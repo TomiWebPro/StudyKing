@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/data.dart';
 import 'package:studyking/features/settings/presentation/api_config_screen.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/features/subjects/presentation/subject_list_view.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/practice/presentation/practice_screen.dart';
 
 // Global database instance
@@ -53,14 +53,33 @@ void main() async {
   
   // Initialize Hive database
   await Hive.initFlutter();
+  
+  // Open all boxes
   await Hive.openBox('subjects');
   await Hive.openBox('topics');
   await Hive.openBox('questions');
+  await Hive.openBox('answers');
+  await Hive.openBox('sources');
   await Hive.openBox('attempts');
+  await Hive.openBox('lessonBlocks');
   await Hive.openBox('lessons');
   await Hive.openBox('sessions');
+  await Hive.openBox('progress');
   
-  runApp(const StudyKingApp());
+  // Initialize all repositories
+  final answerRepo = AnswerRepository();
+  await answerRepo.init();
+  final sourceRepo = SourceRepository();
+  await sourceRepo.init();
+  
+  await database.topicRepository.init();
+  await database.questionRepository.init();
+  await database.attemptRepository.init();
+  await database.lessonRepository.init();
+  await database.sessionRepository.init();
+  await database.subjectRepository.init();
+  
+  runApp(const ProviderScope(child: StudyKingApp()));
 }
 
 class StudyKingApp extends StatelessWidget {

@@ -2,36 +2,26 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 
 class SubjectRepository {
-  Box<Subject>? _subjectBox;
+  late Box<Subject> _subjectBox;
 
-  Box<Subject> get _getSubjectBox {
-    if (_subjectBox == null) {
-      throw Exception('SubjectRepository not initialized. Call initialize() first.');
-    }
-    return _subjectBox!;
-  }
-
-  Future<void> initialize() async {
-    if (!Hive.isBoxOpen('subjects')) {
-      await Hive.openBox<Subject>('subjects');
-    }
+  Future<void> init() async {
     _subjectBox = Hive.box<Subject>('subjects');
   }
 
   Future<List<Subject>> getAll() async {
-    return _getSubjectBox.values.toList();
+    return _subjectBox.values.toList();
   }
 
   Future<Subject?> get(String id) async {
-    return _getSubjectBox.get(id);
+    return _subjectBox.get(id);
   }
 
   Future<void> save(Subject subject) async {
-    await _getSubjectBox.put(subject.id, subject);
+    await _subjectBox.put(subject.id, subject);
   }
 
   Future<void> delete(String id) async {
-    await _getSubjectBox.delete(id);
+    await _subjectBox.delete(id);
   }
 
   Future<List<Subject>> getWithTopics(List<String> topicIds) async {

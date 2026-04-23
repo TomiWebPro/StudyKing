@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/repositories/subject_repository.dart';
 import '../models/subject_model.dart';
+import 'package:studyking/main.dart' show database;
 
 class SubjectManagementScreen extends ConsumerStatefulWidget {
   const SubjectManagementScreen({super.key});
@@ -53,8 +53,6 @@ class _SubjectManagementScreenState
     setState(() => _isLoading = true);
 
     try {
-      final settingsRepo = ref.read(subjectsRepositoryProvider);
-      
       final subject = Subject(
         id: 'subject_${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text.trim(),
@@ -74,7 +72,7 @@ class _SubjectManagementScreenState
         examDate: _examDate,
       );
 
-      await settingsRepo.save(subject);
+      await database.subjectRepository.save(subject);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -259,9 +257,3 @@ class _SubjectManagementScreenState
     return Color(int.parse(hex, radix: 16) + 0xFF000000);
   }
 }
-
-final subjectsRepositoryProvider = Provider<SubjectRepository>((ref) {
-  final repo = SubjectRepository();
-  repo.initialize();
-  return repo;
-});

@@ -8,7 +8,7 @@ class LessonRepository {
 
   Future<void> init() async {
     _box = Hive.box<Lesson>('lessons');
-    _blockBox = Hive.box<LessonBlock>('lesson_blocks');
+    _blockBox = Hive.box<LessonBlock>('lessonBlocks');
   }
 
   Future<void> create(Lesson lesson) async {

@@ -5,7 +5,7 @@ class StudySessionRepository {
   late Box<StudySession> _box;
 
   Future<void> init() async {
-    _box = Hive.box<StudySession>('study_sessions');
+    _box = Hive.box<StudySession>('sessions');
   }
 
   Future<void> create(StudySession session) async {

@@ -1,8 +1,4 @@
-import 'repositories/topic_repository.dart';
-import 'repositories/question_repository.dart';
-import 'repositories/attempt_repository.dart';
-import 'repositories/lesson_repository.dart';
-import 'repositories/study_session_repository.dart';
+import 'package:studyking/core/data/data.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class DatabaseService {
