@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../main.dart' show settingsRepository;
+import '../data/repositories/settings_repository.dart';
+import '../data/models/settings_box.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -14,8 +17,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final TextEditingController _learningGoalController = TextEditingController();
   final TextEditingController _studyTimeController = TextEditingController();
 
-  IconData? _avatarIcon;
+  String? _avatarIconKey;
   bool _isSaving = false;
+  String _profileId = '';
 
   @override
   void initState() {
@@ -24,11 +28,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    // Load from storage - placeholder
-    if (mounted) {
-      setState(() {
-        _avatarIcon = Icons.person;
-      });
+    try {
+      // Get the settings repository from main
+      final repository = settingsRepository;
+      final profileData = await repository.getProfileData();
+      
+      if (profileData != null && mounted) {
+        setState(() {
+          _profileId = profileData.id;
+          _avatarIconKey = profileData.avatarIcon;
+          _nameController.text = profileData.name;
+          _studentIdController.text = profileData.studentId ?? '';
+          _learningGoalController.text = profileData.learningGoal ?? '';
+          _studyTimeController.text = profileData.preferredStudyTime ?? '';
+        });
+      } else if (mounted) {
+        // Create a default profile if none exists
+        _profileId = DateTime.now().millisecondsSinceEpoch.toString();
+        setState(() {
+          _avatarIconKey = 'Icons.person';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+      if (mounted) {
+        _profileId = DateTime.now().millisecondsSinceEpoch.toString();
+        setState(() {
+          _avatarIconKey = 'Icons.person';
+        });
+      }
     }
   }
 
@@ -43,8 +71,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Save to storage - placeholder
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Create profile data
+      final profileData = ProfileData(
+        id: _profileId,
+        name: _nameController.text.trim(),
+        studentId: _studentIdController.text.trim().isEmpty ? null : _studentIdController.text.trim(),
+        avatarIcon: _avatarIconKey,
+        learningGoal: _learningGoalController.text.trim().isEmpty ? null : _learningGoalController.text.trim(),
+        preferredStudyTime: _studyTimeController.text.trim().isEmpty ? null : _studyTimeController.text.trim(),
+        notificationsEnabled: true,
+        language: 'en',
+      );
+
+      // Save to repository
+      await settingsRepository.saveProfileData(profileData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,11 +126,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _buildAvatarChoice(Icons.face),
-                  _buildAvatarChoice(Icons.person),
-                  _buildAvatarChoice(Icons.school),
-                  _buildAvatarChoice(Icons.local_hospital),
-                  _buildAvatarChoice(Icons.leaderboard),
+                  _buildAvatarChoice('Icons.face'),
+                  _buildAvatarChoice('Icons.person'),
+                  _buildAvatarChoice('Icons.school'),
+                  _buildAvatarChoice('Icons.local_hospital'),
+                  _buildAvatarChoice('Icons.leaderboard'),
+                  _buildAvatarChoice('Icons.emoji_events'),
+                  _buildAvatarChoice('Icons.sports_tennis'),
+                  _buildAvatarChoice('Icons.coffee'),
                 ],
               ),
               const SizedBox(height: 16),
@@ -105,10 +148,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildAvatarChoice(IconData icon) {
+  Widget _buildAvatarChoice(String iconKey) {
+    IconData icon;
+    switch (iconKey) {
+      case 'Icons.face':
+        icon = Icons.face;
+        break;
+      case 'Icons.school':
+        icon = Icons.school;
+        break;
+      case 'Icons.local_hospital':
+        icon = Icons.local_hospital;
+        break;
+      case 'Icons.leaderboard':
+        icon = Icons.leaderboard;
+        break;
+      case 'Icons.emoji_events':
+        icon = Icons.emoji_events;
+        break;
+      case 'Icons.sports_tennis':
+        icon = Icons.sports_tennis;
+        break;
+      case 'Icons.coffee':
+        icon = Icons.coffee;
+        break;
+      default:
+        icon = Icons.person;
+    }
+
     return GestureDetector(
       onTap: () {
-        setState(() => _avatarIcon = icon);
+        setState(() => _avatarIconKey = iconKey);
         Navigator.pop(context);
       },
       child: Container(
@@ -116,13 +186,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         height: 60,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: _avatarIcon == icon
+          border: _avatarIconKey == iconKey
               ? Border.all(color: Theme.of(context).primaryColor, width: 3)
               : null,
         ),
         child: Icon(icon, size: 32),
       ),
     );
+  }
+
+  IconData _getIconFromAvatar() {
+    switch (_avatarIconKey) {
+      case 'Icons.face':
+        return Icons.face;
+      case 'Icons.person':
+        return Icons.person;
+      case 'Icons.school':
+        return Icons.school;
+      case 'Icons.local_hospital':
+        return Icons.local_hospital;
+      case 'Icons.leaderboard':
+        return Icons.leaderboard;
+      case 'Icons.emoji_events':
+        return Icons.emoji_events;
+      case 'Icons.sports_tennis':
+        return Icons.sports_tennis;
+      case 'Icons.coffee':
+        return Icons.coffee;
+      default:
+        return Icons.person;
+    }
   }
 
   @override
@@ -158,11 +251,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   ),
-                  child: _avatarIcon != null
+                  child: _avatarIconKey != null
                       ? Icon(
-                          _avatarIcon!,
+                          _getIconFromAvatar(),
                           size: 50,
                           color: Theme.of(context).primaryColor,
                         )
@@ -242,7 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // Delete Account Warning
             Card(
-              color: Colors.redAccent.withAlpha(25),
+              color: Colors.redAccent.withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -255,12 +348,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         style: TextStyle(color: Colors.redAccent),
                       ),
                     ),
+                    TextButton(
+                      onPressed: () => _showDeleteConfirmation(context),
+                      child: const Text('Delete'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await settingsRepository.clearProfile();
+              if (mounted) {
+                Navigator.pop(context);
+                Navigator.pop(context);
+                Navigator.pop(context);
+              }
+            },
+            style: FilledButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

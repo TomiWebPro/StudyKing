@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/data.dart';
-import 'package:studyking/features/settings/presentation/api_config_screen.dart';
-import 'package:studyking/features/settings/presentation/profile_screen.dart';
-import 'package:studyking/features/settings/presentation/settings_screen.dart';
-import 'package:studyking/features/subjects/presentation/subject_list_view.dart';
-import 'package:studyking/features/practice/presentation/practice_screen.dart';
+import 'features/settings/data/models/settings_box.dart';
+import 'features/settings/data/repositories/settings_repository.dart';
+import 'core/data/data.dart';
+import 'core/data/hive_initializer.dart';
+import 'features/settings/presentation/api_config_screen.dart';
+import 'features/settings/presentation/profile_screen.dart';
+import 'features/settings/presentation/settings_screen.dart';
+import 'features/subjects/presentation/subject_list_view.dart';
+import 'features/practice/presentation/practice_screen.dart';
 
 // Global database instance
 final database = DatabaseService(
@@ -18,77 +22,169 @@ final database = DatabaseService(
   subjectRepository: SubjectRepository(),
 );
 
-// Global settings manager
-class SettingsManager {
-  static ThemeMode themeMode = ThemeMode.light;
-  static double fontSize = 16.0;
-  static int totalSessionCount = 0;
-  static int totalStudyTimeMs = 0;
-  static int totalQuestions = 0;
+// Global settings repository (singleton for use outside widget tree)
+final settingsRepository = SettingsRepository();
 
-  static String apiBaseUrl = 'https://openrouter.ai/api/v1';
-  static String apiKey = '';
+// Settings provider (uses the singleton)
+final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>((ref) {
+  return SettingsController(settingsRepository);
+});
 
-  static String selectedModel = '';
+// Theme mode provider
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
-  static void updateTheme(ThemeMode mode) {
-    themeMode = mode;
+// Font size provider  
+final fontSizeProvider = StateProvider<double>((ref) => 16.0);
+
+// API key provider
+final apiKeyProvider = StateProvider<String>((ref) => '');
+
+// API base URL provider
+final apiBaseUrlProvider = StateProvider<String>((ref) => 'https://openrouter.ai/api/v1');
+
+// Selected model provider
+final selectedModelProvider = StateProvider<String>((ref) => '');
+
+class SettingsController extends StateNotifier<SettingsBox> {
+  final SettingsRepository _repository;
+  
+  SettingsController(this._repository) : super(SettingsBox()) {
+    _loadSettings();
   }
 
-  static void updateFontSize(double size) {
-    fontSize = size;
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await _repository.getSettings();
+      state = settings;
+    } catch (e) {
+      debugPrint('Error loading settings: $e');
+      state = SettingsBox();
+    }
   }
 
-  static void setApiKey(String key) {
-    apiKey = key;
+  Future<void> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+  }) async {
+    try {
+      await _repository.updateSettings(
+        apiKey: apiKey ?? state.apiKey,
+        apiBaseUrl: apiBaseUrl ?? state.apiBaseUrl,
+        selectedModel: selectedModel ?? state.selectedModel,
+        themeMode: themeMode ?? state.themeModeEnum,
+        fontSize: fontSize ?? state.fontSize,
+      );
+      state = await _repository.getSettings();
+    } catch (e) {
+      debugPrint('Error updating settings: $e');
+    }
   }
 
-  static void updateModel(String model) {
-    selectedModel = model;
+  Future<void> saveApiKey(String key) async {
+    try {
+      await _repository.saveApiKey(service: 'default', key: key);
+      await _loadSettings();
+    } catch (e) {
+      debugPrint('Error saving API key: $e');
+    }
+  }
+
+  Future<void> updateTheme(ThemeMode mode) async {
+    try {
+      await _repository.updateSettings(themeMode: mode);
+      state = await _repository.getSettings();
+    } catch (e) {
+      debugPrint('Error updating theme: $e');
+    }
+  }
+
+  Future<void> updateFontSize(double size) async {
+    try {
+      await _repository.updateSettings(fontSize: size);
+      state = await _repository.getSettings();
+    } catch (e) {
+      debugPrint('Error updating font size: $e');
+    }
+  }
+
+  Future<void> updateModel(String model) async {
+    try {
+      await _repository.updateSettings(selectedModel: model);
+      state = await _repository.getSettings();
+    } catch (e) {
+      debugPrint('Error updating model: $e');
+    }
+  }
+
+  Future<void> updateStats({
+    int? sessionCount,
+    int? studyTimeMs,
+    int? questions,
+  }) async {
+    try {
+      await _repository.updateStats(
+        sessionCount: sessionCount,
+        studyTimeMs: studyTimeMs,
+        questions: questions,
+      );
+      state = await _repository.getSettings();
+    } catch (e) {
+      debugPrint('Error updating stats: $e');
+    }
   }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Hive database
-  await Hive.initFlutter();
-  
-  // Open all boxes
-  await Hive.openBox('subjects');
-  await Hive.openBox('topics');
-  await Hive.openBox('questions');
-  await Hive.openBox('answers');
-  await Hive.openBox('sources');
-  await Hive.openBox('attempts');
-  await Hive.openBox('lessonBlocks');
-  await Hive.openBox('lessons');
-  await Hive.openBox('sessions');
-  await Hive.openBox('progress');
-  
-  // Initialize all repositories
-  final answerRepo = AnswerRepository();
-  await answerRepo.init();
-  final sourceRepo = SourceRepository();
-  await sourceRepo.init();
-  
-  await database.topicRepository.init();
-  await database.questionRepository.init();
-  await database.attemptRepository.init();
-  await database.lessonRepository.init();
-  await database.sessionRepository.init();
-  await database.subjectRepository.init();
-  
-  runApp(const ProviderScope(child: StudyKingApp()));
+  try {
+    // Initialize Hive database
+    Hive.initFlutter();
+    
+    // Run database migrations and open all boxes
+    await HiveInitializer.initialize();
+    
+    // Initialize all repositories
+    await database.topicRepository.init();
+    await database.questionRepository.init();
+    await database.attemptRepository.init();
+    await database.lessonRepository.init();
+    await database.sessionRepository.init();
+    await database.subjectRepository.init();
+    
+    // Initialize settings repository
+    await settingsRepository.init();
+    
+    // Load initial settings to sync with providers
+    final initialSettings = await settingsRepository.getSettings();
+    
+    // Initialize other providers with saved values
+    // Note: These will be properly loaded by SettingsController in the widget tree
+    
+    runApp(StudyKingApp());
+  } catch (e, stackTrace) {
+    debugPrint('❌ Error during initialization: $e');
+    debugPrint('Stack trace: $stackTrace');
+  }
 }
 
-class StudyKingApp extends StatelessWidget {
+class StudyKingApp extends ConsumerWidget {
   const StudyKingApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final themeMode = SettingsManager.themeMode;
-    final fontSize = SettingsManager.fontSize;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Listen to settings changes
+    final settings = ref.watch(settingsProvider);
+    
+    // Sync secondary providers with settings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(apiKeyProvider.notifier).state = settings.apiKey;
+      ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
+      ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
+    });
     
     return MaterialApp(
       title: 'StudyKing',
@@ -121,12 +217,12 @@ class StudyKingApp extends StatelessWidget {
           elevation: 4,
         ),
         textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: fontSize, height: 1.5),
-          bodyMedium: TextStyle(fontSize: fontSize, height: 1.4),
-          bodySmall: TextStyle(fontSize: fontSize * 0.875, height: 1.3),
-          titleLarge: TextStyle(fontSize: fontSize * 1.5, height: 1.3),
-          titleMedium: TextStyle(fontSize: fontSize * 1.25, height: 1.35),
-          titleSmall: TextStyle(fontSize: fontSize * 1.125, height: 1.35),
+          bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
+          bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
+          bodySmall: TextStyle(fontSize: settings.fontSize * 0.875, height: 1.3),
+          titleLarge: TextStyle(fontSize: settings.fontSize * 1.5, height: 1.3),
+          titleMedium: TextStyle(fontSize: settings.fontSize * 1.25, height: 1.35),
+          titleSmall: TextStyle(fontSize: settings.fontSize * 1.125, height: 1.35),
         ),
       ),
       darkTheme: ThemeData(
@@ -146,15 +242,15 @@ class StudyKingApp extends StatelessWidget {
           ),
         ),
         textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: fontSize, height: 1.5),
-          bodyMedium: TextStyle(fontSize: fontSize, height: 1.4),
-          bodySmall: TextStyle(fontSize: fontSize * 0.875, height: 1.3),
-          titleLarge: TextStyle(fontSize: fontSize * 1.5, height: 1.3),
-          titleMedium: TextStyle(fontSize: fontSize * 1.25, height: 1.35),
-          titleSmall: TextStyle(fontSize: fontSize * 1.125, height: 1.35),
+          bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
+          bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
+          bodySmall: TextStyle(fontSize: settings.fontSize * 0.875, height: 1.3),
+          titleLarge: TextStyle(fontSize: settings.fontSize * 1.5, height: 1.3),
+          titleMedium: TextStyle(fontSize: settings.fontSize * 1.25, height: 1.35),
+          titleSmall: TextStyle(fontSize: settings.fontSize * 1.125, height: 1.35),
         ),
       ),
-      themeMode: themeMode,
+      themeMode: settings.themeModeEnum,
       home: const MainScreen(),
       routes: {
         '/api-config': (context) => const ApiConfigScreen(),
@@ -183,7 +279,10 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
