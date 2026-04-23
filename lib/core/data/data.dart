@@ -1,0 +1,20 @@
+// Core data export file
+export 'enums.dart';
+export 'hive_initializer.dart';
+export 'database_service.dart';
+// Models
+export 'models/topic_model.dart';
+export 'models/topic_progress_model.dart';
+export 'models/question_model.dart';
+export 'models/answer_model.dart';
+export 'models/source_model.dart';
+export 'models/student_attempt_model.dart';
+export 'models/lesson_block_model.dart';
+export 'models/lesson_model.dart';
+export 'models/study_session_model.dart';
+// Repositories
+export 'repositories/topic_repository.dart';
+export 'repositories/question_repository.dart';
+export 'repositories/attempt_repository.dart';
+export 'repositories/lesson_repository.dart';
+export 'repositories/study_session_repository.dart';

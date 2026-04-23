@@ -1,0 +1,92 @@
+# GitIgnore file for StudyKing
+
+# Flutter
+.build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+/pubspec.lock
+/.metadata
+
+# Generated paths
+/web/
+/build/
+/ios/
+/android/
+/macos/
+/linux/
+/windows/
+
+# Native dependencies
+/.cargotoml
+/.cargo/
+/target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+*.pid
+*.pid.lock
+logs/
+*.out
+
+# Test coverage
+coverage/
+.lcov.info
+
+# Environment
+.env
+.env.local
+.env.production
+.env.development
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Database files (if using local storage in unexpected locations)
+*.db
+*.db-journal
+
+# Cache
+.caches/
+.cache/
+
+# Analytics
+analytics*
+
+# Build artifacts
+*.aar
+*.apk
+*.app
+*.ipa
+*.jks
+*.keystore
+
+# CocoaPods
+/Pods/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Archive files
+*.tar
+*.zip
+*.rar
+*.7z
+
+# Build tools
+.cache/*
