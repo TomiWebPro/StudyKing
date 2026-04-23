@@ -1,5 +1,6 @@
 # StudyKing
 
+ActiveBeta, not ready for production. 
 A modern Flutter-based adaptive learning platform designed for efficient study management and AI-powered content generation.
 
 ## ✨ Features
