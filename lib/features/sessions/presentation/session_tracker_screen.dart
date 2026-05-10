@@ -6,6 +6,7 @@ import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
+import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 
 
 const String _defaultStudentId = 'anonymous';
@@ -21,7 +22,6 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
   late StudySessionRepository _sessionRepository;
   List<StudySession> _allSessions = [];
   List<StudySession> _sortedSessions = [];
-  Duration _totalStudyTime = Duration.zero;
   int _currentStreak = 0;
   bool _isTrackingSession = false;
   DateTime? _sessionStartTime;
@@ -83,7 +83,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
     DateTime checkDate = today;
 
     while (true) {
-      final hasSessionToday = _allSessions.any((s) => isSameDay(s.startTime, checkDate));
+      final hasSessionToday = _allSessions.any((s) => s.startTime.isSameDay(checkDate));
       if (hasSessionToday) {
         streak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
@@ -93,12 +93,6 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
     }
 
     _currentStreak = streak;
-
-    int totalMs = 0;
-    for (var session in _allSessions) {
-      totalMs += session.timeSpentMs;
-    }
-    _totalStudyTime = Duration(milliseconds: totalMs);
   }
 
   void _startSession() {
@@ -206,7 +200,8 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
@@ -283,54 +278,10 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
               ),
 
               const SizedBox(height: 24),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Time',
-                      formatDuration(_totalStudyTime),
-                      Icons.access_time,
-                      theme.colorScheme.secondary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Sessions',
-                      _allSessions.length.toString(),
-                      Icons.history,
-                      theme.colorScheme.primary,
-                    ),
-                  ),
-                ],
+              SessionAnalyticsWidget(
+                sessions: _allSessions,
+                currentStreak: _currentStreak,
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Current Streak',
-                      '$_currentStreak days',
-                      Icons.emoji_events,
-                      Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: _buildStatCard(
-                      'Avg per Session',
-                      _allSessions.isNotEmpty
-                          ? formatDuration(Duration(milliseconds: _totalStudyTime.inMilliseconds ~/ _allSessions.length))
-                          : '0m',
-                      Icons.schedule,
-                      Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-
               const SizedBox(height: 24),
 
               Row(
@@ -368,42 +319,11 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                 ],
               ),
 
-              Expanded(
-                child: _buildRecentSessionsList(theme),
-              ),
+              _buildRecentSessionsList(theme),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
             ),
           ),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -427,6 +347,8 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
     final recentSessions = _sortedSessions.take(5).toList();
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: recentSessions.length,
       itemBuilder: (context, index) {
         final session = recentSessions[index];

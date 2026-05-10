@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'practice_session_screen.dart';
 import 'package:studyking/core/errors/handlers.dart';
-import '../../subjects/models/subject_model.dart';
-import 'package:studyking/main.dart' show database;
+import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -15,8 +15,13 @@ class PracticeScreen extends ConsumerStatefulWidget {
 
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   List<Subject> _subjects = [];
-  // ignore: unused_field
   bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubjects();
+  }
 
   Future<void> _loadSubjects() async {
     try {
@@ -28,8 +33,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         });
       }
     } catch (e) {
-      _isLoading = false;
       if (mounted) {
+        setState(() => _isLoading = false);
         AppErrorHandler.handleError(
           context,
           e,
@@ -44,9 +49,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   Future<void> _retryLoadSubjects() => _loadSubjects();
 
   Future<List<Subject>> _fetchSubjects() async {
-    // Use the global database instance
-    // In Consumer widget, access through ref or global
-    return await database.subjectRepository.getAll();
+    final repo = await ref.read(subjectsRepositoryProvider.future);
+    return repo.getAll();
   }
 
   void _startPractice(Subject subject) {
@@ -95,9 +99,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Widget _buildBody() {
-    if (_subjects.isEmpty) {
-      return _buildEmptyState();
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_subjects.isEmpty) return _buildEmptyState();
 
     return RefreshIndicator(
       onRefresh: _loadSubjects,
@@ -143,7 +146,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () {
-                // Navigate to subject management
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Add subjects from the Subjects tab')),
+                );
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Subject'),
@@ -174,7 +179,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           childAspectRatio: 1.2,
           children: [
             _PracticeModeCard(
-              context: context,
               icon: Icons.flash_on,
               title: 'Quick Practice',
               subtitle: '10 random questions',
@@ -182,7 +186,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               onTap: () => _showPracticeModeDialog(),
             ),
             _PracticeModeCard(
-              context: context,
               icon: Icons.schedule,
               title: 'Spaced Repetition',
               subtitle: 'Coming soon',
@@ -190,7 +193,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               onTap: null,
             ),
             _PracticeModeCard(
-              context: context,
               icon: Icons.category,
               title: 'Topic Focus',
               subtitle: 'Practice specific topics',
@@ -198,7 +200,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               onTap: () => _showTopicSelector(),
             ),
             _PracticeModeCard(
-              context: context,
               icon: Icons.bar_chart,
               title: 'Weak Areas',
               subtitle: 'Focus on mistakes',
@@ -322,7 +323,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                     ),
                     if (subject.code != null)
                       Text(
-                        subject.code!,
+                        subject.code ?? '',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
@@ -372,7 +373,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       Colors.indigo,
       Colors.cyan,
     ];
-    return colors[name.hashCode % colors.length];
+    return colors[name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
   }
 
   void _showSubjectSelector() {
@@ -381,7 +382,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (sheetContext) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -389,7 +390,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           children: [
             Text(
               'Select Subject',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -403,7 +404,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 ),
               ),
               title: Text(subject.name),
-              subtitle: subject.code != null ? Text(subject.code!) : null,
+              subtitle: subject.code != null ? Text(subject.code ?? '') : null,
               onTap: () {
                 Navigator.pop(context);
                 _startPractice(subject);
@@ -422,7 +423,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (sheetContext) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -430,7 +431,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           children: [
             Text(
               'Practice Mode',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -482,7 +483,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 }
 
 class _PracticeModeCard extends StatelessWidget {
-  final BuildContext context;
   final IconData icon;
   final String title;
   final String subtitle;
@@ -490,7 +490,6 @@ class _PracticeModeCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _PracticeModeCard({
-    required this.context,
     required this.icon,
     required this.title,
     required this.subtitle,

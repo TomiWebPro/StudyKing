@@ -96,6 +96,27 @@ void main() {
         equals('Retry'),
       );
     });
+
+    test('returns "Retry" for DatabaseNotFoundException', () {
+      expect(
+        AppErrorHandler.getRetryText(DatabaseNotFoundException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    test('returns "Retry" for FileSystemException', () {
+      expect(
+        AppErrorHandler.getRetryText(FileSystemException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    test('returns "Retry" for PdfParseException', () {
+      expect(
+        AppErrorHandler.getRetryText(PdfParseException(message: 'test')),
+        equals('Retry'),
+      );
+    });
   });
 
   group('AppErrorHandler.handleSyncError', () {
@@ -324,6 +345,20 @@ void main() {
       await tester.pump();
       expect(find.text('Retry'), findsNothing);
     });
+
+    testWidgets('shows error icon when retry is true in handleSyncError',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        NetworkException(message: 'network error'),
+        'test',
+        retry: true,
+        retryCallback: () {},
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error), findsOneWidget);
+    });
   });
 
   group('AppErrorHandler.handleError (async)', () {
@@ -369,6 +404,159 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('calls retry callback when retry button is tapped in handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      bool retryCalled = false;
+      await AppErrorHandler.handleError(
+        context,
+        NetworkException(message: 'network error'),
+        'test',
+        retry: true,
+        retryCallback: () {
+          retryCalled = true;
+        },
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Retry'), warnIfMissed: false);
+      expect(retryCalled, isTrue);
+    });
+
+    testWidgets('shows refresh icon when retry is true in handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        NetworkException(message: 'network error'),
+        'test',
+        retry: true,
+        retryCallback: () {},
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    });
+
+    testWidgets('shows network_check icon for NetworkException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        NetworkException(message: 'network error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.network_check), findsOneWidget);
+    });
+
+    testWidgets('shows key_rounded icon for ApiAuthException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ApiAuthException(message: 'auth failed'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.key_rounded), findsOneWidget);
+    });
+
+    testWidgets('shows pause_circle icon for ApiRateLimitException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ApiRateLimitException(message: 'rate limited'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.pause_circle), findsOneWidget);
+    });
+
+    testWidgets('shows looks_one_outlined icon for ApiNotFoundException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ApiNotFoundException(message: 'not found'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.looks_one_outlined), findsOneWidget);
+    });
+
+    testWidgets('shows bug_report icon for ApiInternalServerError via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ApiInternalServerError(message: 'server error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+    });
+
+    testWidgets('shows storage icon for DatabaseException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        DatabaseException(message: 'db error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.storage), findsOneWidget);
+    });
+
+    testWidgets('shows info icon for ValidationException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ValidationException(message: 'validation error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.info), findsOneWidget);
+    });
+
+    testWidgets('shows picture_as_pdf icon for PdfParseException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        PdfParseException(message: 'pdf error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.picture_as_pdf), findsOneWidget);
+    });
+
+    testWidgets('shows wifi_tethering_off icon for LlmException via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        LlmException(message: 'llm error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.wifi_tethering_off), findsOneWidget);
+    });
+
+    testWidgets('shows error_outline icon for default exception via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        DatabaseNotFoundException(message: 'not found'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
   });
 
@@ -618,6 +806,96 @@ void main() {
       await tester.pump();
       expect(
         find.text('Unable to parse the PDF file. Please ensure it is a valid PDF.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts error with "ConnectionFailedError" to NetworkException',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw Exception('ConnectionFailedError: timeout'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('Unable to connect to the server. Please check your internet connection and try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts error with "invalid" keyword to InvalidApiKeyException',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw Exception('invalid credentials'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('Invalid API key. Please check your credentials in Settings.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts error with "forbidden" keyword to ApiRateLimitException',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw Exception('forbidden access'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('Too many requests. Please wait a moment and try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts error with "502" to ApiInternalServerError',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw Exception('502 Bad Gateway'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('The server encountered an error. Please try again later.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts error with "503" to ApiInternalServerError',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw Exception('503 Service Unavailable'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('The server encountered an error. Please try again later.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('converts AssertionError to DatabaseException',
+        (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.safelySync(
+        context,
+        () => throw AssertionError('assertion failed'),
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });

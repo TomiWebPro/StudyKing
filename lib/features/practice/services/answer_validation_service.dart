@@ -1,20 +1,21 @@
-import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/services/answer_validator.dart';
 
-/// A comprehensive answer validation service for PracticeSession
 class AnswerValidationService {
-  final QuestionAnswerValidator _validator;
+  final Map<String, QuestionAnswerValidator> _cache = {};
 
-  AnswerValidationService(this._validator);
-
-  /// Validates a user's answer and returns validation result
-  ValidationResult validateAnswer(Question question, String answer) {
-    return _validator.validate(answer, question.type);
+  QuestionAnswerValidator _getValidator(String questionId, Markscheme markscheme) {
+    return _cache.putIfAbsent(questionId, () => QuestionAnswerValidator(markscheme));
   }
 
-  /// Validates MCQ answer (single or multiple choice)
-  ValidationResult validateMCQAnswer(String answer, QuestionType type) {
-    return _validator.validateMCQAnswer(answer, type);
+  ValidationResult validateAnswer(Question question, String answer) {
+    final markscheme = Markscheme(
+      correctAnswer: question.markscheme ?? '',
+      acceptableAnswers: question.options,
+      explanation: question.explanation ?? '',
+    );
+    final validator = _getValidator(question.id, markscheme);
+    return validator.validate(answer, question.type);
   }
 }

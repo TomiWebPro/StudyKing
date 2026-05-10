@@ -49,7 +49,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     var result = _allSessions;
 
     if (_selectedDate != null) {
-      result = result.where((s) => isSameDay(s.startTime, _selectedDate!)).toList();
+      result = result.where((s) => s.startTime.isSameDay(_selectedDate!)).toList();
     }
 
     if (_selectedSubject != null && _selectedSubject!.isNotEmpty) {

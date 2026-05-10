@@ -3,16 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
 import 'package:studyking/core/errors/handlers.dart';
-import 'package:studyking/features/practice/presentation/practice_screen.dart';
 import 'package:studyking/features/practice/services/answer_validation_service.dart';
-import 'package:studyking/features/questions/services/answer_validator.dart';
+
+final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
+  return QuestionRepository();
+});
 
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -33,52 +34,43 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
+  final AnswerValidationService _validationService = AnswerValidationService();
   List<Question> _questions = [];
   int _currentIndex = 0;
   String? _currentAnswer;
   bool _isSubmitted = false;
   bool _isFeedbackVisible = false;
   bool _isSessionComplete = false;
-  
+
   // Tracking
   int _correctAnswers = 0;
   Timer? _timer;
   DateTime _sessionStartTime = DateTime.now();
-  // ignore: unused_field
-  String? _elapsedTime;  // Display format of elapsed time
-  // ignore: unused_field
-  String? _sessionEndTime;
-  String? _elapsedTimeFormatted;  // Human readable format
-  
+  String? _elapsedTimeFormatted;
+
+
   // Results tracking
   final List<PracticeAnswerRecord> _answerRecords = [];
 
-  // Feedback state (declared before usage)
+  // Feedback state
   bool _isCorrect = false;
-  // ignore: unused_field
-  String _feedbackExplanation = '';
-  // ignore: unused_field
-  double _feedbackScore = 0.0;
-  // ignore: unused_field
-  String? _feedbackDetails;
 
   @override
   void initState() {
     super.initState();
-    _questionRepo = QuestionRepository();
+    _questionRepo = ref.read(questionRepositoryProvider);
     _loadQuestions();
     _startTimer();
   }
 
   void _startTimer() {
-    _timer?.cancel(); // Always cancel existing timer first to prevent leaks
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
       setState(() {
-        // Track elapsed time for session analytics
-        final elapsed = DateTime.now().difference(_sessionStartTime).inMilliseconds;
-        _elapsedTime = elapsed.toString();
-        final minutes = elapsed ~/ (1000 * 60);
-        final seconds = (elapsed ~/ 1000) % 60;
+        final elapsed = DateTime.now().difference(_sessionStartTime);
+        final minutes = elapsed.inMinutes;
+        final seconds = elapsed.inSeconds % 60;
         _elapsedTimeFormatted = '$minutes min $seconds sec';
       });
     });
@@ -96,7 +88,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       }
       final questions = result.data!;
 
-      // Filter by topic if specified
       List<Question> filteredQuestions = questions;
       if (widget.topicId != null && widget.topicId!.isNotEmpty) {
         filteredQuestions = questions.where((q) => q.topicId == widget.topicId).toList();
@@ -110,14 +101,15 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         return;
       }
 
-      // Take requested number or all available
-      final count = (widget.questionCount ?? filteredQuestions.length)
-          .clamp(1, filteredQuestions.length);
+      final shuffled = List<Question>.from(filteredQuestions)..shuffle();
+      final count = (widget.questionCount ?? shuffled.length)
+          .clamp(1, shuffled.length);
 
       if (mounted) {
         setState(() {
-          _questions = filteredQuestions.take(count).toList();
+          _questions = shuffled.take(count).toList();
         });
+        _initializeSession();
       }
     } catch (e) {
       if (mounted) {
@@ -129,10 +121,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           retryCallback: _retryLoadQuestions,
         );
       }
-    }
-
-    if (mounted) {
-      _initializeSession();
     }
   }
   
@@ -170,22 +158,14 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     });
   }
 
-  bool _validateAnswer(Question question, String answer, [AnswerValidationService? service]) {
-    final markscheme = Markscheme(
-      correctAnswer: question.markscheme ?? '',
-      acceptableAnswers: question.options,
-      explanation: question.explanation ?? '',
-    );
-    final validationService = service ??
-        AnswerValidationService(QuestionAnswerValidator(markscheme));
+  bool _validateAnswer(Question question, String answer) {
+    if (question.markscheme == null || question.markscheme!.isEmpty) {
+      setState(() => _isCorrect = false);
+      return false;
+    }
 
-    final result = validationService.validateAnswer(question, answer);
-    setState(() {
-      _isCorrect = result.isCorrect;
-      _feedbackExplanation = result.explanation;
-      _feedbackScore = result.score ?? 0.0;
-      _feedbackDetails = result.feedback;
-    });
+    final result = _validationService.validateAnswer(question, answer);
+    setState(() => _isCorrect = result.isCorrect);
     return result.isCorrect;
   }
 
@@ -235,8 +215,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _completeSession() {
-    _timer?.cancel(); // CRITICAL: Always clean up timer
-    _sessionEndTime = DateTime.now().toIso8601String();
+    _timer?.cancel();
     
     // Update UI to show results
     setState(() {
@@ -247,13 +226,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         Navigator.pop(context);
-        // Navigate back to practice screen with session ID
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const PracticeScreen(),
-          ),
-        );
       }
     });
   }

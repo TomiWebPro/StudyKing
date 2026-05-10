@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/main.dart' show settingsProvider, apiKeyProvider, apiBaseUrlProvider, selectedModelProvider;
 
 class SettingsScreen extends ConsumerWidget {
@@ -130,7 +131,7 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.access_time),
                 title: const Text('Total Study Time'),
-                subtitle: Text(_formatDuration(settings.totalStudyTimeMs)),
+                subtitle: Text(formatDuration(Duration(milliseconds: settings.totalStudyTimeMs), showDays: true)),
                 onTap: null,
               ),
               ListTile(
@@ -222,19 +223,6 @@ class SettingsScreen extends ConsumerWidget {
       return name[0].toUpperCase() + name.substring(1);
     }
     return model;
-  }
-
-  String _formatDuration(int ms) {
-    if (ms < 1000) return 'Less than 1 minute';
-    final seconds = (ms ~/ 1000) % 60;
-    final minutes = (ms ~/ (1000 * 60)) % 60;
-    final hours = (ms ~/ (1000 * 60 * 60)) % 24;
-    final days = ms ~/ (1000 * 60 * 60 * 24);
-
-    if (days > 0) return '$days day${days > 1 ? 's' : ''}, $hours hr $minutes min';
-    if (hours > 0) return '$hours hr $minutes min';
-    if (minutes > 0) return '$minutes min $seconds sec';
-    return '$seconds sec';
   }
 
   Widget _buildSection({
@@ -560,7 +548,7 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _AnalyticsCard(
                 title: 'Total Study Time', 
-                value: _formatDuration(settings.totalStudyTimeMs), 
+                value: formatDuration(Duration(milliseconds: settings.totalStudyTimeMs), showDays: true), 
                 icon: Icons.access_time, 
                 color: Colors.green
               ),

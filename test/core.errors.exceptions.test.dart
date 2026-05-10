@@ -273,4 +273,98 @@ void main() {
       expect(InvalidApiKeyException(message: '').message, isNotNull);
     });
   });
+
+  group('All exception types - originalError', () {
+    test('stores originalError when provided for all exception types', () {
+      final original = Exception('test error');
+      expect(NetworkException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ApiAuthException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ApiRateLimitException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ApiNotFoundException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ApiInternalServerError(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(DatabaseException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(DatabaseNotFoundException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ValidationException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(FileSystemException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(PdfParseException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ContentGenerationException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(LlmException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(ApiKeyMissingException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(InvalidApiKeyException(message: 'e', originalError: original).originalError,
+          equals(original));
+    });
+
+    test('originalError is null by default for all exception types', () {
+      expect(NetworkException(message: 'e').originalError, isNull);
+      expect(ApiAuthException(message: 'e').originalError, isNull);
+      expect(ApiRateLimitException(message: 'e').originalError, isNull);
+      expect(ApiNotFoundException(message: 'e').originalError, isNull);
+      expect(ApiInternalServerError(message: 'e').originalError, isNull);
+      expect(DatabaseException(message: 'e').originalError, isNull);
+      expect(DatabaseNotFoundException(message: 'e').originalError, isNull);
+      expect(ValidationException(message: 'e').originalError, isNull);
+      expect(FileSystemException(message: 'e').originalError, isNull);
+      expect(PdfParseException(message: 'e').originalError, isNull);
+      expect(ContentGenerationException(message: 'e').originalError, isNull);
+      expect(LlmException(message: 'e').originalError, isNull);
+      expect(ApiKeyMissingException(message: 'e').originalError, isNull);
+      expect(InvalidApiKeyException(message: 'e').originalError, isNull);
+    });
+  });
+
+  group('All exception types - custom code override', () {
+    test('allows custom code to override default for all exception types', () {
+      expect(NetworkException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ApiAuthException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ApiRateLimitException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ApiNotFoundException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ApiInternalServerError(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(DatabaseException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(DatabaseNotFoundException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ValidationException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(FileSystemException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(PdfParseException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ContentGenerationException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(LlmException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(ApiKeyMissingException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(InvalidApiKeyException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+    });
+  });
+
+  group('All exception types - toString behavior', () {
+    test('concrete exceptions use Object toString since they implement (not extend) AppException', () {
+      expect(NetworkException(message: 'e').toString(), contains('Instance of'));
+      expect(ApiAuthException(message: 'e').toString(), contains('Instance of'));
+      expect(ApiRateLimitException(message: 'e').toString(), contains('Instance of'));
+      expect(ApiNotFoundException(message: 'e').toString(), contains('Instance of'));
+      expect(ApiInternalServerError(message: 'e').toString(), contains('Instance of'));
+      expect(DatabaseException(message: 'e').toString(), contains('Instance of'));
+      expect(DatabaseNotFoundException(message: 'e').toString(), contains('Instance of'));
+      expect(ValidationException(message: 'e').toString(), contains('Instance of'));
+      expect(FileSystemException(message: 'e').toString(), contains('Instance of'));
+      expect(PdfParseException(message: 'e').toString(), contains('Instance of'));
+      expect(ContentGenerationException(message: 'e').toString(), contains('Instance of'));
+      expect(LlmException(message: 'e').toString(), contains('Instance of'));
+      expect(ApiKeyMissingException(message: 'e').toString(), contains('Instance of'));
+      expect(InvalidApiKeyException(message: 'e').toString(), contains('Instance of'));
+    });
+
+    test('AppException toString works correctly via class that extends AppException', () {
+      const ex = _TestAppException(message: 'test message');
+      expect(ex.toString(), equals('AppException: test message'));
+    });
+  });
 }

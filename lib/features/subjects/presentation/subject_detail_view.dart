@@ -5,6 +5,7 @@ import 'package:studyking/features/practice/presentation/practice_session_screen
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
 class SubjectDetailScreen extends ConsumerStatefulWidget {
@@ -403,7 +404,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   ),
                   title: Text('Session ${index + 1}'),
                   subtitle: Text(
-                    '${_formatDate((session as dynamic).startTime ?? DateTime.now())} • ${_formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
+                    '${formatDate((session as dynamic).startTime)} • ${formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -501,7 +502,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Expanded(
                     child: _buildStatCard(
                       'Time',
-                      _formatDuration(Duration(milliseconds: totalTime)),
+                      formatDuration(Duration(milliseconds: totalTime)),
                       Icons.access_time,
                       Colors.purple,
                     ),
@@ -673,8 +674,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow('Date', _formatDate((session as dynamic).startTime ?? DateTime.now())),
-            _detailRow('Duration', _formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
+            _detailRow('Date', formatDate((session as dynamic).startTime)),
+            _detailRow('Duration', formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
             _detailRow('Questions', questions.toString()),
             if (correct > 0)
               _detailRow('Correct', '$correct/$questions'),
@@ -711,17 +712,4 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _formatDuration(Duration duration) {
-    if (duration.inHours > 0) {
-      return '${duration.inHours}h ';
-    }
-    if (duration.inMinutes > 0) {
-      return '${duration.inMinutes}m ';
-    }
-    return '${duration.inSeconds}s';
-  }
 }
