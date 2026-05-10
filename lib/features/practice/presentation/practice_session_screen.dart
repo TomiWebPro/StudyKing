@@ -10,6 +10,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
+import 'package:studyking/features/practice/services/answer_validation_service.dart';
 
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -124,27 +125,40 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       builder: (context) => AlertDialog(
         title: const Text('No Questions Available'),
         content: const Text('There are no questions for the selected subject/topic. Start creating questions!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Back to Lessons'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _onAnswerSelected(String? answer) {
+  void _validateAnswer(Question question, String answer, [AnswerValidationService? service]) {
+    final validationService = service ?? AnswerValidationService(QuestionAnswerValidator(null));
+    
+    // For single/multi choice with markscheme, use custom logic
+    if (question.type == QuestionType.singleChoice || question.type == QuestionType.multiChoice) {
+      if (question.markscheme != null) {
+        validationService._validator = QuestionAnswerValidator(Markscheme(
+          correctAnswer: question.markscheme!,
+          acceptableAnswers: [],
+          explanation: '',
+          steps: [],
+        ));
+        final result = validationService._validator.validateMCQAnswer(answer, question.type);
+        setState(() {
+          _isCorrect = result.isCorrect;
+          _feedbackExplanation = result.explanation;
+        });
+        return result.isCorrect;
+      }
+    }
+    
+    final result = validationService.validateAnswer(question, answer);
     setState(() {
-      _currentAnswer = answer;
+      _isCorrect = result.isCorrect;
+      _feedbackExplanation = result.explanation;
+      _feedbackScore = result.score;
+      _feedbackDetails = result.feedback;
     });
+    
+    return result.isCorrect;
   }
 
   void _submitAnswer() {
-    if (_currentAnswer == null) return;
+    if (_currentAnswer == null || _questions.isEmpty) return;
     
     final question = _questions[_currentIndex];
     final isCorrect = _validateAnswer(question, _currentAnswer!);
@@ -157,7 +171,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       questionId: question.id,
       questionType: question.type,
       isCorrect: isCorrect,
-      timeSpent: const Duration(seconds: 5), // Would track actual time
+      timeSpent: const Duration(seconds: 0), // Will track actual time
       userAnswer: _currentAnswer!,
     ));
     
@@ -166,6 +180,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _isFeedbackVisible = true;
     });
   }
+
+  // State for feedback
+  int _correctAnswers = 0;
+
+  // Tracking state
+  int _timer = 0;
+  DateTime _sessionStartTime = DateTime.now();
+  String? _sessionEndTime;
+
+  // Results tracking
+  final List<PracticeAnswerRecord> _answerRecords = [];
 
   bool _validateAnswer(Question question, String answer) {
     // Simple validation for now - should integrate with Markscheme

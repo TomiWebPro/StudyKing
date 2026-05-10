@@ -69,20 +69,31 @@ class Question extends HiveObject {
     'updatedAt': updatedAt.toIso8601String(),
   };
 
-  factory Question.fromJson(Map<String, dynamic> json) => Question(
-    id: json['id'],
-    text: json['text'],
-    type: QuestionType.values[json['type']],
-    difficulty: json['difficulty'] ?? 1,
-    subjectId: json['subjectId'],
-    topicId: json['topicId'],
-    variantIds: List<String>.from(json['variantIds'] ?? []),
-    sourceIds: List<String>.from(json['sourceIds'] ?? []),
-    allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
-    markscheme: json['markscheme'],
-    createdAt: DateTime.parse(json['createdAt']),
-    updatedAt: DateTime.parse(json['updatedAt']),
-  );
+  factory Question.fromJson(Map<String, dynamic> json) {
+    // Safe parsing with null checking
+    final typeIndex = json['type'];
+    final type = typeIndex != null && typeIndex is int
+        ? QuestionType.values[typeIndex]
+        : QuestionType.singleChoice; // Default fallback
+    
+    final createdAt = DateTime.parse(json['createdAt']);
+    final updatedAt = DateTime.parse(json['updatedAt']);
+    
+    return Question(
+      id: json['id'] ?? '',
+      text: json['text'] ?? '',
+      type: type,
+      difficulty: json['difficulty'] ?? 1,
+      subjectId: json['subjectId'] ?? '',
+      topicId: json['topicId'] ?? '',
+      variantIds: List<String>.from(json['variantIds'] ?? []),
+      sourceIds: List<String>.from(json['sourceIds'] ?? []),
+      allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
+      markscheme: json['markscheme'],
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 
   Question copyWith({
     String? id,

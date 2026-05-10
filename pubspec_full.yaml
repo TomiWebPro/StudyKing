@@ -1,0 +1,33 @@
+name: study_king
+
+description: A Flutter study application with LLM integration
+version: 1.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  dio: ^5.0.0
+  flutter:
+    sdk: flutter
+  hive_flutter: ^1.1.0
+  provider: ^6.0.0
+  uuid: ^4.2.1
+  image_picker: ^1.0.0
+  file_picker: ^6.0.0
+  path_provider: ^2.1.0
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  plugins:
+    - hive_flutter
+
+fluid:
+  assets:
+    - assets/images/
