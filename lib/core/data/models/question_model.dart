@@ -36,6 +36,9 @@ class Question extends HiveObject {
   @HiveField(10)
   final String? markscheme;
 
+  @HiveField(19)
+  final String? correctAnswer;
+
   @HiveField(11)
   final String? model;  // OpenRouter model ID
 
@@ -72,6 +75,7 @@ class Question extends HiveObject {
     this.options = const [],
     this.allowedAnswerTypes = '',
     this.markscheme,
+    this.correctAnswer,
     this.model,
     this.topic,
     this.tags = const [],
@@ -94,6 +98,7 @@ class Question extends HiveObject {
     'options': options,
     'allowedAnswerTypes': allowedAnswerTypes,
     'markscheme': markscheme,
+    'correctAnswer': correctAnswer,
     'model': model,
     'topic': topic,
     'tags': tags,
@@ -126,6 +131,7 @@ class Question extends HiveObject {
       options: List<String>.from(json['options'] ?? []),
       allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
       markscheme: json['markscheme'],
+      correctAnswer: json['correctAnswer'] ?? json['correct_answer'] ?? json['answer'],
       model: json['model'],
       topic: json['topic'],
       tags: List<String>.from(json['tags'] ?? []),
@@ -149,6 +155,7 @@ class Question extends HiveObject {
     List<String>? options,
     String? allowedAnswerTypes,
     String? markscheme,
+    String? correctAnswer,
     String? model,
     String? topic,
     List<String>? tags,
@@ -170,6 +177,7 @@ class Question extends HiveObject {
       options: options ?? this.options,
       allowedAnswerTypes: allowedAnswerTypes ?? this.allowedAnswerTypes,
       markscheme: markscheme ?? this.markscheme,
+      correctAnswer: correctAnswer ?? this.correctAnswer,
       model: model ?? this.model,
       topic: topic ?? this.topic,
       tags: tags ?? this.tags,

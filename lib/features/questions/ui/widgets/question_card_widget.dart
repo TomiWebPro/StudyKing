@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
 import 'single_answer_widget.dart';
@@ -6,12 +7,13 @@ import 'canvas_drawing_widget.dart';
 
 
 /// Question Card - Main UI component for displaying questions
-class QuestionCardWidget extends StatelessWidget {
+class QuestionCardWidget extends StatefulWidget {
   final Question question;
   final String? currentAnswer;
   final bool isSubmitted;
   final bool isFeedbackVisible;
   final ValueChanged<String?> onAnswerSubmitted;
+  final ValueChanged<String?>? onAnswerChanged;
   final VoidCallback? onNext;
 
   const QuestionCardWidget({
@@ -21,8 +23,66 @@ class QuestionCardWidget extends StatelessWidget {
     this.isSubmitted = false,
     this.isFeedbackVisible = false,
     required this.onAnswerSubmitted,
+    this.onAnswerChanged,
     this.onNext,
   });
+
+  @override
+  State<QuestionCardWidget> createState() => _QuestionCardWidgetState();
+}
+
+class _QuestionCardWidgetState extends State<QuestionCardWidget> {
+  late final TextEditingController _textController;
+  late final TextEditingController _essayController;
+  String? _localAnswer;
+  final Set<String> _multiSelected = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _localAnswer = widget.currentAnswer;
+    _textController = TextEditingController(text: widget.currentAnswer ?? '');
+    _essayController = TextEditingController(text: widget.currentAnswer ?? '');
+    if (widget.question.type == QuestionType.multiChoice &&
+        widget.currentAnswer != null &&
+        widget.currentAnswer!.isNotEmpty) {
+      _multiSelected
+        ..clear()
+        ..addAll(widget.currentAnswer!.split('||').map((e) => e.trim()).where((e) => e.isNotEmpty));
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant QuestionCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentAnswer != widget.currentAnswer) {
+      _localAnswer = widget.currentAnswer;
+      _textController.text = widget.currentAnswer ?? '';
+      _essayController.text = widget.currentAnswer ?? '';
+      if (widget.question.type == QuestionType.multiChoice) {
+        _multiSelected
+          ..clear()
+          ..addAll((widget.currentAnswer ?? '')
+              .split('||')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _essayController.dispose();
+    super.dispose();
+  }
+
+  void _updateAnswer(String? value) {
+    setState(() {
+      _localAnswer = value;
+    });
+    widget.onAnswerChanged?.call(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,17 +105,17 @@ class QuestionCardWidget extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Chip(
-                  label: Text('Difficulty: ${question.difficulty}'),
+                  label: Text('Difficulty: ${_difficultyLabel(widget.question.difficulty)}'),
                   backgroundColor: _getDifficultyColor(),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 const Spacer(),
-                if (isSubmitted)
+                if (widget.isSubmitted)
                   Chip(
-                    label: Text(currentAnswer == question.markscheme ? 'Correct' : 'Incorrect'),
-                    backgroundColor: currentAnswer == question.markscheme
+                    label: Text(_isCurrentAnswerCorrect() ? 'Correct' : 'Incorrect'),
+                    backgroundColor: _isCurrentAnswerCorrect()
                         ? Colors.green
                         : Colors.red,
                     shape: RoundedRectangleBorder(
@@ -67,10 +127,10 @@ class QuestionCardWidget extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Question text
-            Text(
-              question.text,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+              Text(
+                widget.question.text,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             const SizedBox(height: 16),
 
             // Question type specific content
@@ -79,22 +139,35 @@ class QuestionCardWidget extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Submit button
-            if (!isSubmitted)
+            if (!widget.isSubmitted)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    onAnswerSubmitted(currentAnswer);
-                  },
+                  onPressed: _canSubmit
+                      ? () {
+                          widget.onAnswerSubmitted(_localAnswer);
+                        }
+                      : null,
                   child: const Text('Submit Answer'),
                 ),
               ),
+            if (!widget.isSubmitted && !_canSubmit)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Add an answer before submitting.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
 
-            if (isSubmitted && onNext != null)
+            if (widget.isSubmitted && widget.onNext != null)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: onNext,
+                  onPressed: widget.onNext,
                   icon: const Icon(Icons.arrow_forward),
                   label: const Text('Next Question'),
                 ),
@@ -106,10 +179,11 @@ class QuestionCardWidget extends StatelessWidget {
   }
 
   Widget _buildQuestionContent(BuildContext context) {
-    switch (question.type) {
+    switch (widget.question.type) {
       case QuestionType.singleChoice:
-      case QuestionType.multiChoice:
         return _buildMCQContent(context);
+      case QuestionType.multiChoice:
+        return _buildMultiChoiceContent(context);
 
       case QuestionType.typedAnswer:
       case QuestionType.mathExpression:
@@ -123,32 +197,70 @@ class QuestionCardWidget extends StatelessWidget {
         return _buildCanvasContent(context);
 
       default:
-        return Text('Question type not supported');
+        return Row(
+          children: const [
+            Icon(Icons.info_outline),
+            SizedBox(width: 8),
+            Expanded(child: Text('This question type is not yet supported in this view.')),
+          ],
+        );
     }
   }
 
   Widget _buildMCQContent(BuildContext context) {
-    final options = question.markscheme != null 
-        ? (question.markscheme!.isEmpty 
-            ? ['Option 1', 'Option 2', 'Option 3', 'Option 4'] 
-            : question.markscheme!.split(','))
+    final options = widget.question.options.isNotEmpty
+        ? widget.question.options
         : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
 
     return SingleAnswerWidget(
-      questionText: question.text,
-      options: options.take(4).toList(),
-      correctAnswer: question.markscheme,
-      selectedAnswer: currentAnswer,
-      isSubmitted: isSubmitted,
-      isFeedbackVisible: isFeedbackVisible,
+      options: options,
+      correctAnswer: _getCorrectAnswer(),
+      selectedAnswer: _localAnswer,
+      isSubmitted: widget.isSubmitted,
+      isFeedbackVisible: widget.isFeedbackVisible,
       onAnswerSelected: (answer) {
-        // Store selected answer
+        _updateAnswer(answer);
       },
+    );
+  }
+
+  Widget _buildMultiChoiceContent(BuildContext context) {
+    final options = widget.question.options.isNotEmpty
+        ? widget.question.options
+        : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...options.map((option) {
+          final selected = _multiSelected.contains(option);
+          return CheckboxListTile(
+            value: selected,
+            onChanged: widget.isSubmitted
+                ? null
+                : (value) {
+                    setState(() {
+                      if (value ?? false) {
+                        _multiSelected.add(option);
+                      } else {
+                        _multiSelected.remove(option);
+                      }
+                      _localAnswer = _multiSelected.join('||');
+                    });
+                    widget.onAnswerChanged?.call(_localAnswer);
+                  },
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            title: Text(option),
+          );
+        }),
+      ],
     );
   }
 
   Widget _buildTextAnswerContent(BuildContext context) {
     return TextField(
+      controller: _textController,
       maxLines: 3,
       decoration: InputDecoration(
         hintText: 'Type your answer here...',
@@ -157,13 +269,14 @@ class QuestionCardWidget extends StatelessWidget {
         fillColor: Colors.grey.shade50,
       ),
       onChanged: (value) {
-        // Handle text answer
+        _updateAnswer(value.trim().isEmpty ? null : value);
       },
     );
   }
 
   Widget _buildEssayContent(BuildContext context) {
     return TextField(
+      controller: _essayController,
       maxLines: 10,
       decoration: InputDecoration(
         hintText: 'Write your essay answer...',
@@ -171,19 +284,51 @@ class QuestionCardWidget extends StatelessWidget {
         filled: true,
         fillColor: Colors.grey.shade50,
       ),
+      onChanged: (value) {
+        _updateAnswer(value.trim().isEmpty ? null : value);
+      },
     );
   }
 
   Widget _buildCanvasContent(BuildContext context) {
     return CanvasDrawingWidget(
       onDrawingComplete: (data) {
-        // Handle canvas drawing completion
+        _updateAnswer(base64Encode(data));
       },
     );
   }
 
+  String? _getCorrectAnswer() {
+    return widget.question.correctAnswer ?? widget.question.markscheme;
+  }
+
+  bool _isCurrentAnswerCorrect() {
+    final correct = _getCorrectAnswer();
+    if (correct == null || _localAnswer == null) return false;
+    if (widget.question.type == QuestionType.multiChoice) {
+      final selected = _localAnswer!
+          .split('||')
+          .map((e) => e.trim().toLowerCase())
+          .where((e) => e.isNotEmpty)
+          .toSet();
+      final expected = correct
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .where((e) => e.isNotEmpty)
+          .toSet();
+      return selected.length == expected.length && selected.containsAll(expected);
+    }
+    return _localAnswer!.trim().toLowerCase() == correct.trim().toLowerCase();
+  }
+
+  bool get _canSubmit {
+    final answer = _localAnswer;
+    if (answer == null) return false;
+    return answer.trim().isNotEmpty;
+  }
+
   String _getTypeLabel() {
-    switch (question.type) {
+    switch (widget.question.type) {
       case QuestionType.singleChoice:
         return 'Multiple Choice';
       case QuestionType.multiChoice:
@@ -206,7 +351,7 @@ class QuestionCardWidget extends StatelessWidget {
   }
 
   Color _getTypeColor() {
-    switch (question.type) {
+    switch (widget.question.type) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
         return Colors.blue.shade100;
@@ -224,7 +369,7 @@ class QuestionCardWidget extends StatelessWidget {
   }
 
   Color _getDifficultyColor() {
-    switch (question.difficulty) {
+    switch (widget.question.difficulty) {
       case 1:
         return Colors.green.shade100;
       case 2:
@@ -233,6 +378,19 @@ class QuestionCardWidget extends StatelessWidget {
         return Colors.red.shade100;
       default:
         return Colors.grey.shade100;
+    }
+  }
+
+  String _difficultyLabel(int value) {
+    switch (value) {
+      case 1:
+        return 'Easy';
+      case 2:
+        return 'Medium';
+      case 3:
+        return 'Hard';
+      default:
+        return value.toString();
     }
   }
 }

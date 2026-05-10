@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 class MathExpressionWidget extends StatelessWidget {
   final String expression;
   final bool isSolution;
+  final bool showPrefix;
 
   const MathExpressionWidget({
     super.key,
     required this.expression,
     this.isSolution = false,
+    this.showPrefix = false,
   });
 
   @override
@@ -38,14 +40,21 @@ class MathExpressionWidget extends StatelessWidget {
   }
 
   List<TextSpan> _styleMathExpression(String expression) {
-    // Basic formatting for common math symbols
-    // This is a simplified version - production would parse MathJax/Typst
-    
-    return expression.split(' ').map((word) {
-      if (word.contains(r'\\(') || word.contains(r'\\)') || 
-          word.contains('\$') || word.contains(r'\\\\[') || word.contains(r'\\\\]')) {
+    final tokenRegex = RegExp(r'(\\\(|\\\)|\\\[|\\\]|\$|\s+|[+\-*/=><^()])');
+    final parts = expression.splitMapJoin(
+      tokenRegex,
+      onMatch: (m) => '\u0000${m.group(0)}\u0000',
+      onNonMatch: (n) => n,
+    ).split('\u0000').where((e) => e.isNotEmpty);
+
+    return parts.map((token) {
+      if (RegExp(r'^\s+$').hasMatch(token)) {
+        return TextSpan(text: token);
+      }
+
+      if (token == r'\(' || token == r'\)' || token == r'\[' || token == r'\]' || token == r'$') {
         return TextSpan(
-          text: word,
+          text: token,
           style: const TextStyle(
             fontFamily: 'monospace',
             fontSize: 16,
@@ -54,11 +63,9 @@ class MathExpressionWidget extends StatelessWidget {
         );
       }
       
-      if (word.contains('+') || word.contains('-') || 
-          word.contains('*') || word.contains('/') ||
-          word.contains('=') || word.contains('>')) {
+      if (RegExp(r'^[+\-*/=><^()]$').hasMatch(token)) {
         return TextSpan(
-          text: word,
+          text: token,
           style: const TextStyle(
             color: Colors.blue,
             fontSize: 16,
@@ -67,16 +74,16 @@ class MathExpressionWidget extends StatelessWidget {
         );
       }
       
-      if (word.contains('.')) {
+      if (RegExp(r'^[a-zA-Z]+$').hasMatch(token)) {
         return TextSpan(
-          text: word,
+          text: token,
           style: const TextStyle(
             fontStyle: FontStyle.italic,
           ),
         );
       }
       
-      return TextSpan(text: word);
+      return TextSpan(text: token);
     }).toList();
   }
 
@@ -85,10 +92,11 @@ class MathExpressionWidget extends StatelessWidget {
       text: TextSpan(
         style: DefaultTextStyle.of(context).style,
         children: [
-          const TextSpan(
-            text: 'Expression: ',
-            style: TextStyle(fontStyle: FontStyle.italic),
-          ),
+          if (showPrefix)
+            const TextSpan(
+              text: 'Expression: ',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
           ...spans,
         ],
       ),
@@ -117,7 +125,9 @@ class FormulaWidget extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Text(
-        formula,
+        variable == null || variable!.trim().isEmpty
+            ? formula
+            : '$variable = $formula',
         style: const TextStyle(
           fontFamily: 'monospace',
           fontSize: 16,
