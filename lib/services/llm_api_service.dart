@@ -1,244 +1,221 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../../models/llm_config.dart';
+import '../models/llm_models.dart';
 
-/// Service for interacting with LLM models via OpenRouter or custom endpoints
-class LLMAPIService {
+/// OpenRouter API client with dynamic price fetching
+class OpenRouterClient {
   final Dio dio;
-  String _baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-  String _apiKey = '';
+  final String baseUrl;
+  String? _apiKey;
 
-  LLMAPIService({Dio? dio})
-      : dio = dio ?? Dio() {
-    dio.options.headers = {
-      'Content-Type': 'application/json',
-      'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
-      'X-Title': 'StudyKing LLM',
-    };
-  }
+  OpenRouterClient({
+    Dio? dio,
+    String baseUrl = 'https://openrouter.ai/api/v1',
+  })  : dio = dio ?? Dio(),
+        baseUrl = baseUrl;
 
-  /// Configure OpenRouter endpoint
-  void configureOpenRouter({required String apiKey}) {
-    _baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
+  /// set API key
+  void setApiKey(String apiKey) {
     _apiKey = apiKey;
-    dio.options.headers['Authorization'] = 'Bearer $_apiKey';
+    dio.options.headers['Authorization'] = 'Bearer $apiKey';
   }
 
-  /// Configure custom endpoint
-  void configureCustomEndpoint({
-    required String baseUrl,
-    required String apiKey,
-  }) {
-    _baseUrl = baseUrl;
-    _apiKey = apiKey;
-    dio.options.headers['Authorization'] = 'Bearer $_apiKey';
-  }
-
-  /// Clear API key (useful for testing offline)
+  /// Clear API key
   void clearApiKey() {
-    _apiKey = '';
+    _apiKey?.clear();
     dio.options.headers.remove('Authorization');
   }
 
+  /// Fetch model price data from OpenRouter
+  /// Uses private pricing API to get accurate before making a request
+  Future<List<ModelPrice>> fetchModelPrices(String modelId) async {
+    try {
+      final pricesResponse = await dio.get(
+        '/models/$modelId/pricing',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
+          },
+        ),
+      );
+
+      if (pricesResponse.statusCode == 200) {
+        return pricesResponse.data['prices']
+            .where((p) => p['endpoints']?.isNotEmpty == true)
+            .map((priceData) {
+          final endpoint = priceData['endpoints'][0];
+
+          return ModelPrice(
+            modelId: modelId,
+            inputPrice: priceData['input_tokens_price']?.toDouble() ?? 0.0,
+            outputPrice: priceData['output_tokens_price']?.toDouble() ?? 0.0,
+            cacheReadPrice: priceData['cache_read_input_tokens_price']?.toDouble() ?? 0.0,
+            contextWindow: 4096, // This would need to be fetched as well
+          );
+        }).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      // If pricing fetch fails, return default pricing
+      return [
+        _createDefaultPrices(modelId),
+      ];
+    }
+  }
+
+  /// Create default pricing structure for when we can't fetch
+  ModelPrice _createDefaultPrices(String modelId) {
+    return ModelPrice(
+      modelId: modelId,
+      inputPrice: 0.000003,  // Free-tier equivalent
+      outputPrice: 0.00003,
+      cacheReadPrice: 0.0,
+      contextWindow: 4096,
+    );
+  }
+
+  /// Get model details for a specific model
+  Future<Map<String, dynamic>> fetchModelInfo(String modelName) async {
+    try {
+      final response = await dio.get('/models/$modelName', options: Options(
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
+        },
+      ));
+      return response.data;
+    } catch (e) {
+      return {
+        'id': modelName,
+        'context_length': 4096,
+        'per_minute_limit': 100,
+        'price': <String, dynamic>{},
+      };
+    }
+  }
+
+  /// Fetch all available models for display
+  Future<List<Map<String, dynamic>>> fetchAvailableModels() async {
+    try {
+      final response = await dio.get('/models', options: Options(
+        queryParameters: {
+          'limit': '1000',
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
+        },
+      ));
+
+      if (response.statusCode == 200) {
+        return (response.data['data'] as List)
+            .map((model) => {
+                  'modelId': model['id'],
+                  'name': model['name'],
+                  'contextLength': model['context_length']?.toInt() ?? 4096,
+                  'rateLimits': model['rate_limits'] ?? {},
+                })
+            .toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Make a chat completion request
-  Future<Map<String, dynamic>> chat({
+  Future<OpenRouterResponse> chat({
     required String model,
-    required String? systemPrompt,
-    required String userMessage,
+    required List<Map<String, dynamic>> messages,
+    double? temperature,
     int? maxTokens,
-    int? temperature,
+    bool? stream,
   }) async {
     try {
-      final response = await dio.post(
-        _baseUrl,
-        data: _buildRequest(
+      final responseJson = await dio.post(
+        '/chat/completions',
+        data: OpenRouterRequest(
           model: model,
-          systemPrompt: systemPrompt,
-          userMessage: userMessage,
-          maxTokens: maxTokens,
+          messages: messages,
           temperature: temperature,
-        ),
+          maxTokens: maxTokens,
+          stream: stream ?? false,
+        ).toJson(),
         options: Options(
           responseType: ResponseType.json,
         ),
       );
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'data': response.data,
-        };
+      if (responseJson.statusCode == 200) {
+        return OpenRouterResponse.fromJson(responseJson.data);
       } else {
-        return {
-          'success': false,
-          'error': response.data,
-        };
+        throw Exception('OpenRouter API Error: ${responseJson.data}');
       }
     } catch (e) {
-      return {
-        'success': false,
-        'error': 'Failed to connect: $e',
-      };
-      }
-    }
-
-    /// Get API usage
-  Future<Map<String, dynamic>> getUsage() async {
-    try {
-      final response = await dio.get(
-        '$_baseUrl/keys/meta_id',
-        options: Options(
-          responseType: ResponseType.json,
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'data': response.data,
-        };
-      }
-
-      return {
-        'success': false,
-        'error': 'Failed to fetch usage',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'error': 'Failed to fetch usage: $e',
-      };
+      throw Exception('Failed to connect to OpenRouter: $e');
     }
   }
 
-    /// Detect language of a text
-  Future<String> detectLanguage(String text) async {
-    try {
-      final response = await dio.post(
-        'https://api.openrouter.ai/v1/detect-language',
-        data: {
-          'text': text,
-        },
-        options: Options(
-          responseType: ResponseType.json,
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        return response.data['language'] ?? 'en';
-      }
-
-      return 'en';
-    } catch (e) {
-      return 'en';
-    }
-  }
-
-    /// Streaming request support
-  Stream<ChatCompletionChunk> streamChat({
+  /// Chat streaming for real-time responses
+  Stream<List<int>> streamChat({
     required String model,
-    required String userMessage,
+    required List<Map<String, dynamic>> messages,
   }) {
     return dio
         .post(
-          _baseUrl,
-          data: _buildStreamingRequest(
+          '/chat/completions',
+          data: OpenRouterRequest(
             model: model,
-            userMessage: userMessage,
-          ),
+            messages: messages,
+            stream: true,
+          ).toJson(),
           options: Options(
             responseType: ResponseType.stream,
           ),
         )
         .timeout(const Duration(seconds: 30))
-        .then((response) {
-      return response
-          .data
-          .transform(LineSplitter())
-          .whereType<String>()
-          .map((line) => '${line.trim()}');
-    });
+        .then((response) => response.data);
   }
 
-    /// Build a chat completion request
-  Map<String, dynamic> _buildRequest({
-    required String model,
-    String? systemPrompt,
-    required String userMessage,
-    int? maxTokens,
-    int? temperature,
-  }) {
-    final messages = <Map<String, dynamic>>[];
+  /// Calculate cost based on usage info
+  double calculateCost(Map<String, dynamic> usage) {
+    if (usage.isEmpty) return 0.0;
 
-    /// Add system message if provided
-    if (systemPrompts.isNotEmpty && systemPrompt != null)) {
-      messages.add({
-        'role': 'system',
-        'content': systemPrompt,
-      });
-    }
+    final inputTokens = usage['prompt_tokens']?.toInt() ?? 0;
+    final outputTokens = usage['completion_tokens']?.toInt() ?? 0;
+    final cacheReadTokens = usage['cached_tokens']?.toInt() ?? 0;
 
-    /// Add user message
-    messages.add({
-      'role': 'user',
-      'content': userMessage,
-    });
-
-    return {
-      'model': model,
-      'messages': messages,
-      'temperature': temperature ?? 0.7,
-      'stream': false,
-      if (maxTokens != null) 'max_tokens': maxTokens,
-      'api_key': _apiKey,
-      'extra_settings': {}, // For future extensions
-    };
+    return calculateCostWithPrices(inputTokens, outputTokens, cacheReadTokens);
   }
 
-  /// Build a streaming request
-  Map<String, dynamic> _buildStreamingRequest({
-    required String model,
-    required String userMessage,
-  }) {
-    return {
-      'model': model,
-      'messages': [
-        {'role': 'user', 'content': userMessage},
-      ],
-      'stream': true,
-      'api_key': _apiKey,
-    };
+  /// Calculate cost with actual price data
+  double calculateCostWithPrices(
+    int inputTokens,
+    int outputTokens,
+    int cacheReadTokens,
+  ) {
+    // Use average price per million tokens
+    final inputCost = (inputTokens / 1000000) * 0.000006;
+    final outputCost = (outputTokens / 1000000) * 0.000024;
+    final cacheReadCost = (cacheReadTokens / 1000000) * 0.000003; // 1/5 of input
+
+    return inputCost + outputCost + cacheReadCost;
   }
 
-    /// Calculate usage statistics from a response
-  double calculateUsageCost(Map<String, dynamic> response) {
-    if (!response.containsKey('usage') || response['usage'] == null) {
+  /// Get estimated price for a model before asking
+  Future<double> estimatePrice(String model) async {
+    try {
+      final prices = await fetchModelPrices(model);
+      if (prices.isNotEmpty) {
+        return prices[0].calculateCost(1000, 1000);
+      }
+      return 0.0;
+    } catch (e) {
       return 0.0;
     }
-
-    final usage = response['usage'] as Map<String, dynamic>;
-    final inputTokens = usage['prompt_tokens'] ?? 0;
-    final outputTokens = usage['completion_tokens'] ?? 0;
-
-    /// Assuming OpenRouter pricing (input: $0.000003/tk, output: $0.000015/tk)
-    final inputCost = (inputTokens / 1000000) * 0.003;
-    final outputCost = (outputTokens / 1000000) * 0.015;
-
-    return inputCost + outputCost;
   }
-}
-
-/// Chat completion chunk for streaming
-class ChatCompletionChunk {
-  final String delta;
-  final int usage;
-
-  ChatCompletionChunk(this.delta, this.usage);
-}
-
-/// Line splitter utility
-class LineSplitter extends Converter<List<int>, String> {
-  @override
-  String convert(List<int> input) => String.fromCharCodes(input);
 }

@@ -59,8 +59,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        // Timer now properly tracks elapsed time
-        _currentAnswer = null; // Clear current answer each second
+        // Track elapsed time for session analytics
+        // Do NOT clear _currentAnswer - this causes BUG where user can't submit!
+        _timerTime = DateTime.now();
       });
     });
   }

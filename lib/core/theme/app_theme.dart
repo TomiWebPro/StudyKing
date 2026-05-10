@@ -4,7 +4,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: false,
-      useLegacyAccentTile: false,
+      // useLegacyAccentTile: false, // DEPRECATED - removed
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -52,7 +52,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: false,
-      useLegacyAccentTile: false,
+      // useLegacyAccentTile: false, // DEPRECATED - removed
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
