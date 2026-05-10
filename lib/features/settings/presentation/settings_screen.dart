@@ -1,380 +1,191 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/main.dart' show settingsProvider, apiKeyProvider, apiBaseUrlProvider, selectedModelProvider;
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/main.dart'
+    show apiBaseUrlProvider, apiKeyProvider, selectedModelProvider, settingsProvider;
 
-class SettingsScreen extends ConsumerWidget {
+const String _defaultReferer = 'https://studyking.app';
+
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch settings from provider
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final TextEditingController _modelSearchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _modelSearchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final apiKey = ref.watch(apiKeyProvider);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _buildSection(
-            context: context,
-            title: 'User Management',
-            icon: Icons.person,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.account_circle),
-                title: const Text('Current User'),
-                subtitle: const Text('Manage your profile'),
-                onTap: () => Navigator.pushNamed(context, '/profile'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.switch_account),
-                title: const Text('Switch User'),
-                subtitle: const Text('Single user mode'),
-                onTap: () => _showUserSelection(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'Appearance',
-            icon: Icons.palette,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.dark_mode),
-                title: const Text('Theme'),
-                subtitle: Text(_getThemeLabel(settings.themeModeEnum)),
-                onTap: () =>      _showThemeDialog(context, settings.themeModeEnum, ref),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.text_fields),
-                title: const Text('Font Size'),
-                subtitle: Text(_getFontSizeLabel(settings.fontSize)),
-                onTap: () => _showFontSizeDialog(context, settings.fontSize, ref),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'AI Configuration',
-            icon: Icons.settings,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.key),
-                title: const Text('API Keys'),
-                subtitle: Text(apiKey.isNotEmpty ? 'Configured' : 'Not configured'),
-                onTap: () => Navigator.pushNamed(context, '/api-config'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.chat),
-                title: const Text('AI Model'),
-                subtitle: Text(_getAiModelLabel(settings.selectedModel)),
-                onTap: () => _showAiModelSelection(context, settings.selectedModel, apiKey, ref),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.bolt),
-                title: const Text('Request Timeout'),
-                subtitle: const Text('120 seconds'),
-                onTap: () => _showTimeoutDialog(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'Study Preferences',
-            icon: Icons.school,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.notifications),
-                title: const Text('Study Reminders'),
-                subtitle: const Text('Enable notification alerts'),
-                trailing: Switch(value: true, onChanged: (value) {}),
-              ),
-              ListTile(
-                leading: const Icon(Icons.timer),
-                title: const Text('Session Duration'),
-                subtitle: const Text('Default 30 minutes'),
-                onTap: () => _showSessionDurationDialog(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'Study Analytics',
-            icon: Icons.bar_chart,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.show_chart),
-                title: const Text('Total Study Sessions'),
-                subtitle: Text('${settings.totalSessionCount} sessions'),
-                onTap: () => _showAnalytics(context, settings),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.access_time),
-                title: const Text('Total Study Time'),
-                subtitle: Text(formatDuration(Duration(milliseconds: settings.totalStudyTimeMs), showDays: true)),
-                onTap: null,
-              ),
-              ListTile(
-                leading: const Icon(Icons.quiz),
-                title: const Text('Questions Answered'),
-                subtitle: Text('${settings.totalQuestions} questions'),
-                onTap: null,
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'Data & Backup',
-            icon: Icons.storage,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.download),
-                title: const Text('Export Progress'),
-                subtitle: const Text('Download study history'),
-                onTap: () => _exportData(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.clear),
-                title: const Text('Clear Cache'),
-                subtitle: const Text('Free up storage space'),
-                onTap: () => _clearCache(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-            ],
-          ),
-          const Divider(height: 1),
-          _buildSection(
-            context: context,
-            title: 'About',
-            icon: Icons.info_outline,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.info),
-                title: const Text('About StudyKing'),
-                subtitle: const Text('Version 0.1.0'),
-                onTap: () => _showAboutDialog(context),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.security),
-                title: const Text('Privacy Policy'),
-                subtitle: const Text('Read our privacy policy'),
-                onTap: () => _showComingSoon(context, 'Privacy policy details coming soon'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-                onTap: () => _showSignOutDialog(context),
-                trailing: null,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          _section('User Management', [
+            _tile('Current User', 'Manage your profile', Icons.account_circle,
+                () => Navigator.pushNamed(context, '/profile')),
+          ]),
+          _section('Appearance', [
+            _tile('Theme', _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
+                () => _showThemeDialog(settings.themeModeEnum)),
+            _tile('Font Size', _getFontSizeLabel(settings.fontSize), Icons.text_fields,
+                () => _showFontSizeDialog(settings.fontSize)),
+          ]),
+          _section('AI Configuration', [
+            _tile('API Keys', apiKey.isNotEmpty ? 'Configured' : 'Not configured',
+                Icons.key, () => Navigator.pushNamed(context, '/api-config')),
+            _tile('AI Model', _getAiModelLabel(settings.selectedModel), Icons.chat,
+                () => _showAiModelSelection(settings.selectedModel, apiKey)),
+            _tile('Request Timeout', '${settings.requestTimeoutSeconds} seconds',
+                Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
+          ]),
+          _section('Study Preferences', [
+            SwitchListTile(
+              secondary: const Icon(Icons.notifications),
+              title: const Text('Study Reminders'),
+              subtitle: const Text('Enable notification alerts'),
+              value: settings.studyRemindersEnabled,
+              onChanged: (value) =>
+                  ref.read(settingsProvider.notifier).updateStudyReminders(value),
+            ),
+            _tile('Session Duration', '${settings.sessionDurationMinutes} minutes',
+                Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
+          ]),
+          _section('Study Analytics', [
+            _tile('Total Study Sessions', '${settings.totalSessionCount} sessions',
+                Icons.show_chart, () => _showAnalytics(settings)),
+            ListTile(
+              leading: const Icon(Icons.access_time),
+              title: const Text('Total Study Time'),
+              subtitle: Text(formatDuration(
+                  Duration(milliseconds: settings.totalStudyTimeMs),
+                  showDays: true)),
+            ),
+          ]),
+          _section('About', [
+            _tile('About StudyKing', 'Version 0.1.0', Icons.info,
+                () => _showAboutDialog(context)),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              onTap: _showSignOutDialog,
+            ),
+          ]),
         ],
       ),
     );
   }
 
-  String _getThemeLabel(ThemeMode mode) {
-    if (mode == ThemeMode.light) return 'Light';
-    if (mode == ThemeMode.dark) return 'Dark';
-    return 'System';
-  }
+  Widget _section(String title, List<Widget> children) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 8),
+            child: Text(title,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          ...children,
+          const Divider(height: 1),
+        ],
+      );
 
-  String _getFontSizeLabel(double fontSize) {
-    if (fontSize < 14) return 'Small';
-    if (fontSize < 17) return 'Medium';
-    if (fontSize < 23) return 'Large';
-    return 'Extra Large';
-  }
+  Widget _tile(String title, String subtitle, IconData icon, VoidCallback onTap) =>
+      ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: onTap,
+      );
 
+  String _getThemeLabel(ThemeMode mode) =>
+      mode == ThemeMode.light ? 'Light' : mode == ThemeMode.dark ? 'Dark' : 'System';
+  String _getFontSizeLabel(double size) =>
+      size < 14 ? 'Small' : size < 17 ? 'Medium' : size < 23 ? 'Large' : 'Extra Large';
   String _getAiModelLabel(String model) {
-    // Display the model ID directly if set, otherwise show default
-    if (model.isEmpty) {
-      return 'Select a model from API';
-    }
-    // Extract friendly name from model ID (e.g., "anthropic/claude-3-haiku" -> "Claude 3 Haiku")
+    if (model.isEmpty) return 'Select a model from API';
     final parts = model.split('/');
-    if (parts.length >= 2) {
-      final name = parts.last.replaceAll('-', ' ').replaceAll('_', ' ');
-      return name[0].toUpperCase() + name.substring(1);
-    }
-    return model;
+    if (parts.length < 2) return model;
+    final name = parts.last.replaceAll('-', ' ').replaceAll('_', ' ').trim();
+    if (name.isEmpty) return model;
+    return name[0].toUpperCase() + name.substring(1);
   }
 
-  Widget _buildSection({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+  void _showThemeDialog(ThemeMode currentMode) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          title: const Text('Light'),
+          selected: currentMode == ThemeMode.light,
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
+            Navigator.pop(context);
+          },
         ),
-        ...children,
-      ],
+        ListTile(
+          title: const Text('Dark'),
+          selected: currentMode == ThemeMode.dark,
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
+            Navigator.pop(context);
+          },
+        ),
+      ]),
     );
   }
 
-  void _showThemeDialog(BuildContext context, ThemeMode currentMode, WidgetRef ref) {
-    showModalBottomSheet(
+  void _showFontSizeDialog(double currentSize) {
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.35,
-        minChildSize: 0.3,
-        maxChildSize: 0.5,
-        builder: (context, scrollController) => SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Choose Theme', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              _ThemeOption(
-                context: context, 
-                title: 'Light', 
-                icon: Icons.light_mode, 
-                isSelected: currentMode == ThemeMode.light, 
-                onTap: () {
-                  ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
-                  Navigator.pop(context);
-                }
-              ),
-              const SizedBox(height: 8),
-              _ThemeOption(
-                context: context, 
-                title: 'Dark', 
-                icon: Icons.dark_mode, 
-                isSelected: currentMode == ThemeMode.dark, 
-                onTap: () {
-                  ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
-                  Navigator.pop(context);
-                },
-              ),
-              const SizedBox(height: 8),
-              _ThemeOption(
-                context: context, 
-                title: 'System', 
-                icon: Icons.devices, 
-                isSelected: currentMode == ThemeMode.system, 
-                onTap: () {
-                  ref.read(settingsProvider.notifier).updateTheme(ThemeMode.system);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Font Size'),
+        content: StatefulBuilder(builder: (context, setInnerState) {
+          double localSize = currentSize;
+          return Slider(
+            value: localSize,
+            min: 10,
+            max: 30,
+            divisions: 20,
+            onChanged: (value) {
+              final validSize = value.clamp(10.0, 30.0).toDouble();
+              setInnerState(() => localSize = validSize);
+              ref.read(settingsProvider.notifier).updateFontSize(validSize);
+            },
+          );
+        }),
       ),
     );
   }
 
-  void _showFontSizeDialog(BuildContext context, double currentSize, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Font Size', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text('Current: ${currentSize.round()}px', style: const TextStyle(color: Colors.grey)),
-              const SizedBox(height: 24),
-              Slider(
-                value: currentSize, 
-                min: 10.0, 
-                max: 30.0, 
-                divisions: 20, 
-                label: '${currentSize.round()}px', 
-                onChanged: (value) {
-                  // Validate font size range (10-30)
-                  final validSize = value.clamp(10.0, 30.0);
-                  ref.read(settingsProvider.notifier).updateFontSize(validSize);
-                }
-              ),
-              const SizedBox(height: 24),
-              ...List.generate(21, (i) {
-                final size = 10 + i;
-                return _FontSizeOption(
-                  context: context, 
-                  value: '${size}px', 
-                  isSelected: size == currentSize.round(),
-                  onTap: () {
-                    ref.read(settingsProvider.notifier).updateFontSize(size.toDouble());
-                    Navigator.pop(context);
-                  }
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showAiModelSelection(BuildContext context, String currentModel, String apiKey, WidgetRef ref) async {
+  Future<void> _showAiModelSelection(String currentModel, String apiKey) async {
     if (apiKey.isEmpty) {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('API Key Required'),
-          content: const Text('Please configure your API key first before selecting a model.'),
+          content: const Text('Please configure your API key first.'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pushNamed(context, '/api-config');
               },
               child: const Text('OK'),
             ),
@@ -391,345 +202,193 @@ class SettingsScreen extends ConsumerWidget {
     );
 
     try {
-      final response = await http.get(
-        Uri.parse('${ref.read(apiBaseUrlProvider)}/models'), 
-        headers: {
-          'Authorization': 'Bearer $apiKey', 
-          'HTTP-Referer': 'https://studyking.app'
-        },
-      );
+      final response = await http
+          .get(
+            Uri.parse('${ref.read(apiBaseUrlProvider)}/models'),
+            headers: {
+              'Authorization': 'Bearer $apiKey',
+              'HTTP-Referer': _defaultReferer,
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+      if (Navigator.canPop(context)) Navigator.pop(context);
 
-      if (!context.mounted) return;
-      Navigator.pop(context);
-
-      if (!context.mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final models = data['data'] as List<dynamic>;
-
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          isScrollControlled: true,
-          builder: (_) => Column(children: [
-            Container(
-              padding: const EdgeInsets.all(20), 
-              color: Theme.of(context).colorScheme.primary, 
-              child: Row(children: [
-                const Icon(Icons.smart_toy, color: Colors.white),
-                const SizedBox(width: 12),
-                const Text('Select AI Model', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white), 
-                  onPressed: () => _showAiModelSelection(context, currentModel, apiKey, ref),
-                ),
-              ])),
-            Expanded(
-              child: ListView.builder(
-                itemCount: models.length, 
-                itemBuilder: (context, index) {
-                  final modelData = models[index];
-                  final id = modelData['id'] as String;
-                  final name = (modelData['name'] as String?) ?? id.split('/').last.replaceAll(':', '').replaceAll('-', ' ');
-                  final provider = (modelData['providers'] as Map?)?.values.first['id'] as String? ?? 'Unknown';
-                  return ListTile(
-                    leading: const Icon(Icons.smart_toy),
-                    title: Text(name),
-                    subtitle: Text(provider),
-                    trailing: id == currentModel ? const Icon(Icons.check_circle, color: Colors.green) : null,
-                    onTap: () {
-                      ref.read(settingsProvider.notifier).updateModel(id);
-                      ref.read(selectedModelProvider.notifier).state = id;
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ]),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load models: ${response.statusCode}'))
-        );
+      if (response.statusCode != 200) {
+        _showError('Unable to load models right now.');
+        return;
       }
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'))
+
+      final models = _parseModels(response.body);
+      final filtered = models.take(100).toList();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => Column(children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _modelSearchController,
+              decoration: const InputDecoration(
+                  hintText: 'Search models', prefixIcon: Icon(Icons.search)),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              children: filtered
+                  .where((m) => m.name
+                      .toLowerCase()
+                      .contains(_modelSearchController.text.toLowerCase()))
+                  .map((m) => ListTile(
+                        title: Text(m.name),
+                        subtitle: Text(m.provider),
+                        trailing: m.id == currentModel
+                            ? const Icon(Icons.check_circle, color: Colors.green)
+                            : null,
+                        onTap: () {
+                          ref.read(settingsProvider.notifier).updateModel(m.id);
+                          ref.read(selectedModelProvider.notifier).state = m.id;
+                          Navigator.pop(context);
+                        },
+                      ))
+                  .toList(),
+            ),
+          ),
+        ]),
       );
+    } on TimeoutException {
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      _showError('Model request timed out. Please try again.');
+    } catch (_) {
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      _showError('Unable to load models. Please try again.');
     }
   }
 
-  void _showTimeoutDialog(BuildContext context) {
+  List<_AiModel> _parseModels(String responseBody) {
+    final decoded = json.decode(responseBody);
+    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    if (data is! List) return [];
+    return data.whereType<Map>().map((raw) {
+      final map = raw.cast<dynamic, dynamic>();
+      final id = map['id'] is String ? map['id'] as String : 'unknown-model';
+      final name = map['name'] is String
+          ? map['name'] as String
+          : id.split('/').last.replaceAll('-', ' ');
+      String provider = 'Unknown';
+      final providers = map['providers'];
+      if (providers is Map && providers.isNotEmpty) {
+        final first = providers.values.first;
+        if (first is Map && first['id'] is String) {
+          provider = first['id'] as String;
+        }
+      }
+      return _AiModel(id: id, name: name, provider: provider);
+    }).toList();
+  }
+
+  void _showTimeoutDialog(int currentTimeout) {
+    double selected = currentTimeout.toDouble();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Request Timeout'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min, 
-              children: [
-                const Text('Adjust timeout for API requests (seconds):'),
-                const SizedBox(height: 16),
-                Slider(
-                  value: 120.0,
-                  min: 30.0,
-                  max: 300.0,
-                  divisions: 10,
-                  label: '120 sec',
-                  onChanged: (value) {},
-                ),
-              ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('Cancel')
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('Save')
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSessionDurationDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => ListView(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20), 
-            color: Theme.of(context).colorScheme.primaryContainer, 
-            child: const Text(
-              'Session Duration', 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-            )
-          ),
-          ListTile(title: const Text('15 minutes'), onTap: () => Navigator.pop(context)),
-          ListTile(title: const Text('30 minutes'), onTap: () => Navigator.pop(context)),
-          ListTile(title: const Text('45 minutes'), onTap: () => Navigator.pop(context)),
-          ListTile(title: const Text('60 minutes'), onTap: () => Navigator.pop(context)),
-        ],
-      ),
-    );
-  }
-
-  void _showAnalytics(BuildContext context, dynamic settings) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        builder: (_, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Study Analytics', 
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)
-              ),
-              const SizedBox(height: 24),
-              _AnalyticsCard(
-                title: 'Total Study Sessions', 
-                value: '${settings.totalSessionCount} sessions', 
-                icon: Icons.quiz, 
-                color: Colors.blue
-              ),
-              const SizedBox(height: 16),
-              _AnalyticsCard(
-                title: 'Total Study Time', 
-                value: formatDuration(Duration(milliseconds: settings.totalStudyTimeMs), showDays: true), 
-                icon: Icons.access_time, 
-                color: Colors.green
-              ),
-              const SizedBox(height: 16),
-              _AnalyticsCard(
-                title: 'Questions Answered', 
-                value: '${settings.totalQuestions} questions', 
-                icon: Icons.task_alt, 
-                color: Colors.amber
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeOption extends StatelessWidget {
-  final BuildContext context;
-  final String title;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ThemeOption({
-    required this.context, 
-    required this.title, 
-    required this.icon, 
-    required this.isSelected, 
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-          borderRadius: BorderRadius.circular(12),
-          border: isSelected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey),
-            const SizedBox(width: 16),
-            Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
-            if (isSelected) const Icon(Icons.check_circle, color: Colors.green),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => AlertDialog(
+          title: const Text('Request Timeout'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('${selected.round()} seconds'),
+            Slider(
+              value: selected,
+              min: 30,
+              max: 300,
+              divisions: 27,
+              onChanged: (value) => setInnerState(() => selected = value),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                ref
+                    .read(settingsProvider.notifier)
+                    .updateRequestTimeout(selected.round());
+                Navigator.pop(ctx);
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
-class _FontSizeOption extends StatelessWidget {
-  final BuildContext context;
-  final String value;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FontSizeOption({
-    required this.context, 
-    required this.value, 
-    required this.isSelected, 
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(Icons.text_fields, color: isSelected ? Theme.of(context).colorScheme.primary : null),
-      title: Text(value),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
-      onTap: onTap,
+  void _showSessionDurationDialog(int currentMinutes) {
+    final options = [15, 30, 45, 60, 90];
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        children: options
+            .map((m) => ListTile(
+                  title: Text('$m minutes'),
+                  trailing: m == currentMinutes
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).updateSessionDuration(m);
+                    Navigator.pop(context);
+                  },
+                ))
+            .toList(),
+      ),
     );
   }
-}
 
-class _AnalyticsCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _AnalyticsCard({
-    required this.title, 
-    required this.value, 
-    required this.icon, 
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor, 
-        borderRadius: BorderRadius.circular(12)
+  void _showAnalytics(SettingsBox settings) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(title: const Text('Sessions'), subtitle: Text('${settings.totalSessionCount}')),
+          ListTile(title: const Text('Questions'), subtitle: Text('${settings.totalQuestions}')),
+        ]),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                const SizedBox(height: 4),
-                Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: color)),
-              ],
-            ),
+    );
+  }
+
+  void _showSignOutDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              ref.read(apiKeyProvider.notifier).state = '';
+              ref.read(selectedModelProvider.notifier).state = '';
+              ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
+              Navigator.pop(context);
+            },
+            child: const Text('Sign Out'),
           ),
         ],
       ),
     );
   }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
-// Helper functions
-void _exportData(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Export Progress'),
-      content: const Column(
-        mainAxisSize: MainAxisSize.min, 
-        children: [
-          Icon(Icons.file_download, size: 48, color: Colors.blue),
-          SizedBox(height: 16),
-          Text('Exporting study data...'),
-          SizedBox(height: 16),
-          LinearProgressIndicator(),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), 
-          child: const Text('Cancel')
-        ),
-        FilledButton(
-          onPressed: () { 
-            Navigator.pop(context); 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Exported successfully!'))
-            ); 
-          }, 
-          child: const Text('Export'),
-        ),
-      ],
-    ),
-  );
-}
+class _AiModel {
+  final String id;
+  final String name;
+  final String provider;
 
-void _clearCache(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Clear Cache'),
-      content: const Text('Are you sure you want to clear cached data?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), 
-          child: const Text('Cancel')
-        ),
-        FilledButton(
-          onPressed: () { 
-            Navigator.pop(context); 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cache cleared'))
-            ); 
-          }, 
-          child: const Text('Clear'),
-        ),
-      ],
-    ),
-  );
+  const _AiModel({required this.id, required this.name, required this.provider});
 }
 
 void _showAboutDialog(BuildContext context) {
@@ -739,49 +398,6 @@ void _showAboutDialog(BuildContext context) {
       applicationName: 'StudyKing',
       applicationVersion: 'v0.1.0',
       applicationLegalese: '© 2026 StudyKing.',
-    ),
-  );
-}
-
-void _showComingSoon(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-}
-
-void _showSignOutDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Sign Out'),
-      content: const Text('Are you sure you want to sign out?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), 
-          child: const Text('Cancel')
-        ),
-        FilledButton(
-          onPressed: () { 
-            Navigator.pop(context); 
-            // Sign out logic would go here
-          }, 
-          child: const Text('Sign Out'),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showUserSelection(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Switch User'),
-      content: const Text('Single user mode is currently enabled. This feature will support multiple users soon.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context), 
-          child: const Text('OK')
-        ),
-      ],
     ),
   );
 }

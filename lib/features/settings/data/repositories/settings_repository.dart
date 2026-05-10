@@ -10,6 +10,23 @@ class SettingsRepository {
 
   Box? _settingsBox;
   Box? _profileBox;
+  static const String _currentProfileKey = 'current_profile';
+
+  Box _requireSettingsBox() {
+    final box = _settingsBox;
+    if (box == null) {
+      throw StateError('SettingsRepository not initialized');
+    }
+    return box;
+  }
+
+  Box _requireProfileBox() {
+    final box = _profileBox;
+    if (box == null) {
+      throw StateError('SettingsRepository not initialized');
+    }
+    return box;
+  }
 
   Future<void> init() async {
     _settingsBox = await Hive.openBox('settings');
@@ -21,19 +38,7 @@ class SettingsRepository {
     required String service,
     required String key,
   }) async {
-    if (_settingsBox == null) return;
-
-    final box = _settingsBox!;
-    SettingsBox(
-      apiKey: key,
-      apiBaseUrl: box.get('apiBaseUrl', defaultValue: 'https://openrouter.ai/api/v1'),
-      selectedModel: box.get('selectedModel', defaultValue: ''),
-      themeMode: box.get('themeMode', defaultValue: 0),
-      fontSize: box.get('fontSize', defaultValue: 16.0),
-      totalSessionCount: box.get('totalSessionCount', defaultValue: 0),
-      totalStudyTimeMs: box.get('totalStudyTimeMs', defaultValue: 0),
-      totalQuestions: box.get('totalQuestions', defaultValue: 0),
-    );
+    final box = _requireSettingsBox();
 
     // Use service name as a key prefix if needed
     await box.put('apiKey', key);
@@ -44,9 +49,7 @@ class SettingsRepository {
 
   /// Get API key by service
   Future<String?> getApiKey({required String service}) async {
-    if (_settingsBox == null) return null;
-
-    final box = _settingsBox!;
+    final box = _requireSettingsBox();
     
     // Check if this is a service-specific key
     if (service == 'default') {
@@ -58,34 +61,40 @@ class SettingsRepository {
 
   /// Save profile data
   Future<void> saveProfileData(ProfileData profile) async {
-    if (_profileBox == null) return;
-    await _profileBox!.put(profile.id, profile);
+    final box = _requireProfileBox();
+    await box.put(profile.id, profile);
+    await box.put(_currentProfileKey, profile.id);
   }
 
   /// Get profile data
   Future<ProfileData?> getProfileData() async {
-    if (_profileBox == null) return null;
+    final box = _requireProfileBox();
+    final currentId = box.get(_currentProfileKey);
+    if (currentId is String) {
+      final profile = box.get(currentId);
+      if (profile is ProfileData) return profile;
+    }
 
-    // Get the latest profile or use default
-    final box = _profileBox!;
     if (box.keys.isEmpty) {
       return ProfileData(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: 'default_profile',
         name: '',
       );
     }
-    
-    final firstKey = box.keys.first;
-    return box.get(firstKey);
+
+    for (final key in box.keys) {
+      final value = box.get(key);
+      if (value is ProfileData) {
+        await box.put(_currentProfileKey, value.id);
+        return value;
+      }
+    }
+    return null;
   }
 
   /// Get current settings
   Future<SettingsBox> getSettings() async {
-    if (_settingsBox == null) {
-      return SettingsBox();
-    }
-
-    final box = _settingsBox!;
+    final box = _requireSettingsBox();
     
     return SettingsBox(
       apiKey: box.get('apiKey', defaultValue: ''),
@@ -96,6 +105,9 @@ class SettingsRepository {
       totalSessionCount: box.get('totalSessionCount', defaultValue: 0),
       totalStudyTimeMs: box.get('totalStudyTimeMs', defaultValue: 0),
       totalQuestions: box.get('totalQuestions', defaultValue: 0),
+      studyRemindersEnabled: box.get('studyRemindersEnabled', defaultValue: true),
+      requestTimeoutSeconds: box.get('requestTimeoutSeconds', defaultValue: 120),
+      sessionDurationMinutes: box.get('sessionDurationMinutes', defaultValue: 30),
     );
   }
 
@@ -106,10 +118,11 @@ class SettingsRepository {
     String? selectedModel,
     ThemeMode? themeMode,
     double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
   }) async {
-    if (_settingsBox == null) return;
-
-    final box = _settingsBox!;
+    final box = _requireSettingsBox();
     final current = await getSettings();
 
     final updated = SettingsBox(
@@ -121,11 +134,25 @@ class SettingsRepository {
       totalSessionCount: current.totalSessionCount,
       totalStudyTimeMs: current.totalStudyTimeMs,
       totalQuestions: current.totalQuestions,
+      studyRemindersEnabled:
+          studyRemindersEnabled ?? current.studyRemindersEnabled,
+      requestTimeoutSeconds:
+          requestTimeoutSeconds ?? current.requestTimeoutSeconds,
+      sessionDurationMinutes:
+          sessionDurationMinutes ?? current.sessionDurationMinutes,
     );
 
-    // Store updated settings
-    await box.clear();
-    await box.put(0, updated);
+    await box.put('apiKey', updated.apiKey);
+    await box.put('apiBaseUrl', updated.apiBaseUrl);
+    await box.put('selectedModel', updated.selectedModel);
+    await box.put('themeMode', updated.themeMode);
+    await box.put('fontSize', updated.fontSize);
+    await box.put('totalSessionCount', updated.totalSessionCount);
+    await box.put('totalStudyTimeMs', updated.totalStudyTimeMs);
+    await box.put('totalQuestions', updated.totalQuestions);
+    await box.put('studyRemindersEnabled', updated.studyRemindersEnabled);
+    await box.put('requestTimeoutSeconds', updated.requestTimeoutSeconds);
+    await box.put('sessionDurationMinutes', updated.sessionDurationMinutes);
   }
 
   /// Update statistics counters
@@ -134,34 +161,33 @@ class SettingsRepository {
     int? studyTimeMs,
     int? questions,
   }) async {
-    if (_settingsBox == null) return;
-
-    final box = _settingsBox!;
     final current = await getSettings();
-
-    final updated = SettingsBox(
+    await updateSettings(
       apiKey: current.apiKey,
       apiBaseUrl: current.apiBaseUrl,
       selectedModel: current.selectedModel,
-      themeMode: current.themeMode,
+      themeMode: current.themeModeEnum,
       fontSize: current.fontSize,
-      totalSessionCount: sessionCount ?? current.totalSessionCount,
-      totalStudyTimeMs: studyTimeMs ?? current.totalStudyTimeMs,
-      totalQuestions: questions ?? current.totalQuestions,
+      studyRemindersEnabled: current.studyRemindersEnabled,
+      requestTimeoutSeconds: current.requestTimeoutSeconds,
+      sessionDurationMinutes: current.sessionDurationMinutes,
     );
-
-    await box.clear();
-    await box.put(0, updated);
+    final box = _requireSettingsBox();
+    await box.put('totalSessionCount', sessionCount ?? current.totalSessionCount);
+    await box.put('totalStudyTimeMs', studyTimeMs ?? current.totalStudyTimeMs);
+    await box.put('totalQuestions', questions ?? current.totalQuestions);
   }
 
   /// Clear all settings (use with caution)
   Future<void> clearSettings() async {
-    await _settingsBox?.clear();
+    final box = _requireSettingsBox();
+    await box.clear();
   }
 
   /// Clear profile data
   Future<void> clearProfile() async {
-    await _profileBox?.clear();
+    final box = _requireProfileBox();
+    await box.clear();
   }
 
   @override

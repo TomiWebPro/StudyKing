@@ -73,6 +73,9 @@ class SettingsController extends StateNotifier<SettingsBox> {
     String? selectedModel,
     ThemeMode? themeMode,
     double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
   }) async {
     try {
       await _repository.updateSettings(
@@ -81,6 +84,12 @@ class SettingsController extends StateNotifier<SettingsBox> {
         selectedModel: selectedModel ?? state.selectedModel,
         themeMode: themeMode ?? state.themeModeEnum,
         fontSize: fontSize ?? state.fontSize,
+        studyRemindersEnabled:
+            studyRemindersEnabled ?? state.studyRemindersEnabled,
+        requestTimeoutSeconds:
+            requestTimeoutSeconds ?? state.requestTimeoutSeconds,
+        sessionDurationMinutes:
+            sessionDurationMinutes ?? state.sessionDurationMinutes,
       );
       state = await _repository.getSettings();
     } catch (e) {
@@ -122,6 +131,18 @@ class SettingsController extends StateNotifier<SettingsBox> {
     } catch (e) {
       debugPrint('Error updating model: $e');
     }
+  }
+
+  Future<void> updateStudyReminders(bool enabled) async {
+    await updateSettings(studyRemindersEnabled: enabled);
+  }
+
+  Future<void> updateRequestTimeout(int timeoutSeconds) async {
+    await updateSettings(requestTimeoutSeconds: timeoutSeconds);
+  }
+
+  Future<void> updateSessionDuration(int minutes) async {
+    await updateSettings(sessionDurationMinutes: minutes);
   }
 
   Future<void> updateStats({

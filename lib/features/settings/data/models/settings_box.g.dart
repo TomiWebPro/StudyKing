@@ -25,13 +25,16 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       totalSessionCount: fields[5] as int,
       totalStudyTimeMs: fields[6] as int,
       totalQuestions: fields[7] as int,
+      studyRemindersEnabled: fields[8] as bool? ?? true,
+      requestTimeoutSeconds: fields[9] as int? ?? 120,
+      sessionDurationMinutes: fields[10] as int? ?? 30,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -47,7 +50,13 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(6)
       ..write(obj.totalStudyTimeMs)
       ..writeByte(7)
-      ..write(obj.totalQuestions);
+      ..write(obj.totalQuestions)
+      ..writeByte(8)
+      ..write(obj.studyRemindersEnabled)
+      ..writeByte(9)
+      ..write(obj.requestTimeoutSeconds)
+      ..writeByte(10)
+      ..write(obj.sessionDurationMinutes);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../main.dart' show settingsRepository;
 import '../data/models/settings_box.dart';
@@ -18,7 +19,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   String? _avatarIconKey;
   bool _isSaving = false;
-  String _profileId = '';
+  String _profileId = 'default_profile';
+  bool _notificationsEnabled = true;
+  String _language = 'en';
 
   @override
   void initState() {
@@ -40,10 +43,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _studentIdController.text = profileData.studentId ?? '';
           _learningGoalController.text = profileData.learningGoal ?? '';
           _studyTimeController.text = profileData.preferredStudyTime ?? '';
+          _notificationsEnabled = profileData.notificationsEnabled;
+          _language = profileData.language;
         });
       } else if (mounted) {
-        // Create a default profile if none exists
-        _profileId = DateTime.now().millisecondsSinceEpoch.toString();
         setState(() {
           _avatarIconKey = 'Icons.person';
         });
@@ -51,7 +54,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       debugPrint('Error loading profile: $e');
       if (mounted) {
-        _profileId = DateTime.now().millisecondsSinceEpoch.toString();
         setState(() {
           _avatarIconKey = 'Icons.person';
         });
@@ -60,9 +62,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (_nameController.text.trim().isEmpty) {
+    final trimmedName = _nameController.text.trim();
+    final trimmedStudentId = _studentIdController.text.trim();
+    if (trimmedName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Name is required')),
+      );
+      return;
+    }
+    if (trimmedStudentId.isNotEmpty && int.tryParse(trimmedStudentId) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Student ID must be numeric')),
       );
       return;
     }
@@ -73,13 +83,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // Create profile data
       final profileData = ProfileData(
         id: _profileId,
-        name: _nameController.text.trim(),
-        studentId: _studentIdController.text.trim().isEmpty ? null : _studentIdController.text.trim(),
+        name: trimmedName,
+        studentId: trimmedStudentId.isEmpty ? null : trimmedStudentId,
         avatarIcon: _avatarIconKey,
         learningGoal: _learningGoalController.text.trim().isEmpty ? null : _learningGoalController.text.trim(),
         preferredStudyTime: _studyTimeController.text.trim().isEmpty ? null : _studyTimeController.text.trim(),
-        notificationsEnabled: true,
-        language: 'en',
+        notificationsEnabled: _notificationsEnabled,
+        language: _language,
       );
 
       // Save to repository
@@ -175,23 +185,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         icon = Icons.person;
     }
 
-    return GestureDetector(
-      onTap: () {
-        setState(() => _avatarIconKey = iconKey);
-        Navigator.pop(context);
-      },
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: _avatarIconKey == iconKey
-              ? Border.all(color: Theme.of(context).primaryColor, width: 3)
-              : null,
+    return Semantics(
+      label: 'Select avatar $iconKey',
+      button: true,
+      child: InkWell(
+        onTap: () {
+          setState(() => _avatarIconKey = iconKey);
+          Navigator.pop(context);
+        },
+        borderRadius: BorderRadius.circular(30),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: _avatarIconKey == iconKey
+                ? Border.all(color: Theme.of(context).primaryColor, width: 3)
+                : null,
+          ),
+          child: Icon(icon, size: 32),
         ),
-        child: Icon(icon, size: 32),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _studentIdController.dispose();
+    _learningGoalController.dispose();
+    _studyTimeController.dispose();
+    super.dispose();
   }
 
   IconData _getIconFromAvatar() {
@@ -243,8 +267,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             // Avatar
             Center(
-              child: GestureDetector(
+              child: InkWell(
                 onTap: _pickAvatar,
+                borderRadius: BorderRadius.circular(50),
                 child: Container(
                   width: 100,
                   height: 100,
@@ -275,6 +300,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               hintText: 'Enter your name',
               prefixIcon: Icons.person,
               required: true,
+              inputFormatters: [LengthLimitingTextInputFormatter(60)],
             ),
             const SizedBox(height: 16),
 
@@ -285,6 +311,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               hintText: 'Your student ID number',
               prefixIcon: Icons.badge,
               inputType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(20),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -322,9 +352,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ListTile(
                       leading: const Icon(Icons.language),
                       title: const Text('Language'),
-                      subtitle: const Text('English'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {},
+                      subtitle: Text(_language == 'en' ? 'English' : 'Spanish'),
+                      trailing: DropdownButton<String>(
+                        value: _language,
+                        items: const [
+                          DropdownMenuItem(value: 'en', child: Text('English')),
+                          DropdownMenuItem(value: 'es', child: Text('Spanish')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _language = value);
+                          }
+                        },
+                      ),
+                    ),
+                    SwitchListTile(
+                      value: _notificationsEnabled,
+                      onChanged: (value) {
+                        setState(() => _notificationsEnabled = value);
+                      },
+                      secondary: const Icon(Icons.notifications_active),
+                      title: const Text('Notifications'),
                     ),
                   ],
                 ),
@@ -334,23 +382,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // Delete Account Warning
             Card(
-              color: Colors.redAccent.withValues(alpha: 0.1),
+              color: _dangerColor.withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning, color: Colors.redAccent),
+                    const Icon(Icons.warning, color: _dangerColor),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         'Deleting your account will permanently remove all study data',
-                        style: TextStyle(color: Colors.redAccent),
+                         style: const TextStyle(color: _dangerColor),
                       ),
                     ),
                     TextButton(
                       onPressed: () => _showDeleteConfirmation(context),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
+                         foregroundColor: _dangerColor,
                       ),
                       child: const Text('Delete'),
                     ),
@@ -378,11 +426,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           FilledButton(
             onPressed: () async {
-              await settingsRepository.clearProfile();
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              Navigator.pop(context);
-              Navigator.pop(context);
+               await settingsRepository.clearProfile();
+               if (!context.mounted) return;
+               Navigator.pop(context);
+               Navigator.maybePop(context);
             },
             style: FilledButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -399,6 +446,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required IconData prefixIcon,
     TextInputType inputType = TextInputType.text,
     bool required = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,7 +459,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (required) ...[
               const SizedBox(width: 4),
-              Text('*', style: TextStyle(color: Colors.red)),
+               const Text('*', style: TextStyle(color: Colors.red)),
             ],
           ],
         ),
@@ -419,6 +467,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         TextField(
           controller: controller,
           keyboardType: inputType,
+          inputFormatters: inputFormatters,
           textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             hintText: hintText,
@@ -430,3 +479,5 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 }
+
+const Color _dangerColor = Colors.redAccent;

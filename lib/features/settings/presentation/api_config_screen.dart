@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/main.dart' show apiKeyProvider, apiBaseUrlProvider, settingsProvider;
+import 'package:studyking/main.dart'
+    show apiBaseUrlProvider, apiKeyProvider, settingsProvider;
 
 class ApiConfigScreen extends ConsumerStatefulWidget {
   const ApiConfigScreen({super.key});
@@ -14,6 +15,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   final TextEditingController _baseUrlController = TextEditingController();
 
   bool _isSaving = false;
+  bool _obscureApiKey = true;
 
   @override
   void initState() {
@@ -21,15 +23,21 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     _loadCurrentValues();
   }
 
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _baseUrlController.dispose();
+    super.dispose();
+  }
+
   void _loadCurrentValues() {
-    // Load from providers
     setState(() {
-      _apiKeyController.text = ref.read(apiKeyProvider) ?? '';
-      _baseUrlController.text = ref.read(apiBaseUrlProvider) ?? 'https://openrouter.ai/api/v1';
+      _apiKeyController.text = ref.read(apiKeyProvider);
+      _baseUrlController.text = ref.read(apiBaseUrlProvider);
     });
   }
 
-  void _saveKeys() async {
+  Future<void> _saveKeys() async {
     if (_apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -41,36 +49,32 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     }
 
     setState(() => _isSaving = true);
-
     try {
-      // Save to providers
       final apiKey = _apiKeyController.text.trim();
       final baseUrl = _baseUrlController.text.trim();
 
       ref.read(apiKeyProvider.notifier).state = apiKey;
       ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
+      await ref
+          .read(settingsProvider.notifier)
+          .updateSettings(apiKey: apiKey, apiBaseUrl: baseUrl);
 
-      // Save to settings repository
-      await ref.read(settingsProvider.notifier).saveApiKey(apiKey);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('API keys saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving API keys: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('API keys saved successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to save API configuration. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -81,9 +85,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('API Configuration'),
-      ),
+      appBar: AppBar(title: const Text('API Configuration')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -98,28 +100,22 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 24),
-
-            // OpenRouter API Key
             _buildApiSection(
               title: 'OpenRouter API Key',
               controller: _apiKeyController,
               hint: 'sk-or-v1-...',
-              description: 'Required for LLM content generation. Get your key from https://openrouter.ai/keys',
+              description:
+                  'Required for LLM content generation. Get your key from https://openrouter.ai/keys',
+              obscureText: _obscureApiKey,
             ),
-
             const SizedBox(height: 24),
-
-            // API Base URL
             _buildApiSection(
               title: 'API Base URL',
               controller: _baseUrlController,
               hint: 'https://openrouter.ai/api/v1',
               description: 'The endpoint URL for the AI service',
             ),
-
             const SizedBox(height: 32),
-
-            // Save button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -132,44 +128,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                       )
                     : const Icon(Icons.save),
                 label: const Text('Save API Keys'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Cancel button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _isSaving ? null : () => Navigator.pop(context),
-                icon: const Icon(Icons.cancel),
-                label: const Text('Cancel'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Info cards
-            _buildInfoCard(
-              icon: Icons.security,
-              color: Colors.blue,
-              title: 'Security Notice',
-              content: 'API keys are stored locally on your device and never sent to any server other than OpenRouter.',
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildInfoCard(
-              icon: Icons.info_outline,
-              color: Colors.blue,
-              title: 'Getting API Keys',
-              content: 'You can obtain your OpenRouter API key from:\nhttps://openrouter.ai/keys\n\nIt\'s free to sign up and you only pay for what you use.',
             ),
           ],
         ),
@@ -182,6 +141,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     required TextEditingController controller,
     required String hint,
     required String description,
+    bool obscureText = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,22 +153,20 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: true,
+          obscureText: obscureText,
           decoration: InputDecoration(
             hintText: hint,
             border: const OutlineInputBorder(),
-            filled: true,
-            fillColor: Theme.of(context).cardColor,
-            suffixIcon: IconButton(
-              icon: Icon(controller.text.isNotEmpty ? Icons.remove_red_eye : Icons.visibility_off),
-              onPressed: () {
-                setState(() {
-                  controller.text.isEmpty 
-                      ? controller.text = '●' * 12
-                      : controller.clear();
-                });
-              },
-            ),
+            suffixIcon: obscureText
+                ? IconButton(
+                    icon: Icon(
+                      _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(() {
+                      _obscureApiKey = !_obscureApiKey;
+                    }),
+                  )
+                : null,
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -221,44 +179,6 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String content,
-  }) {
-    return Card(
-      color: color.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              content,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

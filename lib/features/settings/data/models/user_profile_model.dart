@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+part 'user_profile_model.g.dart';
+
 @HiveType(typeId: 10)
 class UserProfile extends HiveObject {
   @HiveField(0)
@@ -54,15 +56,19 @@ class UserProfile extends HiveObject {
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
-        id: json['id'],
-        name: json['name'],
-        studentId: json['studentId'],
-        avatarUrl: json['avatarUrl'],
-        learningGoal: json['learningGoal'],
-        preferredStudyTime: json['preferredStudyTime'],
-        notificationsEnabled: json['notificationsEnabled'] ?? true,
-        language: json['language'] ?? 'en',
-        accessibilitySettings: json['accessibilitySettings'] ?? 'default',
+        id: json['id'] is String ? json['id'] as String : '',
+        name: json['name'] is String ? json['name'] as String : '',
+        studentId: json['studentId'] as String?,
+        avatarUrl: json['avatarUrl'] as String?,
+        learningGoal: json['learningGoal'] as String?,
+        preferredStudyTime: json['preferredStudyTime'] as String?,
+        notificationsEnabled: json['notificationsEnabled'] is bool
+            ? json['notificationsEnabled'] as bool
+            : true,
+        language: json['language'] is String ? json['language'] as String : 'en',
+        accessibilitySettings: json['accessibilitySettings'] is String
+            ? json['accessibilitySettings'] as String
+            : 'default',
       );
 
   UserProfile copyWith({

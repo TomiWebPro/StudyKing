@@ -29,6 +29,15 @@ class SettingsBox {
   @HiveField(7)
   late int totalQuestions;
 
+  @HiveField(8)
+  late bool studyRemindersEnabled;
+
+  @HiveField(9)
+  late int requestTimeoutSeconds;
+
+  @HiveField(10)
+  late int sessionDurationMinutes;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = 'https://openrouter.ai/api/v1',
@@ -38,6 +47,9 @@ class SettingsBox {
     this.totalSessionCount = 0,
     this.totalStudyTimeMs = 0,
     this.totalQuestions = 0,
+    this.studyRemindersEnabled = true,
+    this.requestTimeoutSeconds = 120,
+    this.sessionDurationMinutes = 30,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -59,25 +71,38 @@ class SettingsBox {
       'totalSessionCount': totalSessionCount,
       'totalStudyTimeMs': totalStudyTimeMs,
       'totalQuestions': totalQuestions,
+      'studyRemindersEnabled': studyRemindersEnabled,
+      'requestTimeoutSeconds': requestTimeoutSeconds,
+      'sessionDurationMinutes': sessionDurationMinutes,
     };
   }
 
   factory SettingsBox.fromJson(Map<String, dynamic> json) {
     return SettingsBox(
-      apiKey: json['apiKey'] ?? '',
-      apiBaseUrl: json['apiBaseUrl'] ?? 'https://openrouter.ai/api/v1',
-      selectedModel: json['selectedModel'] ?? '',
-      themeMode: json['themeMode'] ?? 0,
-      fontSize: json['fontSize'] ?? 16.0,
-      totalSessionCount: json['totalSessionCount'] ?? 0,
-      totalStudyTimeMs: json['totalStudyTimeMs'] ?? 0,
-      totalQuestions: json['totalQuestions'] ?? 0,
+      apiKey: json['apiKey'] is String ? json['apiKey'] as String : '',
+      apiBaseUrl: json['apiBaseUrl'] is String
+          ? json['apiBaseUrl'] as String
+          : 'https://openrouter.ai/api/v1',
+      selectedModel:
+          json['selectedModel'] is String ? json['selectedModel'] as String : '',
+      themeMode: (json['themeMode'] as num?)?.toInt() ?? 0,
+      fontSize: (json['fontSize'] as num?)?.toDouble() ?? 16.0,
+      totalSessionCount: (json['totalSessionCount'] as num?)?.toInt() ?? 0,
+      totalStudyTimeMs: (json['totalStudyTimeMs'] as num?)?.toInt() ?? 0,
+      totalQuestions: (json['totalQuestions'] as num?)?.toInt() ?? 0,
+      studyRemindersEnabled: json['studyRemindersEnabled'] is bool
+          ? json['studyRemindersEnabled'] as bool
+          : true,
+      requestTimeoutSeconds:
+          (json['requestTimeoutSeconds'] as num?)?.toInt() ?? 120,
+      sessionDurationMinutes:
+          (json['sessionDurationMinutes'] as num?)?.toInt() ?? 30,
     );
   }
 
   @override
   String toString() {
-    return 'SettingsBox(apiKey: ${apiKey.isEmpty ? "(hidden)" : apiKey.substring(0, 8)}, themeMode: $themeModeEnum, fontSize: ${fontSize.round()}px)';
+    return 'SettingsBox(apiKey: (hidden), themeMode: $themeModeEnum, fontSize: ${fontSize.round()}px)';
   }
 }
 
@@ -133,14 +158,16 @@ class ProfileData {
 
   factory ProfileData.fromJson(Map<String, dynamic> json) {
     return ProfileData(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      studentId: json['studentId'],
-      avatarIcon: json['avatarIcon'],
-      learningGoal: json['learningGoal'],
-      preferredStudyTime: json['preferredStudyTime'],
-      notificationsEnabled: json['notificationsEnabled'] ?? true,
-      language: json['language'] ?? 'en',
+      id: json['id'] is String ? json['id'] as String : '',
+      name: json['name'] is String ? json['name'] as String : '',
+      studentId: json['studentId'] as String?,
+      avatarIcon: json['avatarIcon'] as String?,
+      learningGoal: json['learningGoal'] as String?,
+      preferredStudyTime: json['preferredStudyTime'] as String?,
+      notificationsEnabled: json['notificationsEnabled'] is bool
+          ? json['notificationsEnabled'] as bool
+          : true,
+      language: json['language'] is String ? json['language'] as String : 'en',
     );
   }
 
