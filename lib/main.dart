@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'core/constants/app_constants.dart';
 import 'features/settings/data/models/settings_box.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'core/data/data.dart';
@@ -145,6 +146,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    SecurityConfig.enforceStartupGuards();
+    AppConstants.initialize();
+
     // Initialize Hive database
     Hive.initFlutter();
     

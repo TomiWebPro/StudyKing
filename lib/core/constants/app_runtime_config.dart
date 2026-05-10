@@ -39,19 +39,33 @@ class PdfConfig {
   static const int defaultChunkOverlapBytes = 500;
 
   static int adaptiveChunkSize({required int documentSizeBytes}) {
-    if (documentSizeBytes <= 256 * 1024) return 4 * 1024;
-    if (documentSizeBytes <= 2 * 1024 * 1024) return 8 * 1024;
-    if (documentSizeBytes <= 8 * 1024 * 1024) return 12 * 1024;
-    return 16 * 1024;
+    if (documentSizeBytes <= 256 * 1024) {
+      return validatedChunkSize(4 * 1024);
+    }
+    if (documentSizeBytes <= 2 * 1024 * 1024) {
+      return validatedChunkSize(8 * 1024);
+    }
+    if (documentSizeBytes <= 8 * 1024 * 1024) {
+      return validatedChunkSize(12 * 1024);
+    }
+    return validatedChunkSize(16 * 1024);
   }
 
   static int validatedChunkSize(int value) {
-    return value.clamp(minChunkSizeBytes, maxChunkSizeBytes);
+    if (value < minChunkSizeBytes) return minChunkSizeBytes;
+    if (value > maxChunkSizeBytes) return maxChunkSizeBytes;
+    return value;
   }
 
   static int validatedChunkOverlap(int value, {required int chunkSize}) {
-    final bounded = value.clamp(minChunkOverlapBytes, maxChunkOverlapBytes);
-    return bounded.clamp(minChunkOverlapBytes, chunkSize ~/ 4);
+    final normalizedChunkSize = validatedChunkSize(chunkSize);
+    final bounded = value < minChunkOverlapBytes
+        ? minChunkOverlapBytes
+        : (value > maxChunkOverlapBytes ? maxChunkOverlapBytes : value);
+    final maxAllowedOverlap = normalizedChunkSize ~/ 4;
+    if (bounded < minChunkOverlapBytes) return minChunkOverlapBytes;
+    if (bounded > maxAllowedOverlap) return maxAllowedOverlap;
+    return bounded;
   }
 }
 
@@ -75,6 +89,9 @@ class SecurityConfig {
   const SecurityConfig._();
 
   static const Duration sessionTimeout = Duration(minutes: 30);
+  static final RegExp _placeholderTokenPattern = RegExp(
+    r'(default|changeme|change me|sample|example|placeholder|dummy|test)',
+  );
 
   static bool requireAuthentication(AppEnvironment environment) {
     const nonProdOverride = bool.fromEnvironment(
@@ -92,18 +109,42 @@ class SecurityConfig {
         'Missing STUDYKING_ENCRYPTION_KEY. Use platform keystore-backed provisioning.',
       );
     }
+    final normalized = _normalizeKeyCandidate(key);
     const defaultLikeValues = <String>{
-      'studyking_default_encryption_key',
-      'change-me',
+      'studykingdefaultencryptionkey',
+      'changeme',
       'default',
+      'placeholder',
+      'sample',
+      'dummy',
+      'test',
     };
-    if (defaultLikeValues.contains(key.toLowerCase())) {
+    if (defaultLikeValues.contains(normalized) ||
+        _placeholderTokenPattern.hasMatch(normalized)) {
       throw StateError('Unsafe placeholder STUDYKING_ENCRYPTION_KEY detected.');
+    }
+    if (key.length < 32) {
+      throw StateError(
+        'STUDYKING_ENCRYPTION_KEY is too short. Minimum length is 32 characters.',
+      );
+    }
+    final hasLetter = RegExp(r'[A-Za-z]').hasMatch(key);
+    final hasDigit = RegExp(r'\d').hasMatch(key);
+    if (!hasLetter || !hasDigit) {
+      throw StateError(
+        'STUDYKING_ENCRYPTION_KEY must include letters and numbers.',
+      );
     }
     return key;
   }
 
+  static String _normalizeKeyCandidate(String value) {
+    final lower = value.trim().toLowerCase();
+    return lower.replaceAll(RegExp(r'[^a-z0-9]+'), '');
+  }
+
   static void enforceStartupGuards() {
+    BuildConfig.validateOrThrow();
     final env = BuildConfig.environment;
     if (env == AppEnvironment.production || kReleaseMode) {
       encryptionKeyOrThrow();
@@ -120,7 +161,9 @@ class MediaConfig {
   static const int defaultImageCompressionQuality = 80;
 
   static int validatedImageCompressionQuality(int quality) {
-    return quality.clamp(0, 100);
+    if (quality < 0) return 0;
+    if (quality > 100) return 100;
+    return quality;
   }
 }
 
@@ -149,6 +192,8 @@ class AppConfig {
   }
 
   Map<String, Object?> runtimeSnapshot() {
+    // Keep this payload non-sensitive. debugLogSnapshot() additionally redacts
+    // keys matching secret/token/password/key for defensive logging.
     return {
       'appName': BuildConfig.appName,
       'version': BuildConfig.appVersion,
@@ -164,9 +209,30 @@ class AppConfig {
     };
   }
 
+  Map<String, Object?> redactedRuntimeSnapshot() {
+    return _redactSensitiveValues(runtimeSnapshot());
+  }
+
+  static final RegExp _sensitiveSnapshotKeyPattern = RegExp(
+    r'(key|secret|token|password)',
+    caseSensitive: false,
+  );
+
+  static Map<String, Object?> _redactSensitiveValues(Map<String, Object?> data) {
+    final redacted = <String, Object?>{};
+    for (final entry in data.entries) {
+      if (_sensitiveSnapshotKeyPattern.hasMatch(entry.key)) {
+        redacted[entry.key] = '<redacted>';
+      } else {
+        redacted[entry.key] = entry.value;
+      }
+    }
+    return redacted;
+  }
+
   void debugLogSnapshot() {
     assert(() {
-      debugPrint('AppConfig snapshot: ${runtimeSnapshot()}');
+      debugPrint('AppConfig snapshot: ${redactedRuntimeSnapshot()}');
       return true;
     }());
   }
@@ -177,6 +243,23 @@ class AppConstants {
 
   static AppConfig? _instance;
 
-  static AppConfig get instance =>
-      _instance ??= AppConfig.bootstrap(featureOverrides: const {});
+  static AppConfig get instance {
+    final current = _instance;
+    if (current != null) return current;
+    throw StateError(
+      'AppConstants is not initialized. Call AppConstants.initialize() during app startup.',
+    );
+  }
+
+  static AppConfig initialize({Map<AppFeature, bool>? featureOverrides}) {
+    return _instance ??= AppConfig.bootstrap(featureOverrides: featureOverrides);
+  }
+
+  static void resetForTesting() {
+    _instance = null;
+  }
+
+  static void injectForTesting(AppConfig config) {
+    _instance = config;
+  }
 }

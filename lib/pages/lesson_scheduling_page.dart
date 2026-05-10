@@ -44,12 +44,12 @@ class LessonSchedulingPage extends StatelessWidget {
                   children: [
                     const Text('Upcoming Lessons'),
                     const SizedBox(height: 16),
-                    TableCalendar(
-                      firstDay: DateTime(2024),
-                      lastDay: DateTime(2025),
-                      focusedDay: DateTime.now(),
-                      onDaySelected: _onDaySelected,
-                    ),
+                      TableCalendar(
+                        firstDay: DateTime(2024),
+                        lastDay: DateTime(2035),
+                        focusedDay: DateTime.now(),
+                        onDaySelected: _onDaySelected,
+                      ),
                   ],
                 ),
               ),

@@ -11,7 +11,24 @@ class ApiSecrets {
   final String? googleApiKey;
   final String? whisperApiKey;
 
+  factory ApiSecrets.fromRuntime({
+    required String openRouterApiKey,
+    String? googleApiKey,
+    String? whisperApiKey,
+  }) {
+    if (openRouterApiKey.isEmpty && BuildConfig.environment == AppEnvironment.production) {
+      throw StateError('Missing OPENROUTER_API_KEY in production.');
+    }
+    return ApiSecrets(
+      openRouterApiKey: openRouterApiKey,
+      googleApiKey: googleApiKey,
+      whisperApiKey: whisperApiKey,
+    );
+  }
+
   factory ApiSecrets.fromEnvironment() {
+    // TODO(security): prefer runtime secret injection (keystore/native layer)
+    // over compile-time embedding where possible.
     final openRouter = const String.fromEnvironment('OPENROUTER_API_KEY');
     final google = const String.fromEnvironment('GOOGLE_API_KEY');
     final whisper = const String.fromEnvironment('WHISPER_API_KEY');
@@ -20,7 +37,7 @@ class ApiSecrets {
       throw StateError('Missing OPENROUTER_API_KEY in production.');
     }
 
-    return ApiSecrets(
+    return ApiSecrets.fromRuntime(
       openRouterApiKey: openRouter,
       googleApiKey: google.isEmpty ? null : google,
       whisperApiKey: whisper.isEmpty ? null : whisper,
@@ -41,27 +58,30 @@ class ApiConfig {
   final Uri youtubeBaseUrl;
   final Duration youtubeRequestTimeout;
 
+  static final Uri _openRouterBaseUrl = Uri.parse('https://openrouter.ai/api/v1');
+  static final Uri _youtubeBaseUrl = Uri.parse('https://www.googleapis.com/youtube/v3');
+
   factory ApiConfig.forEnvironment(AppEnvironment environment) {
     switch (environment) {
       case AppEnvironment.production:
         return ApiConfig(
-          openRouterBaseUrl: Uri.parse('https://openrouter.ai/api/v1'),
-          openRouterRequestTimeout: const Duration(seconds: 120),
-          youtubeBaseUrl: Uri.parse('https://www.googleapis.com/youtube/v3'),
+          openRouterBaseUrl: _openRouterBaseUrl,
+          openRouterRequestTimeout: const Duration(seconds: 45),
+          youtubeBaseUrl: _youtubeBaseUrl,
           youtubeRequestTimeout: const Duration(seconds: 30),
         );
       case AppEnvironment.staging:
         return ApiConfig(
-          openRouterBaseUrl: Uri.parse('https://openrouter.ai/api/v1'),
+          openRouterBaseUrl: _openRouterBaseUrl,
           openRouterRequestTimeout: const Duration(seconds: 90),
-          youtubeBaseUrl: Uri.parse('https://www.googleapis.com/youtube/v3'),
+          youtubeBaseUrl: _youtubeBaseUrl,
           youtubeRequestTimeout: const Duration(seconds: 30),
         );
       case AppEnvironment.development:
         return ApiConfig(
-          openRouterBaseUrl: Uri.parse('https://openrouter.ai/api/v1'),
+          openRouterBaseUrl: _openRouterBaseUrl,
           openRouterRequestTimeout: const Duration(seconds: 60),
-          youtubeBaseUrl: Uri.parse('https://www.googleapis.com/youtube/v3'),
+          youtubeBaseUrl: _youtubeBaseUrl,
           youtubeRequestTimeout: const Duration(seconds: 20),
         );
     }

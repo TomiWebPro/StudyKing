@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
@@ -221,7 +220,7 @@ void main() {
       expect(adapter.typeId, 4);
       expect(adapter.hashCode, 4.hashCode);
       expect(adapter == SettingsBoxAdapter(), isTrue);
-      expect(adapter == ProfileDataAdapter(), isFalse);
+      expect(adapter, isNot(isA<ProfileDataAdapter>()));
     });
 
     test('ProfileDataAdapter writes/reads all fields and equality', () {
@@ -246,7 +245,7 @@ void main() {
       expect(adapter.typeId, 5);
       expect(adapter.hashCode, 5.hashCode);
       expect(adapter == ProfileDataAdapter(), isTrue);
-      expect(adapter == SettingsBoxAdapter(), isFalse);
+      expect(adapter, isNot(isA<SettingsBoxAdapter>()));
     });
   });
 
