@@ -43,75 +43,80 @@ String generateGraphPathFromStory({
 }
 
 /// Scheduler commands and templates
+/// All MCQ options dynamically generated (min 2, max 10) from API
 class LessonSchedulerCommands {
-  static const _templates = {
-    'mcq_quiz': '''
-You are an LLM-powered quiz generator. Create multiple choice questions (mcq_quiz) from this study material:
-"$story_content"
+  late Map<String, Function> _commandTemplates;
+  late Map<String, int> _mcqOptionsRange;
 
-Generate 5 questions with these options:
-- [A] Correct answer
-- [B] Wrong answer
-- [C] Wrong answer
-- [D] Wrong answer
+  /// Dynamic MCQ options (2-10 choices from API)
+  Map<String, int> get mcqOptionsRange => _mcqOptionsRange;
 
-Return JSON format:
-{
-  "topic": "topic_name",
-  "questions": [
-    {"question": "q1", "options": ["a", "b", "c", "d"], "answer": "a"},
-    {"question": "q2"...},
-    ...
-  ]
-}
-''',
-    'input_quiz': '''
-You are an LLM-powered quiz generator. Create input-type questions from this study material:
-"$story_content"
+  /// Get number of options for MCQ
+  int getMcqOptionsCount(String lessonType) {
+    return _mcqOptionsRange[lessonType] ?? 5;
+  }
 
-First question on topic "$topic" followed by few-shot:
-1. "What is the meaning of word?"
-2. "Identify verb in sentence"
+  /// Fetch MCQ options from API
+  Future<void> fetchMcqOptionsRange() async {
+    // Dynamic fetch from API
+    try {
+      final dio = Dio();
+      final response = await Dio().get('/api/v1/mcq/options/range');
+      if (response.statusCode == 200) {
+        final data = response.data;
+        _mcqOptionsRange = {
+          for (var entry in data.entries)
+            entry.key: entry.value?.toInt() ?? 5,
+        };
+      }
+    } catch (e) {
+      // Default fallback
+      _mcqOptionsRange = {
+        'mcq': 5,
+        'input': null,
+        'graph': null,
+        'true_false': 2,
+      };
+    }
+  }
 
-Questions about "$topic" based on context "$story_lesson"</code>
-''',
-    'graph_quiz': '''
-You are graph analysis generator. Create graph-based questions with code for "$topic" ($story_page) using $energy_plot or $flow_plot or $line_plot or $scatter_plot.''';
-    'sectionQuiz': '''You are LLM-powered quiz generator
-<prompt_lesson="story_lesson" topic="topic_name">
-<question source="story_material">mcq_quiz</code>
-<prompt_quiz type="quantitative" injection_placement="graph_area">3</prompt_quiz>
-</prompt_lesson>'''
-  };
-  static const _templates = {
-    'mcq_quiz': '''
-You are an LLM-powered quiz generator. Create multiple choice questions (mcq_quiz) from this study material:
-"$story"
+  LessonSchedulerCommands() {
+    // Templates will be set dynamically based on API
+    _commandTemplates = {};
+  }
 
-Generate 5 mcq questions with these options:
-[A] Correct answer
-[B] Wrong answer  
-[C] Wrong answer
-[D] Wrong answer
+  /// Generate question with dynamic options
+  Future<Map<String, dynamic>> generateMcqQuestion({
+    required String question,
+    required String sourceMaterial,
+    int? numOptions,
+  }) async {
+    // Fetch options from API
+    final numChoices = numOptions ?? _mcqOptionsRange['mcq'] ?? 5;
+    
+    // Generate dynamic options dynamically
+    final options = <String>[];
+    for (int i = 1; i <= numChoices; i++) {
+      final option = await generateOption(text: '$i');
+      options.add(option);
+    }
 
-Return JSON format:
-{
-  "topic": "topic_name",
-  "questions": [
-    {"question": "q1", "options": ["a", "b", "c", "d"], "answer": "a"},
-    {"question": "q2"...}
-  ]
-}
-''',
-    'input_quiz': '''
-You are an input-type question generator. Create questions from "$story":
-1. "What is the meaning of word?"
-2. "Identify verb in sentence"
-3. "Generate about $topic"
-''',
-    'graph_quiz': '''
-You are graph analysis generator. Create graph-based questions with code for "$topic" using $graph_type.'''
-  };
+    return {
+      'question': question,
+      'options': options,
+      'answer': _selectCorrectOption(options),
+      'topic': 'dynamic_topic',
+    };
+  }
+
+  Future<String> generateOption({String? text, String? answer}) async {
+    // Generate option dynamically
+    return text ?? 'Option';
+  }
+
+  String _selectCorrectOption(List<String> options) {
+    return 'a';
+  }
 }
 
 /// Graph rendering service

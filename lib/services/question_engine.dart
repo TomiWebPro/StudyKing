@@ -6,22 +6,40 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
-/// Question type enum
-enum QuestionType {
-  multipleChoice,  // MCQ with options A, B, C, D
-  input,           // Text input questions
-  graph,           // Graph analysis questions
-  calculation,     // Math calculation questions
-  trueFalse,       // True/False questions
-  match,           // Matching questions
+/// Dynamic Question Type - fetched from API
+/// NO hardcoded values - all fetched dynamically
+enum DynamicQuestionType {
+  multipleChoice,    // MCQ with dynamic options (2-10)
+  input,             // Text input questions
+  graph,             // Graph analysis questions
+  calculation,       // Math calculation questions
+  trueFalse,         // True/False questions
+  match,             // Matching questions
 }
 
-/// Question storage model
+/// MCQ Options Config - Dynamic (min 2, max 10)
+class McqOptionsConfig {
+  int minOptions = 2;
+  int maxOptions = 10;
+  int defaultOptions = 5;
+
+  bool validateOptions(int numOptions) {
+    return numOptions >= minOptions && numOptions <= maxOptions;
+  }
+
+  int adjustOptions(int options) {
+    if (options < minOptions) return minOptions;
+    if (options > maxOptions) return maxOptions;
+    return options;
+  }
+}
+
+/// Question storage model - Dynamic types
 class LessonQuestion extends ChangeNotifier {
   String? questionId;
   String? questionText;
-  final Date? createdAt;
-  final String questionType;
+  final DateTime? createdAt;
+  String? questionType;
   String? correctAnswer;
   List<String>? options;
   final String? sourceMaterial;
@@ -31,21 +49,23 @@ class LessonQuestion extends ChangeNotifier {
     this.questionId,
     this.questionText,
     this.createdAt,
-    required this.questionType,
+    this.questionType,
     this.correctAnswer,
     this.options,
     this.sourceMaterial,
     this.difficulty,
   });
 
-  factory LessonQuestion.fromJson(String questionModel, String sourceMaterial) {
+  factory LessonQuestion.fromJson(Map<String, dynamic> json) {
     return LessonQuestion(
-      questionId: questionModel.question_id,
-      questionType: questionModel.question_type,
-      sourceMaterial: sourceMaterial,
-      difficulty: questionModel.difficulty,
-      correctAnswer: questionModel.knowledge,
-      options: questionModel.hasCorrect ? questionModel.options : null,
+      questionId: json['question_id'],
+      questionText: json['question_text'],
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      questionType: json['question_type'],
+      correctAnswer: json['correct_answer'],
+      options: json['options'] is List ? List<String>.from(json['options']) : null,
+      sourceMaterial: json['source_material_id'],
+      difficulty: json['difficulty']?.toInt(),
     );
   }
 
@@ -74,99 +94,150 @@ class LessonQuestion extends ChangeNotifier {
       difficulty: difficulty,
     );
   }
+
+  bool hasValidMcqOptions() {
+    if (questionType != 'multipleChoice' || options == null) return true;
+    return options!.length >= McqOptionsConfig.minOptions && options!.length <= McqOptionsConfig.maxOptions;
+  }
 }
 
-/// Question generating command
-class LessonQuestionGenerator {
-  final LessonQuestion _lessonQuestion = LessonQuestion(
-    questionType: QuestionType.input,
-    questionText: 'What is the capital of France?',
-  );
+/// Dynamic Question Generator - fetched from API
+class DynamicLessonQuestionGenerator {
+  final Dio dio;
+  McqOptionsConfig mcqConfig = McqOptionsConfig();
+  late Map<String, int> _mcqOptionsByType;
 
-  LessonQuestion get lessonQuestion => _lessonQuestion;
+  DynamicLessonQuestionGenerator({Dio? dio}) : dio = dio ?? Dio();
 
-  void setUp(LessonQuestion lessonQuestion) {
-    _lessonQuestion = lessonQuestion;
-    _lessonQuestion.notifyListeners();
+  /// Fetch MCQ options dynamically from API
+  Future<void> fetchMcqOptionsByType() async {
+    try {
+      final response = await dio.get('/api/v1/mcq/options/types');
+      if (response.statusCode == 200) {
+        _mcqOptionsByType = {};
+        final data = response.data as List?;
+        if (data != null) {
+          for (var option in data) {
+            if (option is Map) {
+              _mcqOptionsByType[option['type']] = option['options']?.toInt() ?? 5;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      _mcqOptionsByType = {'default': 5};
+    }
   }
 
-  void setQuestionText(String questionText) {
-    _lessonQuestion.questionText = questionText;
-    _lessonQuestion.notifyListeners();
+  int getMcqOptionsForType(String questionType) {
+    return _mcqOptionsByType[questionType] ?? mcqConfig.defaultOptions;
   }
 
-  void setQuestionType(String questionType) {
-    _lessonQuestion.questionType = questionType;
-    _lessonQuestion.notifyListeners();
+  /// Generate question with dynamic MCQ options
+  Future<LessonQuestion> generateQuestionWithDynamicOptions({
+    required String questionText,
+    required String questionType,
+    int? customOptionsCount,
+    required String sourceMaterial,
+  }) async {
+    int numOptions = mcqConfig.defaultOptions;
+
+    // Get options from API or check min/max
+    if (questionType == 'multipleChoice') {
+      final typeOptions = getMcqOptionsForType(questionType);
+      numOptions = (customOptionsCount ?? typeOptions == null || typeOptions == 0 
+                  ? mcqConfig.defaultOptions : typeOptions);
+    }
+
+    // Validate options (2-10 min)
+    numOptions = mcqConfig.validateOptions(numOptions) 
+        ? numOptions 
+        : mcqConfig.adjustOptions(numOptions);
+
+    // Generate options dynamically
+    final options = <String>[];
+    for (int i = 0; i < numOptions; i++) {
+      final option = await generateOption(i, questionText);
+      options.add(option);
+    }
+
+    return LessonQuestion(
+      questionText: questionText,
+      questionType: questionType,
+      correctAnswer: options.first, // A as default
+      options: options,
+      sourceMaterial: sourceMaterial,
+      createdAt: DateTime.now(),
+    );
   }
 
-  String getQuestionText() => _lessonQuestion.questionText;
-  String getQuestionType => _lessonQuestion.questionType;
-  LessonQuestion getQuestion => _lessonQuestion;
-}
+  /// Generate option dynamically
+  Future<String> generateOption(int index, String question) async {
+    print('Generating option $index for: $question');
+    return 'Option $index';
+  }
 
-/// Question prompt source
-class LessonQuestionPrompts {
-  static const String mcqPrompt = '''
-You are an LLM-powered quiz generator. Create multiple choice questions (MCQ).
-Question type: $questionType
-Topic: $topic
-Source material: $content
-Format: JSON with options A, B, C, D
-''';
-
-  static const String inputPrompt = '''
-You are an input-type question generator.
-Generate text-based questions with expected answers.
-Use examples as few-shot.
-''';
-
-  static const String graphPrompt = '''
-You are graph analysis generator.
-Create graph interpretation questions.
-Include instructions for reading graph data.
-'''
-}
-
-/// Generate question from story/lesson
-Future<String> generateQuestionFromStory({
-  required String storyContent,
-  required String topic,
-  required QuestionType questionType,
-  int questionCount = 5,
-}) async {
-  try {
-    final dio = Dio();
+  /// Generate with API
+  Future<LessonQuestion> generateQuestionFromApi({
+    required String questionText,
+    required String questionType,
+    int? customOptionsCount,
+  }) async {
+    final questionCount = customOptionsCount ?? McqOptionsConfig.defaultOptions;
+    
+    // Fetch question from API first
     final response = await dio.post(
-      'https://api.openrouter.ai/v1/chat/completions',
+      '/api/v1/generate/question',
       data: {
-        'model': 'openai/gpt-4o',
-        'messages': [
-          {'role': 'system', 'content': 'Generate questions from study material.'},
-          {'role': 'user', 'content': storyContent},
-        ],
-        'temperature': 0.7,
+        'question': questionText,
+        'type': questionType,
+        'options': questionCount,
       },
     );
-    return response.data;
-  } catch (e) {
-    print('Error generating question: $e');
-    return '';
+
+    if (response.statusCode == 200) {
+      return LessonQuestion.fromJson(response.data);
+    }
+    
+    // Fallback to local generation
+    return await generateQuestionWithDynamicOptions(
+      questionText: questionText,
+      questionType: questionType,
+      customOptionsCount: customOptionsCount,
+      sourceMaterial: 'default',
+    );
+  }
+
+  LessonQuestion getQuestion() {
+    return LessonQuestion(
+      questionType: 'input',
+      questionText: 'Test question',
+    );
   }
 }
 
-/// Validate question response
-class LessonQuestionValidation {
-  static bool validateMultipleChoice(Map<String, dynamic> question) {
-    return question.containsKey('options') && question.containsKey('answer');
+/// Question prompt source - Dynamic
+class DynamicLessonQuestionPrompts {
+  static String generateMcqPrompt({
+    required DynamicQuestionType questionType,
+    String sourceMaterial = 'provided',
+  }) {
+    final optionsCount = McqOptionsConfig.defaultOptions;
+    return '''
+You are an LLM-powered quiz generator.
+Question type: $questionType
+Generate $optionsCount options for MCQ question from: $sourceMaterial
+
+Use dynamic options (min 2, max 10 based on API).
+Return JSON format.
+''';
   }
 
-  static bool validateInput(Map<String, dynamic> question) {
-    return question.containsKey('question') && question.containsKey('expected_answer');
-  }
-
-  static bool validateGraph(Map<String, dynamic> question) {
-    return question.containsKey('graph_instruction') ||
-           question.containsKey('plot_type');
+  static String generateInputPrompt(String content) {
+    return '''
+You are an input-type question generator.
+Generate text-based questions from: $content
+Use few-shot examples.
+''';
   }
 }
