@@ -1,5 +1,5 @@
 name: studyking
-description: "A new Flutter project."
+description: "An adaptive learning platform for students"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  vector_math: ^2.2.0
 
   # State Management
   flutter_riverpod: ^2.4.11
@@ -25,23 +26,17 @@ dependencies:
   google_fonts: ^6.1.0
   cupertino_icons: ^1.0.8
 
-  # Form handling
-  # form_builder_validators_localized: ^3.0.0
-
-  # Drawing/canvas
-  # flutter_canvas_drawer: ^2.0.2
-
-  # Math rendering
-  # flutter_latex: ^3.0.0
-
   # Storage
   path_provider: ^2.1.2
+
+  # HTTP
   http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^5.0.0
+  leak_tracker_flutter_testing: ^3.0.10
   hive_generator: ^2.0.1
   build_runner: ^2.4.11
 

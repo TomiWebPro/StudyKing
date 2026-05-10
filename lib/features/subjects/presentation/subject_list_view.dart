@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'subject_selection_screen.dart';
+import 'subject_detail_view.dart';
 
 // Database service import
 import 'package:studyking/main.dart' show database;
@@ -108,7 +109,17 @@ class SubjectListView extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          // Navigate to subject detail
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SubjectDetailScreen(
+                subjectId: subject.id,
+                subjectName: subject.name ?? '',
+                subjectColor: subject.color,
+                topicIds: [],
+              ),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(

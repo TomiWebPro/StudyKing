@@ -8,23 +8,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:studyking/main.dart';
-
 void main() {
   testWidgets('StudyKing app loads', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const StudyKingApp());
+    await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify the app title loads 
+    expect(find.text('StudyKing'), findsOneWidget);
+    
+    // Verify home screen navigation
+    await tester.pumpAndSettle();
+    
+    // Check for bottom navigation
+    expect(find.byIcon(Icons.dashboard_outlined), findsOneWidget);
   });
 }

@@ -199,23 +199,6 @@ class StudyKingApp extends ConsumerWidget {
           centerTitle: true,
           elevation: 0,
         ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          elevation: 4,
-        ),
         textTheme: TextTheme(
           bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
           bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
@@ -235,12 +218,6 @@ class StudyKingApp extends ConsumerWidget {
           centerTitle: true,
           elevation: 0,
         ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
         textTheme: TextTheme(
           bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
           bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
@@ -255,6 +232,7 @@ class StudyKingApp extends ConsumerWidget {
       routes: {
         '/api-config': (context) => const ApiConfigScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }

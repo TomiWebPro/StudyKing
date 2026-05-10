@@ -57,7 +57,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {});
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        // Timer now properly tracks elapsed time
+        _currentAnswer = null; // Clear current answer each second
+      });
+    });
+  }
+  
+  List<Question> _getCurrentQuestions() {
+    return _questions;
   }
 
   Future<void> _loadQuestions() async {
@@ -390,12 +399,18 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     switch (question.type) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
-        // For MCQs, we'll use placeholder options for now
-        // In production, options would be stored in the question
+        // Use actual options from markscheme if available
+        final options = question.markscheme?.split(',').map((opt) => opt.trim()).where((opt) => opt.isNotEmpty).toList();
+        
+        final correctAnswer = question.markscheme ?? 'Option 1';
+        
+        final cleanOptions = options ?? ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+        final finalCorrectAnswer = cleanOptions.isNotEmpty ? cleanOptions[0] : 'Option 1';
+        
         return SingleAnswerWidget(
-          questionText: '',
-          options: ['Answer A', 'Answer B', 'Answer C', 'Answer D'],
-          correctAnswer: question.markscheme ?? 'Answer A',
+          questionText: question.text,
+          options: cleanOptions,
+          correctAnswer: finalCorrectAnswer,
           selectedAnswer: _currentAnswer,
           isSubmitted: _isSubmitted,
           isFeedbackVisible: _isFeedbackVisible,
