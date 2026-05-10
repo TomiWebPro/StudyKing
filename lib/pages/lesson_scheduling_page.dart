@@ -3,13 +3,8 @@
 // Shows progress and lesson types
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/llm_engine_provider.dart';
-import '../services/lesson_scheduler_engine.dart';
-import '../services/question_engine.dart';
-import '../services/graph_rendering_engine.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 /// Main lesson scheduling page
 class LessonSchedulingPage extends StatelessWidget {
@@ -52,6 +47,7 @@ class LessonSchedulingPage extends StatelessWidget {
                     TableCalendar(
                       firstDay: DateTime(2024),
                       lastDay: DateTime(2025),
+                      focusedDay: DateTime.now(),
                       onDaySelected: _onDaySelected,
                     ),
                   ],
@@ -95,18 +91,20 @@ class LessonSchedulingPage extends StatelessWidget {
                       spacing: 16,
                       runSpacing: 16,
                       children: const [
-                        Chip(
+                        FilterChip(
                           label: Text('MCQ'),
                           selected: true,
-                          onSelected: (val) {},
+                          onSelected: null,
                         ),
-                        Chip(
+                        FilterChip(
                           label: Text('Input'),
-                          onSelected: (val) {},
+                          selected: false,
+                          onSelected: null,
                         ),
-                        Chip(
+                        FilterChip(
                           label: Text('Graph'),
-                          onSelected: (val) {},
+                          selected: false,
+                          onSelected: null,
                         ),
                       ],
                     ),
@@ -178,7 +176,7 @@ class LessonSchedulingPage extends StatelessWidget {
     );
   }
 
-  void _onDaySelected(DateTime selected, DateTime focused) {}
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {}
 
   void _handleCreateLesson(BuildContext context) {
     // Create lesson, generate questions via LLM

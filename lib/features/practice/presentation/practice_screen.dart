@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'practice_session_screen.dart';
+import 'package:studyking/core/errors/handlers.dart';
 import '../../subjects/models/subject_model.dart';
-import '../../subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/main.dart' show database;
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
@@ -15,6 +15,8 @@ class PracticeScreen extends ConsumerStatefulWidget {
 
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   List<Subject> _subjects = [];
+  // ignore: unused_field
+  bool _isLoading = true;
 
   Future<void> _loadSubjects() async {
     try {
@@ -22,17 +24,24 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       if (mounted) {
         setState(() {
           _subjects = subjects;
+          _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error loading subjects: $e');
+      _isLoading = false;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load subjects: $e')),
+        AppErrorHandler.handleError(
+          context,
+          e,
+          'Subjects Load',
+          retry: true,
+          retryCallback: _retryLoadSubjects,
         );
       }
     }
   }
+
+  Future<void> _retryLoadSubjects() => _loadSubjects();
 
   Future<List<Subject>> _fetchSubjects() async {
     // Use the global database instance
@@ -41,32 +50,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _startPractice(Subject subject) {
-    showGeneralDialog(
-      context: context,
-      pageBuilder: (context, animation, secondaryAnimation) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.emoji_events, color: Colors.orange.shade400, size: 64),
-              const SizedBox(height: 16),
-              const Text(
-                'Practice Session Starting',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subject.name,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(),
-            ],
-          ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PracticeSessionScreen(
+          subjectId: subject.id,
         ),
       ),
     );
@@ -312,7 +300,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: _getSubjectColor(subject.name).withOpacity(0.1),
+                  color: _getSubjectColor(subject.name).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -408,7 +396,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             const SizedBox(height: 16),
             ..._subjects.map((subject) => ListTile(
               leading: CircleAvatar(
-                backgroundColor: _getSubjectColor(subject.name).withOpacity(0.1),
+                backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
                 child: Icon(
                   Icons.school,
                   color: _getSubjectColor(subject.name),
@@ -521,7 +509,7 @@ class _PracticeModeCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: isAvailable ? color.withOpacity(0.1) : Colors.grey.shade100,
+            color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

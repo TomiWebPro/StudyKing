@@ -1,11 +1,8 @@
 // COMPLETE QUESTION ENGINE - DYNAMIC VERSION
-/// All lesson types, question types fetched from API
-/// MCQ options dynamically generated (min 2, max 10)
+// All lesson types, question types fetched from API
+// MCQ options dynamically generated (min 2, max 10)
 
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
-import 'dynamic_lesson_types.dart';
 
 /// Question type enum
 /// All types fetched from API - NO hardcoded values
@@ -21,27 +18,37 @@ enum DynamicQuestionType {
 /// Dynamic Question Type Fetcher
 class DynamicTypeFetcher {
   final Dio dio;
-  late Map<String, String> _questionTypes;
-  late Map<String, int> _mcqOptionsRanges;
+  Map<String, String> _questionTypes = {};
+  Map<String, int> _mcqOptionsRanges = {};
 
   DynamicTypeFetcher({Dio? dio}) : dio = dio ?? Dio();
 
   /// Fetch question types from API
   Future<void> fetchQuestionTypes() async {
-    final response = await dio.get('/api/v1/question/types');
-    if (response.statusCode == 200) {
-      _questionTypes = {};
-      final types = response.data;
-      for (var type in types as List?) {
-        if (type is Map) {
-          _questionTypes.addAll(type);
+    try {
+      final response = await dio.get('/api/v1/question/types');
+      if (response.statusCode == 200 && response.data != null) {
+        _questionTypes = {};
+        final types = response.data as List?;
+        if (types != null) {
+          for (var type in types) {
+            if (type is Map<String, dynamic>) {
+              final key = type.keys.firstOrNull;
+              final value = type.values.firstOrNull?.toString();
+              if (key != null && value != null) {
+                _questionTypes[key] = value;
+              }
+            }
+          }
         }
       }
+    } catch (e) {
+      _questionTypes = {'default': 'Unknown type'};
     }
   }
 
   List<String> getQuestionTypeIds() {
-    return _questionTypes.keys.cast<String>();
+    return _questionTypes.keys.toList();
   }
 
   String? getQuestionTypeInfo(String typeId) {
@@ -50,18 +57,26 @@ class DynamicTypeFetcher {
 
   /// Fetch MCQ options ranges (min: 2, max: 10)
   Future<void> fetchMcqOptions() async {
-    final response = await dio.get('/api/v1/mcq/options/range');
-    if (response.statusCode == 200) {
-      _mcqOptionsRanges = {};
-      final ranges = response.data;
-      for (var range in ranges as List?) {
-        if (range is Map) {
-          _mcqOptionsRanges.addAll(range);
+    try {
+      final response = await dio.get('/api/v1/mcq/options/range');
+      if (response.statusCode == 200 && response.data != null) {
+        _mcqOptionsRanges = {};
+        final ranges = response.data as List?;
+        if (ranges != null) {
+          for (var range in ranges) {
+            if (range is Map<String, dynamic>) {
+              final key = range.keys.firstOrNull;
+              final value = range.values.firstOrNull?.toInt();
+              if (key != null && value != null) {
+                _mcqOptionsRanges[key] = value;
+              }
+            }
+          }
         }
       }
+    } catch (e) {
+      _mcqOptionsRanges = {'default': 5};
     }
-    // Default fallback
-    _mcqOptionsRanges = {'default': 5};
   }
 
   int getMcqOptionsForType(String type) {
@@ -69,12 +84,10 @@ class DynamicTypeFetcher {
   }
 
   int getMinMcqOptions() {
-    return _mcqOptionsRanges.isEmpty ? 2 : _mcqOptionsRanges.values.firstWhere((v) => v >= 2) ?? 2;
+    return _mcqOptionsRanges.isEmpty ? 2 : _mcqOptionsRanges.values.firstWhere((v) => v >= 2, orElse: () => 2);
   }
 
   int getMaxMcqOptions() {
-    return _mcqOptionsRanges.isEmpty ? 10 : _mcqOptionsRanges.values.where((v) => v <= 10).fold(0, (a, b) => a > b ? a : b);
+    return _mcqOptionsRanges.isEmpty ? 10 : _mcqOptionsRanges.values.reduce((a, b) => a > b ? a : b);
   }
 }
-
-// ... REST OF QUESTION ENGINE (same as before but using dynamic types)

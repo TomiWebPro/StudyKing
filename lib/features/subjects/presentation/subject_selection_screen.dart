@@ -224,7 +224,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           border: Border.all(
             color: isSelected ? color : Colors.grey.shade300,
             width: isSelected ? 2 : 1,

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'features/settings/data/models/settings_box.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'core/data/data.dart';
-import 'core/data/hive_initializer.dart';
 import 'features/settings/presentation/api_config_screen.dart';
 import 'features/settings/presentation/profile_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
@@ -30,6 +28,9 @@ final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>(
   return SettingsController(settingsRepository);
 });
 
+// Settings loading state provider to handle race condition
+final settingsLoadingProvider = StateProvider<bool>((ref) => false);
+
 // Theme mode provider
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
@@ -47,18 +48,21 @@ final selectedModelProvider = StateProvider<String>((ref) => '');
 
 class SettingsController extends StateNotifier<SettingsBox> {
   final SettingsRepository _repository;
+  bool _hasLoadedOnce = false;
   
   SettingsController(this._repository) : super(SettingsBox()) {
-    _loadSettings();
+    // Don't auto-load in constructor to avoid race conditions
+    // The loading will be triggered when needed by the widget tree
   }
 
   Future<void> _loadSettings() async {
+    if (_hasLoadedOnce) return;
     try {
+      _hasLoadedOnce = true;
       final settings = await _repository.getSettings();
       state = settings;
     } catch (e) {
       debugPrint('Error loading settings: $e');
-      state = SettingsBox();
     }
   }
 
@@ -159,7 +163,11 @@ void main() async {
     await settingsRepository.init();
     
     // Load initial settings to sync with providers
-    final initialSettings = await settingsRepository.getSettings();
+    try {
+      await settingsRepository.getSettings();
+    } catch (e) {
+      debugPrint('Error loading initial settings: $e');
+    }
     
     // Initialize other providers with saved values
     // Note: These will be properly loaded by SettingsController in the widget tree
@@ -178,13 +186,17 @@ class StudyKingApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Listen to settings changes
     final settings = ref.watch(settingsProvider);
+    final isLoading = ref.watch(settingsLoadingProvider);
     
-    // Sync secondary providers with settings
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(apiKeyProvider.notifier).state = settings.apiKey;
-      ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
-      ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
-    });
+    // Initialize providers with saved values from main()
+    if (isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(apiKeyProvider.notifier).state = settings.apiKey;
+        ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
+        ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
+        // Mark as loaded - providers will sync on changes now
+      });
+    }
     
     return MaterialApp(
       title: 'StudyKing',

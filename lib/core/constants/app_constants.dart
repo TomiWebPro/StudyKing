@@ -1,11 +1,3 @@
-/// Application constants and configuration
-/// 
-/// This file centralizes all configuration values, including:
-/// - API keys and credentials
-/// - App version and metadata
-/// - Feature flags
-/// - Default values
-
 class AppConstants {
   // Application metadata
   static const String appName = 'StudyKing';

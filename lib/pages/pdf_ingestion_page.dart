@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../providers/llm_engine_provider.dart';
 
 /// Main PDF ingestion page with upload and processing UI
 class PDFIngestionPage extends StatelessWidget {
@@ -14,94 +14,91 @@ class PDFIngestionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LLMAIEngineProvider>(
-      builder: (context, provider, child) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('PDF Ingestion Engine'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.upload_file),
-                onPressed: () => _showUploadDialog(context, provider),
-              ),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('PDF Ingestion Engine'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            onPressed: () => _showUploadDialog(context, llmProvider),
           ),
-          body: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Configure PDF Processing Settings',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Configure PDF Processing Settings',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            // Model Selection
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.memory),
+                title: const Text('Select LLM Model'),
+                subtitle: const Text('Choose the model for PDF processing'),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    llmProvider.setApiKey('YOUR_API_KEY');
+                  },
+                  itemBuilder: (context) {
+                    return [
+                      const PopupMenuItem(value: 'claude', child: Text('Claude 3.5 Sonnet')),
+                      const PopupMenuItem(value: 'gemini', child: Text('Gemini 1.5 Pro')),
+                      const PopupMenuItem(value: 'llama', child: Text('Llama 3.1 405B')),
+                    ];
+                  },
                 ),
-                // Model Selection
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.models),
-                    title: const Text('Select LLM Model'),
-                    subtitle: const Text('Choose the model for PDF processing'),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        llmProvider.setApiKey('YOUR_API_KEY');
-                      },
-                      itemBuilder: (context) {
-                        return [
-                          const PopupMenuItem(value: 'claude', child: Text('Claude 3.5 Sonnet')),
-                          const PopupMenuItem(value: 'gemini', child: Text('Gemini 1.5 Pro')),
-                          const PopupMenuItem(value: 'llama', child: Text('Llama 3.1 405B')),
-                        ];
+              ),
+            ),
+            // Batch Settings
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.history),
+                        SizedBox(width: 8),
+                        Text('Batch Processing Settings'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Pages per batch:'),
+                    Slider(
+                      value: 10,
+                      min: 1,
+                      max: 16,
+                      divisions: 15,
+                      onChanged: (value) {
+                        _updateContextWindow(value.round());
                       },
                     ),
-                  ),
-                ),
-                // Batch Settings
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 8),
+                    const Text('Processing queue:'),
+                    Row(
                       children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.history),
-                            SizedBox(width: 8),
-                            Text('Batch Processing Settings'),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text('Pages per batch:'),
-                        SlidingTile(
-                          initialValue: 10,
-                          min: 1,
-                          max: 16,
-                          onChange: (value) {
-                            _updateContextWindow(value);
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        const Text('Processing queue:'),
-                        Row(
-                          children: [
-                            Slider(
-                              value: 50,
-                              max: 200,
-                              divisions: 150,
-                              onChanged: (val) {},
-                            ),
-                          ],
+                        Slider(
+                          value: 50,
+                          max: 200,
+                          divisions: 150,
+                          onChanged: (val) {},
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 

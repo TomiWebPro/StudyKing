@@ -3,50 +3,13 @@
 // Supports multiple question types (MCQ, Input, Graph)
 // Auto-schedules via LLM engine
 
-import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
-import 'package:graphing/graphing.dart';
-
-/// Generate graph path from existing story
-String generateGraphPathFromStory({
-  required String story,
-  required String theme,
-  int width = 1600,
-  int height = 1200,
-}) {
-  return Graphing({
-    'theme': theme,
-    'width': width,
-    'height': height,
-    'requestTheme_preset': theme,
-    'primaryColor': theme,
-    'draft': true,
-    'target': 'yz',
-    'axis_size': 100,
-    'axes': true,
-    'show_background_grid': true,
-    'title': 'Graph from story',
-    'credit': true,
-    'sectionId': 'story',
-    'text': story,
-    'title_background_color': theme,
-  }, {
-    'text_size': 'middle_top',
-    'title_align': 'middle',
-    'text_align': 'justify',
-    'background_color': theme,
-    'showLegend': true,
-    'show_titles': true,
-  }).path;
-}
+import 'graph_type_detector.dart';
 
 /// Scheduler commands and templates
 /// All MCQ options dynamically generated (min 2, max 10) from API
 class LessonSchedulerCommands {
-  late Map<String, Function> _commandTemplates;
-  late Map<String, int> _mcqOptionsRange;
+  Map<String, int> _mcqOptionsRange = {};
 
   /// Dynamic MCQ options (2-10 choices from API)
   Map<String, int> get mcqOptionsRange => _mcqOptionsRange;
@@ -60,29 +23,20 @@ class LessonSchedulerCommands {
   Future<void> fetchMcqOptionsRange() async {
     // Dynamic fetch from API
     try {
-      final dio = Dio();
       final response = await Dio().get('/api/v1/mcq/options/range');
       if (response.statusCode == 200) {
         final data = response.data;
         _mcqOptionsRange = {
           for (var entry in data.entries)
-            entry.key: entry.value?.toInt() ?? 5,
+            entry.key: (entry.value is num) ? (entry.value as num).toInt() : 5,
         };
       }
     } catch (e) {
-      // Default fallback
       _mcqOptionsRange = {
         'mcq': 5,
-        'input': null,
-        'graph': null,
         'true_false': 2,
       };
     }
-  }
-
-  LessonSchedulerCommands() {
-    // Templates will be set dynamically based on API
-    _commandTemplates = {};
   }
 
   /// Generate question with dynamic options
@@ -110,37 +64,35 @@ class LessonSchedulerCommands {
   }
 
   Future<String> generateOption({String? text, String? answer}) async {
-    // Generate option dynamically
     return text ?? 'Option';
   }
 
   String _selectCorrectOption(List<String> options) {
-    return 'a';
+    if (options.isEmpty) return '';
+    final random = DateTime.now().millisecondsSinceEpoch % options.length;
+    return options[random];
   }
 }
 
 /// Graph rendering service
 class GraphRenderingService {
   final Dio _dio = Dio();
-  final String Function(
-  String method,
-  String endpoint,
-  String graphType,
-  String energyPlot,
-  String flowPlot,
-  String linePlot,
-  String scatterPlot,
-  int[,] matrix,
-  int width,
-  int height,
-  String source,
-  String title,
-  [List<StylingElement>? styling]) _graphFunc;
 
-  Future<GraphPath> generateGraphFromStory({
+  GraphRenderingService();
+
+  Future<Map<String, dynamic>> generateGraphFromStory({
     required String story,
     required String theme,
     String graphType = 'linePlot',
+    String energyPlot = '',
+    String flowPlot = '',
+    String linePlot = '',
+    String scatterPlot = '',
+    List<List<int>>? matrix,
+    int width = 1600,
+    int height = 1200,
+    String source = '',
+    String title = '',
   }) async {
     try {
       final response = await _dio.post(
@@ -160,36 +112,9 @@ class GraphRenderingService {
           'title': title,
         },
       );
-      return GraphPath(
-        path: response.data['path'],
-        rendering: GraphRendering(
-          theme: theme,
-          bounds: Box(width, height),
-        ),
-      );
+      return response.data is Map ? response.data as Map<String, dynamic> : <String, dynamic>{};
     } catch (e) {
       throw GraphError('Graph generation failed: $e');
     }
-  }
-
-  List<GraphData> _getGraphData() {
-    return [
-      GraphData(
-        type: 'linePlot',
-        chart: MatrixChart(
-          matrix: matrix,
-          color: MatrixColor(0xFF0000FF),
-          title: 'Line Plot',
-        ),
-      ),
-      GraphData(
-        type: 'scatterPlot',
-        chart: ScatterChart(
-          x: [x, y],
-          y: [y, x],
-          title: 'Scatter Plot',
-        ),
-      ),
-    ];
   }
 }

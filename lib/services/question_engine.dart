@@ -4,7 +4,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
 
 /// Dynamic Question Type - fetched from API
 /// NO hardcoded values - all fetched dynamically
@@ -19,9 +18,9 @@ enum DynamicQuestionType {
 
 /// MCQ Options Config - Dynamic (min 2, max 10)
 class McqOptionsConfig {
-  int minOptions = 2;
-  int maxOptions = 10;
-  int defaultOptions = 5;
+  static const int minOptions = 2;
+  static const int maxOptions = 10;
+  static const int defaultOptions = 5;
 
   bool validateOptions(int numOptions) {
     return numOptions >= minOptions && numOptions <= maxOptions;
@@ -35,7 +34,7 @@ class McqOptionsConfig {
 }
 
 /// Question storage model - Dynamic types
-class LessonQuestion extends ChangeNotifier {
+class LessonQuestion {
   String? questionId;
   String? questionText;
   final DateTime? createdAt;
@@ -96,8 +95,9 @@ class LessonQuestion extends ChangeNotifier {
   }
 
   bool hasValidMcqOptions() {
-    if (questionType != 'multipleChoice' || options == null) return true;
-    return options!.length >= McqOptionsConfig.minOptions && options!.length <= McqOptionsConfig.maxOptions;
+    if (questionType != 'multipleChoice') return true;
+    if (options == null || options!.length < McqOptionsConfig.minOptions || options!.length > McqOptionsConfig.maxOptions) return false;
+    return true;
   }
 }
 
@@ -105,7 +105,7 @@ class LessonQuestion extends ChangeNotifier {
 class DynamicLessonQuestionGenerator {
   final Dio dio;
   McqOptionsConfig mcqConfig = McqOptionsConfig();
-  late Map<String, int> _mcqOptionsByType;
+  Map<String, int> _mcqOptionsByType = {};
 
   DynamicLessonQuestionGenerator({Dio? dio}) : dio = dio ?? Dio();
 
@@ -113,7 +113,7 @@ class DynamicLessonQuestionGenerator {
   Future<void> fetchMcqOptionsByType() async {
     try {
       final response = await dio.get('/api/v1/mcq/options/types');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data != null) {
         _mcqOptionsByType = {};
         final data = response.data as List?;
         if (data != null) {
@@ -123,14 +123,17 @@ class DynamicLessonQuestionGenerator {
             }
           }
         }
+      } else {
+        _mcqOptionsByType = {'default': 5};
       }
     } catch (e) {
+      debugPrint('fetchMcqOptionsByType failed: $e');
       _mcqOptionsByType = {'default': 5};
     }
   }
 
   int getMcqOptionsForType(String questionType) {
-    return _mcqOptionsByType[questionType] ?? mcqConfig.defaultOptions;
+    return _mcqOptionsByType[questionType] ?? McqOptionsConfig.defaultOptions;
   }
 
   /// Generate question with dynamic MCQ options
@@ -140,13 +143,15 @@ class DynamicLessonQuestionGenerator {
     int? customOptionsCount,
     required String sourceMaterial,
   }) async {
-    int numOptions = mcqConfig.defaultOptions;
+    int numOptions = McqOptionsConfig.defaultOptions;
 
     // Get options from API or check min/max
     if (questionType == 'multipleChoice') {
       final typeOptions = getMcqOptionsForType(questionType);
-      numOptions = (customOptionsCount ?? typeOptions == null || typeOptions == 0 
-                  ? mcqConfig.defaultOptions : typeOptions);
+      numOptions = customOptionsCount ?? typeOptions;
+      if (numOptions == 0) {
+        numOptions = McqOptionsConfig.defaultOptions;
+      }
     }
 
     // Validate options (2-10 min)
@@ -164,7 +169,7 @@ class DynamicLessonQuestionGenerator {
     return LessonQuestion(
       questionText: questionText,
       questionType: questionType,
-      correctAnswer: options.first, // A as default
+      correctAnswer: options.isNotEmpty ? options[0] : '',
       options: options,
       sourceMaterial: sourceMaterial,
       createdAt: DateTime.now(),
@@ -173,7 +178,7 @@ class DynamicLessonQuestionGenerator {
 
   /// Generate option dynamically
   Future<String> generateOption(int index, String question) async {
-    print('Generating option $index for: $question');
+    // TODO: Implement actual LLM-based or rule-based option generation
     return 'Option $index';
   }
 
@@ -208,6 +213,7 @@ class DynamicLessonQuestionGenerator {
     );
   }
 
+  /// TODO: Remove if unused - development test helper
   LessonQuestion getQuestion() {
     return LessonQuestion(
       questionType: 'input',

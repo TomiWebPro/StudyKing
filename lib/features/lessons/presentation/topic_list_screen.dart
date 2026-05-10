@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
-import '../../../../main.dart' show database;
+import '../../../main.dart' show database;
 import 'lesson_list_screen.dart';
 
 class TopicListScreen extends StatefulWidget {
@@ -28,9 +29,19 @@ class _TopicListScreenState extends State<TopicListScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        AppErrorHandler.handleError(
+          context,
+          e,
+          'Topic Load',
+          retry: true,
+          retryCallback: _retryLoadTopics,
+        );
+      }
     }
   }
+  
+  Future<void> _retryLoadTopics() => _loadTopics();
 
   @override
   Widget build(BuildContext context) {

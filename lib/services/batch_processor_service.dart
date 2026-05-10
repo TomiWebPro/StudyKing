@@ -1,12 +1,25 @@
-import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:dio/dio.dart';
 
 /// Batch processor orchestrator for PDF processing
 class BatchProcessingService {
+  final Dio dio;
+  final ContextAPI contextApi;
+  final BatchAPI batchApi;
+  final BatchAdmin batchAdmin;
   final Map<String, int> _currentContextWindows = {};
   Map<String, int> get contextWindows => Map.unmodifiable(_currentContextWindows);
-  final String Function() uuidGen = const Uuid().v4;
+  final uuid = Uuid();
+
+  BatchProcessingService({
+    Dio? dio,
+    ContextAPI? contextApi,
+    BatchAPI? batchApi,
+    BatchAdmin? batchAdmin,
+  })  : dio = dio ?? Dio(),
+        contextApi = contextApi ?? ContextAPI(dio: Dio()),
+        batchApi = batchApi ?? BatchAPI(dio: Dio()),
+        batchAdmin = batchAdmin ?? BatchAdmin(dio: Dio());
 
   Future<void> prefetchContextWindows(List<String> models) {
     final tasks = models
@@ -18,48 +31,40 @@ class BatchProcessingService {
             );
 
             if (response.statusCode == 200 && response.data is Map) {
-              final platformData = response.data as Map;
-              final platform = PlatformDatabase(database: platformData);
-
               try {
                 final contextData = await contextApi.get(
                   'context.window.size',
-                  path: {
-                    'model': model,
-                  },
                   params: {'model': model},
                 );
 
-                if (contextData.content.isNotEmpty &&
-                    contextData.content is Map) {
+                if (contextData.isNotEmpty) {
                   final size = int.parse(
-                    contextData.content['context_window_size']?.toString() ?? '8192',
+                    contextData['context_window_size']?.toString() ?? '8192',
                   );
                   final batch = await batchApi.get(
                     'batch.size',
-                    path: {'model': model},
-                    params: {'model': model, 'size': size},
+                    params: <String, dynamic>{'model': model, 'size': size},
                   );
 
                   _currentContextWindows[model] = size;
                   return {
                     'model': model,
                     'context': size,
-                    'batch': batch.content['batch_size']?.toInt() ?? 10,
+                    'batch': batch['batch_size']?.toInt() ?? 10,
                   };
                 }
 
-                if (contextData.content is Num) {
-                  final size = contextData.content.toInt();
+                if (contextData['content'] is num) {
+                  final size = (contextData['content'] as num).toInt();
                   final batch = await batchApi.get(
                     'batch.size',
-                    params: {'model': model, 'size': size},
+                    params: <String, dynamic>{'model': model, 'size': size},
                   );
                   _currentContextWindows[model] = size;
                   return {
                     'model': model,
                     'context': size,
-                    'batch': batch.content['batch_size']?.toInt() ?? 10,
+                    'batch': batch['batch_size']?.toInt() ?? 10,
                   };
                 }
               } catch (e) {
@@ -71,54 +76,58 @@ class BatchProcessingService {
             _currentContextWindows[model] = 4096;
             return {'model': model, 'context': 4096, 'batch': 5};
           }
+          return null;
         }).toList();
-    await Future.wait(tasks);
+    return Future.wait(tasks);
   }
 
-  Future<List<TextSegment> processTextExtractedPages(List<String> texts, String model) async {
+  Future<List<TextSegment>> processTextExtractedPages(List<String> texts, String model) async {
     await _ensureContextWindow(model);
 
     final segments = <TextSegment>[];
-    final pageCounter = 0;
+    var pageCounter = 0;
     final currentBatch = <String>[];
 
     for (var text in texts) {
       if (text.isEmpty) continue;
 
       final segment = TextSegment(
-        messageId: uuidGen(),
+        messageId: uuid.v4(),
         page: pageCounter++,
         textSegment: text,
       );
 
-      currentBatch.add(segment.id);
+      currentBatch.add(segment.messageId);
 
       if (currentBatch.length == 10) {
-        segments.add(segment);
         final result = await batchAdmin.process(currentBatch);
         if (result.isSuccess && result.content.length == 10) {
-          final combined = result.content[0] + ' (Page ${segment.page})';
+          final combined = '${result.content[0]} (Page ${segment.page})';
           segments.add(TextSegment(
-            messageId: uuidGen(),
+            messageId: uuid.v4(),
             page: pageCounter,
             textSegment: combined,
           ));
           currentBatch.clear();
+        } else {
+          segments.add(segment);
         }
+      } else {
+        segments.add(segment);
       }
-
-      segments.add(segment);
     }
 
     if (currentBatch.isNotEmpty) {
       final result = await batchAdmin.process(currentBatch);
-      for (var segment in segments) {
-        final combined = '${result.content[segment.page]} (Page ${segment.page})';
-        segments[segment.id] = TextSegment(
-          messageId: uuidGen(),
-          page: segment.page,
-          textSegment: combined,
-        );
+      if (result.isSuccess) {
+        for (var i = 0; i < segments.length && i < result.content.length; i++) {
+          final combined = '${result.content[i]} (Page ${segments[i].page})';
+          segments[i] = TextSegment(
+            messageId: uuid.v4(),
+            page: segments[i].page,
+            textSegment: combined,
+          );
+        }
       }
     }
 
@@ -138,18 +147,30 @@ class BatchProcessingService {
         'temperature': 0.7,
       });
 
-      for (var token in response.data) {
-        if (token.token.length > 0) {
-          finalSegments.add(TextSegment(
-            messageId: uuidGen(),
-            page: finalSegments.length + 1,
-            textSegment: '${token.token} ',
-          ));
+      if (response.data is List) {
+        for (var token in response.data as List) {
+          if (token is Map && token['token'] != null && token['token'].toString().isNotEmpty) {
+            finalSegments.add(TextSegment(
+              messageId: uuid.v4(),
+              page: finalSegments.length + 1,
+              textSegment: '${token['token']} ',
+            ));
+          }
+        }
+      } else if (response.data is Map && (response.data as Map)['choices'] is List) {
+        for (var choice in (response.data as Map)['choices'] as List) {
+          if (choice is Map) {
+            finalSegments.add(TextSegment(
+              messageId: uuid.v4(),
+              page: finalSegments.length + 1,
+              textSegment: choice['text']?.toString() ?? '',
+            ));
+          }
         }
       }
     } catch (e) {
       finalSegments.add(TextSegment(
-        messageId: uuidGen(),
+        messageId: uuid.v4(),
         page: 1,
         textSegment: _errorToString(e),
       ));
@@ -160,6 +181,7 @@ class BatchProcessingService {
 
   Future<void> _ensureContextWindow(String model) async {
     try {
+      // TODO: Implement actual context window fetching from model endpoint
       _currentContextWindows[model] = 8192;
     } catch (e) {
       _currentContextWindows[model] = 4096;
@@ -207,7 +229,9 @@ class BatchAdmin {
       final response = await dio.get('/context', queryParameters: {'text': segments.join(' ')});
       return BatchResult(
         isSuccess: response.statusCode == 200,
-        content: response.statusCode == 200 ? response.data : ['Error processing segments'],
+        content: response.statusCode == 200 && response.data is List
+            ? List<String>.from(response.data as List)
+            : ['Error processing segments'],
       );
     } catch (e) {
       return BatchResult(
@@ -224,7 +248,7 @@ class PlatformDatabase {
 
   PlatformDatabase(this.database);
 
-  int get contextWindow;
+  int get contextWindow => database['contextWindow']?.toInt() ?? 4096;
 }
 
 /// Error message formatter
@@ -244,9 +268,13 @@ class BatchAPI {
   }) async {
     try {
       final response = await dio.get('/api/v1/$endpoint', queryParameters: params);
-      if (response.statusCode != 200) {
-        throw Exception('Error: ${response.data}');
+      if (response.statusCode == 200) {
+        if (response.data is Map) {
+          return Map<String, dynamic>.from(response.data as Map);
+        }
+        return <String, dynamic>{};
       }
+      throw Exception('Error: ${response.data}');
     } catch (e) {
       throw Exception('Failed to fetch batch size: $e');
     }
@@ -266,9 +294,13 @@ class ContextAPI {
   }) async {
     try {
       final response = await dio.get('/api/v1/$endpoint', queryParameters: params);
-      if (response.statusCode != 200) {
-        throw Exception('Error: ${response.data}');
+      if (response.statusCode == 200) {
+        if (response.data is Map) {
+          return Map<String, dynamic>.from(response.data as Map);
+        }
+        return <String, dynamic>{};
       }
+      throw Exception('Error: ${response.data}');
     } catch (e) {
       throw Exception('Failed to fetch context: $e');
     }

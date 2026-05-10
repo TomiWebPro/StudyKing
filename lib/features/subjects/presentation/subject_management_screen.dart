@@ -56,18 +56,13 @@ class _SubjectManagementScreenState
       final subject = Subject(
         id: 'subject_${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text.trim(),
-        code: _codeController.text.trim().isNotEmpty 
-            ? _codeController.text.trim().toUpperCase() 
-            : null,
-        description: _descriptionController.text.trim().isNotEmpty 
-            ? _descriptionController.text.trim() 
-            : null,
-        teacher: _teacherController.text.trim().isNotEmpty 
-            ? _teacherController.text.trim() 
-            : null,
-        syllabus: _syllabusController.text.trim().isNotEmpty 
-            ? _syllabusController.text.trim() 
-            : null,
+        code: _codeController.text.trim().isEmpty
+            ? null
+            : _codeController.text.trim().toUpperCase(),
+        description:
+            _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        teacher: _teacherController.text.trim().isEmpty ? null : _teacherController.text.trim(),
+        syllabus: _syllabusController.text.trim().isEmpty ? null : _syllabusController.text.trim(),
         color: _selectedColor ?? '#2196F3',
         examDate: _examDate,
       );
@@ -95,7 +90,6 @@ class _SubjectManagementScreenState
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,7 +147,7 @@ class _SubjectManagementScreenState
                             boxShadow: _selectedColor == color
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
+                                      color: Colors.black.withValues(alpha: 0.3),
                                       blurRadius: 4,
                                     ),
                                   ]

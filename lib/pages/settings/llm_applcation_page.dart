@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../models/llm_config.dart';
 import '../../providers/llm_engine_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
 /// Main chat application UI
 class LLMApplcationPage extends StatefulWidget {
-  final LLMEngineProvider engineProvider;
+  final LLMAIEngineProvider engineProvider;
 
   const LLMApplcationPage({
-    Key? key,
+    super.key,
     required this.engineProvider,
-  }) : super(key: key);
+  });
 
   @override
   State<LLMApplcationPage> createState() => _LLMApplcationPageState();
@@ -19,8 +19,7 @@ class LLMApplcationPage extends StatefulWidget {
 class _LLMApplcationPageState extends State<LLMApplcationPage> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String? _systemPrompt;
-  bool _autoScroll = true;
+  final bool _autoScroll = true;
 
   @override
   void dispose() {
@@ -31,7 +30,7 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final engine = Provider.of<LLMEngineProvider>(context, listen: false);
+    final engine = Provider.of<LLMAIEngineProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,12 +38,10 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.folder_open),
-            label: 'Open File',
             onPressed: _openFile,
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            label: 'Settings',
             onPressed: () => Navigator.pushNamed(context, '/llm-settings'),
           ),
         ],
@@ -55,8 +52,8 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
           Container(
             padding: const EdgeInsets.all(12),
             color: engine.selectedModel == null
-                ? Theme.of(context).colorScheme.background
-                : Theme.of(context).colorScheme.surfaceVariant,
+                ? Theme.of(context).colorScheme.surface
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Row(
               children: [
                 Expanded(
@@ -72,7 +69,7 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
             ),
           ),
           Expanded(
-            child: Consumer<LLMEngineProvider>(
+            child: Consumer<LLMAIEngineProvider>(
               builder: (context, engine, _) {
                 return Container(
                   color: engine.selectedModel == null
@@ -85,7 +82,7 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
           ),
           Expanded(
             flex: 2,
-            child: Consumer<LLMEngineProvider>(
+            child: Consumer<LLMAIEngineProvider>(
               builder: (context, engine, _) {
                 return ChatArea(
                   engine: engine,
@@ -102,7 +99,7 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
   }
 
   Widget _buildAttachedFilesArea() {
-    return Consumer<LLMEngineProvider>(
+    return Consumer<LLMAIEngineProvider>(
             builder: (context, engine, _) {
               return Center(
                 child: Column(
@@ -127,25 +124,9 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
   }
 
   void _onSend(String message, Function(Map<String, dynamic>)? onSuccess, Function(String)? onError) {
-    final engine = Provider.of<LLMEngineProvider>(context, listen: false);
+    final engine = Provider.of<LLMAIEngineProvider>(context, listen: false);
 
     if (_textController.text.trim().isEmpty) return;
-
-    // Create user message
-    final userMsg = ChatMessage(
-      type: MessageType.user,
-      content: message,
-    );
-
-    // Create assistant message placeholder
-    final assistantMsg = ChatMessage(
-      type: MessageType.assistant,
-      content: '',
-      isLoading: true,
-    );
-
-    widget._chatHistory.add(userMsg);
-    widget._chatHistory.add(assistantMsg);
 
     // Scroll to bottom
     _scrollToBottom();
@@ -156,28 +137,13 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
       userMessage: message,
       onSuccess: (response) {
         if (response['success'] == true) {
-          final usageRecord = LLMUsageRecord(
-            timestamp: DateTime.now(),
-            provider: response['provider'] ?? 'OpenRouter',
-            model: engine.selectedModel?.modelName ?? 'Unknown',
-            inputTokens: response['usage']['prompt_tokens'] ?? 0,
-            outputTokens: response['usage']['completion_tokens'] ?? 0,
-            totalCost: response['totalCost']
-?? 0.0,
-          );
-          engine._usageHistory.add(usageRecord);
-
-          assistantMsg.data = response;
-
           // Update chat history with assistant response
-          setState(() {
-            _chatHistory.last = assistantMsg;
-          });
+          setState(() {});
         } else {
-          onError(response['error'] ?? 'Unknown error');
+          onError?.call(response['error'] ?? 'Unknown error');
         }
       },
-      onError: (error) => onError(error),
+      onError: (error) => onError?.call(error),
     );
   }
 
@@ -188,7 +154,7 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
   }
 
   void _openFile() {
-    // TODO: Implement file open dialog
+    // TODO: P3-2 Implement file open dialog with path picker and validation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('File open feature coming soon')),
     );
@@ -196,18 +162,18 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
 }
 
 class ChatArea extends StatefulWidget {
-  final LLMEngineProvider engine;
+  final LLMAIEngineProvider engine;
   final TextEditingController controller;
   final bool autoScroll;
   final Function(String message, Function(Map<String, dynamic>)? onSuccess, Function(String)? onError) onSend;
 
   const ChatArea({
-    Key? key,
+    super.key,
     required this.engine,
     required this.controller,
     this.autoScroll = true,
     required this.onSend,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatArea> createState() => _ChatAreaState();
@@ -216,21 +182,22 @@ class ChatArea extends StatefulWidget {
 class _ChatAreaState extends State<ChatArea> {
   @override
   Widget build(BuildContext context) {
-    return Consumer<LLMEngineProvider>(
+    return Consumer<LLMAIEngineProvider>(
       builder: (context, engine, _) {
         return Column(
           children: [
             // Messages list
             Expanded(
-              child: Consumer<LLMEngineProvider>(
+              child: Consumer<LLMAIEngineProvider>(
                 builder: (context, engine, _) {
-                  return StreamBuilder(
-                    stream: Stream.value([]),
+                  return StreamBuilder<List<ChatMessage>>(
+                    stream: Stream.value(<ChatMessage>[]),
                     builder: (context, snapshot) {
+                      final chatMessages = snapshot.data ?? <ChatMessage>[];
                       return ListView.builder(
-                        itemCount: messages.length,
+                        itemCount: chatMessages.length,
                         itemBuilder: (context, index) {
-                          final message = messages[index];
+                          final message = chatMessages[index];
                           return ChatBubble(
                             message: message,
                             isUser: message.type == MessageType.user,
@@ -288,7 +255,6 @@ class _ChatAreaState extends State<ChatArea> {
           ],
         );
       },
-      );
     );
   }
 
@@ -330,10 +296,10 @@ class ChatBubble extends StatelessWidget {
   final bool isUser;
 
   const ChatBubble({
-    Key? key,
+    super.key,
     required this.message,
     required this.isUser,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +314,7 @@ class ChatBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: isUser
               ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceVariant,
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(12),
             topRight: Radius.circular(12),
@@ -379,13 +345,13 @@ class ModelSelectorWidget extends StatelessWidget {
   final ValueChanged<String> onModelSelected;
 
   const ModelSelectorWidget({
-    Key? key,
+    super.key,
     required this.onModelSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LLMEngineProvider>(
+    return Consumer<LLMAIEngineProvider>(
       builder: (context, engine, _) {
         return PopupMenuButton<String>(
           onSelected: onModelSelected,

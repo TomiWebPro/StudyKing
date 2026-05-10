@@ -1,8 +1,3 @@
-/// Application-specific exceptions for error handling
-/// 
-/// These exceptions provide structured error types that can be
-/// caught and handled appropriately throughout the application.
-
 /// Base exception for all app errors
 abstract class AppException implements Exception {
   final String message;

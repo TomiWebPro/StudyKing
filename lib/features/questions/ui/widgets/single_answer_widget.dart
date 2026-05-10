@@ -56,13 +56,14 @@ class SingleAnswerWidget extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    // Radio button
-                    Radio<String>(
-                      value: option,
-                      groupValue: selectedAnswer,
-                      onChanged: isSubmitted
-                          ? null
-                          : (value) => onAnswerSelected(value ?? ''),
+                    // Radio button indicator
+                    Icon(
+                      selectedAnswer == option
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: selectedAnswer == option
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
                     ),
                     const SizedBox(width: 8),
                     Text(option),
@@ -83,8 +84,8 @@ class SingleAnswerWidget extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: selectedAnswer == correctAnswer
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -120,10 +121,10 @@ class SingleAnswerWidget extends StatelessWidget {
   Color _getOptionColor(String option) {
     if (isSubmitted && correctAnswer != null) {
       if (option == correctAnswer) {
-        return Colors.green.withOpacity(0.2);
+        return Colors.green.withValues(alpha: 0.2);
       }
       if (option == selectedAnswer) {
-        return Colors.red.withOpacity(0.2);
+        return Colors.red.withValues(alpha: 0.2);
       }
     }
     return Colors.transparent;

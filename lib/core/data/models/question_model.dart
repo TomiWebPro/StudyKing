@@ -27,17 +27,38 @@ class Question extends HiveObject {
   @HiveField(7, defaultValue: [])
   final List<String> sourceIds;
 
-  @HiveField(8, defaultValue: '')
+  @HiveField(8, defaultValue: [])
+  final List<String> options;  // For MCQ questions
+
+  @HiveField(9, defaultValue: '')
   final String allowedAnswerTypes;
 
-  @HiveField(9)
+  @HiveField(10)
   final String? markscheme;
 
-  @HiveField(10)
+  @HiveField(11)
+  final String? model;  // OpenRouter model ID
+
+  @HiveField(12)
+  final String? topic;
+
+  @HiveField(13, defaultValue: [])
+  final List<String> tags;
+
+  @HiveField(14)
+  final String? explanation;
+
+  @HiveField(15)
+  final String? difficultyText;
+
+  @HiveField(16)
   final DateTime createdAt;
 
-  @HiveField(11)
+  @HiveField(17)
   DateTime updatedAt;
+
+  @HiveField(18)
+  final DateTime? nextReview;
 
   Question({
     required this.id,
@@ -48,10 +69,17 @@ class Question extends HiveObject {
     required this.topicId,
     this.variantIds = const [],
     this.sourceIds = const [],
+    this.options = const [],
     this.allowedAnswerTypes = '',
     this.markscheme,
+    this.model,
+    this.topic,
+    this.tags = const [],
+    this.explanation,
+    this.difficultyText,
     required this.createdAt,
     required this.updatedAt,
+    this.nextReview,
   });
 
   Map<String, dynamic> toJson() => {
@@ -63,8 +91,15 @@ class Question extends HiveObject {
     'topicId': topicId,
     'variantIds': variantIds,
     'sourceIds': sourceIds,
+    'options': options,
     'allowedAnswerTypes': allowedAnswerTypes,
     'markscheme': markscheme,
+    'model': model,
+    'topic': topic,
+    'tags': tags,
+    'explanation': explanation,
+    'difficultyText': difficultyText,
+    'nextReview': nextReview?.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -88,8 +123,15 @@ class Question extends HiveObject {
       topicId: json['topicId'] ?? '',
       variantIds: List<String>.from(json['variantIds'] ?? []),
       sourceIds: List<String>.from(json['sourceIds'] ?? []),
+      options: List<String>.from(json['options'] ?? []),
       allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
       markscheme: json['markscheme'],
+      model: json['model'],
+      topic: json['topic'],
+      tags: List<String>.from(json['tags'] ?? []),
+      explanation: json['explanation'],
+      difficultyText: json['difficultyText'],
+      nextReview: json['nextReview'] != null ? DateTime.parse(json['nextReview']) : null,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -104,10 +146,17 @@ class Question extends HiveObject {
     String? topicId,
     List<String>? variantIds,
     List<String>? sourceIds,
+    List<String>? options,
     String? allowedAnswerTypes,
     String? markscheme,
+    String? model,
+    String? topic,
+    List<String>? tags,
+    String? explanation,
+    String? difficultyText,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? nextReview,
   }) {
     return Question(
       id: id ?? this.id,
@@ -118,8 +167,15 @@ class Question extends HiveObject {
       topicId: topicId ?? this.topicId,
       variantIds: variantIds ?? this.variantIds,
       sourceIds: sourceIds ?? this.sourceIds,
+      options: options ?? this.options,
       allowedAnswerTypes: allowedAnswerTypes ?? this.allowedAnswerTypes,
       markscheme: markscheme ?? this.markscheme,
+      model: model ?? this.model,
+      topic: topic ?? this.topic,
+      tags: tags ?? this.tags,
+      explanation: explanation ?? this.explanation,
+      difficultyText: difficultyText ?? this.difficultyText,
+      nextReview: nextReview ?? this.nextReview,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

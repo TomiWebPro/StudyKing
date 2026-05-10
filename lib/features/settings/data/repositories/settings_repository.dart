@@ -24,7 +24,7 @@ class SettingsRepository {
     if (_settingsBox == null) return;
 
     final box = _settingsBox!;
-    final settings = SettingsBox(
+    SettingsBox(
       apiKey: key,
       apiBaseUrl: box.get('apiBaseUrl', defaultValue: 'https://openrouter.ai/api/v1'),
       selectedModel: box.get('selectedModel', defaultValue: ''),

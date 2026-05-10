@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 
-/// Session Analytics Widget - Analytics and progress visualization
-class SessionAnalyticsWidget extends ConsumerWidget {
+const List<String> _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const double _minBarHeight = 40;
+const double _maxBarHeight = 120;
+
+class SessionAnalyticsWidget extends StatelessWidget {
   final List<StudySession> sessions;
   final Duration totalStudyTime;
   final int currentStreak;
@@ -16,59 +19,23 @@ class SessionAnalyticsWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    // Calculate session counts by day of week
     final dayOfWeekCounts = _getSessionCountByDayOfWeek();
-    
-    // Calculate average time per session
-    final avgTimePerSession = sessions.isNotEmpty 
-        ? totalStudyTime ~/ sessions.length 
+    final avgTimePerSession = sessions.isNotEmpty
+        ? totalStudyTime ~/ sessions.length
         : Duration.zero;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Study Time Distribution
-        _buildSectionHeader('Study Activity (Last 7 Days)', Icons.calendar_month),
+        _buildSectionHeader('Study Activity (Last 7 Days)', Icons.calendar_month, theme),
         const SizedBox(height: 12),
         _buildDayOfWeekChart(dayOfWeekCounts, theme),
-        
         const SizedBox(height: 24),
-        
-        // Performance Metrics
-        _buildSectionHeader('Performance Metrics', Icons.show_chart),
+        _buildSectionHeader('Performance Metrics', Icons.show_chart, theme),
         const SizedBox(height: 12),
-        _buildMetricCards(
-          [
-            MetricCardData(
-              label: 'Avg Session',
-              value: _formatDuration(avgTimePerSession),
-              icon: Icons.timer,
-              color: Colors.blue,
-            ),
-            MetricCardData(
-              label: 'Total Sessions',
-              value: sessions.length.toString(),
-              icon: Icons.history,
-              color: Colors.green,
-            ),
-            MetricCardData(
-              label: 'Best Streak',
-              value: '${_getBestStreak()} days',
-              icon: Icons.emoji_events,
-              color: Colors.orange,
-            ),
-            MetricCardData(
-              label: 'Total Time',
-              value: _formatDuration(totalStudyTime),
-              icon: Icons.access_time,
-              color: Colors.purple,
-            ),
-          ],
-          theme,
-        ),
+        _buildMetricCards(theme, avgTimePerSession),
       ],
     );
   }
@@ -76,35 +43,37 @@ class SessionAnalyticsWidget extends ConsumerWidget {
   Map<String, int> _getSessionCountByDayOfWeek() {
     final today = DateTime.now();
     final counts = <String, int>{};
-    
+
     for (var i = 0; i < 7; i++) {
       final date = today.subtract(Duration(days: i));
       final dayName = _getDayName(date);
-      final dayStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      
+
       counts[dayName] = sessions
-          .where((s) => s.startTime.toString().startsWith(dayStr))
+          .where((s) =>
+              s.startTime.year == date.year &&
+              s.startTime.month == date.month &&
+              s.startTime.day == date.day)
           .length;
     }
-    
+
     return counts;
   }
 
   String _getDayName(DateTime date) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[date.weekday % 7];
+    return _dayNames[date.weekday - 1];
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
+        Icon(icon, size: 20, color: theme.textTheme.bodySmall?.color ?? Colors.grey),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            color: theme.textTheme.bodyLarge?.color,
           ),
         ),
       ],
@@ -112,9 +81,10 @@ class SessionAnalyticsWidget extends ConsumerWidget {
   }
 
   Widget _buildDayOfWeekChart(Map<String, int> counts, ThemeData theme) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final maxCount = counts.values.isNotEmpty ? counts.values.reduce((a, b) => a > b ? a : b) : 1;
-    
+    final maxCount = counts.values.isNotEmpty
+        ? counts.values.reduce((a, b) => a > b ? a : b)
+        : 1;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -124,10 +94,10 @@ class SessionAnalyticsWidget extends ConsumerWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: days.map((day) {
+        children: _dayNames.map((day) {
           final count = counts[day] ?? 0;
-          final height = 40 + (count / maxCount * 80);
-          
+          final height = _minBarHeight + (count / maxCount * (_maxBarHeight - _minBarHeight));
+
           return Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -136,8 +106,8 @@ class SessionAnalyticsWidget extends ConsumerWidget {
                 height: height,
                 decoration: BoxDecoration(
                   color: count > 0
-                      ? theme.primaryColor.withOpacity(0.7 + (count / maxCount * 0.3))
-                      : Colors.grey[200],
+                      ? theme.primaryColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+                      : theme.disabledColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -146,7 +116,7 @@ class SessionAnalyticsWidget extends ConsumerWidget {
                 day,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: theme.textTheme.bodySmall?.color ?? Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -155,7 +125,7 @@ class SessionAnalyticsWidget extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: count > 0 ? theme.primaryColor : Colors.grey[400],
+                  color: count > 0 ? theme.primaryColor : (theme.textTheme.bodySmall?.color ?? Colors.grey),
                 ),
               ),
             ],
@@ -165,7 +135,7 @@ class SessionAnalyticsWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildMetricCards(List<MetricCardData> metrics, ThemeData theme) {
+  Widget _buildMetricCards(ThemeData theme, Duration avgTimePerSession) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -173,13 +143,18 @@ class SessionAnalyticsWidget extends ConsumerWidget {
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       childAspectRatio: 1.2,
-      children: metrics.map((metric) => _buildMetricCard(metric, theme)).toList(),
+      children: [
+        _buildMetricCard('Avg Session', _formatDuration(avgTimePerSession), Icons.timer, Colors.blue, theme),
+        _buildMetricCard('Total Sessions', sessions.length.toString(), Icons.history, Colors.green, theme),
+        _buildMetricCard('Best Streak', '$currentStreak days', Icons.emoji_events, Colors.orange, theme),
+        _buildMetricCard('Total Time', _formatDuration(totalStudyTime), Icons.access_time, Colors.purple, theme),
+      ],
     );
   }
 
-  Widget _buildMetricCard(MetricCardData metric, ThemeData theme) {
+  Widget _buildMetricCard(String label, String value, IconData icon, Color color, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -187,37 +162,31 @@ class SessionAnalyticsWidget extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            metric.color.withOpacity(isDark ? 0.3 : 0.2),
-            metric.color.withOpacity(isDark ? 0.1 : 0.05),
+            color.withValues(alpha: isDark ? 0.3 : 0.2),
+            color.withValues(alpha: isDark ? 0.1 : 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: metric.color.withOpacity(0.3),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Icon(
-            metric.icon,
-            color: metric.color,
-            size: 28,
-          ),
+          Icon(icon, color: color, size: 28),
           const Spacer(),
           Text(
-            metric.value,
+            value,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
-              color: metric.color,
+              color: color,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            metric.label,
+            label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+              color: theme.textTheme.bodySmall?.color ?? Colors.grey,
             ),
           ),
         ],
@@ -234,23 +203,4 @@ class SessionAnalyticsWidget extends ConsumerWidget {
       return '${duration.inSeconds}s';
     }
   }
-
-  int _getBestStreak() {
-    // Simple best streak calculation (would be more complex in production)
-    return currentStreak;
-  }
-}
-
-class MetricCardData {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  MetricCardData({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
 }

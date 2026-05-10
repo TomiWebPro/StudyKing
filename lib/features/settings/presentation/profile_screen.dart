@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../main.dart' show settingsRepository;
-import '../data/repositories/settings_repository.dart';
 import '../data/models/settings_box.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -350,10 +349,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     TextButton(
                       onPressed: () => _showDeleteConfirmation(context),
-                      child: const Text('Delete'),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.redAccent,
                       ),
+                      child: const Text('Delete'),
                     ),
                   ],
                 ),
@@ -380,11 +379,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           FilledButton(
             onPressed: () async {
               await settingsRepository.clearProfile();
-              if (mounted) {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                Navigator.pop(context);
-              }
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             style: FilledButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),

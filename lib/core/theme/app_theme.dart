@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 
 // Avoid Material 3 ink effects and ripple animations for web compatibility
 class AppTheme {
@@ -12,19 +13,11 @@ class AppTheme {
         scrolledUnderElevation: 0,
       ),
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-      colorScheme: const ColorScheme.light(
-        primary: Color(0xFF673AB7),
-        secondary: Color(0xFF448AFF),
-        surface: Color(0xFFF5F5F5),
-        error: Color(0xFFB00020),
-        inversePrimary: Color(0xFF4527A0),
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: Colors.black87,
-        onError: Colors.white,
-        onInversePrimary: Colors.white,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF673AB7),
+        brightness: Brightness.light,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -52,7 +45,6 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: false,
-      // useLegacyAccentTile: false, // DEPRECATED - removed
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -60,19 +52,11 @@ class AppTheme {
         scrolledUnderElevation: 0,
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF9575CD),
-        secondary: Color(0xFF82B1FF),
-        surface: const Color(0xFF1E1E1E),
-        error: Color(0xFFFF5252),
-        inversePrimary: Color(0xFFB39DDB),
-        onPrimary: Colors.black87,
-        onSecondary: Colors.black87,
-        onSurface: Colors.white70,
-        onError: Colors.black87,
-        onInversePrimary: Colors.black87,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF9575CD),
+        brightness: Brightness.dark,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(

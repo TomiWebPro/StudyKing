@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
 import '../../../core/data/enums.dart';
-import '../../../core/data/models/question_model.dart';
-import '../models/markscheme_model.dart';
+import '../../../core/data/models/markscheme_model.dart';
 
 /// Question answer validator service
 /// 
@@ -19,31 +17,39 @@ class QuestionAnswerValidator {
         explanation: 'No markscheme available for validation',
       );
     }
-
+    
+    // STRICT VALIDATION: Answer must not be empty or only whitespace
+    if (userAnswer.trim().isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: 'Please provide an answer',
+      );
+    }
+    
     final normalizedUserAnswer = userAnswer.trim().toLowerCase();
-    final normalizedCorrectAnswer = _markscheme!.correctAnswer.trim().toLowerCase();
-
+    final normalizedCorrectAnswer = _markscheme.correctAnswer.trim().toLowerCase();
+    
     // Check if exact match
     if (normalizedUserAnswer == normalizedCorrectAnswer) {
       return ValidationResult(
         isCorrect: true,
-        explanation: _markscheme!.explanation ?? 'Correct!',
+        explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Correct!',
       );
     }
-
+    
     // Check if in acceptable answers
-    for (final acceptable in _markscheme!.acceptableAnswers) {
+    for (final acceptable in _markscheme.acceptableAnswers) {
       if (normalizedUserAnswer == acceptable.trim().toLowerCase()) {
         return ValidationResult(
           isCorrect: true,
-          explanation: _markscheme!.explanation ?? 'Correct!',
+          explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Correct!',
         );
       }
     }
-
+    
     return ValidationResult(
       isCorrect: false,
-      explanation: _markscheme!.explanation ?? 'Incorrect',
+      explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Incorrect',
     );
   }
 
@@ -69,23 +75,25 @@ class QuestionAnswerValidator {
   }
 
   ValidationResult _validateSingleChoice(String userAnswer) {
-    final normalizedCorrect = _markscheme!.correctAnswer.trim().toLowerCase();
+    final markscheme = _markscheme!;
+    final normalizedCorrect = markscheme.correctAnswer.trim().toLowerCase();
     final normalizedUser = userAnswer.trim().toLowerCase();
     
     return ValidationResult(
       isCorrect: normalizedUser == normalizedCorrect,
-      explanation: _markscheme!.explanation ?? 'Incorrect',
+      explanation: markscheme.explanation.isNotEmpty ? markscheme.explanation : 'Incorrect',
     );
   }
 
   ValidationResult _validateMultiChoice(String userAnswer) {
+    final markscheme = _markscheme!;
     // Parse user answer (comma-separated or similar)
     final userAnswers = userAnswer
         .split(',')
         .map((a) => a.trim().toLowerCase())
         .toList();
     
-    final correctAnswers = _markscheme!.correctAnswer
+    final correctAnswers = markscheme.correctAnswer
         .split(',')
         .map((a) => a.trim().toLowerCase())
         .toList();
@@ -96,7 +104,7 @@ class QuestionAnswerValidator {
 
     return ValidationResult(
       isCorrect: isAllCorrect,
-      explanation: _markscheme!.explanation ?? 
+      explanation: markscheme.explanation.isNotEmpty ? markscheme.explanation : 
           'Some answers are incorrect',
     );
   }
@@ -113,12 +121,12 @@ class QuestionAnswerValidator {
     // For math, we might want to use symbolic evaluation
     // For now, simple normalization and comparison
     final normalizedUser = _normalizeMathExpression(userAnswer);
-    final normalizedCorrect = _normalizeMathExpression(_markscheme!.correctAnswer);
+    final normalizedCorrect = _normalizeMathExpression(_markscheme.correctAnswer);
 
     return ValidationResult(
       isCorrect: normalizedUser == normalizedCorrect,
-      explanation: _markscheme!.explanation ?? 
-          'The correct answer is: $_markscheme',
+      explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 
+          'The correct answer is: ${_markscheme.correctAnswer}',
     );
   }
 
@@ -132,11 +140,29 @@ class QuestionAnswerValidator {
 
   /// Validate essay answer (requires AI grading - placeholder)
   ValidationResult validateEssayAnswer(String userAnswer) {
+    // STRICT VALIDATION: Check for at least meaningful content
+    // Must not be empty, whitespace only, or too short
+    if (userAnswer.trim().isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: 'Please provide an answer',
+      );
+    }
+    
+    if (userAnswer.trim().length < 10) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: 'Answer is too short. Please provide more details.',
+      );
+    }
+    
     // In a real implementation, this would use AI grading
     // For now, return basic validation
     return ValidationResult(
-      isCorrect: userAnswer.trim().length > 50, // Minimum length
-      explanation: 'Essays require AI-based grading (placeholder)',
+      isCorrect: userAnswer.trim().length > 50, // Minimum length for full credit
+      explanation: userAnswer.trim().length > 50 
+          ? 'Good response length. Essays require AI-based grading (placeholder).' 
+          : 'Answer too short for full credit.',
     );
   }
 
@@ -144,11 +170,26 @@ class QuestionAnswerValidator {
   ValidationResult validateCanvasDrawing(List<Map<String, dynamic>> canvasData) {
     // Canvas data validation is complex
     // For now, check if canvas has content
-    final hasContent = canvasData.isNotEmpty;
+    if (canvasData.isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: 'No drawing detected. Please draw something on the canvas.',
+      );
+    }
+    
+    // Additional strict validation: points must have valid coordinates
+    for (final point in canvasData) {
+      if (point.isEmpty) {
+        return ValidationResult(
+          isCorrect: false,
+          explanation: 'Invalid drawing data detected. Please redraw.',
+        );
+      }
+    }
     
     return ValidationResult(
-      isCorrect: hasContent,
-      explanation: hasContent ? 'Drawing detected' : 'No drawing detected',
+      isCorrect: true,
+      explanation: 'Drawing detected',
     );
   }
 
@@ -194,8 +235,8 @@ class QuestionAnswerValidator {
     }
 
     // Check if answer contains required steps
-    final hasRequiredSteps = _markscheme!.steps.every((step) {
-      return answer.contains(step.requiredAnswer.toLowerCase());
+    final hasRequiredSteps = _markscheme.steps.every((step) {
+      return answer.contains(step.toLowerCase());
     });
 
     return ValidationResult(

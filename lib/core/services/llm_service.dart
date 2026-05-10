@@ -414,7 +414,7 @@ Format as JSON with subject-specific recommendations.
 
   Lesson _getMockLesson(String title, String subjectId, String topicId, int difficulty) {
     return Lesson(
-      id: 'mock_lesson_${subjectId}',
+      id: 'mock_lesson_$subjectId',
       subjectId: subjectId,
       title: title,
       topicId: topicId,

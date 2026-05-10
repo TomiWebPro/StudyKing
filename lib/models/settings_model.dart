@@ -29,7 +29,6 @@ class SettingsAPIKey {
     return {
       'provider': provider,
       'key': key,
-      'password': password,
     };
   }
 
@@ -39,10 +38,11 @@ class SettingsAPIKey {
       other is SettingsAPIKey &&
           runtimeType == other.runtimeType &&
           provider == other.provider &&
-          key == other.key;
+          key == other.key &&
+          password == other.password;
 
   @override
-  int get hashCode => provider.hashCode ^ key.hashCode;
+  int get hashCode => Object.hash(provider, key);
 }
 
 /// Usage record with full data
@@ -85,15 +85,14 @@ class UsageRecord {
     required String provider,
     required String modelId,
     required Map<String, dynamic>? usage,
-    double totalCost,
     Map<String, dynamic>? promptTokensDetails,
     Map<String, dynamic>? completionTokensDetails,
   }) {
-    final inputTokens = usage['prompt_tokens']?.toInt() ?? 0;
-    final outputTokens = usage['completion_tokens']?.toInt() ?? 0;
-    final cachedTokens = usage['cached_tokens']?.toInt() ?? 0;
+    final inputTokens = usage?['prompt_tokens']?.toInt() ?? 0;
+    final outputTokens = usage?['completion_tokens']?.toInt() ?? 0;
+    final cachedTokens = usage?['cached_tokens']?.toInt() ?? 0;
 
-    final totalCost = this.calculateTotalCost(inputTokens, outputTokens, cachedTokens);
+    final totalCost = UsageRecord.calculateTotalCost(inputTokens, outputTokens, cachedTokens);
 
     return UsageRecord(
       id: id,
@@ -111,8 +110,8 @@ class UsageRecord {
   }
 
   /// Calculate total cost from tokens
-  double calculateTotalCost(int inputTokens, int outputTokens, int cachedTokensCost) {
-    final cachedInputCost = (cachedTokens * 0.000005) / 1000000;
+  static double calculateTotalCost(int inputTokens, int outputTokens, int cachedTokensCost) {
+    final cachedInputCost = (cachedTokensCost * 0.000005) / 1000000;
     final inputCost = (inputTokens * 0.000006) / 1000000;
     final outputCost = (outputTokens * 0.0000024) / 1000000;
     final total = cachedInputCost + inputCost + outputCost;
@@ -123,10 +122,10 @@ class UsageRecord {
   String get priceDisplay => '\$${totalCost.toStringAsFixed(4)}';
 
   /// Create token display string
-  String get tokenDisplay => '(${inputTokens} in / ${outputTokens} out)';
+  String get tokenDisplay => '($inputTokens in / $outputTokens out)';
 
   /// Format for list view
-  String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${totalCost / totalTokens.toStringAsFixed(10)}';
+  String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${(totalCost / totalTokens).toStringAsFixed(10)}';
 
   @override
   String toString() => 'UsageRecord(\$: $formattedText)';
@@ -134,7 +133,7 @@ class UsageRecord {
 
 /// Complete settings model class
 class LLMSettingsModel extends ChangeNotifier {
-  final SettingsAPIKey? _apiKey;
+  SettingsAPIKey? _apiKey;
   final Map<String, ModelPrice> _modelPricing = {};
   final List<UsageRecord> _usageHistory = [];
   String? _lastCost;
@@ -143,7 +142,7 @@ class LLMSettingsModel extends ChangeNotifier {
   Map<String, ModelPrice> get modelPricing => Map.unmodifiable(_modelPricing);
   List<UsageRecord> get usageHistory => List.unmodifiable(_usageHistory);
   String? get lastCost => _lastCost;
-  bool get hasApiKey => _apiKey != null && _apiKey?.key.isNotEmpty == true;
+  bool get hasApiKey => _apiKey?.key.isNotEmpty ?? false;
 
   /// Add API key
   void addApiKey(String provider, String key, {String? password}) {
@@ -193,7 +192,8 @@ class LLMSettingsModel extends ChangeNotifier {
 
   /// Project monthly cost
   double get projectedMonthlyCost {
-    return (getTotalCost() / _usageHistory.length * 30 * 10000) * 100;
+    if (_usageHistory.isEmpty) return 0.0;
+    return (getTotalCost() / _usageHistory.length * 30);
   }
 
   /// Format usage summary
@@ -201,6 +201,6 @@ class LLMSettingsModel extends ChangeNotifier {
     final totalTokens = getTotalTokens();
     final totalCost = getTotalCost();
 
-    return 'Usage: $\${totalCost.toStringAsFixed(2)} over \$${totalTokens.toStringAsFixed(0)} tokens, avg: \${avgCostPer1000Tokens.toStringAsFixed(2)} per 1k tokens';
+    return 'Usage: \$${totalCost.toStringAsFixed(2)} over $totalTokens tokens, avg: \$${avgCostPer1000Tokens.toStringAsFixed(2)} per 1k tokens';
   }
 }

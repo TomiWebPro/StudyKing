@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'models/question_model.dart';
-import '../enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/enums.dart';
 
 /// Generic Result class for safe error propagation
 sealed class Result<T> {
   final T? data;
   final String? error;
+
+  const Result({this.data, this.error});
 
   factory Result.success(T data) = SuccessResult<T>;
   factory Result.failure(String error) = FailureResult<T>;
@@ -14,22 +17,12 @@ sealed class Result<T> {
   bool get isFailure => error != null;
 }
 
-class SuccessResult<T> implements Result<T> {
-  final T data;
-  SuccessResult(this.data) : data = data;
-  @override
-  final T? data;
-  @override
-  final String? error = null;
+class SuccessResult<T> extends Result<T> {
+  SuccessResult(T data) : super(data: data);
 }
 
-class FailureResult<T> implements Result<T> {
-  final String error;
-  FailureResult(this.error) : data = null;
-  @override
-  final T? data = null;
-  @override
-  final String? error;
+class FailureResult<T> extends Result<T> {
+  FailureResult(String error) : super(error: error);
 }
 
 class QuestionRepository {
@@ -37,16 +30,6 @@ class QuestionRepository {
 
   Future<Result<void>> init() async {
     try {
-      _box = Hive.box<Question>('questions');
-      if (!_box.isOpen) {
-        await _box.open();
-      }
-      return Result.success(null);
-    } on BoxAlreadyOpenException {
-      debugPrint('Question box already open');
-      return Result.success(null);
-    } on BoxDoesNotExistException {
-      debugPrint('Question box does not exist, creating...');
       _box = await Hive.openBox<Question>('questions');
       return Result.success(null);
     } catch (e) {
@@ -59,10 +42,6 @@ class QuestionRepository {
     try {
       await _box.put(question.id, question);
       return Result.success(null);
-    } on BoxAlreadyOpenException {
-      return Result.failure('Box already open');
-    } on BoxFullException {
-      return Result.failure('Box is full, cannot add question');
     } catch (e) {
       debugPrint('Error creating question: $e');
       return Result.failure('Failed to create question: ${e.toString()}');
@@ -200,8 +179,6 @@ class QuestionRepository {
       final updated = question.copyWith(markscheme: markscheme);
       await _box.put(questionId, updated);
       return Result.success(null);
-    } on BoxAlreadyOpenException {
-      return Result.failure('Question box already open');
     } catch (e) {
       debugPrint('Error updating markscheme: $e');
       return Result.failure('Failed to update markscheme: ${e.toString()}');
@@ -212,10 +189,6 @@ class QuestionRepository {
     try {
       await _box.delete(id);
       return Result.success(null);
-    } on BoxAlreadyOpenException {
-      return Result.failure('Question box already open');
-    } on BoxEmptyException {
-      return Result.failure('Cannot delete from empty box');
     } catch (e) {
       debugPrint('Error deleting question: $e');
       return Result.failure('Failed to delete question: ${e.toString()}');

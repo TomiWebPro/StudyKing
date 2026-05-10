@@ -1,14 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
-import 'pdf_service.dart';
+import '../pdf_service.dart';
 import '../providers/llm_engine_provider.dart';
 import '../services/batch_processor_service.dart';
-import '../services/dynamic_context_config.dart';
 
 /// PDF Upload Coordinator with Progress Tracking
 class PDFUploadCoordinator extends ChangeNotifier {
@@ -20,7 +15,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
   bool isProcessing = false;
   int uploadedPages = 0;
   int completedPages = 0;
-  int totalCost = 0;
+  double totalCost = 0;
   bool cancelProcessing = false;
 
   PDFUploadCoordinator({
@@ -28,7 +23,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
     required this.batchProcessor,
   }) : _currentBatch = TextPageAccumulator('batch');
 
-  StudyMaterial get activeMaterial => _activeMaterial ?? const StudyMaterial(
+  StudyMaterial get activeMaterial => _activeMaterial ?? StudyMaterial(
     materialId: '',
   );
 
@@ -48,7 +43,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
     String materialId,
     String? subjectId,
     String? title,
-    List<XFile> pdfFiles,
+    List<String> pdfFiles,
   ) async {
     if (pdfFiles.isEmpty) return;
 
@@ -66,7 +61,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
 
     for (var pdf in pdfFiles) {
       if (cancelProcessing) break;
-      await _processSingleFile(pdf.path);
+      await _processSingleFile(pdf);
     }
 
     isProcessing = false;
@@ -82,9 +77,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
       final sizeMB = (file.lengthSync() / 1048576).round();
 
       // Send to server
-      await Dio().get('/api/v1/download?redirect=true', options: Options(
-        queryParameters: {'sizeMB': sizeMB.toString()},
-      ));
+      await Dio().get('/api/v1/download?redirect=true', queryParameters: {'sizeMB': sizeMB.toString()});
 
       uploadedPages += 1;
       totalCost += 0.05;
@@ -105,9 +98,7 @@ class PDFUploadCoordinator extends ChangeNotifier {
     String? value,
     String? fileValue,
   ) async {
-    await Dio().get('/api/v1/download', options: Options(
-      queryParameters: {'redirect': true},
-    ));
+    await Dio().get('/api/v1/download', queryParameters: {'redirect': true});
 
     final result = await Dio()
         .post('/api/v1/origins', data: {
@@ -144,7 +135,6 @@ class PDFIngestionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final picker = ImagePicker();
     return Scaffold(
       appBar: AppBar(
         title: const Text('PDF Ingestion Engine'),
@@ -153,7 +143,6 @@ class PDFIngestionPage extends StatelessWidget {
             icon: const Icon(Icons.upload),
             onPressed: () => _showUploadDialog(
               context,
-              picker,
               llmProvider,
               pageProcessor,
             ),
@@ -175,7 +164,6 @@ class PDFIngestionPage extends StatelessWidget {
 
   void _showUploadDialog(
     BuildContext context,
-    ImagePicker picker,
     LLMAIEngineProvider provider,
     LLMAIEngineProvider processor,
   ) {
@@ -188,11 +176,10 @@ class PDFIngestionPage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.image),
               title: const Text('Pick PDF File'),
-              onTap: () async {
-                final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-                if (picked != null) {
-                  _processFile(context, picker, provider, processor);
-                }
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please upload a PDF file')),
+                );
               },
             ),
             ListTile(
@@ -206,19 +193,5 @@ class PDFIngestionPage extends StatelessWidget {
         );
       },
     );
-  }
-
-  void _processFile(
-    BuildContext context,
-    ImagePicker picker,
-    LLMAIEngineProvider provider,
-    LLMAIEngineProvider processor,
-  ) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('File ready for processing: ${picked.path}')),
-      );
-    }
   }
 }

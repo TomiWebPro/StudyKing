@@ -1,15 +1,8 @@
 // Complete PDF Ingestion Engine Implementation
 // Handles PDF upload, page-by-page processing, and storage
 
+import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:uuid/uuid.dart';
-import 'package:image_picker/image_picker.dart';
 
 // Flutter context override
 class FlutterContext {
@@ -57,13 +50,13 @@ class HttpRequestWrapper {
   String url = '';
   Map<String, dynamic> parameters = {};
   String token = '';
-  Encoding encoding = Encoding.getByName('utf-8');
+  Encoding encoding = Encoding.getByName('utf-8') ?? utf8;
 
-  Future<File> processData(String data) {
+  Future<File> processData(String data) async {
     return File(data);
   }
 
-  Future<File> processDartFile(File file) {
+  Future<File> processDartFile(File file) async {
     return file;
   }
 

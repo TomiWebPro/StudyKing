@@ -1,9 +1,7 @@
-import 'dart:convert';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../models/llm_config.dart';
 import '../models/llm_models.dart';
-import '../models/settings_model.dart';
-import '../providers/llm_engine_provider.dart';
 import '../services/llm_api_service.dart';
 
 /// Provider for LLM engine with fully dynamic pricing
@@ -11,9 +9,9 @@ class LLMAIEngineProvider extends ChangeNotifier {
   final OpenRouterClient client;
   String? _apiKey;
   bool _isLoading = false;
-  String? _lastError;
-  List<LLMUsageRecord> _usageHistory = [];
+  final List<LLMUsageRecord> _usageHistory = [];
   final Map<String, ModelPrice> _modelPricing = {};
+  LLMModelConfig? _selectedModel;
 
   /// Default key for local storage
   static const String apikeyKey = 'llm_apikey';
@@ -22,6 +20,34 @@ class LLMAIEngineProvider extends ChangeNotifier {
       : client = OpenRouterClient(
         dio: dio ?? Dio(),
       );
+
+  /// Selected model getter
+  LLMModelConfig? get selectedModel => _selectedModel;
+
+  void setSelectedModel(LLMModelConfig model) {
+    _selectedModel = model;
+    notifyListeners();
+  }
+
+  /// Whether the provider is loading
+  bool get isLoading => _isLoading;
+
+  /// Whether API key is configured
+  bool get apiKeyConfigured => _apiKey != null && _apiKey!.isNotEmpty;
+
+  /// Usage summary
+  LLMUsageSummary get usageSummary {
+    final totalInput = _usageHistory.fold<int>(0, (s, r) => s + r.inputTokens);
+    final totalOutput = _usageHistory.fold<int>(0, (s, r) => s + r.outputTokens);
+    final totalCost = _usageHistory.fold<double>(0.0, (s, r) => s + r.totalCost);
+    return LLMUsageSummary(
+      totalRequests: _usageHistory.length,
+      totalTokens: totalInput + totalOutput,
+      totalInputTokens: totalInput,
+      totalOutputTokens: totalOutput,
+      totalCost: totalCost,
+    );
+  }
 
   /// Key field
   String get apiKey => _apiKey ?? '';
@@ -49,9 +75,38 @@ class LLMAIEngineProvider extends ChangeNotifier {
     return DateTime.now().toIso8601String();
   }
 
-  /// get API usage info
-  Future<Map<String, dynamic>?> getApiKeyInfo() async {
-    return await client.getApiInfo();
+  /// Configure endpoint with API key
+  Future<void> configureEndpoint(String apiKey) => setApiKey(apiKey);
+
+  /// Reset configuration
+  Future<void> resetConfiguration() async {
+    _apiKey = null;
+    _selectedModel = null;
+    client.clearApiKey();
+    notifyListeners();
+  }
+
+  /// Make request (compatible wrapper for pages that expect Map callback)
+  void makeRequest({
+    required String model,
+    required String userMessage,
+    required Function(Map<String, dynamic>) onSuccess,
+    required Function(String) onError,
+  }) {
+    sendRequest(
+      model: model,
+      userMessage: userMessage,
+      onResponse: (response) {
+        onSuccess(<String, dynamic>{
+          'id': response.id,
+          'success': response.choices.isNotEmpty,
+          'provider': 'OpenRouter',
+          'usage': response.usage,
+          'totalCost': 0.0,
+        });
+      },
+      onError: onError,
+    );
   }
 
   /// Get all available models with dynamic pricing
@@ -74,14 +129,13 @@ class LLMAIEngineProvider extends ChangeNotifier {
   /// Fetch prices for all models
   Future<void> fetchAllModelPrices() async {
     if (_apiKey == null) {
-      _lastError = 'No API key set';
       return;
     }
 
     final models = await getAllModels();
     for (var model in models) {
       try {
-        Wait until response, then fetch price data for each model
+        await fetchModelPrice(model.modelId);
       } catch (e) {
         // Failed to fetch
       }
@@ -93,7 +147,6 @@ class LLMAIEngineProvider extends ChangeNotifier {
   /// Fetch price for a specific model
   Future<void> fetchModelPrice(String modelId) async {
     if (_apiKey == null) {
-      _lastError = 'No API key set';
       return;
     }
 
@@ -102,12 +155,11 @@ class LLMAIEngineProvider extends ChangeNotifier {
       notifyListeners();
 
       final price = await client.fetchModelPrices(modelId);
-      _modelPricing[modelId] = price.isNotEmpty ? price[0] : null;
+      if (price.isNotEmpty) _modelPricing[modelId] = price[0];
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _lastError = e.toString();
       notifyListeners();
     }
   }
@@ -120,18 +172,17 @@ class LLMAIEngineProvider extends ChangeNotifier {
   /// Calculate cost for given model
   double calculateModelCost(String modelId) {
     final price = _modelPricing[modelId];
-    return price ?? null;
+    return price != null ? price.inputPrice + price.outputPrice : 0.0;
   }
 
   /// Make chat request with dynamic pricing
   void sendRequest({
     required String model,
     required String userMessage,
-    required Function(Map<String, dynamic>) onResponse,
+    required Function(OpenRouterResponse) onResponse,
     required Function(String) onError,
   }) {
     _isLoading = true;
-    _lastError = null;
     notifyListeners();
 
     client.chat(
@@ -196,7 +247,7 @@ class OpenRouterModelModel {
       'provider': provider,
       'modelName': modelName,
       'contextLength': contextLength,
-      if (metadata != null) ...metadata,
+      ...?metadata,
     };
   }
 

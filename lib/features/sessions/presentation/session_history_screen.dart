@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 
-/// Session History Screen - View all past sessions
 class SessionHistoryScreen extends StatefulWidget {
   const SessionHistoryScreen({super.key});
 
@@ -16,26 +16,32 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   List<StudySession> _filteredSessions = [];
   DateTime? _selectedDate;
   String? _selectedSubject;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _sessionRepository = StudySessionRepository();
     _loadSessions();
-    _filterSessions();
   }
 
   Future<void> _loadSessions() async {
     try {
+      await _sessionRepository.init();
       final sessions = await _sessionRepository.getAll();
       if (mounted) {
         setState(() {
-          _allSessions = sessions.toList();
-          _filteredSessions = _allSessions;
+          _allSessions = sessions.toList()
+            ..sort((a, b) => b.startTime.millisecondsSinceEpoch.compareTo(a.startTime.millisecondsSinceEpoch));
+          _isLoading = false;
         });
+        _filterSessions();
       }
     } catch (e) {
       debugPrint('Error loading sessions: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -43,25 +49,18 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     var result = _allSessions;
 
     if (_selectedDate != null) {
-      final dateStr = '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}';
-      result = result.where((s) => _isSameDay(s.startTime, _selectedDate!)).toList();
+      result = result.where((s) => isSameDay(s.startTime, _selectedDate!)).toList();
     }
 
     if (_selectedSubject != null && _selectedSubject!.isNotEmpty) {
       result = result.where((s) => s.subjectId == _selectedSubject).toList();
     }
 
-    result.sort((a, b) => b.startTime.millisecondsSinceEpoch.compareTo(a.startTime.millisecondsSinceEpoch));
-
     if (mounted) {
       setState(() {
         _filteredSessions = result;
       });
     }
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   void _clearFilters() {
@@ -72,7 +71,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     _filterSessions();
   }
 
-  void _deleteSession(StudySession session) async {
+  Future<bool> _deleteSession(StudySession session) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -93,37 +92,37 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     );
 
     if (confirmed == true) {
-      await _sessionRepository.delete(session.id);
-      _loadSessions();
+      try {
+        await _sessionRepository.delete(session.id);
+        if (mounted) {
+          setState(() {
+            _allSessions.remove(session);
+            _filteredSessions.remove(session);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Session deleted'),
+              action: SnackBarAction(
+                label: 'Undo',
+                onPressed: () {
+                  _sessionRepository.create(session);
+                  _loadSessions();
+                },
+              ),
+            ),
+          );
+        }
+        return true;
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete session: $e')),
+          );
+        }
+        return false;
+      }
     }
-  }
-
-  String _formatTime(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m ${seconds}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
-    } else {
-      return '${seconds}s';
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final sessionDate = DateTime(date.year, date.month, date.day);
-
-    if (sessionDate == today) {
-      return 'Today';
-    } else if (sessionDate.difference(today).abs() == const Duration(days: 1)) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
+    return false;
   }
 
   int _formatTimeMinutes(Duration duration) {
@@ -133,7 +132,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalMinutes = _filteredSessions.fold<int>(0, (sum, s) => sum + _formatTimeMinutes(Duration(milliseconds: s.timeSpentMs)));
+    final totalMinutes = _filteredSessions.fold<int>(
+      0,
+      (sum, s) => sum + _formatTimeMinutes(Duration(milliseconds: s.timeSpentMs)),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -149,75 +151,76 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filter Controls
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: theme.primaryColor.withOpacity(0.05),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showDateFilter(),
-                        icon: Icon(Icons.calendar_today, color: theme.primaryColor),
-                        label: Text(
-                          _selectedDate != null
-                              ? '📅 ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                              : 'Filter by Date',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.primaryColor,
-                        ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: theme.primaryColor.withValues(alpha: 0.05),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showDatePicker(),
+                              icon: Icon(Icons.calendar_today, color: theme.primaryColor),
+                              label: Text(
+                                _selectedDate != null
+                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                    : 'Filter by Date',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showSubjectFilter(),
+                              icon: Icon(Icons.folder, color: theme.primaryColor),
+                              label: Text(
+                                _selectedSubject != null ? _selectedSubject! : 'Filter by Subject',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          // Subject filter would go here
-                        },
-                        icon: Icon(Icons.folder, color: theme.primaryColor),
-                        label: Text(
-                          _selectedSubject != null ? '📚 Subject' : 'Filter by Subject',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.primaryColor,
-                        ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildSummaryStat('Sessions', _filteredSessions.length.toString(), Icons.history),
+                      _buildSummaryStat('Total Time', formatDuration(Duration(minutes: totalMinutes)), Icons.access_time),
+                      _buildSummaryStat(
+                        'Average',
+                        _filteredSessions.isNotEmpty
+                            ? formatDuration(Duration(minutes: totalMinutes ~/ _filteredSessions.length))
+                            : '0m',
+                        Icons.schedule,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: _filteredSessions.isEmpty
+                      ? _buildEmptyState(theme)
+                      : _buildSessionsList(theme),
                 ),
               ],
             ),
-          ),
-
-          // Summary Stats
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildSummaryStat('Sessions', _filteredSessions.length.toString(), Icons.history),
-                _buildSummaryStat('Total Time', _formatTime(Duration(minutes: totalMinutes)), Icons.access_time),
-                _buildSummaryStat('Average', _filteredSessions.isNotEmpty
-                    ? _formatTime(Duration(minutes: totalMinutes ~/ _filteredSessions.length))
-                    : '0m', Icons.schedule),
-              ],
-            ),
-          ),
-
-          // Sessions List
-          Expanded(
-            child: _filteredSessions.isEmpty
-                ? _buildEmptyState()
-                : _buildSessionsList(theme),
-          ),
-        ],
-      ),
     );
   }
 
@@ -239,20 +242,19 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    final theme = Theme.of(context);
+  Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 64, color: theme.disabledColor.withOpacity(0.5)),
+          Icon(Icons.history, size: 64, color: theme.disabledColor.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             _selectedDate != null || _selectedSubject != null
                 ? 'No sessions found for selected filters'
                 : 'No sessions yet',
             style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color,
+              color: theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodySmall?.color,
             ),
           ),
           const SizedBox(height: 8),
@@ -274,11 +276,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       itemBuilder: (context, index) {
         final session = _filteredSessions[index];
         final timeSpent = Duration(milliseconds: session.timeSpentMs);
+        final position = _allSessions.indexOf(session);
 
         return Dismissible(
           key: Key(session.id),
           direction: DismissDirection.endToStart,
-          onDismissed: (direction) => _deleteSession(session),
+          confirmDismiss: (direction) => _deleteSession(session),
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 16),
@@ -291,13 +294,13 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
+                  color: theme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.play_arrow, color: theme.primaryColor),
               ),
               title: Text(
-                'Session ${index + 1}',
+                'Session ${_allSessions.length - position}',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -307,7 +310,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 children: [
                   const SizedBox(height: 4),
                   Text(
-                    '${_formatDate(session.startTime)} • '
+                    '${formatDate(session.startTime)} • '
                     '${session.questionsAnswered > 0 ? '${session.questionsAnswered} questions' : 'No questions'}',
                     style: theme.textTheme.bodySmall,
                   ),
@@ -315,7 +318,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                     Text(
                       'Correct: ${session.correctAnswers}/${session.questionsAnswered}',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: session.questionsAnswered > 0 && session.correctAnswers >= (session.questionsAnswered / 2)
+                        color: session.questionsAnswered > 0 &&
+                                session.correctAnswers >= (session.questionsAnswered / 2)
                             ? Colors.green
                             : Colors.orange,
                       ),
@@ -323,7 +327,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 ],
               ),
               trailing: Text(
-                _formatTime(timeSpent),
+                formatDuration(timeSpent),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.primaryColor,
@@ -337,7 +341,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     );
   }
 
-  Future<void> _showDateFilter() async {
+  Future<void> _showDatePicker() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
@@ -352,5 +356,44 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       });
       _filterSessions();
     }
+  }
+
+  Future<void> _showSubjectFilter() async {
+    final subjects = _allSessions.map((s) => s.subjectId).toSet().toList()..sort();
+
+    if (subjects.isEmpty) return;
+
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filter by Subject'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: subjects.length,
+            itemBuilder: (context, index) {
+              final subject = subjects[index];
+              return ListTile(
+                title: Text(subject),
+                selected: subject == _selectedSubject,
+                onTap: () => Navigator.pop(context, subject),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    setState(() {
+      _selectedSubject = selected;
+    });
+    _filterSessions();
   }
 }

@@ -42,15 +42,15 @@ class TaskModel extends HiveObject {
   });
 
   TaskModel.empty()
-      : this.id = 'empty',
-        this.title = '',
-        this.description = '',
-        this.status = 'todo',
-        this.assignee = null,
-        this.priority = 'medium',
-        this.dueDate = null,
-        this.createdAt = null,
-        this.updatedAt = null;
+      : id = 'empty',
+        title = '',
+        description = '',
+        status = 'todo',
+        assignee = null,
+        priority = 'medium',
+        dueDate = null,
+        createdAt = null,
+        updatedAt = null;
 
   TaskModel copyWith({
     String? id,

@@ -2,11 +2,7 @@
 // Renders graphs and allows LLM input to check graph type
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../providers/llm_engine_provider.dart';
-import '../services/graph_rendering_engine.dart';
-import '../services/graph_type_detector.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 /// Graph rendering page with LLM validation
 class GraphRenderingPage extends StatelessWidget {
@@ -28,7 +24,7 @@ class GraphRenderingPage extends StatelessWidget {
             onPressed: () => _reRenderGraph(context),
           ),
           IconButton(
-            icon: const Icon(Icons.validate),
+            icon: const Icon(Icons.verified),
             onPressed: () => _validateGraphType(context),
           ),
         ],
@@ -44,10 +40,10 @@ class GraphRenderingPage extends StatelessWidget {
                   children: [
                     const Text('Upload Data'),
                     const SizedBox(height: 16),
-                    const TextButton.icon(
+                    TextButton.icon(
                       onPressed: () => _showUploadDialog(context),
-                      icon: Icon(Icons.upload_file),
-                      label: Text('Upload Data File'),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Upload Data File'),
                     ),
                     const SizedBox(height: 8),
                     const Text('Or paste data directly:'),
@@ -74,7 +70,7 @@ class GraphRenderingPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     Row(
                       children: const [
-                        Icon(Icons.chart_line),
+                        Icon(Icons.show_chart),
                         SizedBox(width: 8),
                         Text('Auto-detect from data:'),
                       ],
@@ -82,21 +78,21 @@ class GraphRenderingPage extends StatelessWidget {
                     Wrap(
                       spacing: 12,
                       children: [
-                        Chip(
+                        ActionChip(
                           label: const Text('Line Graph'),
-                          onClicked: () => _setGraphType('line'),
+                          onPressed: () => _setGraphType('line'),
                         ),
-                        Chip(
+                        ActionChip(
                           label: const Text('Bar Chart'),
-                          onClicked: () => _setGraphType('bar'),
+                          onPressed: () => _setGraphType('bar'),
                         ),
-                        Chip(
+                        ActionChip(
                           label: const Text('Scatter Plot'),
-                          onClicked: () => _setGraphType('scatter'),
+                          onPressed: () => _setGraphType('scatter'),
                         ),
-                        Chip(
+                        ActionChip(
                           label: const Text('Pie Chart'),
-                          onClicked: () => _setGraphType('pie'),
+                          onPressed: () => _setGraphType('pie'),
                         ),
                       ],
                     ),

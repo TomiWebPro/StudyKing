@@ -32,6 +32,9 @@ class StudentAttempt extends HiveObject {
   @HiveField(9)
   final String? markschemeMatch;
 
+  @HiveField(10)
+  final DateTime? lastDueDate;
+
   StudentAttempt({
     required this.id,
     required this.studentId,
@@ -43,5 +46,6 @@ class StudentAttempt extends HiveObject {
     required this.timestamp,
     this.userAnswer = '',
     this.markschemeMatch,
+    this.lastDueDate,
   });
 }

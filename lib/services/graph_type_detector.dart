@@ -2,9 +2,7 @@
 // Analyzes graph type, validates format, and detects from data
 
 import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 /// Graph type detection result
 enum GraphDetectionResult {
@@ -49,8 +47,8 @@ class GraphTypeValidator {
       final isValid = validateGraphFormat(inputData);
       return GraphValidationResult(
         detectedType: detectedType,
-        isValid: true,
-        message: isValid ? 'Graph valid' : 'Graph valid but type ambiguous',
+        isValid: isValid,
+        message: isValid ? 'Graph valid' : 'Graph format invalid',
       );
     } catch (e) {
       return GraphValidationResult(
@@ -62,10 +60,11 @@ class GraphTypeValidator {
   }
 
   String detectGraphTypeFromContent(String content) {
+    if (content.contains(',') && content.contains(']')) return 'scatterPlot';
+    if (content.contains('[')) return 'barChart';
+    if (content.contains('}') && content.contains('"heatmap"')) return 'heatmap';
     if (content.contains(',')) return 'lineGraph';
-    if (content.contains('[') && !content.contains(',')) return 'barChart';
     if (content.contains('}')) return 'pieChart';
-    if (content.contains('}')) return 'heatmap';
     if (content.contains('nodes')) return 'network';
     if (content.contains('start')) return 'sankey';
     return 'unknown';
@@ -135,32 +134,43 @@ class GraphAnalyzer {
   }
 
   Future<String> detectGraphTypes(String imageData) async {
-    final response = await dio.post(
-      '/api/v1/graph/detect',
-      data: {'imageData': imageData},
-    );
-    return response.data.body;
+    try {
+      final response = await dio.post(
+        '/api/v1/graph/detect',
+        data: {'imageData': imageData},
+      );
+      return response.data?.toString() ?? 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
   }
 
   String renderGraphFromJSON(Map<String, dynamic> graphJson) {
     return jsonEncode(graphJson);
   }
-
-  Error traceError(BoxError error) {
-    return Error(error: error);
-  }
 }
 
 /// Graph analysis result
 class GraphAnalysis {
-  final GraphType type;
+  final String type;
   final String? suggestedType;
   final Map<String, dynamic>? data;
   final String? suggestion;
   final String? error;
 
+  const GraphAnalysis({
+    required this.type,
+    this.suggestedType,
+    this.data,
+    this.suggestion,
+    this.error,
+  });
+
   static GraphAnalysis failure({String? exception}) {
-    return GraphAnalysis.failure(exception: exception);
+    return const GraphAnalysis(
+      type: 'unknown',
+      error: 'Analysis failed',
+    );
   }
 
   factory GraphAnalysis.fromJson(Map<String, dynamic> json) {
@@ -183,7 +193,7 @@ enum GraphErrorType {
 }
 
 /// Graph rendering error
-class GraphError extends Exception {
+class GraphError {
   final GraphErrorType errorType;
   final String? details;
 

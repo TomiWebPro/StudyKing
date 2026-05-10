@@ -32,6 +32,24 @@ dependencies:
   # HTTP
   http: ^1.6.0
 
+  # Date formatting
+  intl: ^0.18.0
+
+  # State management (used by legacy pages)
+  provider: ^6.1.1
+
+  # PDF generation
+  pdf: ^3.10.4
+
+  # UUID generation
+  uuid: ^4.2.1
+
+  # Image picker
+  image_picker: ^1.0.7
+
+  # Calendar
+  table_calendar: ^3.0.9
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

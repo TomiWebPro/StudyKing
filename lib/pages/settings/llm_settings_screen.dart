@@ -4,12 +4,12 @@ import '../../providers/llm_engine_provider.dart';
 import 'package:provider/provider.dart';
 
 class LLMSettingsScreen extends StatefulWidget {
-  final LLMEngineProvider engineProvider;
+  final LLMAIEngineProvider engineProvider;
 
   const LLMSettingsScreen({
-    Key? key,
+    super.key,
     required this.engineProvider,
-  }) : super(key: key);
+  });
 
   @override
   State<LLMSettingsScreen> createState() => _LLMSettingsScreenState();
@@ -18,6 +18,7 @@ class LLMSettingsScreen extends StatefulWidget {
 class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
   final _apiKeysController = TextEditingController();
   final _baseUrlController = TextEditingController();
+  String? _connectionType = 'openrouter';
 
   @override
   void dispose() {
@@ -28,7 +29,7 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final engine = Provider.of<LLMEngineProvider>(context, listen: false);
+    final engine = Provider.of<LLMAIEngineProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -45,15 +46,17 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Radio<String>(
-                        value: 'openrouter',
-                        groupValue: 'openrouter',
-                        onChanged: (v) => switchToOpenRouter(context),
-                      ),
-                      const Text('OpenRouter'),
-                    ],
+                  RadioGroup<String>(
+                    groupValue: _connectionType,
+                    onChanged: (String? value) {
+                      setState(() {
+                        _connectionType = value;
+                      });
+                    },
+                    child: RadioListTile<String>(
+                      title: const Text('OpenRouter'),
+                      value: 'openrouter',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -80,11 +83,11 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
             // Model Settings
             _buildSectionTitle('Model Selection'),
             _buildCard(
-              child: Consumer<LLMEngineProvider>(
+              child: Consumer<LLMAIEngineProvider>(
                 builder: (context, engine, _) {
                   final models = AvailableModels.openrouterModels;
 
-                  return Container(
+                  return SizedBox(
                     height: 300,
                     child: ListView(
                       children: models.map((model) {
@@ -101,11 +104,12 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('${model.providerDisplayName} selected'),
-                      ...[truncated]
-                        },
-                      ).toList();
-                    },
-                  ),
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
                   );
                 },
               ),
@@ -115,7 +119,7 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
             // Usage Statistics
             _buildSectionTitle('Usage Statistics'),
             _buildCard(
-              child: Consumer<LLMEngineProvider>(
+              child: Consumer<LLMAIEngineProvider>(
                 builder: (context, engine, _) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +192,7 @@ class _LLMSettingsScreenState extends State<LLMSettingsScreen> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, LLMEngineProvider engine) {
+  Widget _buildActionButtons(BuildContext context, LLMAIEngineProvider engine) {
     return Column(
       children: [
         Padding(

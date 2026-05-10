@@ -1,5 +1,5 @@
 // PDF Ingestion Engine - Static Design
-// TODO: Add implementation for:
+// TODO: P3-2 Add implementation for: PDF parsing, OCR, schema validation, and preview rendering
 // 1. File upload UI
 // 2. PDF page-by-page extraction
 // 3. Text processing per page

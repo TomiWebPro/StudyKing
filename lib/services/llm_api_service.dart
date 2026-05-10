@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/llm_models.dart';
@@ -7,23 +6,19 @@ import '../models/llm_models.dart';
 class OpenRouterClient {
   final Dio dio;
   final String baseUrl;
-  String? _apiKey;
 
   OpenRouterClient({
     Dio? dio,
-    String baseUrl = 'https://openrouter.ai/api/v1',
-  })  : dio = dio ?? Dio(),
-        baseUrl = baseUrl;
+    this.baseUrl = 'https://openrouter.ai/api/v1',
+  }) : dio = dio ?? Dio();
 
   /// set API key
   void setApiKey(String apiKey) {
-    _apiKey = apiKey;
     dio.options.headers['Authorization'] = 'Bearer $apiKey';
   }
 
   /// Clear API key
   void clearApiKey() {
-    _apiKey?.clear();
     dio.options.headers.remove('Authorization');
   }
 
@@ -45,8 +40,6 @@ class OpenRouterClient {
         return pricesResponse.data['prices']
             .where((p) => p['endpoints']?.isNotEmpty == true)
             .map((priceData) {
-          final endpoint = priceData['endpoints'][0];
-
           return ModelPrice(
             modelId: modelId,
             inputPrice: priceData['input_tokens_price']?.toDouble() ?? 0.0,
@@ -100,15 +93,16 @@ class OpenRouterClient {
   /// Fetch all available models for display
   Future<List<Map<String, dynamic>>> fetchAvailableModels() async {
     try {
-      final response = await dio.get('/models', options: Options(
-        queryParameters: {
-          'limit': '1000',
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
-        },
-      ));
+      final response = await dio.get(
+        '/models',
+        queryParameters: {'limit': '1000'},
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'HTTP-Referer': kReleaseMode ? 'https://yourapp.com' : 'http://localhost:3000',
+          },
+        ),
+      );
 
       if (response.statusCode == 200) {
         return (response.data['data'] as List)
@@ -164,21 +158,24 @@ class OpenRouterClient {
   Stream<List<int>> streamChat({
     required String model,
     required List<Map<String, dynamic>> messages,
-  }) {
-    return dio
-        .post(
-          '/chat/completions',
-          data: OpenRouterRequest(
-            model: model,
-            messages: messages,
-            stream: true,
-          ).toJson(),
-          options: Options(
-            responseType: ResponseType.stream,
-          ),
-        )
-        .timeout(const Duration(seconds: 30))
-        .then((response) => response.data);
+  }) async* {
+    try {
+      final response = await dio.post(
+        '/chat/completions',
+        data: OpenRouterRequest(
+          model: model,
+          messages: messages,
+          stream: true,
+        ).toJson(),
+        options: Options(
+          responseType: ResponseType.stream,
+        ),
+      ).timeout(const Duration(seconds: 30));
+
+      yield* response.data.stream;
+    } catch (e) {
+      throw Exception('Failed to connect to OpenRouter: $e');
+    }
   }
 
   /// Calculate cost based on usage info
@@ -211,7 +208,8 @@ class OpenRouterClient {
     try {
       final prices = await fetchModelPrices(model);
       if (prices.isNotEmpty) {
-        return prices[0].calculateCost(1000, 1000);
+        final price = prices[0];
+        return ((price.inputPrice * 1000) + (price.outputPrice * 1000)) / 1000000;
       }
       return 0.0;
     } catch (e) {

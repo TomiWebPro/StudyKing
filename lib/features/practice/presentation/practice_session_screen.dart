@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
+import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/features/practice/presentation/practice_screen.dart';
 import 'package:studyking/features/practice/services/answer_validation_service.dart';
+import 'package:studyking/features/questions/services/answer_validator.dart';
 
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -31,7 +33,6 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
-  late StudySessionRepository _sessionRepo;
   List<Question> _questions = [];
   int _currentIndex = 0;
   String? _currentAnswer;
@@ -43,65 +44,99 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   int _correctAnswers = 0;
   Timer? _timer;
   DateTime _sessionStartTime = DateTime.now();
+  // ignore: unused_field
+  String? _elapsedTime;  // Display format of elapsed time
+  // ignore: unused_field
   String? _sessionEndTime;
+  String? _elapsedTimeFormatted;  // Human readable format
   
   // Results tracking
   final List<PracticeAnswerRecord> _answerRecords = [];
+
+  // Feedback state (declared before usage)
+  bool _isCorrect = false;
+  // ignore: unused_field
+  String _feedbackExplanation = '';
+  // ignore: unused_field
+  double _feedbackScore = 0.0;
+  // ignore: unused_field
+  String? _feedbackDetails;
 
   @override
   void initState() {
     super.initState();
     _questionRepo = QuestionRepository();
-    _sessionRepo = StudySessionRepository();
     _loadQuestions();
     _startTimer();
   }
 
   void _startTimer() {
+    _timer?.cancel(); // Always cancel existing timer first to prevent leaks
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         // Track elapsed time for session analytics
-        // Do NOT clear _currentAnswer - this causes BUG where user can't submit!
-        _timerTime = DateTime.now();
+        final elapsed = DateTime.now().difference(_sessionStartTime).inMilliseconds;
+        _elapsedTime = elapsed.toString();
+        final minutes = elapsed ~/ (1000 * 60);
+        final seconds = (elapsed ~/ 1000) % 60;
+        _elapsedTimeFormatted = '$minutes min $seconds sec';
       });
     });
   }
   
-  List<Question> _getCurrentQuestions() {
-    return _questions;
-  }
-
   Future<void> _loadQuestions() async {
     try {
-      final questions = await _questionRepo.getBySubject(widget.subjectId);
-      
+      final result = await _questionRepo.getBySubject(widget.subjectId);
+      if (result.isFailure || result.data == null) {
+        if (mounted) {
+          setState(() => _questions = []);
+          _showNoQuestionsDialog();
+        }
+        return;
+      }
+      final questions = result.data!;
+
       // Filter by topic if specified
       List<Question> filteredQuestions = questions;
       if (widget.topicId != null && widget.topicId!.isNotEmpty) {
         filteredQuestions = questions.where((q) => q.topicId == widget.topicId).toList();
       }
-      
+
+      if (filteredQuestions.isEmpty) {
+        if (mounted) {
+          setState(() => _questions = []);
+          _showNoQuestionsDialog();
+        }
+        return;
+      }
+
       // Take requested number or all available
-      final count = widget.questionCount!.clamp(1, filteredQuestions.length);
-      
+      final count = (widget.questionCount ?? filteredQuestions.length)
+          .clamp(1, filteredQuestions.length);
+
       if (mounted) {
         setState(() {
           _questions = filteredQuestions.take(count).toList();
         });
       }
     } catch (e) {
-      debugPrint('Error loading questions: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load questions: $e')),
+        AppErrorHandler.handleError(
+          context,
+          e,
+          'Questions Load',
+          retry: true,
+          retryCallback: _retryLoadQuestions,
         );
       }
     }
-    
+
     if (mounted) {
       _initializeSession();
     }
   }
+  
+  Future<void> _retryLoadQuestions() => _loadQuestions();
 
   void _initializeSession() {
     if (_questions.isEmpty) {
@@ -125,35 +160,32 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       builder: (context) => AlertDialog(
         title: const Text('No Questions Available'),
         content: const Text('There are no questions for the selected subject/topic. Start creating questions!'),
-  void _validateAnswer(Question question, String answer, [AnswerValidationService? service]) {
-    final validationService = service ?? AnswerValidationService(QuestionAnswerValidator(null));
-    
-    // For single/multi choice with markscheme, use custom logic
-    if (question.type == QuestionType.singleChoice || question.type == QuestionType.multiChoice) {
-      if (question.markscheme != null) {
-        validationService._validator = QuestionAnswerValidator(Markscheme(
-          correctAnswer: question.markscheme!,
-          acceptableAnswers: [],
-          explanation: '',
-          steps: [],
-        ));
-        final result = validationService._validator.validateMCQAnswer(answer, question.type);
-        setState(() {
-          _isCorrect = result.isCorrect;
-          _feedbackExplanation = result.explanation;
-        });
-        return result.isCorrect;
-      }
-    }
-    
+      ),
+    );
+  }
+  
+  void _onAnswerSelected(String? answer) {
+    setState(() {
+      _currentAnswer = answer;
+    });
+  }
+
+  bool _validateAnswer(Question question, String answer, [AnswerValidationService? service]) {
+    final markscheme = Markscheme(
+      correctAnswer: question.markscheme ?? '',
+      acceptableAnswers: question.options,
+      explanation: question.explanation ?? '',
+    );
+    final validationService = service ??
+        AnswerValidationService(QuestionAnswerValidator(markscheme));
+
     final result = validationService.validateAnswer(question, answer);
     setState(() {
       _isCorrect = result.isCorrect;
       _feedbackExplanation = result.explanation;
-      _feedbackScore = result.score;
+      _feedbackScore = result.score ?? 0.0;
       _feedbackDetails = result.feedback;
     });
-    
     return result.isCorrect;
   }
 
@@ -181,36 +213,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     });
   }
 
-  // State for feedback
-  int _correctAnswers = 0;
-
-  // Tracking state
-  int _timer = 0;
-  DateTime _sessionStartTime = DateTime.now();
-  String? _sessionEndTime;
-
-  // Results tracking
-  final List<PracticeAnswerRecord> _answerRecords = [];
-
-  bool _validateAnswer(Question question, String answer) {
-    // Simple validation for now - should integrate with Markscheme
-    switch (question.type) {
-      case QuestionType.singleChoice:
-      case QuestionType.multiChoice:
-        // markscheme is a String, handle it appropriately
-        final correctAnswer = question.markscheme ?? '';
-        return answer.toLowerCase() == correctAnswer.toLowerCase();
-      
-      case QuestionType.typedAnswer:
-        // For typed answers, we'd need AI validation
-        // For now, consider any answer as valid
-        return answer.isNotEmpty;
-      
-      default:
-        return answer.isNotEmpty;
-    }
-  }
-
   void _nextQuestion() {
     if (_currentIndex < _questions.length - 1) {
       setState(() {
@@ -233,7 +235,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _completeSession() {
-    _timer?.cancel();
+    _timer?.cancel(); // CRITICAL: Always clean up timer
     _sessionEndTime = DateTime.now().toIso8601String();
     
     // Update UI to show results
@@ -241,19 +243,19 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _isSessionComplete = true;
     });
     
-    // Save session to database
-    final totalTime = DateTime.parse(_sessionEndTime!).difference(_sessionStartTime).inMilliseconds;
-    
-    _sessionRepo.create(StudySession(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      startTime: _sessionStartTime,
-      endTime: DateTime.parse(_sessionEndTime!),
-      timeSpentMs: totalTime,
-      questionsAnswered: _questions.length,
-      correctAnswers: _correctAnswers,
-      studentId: 'anonymous',
-      subjectId: widget.subjectId,
-    ));
+    // Wait briefly for UI update, then navigate
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        Navigator.pop(context);
+        // Navigate back to practice screen with session ID
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PracticeScreen(),
+          ),
+        );
+      }
+    });
   }
 
   void _restartSession() {
@@ -306,32 +308,33 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header with progress info
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildMiniStat(
-                    context,
-                    'Question',
-                    '${_currentIndex + 1}/${_questions.length}',
-                    Icons.numbers,
-                  ),
+    // Header with progress info
+    Container(
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildMiniStat(
+            context,
+            'Time',
+            _elapsedTimeFormatted ?? '0 min 0 sec',
+            Icons.access_time,
+            Colors.blue,
+          ),
                   _buildMiniStat(
                     context,
                     'Score',
                     '${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
                     Icons.star,
-                    color: _getColorForScore(_correctAnswers / (_currentIndex + 1)),
+                    _getColorForScore(_correctAnswers / (_currentIndex + 1)),
                   ),
                   _buildMiniStat(
                     context,
                     'Correct',
                     _correctAnswers.toString(),
                     Icons.check_circle,
-                    color: Colors.green,
+                    Colors.green,
                   ),
                 ],
               ),
@@ -351,7 +354,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -365,7 +368,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -425,18 +428,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     switch (question.type) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
-        // Use actual options from markscheme if available
-        final options = question.markscheme?.split(',').map((opt) => opt.trim()).where((opt) => opt.isNotEmpty).toList();
-        
-        final correctAnswer = question.markscheme ?? 'Option 1';
-        
-        final cleanOptions = options ?? ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
-        final finalCorrectAnswer = cleanOptions.isNotEmpty ? cleanOptions[0] : 'Option 1';
+        // MCQ - Use question.options field which is properly populated
+        final correctAnswer = question.markscheme ?? '';
+        final options = question.type == QuestionType.singleChoice 
+            ? question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options
+            : question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options;
         
         return SingleAnswerWidget(
           questionText: question.text,
-          options: cleanOptions,
-          correctAnswer: finalCorrectAnswer,
+          options: options,
+          correctAnswer: correctAnswer,
           selectedAnswer: _currentAnswer,
           isSubmitted: _isSubmitted,
           isFeedbackVisible: _isFeedbackVisible,
@@ -490,129 +491,87 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         filled: true,
-        counterText: '',
       ),
-      maxLines: 10,
+      maxLines: 5,
       keyboardType: TextInputType.multiline,
       onChanged: _onAnswerSelected,
     );
   }
 
   Widget _buildFallbackWidget(Question question) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              'Question type "${question.type.name}" not fully implemented yet',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
-    );
+    return Text('Unsupported question type: ${question.type.name}');
   }
 
   Widget _buildFeedback(BuildContext context, Question question) {
-    final isCorrect = _validateAnswer(question, _currentAnswer!);
-    final theme = Theme.of(context);
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCorrect 
-            ? Colors.green.withOpacity(0.1)
-            : Colors.red.withOpacity(0.1),
+        color: _isCorrect
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isCorrect ? Colors.green : Colors.red,
-        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isCorrect ? Icons.check_circle : Icons.error_outline,
-            color: isCorrect ? Colors.green : Colors.red,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isCorrect ? 'Correct!' : 'Incorrect',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isCorrect ? Colors.green : Colors.red,
-                  ),
+          Row(
+            children: [
+              Icon(
+                _isCorrect ? Icons.check_circle : Icons.error_outline,
+                color: _isCorrect ? Colors.green : Colors.red,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                _isCorrect ? 'Correct!' : 'Incorrect',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _isCorrect ? Colors.green : Colors.red,
                 ),
-                // markscheme is a String now, not an object
-                if (question.markscheme != null && 
-                    question.type == QuestionType.singleChoice) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Answer: ${question.markscheme}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          if (question.explanation != null && question.explanation!.isNotEmpty)
+            Text(
+              question.explanation!,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
         ],
       ),
     );
   }
 
   Widget _buildNavigationButtons(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = _currentIndex > 0;
-    final canGoNext = _currentIndex < _questions.length - 1;
-
-    return Row(
+    return Column(
       children: [
-        if (canGoBack)
-          OutlinedButton.icon(
-            onPressed: _previousQuestion,
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Previous'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: theme.primaryColor,
-            ),
-          ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: canGoNext ? _nextQuestion : _completeSession,
-            icon: Icon(canGoNext ? Icons.arrow_forward : Icons.celebration),
-            label: Text(canGoNext ? 'Next' : 'See Results'),
-          ),
+        ElevatedButton.icon(
+          onPressed: _previousQuestion,
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Previous'),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _nextQuestion,
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('Next'),
         ),
       ],
     );
   }
 
-  Widget _buildMiniStat(BuildContext context, String label, String value, IconData icon, {Color? color}) {
+  Widget _buildMiniStat(BuildContext context, String label, String value, IconData icon, [Color? color]) {
     return Column(
       children: [
-        Icon(icon, color: color ?? Theme.of(context).primaryColor, size: 24),
+        Icon(icon, size: 16, color: color ?? Theme.of(context).primaryColor),
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: color ?? Theme.of(context).primaryColor,
+            fontSize: 14,
           ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );
@@ -624,203 +583,53 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     return Colors.red;
   }
 
-  Widget _buildResultsScreen() {
-    final theme = Theme.of(context);
-    final score = _correctAnswers / _questions.length * 100;
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Practice Complete'),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Score Circle
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      score >= 80 ? Colors.green : Colors.orange,
-                      score >= 80 ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      '${score.toStringAsFixed(1)}%',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'Your Score',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Stats Grid
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildResultsStat(
-                      context,
-                      'Questions',
-                      '${_questions.length}',
-                      Icons.question_answer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildResultsStat(
-                      context,
-                      'Correct',
-                      '${_correctAnswers}',
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildResultsStat(
-                      context,
-                      'Incorrect',
-                      '${_questions.length - _correctAnswers}',
-                      Icons.clear,
-                      color: Colors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildResultsStat(
-                      context,
-                      'Accuracy',
-                      '${score.toStringAsFixed(0)}%',
-                      Icons.sticky_note_2,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Detailed Analysis
-              if (_answerRecords.isNotEmpty) ...[
-                _buildSectionHeader('Answer Details'),
-                const SizedBox(height: 12),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _answerRecords.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final record = _answerRecords[index];
-                    return ListTile(
-                      leading: Icon(
-                        record.isCorrect ? Icons.check : Icons.clear,
-                        color: record.isCorrect ? Colors.green : Colors.red,
-                      ),
-                      title: Text('Question ${index + 1}'),
-                      subtitle: Text(record.questionType.name),
-                      trailing: Text(
-                        record.isCorrect ? 'Correct' : 'Incorrect',
-                        style: TextStyle(
-                          color: record.isCorrect ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const SizedBox(height: 32),
-
-              // Actions
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Back'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _restartSession,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Restart'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultsStat(BuildContext context, String label, String value, IconData icon, {Color? color}) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: (color ?? theme.primaryColor).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: (color ?? theme.primaryColor).withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color ?? theme.primaryColor, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color ?? theme.primaryColor,
-            ),
-          ),
-          Text(label, style: theme.textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
+  Widget _buildStatRow(String label, String value) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodyLarge),
+        Text(value, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
       ],
+    );
+  }
+
+  Widget _buildResultsScreen() {
+    final accuracy = _questions.isEmpty
+        ? 0.0
+        : (_correctAnswers / _questions.length) * 100;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Session Results')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Practice Complete!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildStatRow('Total Questions', _questions.length.toString()),
+            const SizedBox(height: 12),
+            _buildStatRow('Correct Answers', '$_correctAnswers/${_questions.length}'),
+            const SizedBox(height: 12),
+            _buildStatRow('Accuracy', '${accuracy.toStringAsFixed(0)}%'),
+            const SizedBox(height: 24),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _restartSession,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Practice Again'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+/// Record of a single answer during a practice session
 class PracticeAnswerRecord {
   final String questionId;
   final QuestionType questionType;

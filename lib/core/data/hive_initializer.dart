@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'database_migration.dart';
@@ -22,6 +23,6 @@ class HiveInitializer {
     // Open the Kanban tasks box
     await Hive.openBox('tasks');
     
-    print('Hive initialized successfully with migrations');
+    debugPrint('Hive initialized successfully with migrations');
   }
 }

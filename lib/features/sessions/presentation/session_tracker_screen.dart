@@ -1,62 +1,89 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
-import 'session_history_screen.dart';
-import '../widgets/session_analytics.dart';
+import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 
-/// Session Tracker Screen - Main UI for tracking study sessions
-class SessionTrackerScreen extends ConsumerStatefulWidget {
+
+const String _defaultStudentId = 'anonymous';
+
+class SessionTrackerScreen extends StatefulWidget {
   const SessionTrackerScreen({super.key});
 
   @override
-  ConsumerState<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
+  State<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
 }
 
-class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
+class _SessionTrackerScreenState extends State<SessionTrackerScreen> with WidgetsBindingObserver {
   late StudySessionRepository _sessionRepository;
   List<StudySession> _allSessions = [];
+  List<StudySession> _sortedSessions = [];
   Duration _totalStudyTime = Duration.zero;
   int _currentStreak = 0;
   bool _isTrackingSession = false;
   DateTime? _sessionStartTime;
   Timer? _timer;
   int _elapsedSeconds = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _sessionRepository = StudySessionRepository();
     _loadSessions();
-    _calculateStats();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused && _isTrackingSession) {
+      _timer?.cancel();
+    } else if (state == AppLifecycleState.resumed && _isTrackingSession && _sessionStartTime != null) {
+      _elapsedSeconds = DateTime.now().difference(_sessionStartTime!).inSeconds;
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateElapsed());
+    }
   }
 
   Future<void> _loadSessions() async {
     try {
+      await _sessionRepository.init();
       final sessions = await _sessionRepository.getAll();
       if (mounted) {
         setState(() {
           _allSessions = sessions.toList();
+          _sortedSessions = List<StudySession>.from(_allSessions)
+            ..sort((a, b) => b.startTime.millisecondsSinceEpoch.compareTo(a.startTime.millisecondsSinceEpoch));
+          _isLoading = false;
         });
+        _calculateStats();
       }
     } catch (e) {
       debugPrint('Error loading sessions: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _calculateStats() {
     final today = DateTime.now();
-    
-    // Calculate current streak
+
     int streak = 0;
-    DateTime checkDate = DateTime.now().subtract(const Duration(days: 1));
-    
+    DateTime checkDate = today;
+
     while (true) {
-      final dateStr = '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
-      final hasSessionToday = _allSessions.any((s) => _isSameDay(s.startTime, checkDate));
-      
+      final hasSessionToday = _allSessions.any((s) => isSameDay(s.startTime, checkDate));
       if (hasSessionToday) {
         streak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
@@ -64,19 +91,14 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
         break;
       }
     }
-    
+
     _currentStreak = streak;
-    
-    // Calculate total study time
+
     int totalMs = 0;
     for (var session in _allSessions) {
       totalMs += session.timeSpentMs;
     }
     _totalStudyTime = Duration(milliseconds: totalMs);
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   void _startSession() {
@@ -85,62 +107,96 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
       _sessionStartTime = DateTime.now();
       _elapsedSeconds = 0;
     });
-    
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateElapsed());
+  }
+
+  void _updateElapsed() {
+    if (_sessionStartTime == null) return;
+    if (mounted) {
       setState(() {
-        _elapsedSeconds++;
+        _elapsedSeconds = DateTime.now().difference(_sessionStartTime!).inSeconds;
       });
-    });
-  }
-
-  void _endSession() {
-    _timer?.cancel();
-    setState(() {
-      _isTrackingSession = false;
-    });
-    
-    final endTime = DateTime.now();
-    final duration = endTime.difference(_sessionStartTime!).inMilliseconds;
-    
-    _sessionRepository.create(StudySession(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      startTime: _sessionStartTime!,
-      endTime: endTime,
-      timeSpentMs: duration,
-      questionsAnswered: 0,
-      correctAnswers: 0,
-      studentId: 'anonymous',
-      subjectId: 'all',
-    ));
-    
-    _loadSessions();
-    _calculateStats();
-  }
-
-  String _formatTime(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-    
-    if (hours > 0) {
-      return '${hours}h ${minutes}m ${seconds}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
-    } else {
-      return '${seconds}s';
     }
   }
 
+  Future<void> _endSession() async {
+    _timer?.cancel();
+
+    if (_sessionStartTime == null) return;
+
+    final endTime = DateTime.now();
+    final startTime = _sessionStartTime!;
+    final duration = endTime.difference(startTime).inMilliseconds;
+
+    if (!mounted) return;
+
+    final stats = await showDialog<_SessionEndStats>(
+      context: context,
+      builder: (context) => const _SessionEndDialog(),
+    );
+
+    if (!mounted) return;
+
+    final questionsAnswered = stats?.questionsAnswered ?? 0;
+    final correctAnswers = stats?.correctAnswers ?? 0;
+
+    final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+
+    try {
+      await _sessionRepository.create(StudySession(
+        id: id,
+        startTime: startTime,
+        endTime: endTime,
+        timeSpentMs: duration,
+        questionsAnswered: questionsAnswered,
+        correctAnswers: correctAnswers,
+        studentId: _defaultStudentId,
+        subjectId: 'all',
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save session: $e')),
+        );
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isTrackingSession = false;
+      _sessionStartTime = null;
+    });
+
+    await _loadSessions();
+  }
+
   String _formatElapsed(int seconds) {
-    final mins = (seconds ~/ 60).toString().padLeft(2, '0');
-    final secs = (seconds % 60).toString().padLeft(2, '0');
-    return '$mins:$secs';
+    final hours = seconds ~/ 3600;
+    final mins = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    if (hours > 0) {
+      return '${hours}h ${mins}m ${secs}s';
+    }
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Study Session Tracker'),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Study Session Tracker'),
@@ -153,21 +209,20 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Active Session Card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      theme.primaryColor.withOpacity(0.1),
-                      theme.primaryColor.withOpacity(0.05),
+                      theme.primaryColor.withValues(alpha: 0.1),
+                      theme.primaryColor.withValues(alpha: 0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: theme.primaryColor.withOpacity(0.3),
+                    color: theme.primaryColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(
@@ -226,16 +281,15 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // Stats Grid
+
               Row(
                 children: [
                   Expanded(
                     child: _buildStatCard(
                       'Total Time',
-                      _formatTime(_totalStudyTime),
+                      formatDuration(_totalStudyTime),
                       Icons.access_time,
                       theme.colorScheme.secondary,
                     ),
@@ -267,8 +321,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
                     flex: 2,
                     child: _buildStatCard(
                       'Avg per Session',
-                      _allSessions.isNotEmpty 
-                          ? _formatTime(_totalStudyTime ~/ _allSessions.length)
+                      _allSessions.isNotEmpty
+                          ? formatDuration(Duration(milliseconds: _totalStudyTime.inMilliseconds ~/ _allSessions.length))
                           : '0m',
                       Icons.schedule,
                       Colors.purple,
@@ -276,10 +330,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // Recent Sessions Header
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -289,21 +342,32 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SessionHistoryScreen(),
+                  Row(
+                    children: [
+                      if (_allSessions.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(
+                            '${_sortedSessions.take(5).length} of ${_allSessions.length}',
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ),
-                      );
-                    },
-                    child: const Text('View All'),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SessionHistoryScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text('View All'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              
-              // Recent Sessions List
+
               Expanded(
                 child: _buildRecentSessionsList(theme),
               ),
@@ -316,13 +380,13 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     final theme = Theme.of(context);
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -360,32 +424,28 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
       );
     }
 
-    final sortedSessions = List<StudySession>.from(_allSessions)
-      ..sort((a, b) => b.startTime.millisecondsSinceEpoch.compareTo(a.startTime.millisecondsSinceEpoch));
-    
-    final recentSessions = sortedSessions.take(5).toList();
+    final recentSessions = _sortedSessions.take(5).toList();
 
     return ListView.builder(
       itemCount: recentSessions.length,
       itemBuilder: (context, index) {
         final session = recentSessions[index];
+        final position = _sortedSessions.indexOf(session);
+
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: Icon(
-              Icons.play_arrow,
-              color: theme.primaryColor,
-            ),
+            leading: Icon(Icons.play_arrow, color: theme.primaryColor),
             title: Text(
-              'Session ${index + 1}',
+              'Session ${_sortedSessions.length - position}',
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              '${_formatTime(Duration(milliseconds: session.timeSpentMs))} • ${_formatDate(session.startTime)}',
+              '${formatDuration(Duration(milliseconds: session.timeSpentMs))} • ${formatDate(session.startTime)}',
               style: theme.textTheme.bodySmall,
             ),
             trailing: Text(
-              _formatTime(Duration(milliseconds: session.timeSpentMs)),
+              formatDuration(Duration(milliseconds: session.timeSpentMs)),
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.primaryColor,
@@ -396,18 +456,79 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> {
       },
     );
   }
+}
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final sessionDate = DateTime(date.year, date.month, date.day);
-    
-    if (sessionDate == today) {
-      return 'Today';
-    } else if (sessionDate.difference(today).abs() == const Duration(days: 1)) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
+class _SessionEndStats {
+  final int questionsAnswered;
+  final int correctAnswers;
+
+  const _SessionEndStats({required this.questionsAnswered, required this.correctAnswers});
+}
+
+class _SessionEndDialog extends StatefulWidget {
+  const _SessionEndDialog();
+
+  @override
+  State<_SessionEndDialog> createState() => _SessionEndDialogState();
+}
+
+class _SessionEndDialogState extends State<_SessionEndDialog> {
+  final _questionsController = TextEditingController(text: '0');
+  final _correctController = TextEditingController(text: '0');
+
+  @override
+  void dispose() {
+    _questionsController.dispose();
+    _correctController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Session Complete'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('How many questions did you answer?'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _questionsController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Questions Answered',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _correctController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Correct Answers',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () =>
+              Navigator.pop(context, const _SessionEndStats(questionsAnswered: 0, correctAnswers: 0)),
+          child: const Text('Skip'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final questions = int.tryParse(_questionsController.text) ?? 0;
+            final correct = int.tryParse(_correctController.text) ?? 0;
+            Navigator.pop(
+              context,
+              _SessionEndStats(questionsAnswered: questions, correctAnswers: correct),
+            );
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }

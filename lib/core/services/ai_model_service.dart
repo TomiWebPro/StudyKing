@@ -70,9 +70,7 @@ class AiModel {
     String? contextLength = data['context_length']?.toString();
     String? pricing = (data['pricing'] as Map?)?['prompt'] as String?;
 
-    if (id == null) {
-      id = 'unknown';
-    }
+    id ??= 'unknown';
 
     if (name == null) {
       final parts = id.split('/');

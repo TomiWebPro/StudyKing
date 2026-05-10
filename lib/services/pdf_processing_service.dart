@@ -1,54 +1,72 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../../models/dynamic_context_config.dart';
+import 'package:studyking/providers/llm_engine_provider.dart';
 
 /// PDF Processing Service with Dynamic Context Window Fetching
 class PDFProcessingService extends ChangeNotifier {
   final Dio dio;
-  final LLMAIEngineProvider llmEngine;
-  Map<String, int> _contextWindows = {};
+  final LLMAIEngineProvider llmEngineProvider;
+  final Map<String, int> _contextWindows = {};
   int _currentContext = 8192;
   bool _isFetching = false;
 
-  PDFProcessingService({Required LLMAIEngineProvider LLMAIEngineProvider llmEngineProvider})
-      : dio = Dio(),
-        llmEngineProvider = llmEngineProvider;
+  PDFProcessingService({required this.llmEngineProvider})
+      : dio = Dio();
 
   int get currentContext => _currentContext;
   Map<String, int> get contextWindows => Map.unmodifiable(_contextWindows);
   bool get isFetching => _isFetching;
 
-  LLMAIEngineProvider get _llmEngine => llmEngineProvider;
-  void setLLMEngine(LLMAIEngineProvider engine) {
-    _llmEngine = engine;
-  }
-
   /// Fetch context window for active model
   Future<void> fetchContextWindow(String modelId) async {
     _isFetching = true;
-    llmEngine.notifyListeners();
+    llmEngineProvider.notifyListeners();
 
-    await dio.post('/api/v1/context', data: {'model': modelId}).then((response) {
-      // Parse response to get context window
+    try {
+      final response = await dio.post('/api/v1/context', data: {'model': modelId});
       _contextWindows[modelId] = response.data['context_window_size']?.toInt() ?? 4096;
       _currentContext = _contextWindows[modelId] ?? 8192;
+    } catch (e) {
+      _contextWindows[modelId] = 4096;
+      _currentContext = 8192;
+    } finally {
       _isFetching = false;
       notifyListeners();
-    });
+    }
   }
 
   /// Fetch batches of pages from document
-  Future<List<File>> fetchContextPages(int pages) async {
-    final pagesData = await dio.get('/api/v1/pages', queryParameters: {'n': pages});
-    return pagesData.data;
+  Future<List<Map<String, dynamic>>> fetchContextPages(int pages) async {
+    final response = await dio.get('/api/v1/pages', queryParameters: {'n': pages});
+    if (response.data is List) {
+      return List<Map<String, dynamic>>.from(response.data as List);
+    }
+    return [];
   }
 
   /// Chunk text with fixed window
   List<List<String>> chunkText(List<String> pages) {
-    return pages.groupBy(
-      (page) => byteLength(page) <= _currentContext ? page : chunk(part: page, limit: _currentContext),
-    );
+    final result = <List<String>>[];
+    var currentChunk = <String>[];
+    var currentSize = 0;
+
+    for (var page in pages) {
+      final pageSize = page.length;
+      if (currentSize + pageSize > _currentContext && currentChunk.isNotEmpty) {
+        result.add(currentChunk);
+        currentChunk = [];
+        currentSize = 0;
+      }
+      currentChunk.add(page);
+      currentSize += pageSize;
+    }
+
+    if (currentChunk.isNotEmpty) {
+      result.add(currentChunk);
+    }
+
+    return result;
   }
 
   /// Process text via LLM
@@ -57,7 +75,11 @@ class PDFProcessingService extends ChangeNotifier {
 
     for (var chunk in textChunks) {
       final response = await dio.post('/api/v1/generate', data: {'text': chunk.join('\n')});
-      results.add(TextSegment(id: response.data.id, text: response.data.generated));
+      final data = response.data is Map ? response.data as Map<String, dynamic> : <String, dynamic>{};
+      results.add(TextSegment(
+        id: data['id']?.toString() ?? '',
+        text: data['generated']?.toString() ?? '',
+      ));
     }
 
     return results;
@@ -65,29 +87,41 @@ class PDFProcessingService extends ChangeNotifier {
 
   /// Error handling
   void onError(String? error) {
-    print('Error: $error');
+    debugPrint('PDFProcessingService error: $error');
   }
 
   /// HTTP request
   Future<File> requestStream(String url) async {
-    return File(url);
+    final response = await Dio().get(url, options: Options(responseType: ResponseType.bytes));
+    final tempFile = File('${Directory.systemTemp.path}/stream_output');
+    await tempFile.writeAsBytes(response.data as List<int>);
+    return tempFile;
   }
 
   /// Upload to server
-  Future<File> upload(String filePath, String content) async {
-    final file = File(filePath);
-    return file.writeAsString(content);
+  Future<Response> upload(String filePath, String url) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    return await Dio().post(url, data: formData);
   }
+}
+
+/// Text segment for processed content
+class TextSegment {
+  final String id;
+  final String text;
+
+  TextSegment({required this.id, required this.text});
 }
 
 /// API Context Generator
 class ApiContext {
   final String endpoint = '/api/v1/context';
-  String text = '';
 
   Future<String> createContext() async {
     final response = await Dio().get('/api/v1/context');
-    return response.data;
+    return response.data?.toString() ?? '';
   }
 }
 
@@ -96,39 +130,8 @@ class ContextGenerator {
   final Map<String, int> _contextMap = {};
   int currentContext = 0;
 
-  ContextGenerator();
-
-  int getContextSize(String model) {
-    if (_contextMap.containsKey(model)) {
-      return _contextMap[model]!;
-    }
-    return 4096;
-  }
-
-  void updateContext(String model, int size) {
-    _contextMap[model] = size;
-    currentContext = size;
-  }
-
-  int getWithContextSize(String model) {
-    return _contextMap[model] ?? 4096;
-  }
-
   int getContextWindow(String model) {
     return _contextMap[model] ?? 4096;
-  }
-
-  void clearContext() {
-    _contextMap.clear();
-  }
-
-  void removeContext(String model) {
-    _contextMap.remove(model);
-  }
-
-  void addContext(String model, int size) {
-    _contextMap[model] = size;
-    currentContext = size;
   }
 
   void setContext(String model, int size) {
@@ -136,8 +139,8 @@ class ContextGenerator {
     currentContext = size;
   }
 
-  String getModel(String model) {
-    return model;
+  void clearContext() {
+    _contextMap.clear();
   }
 
   Map<String, int> getContextMap() => _contextMap;
@@ -150,49 +153,29 @@ class HTTPResponseProcessor {
   final String status;
   final Map<String, dynamic>? queryParameters;
 
-  dynamic getTarget;
-
   HTTPResponseProcessor({
     required this.body,
     required this.headers,
     required this.status,
     this.queryParameters,
   });
-
-  Future<File> setFile(String fileName) {
-    final file = File(fileName);
-    return file.create();
-  }
-
-  Future<File> writeText(String text) async {
-    final file = File('output.txt');
-    return file.writeAsString(text);
-  }
 }
 
 /// Storage Manager
 class StorageService {
-  static const _boxType = 'StudyKing';
-  static Box? _box;
-
-  static Box get box {
-    if (_box == null) {
-      final dir = Directory('/tmp/');
-      final path = dir.path;
-      _box = await Hive.openBox(_boxType, path);
-    }
-    return _box;
+  static Future<void> initialize() async {
+    // TODO: Add Hive initialization when hive package is properly configured
   }
-
-  static void clearBox() => _box?.clear();
 
   static Future<void> set(String key, dynamic value) async {
-    await box.put(key, value);
+    // TODO: Implement with Hive when available
   }
 
-  static Future<dynamic> get(String key) async => box.get(key);
+  static Future<dynamic> get(String key) async => null;
 
-  static Future<void> remove(String key) async => box.delete(key);
+  static Future<void> remove(String key) async {}
 
-  static Future<void> clearAll() async => box.clear();
+  static Future<void> clearAll() async {}
+
+  static Future<void> clearBox() async {}
 }

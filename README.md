@@ -46,10 +46,12 @@ A modern Flutter-based adaptive learning platform designed for efficient study m
 
 ## 📱 Platform Support
 
-- ✅ Web (Primary target)
-- ✅ Android (via Flutter Web build)
-- 🚧 iOS (work in progress)
-- 🚧 Desktop (work in progress)
+StudyKing is designed primarily for web, with platform-specific features.
+
+- ✅ **Web** (Primary target) - Full feature support
+- ℹ️ **Android** - Web wrapper via Flutter Web. Touch controls may vary.
+- ℹ️ **iOS** - Web wrapper via Flutter Web. Some features still in development
+- ℹ️ **Desktop** - Planing for native desktop support (Flutter Desktop)
 
 ## 🔧 Configuration
 

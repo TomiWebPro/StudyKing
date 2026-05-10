@@ -10,7 +10,7 @@ class LLMModelConfig {
   final String providerDisplayName;
   final double inputPricePerMillionTokens;
   final double outputPricePerMillionTokens;
-  final double contextWindow;
+  final int contextWindow;
 
   const LLMModelConfig({
     required this.provider,
@@ -33,7 +33,7 @@ class LLMModelConfig {
 
   /// Format pricing for display
   String formatPricing() {
-    return '${inputPricePerMillionTokens}/$M input, ${outputPricePerMillionTokens}/$M output';
+    return '$inputPricePerMillionTokens/\$M input, $outputPricePerMillionTokens/\$M output';
   }
 
   @override
@@ -45,10 +45,10 @@ class LLMModelConfig {
           modelName == other.modelName;
 
   @override
-  int get hashCode => provider.hashCode ^ modelName.hashCode;
+  int get hashCode => Object.hash(provider, modelName);
 
   @override
-  String toString() -> 'LLMConfig($provider, $modelName, ${(inputPricePerMillionTokens + outputPricePerMillionTokens)/2}/M)';
+  String toString() => 'LLMConfig($provider, $modelName, ${(inputPricePerMillionTokens + outputPricePerMillionTokens) / 2}/M)';
 }
 
 /// API endpoint configuration
@@ -60,13 +60,13 @@ class APIEndpointConfig {
   final String modelName;
   final int contextWindow;
 
-  const APIEndpointConfig({
+  APIEndpointConfig({
     required this.provider,
     required this.baseUrl,
-    required this.apiKey.isEmpty ? '' : this.apiKey,
+    required String apiKey,
     this.modelName = '',
     this.contextWindow = 4096,
-  });
+  }) : apiKey = apiKey.isEmpty ? '' : apiKey;
 
   LLMModelConfig toModelConfig() {
     switch (provider.toLowerCase()) {
@@ -100,10 +100,11 @@ class APIEndpointConfig {
           baseUrl == other.baseUrl;
 
   @override
-  int get hashCode => provider.hashCode ^ baseUrl.hashCode;
+  int get hashCode => Object.hash(provider, baseUrl);
 }
 
 /// Usage tracking record
+@immutable
 class LLMUsageRecord {
   final DateTime timestamp;
   final String provider;
@@ -112,7 +113,7 @@ class LLMUsageRecord {
   final int outputTokens;
   final double totalCost;
 
-  LLMUsageRecord({
+  const LLMUsageRecord({
     required this.timestamp,
     required this.provider,
     required this.model,
@@ -149,6 +150,7 @@ class LLMUsageRecord {
 }
 
 /// Summary of usage statistics
+@immutable
 class LLMUsageSummary {
   final int totalRequests;
   final int totalTokens;
@@ -168,12 +170,9 @@ class LLMUsageSummary {
   double get costPerToken =>
       totalTokens > 0 ? (totalCost / totalTokens) : 0.0;
 
-  /// Requests per day
-  double get requestsPerDay => totalRequests / 24.0;
-
   /// Monthly projection at current rate
   double get monthlyProjection =>
-      (totalCost / totalRequests * 30 * 1000000);
+      totalRequests > 0 ? (totalCost / totalRequests * 30) : 0.0;
 
   @override
   String toString() {
@@ -183,7 +182,9 @@ class LLMUsageSummary {
 }
 
 /// Available models for different providers
+@immutable
 class AvailableModels {
+  const AvailableModels._();
   /// OpenRouter models with pricing
   static const List<LLMModelConfig> openrouterModels = [
     // Anthropic

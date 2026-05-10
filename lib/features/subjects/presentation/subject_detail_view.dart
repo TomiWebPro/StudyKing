@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/main.dart' show database;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
@@ -64,7 +63,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             expandedHeight: 200,
             floating: false,
             pinned: true,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 widget.subjectName,
@@ -77,8 +76,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      color.withOpacity(0.8),
-                      color.withOpacity(0.4),
+                      color.withValues(alpha: 0.8),
+                      color.withValues(alpha: 0.4),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -123,7 +122,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                         Text(
                                           widget.subjectCode!,
                                           style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: Colors.white.withOpacity(0.8),
+                                            color: Colors.white.withValues(alpha: 0.8),
                                           ),
                                         ),
                                     ],
@@ -253,7 +252,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _stringToColor(widget.subjectColor).withOpacity(0.2),
+                    backgroundColor: _stringToColor(widget.subjectColor).withValues(alpha: 0.2),
                     child: Icon(Icons.book, color: _stringToColor(widget.subjectColor)),
                   ),
                   title: Text((lesson as dynamic).title ?? 'Lesson'),
@@ -387,10 +386,10 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: score >= 80 
-                        ? Colors.green.withOpacity(0.2)
+                        ? Colors.green.withValues(alpha: 0.2)
                         : score >= 50 
-                            ? Colors.orange.withOpacity(0.2)
-                            : Colors.red.withOpacity(0.2),
+                            ? Colors.orange.withValues(alpha: 0.2)
+                            : Colors.red.withValues(alpha: 0.2),
                     child: Icon(
                       score >= 80 
                           ? Icons.check_circle 
@@ -576,9 +575,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [

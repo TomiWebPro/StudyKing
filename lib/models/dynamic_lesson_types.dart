@@ -1,11 +1,13 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 /// API-driven lesson/generator types
 /// All types fetched from OpenRouter API - NO hardcoded values
 class DynamicLessonTypes {
-  late Map<String, String> _lessonTypesMap;
-  final Dio dio = Dio();
+  Map<String, String> _lessonTypesMap = {};
+  final Dio dio;
+
+  DynamicLessonTypes({Dio? dio}) : dio = dio ?? Dio();
 
   /// Fetch from OpenRouter
   Future<void> fetchLessonTypes() async {
@@ -16,21 +18,24 @@ class DynamicLessonTypes {
         _lessonTypesMap = {};
         // Parse all available lesson types
         final data = response.data as Map;
-        for (var type in data['types'] as List?) {
-          if (type is Map) {
-            _lessonTypesMap.addAll(type);
+        final types = data['types'] as List?;
+        if (types != null) {
+          for (var type in types) {
+            if (type is Map) {
+              _lessonTypesMap.addAll(type.cast<String, String>());
+            }
           }
         }
       }
     } catch (e) {
-      print('Error fetching lesson types: $e');
+      debugPrint('Error fetching lesson types: $e');
       _lessonTypesMap = {};
     }
   }
 
   /// Get lesson types from database
   List<String> getLessonTypes() {
-    return _lessonTypesMap.keys.cast<String>();
+    return _lessonTypesMap.keys.cast<String>().toList();
   }
 
   /// Get lesson type by ID
@@ -50,7 +55,7 @@ class DynamicLessonTypes {
         '/api/v1/lesson/types',
         queryParameters: {'typeId': typeId},
       );
-      return LessonType.fromJson(response.data);
+      return LessonType.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw LessonTypeError('Failed to fetch lesson type: $e');
     }
@@ -58,31 +63,34 @@ class DynamicLessonTypes {
 
   /// Add new lesson type
   Future<void> addLessonType(String typeId, String name) async {
-    await dio.post(
-      '/api/v1/lesson/types',
-      data: {'typeId': typeId, 'name': name},
-    );
+    try {
+      await dio.post(
+        '/api/v1/lesson/types',
+        data: {'typeId': typeId, 'name': name},
+      );
+    } catch (e) {
+      debugPrint('Error adding lesson type: $e');
+    }
   }
 
   /// Remove lesson type
   Future<void> removeLessonType(String typeId) async {
-    await dio.delete(
-      '/api/v1/lesson/types/$typeId',
-    );
+    try {
+      await dio.delete(
+        '/api/v1/lesson/types/$typeId',
+      );
+    } catch (e) {
+      debugPrint('Error removing lesson type: $e');
+    }
   }
 }
 
 /// Storage lesson types in database
 class DBLessonTypes {
-  static final Map<String, String> _store = {};
-  late final Map<String, String> _dbStore;
-
-  DBLessonTypes() {
-    _dbStore = _store;
-  }
+  final Map<String, String> _dbStore = {};
 
   List<String> getAllLessonTypes() {
-    return _dbStore.keys.cast<String>();
+    return _dbStore.keys.cast<String>().toList();
   }
 
   List<LessonType> getAllLessonTypesWithMeta() {
@@ -93,22 +101,19 @@ class DBLessonTypes {
   }
 
   Map<String, String> getStore() {
-    return _dbStore;
+    return Map.unmodifiable(_dbStore);
   }
 
   void setLessonType(String id, String name) {
     _dbStore[id] = name;
-    _store[id] = name;
   }
 
   void clearStore() {
     _dbStore.clear();
-    _store.clear();
   }
 
   void removeFromStore(String id) {
     _dbStore.remove(id);
-    _store.remove(id);
   }
 }
 
@@ -116,10 +121,9 @@ class DBLessonTypes {
 class LessonType {
   final String id;
   final String name;
-  // More fields will be added dynamically from API
-  String? description;
-  Map<String, dynamic>? config;
-  DateTime? createdAt;
+  final String? description;
+  final Map<String, dynamic>? config;
+  final DateTime? createdAt;
 
   LessonType({
     required this.id,
@@ -134,7 +138,7 @@ class LessonType {
       id: json['id'],
       name: json['name'],
       description: json['description'],
-      config: json['config'] as Map?,
+      config: (json['config'] as Map?)?.cast<String, dynamic>(),
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
     );
   }
@@ -148,4 +152,27 @@ class LessonType {
       'created_at': createdAt?.toIso8601String(),
     };
   }
+
+  LessonType copyWith({
+    String? id,
+    String? name,
+    String? description,
+    Map<String, dynamic>? config,
+    DateTime? createdAt,
+  }) {
+    return LessonType(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      config: config ?? this.config,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
+/// Error thrown when lesson type operations fail
+class LessonTypeError implements Exception {
+  final String message;
+  LessonTypeError(this.message);
+  @override String toString() => message;
 }

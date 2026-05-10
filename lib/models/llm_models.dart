@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 /// Dynamic model pricing configuration fetched from OpenRouter
 /// All prices are fetched dynamically, no hardcoded values
@@ -48,7 +47,7 @@ class DynamicModel {
   final String provider;
   final String modelName;
   final String providerDisplayName;
-  bool pricesFetched;
+  final bool pricesFetched;
   final List<ModelPrice> prices;
   final Map<String, dynamic> metadata;
 
@@ -65,7 +64,7 @@ class DynamicModel {
   /// Get current best price (lowest input + output)
   ModelPrice getBestPrice() {
     if (prices.isEmpty) {
-      return const ModelPrice(
+      return ModelPrice(
         modelId: modelName,
         inputPrice: 0.0,
         outputPrice: 0.0,
@@ -73,13 +72,17 @@ class DynamicModel {
         contextWindow: 4096,
       );
     }
-    return prices[0]; // First fetched price
+    return prices.fold<ModelPrice>(prices[0], (best, current) {
+      final bestTotal = best.inputPrice + best.outputPrice;
+      final currentTotal = current.inputPrice + current.outputPrice;
+      return currentTotal < bestTotal ? current : best;
+    });
   }
 
   /// Calculate cost for given tokens
   double calculateCost(int inputTokens, int outputTokens) {
     if (prices.isEmpty) return 0.0;
-    final model = prices[0]; // Use best price
+    final model = getBestPrice();
     return ((inputTokens * model.inputPrice) + (outputTokens * model.outputPrice)) / 1000000;
   }
 
@@ -92,10 +95,10 @@ class DynamicModel {
           modelName == other.modelName;
 
   @override
-  int get hashCode => provider.hashCode ^ modelName.hashCode;
+  int get hashCode => Object.hash(provider, modelName);
 
   @override
-  String toString() => 'Model($modelName, fetched:${pricesFetched})';
+  String toString() => 'Model($modelName, fetched:$pricesFetched)';
 }
 
 /// Request body structure matching OpenRouter API spec
@@ -105,7 +108,7 @@ class OpenRouterRequest {
   final List<Map<String, dynamic>> messages;
   final double? temperature;
   final int? maxTokens;
-  final int? topP;
+  final double? topP;
   final bool? stream;
   final String? apiKey;
   final String? extraHeaderKey;
@@ -132,7 +135,6 @@ class OpenRouterRequest {
 
     if (maxTokens != null) json['max_tokens'] = maxTokens;
     if (topP != null) json['top_p'] = topP;
-    if (apiKey != null) json['api_key'] = apiKey;
 
     return json;
   }
@@ -148,7 +150,7 @@ class OpenRouterRequest {
 class OpenRouterResponse {
   final String id;
   final String object;
-  final String created;
+  final int created;
   final List<Message> choices;
   final Map<String, dynamic> usage;
   final int effectiveDurationMs;
@@ -165,27 +167,19 @@ class OpenRouterResponse {
   });
 
   factory OpenRouterResponse.fromJson(Map<String, dynamic> json) {
-    final List<Message> choices = (json['choices'] as List)
-        .map((item) => Message.fromJson(item))
-        .toList();
+    final List<Message> choices = (json['choices'] as List?)
+        ?.map((item) => Message.fromJson(item as Map<String, dynamic>))
+        .toList() ?? [];
 
     return OpenRouterResponse(
       id: json['id'],
       object: json['object'] ?? 'chat.completion',
-      created: json['created'],
+      created: json['created']?.toInt() ?? 0,
       choices: choices,
       usage: json['usage'] ?? {},
       effectiveDurationMs: json['effective_duration_ms'] ?? 0,
       promptTokensDetails: json['prompt_tokens_details'] ?? {},
     );
-  }
-
-  /// Get total cost
-  double getTotalCost() {
-    if (usage.isEmpty || usage['total_tokens'] == null) return 0.0;
-
-    final totalTokens = usage['total_tokens']?.toInt() ?? 0;
-    return (totalTokens * 0.000006) / 1000000; // Rough estimate
   }
 
   Message? getAssistantResponse() {
@@ -195,20 +189,21 @@ class OpenRouterResponse {
 
   @override
   String toString() {
-    return 'Response(choices: ${choices.length}, usage: \$${getTotalCost().toStringAsFixed(4)})';
+    return 'Response(choices: ${choices.length}, id: $id)';
   }
 }
 
 /// Message in chat conversation
+@immutable
 class Message {
   final String role;
   final String content;
-  final Map<String, dynamic>?? reasoning;
+  final Map<String, dynamic>? reasoning;
   final Map<String, dynamic>? tool;
   final Map<String, dynamic>? index;
   final Map<String, dynamic>? finish;
 
-  Message({
+  const Message({
     this.role = '',
     this.content = '',
     this.reasoning,
@@ -221,14 +216,12 @@ class Message {
     return Message(
       role: json['role'] ?? 'unknown',
       content: json['content'] ?? '',
-      reasoning: json['reasoning'] as Map<String, dynamic>??,
+      reasoning: json['reasoning'] as Map<String, dynamic>?,
       tool: json['tool'] as Map<String, dynamic>?,
       index: json['index'] as Map<String, dynamic>?,
       finish: json['finish'] as Map<String, dynamic>?,
     );
   }
-
-  String getContent() => content;
 
   @override
   String toString() => 'Message(role: $role, content: ${content.length} chars)';

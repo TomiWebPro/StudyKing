@@ -114,7 +114,7 @@ class SubjectListView extends ConsumerWidget {
             MaterialPageRoute(
               builder: (context) => SubjectDetailScreen(
                 subjectId: subject.id,
-                subjectName: subject.name ?? '',
+                subjectName: subject.name,
                 subjectColor: subject.color,
                 topicIds: [],
               ),
@@ -128,7 +128,6 @@ class SubjectListView extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Colors.transparent,
-              style: BorderStyle.solid,
             ),
           ),
           child: Row(

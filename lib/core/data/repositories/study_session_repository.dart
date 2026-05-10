@@ -47,7 +47,7 @@ class StudySessionRepository {
   /// Get total study time for a subject
   Future<int> getTotalStudyTimeForSubject(String subjectId) async {
     final sessions = await getBySubject(subjectId);
-    return sessions.fold<int>(0, (sum, s) => sum + (s.timeSpentMs ??= 0));
+    return sessions.fold<int>(0, (sum, s) => sum + s.timeSpentMs);
   }
 
   Future<void> updateQuestionCount(String id, int count) async {

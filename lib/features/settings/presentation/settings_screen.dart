@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:studyking/core/data/data.dart';
-import 'package:studyking/features/settings/presentation/api_config_screen.dart';
-import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/main.dart' show settingsProvider, apiKeyProvider, apiBaseUrlProvider, selectedModelProvider;
 
 class SettingsScreen extends ConsumerWidget {
@@ -208,8 +205,8 @@ class SettingsScreen extends ConsumerWidget {
 
   String _getFontSizeLabel(double fontSize) {
     if (fontSize < 14) return 'Small';
-    if (fontSize < 18) return 'Medium';
-    if (fontSize < 22) return 'Large';
+    if (fontSize < 17) return 'Medium';
+    if (fontSize < 23) return 'Large';
     return 'Extra Large';
   }
 
@@ -229,14 +226,15 @@ class SettingsScreen extends ConsumerWidget {
 
   String _formatDuration(int ms) {
     if (ms < 1000) return 'Less than 1 minute';
-    int seconds = ms ~/ 1000;
-    if (seconds < 60) return '$seconds sec';
-    int minutes = seconds ~/ 60;
-    seconds = seconds % 60;
-    if (minutes < 60) return '$minutes min $seconds sec';
-    int hours = minutes ~/ 60;
-    minutes = minutes % 60;
-    return '$hours hr $minutes min';
+    final seconds = (ms ~/ 1000) % 60;
+    final minutes = (ms ~/ (1000 * 60)) % 60;
+    final hours = (ms ~/ (1000 * 60 * 60)) % 24;
+    final days = ms ~/ (1000 * 60 * 60 * 24);
+
+    if (days > 0) return '$days day${days > 1 ? 's' : ''}, $hours hr $minutes min';
+    if (hours > 0) return '$hours hr $minutes min';
+    if (minutes > 0) return '$minutes min $seconds sec';
+    return '$seconds sec';
   }
 
   Widget _buildSection({
@@ -347,17 +345,19 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               Slider(
                 value: currentSize, 
-                min: 12, 
-                max: 24, 
-                divisions: 12, 
-                label: currentSize.round().toString(), 
+                min: 10.0, 
+                max: 30.0, 
+                divisions: 20, 
+                label: '${currentSize.round()}px', 
                 onChanged: (value) {
-                  ref.read(settingsProvider.notifier).updateFontSize(value);
+                  // Validate font size range (10-30)
+                  final validSize = value.clamp(10.0, 30.0);
+                  ref.read(settingsProvider.notifier).updateFontSize(validSize);
                 }
               ),
               const SizedBox(height: 24),
-              ...List.generate(13, (i) {
-                final size = 12 + i;
+              ...List.generate(21, (i) {
+                final size = 10 + i;
                 return _FontSizeOption(
                   context: context, 
                   value: '${size}px', 
@@ -410,8 +410,11 @@ class SettingsScreen extends ConsumerWidget {
           'HTTP-Referer': 'https://studyking.app'
         },
       );
-      
+
+      if (!context.mounted) return;
       Navigator.pop(context);
+
+      if (!context.mounted) return;
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -465,6 +468,7 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
     } catch (e) {
+      if (!context.mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'))

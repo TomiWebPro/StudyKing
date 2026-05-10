@@ -2,10 +2,9 @@
 // Renders graphs (line, bar, scatter, pie) and validates graph types
 // Supports LLM input and graph type checking
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:charting_flutter/charting_flutter.dart';
-import 'package:graphing/graphing.dart';
+import 'package:dio/dio.dart';
+import 'graph_type_detector.dart';
 
 /// Graph visualization configuration
 enum GraphType {
@@ -22,7 +21,7 @@ enum GraphType {
 /// Graph rendering service
 class GraphRenderingEngine extends ChangeNotifier {
   final Dio dio;
-  Map<String, GraphPath> renderedGraphs = {};
+  Map<String, Map<String, dynamic>> renderedGraphs = {};
   GraphType? currentGraphType;
 
   GraphRenderingEngine({Dio? dio}) : dio = dio ?? Dio();
@@ -32,26 +31,21 @@ class GraphRenderingEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<GraphData> renderGraph({
+  Future<Map<String, dynamic>> renderGraph({
     required String data,
     required String title,
     GraphType type = GraphType.line,
     Color? primaryColor,
   }) async {
     try {
-      final response = await dio.get('/api/v1/graph/render', data: {
+      final response = await dio.post('/api/v1/graph/render', data: {
         'data': data,
         'title': title,
         'type': type.name,
-        'primaryColor': primaryColor?.value.toString(),
+        'primaryColor': primaryColor?.toARGB32().toString(),
       });
-      
-      return GraphData(
-        graphData: response.data['data'],
-        path: response.data['path'],
-        graphType: type,
-        graphTitle: title,
-      );
+
+      return response.data is Map ? response.data as Map<String, dynamic> : <String, dynamic>{};
     } catch (e) {
       throw GraphError('Graph rendering failed: $e');
     }
@@ -63,7 +57,7 @@ class GraphRenderingEngine extends ChangeNotifier {
     Iterable<Color>? schemes,
     int? columns,
   }) async {
-    return await dio.get(
+    final response = await dio.post(
       '/api/v1/graphing/plot_r_eq',
       data: {
         'content': content,
@@ -72,6 +66,10 @@ class GraphRenderingEngine extends ChangeNotifier {
         'columns': columns,
       },
     );
+    if (response.data is List) {
+      return List<String>.from(response.data as List);
+    }
+    return [];
   }
 
   /// Generate plot from chart
@@ -79,14 +77,14 @@ class GraphRenderingEngine extends ChangeNotifier {
     required String chartContent,
     String? equation,
   }) async {
-    final plot = await dio.get(
+    final response = await dio.post(
       '/api/v1/plot',
       data: {
         'chartContent': chartContent,
         'equation': equation,
       },
     );
-    return plot.data;
+    return response.data?.toString() ?? '';
   }
 
   /// Check graph type validation
@@ -103,32 +101,10 @@ class GraphRenderingEngine extends ChangeNotifier {
 
   /// Get graph type from data
   GraphType getGraphTypeFromData(String data) {
+    if (data.contains('[') && data.contains(']')) return GraphType.scatter;
     if (data.contains(',')) return GraphType.line;
     if (data.contains('[')) return GraphType.bar;
-    if (data.contains('[') && data.contains(']')) return GraphType.scatter;
     return GraphType.pie;
-  }
-}
-
-/// Graph drawing service
-class GraphDrawingService {
-  List<GraphCoordinate> _coordinates = [];
-  GraphCoordinates get _coords => GraphCoordinates(
-    width: 1600,
-    height: 1200,
-    graphText: 'graph_table',
-    plotCurve: 'plot_curve equation',
-    image: 'graph_image',
-  );
-
-  GraphCoordinates _graphData = GraphCoordinates();
-
-  void updateCoordinates(GraphCoordinate coordinate) {
-    _coordinates.add(coordinate);
-  }
-
-  void drawCoordinates() {
-    _graphData = _graphData;
   }
 }
 
@@ -175,7 +151,7 @@ class PlotConfiguration {
   Map<String, dynamic> toJson() {
     return {
       'label': label,
-      if (type != null) 'type': type,
+      if (type != null) 'type': type!.name,
       if (dataColor != null) 'dataColor': dataColor,
       if (graphType != null) 'graphType': graphType,
       if (annotation != null) 'annotation': annotation,

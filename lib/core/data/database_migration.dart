@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Migration for StudyKing Hive database
@@ -24,13 +25,13 @@ class DatabaseMigration {
       await box.put('version', 1);
     }
 
-    print('Database migration complete. Current version: $existingVersion');
+    debugPrint('Database migration complete. Current version: $existingVersion');
   }
 
   /// Migration 1: Add subjectId to existing questions and lesson blocks
   /// This migration ensures all questions and lesson blocks have subjectId
   static Future<void> _migrateToV1() async {
-    print('Running migration v1: Adding subjectId to questions and lessons');
+    debugPrint('Running migration v1: Adding subjectId to questions and lessons');
 
     try {
       // Migrate questions that might be missing subjectId
@@ -41,12 +42,12 @@ class DatabaseMigration {
       final lessonBox = Hive.box<Map<String, dynamic>>('lessons');
       await _migrateLessonSubjectId(lessonBox);
 
-      print('Migration v1 completed successfully');
+      debugPrint('Migration v1 completed successfully');
     } on Exception catch (e) {
-      print('Migration error: ${e.toString()}');
+      debugPrint('Migration error: ${e.toString()}');
       rethrow;
     } catch (e) {
-      print('Unexpected migration error: $e');
+      debugPrint('Unexpected migration error: $e');
       rethrow;
     }
   }
