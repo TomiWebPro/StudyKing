@@ -1,0 +1,109 @@
+meta:
+  project: StudyKing
+  name: StudyKing Development
+  description: Track development tasks for StudyKing project
+  version: '1.0'
+  columns:
+  - backlog
+  - todo
+  - in_progress
+  - review
+  - done
+assignments:
+  hermes-worker:
+    id: w001
+    name: Hermes Worker Agent
+    description: Kanban worker agent for processing StudyKing dev tasks
+tasks:
+- id: T001
+  title: Setup Kanban board and initial sprint planning
+  description: Create and configure Kanban board for StudyKing development, prepare
+    initial sprint goals and milestones
+  column: todo
+  priority: high
+  assignees:
+  - id: hermes-worker
+    role: Kanban Worker Agent
+  status: in_progress
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T002
+  title: Core features review - identify bugs and missing features
+  description: Core features reviewed. PracticeSession bugfixed - hardcoded answers
+    resolved. Theme updated. Subject list improved.
+  column: done
+  priority: high
+  assignees:
+  - id: hermes-agent
+    role: Hermes Agent
+  status: done
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:46:00Z'
+  dependencies:
+  - T001
+- id: T003
+  title: UI/UX improvements needed
+  description: Identify UI/UX issues and recommend improvements for better user experience
+    in StudyKing
+  column: todo
+  priority: medium
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T004
+  title: Missing dependencies check and installation
+  description: Audit StudyKing dependencies, identify missing/pinned packages, and
+    update pubspec.yaml as needed
+  column: todo
+  priority: high
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T005
+  title: Web browser testing and bug fixing
+  description: Test StudyKing in web browsers, identify cross-browser compatibility
+    issues and bugs
+  column: todo
+  priority: medium
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T006
+  title: Documentation updates (README, changelog, docs)
+  description: Update project documentation including README.md, CHANGELOG.md, and
+    technical documentation
+  column: todo
+  priority: medium
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T007
+  title: CI/CD setup - daily cron build and release
+  description: Configure CI/CD pipeline with daily automated builds and release workflow
+  column: todo
+  priority: high
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies: []
+- id: T008
+  title: Issue tracking and bug fixes
+  description: Track and resolve reported issues and bugs in StudyKing
+  column: todo
+  priority: medium
+  assignees: []
+  status: todo
+  createdAt: '2026-05-10T14:26:48Z'
+  updatedAt: '2026-05-10T14:26:48Z'
+  dependencies:
+  - T002
