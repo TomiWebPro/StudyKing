@@ -32,6 +32,7 @@ class SingleAnswerWidget extends StatelessWidget {
               selected: selectedAnswer == option,
               button: true,
               label: option,
+              hint: 'Select as answer',
               child: InkWell(
                 onTap: !isSubmitted ? () => onAnswerSelected(option) : null,
                 borderRadius: BorderRadius.circular(8),
@@ -76,10 +77,15 @@ class SingleAnswerWidget extends StatelessWidget {
 
         // Feedback
         if (isFeedbackVisible && correctAnswer != null)
-          AnimatedOpacity(
+          AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            opacity: isSubmitted ? 1.0 : 0.0,
+            switchInCurve: Curves.easeIn,
+            switchOutCurve: Curves.easeOut,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
             child: Container(
+              key: ValueKey('feedback_${selectedAnswer}_$correctAnswer'),
               margin: const EdgeInsets.only(top: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

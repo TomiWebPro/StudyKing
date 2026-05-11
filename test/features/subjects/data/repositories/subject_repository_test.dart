@@ -421,6 +421,113 @@ void main() {
       });
     });
 
+    group('init', () {
+      test('initializes with provided box', () async {
+        final repoWithInit = SubjectRepository(subjectBox: mockBox);
+        expect(repoWithInit.getAll(), completes);
+      });
+
+      test('repository can be created without init when box is provided', () {
+        final repo = SubjectRepository(subjectBox: mockBox);
+        expect(repo, isNotNull);
+      });
+    });
+
+    group('uninitialized repository error handling', () {
+      test('throws StateError when box is null and getAll is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.getAll(),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and get is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.get('any-id'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and save is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+        final subject = createTestSubject(id: 'test', name: 'Test');
+
+        expect(
+          () => uninitRepo.save(subject),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and delete is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.delete('any-id'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and getWithTopics is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.getWithTopics(['topic-1']),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and addTopicToSubject is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.addTopicToSubject('subject-1', 'topic-1'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and removeTopicFromSubject is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.removeTopicFromSubject('subject-1', 'topic-1'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and getByCode is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.getByCode('IB-PHYS'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('throws StateError when box is null and getStudentSubjects is called', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        expect(
+          () => uninitRepo.getStudentSubjects('student-1'),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('StateError message describes the issue', () async {
+        final uninitRepo = SubjectRepository(subjectBox: null);
+
+        try {
+          await uninitRepo.getAll();
+          fail('Expected StateError');
+        } catch (e) {
+          expect(e.toString(), contains('SubjectRepository not initialized'));
+        }
+      });
+    });
+
     group('error handling', () {
       test('get handles box errors gracefully', () async {
         final result = await repository.get('any-id');
