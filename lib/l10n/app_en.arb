@@ -377,5 +377,41 @@
   "spacedRepetitionMode": "Spaced Repetition",
   "@spacedRepetitionMode": {
     "description": "Title for spaced repetition practice session"
+  },
+  "colorBlue": "Blue",
+  "@colorBlue": {
+    "description": "Color label for blue"
+  },
+  "colorGreen": "Green",
+  "@colorGreen": {
+    "description": "Color label for green"
+  },
+  "colorOrange": "Orange",
+  "@colorOrange": {
+    "description": "Color label for orange"
+  },
+  "colorPurple": "Purple",
+  "@colorPurple": {
+    "description": "Color label for purple"
+  },
+  "colorPink": "Pink",
+  "@colorPink": {
+    "description": "Color label for pink"
+  },
+  "colorCyan": "Cyan",
+  "@colorCyan": {
+    "description": "Color label for cyan"
+  },
+  "colorAmber": "Amber",
+  "@colorAmber": {
+    "description": "Color label for amber"
+  },
+  "colorDeepOrange": "Deep Orange",
+  "@colorDeepOrange": {
+    "description": "Color label for deep orange"
+  },
+  "colorBlueGrey": "Blue Grey",
+  "@colorBlueGrey": {
+    "description": "Color label for blue grey"
   }
 }

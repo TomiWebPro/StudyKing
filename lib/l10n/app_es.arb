@@ -1,81 +1,417 @@
 {
   "@@locale": "es",
   "appTitle": "StudyKing",
+  "@appTitle": {
+    "description": "The application title"
+  },
   "subjects": "Materias",
+  "@subjects": {
+    "description": "Bottom navigation label for subjects"
+  },
   "practice": "Práctica",
+  "@practice": {
+    "description": "Bottom navigation label for practice"
+  },
   "settings": "Ajustes",
+  "@settings": {
+    "description": "Bottom navigation label for settings"
+  },
   "studyPlanner": "Planificador de Estudio",
+  "@studyPlanner": {
+    "description": "App bar title for planner screen"
+  },
   "createStudyPlan": "Crear Plan de Estudio",
+  "@createStudyPlan": {
+    "description": "Title for study plan creation section"
+  },
   "courseSubject": "Curso/Materia",
+  "@courseSubject": {
+    "description": "Label for course/subject text field"
+  },
   "courseHint": "ej., Física IB",
+  "@courseHint": {
+    "description": "Hint text for course input"
+  },
   "days": "Días",
+  "@days": {
+    "description": "Label for days input"
+  },
   "hoursPerDay": "Horas/Día",
+  "@hoursPerDay": {
+    "description": "Label for hours per day input"
+  },
   "generatePlan": "Generar Plan",
+  "@generatePlan": {
+    "description": "Button label to generate study plan"
+  },
   "generating": "Generando...",
+  "@generating": {
+    "description": "Button label when plan is being generated"
+  },
   "yourStudySchedule": "Tu Horario de Estudio",
+  "@yourStudySchedule": {
+    "description": "Title for the generated study schedule"
+  },
   "topicLabel": "Tema {number}",
+  "@topicLabel": {
+    "description": "Label for a topic with number",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "sessionDurationMinutes": "{minutes} min de sesión",
+  "@sessionDurationMinutes": {
+    "description": "Session duration in minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "fillAllFieldsCorrectly": "Por favor complete todos los campos correctamente",
+  "@fillAllFieldsCorrectly": {
+    "description": "Error message when form fields are invalid"
+  },
   "generatedPlanOverDays": "Plan generado para {course} en {days} días ({totalHours} horas totales)",
+  "@generatedPlanOverDays": {
+    "description": "Snackbar message when plan is generated",
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "totalHours": {
+        "type": "int"
+      }
+    }
+  },
   "overDaysPlural": "en {count, plural, =0{0 días} =1{1 día} other{{count} días}}",
+  "@overDaysPlural": {
+    "description": "Pluralized phrase for days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "totalHoursPlural": "{count, plural, =1{1 hora total} other{{count} horas totales}}",
+  "@totalHoursPlural": {
+    "description": "Pluralized phrase for total hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "today": "Hoy",
+  "@today": {
+    "description": "Label for today's date"
+  },
   "yesterday": "Ayer",
+  "@yesterday": {
+    "description": "Label for yesterday's date"
+  },
   "unknown": "Desconocido",
+  "@unknown": {
+    "description": "Fallback label when date is null"
+  },
   "durationDays": "{count, plural, =1{1d} other{{count}d}}",
+  "@durationDays": {
+    "description": "Duration in days abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "durationHours": "{count, plural, =1{1h} other{{count}h}}",
+  "@durationHours": {
+    "description": "Duration in hours abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "durationMinutes": "{count, plural, =1{1m} other{{count}m}}",
+  "@durationMinutes": {
+    "description": "Duration in minutes abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "durationSeconds": "{count, plural, =1{1s} other{{count}s}}",
+  "@durationSeconds": {
+    "description": "Duration in seconds abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "practiceMode": "Modo de Práctica",
+  "@practiceMode": {
+    "description": "AppBar title for practice screen"
+  },
   "practiceOptions": "Opciones de Práctica",
+  "@practiceOptions": {
+    "description": "Tooltip for practice options button"
+  },
   "noSubjects": "Sin Materias",
+  "@noSubjects": {
+    "description": "FAB label when no subjects available"
+  },
   "noPracticeSessionsYet": "Sin Sesiones de Práctica",
+  "@noPracticeSessionsYet": {
+    "description": "Empty state heading for practice screen"
+  },
   "addSubjectsAndQuestionsToStartPracticing": "Agrega materias y preguntas para comenzar a practicar",
+  "@addSubjectsAndQuestionsToStartPracticing": {
+    "description": "Empty state body text for practice screen"
+  },
   "addSubjectsFromSubjectsTab": "Agrega materias desde la pestaña Materias",
+  "@addSubjectsFromSubjectsTab": {
+    "description": "Snackbar message directing to subjects tab"
+  },
   "addSubject": "Agregar Materia",
+  "@addSubject": {
+    "description": "Button label to add a subject"
+  },
   "practiceModes": "Modos de Práctica",
+  "@practiceModes": {
+    "description": "Section heading for practice modes"
+  },
   "quickPractice": "Práctica Rápida",
+  "@quickPractice": {
+    "description": "Quick practice mode title"
+  },
   "randomQuestions": "{count} preguntas aleatorias",
+  "@randomQuestions": {
+    "description": "Subtitle for quick practice mode",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "comingSoon": "Próximamente",
+  "@comingSoon": {
+    "description": "Label for unavailable features"
+  },
   "spacedRepetition": "Repetición Espaciada",
+  "@spacedRepetition": {
+    "description": "Spaced repetition mode title"
+  },
   "topicFocus": "Enfoque por Tema",
+  "@topicFocus": {
+    "description": "Topic focus mode title"
+  },
   "practiceSpecificTopics": "Practica temas específicos",
+  "@practiceSpecificTopics": {
+    "description": "Subtitle for topic focus mode"
+  },
   "weakAreas": "Áreas Débiles",
-  "focusOnMistakes": "Enfócate en tus errores",
+  "@weakAreas": {
+    "description": "Weak areas mode title"
+  },
+  "focusOnMistakes": "Enfíquese en sus errores",
+  "@focusOnMistakes": {
+    "description": "Subtitle for weak areas mode"
+  },
   "yourSubjects": "Tus Materias",
+  "@yourSubjects": {
+    "description": "Section heading for subjects"
+  },
   "readyForPractice": "Listo para practicar",
+  "@readyForPractice": {
+    "description": "Subtitle for single subject card"
+  },
   "practiceAvailable": "Práctica disponible",
+  "@practiceAvailable": {
+    "description": "Label showing practice is available"
+  },
   "selectSubject": "Seleccionar Materia",
+  "@selectSubject": {
+    "description": "Title for subject selector bottom sheet"
+  },
   "practiceModeTitle": "Modo de Práctica",
+  "@practiceModeTitle": {
+    "description": "Title for practice mode bottom sheet"
+  },
   "autoSelect": "Selección Automática",
+  "@autoSelect": {
+    "description": "Auto select option title"
+  },
   "aiPicksOptimalQuestions": "La IA selecciona preguntas óptimas",
+  "@aiPicksOptimalQuestions": {
+    "description": "Auto select option subtitle"
+  },
   "chooseSubject": "Elegir Materia",
+  "@chooseSubject": {
+    "description": "Title for choose subject section"
+  },
   "noCode": "Sin código",
+  "@noCode": {
+    "description": "Fallback for missing subject code"
+  },
   "topicSelectionComingSoon": "¡Selección de temas próximamente!",
+  "@topicSelectionComingSoon": {
+    "description": "Snackbar message for unavailable topic selection"
+  },
   "noQuestionsAvailable": "No Hay Preguntas Disponibles",
+  "@noQuestionsAvailable": {
+    "description": "Dialog title when no questions available"
+  },
   "noQuestionsForSelectedSubject": "No hay preguntas para la materia/tema seleccionado. ¡Comienza a crear preguntas!",
+  "@noQuestionsForSelectedSubject": {
+    "description": "Dialog content when no questions available"
+  },
   "time": "Tiempo",
+  "@time": {
+    "description": "Label for time stat"
+  },
   "score": "Puntuación",
+  "@score": {
+    "description": "Label for score stat"
+  },
   "correct": "Correctas",
+  "@correct": {
+    "description": "Label for correct answers stat"
+  },
   "yourAnswer": "Tu Respuesta",
+  "@yourAnswer": {
+    "description": "Label for answer input field"
+  },
   "yourAnswerCharacters": "Tu Respuesta ({count} caracteres)",
+  "@yourAnswerCharacters": {
+    "description": "Label for essay answer input with character count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "submitAnswer": "Enviar Respuesta",
+  "@submitAnswer": {
+    "description": "Button label to submit answer"
+  },
   "correctFeedback": "¡Correcto!",
+  "@correctFeedback": {
+    "description": "Feedback message for correct answer"
+  },
   "incorrectFeedback": "Incorrecto",
+  "@incorrectFeedback": {
+    "description": "Feedback message for incorrect answer"
+  },
   "previous": "Anterior",
+  "@previous": {
+    "description": "Button label for previous question"
+  },
   "next": "Siguiente",
+  "@next": {
+    "description": "Button label for next question"
+  },
   "sessionResults": "Resultados de la Sesión",
+  "@sessionResults": {
+    "description": "AppBar title for results screen"
+  },
   "practiceComplete": "¡Práctica Completada!",
+  "@practiceComplete": {
+    "description": "Heading for completed practice session"
+  },
   "totalQuestions": "Total de Preguntas",
+  "@totalQuestions": {
+    "description": "Label for total questions stat"
+  },
   "correctAnswers": "Respuestas Correctas",
-  "accuracy": "Precisión",
+  "@correctAnswers": {
+    "description": "Label for correct answers stat in results"
+  },
+  "accuracy": "Exactitud",
+  "@accuracy": {
+    "description": "Label for accuracy stat"
+  },
   "practiceAgain": "Practicar de Nuevo",
+  "@practiceAgain": {
+    "description": "Button label to restart practice"
+  },
   "allCaughtUp": "¡Todo al día!",
+  "@allCaughtUp": {
+    "description": "Message when no questions are due for review"
+  },
   "noReviewsScheduled": "No hay repasos programados.",
+  "@noReviewsScheduled": {
+    "description": "Subtitle when no questions are due for review"
+  },
   "dueQuestionsCount": "{count} pendientes",
+  "@dueQuestionsCount": {
+    "description": "Badge showing number of due questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reviewDueQuestions": "Repasar preguntas pendientes",
+  "@reviewDueQuestions": {
+    "description": "Button to start reviewing due questions"
+  },
   "selectTopic": "Seleccionar Tema",
+  "@selectTopic": {
+    "description": "Title for topic selector"
+  },
   "noTopicsAvailable": "No hay temas disponibles",
+  "@noTopicsAvailable": {
+    "description": "Message when no topics are available for a subject"
+  },
   "questionsDueForReview": "preguntas pendientes de repaso",
-  "spacedRepetitionMode": "Repetición Espaciada"
+  "@questionsDueForReview": {
+    "description": "Subtitle showing questions due for a subject"
+  },
+  "spacedRepetitionMode": "Repetición Espaciada",
+  "@spacedRepetitionMode": {
+    "description": "Title for spaced repetition practice session"
+  },
+  "colorBlue": "Azul",
+  "@colorBlue": {
+    "description": "Color label for blue"
+  },
+  "colorGreen": "Verde",
+  "@colorGreen": {
+    "description": "Color label for green"
+  },
+  "colorOrange": "Naranja",
+  "@colorOrange": {
+    "description": "Color label for orange"
+  },
+  "colorPurple": "Morado",
+  "@colorPurple": {
+    "description": "Color label for purple"
+  },
+  "colorPink": "Rosa",
+  "@colorPink": {
+    "description": "Color label for pink"
+  },
+  "colorCyan": "Cian",
+  "@colorCyan": {
+    "description": "Color label for cyan"
+  },
+  "colorAmber": "Ámbar",
+  "@colorAmber": {
+    "description": "Color label for amber"
+  },
+  "colorDeepOrange": "Naranja Oscuro",
+  "@colorDeepOrange": {
+    "description": "Color label for deep orange"
+  },
+  "colorBlueGrey": "Gris Azulado",
+  "@colorBlueGrey": {
+    "description": "Color label for blue grey"
+  }
 }

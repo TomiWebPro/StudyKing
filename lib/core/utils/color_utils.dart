@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class ColorUtils {
   static const Color defaultColor = Color(0xFF2196F3);
@@ -26,7 +27,31 @@ class ColorUtils {
     }
   }
 
-  static String getColorLabel(String hexColor) {
+  static String getColorLabel(String hexColor, {AppLocalizations? l10n}) {
+    if (l10n != null) {
+      switch (hexColor) {
+        case '#2196F3':
+          return l10n.colorBlue;
+        case '#4CAF50':
+          return l10n.colorGreen;
+        case '#FF9800':
+          return l10n.colorOrange;
+        case '#9C27B0':
+          return l10n.colorPurple;
+        case '#E91E63':
+          return l10n.colorPink;
+        case '#00BCD4':
+          return l10n.colorCyan;
+        case '#FFC107':
+          return l10n.colorAmber;
+        case '#FF5722':
+          return l10n.colorDeepOrange;
+        case '#607D8B':
+          return l10n.colorBlueGrey;
+        default:
+          return hexColor;
+      }
+    }
     switch (hexColor) {
       case '#2196F3':
         return 'Blue';

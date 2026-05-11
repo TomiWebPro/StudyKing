@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectColors {
   static const List<String> all = ColorUtils.availableColors;
@@ -8,7 +9,8 @@ class SubjectColors {
 
   static Color stringToColor(String hexColor) => ColorUtils.stringToColor(hexColor);
 
-  static String getColorLabel(String hexColor) => ColorUtils.getColorLabel(hexColor);
+  static String getColorLabel(String hexColor, {AppLocalizations? l10n}) =>
+      ColorUtils.getColorLabel(hexColor, l10n: l10n);
 }
 
 class SubjectColorSelector extends StatelessWidget {
@@ -23,6 +25,7 @@ class SubjectColorSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -64,7 +67,7 @@ class SubjectColorSelector extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      SubjectColors.getColorLabel(colorString),
+                      SubjectColors.getColorLabel(colorString, l10n: l10n),
                       style: TextStyle(
                         color: isSelected ? color : Colors.black87,
                         fontWeight:

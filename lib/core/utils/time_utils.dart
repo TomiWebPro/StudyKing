@@ -3,23 +3,19 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 
 String _getDurationDays(int count, AppLocalizations l10n) {
-  if (count == 1) return '1d';
-  return '${count}d';
+  return l10n.durationDays(count);
 }
 
 String _getDurationHours(int count, AppLocalizations l10n) {
-  if (count == 1) return '1h';
-  return '${count}h';
+  return l10n.durationHours(count);
 }
 
 String _getDurationMinutes(int count, AppLocalizations l10n) {
-  if (count == 1) return '1m';
-  return '${count}m';
+  return l10n.durationMinutes(count);
 }
 
 String _getDurationSeconds(int count, AppLocalizations l10n) {
-  if (count == 1) return '1s';
-  return '${count}s';
+  return l10n.durationSeconds(count);
 }
 
 String formatDuration(Duration duration, {bool showDays = false, AppLocalizations? l10n}) {
@@ -64,7 +60,8 @@ String formatDate(DateTime? date, {AppLocalizations? l10n}) {
   if (diff == const Duration(days: 1)) {
     return l10n?.yesterday ?? 'Yesterday';
   }
-  return DateFormat.yMd().format(date);
+  final l10nLocale = l10n != null ? l10n.localeName : 'en';
+  return DateFormat.yMd(l10nLocale).format(date);
 }
 
 String formatDurationFromContext(BuildContext context, Duration duration, {bool showDays = false}) {

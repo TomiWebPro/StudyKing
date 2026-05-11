@@ -192,7 +192,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weakAreas => 'Áreas Débiles';
 
   @override
-  String get focusOnMistakes => 'Enfócate en tus errores';
+  String get focusOnMistakes => 'Enfíquese en sus errores';
 
   @override
   String get yourSubjects => 'Tus Materias';
@@ -276,7 +276,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get correctAnswers => 'Respuestas Correctas';
 
   @override
-  String get accuracy => 'Precisión';
+  String get accuracy => 'Exactitud';
 
   @override
   String get practiceAgain => 'Practicar de Nuevo';
@@ -306,4 +306,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get spacedRepetitionMode => 'Repetición Espaciada';
+
+  @override
+  String get colorBlue => 'Azul';
+
+  @override
+  String get colorGreen => 'Verde';
+
+  @override
+  String get colorOrange => 'Naranja';
+
+  @override
+  String get colorPurple => 'Morado';
+
+  @override
+  String get colorPink => 'Rosa';
+
+  @override
+  String get colorCyan => 'Cian';
+
+  @override
+  String get colorAmber => 'Ámbar';
+
+  @override
+  String get colorDeepOrange => 'Naranja Oscuro';
+
+  @override
+  String get colorBlueGrey => 'Gris Azulado';
 }

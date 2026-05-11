@@ -304,4 +304,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spacedRepetitionMode => 'Spaced Repetition';
+
+  @override
+  String get colorBlue => 'Blue';
+
+  @override
+  String get colorGreen => 'Green';
+
+  @override
+  String get colorOrange => 'Orange';
+
+  @override
+  String get colorPurple => 'Purple';
+
+  @override
+  String get colorPink => 'Pink';
+
+  @override
+  String get colorCyan => 'Cyan';
+
+  @override
+  String get colorAmber => 'Amber';
+
+  @override
+  String get colorDeepOrange => 'Deep Orange';
+
+  @override
+  String get colorBlueGrey => 'Blue Grey';
 }

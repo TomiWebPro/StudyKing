@@ -1,73 +1,101 @@
-# Internationalisation: Hardcoded Strings and Locale-Ignoring Duration Formatting
+# Internationalisation: Extensive Hardcoded UI Strings Not Using Localization System
 
 ## Context
 
-The StudyKing app uses Flutter's `flutter_localizations` and `intl` package with ARB files for English and Spanish. However, several critical i18n issues were found that cause incorrect or missing translations for end users.
+The StudyKing app has a working localization infrastructure (Flutter's `flutter_localizations` with ARB files for English and Spanish). However, the majority of UI strings throughout the codebase remain hardcoded in English, bypassing the translation system entirely. This severely impacts international users and limits the app's accessibility.
 
 ## Affected Files
 
-- `lib/core/utils/time_utils.dart` (lines 5–51) — Duration formatting functions receive `AppLocalizations` but completely ignore it
-- `lib/core/utils/time_utils.dart:67` — `DateFormat.yMd()` uses system locale instead of app locale
-- `lib/core/utils/color_utils.dart:29–52` — `getColorLabel()` returns hardcoded English color names
-- `lib/l10n/app_es.arb` — Missing translations for several keys present in `app_en.arb`
-- `lib/l10n/app_es.arb` — Grammatically incorrect Spanish translations
+- `lib/features/settings/presentation/profile_screen.dart` (lines 69, 75, 101, 110, 130, 151, 189, 254, 306, 317, 331, 341, 360, 381, 400, 409, 426-427, 431, 441, 468) — 20+ hardcoded strings
+- `lib/features/settings/presentation/settings_screen.dart` (lines 35, 64-65, 78, 89, 139, 147, 162, 186-187, 194, 301, 313, 321, 356-357, 367-368, 370, 378) — 18+ hardcoded strings
+- `lib/features/subjects/presentation/subject_detail_view.dart` (lines 241, 315, 352, 364, 613, 621, 629, 645-646, 650, 659, 673, 688) — 12+ hardcoded strings
+- `lib/features/subjects/presentation/subject_management_screen.dart` (lines 98, 126, 197, 227) — 4+ hardcoded strings
+- `lib/features/subjects/presentation/subject_list_view.dart` (lines 19, 88) — 2 hardcoded strings
+- `lib/features/subjects/presentation/subject_selection_screen.dart` (lines 90, 101) — 2 hardcoded strings
+- `lib/features/subjects/presentation/subject_form_widgets.dart` (lines 123, 143, 152, 162) — 4 hardcoded strings
+- `lib/features/sessions/presentation/session_history_screen.dart` (lines 80, 85, 90, 106, 144, 371, 390) — 7 hardcoded strings
+- `lib/features/sessions/presentation/session_tracker_screen.dart` (lines 188, 198, 258, 269, 317, 413, 417, 442, 453) — 9 hardcoded strings
+- `lib/features/settings/presentation/api_config_screen.dart` (lines 88, 130) — 2 hardcoded strings
+- `lib/pages/graph_rendering_page.dart` (lines 41, 46, 51, 64, 69, 72, 77, 100, 114, 121, 128, 135, 154, 156, 161, 176, 229, 257, 265, 291, 325, 372, 375, 391, 406, 427, 433, 446, 456, 467, 469, 471, 484) — 30+ hardcoded strings
+- `lib/pages/lesson_scheduling_page.dart` (lines 22, 45, 64, 87, 89, 121, 141-142) — 8 hardcoded strings
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 96, 321, 332) — 3 hardcoded strings
+- `lib/features/questions/ui/widgets/question_card_widget.dart` (lines 162, 183) — 2 hardcoded strings
+- `lib/features/questions/ui/widgets/single_answer_widget.dart` (lines 35, 121) — 2 hardcoded strings
+- `lib/features/questions/ui/widgets/canvas_drawing_widget.dart` (line 102) — 1 hardcoded string
+- `lib/l10n/app_en.arb` — Missing translation keys for profile, settings, and screen titles
+- `lib/l10n/app_es.arb` — Missing corresponding translations
 
-## Issue 1: Duration helpers ignore localization entirely
+## Issue 1: Profile Screen Has 20+ Unlocalized Strings
 
-The private helpers `_getDurationDays`, `_getDurationHours`, `_getDurationMinutes`, and `_getDurationSeconds` each accept an `AppLocalizations l10n` parameter but return **hardcoded English abbreviations** ("1d", "2h", etc.) regardless of locale:
+The Profile screen in `profile_screen.dart` contains extensive hardcoded English strings including:
+- 'Name is required', 'Student ID must be numeric', 'Profile saved successfully'
+- 'Error saving profile: $e', 'Choose Avatar', 'Select avatar $iconKey'
+- 'Profile', 'Full Name', 'Enter your name', 'Student ID (Optional)'
+- 'Your student ID number', 'Learning Goal', 'e.g., Final Exams, Certifications'
+- 'Preferred Study Time', 'e.g., Evening (6-9 PM)', 'Account Information'
+- 'Language', 'English', 'Spanish', 'Notifications', 'Delete Account'
+- Warning and confirmation dialogs for account deletion
 
-```dart
-String _getDurationDays(int count, AppLocalizations l10n) {
-  if (count == 1) return '1d';  // l10n unused
-  return '${count}d';             // l10n unused
-}
-```
+All these should use `AppLocalizations` for full international support.
 
-The ARB files **do** define `durationDays`, `durationHours`, `durationMinutes`, `durationSeconds` plural strings, but the code never calls them. This means every user — whether their locale is Spanish, English, or any future language — sees English duration abbreviations like "2d 3h 5m".
+## Issue 2: Settings Screen Not Using Localization
 
-**Expected**: `l10n.durationDays(count)` etc. should be called so each locale returns its own formatted string.
+Settings screen has 18+ hardcoded strings:
+- 'Settings', 'Study Reminders', 'Enable notification alerts'
+- 'Total Study Time', 'Sign Out', 'Light', 'Dark'
+- 'Font Size', 'API Key Required', 'Please configure your API key first'
+- 'Request Timeout', 'Sessions', 'Questions'
+- Various dialog content and button labels
 
-## Issue 2: `DateFormat.yMd()` bypasses app locale
+## Issue 3: Subject Management Screens Lack Localization
 
-In `formatDate()` (line 67), the date for non-special dates is formatted using `DateFormat.yMd().format(date)`, which uses the **system** locale rather than the Flutter app's configured locale. Users with a Spanish system locale but English app locale will see mixed locales.
+Multiple subject-related screens have hardcoded strings:
+- 'My Subjects', 'Add Subject', 'Add New Subject', 'Theme Color'
+- 'Exam Date (Optional)', 'Create Subject', 'Start Practice'
+- 'No practice history', 'View All Sessions', 'Edit Subject'
+- 'Settings', 'Delete Subject', 'Session Details', 'Close'
 
-**Expected**: Use `DateFormat.yMd(l10nLocale)` with the app's locale, or a locale-aware `DateFormat`.
+## Issue 4: Graph Rendering Page Has 30+ Hardcoded Strings
 
-## Issue 3: Color labels are hardcoded English
+The graph rendering page contains extensive unlocalized strings including:
+- 'Graph Renderer', 'Upload Data', 'Upload Data File', 'Or paste data directly'
+- 'Graph Type Detection', 'Line Graph', 'Bar Chart', 'Scatter Plot', 'Pie Chart'
+- 'LLM Validation', 'Use LLM to validate graph', 'Rendered Graph'
+- Various validation and status messages
 
-`ColorUtils.getColorLabel()` returns hardcoded English color names ("Blue", "Green", "Orange", "Purple", "Pink", "Cyan", "Amber", "Deep Orange", "Blue Grey"). These are displayed in the UI with no localization.
+## Issue 5: Session Tracking Has Unlocalized Strings
 
-**Expected**: Add color label translations to the ARB files and retrieve them via `l10n` in a new `getColorLabel(l10n)` overload or static utility.
+- 'Study Session Tracker', 'Start', 'End', 'View All'
+- 'Session Complete', 'How many questions did you answer?'
+- 'Skip', 'Save'
 
-## Issue 4: Missing Spanish ARB translations
+## Issue 6: Missing Translation Keys in ARB Files
 
-Several translation keys from `app_en.arb` are absent from `app_es.arb`:
-- `practiceOptions` (tooltip for practice options button)
-- `appTitle` (transcribed as "StudyKing" but should likely be localized or have a justification comment)
-
-Additionally, several keys from `app_en.arb` that exist in `app_es.arb` lack `@description` metadata, making future translation work harder.
-
-## Issue 5: Spanish grammar — "Enfócate" is informal imperative
-
-In `app_es.arb`, the translation for `focusOnMistakes` is "Enfócate en tus errores" (informal "focus yourself"). For an educational/study app, the standard formal register is "Enfóquese en sus errores".
-
-Also, "Precisión" for `accuracy` is technically valid but in the context of quiz results, "Exactitud" is more idiomatic in Spanish educational software.
+The ARB files lack translation keys for many UI elements:
+- Profile field labels and hints
+- Settings section titles
+- Screen titles ('Graph Renderer', 'Lesson Scheduler', 'Quick Guide')
+- Subject management actions and labels
+- Session tracking labels
+- Confirmation dialogs
 
 ## Rationale
 
-These are high-value i18n improvements because they affect **every non-English user** in real, visible ways:
-- Duration abbreviations appear in study sessions and study plans — a core app feature
-- Date formatting appears in session history — a core app feature
-- Color labels appear in subject management — a visible UI element
-- Missing/wrong translations degrade trust in localized apps
-- The duration and date formatting issues cannot be fixed by adding more ARB entries alone — the code logic must be corrected first
+This is a high-priority internationalization issue because:
+
+1. **Scope**: Over 100 hardcoded strings across 15+ files affecting every major screen
+2. **User Impact**: Non-English users see mixed English/Spanish interfaces, degrading trust
+3. **Future Languages**: Adding new languages (French, German, Chinese, etc.) won't help because the strings aren't using the localization system
+4. **Consistency**: The localization infrastructure exists but is vastly underutilized
+5. **Maintenance**: Hardcoded strings create technical debt and make translation management difficult
 
 ## Acceptance Criteria
 
-1. `_getDurationDays`, `_getDurationHours`, `_getDurationMinutes`, `_getDurationSeconds` in `time_utils.dart` call `l10n.durationDays(count)`, `l10n.durationHours(count)`, etc. instead of returning hardcoded strings.
-2. `formatDate()` in `time_utils.dart` uses a locale-aware `DateFormat` that respects the app's current locale (not the system locale).
-3. `ColorUtils.getColorLabel()` is either removed (if the UI already uses localized labels) or replaced with a localized version using the ARB translation system.
-4. `app_es.arb` contains translations for all keys present in `app_es.arb` that exist in `app_en.arb`.
-5. "Enfócate en tus errores" → "Enfóquese en sus errores" in `app_es.arb`.
-6. "Precisión" → "Exactitud" (or the equivalent idiomatic Spanish term for quiz accuracy) in `app_es.arb`.
-7. Regenerate `app_localizations_es.dart` and `app_localizations.dart` after fixes.
+1. All user-facing strings in `profile_screen.dart` are replaced with `AppLocalizations` calls
+2. All user-facing strings in `settings_screen.dart` are replaced with `AppLocalizations` calls
+3. All subject management screens use localization for labels, buttons, and messages
+4. Graph rendering page uses localization for all UI strings
+5. Session tracking and history screens use localization
+6. New translation keys are added to both `app_en.arb` and `app_es.arb` for all identified strings
+7. `app_localizations.dart` and `app_localizations_es.dart` are regenerated after changes
+8. All existing Spanish translations are verified for accuracy (grammar, formality)

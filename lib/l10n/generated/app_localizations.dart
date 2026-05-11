@@ -565,6 +565,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spaced Repetition'**
   String get spacedRepetitionMode;
+
+  /// Color label for blue
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get colorBlue;
+
+  /// Color label for green
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get colorGreen;
+
+  /// Color label for orange
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get colorOrange;
+
+  /// Color label for purple
+  ///
+  /// In en, this message translates to:
+  /// **'Purple'**
+  String get colorPurple;
+
+  /// Color label for pink
+  ///
+  /// In en, this message translates to:
+  /// **'Pink'**
+  String get colorPink;
+
+  /// Color label for cyan
+  ///
+  /// In en, this message translates to:
+  /// **'Cyan'**
+  String get colorCyan;
+
+  /// Color label for amber
+  ///
+  /// In en, this message translates to:
+  /// **'Amber'**
+  String get colorAmber;
+
+  /// Color label for deep orange
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Orange'**
+  String get colorDeepOrange;
+
+  /// Color label for blue grey
+  ///
+  /// In en, this message translates to:
+  /// **'Blue Grey'**
+  String get colorBlueGrey;
 }
 
 class _AppLocalizationsDelegate
