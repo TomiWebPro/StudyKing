@@ -170,7 +170,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   bool _validateAnswer(Question question, String answer) {
-    if (question.markscheme == null || question.markscheme!.isEmpty) {
+    if (question.markscheme == null || question.markscheme!.correctAnswer.isEmpty) {
       setState(() => _isCorrect = false);
       return false;
     }
@@ -429,8 +429,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     switch (question.type) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
-        // MCQ - Use question.options field which is properly populated
-        final correctAnswer = question.correctAnswer ?? question.markscheme ?? '';
+        final correctAnswer = question.markscheme?.correctAnswer ?? '';
         final options = question.type == QuestionType.singleChoice 
             ? question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options
             : question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options;

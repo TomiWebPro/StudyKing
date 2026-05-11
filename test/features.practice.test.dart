@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
@@ -27,7 +28,7 @@ Question _question({
   required String id,
   required String text,
   required QuestionType type,
-  required String markscheme,
+  required String markschemeText,
   String topicId = 'topic-a',
   List<String> options = const [],
 }) {
@@ -38,7 +39,7 @@ Question _question({
     type: type,
     subjectId: 'subject-a',
     topicId: topicId,
-    markscheme: markscheme,
+    markscheme: Markscheme(questionId: id, correctAnswer: markschemeText),
     options: options,
     createdAt: now,
     updatedAt: now,
@@ -83,7 +84,7 @@ void main() {
   group('PracticeSessionScreen behavior', () {
     testWidgets('loads questions and renders first question', (tester) async {
       final questions = [
-        _question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markscheme: '4'),
+        _question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
       ];
 
       await tester.pumpWidget(_sessionApp(result: Result.success(questions)));
@@ -105,7 +106,7 @@ void main() {
 
     testWidgets('submit is disabled until answer exists and score updates on submit', (tester) async {
       final questions = [
-        _question(id: 'q1', text: 'Capital of France?', type: QuestionType.typedAnswer, markscheme: 'Paris'),
+        _question(id: 'q1', text: 'Capital of France?', type: QuestionType.typedAnswer, markschemeText: 'Paris'),
       ];
 
       await tester.pumpWidget(_sessionApp(result: Result.success(questions)));
@@ -132,8 +133,8 @@ void main() {
     testWidgets('completes session and pops back to previous route', (tester) async {
       final observer = _TestNavigatorObserver();
       final questions = [
-        _question(id: 'q1', text: 'One?', type: QuestionType.typedAnswer, markscheme: 'ok'),
-        _question(id: 'q3', text: 'Wrong topic', type: QuestionType.typedAnswer, markscheme: 'ok', topicId: 'topic-b'),
+        _question(id: 'q1', text: 'One?', type: QuestionType.typedAnswer, markschemeText: 'ok'),
+        _question(id: 'q3', text: 'Wrong topic', type: QuestionType.typedAnswer, markschemeText: 'ok', topicId: 'topic-b'),
       ];
 
       await tester.pumpWidget(

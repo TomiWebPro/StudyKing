@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../enums.dart';
+import '../../../features/questions/models/markscheme_model.dart';
 
 @HiveType(typeId: 2)
 class Question extends HiveObject {
@@ -28,19 +29,16 @@ class Question extends HiveObject {
   final List<String> sourceIds;
 
   @HiveField(8, defaultValue: [])
-  final List<String> options;  // For MCQ questions
+  final List<String> options;
 
   @HiveField(9, defaultValue: '')
   final String allowedAnswerTypes;
 
   @HiveField(10)
-  final String? markscheme;
-
-  @HiveField(19)
-  final String? correctAnswer;
+  final Markscheme? markscheme;
 
   @HiveField(11)
-  final String? model;  // OpenRouter model ID
+  final String? model;
 
   @HiveField(12)
   final String? topic;
@@ -75,7 +73,6 @@ class Question extends HiveObject {
     this.options = const [],
     this.allowedAnswerTypes = '',
     this.markscheme,
-    this.correctAnswer,
     this.model,
     this.topic,
     this.tags = const [],
@@ -97,8 +94,7 @@ class Question extends HiveObject {
     'sourceIds': sourceIds,
     'options': options,
     'allowedAnswerTypes': allowedAnswerTypes,
-    'markscheme': markscheme,
-    'correctAnswer': correctAnswer,
+    'markscheme': markscheme?.toJson(),
     'model': model,
     'topic': topic,
     'tags': tags,
@@ -110,11 +106,25 @@ class Question extends HiveObject {
   };
 
   factory Question.fromJson(Map<String, dynamic> json) {
-    // Safe parsing with null checking
     final typeIndex = json['type'];
     final type = typeIndex != null && typeIndex is int
         ? QuestionType.values[typeIndex]
-        : QuestionType.singleChoice; // Default fallback
+        : QuestionType.singleChoice;
+    
+    Markscheme? parsedMarkscheme;
+    final markschemeData = json['markscheme'];
+    if (markschemeData != null) {
+      if (markschemeData is Map) {
+        parsedMarkscheme = Markscheme.fromJson(Map<String, dynamic>.from(markschemeData));
+      } else if (markschemeData is String && markschemeData.isNotEmpty) {
+        parsedMarkscheme = Markscheme(
+          questionId: json['id'] ?? '',
+          correctAnswer: markschemeData,
+          acceptableAnswers: List<String>.from(json['acceptableAnswers'] ?? []),
+          explanation: json['explanation'],
+        );
+      }
+    }
     
     final createdAt = DateTime.parse(json['createdAt']);
     final updatedAt = DateTime.parse(json['updatedAt']);
@@ -130,8 +140,7 @@ class Question extends HiveObject {
       sourceIds: List<String>.from(json['sourceIds'] ?? []),
       options: List<String>.from(json['options'] ?? []),
       allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
-      markscheme: json['markscheme'],
-      correctAnswer: json['correctAnswer'] ?? json['correct_answer'] ?? json['answer'],
+      markscheme: parsedMarkscheme,
       model: json['model'],
       topic: json['topic'],
       tags: List<String>.from(json['tags'] ?? []),
@@ -154,8 +163,7 @@ class Question extends HiveObject {
     List<String>? sourceIds,
     List<String>? options,
     String? allowedAnswerTypes,
-    String? markscheme,
-    String? correctAnswer,
+    Markscheme? markscheme,
     String? model,
     String? topic,
     List<String>? tags,
@@ -177,7 +185,6 @@ class Question extends HiveObject {
       options: options ?? this.options,
       allowedAnswerTypes: allowedAnswerTypes ?? this.allowedAnswerTypes,
       markscheme: markscheme ?? this.markscheme,
-      correctAnswer: correctAnswer ?? this.correctAnswer,
       model: model ?? this.model,
       topic: topic ?? this.topic,
       tags: tags ?? this.tags,

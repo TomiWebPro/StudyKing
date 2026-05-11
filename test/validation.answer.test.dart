@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/services/answer_validation_service.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 
 void main() {
   group('AnswerValidationService', () {
@@ -15,7 +16,7 @@ void main() {
     Question buildQuestion({
       required String id,
       required QuestionType type,
-      String? markscheme,
+      String? markschemeText,
       List<String> options = const [],
       String? explanation,
     }) {
@@ -25,7 +26,7 @@ void main() {
         type: type,
         subjectId: 'sub-1',
         topicId: 'topic-1',
-        markscheme: markscheme,
+        markscheme: markschemeText != null ? Markscheme(questionId: id, correctAnswer: markschemeText) : null,
         options: options,
         explanation: explanation,
         createdAt: now,
@@ -38,8 +39,8 @@ void main() {
         final service1 = AnswerValidationService();
         final service2 = AnswerValidationService();
 
-        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markscheme: 'Answer A');
-        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markscheme: 'Answer B');
+        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Answer A');
+        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Answer B');
 
         final r1 = service1.validateAnswer(q1, 'Answer A');
         final r2 = service2.validateAnswer(q2, 'Answer B');
@@ -49,8 +50,8 @@ void main() {
       });
 
       test('generates different signature for different acceptable answers', () {
-        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markscheme: 'Correct', options: ['alt1']);
-        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markscheme: 'Correct', options: ['alt2']);
+        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Correct', options: ['alt1']);
+        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Correct', options: ['alt2']);
 
         final r1 = service.validateAnswer(q1, 'alt1');
         final r2 = service.validateAnswer(q2, 'alt2');
@@ -60,8 +61,8 @@ void main() {
       });
 
       test('generates different signature for different explanations', () {
-        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markscheme: 'Answer', explanation: 'Explanation 1');
-        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markscheme: 'Answer', explanation: 'Explanation 2');
+        final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Answer', explanation: 'Explanation 1');
+        final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Answer', explanation: 'Explanation 2');
 
         final r1 = service.validateAnswer(q1, 'answer');
         final r2 = service.validateAnswer(q2, 'answer');
@@ -76,7 +77,7 @@ void main() {
         final question = buildQuestion(
           id: 'cache-test-1',
           type: QuestionType.typedAnswer,
-          markscheme: 'Paris',
+          markschemeText: 'Paris',
         );
 
         final result1 = service.validateAnswer(question, 'Paris');
@@ -87,8 +88,8 @@ void main() {
       });
 
       test('creates new validator when question ID is different', () {
-        final q1 = buildQuestion(id: 'id-1', type: QuestionType.typedAnswer, markscheme: 'Answer');
-        final q2 = buildQuestion(id: 'id-2', type: QuestionType.typedAnswer, markscheme: 'Answer');
+        final q1 = buildQuestion(id: 'id-1', type: QuestionType.typedAnswer, markschemeText: 'Answer');
+        final q2 = buildQuestion(id: 'id-2', type: QuestionType.typedAnswer, markschemeText: 'Answer');
 
         final r1 = service.validateAnswer(q1, 'answer');
         final r2 = service.validateAnswer(q2, 'Answer');
@@ -98,8 +99,8 @@ void main() {
       });
 
       test('cache key is based on question ID only', () {
-        final q1 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markscheme: 'First');
-        final q2 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markscheme: 'Second');
+        final q1 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markschemeText: 'First');
+        final q2 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markschemeText: 'Second');
 
         final r1 = service.validateAnswer(q1, 'first');
         final r2 = service.validateAnswer(q2, 'second');
@@ -111,8 +112,8 @@ void main() {
       });
 
       test('cache updates when markscheme signature changes', () {
-        final q1 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markscheme: 'Original');
-        final q2 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markscheme: 'Updated');
+        final q1 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markschemeText: 'Original');
+        final q2 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markschemeText: 'Updated');
 
         final firstValidation = service.validateAnswer(q1, 'original');
         final afterUpdate = service.validateAnswer(q2, 'updated');
@@ -123,9 +124,9 @@ void main() {
       });
 
       test('multiple different questions maintain separate cache entries', () {
-        final q1 = buildQuestion(id: 'multi-1', type: QuestionType.typedAnswer, markscheme: 'ans1');
-        final q2 = buildQuestion(id: 'multi-2', type: QuestionType.typedAnswer, markscheme: 'ans2');
-        final q3 = buildQuestion(id: 'multi-3', type: QuestionType.typedAnswer, markscheme: 'ans3');
+        final q1 = buildQuestion(id: 'multi-1', type: QuestionType.typedAnswer, markschemeText: 'ans1');
+        final q2 = buildQuestion(id: 'multi-2', type: QuestionType.typedAnswer, markschemeText: 'ans2');
+        final q3 = buildQuestion(id: 'multi-3', type: QuestionType.typedAnswer, markschemeText: 'ans3');
 
         expect(service.validateAnswer(q1, 'ans1').isCorrect, isTrue);
         expect(service.validateAnswer(q2, 'ans2').isCorrect, isTrue);
@@ -141,7 +142,7 @@ void main() {
         final question = buildQuestion(
           id: 'options-test',
           type: QuestionType.typedAnswer,
-          markscheme: 'correct',
+          markschemeText: 'correct',
           options: ['alt1', 'alt2', 'alt3'],
         );
 
@@ -155,7 +156,7 @@ void main() {
         final question = buildQuestion(
           id: 'explanation-test',
           type: QuestionType.typedAnswer,
-          markscheme: 'Answer',
+          markschemeText: 'Answer',
           explanation: 'This is the detailed explanation',
         );
 
@@ -167,7 +168,7 @@ void main() {
         final question = buildQuestion(
           id: 'no-explanation',
           type: QuestionType.typedAnswer,
-          markscheme: 'Answer',
+          markschemeText: 'Answer',
         );
 
         final correctResult = service.validateAnswer(question, 'answer');
@@ -181,7 +182,7 @@ void main() {
         final question = buildQuestion(
           id: 'empty-options',
           type: QuestionType.typedAnswer,
-          markscheme: 'Correct',
+          markschemeText: 'Correct',
           options: [],
         );
 
@@ -195,7 +196,7 @@ void main() {
         final question = buildQuestion(
           id: 'math-type',
           type: QuestionType.mathExpression,
-          markscheme: '2 + 2 = 4',
+          markschemeText: '2 + 2 = 4',
         );
 
         expect(service.validateAnswer(question, '2+2=4').isCorrect, isTrue);
@@ -206,7 +207,7 @@ void main() {
         final question = buildQuestion(
           id: 'essay-type',
           type: QuestionType.essay,
-          markscheme: '',
+          markschemeText: '',
         );
 
         final shortAnswer = service.validateAnswer(question, 'Short');
@@ -223,7 +224,7 @@ void main() {
         final question = buildQuestion(
           id: 'step-type',
           type: QuestionType.stepByStep,
-          markscheme: 'Solution',
+          markschemeText: 'Solution',
         );
 
         final resultWithSteps = service.validateAnswer(question, 'First do step one, then step two');
@@ -234,7 +235,7 @@ void main() {
         final question = buildQuestion(
           id: 'canvas-type',
           type: QuestionType.canvas,
-          markscheme: '',
+          markschemeText: '',
         );
 
         final result = service.validateAnswer(question, '');
@@ -248,7 +249,7 @@ void main() {
         final question = buildQuestion(
           id: 'null-markscheme',
           type: QuestionType.typedAnswer,
-          markscheme: null,
+          markschemeText: null,
         );
 
         final result = service.validateAnswer(question, 'anything');
@@ -259,7 +260,7 @@ void main() {
         final question = buildQuestion(
           id: 'empty-markscheme',
           type: QuestionType.typedAnswer,
-          markscheme: '',
+          markschemeText: '',
         );
 
         final result = service.validateAnswer(question, 'answer');
@@ -270,7 +271,7 @@ void main() {
         final question = buildQuestion(
           id: 'whitespace-answer',
           type: QuestionType.typedAnswer,
-          markscheme: 'correct',
+          markschemeText: 'correct',
         );
 
         final result = service.validateAnswer(question, '   ');
@@ -281,7 +282,7 @@ void main() {
         final question = buildQuestion(
           id: 'long-answer',
           type: QuestionType.typedAnswer,
-          markscheme: 'answer',
+          markschemeText: 'answer',
         );
 
         final longAnswer = 'a' * 1000;
@@ -293,7 +294,7 @@ void main() {
         final question = buildQuestion(
           id: 'special-chars',
           type: QuestionType.typedAnswer,
-          markscheme: 'Test <>&"\'123',
+          markschemeText: 'Test <>&"\'123',
         );
 
         expect(service.validateAnswer(question, 'test <>&"\'123').isCorrect, isTrue);
@@ -303,9 +304,9 @@ void main() {
     group('validateAnswer integration', () {
       test('validates multiple questions in sequence correctly', () {
         final questions = [
-          buildQuestion(id: 'seq-1', type: QuestionType.typedAnswer, markscheme: 'Answer 1'),
-          buildQuestion(id: 'seq-2', type: QuestionType.singleChoice, markscheme: 'A', options: ['A', 'B']),
-          buildQuestion(id: 'seq-3', type: QuestionType.multiChoice, markscheme: 'A,B', options: ['A', 'B', 'C']),
+          buildQuestion(id: 'seq-1', type: QuestionType.typedAnswer, markschemeText: 'Answer 1'),
+          buildQuestion(id: 'seq-2', type: QuestionType.singleChoice, markschemeText: 'A', options: ['A', 'B']),
+          buildQuestion(id: 'seq-3', type: QuestionType.multiChoice, markschemeText: 'A,B', options: ['A', 'B', 'C']),
         ];
 
         expect(service.validateAnswer(questions[0], 'answer 1').isCorrect, isTrue);
@@ -317,7 +318,7 @@ void main() {
         final question = buildQuestion(
           id: 'result-info',
           type: QuestionType.typedAnswer,
-          markscheme: 'Correct',
+          markschemeText: 'Correct',
           explanation: 'Detailed explanation here',
         );
 
@@ -334,7 +335,7 @@ void main() {
     Question buildQuestion({
       required String id,
       required QuestionType type,
-      String? markscheme,
+      String? markschemeText,
       List<String> options = const [],
     }) {
       return Question(
@@ -343,7 +344,7 @@ void main() {
         type: type,
         subjectId: 'sub-1',
         topicId: 'topic-1',
-        markscheme: markscheme,
+        markscheme: markschemeText != null ? Markscheme(questionId: id, correctAnswer: markschemeText) : null,
         options: options,
         createdAt: now,
         updatedAt: now,
@@ -354,12 +355,12 @@ void main() {
       final withMarkscheme = buildQuestion(
         id: 'typed-1',
         type: QuestionType.typedAnswer,
-        markscheme: 'Paris',
+        markschemeText: 'Paris',
       );
       final withoutMarkscheme = buildQuestion(
         id: 'typed-2',
         type: QuestionType.typedAnswer,
-        markscheme: null,
+        markschemeText: null,
       );
 
       final correctResult = service.validateAnswer(withMarkscheme, 'paris');
@@ -373,7 +374,7 @@ void main() {
       final question = buildQuestion(
         id: 'single-1',
         type: QuestionType.singleChoice,
-        markscheme: 'B',
+        markschemeText: 'B',
         options: const ['A', 'B', 'C'],
       );
 
@@ -385,7 +386,7 @@ void main() {
       final question = buildQuestion(
         id: 'multi-1',
         type: QuestionType.multiChoice,
-        markscheme: 'A,C',
+        markschemeText: 'A,C',
         options: const ['A', 'B', 'C', 'D'],
       );
 
@@ -397,13 +398,13 @@ void main() {
       final original = buildQuestion(
         id: 'cache-1',
         type: QuestionType.singleChoice,
-        markscheme: 'A',
+        markschemeText: 'A',
         options: const ['A', 'B'],
       );
       final updated = buildQuestion(
         id: 'cache-1',
         type: QuestionType.singleChoice,
-        markscheme: 'B',
+        markschemeText: 'B',
         options: const ['A', 'B'],
       );
 

@@ -1,24 +1,26 @@
 import '../data/models/question_evaluation_model.dart';
 import '../data/models/question_model.dart';
-import '../data/models/markscheme_model.dart' as legacy;
+import '../../features/questions/models/markscheme_model.dart';
 
 class EvaluationAdapterService {
   QuestionEvaluation convertFromQuestion(Question question) {
+    final markscheme = question.markscheme;
     return QuestionEvaluation.fromLegacy(
       questionId: question.id,
-      markscheme: question.markscheme,
-      correctAnswer: question.correctAnswer,
+      markscheme: markscheme?.correctAnswer,
+      correctAnswer: markscheme?.correctAnswer,
       options: question.options,
-      explanation: question.explanation,
+      explanation: markscheme?.explanation ?? question.explanation,
     );
   }
 
-  QuestionEvaluation convertFromLegacyMarkscheme(String questionId, legacy.Markscheme markscheme) {
+  QuestionEvaluation convertFromFeatureMarkscheme(String questionId, Markscheme markscheme) {
     final steps = markscheme.steps.isNotEmpty
-        ? markscheme.steps.asMap().entries.map((e) => EvaluationStep(
-                  stepNumber: '${e.key + 1}',
-                  requiredAnswer: e.value,
-                  points: 1.0,
+        ? markscheme.steps.map((s) => EvaluationStep(
+                  stepNumber: s.stepNumber,
+                  requiredAnswer: s.requiredAnswer,
+                  points: s.points,
+                  description: s.description,
                 )).toList()
         : null;
 
@@ -29,6 +31,7 @@ class EvaluationAdapterService {
       evaluationType: steps != null ? EvaluationType.stepBased : EvaluationType.exactMatch,
       explanation: markscheme.explanation,
       steps: steps,
+      maxPoints: markscheme.markschemePoints,
       version: 1,
     );
   }
@@ -97,7 +100,9 @@ class EvaluationAdapterService {
       }
     }
 
-    return (matchedSteps / steps.length) * (steps.first.points * steps.length);
+    final totalPoints = steps.fold(0.0, (sum, step) => sum + step.points);
+    if (totalPoints == 0) return matchedSteps / steps.length;
+    return (matchedSteps / steps.length) * (totalPoints / steps.length);
   }
 
   String _generateStepFeedback(List<EvaluationStep> steps, String userAnswer) {

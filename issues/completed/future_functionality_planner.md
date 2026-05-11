@@ -1,80 +1,42 @@
-# [Feature] Wire Up Spaced Repetition Mode — Backend Exists, UI is a Dead Button
-
-**Date:** May 11, 2026
-**Priority:** High
-**Type:** Future Functionality / Missing Feature Wiring
-**Status:** Open
-
----
+# Future Functionality: AI-Powered Question Generation Pipeline
 
 ## Context
 
-StudyKing presents **four practice modes** on the Practice home screen (`lib/features/practice/presentation/practice_screen.dart:173-209`):
+The StudyKing codebase has a sophisticated Question model (`lib/core/data/models/question_model.dart`) with a `model` field (OpenRouter model ID) intended for AI-generated questions. However, no AI-powered question generation pipeline exists. Additionally, there are **two redundant Markscheme definitions**:
 
-| Mode | Icon | Subtitle | Status |
-|------|------|----------|--------|
-| Quick Practice | `flash_on` | "10 random questions" | ✅ Functional |
-| **Spaced Repetition** | `schedule` | "Coming soon" | ❌ **Dead button** |
-| Topic Focus | `category` | "Practice specific topics" | ⚠️ Snackbars "coming soon" |
-| Weak Areas | `bar_chart` | "Focus on mistakes" | ❌ Dead button |
+- `lib/core/data/models/markscheme_model.dart` (simpler, with fuzzy matching)
+- `lib/features/questions/models/markscheme_model.dart` (richer, with `MarkSchemeStep`)
 
-Two modes are displayed as enticing cards with icons and colors — but both **"Coming soon" modes** are entirely non-functional (`onTap: null`). Users see the cards, tap them, and get nothing. This creates a broken promise and erodes trust in the app's feature depth.
-
-Critically, **Spaced Repetition has a complete backend** (`lib/core/data/repositories/spaced_repetition_repository.dart`) with:
-- `getQuestionsDueForReview()` — fetch questions whose `nextReview` date has passed
-- `updateNextReviewDate()` — schedule next review based on mastery (7d, 3d, 1d, 12h, 30m)
-- `getSubjectDueCount()` — count due questions per subject
-- `SpacedRepetitionQueries` static helpers for filtering
-
-The infrastructure is ready. The UI is a placeholder.
-
----
+Both are used differently: the core one via `Question.correctAnswer`, the feature one via `QuestionAnswerValidator`. This duplication causes maintenance burden and inconsistent validation logic.
 
 ## Affected Files
 
-- **Primary UI:** `lib/features/practice/presentation/practice_screen.dart` (lines 188-194 — disabled Spaced Repetition card)
-- **Backend:** `lib/core/data/repositories/spaced_repetition_repository.dart`
-- **Question Model:** `lib/core/data/models/question_model.dart` (`nextReview` field at line 64)
-- **Session Tracking:** `lib/core/data/repositories/study_session_repository.dart`
-- **Attempts:** `lib/core/data/repositories/attempt_repository.dart`
-
----
+- `lib/core/data/models/question_model.dart` — has unused `model` field and `markscheme`/`correctAnswer` redundancy
+- `lib/core/data/models/markscheme_model.dart` — duplicate, isolated markscheme
+- `lib/features/questions/models/markscheme_model.dart` — duplicate, richer markscheme with step support
+- `lib/features/questions/services/answer_validator.dart` — uses feature markscheme
+- `lib/features/practice/services/answer_validation_service.dart` — wraps validator, creates markscheme on-the-fly from Question fields
+- `lib/core/data/repositories/question_repository.dart` — no generation capability
+- `lib/core/services/mastery_graph_service.dart` — rich mastery tracking, but no connection to question generation
 
 ## Rationale
 
-1. **Spaced repetition is a core differentiator** for a study app — it directly impacts learning retention and user stickiness
-2. **Backend is complete but unused** — `SpacedRepetitionRepository` has been built but never connected to the practice workflow
-3. **User-visible dead buttons** damage first impressions — two of four practice modes do nothing
-4. **Topic Focus is also non-functional** but shown as a mode — `_showTopicSelector()` only shows a snackbar (line 479)
-5. **"Weak Areas"** mode would require analytics infrastructure, but Spaced Repetition is a prerequisite for meaningful weakness detection
-
----
+1. **Consolidate Markscheme** into a single, comprehensive model (keeping the step-based one from `lib/features/questions/models/markscheme_model.dart`) that both `Question` and the validator can share.
+2. **Build an AI Question Generation Service** that:
+   - Accepts a topic/syllabus context
+   - Calls OpenRouter API to generate questions using the stored `model` field
+   - Creates Questions with proper Markscheme, difficulty, tags
+   - Integrates with MasteryState to prioritize weak areas when generating
+3. **Unified Answer Validation** — refactor `AnswerValidationService` to use the consolidated Markscheme directly, removing the on-the-fly construction.
 
 ## Acceptance Criteria
 
-1. **Spaced Repetition card becomes interactive** — tapping opens a subject selector, then begins a practice session with due questions
-2. **Due questions are fetched** via `SpacedRepetitionRepository.getQuestionsDueForReview()` filtered by subject
-3. **Session completion updates `nextReview`** — after each answer, call `updateNextReviewDate()` with the mastery level
-4. **Due count badge** appears on the Spaced Repetition card showing how many questions are ready for review (using `getSubjectDueCount`)
-5. **Empty state** shown when no questions are due ("All caught up! No reviews scheduled.")
-6. **Topic Focus card** becomes functional with actual topic selection from the lessons feature
-7. **"Weak Areas"** mode can remain as a placeholder or be scoped to a future analytics iteration
-
-### Test Scenarios
-
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| Tap Spaced Repetition with 0 due questions | Show "All caught up" empty state |
-| Tap Spaced Repetition with due questions | Show subject selector, then start session |
-| Complete a question in SR mode | Update `nextReview` based on correctness |
-| Tap Topic Focus | Show actual topic list from lessons |
-| Tap Weak Areas | Either work or show "Coming soon" message |
-
----
-
-## Supporting Notes
-
-- The `SpacedRepetitionRepository` uses Hive boxes — ensure `init()` is called before use
-- Mastery level calculation should use attempt history (correct/total attempts ratio)
-- The interval scaling in `updateNextReviewDate()` already exists with 5 tiers (0.9+, 0.7+, 0.5+, 0.3+, below 0.3)
-- Consider adding a "due today" home screen widget for quick access
+1. Remove `lib/core/data/models/markscheme_model.dart` — consolidate into the feature one
+2. Question model should use a single `Markscheme?` field instead of `markscheme` + `correctAnswer` strings
+3. Implement `QuestionGenerationService` with:
+   - `generateQuestions(topicId, count, difficulty)` method
+   - OpenRouter API integration using model's `model` field
+   - Proper error handling and retry logic
+4. `AnswerValidationService` consumes the consolidated Markscheme directly
+5. Optionally: link generation to MasteryState weak areas (generate more questions for topics with low mastery)
+6. All existing tests pass after refactoring

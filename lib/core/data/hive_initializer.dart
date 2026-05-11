@@ -7,6 +7,7 @@ import 'adapters/mastery_state_adapter.dart';
 import 'adapters/topic_dependency_adapter.dart';
 import 'adapters/question_mastery_state_adapter.dart';
 import 'adapters/personal_learning_plan_adapter.dart';
+import 'adapters/markscheme_adapter.dart';
 import 'models/question_evaluation_model.dart';
 import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
@@ -64,6 +65,10 @@ class HiveInitializer {
       Hive.registerAdapter(PlannedTopicAdapter());
       Hive.registerAdapter(PlanSummaryAdapter());
       Hive.registerAdapter(PlanRecommendationAdapter());
+    }
+    if (!Hive.isAdapterRegistered(12)) {
+      Hive.registerAdapter(MarkschemeAdapter());
+      Hive.registerAdapter(MarkSchemeStepAdapter());
     }
   }
 }

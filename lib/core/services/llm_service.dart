@@ -6,6 +6,7 @@ import '../data/enums.dart';
 import '../data/models/lesson_block_model.dart';
 import '../data/models/question_model.dart';
 import '../data/models/lesson_model.dart';
+import '../../features/questions/models/markscheme_model.dart';
 
 enum LlmProvider { openRouter, ollama }
 
@@ -376,7 +377,10 @@ Format as JSON with subject-specific recommendations.
         text: 'Mock question about $topicTitle (Q$i) for subject $subjectId?',
         type: _getMockQuestionType(i),
         difficulty: difficulty,
-        markscheme: 'Mock answer for question $i',
+        markscheme: Markscheme(
+          questionId: 'mock_q_${subjectId}_$i',
+          correctAnswer: 'Mock answer for question $i',
+        ),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

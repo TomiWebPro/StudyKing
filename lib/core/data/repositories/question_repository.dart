@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
+import '../../../features/questions/models/markscheme_model.dart';
 
 /// Generic Result class for safe error propagation
 sealed class Result<T> {
@@ -152,7 +153,7 @@ class QuestionRepository {
         return Result.failure('Question bank is not open');
       }
       final questions = _box.values.toList();
-      final filtered = questions.where((q) => q.markscheme != null && q.markscheme!.isNotEmpty).toList();
+      final filtered = questions.where((q) => q.markscheme != null).toList();
       
       if (filtered.isEmpty) {
         return Result.failure('No questions with markscheme found for subject: $subjectId');
@@ -161,7 +162,7 @@ class QuestionRepository {
       return SuccessResult<List<QuestionWithMarkscheme>>(
         filtered.map((q) => QuestionWithMarkscheme(
           question: q, 
-          markscheme: q.markscheme!
+          markscheme: q.markscheme!,
         )).toList()
       );
     } catch (e) {
@@ -170,7 +171,7 @@ class QuestionRepository {
     }
   }
 
-  Future<Result<void>> updateMarkscheme(String questionId, String markscheme) async {
+  Future<Result<void>> updateMarkscheme(String questionId, Markscheme markscheme) async {
     try {
       final question = _box.get(questionId);
       if (question == null) {
@@ -198,7 +199,7 @@ class QuestionRepository {
 
 class QuestionWithMarkscheme {
   final Question question;
-  final String markscheme;
+  final Markscheme markscheme;
 
   QuestionWithMarkscheme({required this.question, required this.markscheme});
 }

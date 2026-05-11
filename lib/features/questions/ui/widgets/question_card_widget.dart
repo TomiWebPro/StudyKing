@@ -316,7 +316,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   String? _getCorrectAnswer() {
-    return widget.question.correctAnswer ?? widget.question.markscheme;
+    return widget.question.markscheme?.correctAnswer;
   }
 
   bool _isCurrentAnswerCorrect() {

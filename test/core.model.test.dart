@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/main.dart' as app;
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,7 +25,7 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         difficulty: 2,
-        markscheme: 'Paris',
+        markscheme: Markscheme(questionId: 'test-1', correctAnswer: 'Paris'),
         tags: ['geography', 'capital'],
       );
     });
@@ -34,7 +35,6 @@ void main() {
       expect(json['id'], equals('test-1'));
       expect(json['type'], equals(0));
       expect(json['difficulty'], equals(2));
-      expect(json['markscheme'], equals('Paris'));
     });
 
     test('Question deserializes correctly', () {

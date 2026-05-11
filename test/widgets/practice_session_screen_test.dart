@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
@@ -18,8 +19,7 @@ Question _question({
   required String id,
   required String text,
   required QuestionType type,
-  required String markscheme,
-  String? correctAnswer,
+  required String markschemeText,
   List<String> options = const [],
   String topicId = 'topic-a',
 }) {
@@ -30,8 +30,7 @@ Question _question({
     type: type,
     subjectId: 'subject-a',
     topicId: topicId,
-    markscheme: markscheme,
-    correctAnswer: correctAnswer ?? markscheme,
+    markscheme: Markscheme(questionId: id, correctAnswer: markschemeText),
     options: options,
     createdAt: now,
     updatedAt: now,
@@ -78,7 +77,7 @@ void main() {
           id: 'q1',
           text: 'What is the capital of France?',
           type: QuestionType.singleChoice,
-          markscheme: 'Paris',
+          markschemeText: 'Paris',
           options: ['London', 'Paris', 'Berlin', 'Madrid'],
         ),
       ];
@@ -101,7 +100,7 @@ void main() {
           id: 'q1',
           text: 'Select all prime numbers:',
           type: QuestionType.multiChoice,
-          markscheme: '2,3',
+          markschemeText: '2,3',
           options: ['1', '2', '3', '4'],
         ),
       ];
@@ -120,7 +119,7 @@ void main() {
           id: 'q1',
           text: r'Solve: x^2 = 4',
           type: QuestionType.mathExpression,
-          markscheme: 'x = 2',
+          markschemeText: 'x = 2',
         ),
       ];
 
@@ -138,7 +137,7 @@ void main() {
           id: 'q1',
           text: 'Draw a circle',
           type: QuestionType.canvas,
-          markscheme: 'circle',
+          markschemeText: 'circle',
         ),
       ];
 
@@ -156,7 +155,7 @@ void main() {
           id: 'q1',
           text: 'What is 2+2?',
           type: QuestionType.typedAnswer,
-          markscheme: '4',
+          markschemeText: '4',
         ),
       ];
 
@@ -175,7 +174,7 @@ void main() {
           id: 'q1',
           text: 'Write about photosynthesis',
           type: QuestionType.essay,
-          markscheme: '',
+          markschemeText: '',
         ),
       ];
 
@@ -193,7 +192,7 @@ void main() {
           id: 'q1',
           text: 'Unknown type question',
           type: QuestionType.stepByStep,
-          markscheme: 'step',
+          markschemeText: 'step',
         ),
       ];
 
@@ -212,7 +211,7 @@ void main() {
           id: 'q1',
           text: 'Select A',
           type: QuestionType.singleChoice,
-          markscheme: 'A',
+          markschemeText: 'A',
           options: ['A', 'B', 'C', 'D'],
         ),
       ];
@@ -231,7 +230,7 @@ void main() {
           id: 'q1',
           text: 'Select A',
           type: QuestionType.singleChoice,
-          markscheme: 'A',
+          markschemeText: 'A',
           options: ['A', 'B', 'C', 'D'],
         ),
       ];
@@ -253,7 +252,7 @@ void main() {
           id: 'q1',
           text: 'What is 2+2?',
           type: QuestionType.singleChoice,
-          markscheme: '4',
+          markschemeText: '4',
           options: ['3', '4', '5', '6'],
         ),
       ];
@@ -277,7 +276,7 @@ void main() {
           id: 'q1',
           text: 'What is 2+2?',
           type: QuestionType.singleChoice,
-          markscheme: '4',
+          markschemeText: '4',
           options: ['3', '4', '5', '6'],
         ),
       ];
@@ -301,13 +300,13 @@ void main() {
           id: 'q1',
           text: 'Test question',
           type: QuestionType.typedAnswer,
-          markscheme: 'a',
+          markschemeText: 'a',
         ),
         _question(
           id: 'q2',
           text: 'Another question',
           type: QuestionType.typedAnswer,
-          markscheme: 'b',
+          markschemeText: 'b',
         ),
       ];
 
@@ -332,7 +331,7 @@ void main() {
           id: 'q1',
           text: 'Only question',
           type: QuestionType.typedAnswer,
-          markscheme: 'answer',
+          markschemeText: 'answer',
         ),
       ];
 
@@ -360,7 +359,7 @@ void main() {
           id: 'q1',
           text: 'Question with no options provided',
           type: QuestionType.singleChoice,
-          markscheme: 'Option A',
+          markschemeText: 'Option A',
           options: [],
         ),
       ];
@@ -381,7 +380,7 @@ void main() {
           id: 'q1',
           text: 'Multi with no options',
           type: QuestionType.multiChoice,
-          markscheme: 'Option A',
+          markschemeText: 'Option A',
           options: [],
         ),
       ];
@@ -399,13 +398,13 @@ void main() {
           id: 'q1',
           text: 'Correct answer',
           type: QuestionType.typedAnswer,
-          markscheme: 'correct',
+          markschemeText: 'correct',
         ),
         _question(
           id: 'q2',
           text: 'Wrong answer',
           type: QuestionType.typedAnswer,
-          markscheme: 'correct',
+          markschemeText: 'correct',
         ),
       ];
 
@@ -434,8 +433,8 @@ void main() {
 
     testWidgets('shows progress bar', (tester) async {
       final questions = [
-        _question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markscheme: 'a'),
-        _question(id: 'q2', text: 'Q2', type: QuestionType.typedAnswer, markscheme: 'a'),
+        _question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        _question(id: 'q2', text: 'Q2', type: QuestionType.typedAnswer, markschemeText: 'a'),
       ];
 
       await tester.pumpWidget(_sessionApp(result: Result.success(questions)));
@@ -447,7 +446,7 @@ void main() {
 
     testWidgets('shows timer and score stats', (tester) async {
       final questions = [
-        _question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markscheme: 'a'),
+        _question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
       ];
 
       await tester.pumpWidget(_sessionApp(result: Result.success(questions)));

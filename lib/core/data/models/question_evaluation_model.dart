@@ -50,6 +50,12 @@ class QuestionEvaluation extends HiveObject {
   });
 
   bool isMatch(String userAnswer) {
+    if (evaluationType == EvaluationType.stepBased && steps != null && steps!.isNotEmpty) {
+      final answerLower = userAnswer.toLowerCase();
+      return steps!.every((step) => 
+        answerLower.contains(step.requiredAnswer.toLowerCase()));
+    }
+
     final answer = userAnswer.toLowerCase().trim();
     final correct = correctAnswer.toLowerCase().trim();
     if (answer == correct) return true;

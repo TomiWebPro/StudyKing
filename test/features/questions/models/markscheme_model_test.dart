@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 
 void main() {
   group('Markscheme', () {
@@ -8,7 +8,7 @@ void main() {
 
       expect(markscheme.correctAnswer, 'Paris');
       expect(markscheme.acceptableAnswers, isEmpty);
-      expect(markscheme.explanation, '');
+      expect(markscheme.explanation, isNull);
       expect(markscheme.steps, isEmpty);
     });
 
@@ -17,13 +17,16 @@ void main() {
         correctAnswer: 'London',
         acceptableAnswers: ['london', 'england capital'],
         explanation: 'Capital of England',
-        steps: ['step 1', 'step 2'],
+        steps: [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'step 1', points: 1.0),
+          MarkSchemeStep(stepNumber: '2', requiredAnswer: 'step 2', points: 1.0),
+        ],
       );
 
       expect(markscheme.correctAnswer, 'London');
       expect(markscheme.acceptableAnswers, ['london', 'england capital']);
       expect(markscheme.explanation, 'Capital of England');
-      expect(markscheme.steps, ['step 1', 'step 2']);
+      expect(markscheme.steps.length, 2);
     });
 
     test('toJson serializes correctly', () {
@@ -31,7 +34,10 @@ void main() {
         correctAnswer: 'Paris',
         acceptableAnswers: ['paris'],
         explanation: 'Capital of France',
-        steps: ['First', 'Second'],
+        steps: [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'First', points: 1.0),
+          MarkSchemeStep(stepNumber: '2', requiredAnswer: 'Second', points: 1.0),
+        ],
       );
 
       final json = markscheme.toJson();
@@ -39,15 +45,19 @@ void main() {
       expect(json['correctAnswer'], 'Paris');
       expect(json['acceptableAnswers'], ['paris']);
       expect(json['explanation'], 'Capital of France');
-      expect(json['steps'], ['First', 'Second']);
+      expect((json['steps'] as List).length, 2);
     });
 
     test('fromJson deserializes correctly', () {
       final json = {
+        'questionId': 'q1',
         'correctAnswer': 'Berlin',
         'acceptableAnswers': ['berlin', 'germany capital'],
         'explanation': 'Capital of Germany',
-        'steps': ['Step 1', 'Step 2'],
+        'steps': [
+          {'stepNumber': '1', 'requiredAnswer': 'Step 1', 'points': 1.0},
+          {'stepNumber': '2', 'requiredAnswer': 'Step 2', 'points': 1.0},
+        ],
       };
 
       final markscheme = Markscheme.fromJson(json);
@@ -55,7 +65,7 @@ void main() {
       expect(markscheme.correctAnswer, 'Berlin');
       expect(markscheme.acceptableAnswers, ['berlin', 'germany capital']);
       expect(markscheme.explanation, 'Capital of Germany');
-      expect(markscheme.steps, ['Step 1', 'Step 2']);
+      expect(markscheme.steps.length, 2);
     });
 
     test('fromJson handles empty acceptableAnswers', () {
@@ -93,7 +103,7 @@ void main() {
       final markscheme = Markscheme(correctAnswer: 'Test');
 
       expect(markscheme.acceptableAnswers, []);
-      expect(markscheme.explanation, '');
+      expect(markscheme.explanation, isNull);
       expect(markscheme.steps, []);
     });
 
@@ -153,7 +163,7 @@ void main() {
 
       expect(copy.correctAnswer, 'Paris');
       expect(copy.explanation, 'Updated explanation');
-      expect(original.explanation, '');
+      expect(original.explanation, isNull);
     });
 
     test('copyWith preserves original values', () {

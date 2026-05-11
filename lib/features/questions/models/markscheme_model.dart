@@ -21,7 +21,7 @@ class Markscheme extends HiveObject {
   final List<MarkSchemeStep> steps;
 
   Markscheme({
-    required this.questionId,
+    this.questionId = '',
     required this.correctAnswer,
     List<String>? acceptableAnswers,
     this.explanation,
@@ -40,7 +40,7 @@ class Markscheme extends HiveObject {
   };
 
   factory Markscheme.fromJson(Map<String, dynamic> json) => Markscheme(
-    questionId: json['questionId'],
+    questionId: json['questionId'] ?? '',
     correctAnswer: json['correctAnswer'],
     acceptableAnswers: List<String>.from(json['acceptableAnswers'] ?? []),
     explanation: json['explanation'],
@@ -49,6 +49,51 @@ class Markscheme extends HiveObject {
         .map((s) => MarkSchemeStep.fromJson(s))
         .toList(),
   );
+
+  bool isMatch(String userAnswer) {
+    final answer = userAnswer.toLowerCase().trim();
+    final correct = correctAnswer.toLowerCase().trim();
+    if (answer == correct) return true;
+
+    for (final acceptable in acceptableAnswers) {
+      if (acceptable.toLowerCase().trim() == answer) return true;
+    }
+
+    return _isSimilar(answer, correct);
+  }
+
+  bool _isSimilar(String answer, String correct) {
+    final answerWords = answer.split(' ');
+    final correctWords = correct.split(' ');
+
+    if (answerWords.length >= correctWords.length * 0.8) {
+      final matchingRatio = answerWords
+          .where((word) => correctWords.contains(word))
+          .length /
+        correctWords.length;
+      return matchingRatio > 0.7;
+    }
+
+    return false;
+  }
+
+  Markscheme copyWith({
+    String? questionId,
+    String? correctAnswer,
+    List<String>? acceptableAnswers,
+    String? explanation,
+    double? markschemePoints,
+    List<MarkSchemeStep>? steps,
+  }) {
+    return Markscheme(
+      questionId: questionId ?? this.questionId,
+      correctAnswer: correctAnswer ?? this.correctAnswer,
+      acceptableAnswers: acceptableAnswers ?? this.acceptableAnswers,
+      explanation: explanation ?? this.explanation,
+      markschemePoints: markschemePoints ?? this.markschemePoints,
+      steps: steps ?? this.steps,
+    );
+  }
 }
 
 @HiveType(typeId: 13)

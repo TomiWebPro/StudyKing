@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
@@ -18,7 +19,7 @@ Question _question({
   required String id,
   required String text,
   required QuestionType type,
-  required String markscheme,
+  required String markschemeText,
   List<String> options = const [],
 }) {
   final now = DateTime.utc(2024, 1, 1);
@@ -28,8 +29,7 @@ Question _question({
     type: type,
     subjectId: 'subject-a',
     topicId: 'topic-a',
-    markscheme: markscheme,
-    correctAnswer: markscheme,
+    markscheme: Markscheme(questionId: id, correctAnswer: markschemeText),
     options: options,
     createdAt: now,
     updatedAt: now,
@@ -67,7 +67,7 @@ void main() {
         id: 'q1',
         text: 'Capital of France?',
         type: QuestionType.singleChoice,
-        markscheme: 'Paris',
+        markschemeText: 'Paris',
         options: ['London', 'Paris', 'Berlin', 'Madrid'],
       ),
     ];
@@ -93,7 +93,7 @@ void main() {
 
   testWidgets('Practice session loads typedAnswer question and validates answer', (tester) async {
     final questions = [
-      _question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markscheme: '4'),
+      _question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
     ];
 
     await tester.pumpWidget(_testApp(result: Result.success(questions)));
@@ -123,8 +123,8 @@ void main() {
 
   testWidgets('Practice session shows progress bar and stats', (tester) async {
     final questions = [
-      _question(id: 'q1', text: 'Question 1', type: QuestionType.typedAnswer, markscheme: 'a'),
-      _question(id: 'q2', text: 'Question 2', type: QuestionType.typedAnswer, markscheme: 'b'),
+      _question(id: 'q1', text: 'Question 1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+      _question(id: 'q2', text: 'Question 2', type: QuestionType.typedAnswer, markschemeText: 'b'),
     ];
 
     await tester.pumpWidget(_testApp(result: Result.success(questions)));
@@ -143,7 +143,7 @@ void main() {
         id: 'q1',
         text: 'Math Q',
         type: QuestionType.mathExpression,
-        markscheme: 'x',
+        markschemeText: 'x',
       ),
     ];
 
@@ -157,7 +157,7 @@ void main() {
 
   testWidgets('Practice session completes session and shows results', (tester) async {
     final questions = [
-      _question(id: 'q1', text: 'First Q', type: QuestionType.typedAnswer, markscheme: 'yes'),
+      _question(id: 'q1', text: 'First Q', type: QuestionType.typedAnswer, markschemeText: 'yes'),
     ];
 
     await tester.pumpWidget(_testApp(result: Result.success(questions)));
@@ -187,7 +187,7 @@ void main() {
 
   testWidgets('Submit button disabled when no answer for typedAnswer', (tester) async {
     final questions = [
-      _question(id: 'q1', text: 'Fill in', type: QuestionType.typedAnswer, markscheme: 'answer'),
+      _question(id: 'q1', text: 'Fill in', type: QuestionType.typedAnswer, markschemeText: 'answer'),
     ];
 
     await tester.pumpWidget(_testApp(result: Result.success(questions)));

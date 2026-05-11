@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/evaluation_adapter_service.dart';
 import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart' as legacy;
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 void main() {
@@ -25,8 +25,11 @@ void main() {
           variantIds: [],
           sourceIds: [],
           allowedAnswerTypes: '',
-          markscheme: '4',
-          correctAnswer: '4',
+          markscheme: Markscheme(
+            questionId: 'q1',
+            correctAnswer: '4',
+            explanation: 'Simple addition',
+          ),
           options: ['2', '3', '4', '5'],
           explanation: 'Simple addition',
           createdAt: DateTime.now(),
@@ -50,8 +53,6 @@ void main() {
           variantIds: [],
           sourceIds: [],
           allowedAnswerTypes: '',
-          markscheme: '',
-          correctAnswer: '',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -64,14 +65,26 @@ void main() {
 
     group('convertFromLegacyMarkscheme', () {
       test('converts legacy markscheme with steps', () {
-        final markscheme = legacy.Markscheme(
+        final markscheme = Markscheme(
+          questionId: 'q1',
           correctAnswer: 'x = 5',
           acceptableAnswers: [],
           explanation: 'Solve for x',
-          steps: ['Step 1: Subtract 3', 'Step 2: Divide by 2'],
+          steps: [
+            MarkSchemeStep(
+              stepNumber: '1',
+              requiredAnswer: 'Step 1: Subtract 3',
+              points: 1.0,
+            ),
+            MarkSchemeStep(
+              stepNumber: '2',
+              requiredAnswer: 'Step 2: Divide by 2',
+              points: 1.0,
+            ),
+          ],
         );
 
-        final evaluation = service.convertFromLegacyMarkscheme('q1', markscheme);
+        final evaluation = service.convertFromFeatureMarkscheme('q1', markscheme);
 
         expect(evaluation.questionId, equals('q1'));
         expect(evaluation.correctAnswer, equals('x = 5'));
@@ -81,28 +94,30 @@ void main() {
       });
 
       test('converts legacy markscheme without steps', () {
-        final markscheme = legacy.Markscheme(
+        final markscheme = Markscheme(
+          questionId: 'q1',
           correctAnswer: '42',
           acceptableAnswers: [],
           explanation: 'The answer is 42',
           steps: [],
         );
 
-        final evaluation = service.convertFromLegacyMarkscheme('q1', markscheme);
+        final evaluation = service.convertFromFeatureMarkscheme('q1', markscheme);
 
         expect(evaluation.evaluationType, equals(EvaluationType.exactMatch));
         expect(evaluation.steps, isNull);
       });
 
       test('handles empty steps list', () {
-        final markscheme = legacy.Markscheme(
+        final markscheme = Markscheme(
+          questionId: 'q1',
           correctAnswer: '42',
           acceptableAnswers: [],
           explanation: 'The answer is 42',
           steps: [],
         );
 
-        final evaluation = service.convertFromLegacyMarkscheme('q1', markscheme);
+        final evaluation = service.convertFromFeatureMarkscheme('q1', markscheme);
 
         expect(evaluation.steps, isNull);
       });

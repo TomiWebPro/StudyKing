@@ -25,12 +25,14 @@ class AnswerValidationService {
   }
 
   ValidationResult validateAnswer(Question question, String answer) {
-    final markscheme = Markscheme(
-      questionId: question.id,
-      correctAnswer: question.markscheme ?? '',
-      acceptableAnswers: question.options,
-      explanation: question.explanation ?? '',
-    );
+    final markscheme = question.markscheme;
+    if (markscheme == null) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: 'No markscheme available for this question',
+      );
+    }
+    
     final validator = _getValidator(question.id, markscheme);
     return validator.validate(answer, question.type);
   }

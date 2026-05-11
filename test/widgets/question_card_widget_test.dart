@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/features/questions/ui/widgets/question_card_widget.dart';
 
 Question _question({
   required String id,
   required String text,
   required QuestionType type,
-  String? markscheme,
+  String? markschemeText,
   List<String> options = const [],
   int difficulty = 1,
 }) {
@@ -19,8 +20,7 @@ Question _question({
     type: type,
     subjectId: 'subject-a',
     topicId: 'topic-a',
-    markscheme: markscheme,
-    correctAnswer: markscheme,
+    markscheme: markschemeText != null ? Markscheme(questionId: id, correctAnswer: markschemeText) : null,
     options: options,
     difficulty: difficulty,
     createdAt: now,
@@ -35,7 +35,7 @@ void main() {
         id: 'q1',
         text: 'What is the capital of France?',
         type: QuestionType.singleChoice,
-        markscheme: 'Paris',
+        markschemeText: 'Paris',
       );
 
       await tester.pumpWidget(
@@ -58,7 +58,7 @@ void main() {
         id: 'q1',
         text: 'Test question?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       await tester.pumpWidget(
@@ -81,7 +81,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       await tester.pumpWidget(
@@ -103,7 +103,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       await tester.pumpWidget(
@@ -128,7 +128,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       String? submittedAnswer;
@@ -158,7 +158,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.singleChoice,
-        markscheme: 'A',
+        markschemeText: 'A',
         options: ['A', 'B', 'C', 'D'],
       );
 
@@ -185,7 +185,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.singleChoice,
-        markscheme: 'A',
+        markschemeText: 'A',
         options: ['A', 'B', 'C', 'D'],
       );
 
@@ -212,7 +212,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       bool nextPressed = false;
@@ -246,7 +246,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
       );
 
       await tester.pumpWidget(
@@ -287,7 +287,7 @@ void main() {
         id: 'q1',
         text: 'Select all that apply:',
         type: QuestionType.multiChoice,
-        markscheme: 'A,B',
+        markschemeText: 'A,B',
         options: ['A', 'B', 'C', 'D'],
       );
 
@@ -323,7 +323,7 @@ void main() {
         id: 'q1',
         text: 'Select:',
         type: QuestionType.multiChoice,
-        markscheme: 'Option A,Option B',
+        markschemeText: 'Option A,Option B',
         options: ['Option A', 'Option B', 'Option C', 'Option D'],
       );
 
@@ -349,7 +349,7 @@ void main() {
         id: 'q1',
         text: 'Test?',
         type: QuestionType.stepByStep,
-        markscheme: 'step',
+        markschemeText: 'step',
       );
 
       await tester.pumpWidget(
@@ -371,7 +371,7 @@ void main() {
         id: 'q1',
         text: 'Hard question',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
         difficulty: 3,
       );
 
@@ -394,7 +394,7 @@ void main() {
         id: 'q1',
         text: 'Easy question',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
         difficulty: 1,
       );
 
@@ -417,7 +417,7 @@ void main() {
         id: 'q1',
         text: 'Medium question',
         type: QuestionType.typedAnswer,
-        markscheme: 'answer',
+        markschemeText: 'answer',
         difficulty: 2,
       );
 
