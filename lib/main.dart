@@ -10,6 +10,7 @@ import 'features/settings/presentation/profile_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_view.dart';
 import 'features/practice/presentation/practice_screen.dart';
+import 'features/quickguide/quickguide.dart';
 
 // Global database instance
 final database = DatabaseService(
@@ -270,6 +271,7 @@ class StudyKingApp extends ConsumerWidget {
         '/api-config': (context) => const ApiConfigScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/quick-guide': (context) => const QuickGuideScreen(),
       },
     );
   }

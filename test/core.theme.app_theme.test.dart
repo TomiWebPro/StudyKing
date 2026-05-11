@@ -460,7 +460,7 @@ void main() {
             appBar: AppBar(title: const Text('Title')),
             body: Column(
               children: [
-                Card(child: Container(width: 50, height: 50)),
+                Card(child: SizedBox(width: 50, height: 50)),
                 ElevatedButton(onPressed: () {}, child: const Text('Button')),
               ],
             ),
@@ -481,7 +481,7 @@ void main() {
             appBar: AppBar(title: const Text('Title')),
             body: Column(
               children: [
-                Card(child: Container(width: 50, height: 50)),
+                Card(child: SizedBox(width: 50, height: 50)),
                 ElevatedButton(onPressed: () {}, child: const Text('Button')),
                 FloatingActionButton(
                   onPressed: () {},

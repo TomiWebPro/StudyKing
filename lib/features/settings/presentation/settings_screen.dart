@@ -40,6 +40,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _tile('Current User', 'Manage your profile', Icons.account_circle,
                 () => Navigator.pushNamed(context, '/profile')),
           ]),
+          _section('Quick Access', [
+            _tile('Quick Guide', 'AI-powered study assistant', Icons.auto_awesome,
+                () => Navigator.pushNamed(context, '/quick-guide')),
+          ]),
           _section('Appearance', [
             _tile('Theme', _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
                 () => _showThemeDialog(settings.themeModeEnum)),
