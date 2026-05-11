@@ -1,42 +1,48 @@
-# Duplicate Hive typeId Assignments
+# Code Refactoring: Model Boilerplate Code Duplication
 
 ## Context
 
-Hive requires each registered TypeAdapter to have a **globally unique** `typeId` integer. The codebase has a critical bug where multiple models share the same `typeId: 5`, causing potential data corruption and serialization failures at runtime.
-
-### Conflicting typeId: 5 Assignments
-
-| Model | File | typeId |
-|-------|------|--------|
-| `ProfileData` | `lib/features/settings/data/models/settings_box.dart` | **5** |
-| `StudentAttempt` | `lib/core/data/models/student_attempt_model.dart` | **5** |
-| `Markscheme` | `lib/core/data/models/markscheme_model.dart` | **5** |
+The StudyKing codebase contains 20+ HiveObject model classes in `lib/core/data/models/` (and a few in feature directories) that each implement identical `toJson()`, `fromJson()`, and `copyWith()` methods. This creates significant maintenance burden and violates the DRY principle.
 
 ## Affected Files
 
-- `lib/core/data/models/student_attempt_model.dart:3`
-- `lib/core/data/models/markscheme_model.dart:5`
-- `lib/features/settings/data/models/settings_box.dart:109`
-
-## Additional Observations
-
-1. **Duplicate functionality**: `QuestionEvaluation` (`typeId: 14`) and `Markscheme` (`typeId: 5`) implement nearly identical `isMatch()` and `_isSimilar()` methods—likely a remnant of migration/refactoring.
-
-2. **Inconsistent adapter strategy**: Models with `@HiveType` annotations (e.g., `mastery_state_model.dart`) also have manually maintained adapters in `lib/core/data/adapters/`. The manual adapters may be dead code if code generation (`build_runner`) is used.
-
-3. **Duplicate model**: `StudentAttempt` (`typeId: 5`) is a separate model from `markscheme_model.dart` (`typeId: 5`), yet both use the same ID.
+- `lib/core/data/models/question_model.dart` (191 lines, 60+ lines boilerplate)
+- `lib/core/data/models/topic_model.dart` (83 lines, ~45 lines boilerplate)
+- `lib/core/data/models/study_session_model.dart` (91 lines, ~45 lines boilerplate)
+- `lib/core/data/models/markscheme_model.dart` (84 lines, ~50 lines boilerplate)
+- `lib/core/data/models/lesson_model.dart` (69 lines, missing copyWith - inconsistent)
+- `lib/core/data/models/student_attempt_model.dart` (53 lines, no serialization methods)
+- `lib/core/data/models/source_model.dart` (24 lines, no serialization methods)
+- `lib/core/data/models/lesson_block_model.dart`
+- `lib/core/data/models/topic_progress_model.dart`
+- `lib/core/data/models/answer_model.dart`
+- `lib/core/data/models/personal_learning_plan_model.dart`
+- `lib/core/data/models/mastery_state_model.dart`
+- `lib/core/data/models/question_mastery_state_model.dart`
+- `lib/core/data/models/topic_dependency_model.dart`
+- `lib/core/data/models/question_evaluation_model.dart`
+- `lib/core/data/models/task_model.dart`
+- `lib/features/subjects/models/subject_model.dart`
+- `lib/features/settings/data/models/user_profile_model.dart`
 
 ## Rationale
 
-Hive typeId collisions cause silent data corruption: when deserializing, Hive uses the typeId to lookup the adapter. If multiple adapters share an ID, the wrong model may be instantiated, leading to runtime crashes or corrupted state.
+1. **Duplication**: Each model repeats identical serialization/deserialization patterns
+2. **Maintenance burden**: Any change to JSON structure requires updating 20+ files
+3. **Inconsistency**: Some models have all methods, others have none, some have partial implementations (e.g., `Lesson` missing `copyWith`, `Source` missing JSON methods)
+4. **Inconsistent error handling**: `Question.fromJson` has complex fallback logic (`correctAnswer ?? json['correct_answer'] ?? json['answer']`) while other models lack similar resilience
 
 ## Acceptance Criteria
 
-- [ ] Assign a unique `typeId` to each model. Suggested mapping:
-  - `StudentAttempt`: reassign to `typeId: 24`
-  - `Markscheme`: reassign to `typeId: 25`
-  - `ProfileData` (`typeId: 5`): keep or reassign—decide based on usage
-- [ ] Verify no other duplicate typeIds exist across the codebase
-- [ ] If `Markscheme` is deprecated in favor of `QuestionEvaluation`, remove `Markscheme` entirely
-- [ ] Run `flutter pub run build_runner build --delete-conflicting-outputs` if using generated adapters
-- [ ] Add a static assertion or unit test that validates typeId uniqueness at compile time
+1. Create a `JsonSerializableModel` mixin or abstract base class that provides:
+   - `Map<String, dynamic> toJson()` method
+   - `static T fromJson(Map<String, dynamic> json)` factory method
+   - `T copyWith(...)` method using runtime type detection
+
+2. Refactor all affected models to use the new base class/mixin
+
+3. Ensure consistent error handling in `fromJson` across all models
+
+4. Add comprehensive tests for the base class serialization behavior
+
+5. Verify all existing functionality remains intact (run existing test suite)

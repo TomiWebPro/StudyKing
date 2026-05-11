@@ -105,9 +105,7 @@ Subject createTestSubject({
 }
 
 class MockSubjectRepository extends SubjectRepository {
-  final MockSubjectBox _mockBox;
-
-  MockSubjectRepository(this._mockBox) : super(subjectBox: _mockBox);
+  MockSubjectRepository(MockSubjectBox subjectBox) : super(subjectBox: subjectBox);
 
   @override
   Future<void> init() async {}
@@ -173,7 +171,7 @@ void main() {
           ],
         );
 
-        final asyncValue = container.read(subjectsRepositoryProvider);
+        container.read(subjectsRepositoryProvider);
         
         await expectLater(
           container.read(subjectsRepositoryProvider.future),

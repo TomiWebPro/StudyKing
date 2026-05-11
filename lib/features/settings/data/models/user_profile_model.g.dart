@@ -2,6 +2,10 @@
 
 part of 'user_profile_model.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class UserProfileAdapter extends TypeAdapter<UserProfile> {
   @override
   final int typeId = 10;
@@ -19,9 +23,9 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       avatarUrl: fields[3] as String?,
       learningGoal: fields[4] as String?,
       preferredStudyTime: fields[5] as String?,
-      notificationsEnabled: fields[6] as bool? ?? true,
-      language: fields[7] as String? ?? 'en',
-      accessibilitySettings: fields[8] as String? ?? 'default',
+      notificationsEnabled: fields[6] as bool,
+      language: fields[7] as String,
+      accessibilitySettings: fields[8] as String,
     );
   }
 
@@ -48,4 +52,14 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(8)
       ..write(obj.accessibilitySettings);
   }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserProfileAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

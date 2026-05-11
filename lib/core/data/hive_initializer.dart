@@ -12,6 +12,7 @@ import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
 import 'models/question_mastery_state_model.dart';
 import 'models/personal_learning_plan_model.dart';
+import 'models/student_attempt_model.dart';
 
 class HiveInitializer {
   static Future<void> initialize() async {
@@ -41,6 +42,9 @@ class HiveInitializer {
   }
   
   static Future<void> _registerAdapters() async {
+    if (!Hive.isAdapterRegistered(24)) {
+      Hive.registerAdapter(StudentAttemptAdapter());
+    }
     if (!Hive.isAdapterRegistered(14)) {
       Hive.registerAdapter(QuestionEvaluationAdapter());
       Hive.registerAdapter(EvaluationStepAdapter());

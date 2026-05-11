@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 /// Markscheme model for correct answer with optional acceptable answers
 /// Used in single/multiple choice questions to validate user responses
-@HiveType(typeId: 5)
+@HiveType(typeId: 25)
 class Markscheme extends HiveObject {
   @HiveField(0)
   final String correctAnswer;

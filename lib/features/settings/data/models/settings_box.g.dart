@@ -25,9 +25,9 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       totalSessionCount: fields[5] as int,
       totalStudyTimeMs: fields[6] as int,
       totalQuestions: fields[7] as int,
-      studyRemindersEnabled: fields[8] as bool? ?? true,
-      requestTimeoutSeconds: fields[9] as int? ?? 120,
-      sessionDurationMinutes: fields[10] as int? ?? 30,
+      studyRemindersEnabled: fields[8] as bool,
+      requestTimeoutSeconds: fields[9] as int,
+      sessionDurationMinutes: fields[10] as int,
     );
   }
 

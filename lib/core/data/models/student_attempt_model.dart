@@ -1,6 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-@HiveType(typeId: 5)
+part 'student_attempt_model.g.dart';
+
+@HiveType(typeId: 24)
 class StudentAttempt extends HiveObject {
   @HiveField(0)
   final String id;
