@@ -1,49 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 
 class SubjectColors {
-  static const List<String> all = [
-    '#2196F3',
-    '#4CAF50',
-    '#FF9800',
-    '#9C27B0',
-    '#E91E63',
-    '#00BCD4',
-    '#FFC107',
-    '#FF5722',
-    '#607D8B',
-  ];
+  static const List<String> all = ColorUtils.availableColors;
 
-  static String get defaultColor => '#2196F3';
+  static String get defaultColor => ColorUtils.defaultColorHex;
 
-  static Color stringToColor(String hexColor) {
-    final hex = hexColor.replaceAll('#', '');
-    return Color(int.parse(hex, radix: 16) + 0xFF000000);
-  }
+  static Color stringToColor(String hexColor) => ColorUtils.stringToColor(hexColor);
 
-  static String getColorLabel(String hexColor) {
-    switch (hexColor) {
-      case '#2196F3':
-        return 'Blue';
-      case '#4CAF50':
-        return 'Green';
-      case '#FF9800':
-        return 'Orange';
-      case '#9C27B0':
-        return 'Purple';
-      case '#E91E63':
-        return 'Pink';
-      case '#00BCD4':
-        return 'Cyan';
-      case '#FFC107':
-        return 'Amber';
-      case '#FF5722':
-        return 'Deep Orange';
-      case '#607D8B':
-        return 'Blue Grey';
-      default:
-        return hexColor;
-    }
-  }
+  static String getColorLabel(String hexColor) => ColorUtils.getColorLabel(hexColor);
 }
 
 class SubjectColorSelector extends StatelessWidget {

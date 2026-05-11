@@ -17,7 +17,7 @@ void main() {
       required QuestionType type,
       String? markscheme,
       List<String> options = const [],
-      String? explanation = null,
+      String? explanation,
     }) {
       return Question(
         id: id,

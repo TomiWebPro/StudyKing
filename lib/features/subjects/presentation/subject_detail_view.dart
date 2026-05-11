@@ -6,6 +6,7 @@ import 'package:studyking/features/sessions/presentation/session_history_screen.
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
 class SubjectDetailScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = _stringToColor(widget.subjectColor);
+    final color = ColorUtils.stringToColor(widget.subjectColor);
 
     return Scaffold(
       body: CustomScrollView(
@@ -253,8 +254,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _stringToColor(widget.subjectColor).withValues(alpha: 0.2),
-                    child: Icon(Icons.book, color: _stringToColor(widget.subjectColor)),
+                    backgroundColor: ColorUtils.stringToColor(widget.subjectColor).withValues(alpha: 0.2),
+                    child: Icon(Icons.book, color: ColorUtils.stringToColor(widget.subjectColor)),
                   ),
                   title: Text((lesson as dynamic).title ?? 'Lesson'),
                   subtitle: Text('Questions: $questionCount'),
@@ -284,11 +285,11 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.workspace_premium, size: 64, color: _stringToColor(widget.subjectColor)),
+          Icon(Icons.workspace_premium, size: 64, color: ColorUtils.stringToColor(widget.subjectColor)),
           const SizedBox(height: 16),
           Text(
             'Practice Mode',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _stringToColor(widget.subjectColor)),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: ColorUtils.stringToColor(widget.subjectColor)),
           ),
           const SizedBox(height: 8),
           Text(
@@ -702,14 +703,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         ],
       ),
     );
-  }
-
-  Color _stringToColor(String hexColor) {
-    try {
-      return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
-    } catch (_) {
-      return Colors.blue;
-    }
   }
 
 }

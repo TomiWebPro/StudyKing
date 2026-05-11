@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 import '../models/subject_model.dart';
 import 'package:studyking/main.dart' show database;
 
@@ -135,7 +136,7 @@ class _SubjectManagementScreenState
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: _colorToMaterialColor(color),
+                            color: ColorUtils.stringToColor(color),
                             shape: BoxShape.circle,
                             border: _selectedColor == color
                                 ? Border.all(
@@ -243,11 +244,5 @@ class _SubjectManagementScreenState
     if (date != null) {
       setState(() => _examDate = date);
     }
-  }
-
-  Color _colorToMaterialColor(String hexColor) {
-    // Convert hex string like '#2196F3' to Color
-    final hex = hexColor.replaceAll('#', '');
-    return Color(int.parse(hex, radix: 16) + 0xFF000000);
   }
 }
