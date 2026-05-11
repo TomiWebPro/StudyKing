@@ -1,60 +1,62 @@
-# Strengthen Practice Feature Tests: replace placeholders with behavior-level coverage
+# Strengthen practice question UI test coverage (interaction matrix + edge paths)
 
-## Context
+## Why this matters
 
-The current practice-related test suite is mostly placeholder-level and does not protect core user flows in `lib/features/practice`.
+The practice flow currently has only basic happy-path coverage and almost no direct tests for the question UI widgets that drive answer capture and grading behavior. This leaves high-risk paths unprotected: question-type rendering switches, submit gating, feedback visibility, and drawing/math-specific interactions.
 
-Examples:
-- `test/screens.practice.test.dart` asserts trivial values and widget construction, but does not validate screen behavior (loading, error state, subject selection, navigation).
-- `test/validation.answer.test.dart` checks enum equality and static lists instead of real answer validation outcomes.
-- `test/features.practice.test.dart` contains placeholder assertions (e.g., `1 + 1 == 2`) and does not exercise `PracticeAnswerRecord` or session behavior.
+Current tests (`test/features.practice.test.dart`, `test/screens.practice.test.dart`, `test/widget_test.dart`) mostly validate app boot, loading states, and a single typed-answer flow. Regressions in other question types can ship undetected.
 
-Meanwhile, important production logic exists in:
-- `lib/features/practice/presentation/practice_screen.dart`
+## Coverage gaps to address
+
+1. **Question type rendering matrix is largely untested**
+   - `PracticeSessionScreen._buildQuestionWidget` has multiple branches (`singleChoice`, `multiChoice`, `mathExpression`, `canvas`, `typedAnswer`, `essay`, fallback), but tests only exercise typed-answer behavior.
+   - Multi-choice and single-choice currently share `SingleAnswerWidget`; without tests, incorrect selection semantics can slip through.
+
+2. **Question UI widget behavior is untested in isolation**
+   - `QuestionCardWidget` contains substantial state logic (`didUpdateWidget`, local answer syncing, submit enablement, correctness evaluation, multi-select serialization with `||`), but there are no widget tests covering this.
+   - `SingleAnswerWidget` feedback states (`isSubmitted`, `isFeedbackVisible`, option color semantics, disabled tap after submit) are not tested.
+
+3. **Canvas and math paths lack interaction tests**
+   - `CanvasDrawingWidget` has undo/clear/save state transitions and initial drawing parsing; no tests verify save button gating, message states, or malformed payload handling.
+   - `MathExpressionWidget` token styling and `showPrefix`/`isSolution` variants are untested, creating risk when refactoring rendering.
+
+4. **Existing baseline test is overly basic**
+   - `test/widget_test.dart` only checks app load/material presence and does not protect feature behavior.
+
+## Affected files
+
 - `lib/features/practice/presentation/practice_session_screen.dart`
-- `lib/features/practice/services/answer_validation_service.dart`
-
-This creates high regression risk in the practice journey (question loading, submission, correctness tracking, completion flow, and validator behavior).
-
-## Problem
-
-There is no meaningful automated coverage for the most failure-prone practice paths:
-- repository failure/empty-question handling
-- question count clamping and topic filtering
-- submission/feedback/next-question progression
-- session completion and timer cleanup behavior
-- `AnswerValidationService` correctness across question types and cache behavior
-
-## Affected Files
-
-- `test/screens.practice.test.dart`
-- `test/validation.answer.test.dart`
+- `lib/features/questions/ui/widgets/question_card_widget.dart`
+- `lib/features/questions/ui/widgets/single_answer_widget.dart`
+- `lib/features/questions/ui/widgets/canvas_drawing_widget.dart`
+- `lib/features/questions/ui/widgets/math_expression_widget.dart`
 - `test/features.practice.test.dart`
-- `lib/features/practice/presentation/practice_screen.dart`
-- `lib/features/practice/presentation/practice_session_screen.dart`
-- `lib/features/practice/services/answer_validation_service.dart`
+- `test/screens.practice.test.dart`
+- `test/widget_test.dart`
 
-## Why this is high value
+## Proposed test additions
 
-Practice is a core learning loop; regressions here directly affect grading trust and user confidence. Current tests can pass while the actual session flow is broken, so they provide low signal and poor release safety.
+- Add focused widget tests for each questions UI widget (`QuestionCardWidget`, `SingleAnswerWidget`, `CanvasDrawingWidget`, `MathExpressionWidget`).
+- Expand `PracticeSessionScreen` tests to cover each question type branch and answer submission lifecycle.
+- Add negative/edge tests (empty options fallback, malformed initial drawing JSON, submit disabled with empty answer, post-submit controls disabled).
 
-## Acceptance Criteria
+## Acceptance criteria
 
-1. Replace placeholder assertions in the three practice test files with behavior-driven tests that fail on real regressions.
-2. Add widget tests for `PracticeScreen` covering:
-   - loading indicator before subjects resolve,
-   - empty state when no subjects exist,
-   - subject list rendering for one and multiple subjects,
-   - tap paths (`Practice` FAB and subject card) leading to practice session navigation.
-3. Add widget tests for `PracticeSessionScreen` covering:
-   - successful question load and first question render,
-   - empty/failure repository result showing no-questions path,
-   - submit disabled until answer exists,
-   - score/correct count updates after submit,
-   - next question progression and completion pop flow.
-4. Add unit tests for `AnswerValidationService.validateAnswer` covering:
-   - markscheme present vs missing,
-   - typed/single-choice/multi-choice correctness outcomes,
-   - cache behavior when validating the same `question.id` repeatedly (ensuring no stale-validator false positives).
-5. Ensure tests use deterministic fixtures/fakes (no `DateTime.now()` assertions without clock control, no trivial tautology checks).
-6. CI test run demonstrates these tests execute and pass under `flutter test`.
+- New widget tests cover all `QuestionType` branches used in `PracticeSessionScreen._buildQuestionWidget`.
+- `QuestionCardWidget` tests verify:
+  - submit button enable/disable transitions,
+  - answer sync behavior when `currentAnswer` changes,
+  - multi-select serialization/parsing (`||`),
+  - correctness chip for submitted answers.
+- `SingleAnswerWidget` tests verify:
+  - selection callback only when not submitted,
+  - feedback container visibility rules,
+  - correct/incorrect visual state behavior.
+- `CanvasDrawingWidget` tests verify:
+  - save disabled when empty,
+  - undo/clear behavior updates state,
+  - graceful handling of invalid `initialDrawing` payload.
+- `MathExpressionWidget` tests verify:
+  - prefix rendering when `showPrefix=true`,
+  - solution container variant when `isSolution=true`.
+- Existing broad smoke test(s) are either replaced or complemented so they assert meaningful practice-flow behavior rather than only app boot.

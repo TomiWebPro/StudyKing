@@ -1,10 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
 
-Widget buildTestApp() {
+class _FakeStudySessionRepository extends StudySessionRepository {
+  _FakeStudySessionRepository({List<StudySession>? seed})
+      : _sessions = List<StudySession>.from(seed ?? []);
+
+  final List<StudySession> _sessions;
+  bool throwOnCreate = false;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<StudySession>> getAll() async => List<StudySession>.from(_sessions);
+
+  @override
+  Future<void> create(StudySession session) async {
+    if (throwOnCreate) {
+      throw Exception('save failed');
+    }
+    _sessions.removeWhere((s) => s.id == session.id);
+    _sessions.add(session);
+  }
+}
+
+Widget _buildTestApp(_FakeStudySessionRepository repository) {
   return MaterialApp(
-    home: const SessionTrackerScreen(),
+    home: SessionTrackerScreen(sessionRepository: repository),
+    routes: {
+      '/history': (_) => const SessionHistoryScreen(),
+    },
   );
 }
 
@@ -17,113 +46,110 @@ void main() {
       view.devicePixelRatio = 1.0;
     });
 
-    testWidgets('renders app bar with correct title', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pump();
+    testWidgets('renders empty state after repository load', (tester) async {
+      final repo = _FakeStudySessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
 
       expect(find.text('Study Session Tracker'), findsOneWidget);
-    });
-
-    testWidgets('shows CircularProgressIndicator while loading', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
-    testWidgets('shows empty state after load completes', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
       expect(find.text('No Active Session'), findsOneWidget);
       expect(find.text('Tap start to begin tracking'), findsOneWidget);
+      expect(find.text('No sessions yet'), findsOneWidget);
     });
 
-    testWidgets('shows Start button', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+    testWidgets('loads sessions and shows recent entries', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeStudySessionRepository(seed: [
+        StudySession(
+          id: 'a',
+          studentId: 'u1',
+          subjectId: 'math',
+          startTime: now.subtract(const Duration(hours: 2)),
+          timeSpentMs: 1800000,
+        ),
+        StudySession(
+          id: 'b',
+          studentId: 'u1',
+          subjectId: 'science',
+          startTime: now.subtract(const Duration(hours: 1)),
+          timeSpentMs: 3600000,
+        ),
+      ]);
 
-      expect(find.text('Start'), findsOneWidget);
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 of 2'), findsOneWidget);
+      expect(find.text('Session 1'), findsOneWidget);
+      expect(find.text('Session 2'), findsOneWidget);
     });
 
-    testWidgets('End button is not visible when no active session', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+    testWidgets('start and end session saves entered stats', (tester) async {
+      final repo = _FakeStudySessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
 
-      expect(find.text('End'), findsNothing);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('Current Session'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'End'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Complete'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Questions Answered'), '12');
+      await tester.enterText(find.widgetWithText(TextField, 'Correct Answers'), '9');
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(repo._sessions.length, 1);
+      expect(repo._sessions.single.questionsAnswered, 12);
+      expect(repo._sessions.single.correctAnswers, 9);
+      expect(find.text('No Active Session'), findsOneWidget);
     });
 
-    testWidgets('shows stat cards', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+    testWidgets('shows snackbar when save fails', (tester) async {
+      final repo = _FakeStudySessionRepository()..throwOnCreate = true;
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Total Time'), findsOneWidget);
-      expect(find.text('Sessions'), findsOneWidget);
-      expect(find.text('Current Streak'), findsOneWidget);
-      expect(find.text('Avg per Session'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Failed to save session'), findsOneWidget);
     });
 
-    testWidgets('shows initial stat values as zero', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+    testWidgets('view all navigates to history screen', (tester) async {
+      final repo = _FakeStudySessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'View All'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session History'), findsOneWidget);
+    });
+
+    testWidgets('renders analytics and actions in default state', (tester) async {
+      final repo = _FakeStudySessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
 
       expect(find.text('0s'), findsOneWidget);
       expect(find.text('0'), findsWidgets);
       expect(find.text('0 days'), findsOneWidget);
-      expect(find.text('0m'), findsOneWidget);
-    });
-
-    testWidgets('shows Recent Sessions section', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
       expect(find.text('Recent Sessions'), findsOneWidget);
-    });
-
-    testWidgets('shows empty sessions message', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      expect(find.text('No sessions yet'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
       expect(find.text('Start your first session!'), findsOneWidget);
-    });
-
-    testWidgets('shows timer_off icon when no active session', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
       expect(find.byIcon(Icons.timer_off), findsOneWidget);
-    });
-
-    testWidgets('stat cards show icons', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
       expect(find.byIcon(Icons.access_time), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
-      expect(find.byIcon(Icons.schedule), findsOneWidget);
-    });
-
-    testWidgets('View All button navigates to history screen', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      expect(find.text('View All'), findsOneWidget);
-    });
-
-    testWidgets('Start button is enabled when no session active', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      final startButton = find.widgetWithText(ElevatedButton, 'Start');
-      expect(startButton, findsOneWidget);
-      final button = tester.widget<ElevatedButton>(startButton);
-      expect(button.onPressed, isNotNull);
-    });
-
-    testWidgets('Start button has play_arrow icon', (tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
     });
   });

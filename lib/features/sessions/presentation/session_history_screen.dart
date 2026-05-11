@@ -4,7 +4,9 @@ import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
-  const SessionHistoryScreen({super.key});
+  final StudySessionRepository? sessionRepository;
+
+  const SessionHistoryScreen({super.key, this.sessionRepository});
 
   @override
   State<SessionHistoryScreen> createState() => _SessionHistoryScreenState();
@@ -21,7 +23,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _sessionRepository = StudySessionRepository();
+    _sessionRepository = widget.sessionRepository ?? StudySessionRepository();
     _loadSessions();
   }
 

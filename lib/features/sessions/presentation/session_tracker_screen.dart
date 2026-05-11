@@ -12,7 +12,9 @@ import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 const String _defaultStudentId = 'anonymous';
 
 class SessionTrackerScreen extends StatefulWidget {
-  const SessionTrackerScreen({super.key});
+  final StudySessionRepository? sessionRepository;
+
+  const SessionTrackerScreen({super.key, this.sessionRepository});
 
   @override
   State<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
@@ -33,7 +35,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _sessionRepository = StudySessionRepository();
+    _sessionRepository = widget.sessionRepository ?? StudySessionRepository();
     _loadSessions();
   }
 

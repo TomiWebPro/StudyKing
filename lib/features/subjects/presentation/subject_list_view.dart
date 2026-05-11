@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'subject_selection_screen.dart';
 import 'subject_detail_view.dart';
-
-// Database service import
-import 'package:studyking/main.dart' show database;
 
 class SubjectListView extends ConsumerWidget {
   const SubjectListView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final subjectsAsync = ref.watch(subjectsRepositoryProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Subjects'),
@@ -29,79 +31,77 @@ class SubjectListView extends ConsumerWidget {
           ),
         ],
       ),
-      body: Consumer(
-        builder: (context, ref, child) {
-          // Note: In production, use Riverpod to watch subjects
-          return FutureBuilder<List<Subject>>(
-            future: _loadSubjects(ref),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              final subjects = snapshot.data ?? [];
-
-              if (subjects.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.school_outlined,
-                        size: 64,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No subjects yet',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add your first subject to begin studying',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SubjectSelectionScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Subject'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: subjects.length,
-                itemBuilder: (context, index) {
-                  final subject = subjects[index];
-                  return _buildSubjectCard(context, subject);
-                },
-              );
-            },
-          );
-        },
+      body: subjectsAsync.when(
+        data: (repository) => _buildSubjectList(context, ref, repository),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
   }
 
-  Future<List<Subject>> _loadSubjects(WidgetRef ref) async {
-    // Use database directly since we don't have full Riverpod setup yet
-    final subjects = await database.subjectRepository.getAll();
-    return subjects;
+  Widget _buildSubjectList(
+      BuildContext context, WidgetRef ref, SubjectRepository repository) {
+    return FutureBuilder<List<Subject>>(
+      future: repository.getAll(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final subjects = snapshot.data ?? [];
+
+        if (subjects.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No subjects yet',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add your first subject to begin studying',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SubjectSelectionScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Subject'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: subjects.length,
+          itemBuilder: (context, index) {
+            final subject = subjects[index];
+            return _buildSubjectCard(context, subject);
+          },
+        );
+      },
+    );
   }
 
   Widget _buildSubjectCard(BuildContext context, Subject subject) {
@@ -132,22 +132,19 @@ class SubjectListView extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              // Subject icon with color
               Container(
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(subject.color.substring(1), radix: 16) + 0xFF000000),
+                  color: SubjectColors.stringToColor(subject.color),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.school,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Subject info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,8 +178,6 @@ class SubjectListView extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              // Arrow
               const Icon(Icons.arrow_forward_ios, size: 16),
             ],
           ),
