@@ -176,7 +176,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.2 / MediaQuery.textScalerOf(context).scale(1.0),
           children: [
             _PracticeModeCard(
               icon: Icons.flash_on,

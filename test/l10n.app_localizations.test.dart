@@ -529,7 +529,6 @@ void main() {
 
     test('AppLocalizationsEn can be compared', () {
       final en1 = AppLocalizationsEn();
-      final en2 = AppLocalizationsEn();
       expect(en1.hashCode, isNotNull);
     });
 

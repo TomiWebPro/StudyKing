@@ -5,7 +5,7 @@ import 'package:studyking/core/theme/app_theme.dart';
 void main() {
   group('AppTheme lightTheme', () {
     test('builds expected ThemeData values', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
 
       expect(theme.useMaterial3, isFalse);
       expect(theme.scaffoldBackgroundColor, const Color(0xFFF5F5F5));
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('elevated button style contains configured values', () {
-      final style = AppTheme.lightTheme.elevatedButtonTheme.style!;
+      final style = AppTheme.lightTheme().elevatedButtonTheme.style!;
 
       expect(style.elevation?.resolve({}), 2);
       expect(
@@ -42,7 +42,7 @@ void main() {
 
   group('AppTheme darkTheme', () {
     test('builds expected ThemeData values', () {
-      final theme = AppTheme.darkTheme;
+      final theme = AppTheme.darkTheme();
 
       expect(theme.useMaterial3, isFalse);
       expect(theme.scaffoldBackgroundColor, const Color(0xFF121212));
@@ -64,7 +64,7 @@ void main() {
     });
 
     test('elevated button style contains configured values', () {
-      final style = AppTheme.darkTheme.elevatedButtonTheme.style!;
+      final style = AppTheme.darkTheme().elevatedButtonTheme.style!;
 
       expect(style.elevation?.resolve({}), 2);
       expect(
@@ -85,7 +85,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             appBar: AppBar(title: const Text('Light')),
             body: Builder(
@@ -110,7 +110,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Scaffold(
             appBar: AppBar(title: const Text('Dark')),
             body: Builder(
@@ -131,25 +131,25 @@ void main() {
 
   group('AppTheme color scheme verification', () {
     test('lightTheme uses correct seed color', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
       expect(theme.colorScheme, isNotNull);
       expect(theme.colorScheme.primary, isNotNull);
     });
 
     test('darkTheme uses correct seed color', () {
-      final theme = AppTheme.darkTheme;
+      final theme = AppTheme.darkTheme();
       expect(theme.colorScheme, isNotNull);
       expect(theme.colorScheme.primary, isNotNull);
     });
 
     test('lightTheme colorScheme brightness is light', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
       expect(theme.colorScheme.brightness, Brightness.light);
       expect(theme.brightness, Brightness.light);
     });
 
     test('darkTheme colorScheme brightness is dark', () {
-      final theme = AppTheme.darkTheme;
+      final theme = AppTheme.darkTheme();
       expect(theme.colorScheme.brightness, Brightness.dark);
       expect(theme.brightness, Brightness.dark);
     });
@@ -157,42 +157,42 @@ void main() {
 
   group('AppTheme theme consistency', () {
     test('both themes have same useMaterial3 setting', () {
-      expect(AppTheme.lightTheme.useMaterial3, AppTheme.darkTheme.useMaterial3);
+      expect(AppTheme.lightTheme().useMaterial3, AppTheme.darkTheme().useMaterial3);
     });
 
     test('both themes have same card elevation', () {
       expect(
-        AppTheme.lightTheme.cardTheme.elevation,
-        AppTheme.darkTheme.cardTheme.elevation,
+        AppTheme.lightTheme().cardTheme.elevation,
+        AppTheme.darkTheme().cardTheme.elevation,
       );
     });
 
     test('both themes have same card border radius', () {
       final lightShape =
-          AppTheme.lightTheme.cardTheme.shape as RoundedRectangleBorder;
+          AppTheme.lightTheme().cardTheme.shape as RoundedRectangleBorder;
       final darkShape =
-          AppTheme.darkTheme.cardTheme.shape as RoundedRectangleBorder;
+          AppTheme.darkTheme().cardTheme.shape as RoundedRectangleBorder;
       expect(lightShape.borderRadius, darkShape.borderRadius);
     });
 
     test('both themes have same appBarTheme elevation', () {
       expect(
-        AppTheme.lightTheme.appBarTheme.elevation,
-        AppTheme.darkTheme.appBarTheme.elevation,
+        AppTheme.lightTheme().appBarTheme.elevation,
+        AppTheme.darkTheme().appBarTheme.elevation,
       );
     });
 
     test('both themes have same appBarTheme centerTitle', () {
       expect(
-        AppTheme.lightTheme.appBarTheme.centerTitle,
-        AppTheme.darkTheme.appBarTheme.centerTitle,
+        AppTheme.lightTheme().appBarTheme.centerTitle,
+        AppTheme.darkTheme().appBarTheme.centerTitle,
       );
     });
 
     test('both themes have same FAB elevation', () {
       expect(
-        AppTheme.lightTheme.floatingActionButtonTheme.elevation,
-        AppTheme.darkTheme.floatingActionButtonTheme.elevation,
+        AppTheme.lightTheme().floatingActionButtonTheme.elevation,
+        AppTheme.darkTheme().floatingActionButtonTheme.elevation,
       );
     });
   });
@@ -203,7 +203,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -225,7 +225,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -246,7 +246,7 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             body: Center(
               child: ElevatedButton(
@@ -266,7 +266,7 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Scaffold(
             body: Center(
               child: ElevatedButton(
@@ -285,7 +285,7 @@ void main() {
     testWidgets('light theme FAB renders correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             floatingActionButton: FloatingActionButton(
               onPressed: () {},
@@ -302,7 +302,7 @@ void main() {
     testWidgets('dark theme FAB renders correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Scaffold(
             floatingActionButton: FloatingActionButton(
               onPressed: () {},
@@ -321,7 +321,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -339,7 +339,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -356,7 +356,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -376,7 +376,7 @@ void main() {
       late ThemeData themeData;
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Builder(
             builder: (context) {
               themeData = Theme.of(context);
@@ -395,58 +395,58 @@ void main() {
 
   group('AppTheme theme data properties', () {
     test('lightTheme returns non-null ThemeData', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
       expect(theme, isA<ThemeData>());
       expect(theme.hashCode, isNotNull);
     });
 
     test('darkTheme returns non-null ThemeData', () {
-      final theme = AppTheme.darkTheme;
+      final theme = AppTheme.darkTheme();
       expect(theme, isA<ThemeData>());
       expect(theme.hashCode, isNotNull);
     });
 
     test('themes are different instances', () {
-      final lightTheme = AppTheme.lightTheme;
-      final darkTheme = AppTheme.darkTheme;
+      final lightTheme = AppTheme.lightTheme();
+      final darkTheme = AppTheme.darkTheme();
       expect(identical(lightTheme, darkTheme), isFalse);
     });
 
     test('lightTheme scaffoldBackgroundColor is accessible', () {
-      final theme = AppTheme.lightTheme;
+      final theme = AppTheme.lightTheme();
       final bgColor = theme.scaffoldBackgroundColor;
       expect(bgColor, const Color(0xFFF5F5F5));
     });
 
     test('darkTheme scaffoldBackgroundColor is accessible', () {
-      final theme = AppTheme.darkTheme;
+      final theme = AppTheme.darkTheme();
       final bgColor = theme.scaffoldBackgroundColor;
       expect(bgColor, const Color(0xFF121212));
     });
 
     test('cardTheme margin is zero for light theme', () {
-      final cardTheme = AppTheme.lightTheme.cardTheme;
+      final cardTheme = AppTheme.lightTheme().cardTheme;
       expect(cardTheme.margin, EdgeInsets.zero);
     });
 
     test('cardTheme margin is zero for dark theme', () {
-      final cardTheme = AppTheme.darkTheme.cardTheme;
+      final cardTheme = AppTheme.darkTheme().cardTheme;
       expect(cardTheme.margin, EdgeInsets.zero);
     });
   });
 
   group('AppTheme edge cases', () {
     test('calling lightTheme multiple times returns consistent result', () {
-      final theme1 = AppTheme.lightTheme;
-      final theme2 = AppTheme.lightTheme;
+      final theme1 = AppTheme.lightTheme();
+      final theme2 = AppTheme.lightTheme();
       expect(theme1.useMaterial3, theme2.useMaterial3);
       expect(theme1.scaffoldBackgroundColor, theme2.scaffoldBackgroundColor);
       expect(theme1.appBarTheme.elevation, theme2.appBarTheme.elevation);
     });
 
     test('calling darkTheme multiple times returns consistent result', () {
-      final theme1 = AppTheme.darkTheme;
-      final theme2 = AppTheme.darkTheme;
+      final theme1 = AppTheme.darkTheme();
+      final theme2 = AppTheme.darkTheme();
       expect(theme1.useMaterial3, theme2.useMaterial3);
       expect(theme1.scaffoldBackgroundColor, theme2.scaffoldBackgroundColor);
       expect(theme1.appBarTheme.elevation, theme2.appBarTheme.elevation);
@@ -455,7 +455,7 @@ void main() {
     testWidgets('theme works with nested widgets', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
+          theme: AppTheme.lightTheme(),
           home: Scaffold(
             appBar: AppBar(title: const Text('Title')),
             body: Column(
@@ -476,7 +476,7 @@ void main() {
     testWidgets('dark theme works with nested widgets', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.darkTheme(),
           home: Scaffold(
             appBar: AppBar(title: const Text('Title')),
             body: Column(

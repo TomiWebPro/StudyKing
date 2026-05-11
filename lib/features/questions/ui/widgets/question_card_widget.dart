@@ -97,24 +97,35 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
             Row(
               children: [
                 Chip(
-                  label: Text(_getTypeLabel()),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(_getTypeLabel()),
+                  ),
                   backgroundColor: _getTypeColor(),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Chip(
-                  label: Text('Difficulty: ${_difficultyLabel(widget.question.difficulty)}'),
-                  backgroundColor: _getDifficultyColor(),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                Flexible(
+                  child: Chip(
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('Difficulty: ${_difficultyLabel(widget.question.difficulty)}'),
+                    ),
+                    backgroundColor: _getDifficultyColor(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const Spacer(),
                 if (widget.isSubmitted)
                   Chip(
-                    label: Text(_isCurrentAnswerCorrect() ? 'Correct' : 'Incorrect'),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(_isCurrentAnswerCorrect() ? 'Correct' : 'Incorrect'),
+                    ),
                     backgroundColor: _isCurrentAnswerCorrect()
                         ? Colors.green
                         : Colors.red,
@@ -251,7 +262,13 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   },
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
-            title: Text(option),
+            title: Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(option),
+              ),
+            ),
           );
         }),
       ],

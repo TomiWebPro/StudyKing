@@ -1,11 +1,29 @@
 import 'package:flutter/material.dart';
 
-// Avoid Material 3 ink effects and ripple animations for web compatibility
 class AppTheme {
-  static ThemeData get lightTheme {
+  static TextTheme createTextTheme(double fontSize) {
+    return TextTheme(
+      displayLarge: TextStyle(fontSize: fontSize * 2.5, height: 1.2),
+      displayMedium: TextStyle(fontSize: fontSize * 2.0, height: 1.25),
+      displaySmall: TextStyle(fontSize: fontSize * 1.75, height: 1.3),
+      headlineLarge: TextStyle(fontSize: fontSize * 1.75, height: 1.3),
+      headlineMedium: TextStyle(fontSize: fontSize * 1.5, height: 1.35),
+      headlineSmall: TextStyle(fontSize: fontSize * 1.25, height: 1.4),
+      titleLarge: TextStyle(fontSize: fontSize * 1.5, height: 1.3),
+      titleMedium: TextStyle(fontSize: fontSize * 1.25, height: 1.35),
+      titleSmall: TextStyle(fontSize: fontSize * 1.125, height: 1.35),
+      bodyLarge: TextStyle(fontSize: fontSize, height: 1.5),
+      bodyMedium: TextStyle(fontSize: fontSize, height: 1.4),
+      bodySmall: TextStyle(fontSize: fontSize * 0.875, height: 1.3),
+      labelLarge: TextStyle(fontSize: fontSize * 0.875, height: 1.4),
+      labelMedium: TextStyle(fontSize: fontSize * 0.75, height: 1.35),
+      labelSmall: TextStyle(fontSize: fontSize * 0.625, height: 1.3),
+    );
+  }
+
+  static ThemeData lightTheme({double fontSize = 16}) {
     return ThemeData(
       useMaterial3: false,
-      // useLegacyAccentTile: false, // DEPRECATED - removed
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -17,6 +35,7 @@ class AppTheme {
         seedColor: const Color(0xFF673AB7),
         brightness: Brightness.light,
       ),
+      textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(
         elevation: 2,
         margin: EdgeInsets.zero,
@@ -41,8 +60,8 @@ class AppTheme {
       ),
     );
   }
-  
-  static ThemeData get darkTheme {
+
+  static ThemeData darkTheme({double fontSize = 16}) {
     return ThemeData(
       useMaterial3: false,
       appBarTheme: const AppBarTheme(
@@ -56,6 +75,7 @@ class AppTheme {
         seedColor: const Color(0xFF9575CD),
         brightness: Brightness.dark,
       ),
+      textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(
         elevation: 2,
         margin: EdgeInsets.zero,

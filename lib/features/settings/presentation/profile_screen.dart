@@ -194,16 +194,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Navigator.pop(context);
         },
         borderRadius: BorderRadius.circular(30),
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: _avatarIconKey == iconKey
-                ? Border.all(color: Theme.of(context).primaryColor, width: 3)
-                : null,
-          ),
-          child: Icon(icon, size: 32),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+            final size = 48.0 * textScale;
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: _avatarIconKey == iconKey
+                    ? Border.all(color: Theme.of(context).primaryColor, width: 3)
+                    : null,
+              ),
+              child: Icon(icon, size: size * 0.533),
+            );
+          },
         ),
       ),
     );

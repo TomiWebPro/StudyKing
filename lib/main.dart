@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
 import 'features/settings/data/models/settings_box.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'core/data/data.dart';
@@ -244,44 +245,8 @@ class StudyKingApp extends ConsumerWidget {
         Locale('en'),
         Locale('es'),
       ],
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
-          bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
-          bodySmall: TextStyle(fontSize: settings.fontSize * 0.875, height: 1.3),
-          titleLarge: TextStyle(fontSize: settings.fontSize * 1.5, height: 1.3),
-          titleMedium: TextStyle(fontSize: settings.fontSize * 1.25, height: 1.35),
-          titleSmall: TextStyle(fontSize: settings.fontSize * 1.125, height: 1.35),
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: settings.fontSize, height: 1.5),
-          bodyMedium: TextStyle(fontSize: settings.fontSize, height: 1.4),
-          bodySmall: TextStyle(fontSize: settings.fontSize * 0.875, height: 1.3),
-          titleLarge: TextStyle(fontSize: settings.fontSize * 1.5, height: 1.3),
-          titleMedium: TextStyle(fontSize: settings.fontSize * 1.25, height: 1.35),
-          titleSmall: TextStyle(fontSize: settings.fontSize * 1.125, height: 1.35),
-        ),
-      ),
+      theme: AppTheme.lightTheme(fontSize: settings.fontSize),
+      darkTheme: AppTheme.darkTheme(fontSize: settings.fontSize),
       themeMode: settings.themeModeEnum,
       home: const MainScreen(),
       routes: {
