@@ -1,32 +1,40 @@
-# Issue: Build proper i18n support and migrate Planner + shared date/time copy
+# Internationalisation: Practice Module Has 50+ Hardcoded Strings
 
-## Why this is high value
-StudyKing currently ships user-facing copy as hardcoded English strings, and the app shell is not configured for Flutter localization delegates or supported locales. This blocks non-English users from using core flows and makes future translation expensive because strings are embedded directly in widgets and utility formatters.
+## Context
 
-The Planner flow is a strong first migration target (high visibility, many user-facing strings, dynamic sentence generation, validation feedback), and shared time/date formatting also contains English-only output that appears across features.
+The StudyKing app uses a Flutter ARB-based localisation system (`lib/l10n/`) with `AppLocalizations` for English and Spanish. However, the practice feature screens contain **over 50 hardcoded English strings** that bypass the localisation system entirely. These strings cover critical user-facing content including prompts, labels, feedback messages, empty states, and navigation buttons.
 
-## Evidence and affected files
-- `lib/main.dart:226` - `MaterialApp` is missing `localizationsDelegates`, `supportedLocales`, and locale wiring.
-- `lib/features/planner/presentation/planner_screen.dart` - hardcoded English UI/feedback strings (title, labels, button states, snackbar messages, schedule section, `Topic` text).
-- `lib/core/utils/time_utils.dart` - English-only tokens and labels (`Unknown`, `Today`, `Yesterday`, `d/h/m/s`) in shared formatting paths.
+### Affected Files
 
-## Internationalisation gaps to address
-1. No localization infrastructure in app root, so locale-specific resources are not formally supported.
-2. Planner copy is not translatable and includes dynamic text that is not localization-safe.
-3. Dynamic grammar is English-centric (e.g., "over X days", "total hours") and lacks pluralization handling.
-4. Date/time helper output mixes locale-aware date formatting with non-localized relative labels/units, causing inconsistent localization quality.
+- `lib/features/practice/presentation/practice_screen.dart` (lines: 71, 79, 96, 131–136, 140, 150, 154, 167, 183–184, 189–191, 196–198, 203–205, 225, 269–271, 342, 392, 443–444, 460)
+- `lib/features/practice/presentation/practice_session_screen.dart` (lines: 149–150, 259, 273, 292, 298, 306, 376, 445, 460, 473, 497, 523, 529, 572, 579, 583–587, 593)
 
-## Proposed fix (single implementation issue)
-Implement first-class Flutter i18n and migrate Planner + shared date/time strings to localized resources:
+### Examples of Missing Translations
 
-- Add l10n setup (ARB-based) and wire it into `MaterialApp`.
-- Introduce at least `en` + one additional locale (project-selected target language) to validate real multilingual behavior.
-- Replace hardcoded Planner strings with localized keys, including interpolated messages and pluralized variants.
-- Localize shared date/time labels and duration units used by `time_utils` (or route them through localized formatters).
+From `practice_screen.dart`:
+- `'Practice Mode'` (AppBar title)
+- `'No Practice Sessions Yet'` (empty state heading)
+- `'Add subjects and questions to start practicing'` (empty state body)
+- `'Practice Modes'`, `'Quick Practice'`, `'10 random questions'`, `'Coming soon'`, `'Spaced Repetition'`, `'Topic Focus'`, `'Practice specific topics'`, `'Weak Areas'`, `'Focus on mistakes'`
+- `'Your Subjects'`, `'Ready for practice'`
+- `'Practice Options'` (tooltip), `'No Subjects'` / `'Practice'` (FAB label)
 
-## Acceptance criteria
-- `MaterialApp` declares localization delegates and supported locales, and locale switching follows app settings/system locale.
-- All user-facing text in `planner_screen.dart` is sourced from localization keys (no hardcoded English literals).
-- Planner snackbar/status sentences use parameterized translations with correct pluralization for day/hour/session-style values.
-- `formatDate` relative labels and duration unit output are localized (no English-only `Unknown/Today/Yesterday/d/h/m/s` in UI output).
-- Localization resources include complete keys for Planner + shared date/time strings in all supported locales, with no missing-translation runtime warnings.
+From `practice_session_screen.dart`:
+- `'No Questions Available'`, `'There are no questions for the selected subject/topic. Start creating questions!'`
+- `'Practice'`, `'Time'`, `'Score'`, `'Correct'` (stat labels)
+- `'Your Answer'`, `'Your Answer (N characters)'` (input labels)
+- `'Submit Answer'`, `'Correct!'`, `'Incorrect'`
+- `'Previous'`, `'Next'`
+- `'Session Results'`, `'Practice Complete!'`, `'Total Questions'`, `'Correct Answers'`, `'Accuracy'`, `'Practice Again'`
+
+## Rationale
+
+Users with a device language set to Spanish see a mixed-experience: the planner, subjects tab, and settings are fully localised, but every screen within the practice flow remains in English. This is a degraded experience for non-English users and makes the app appear unfinished. Additionally, any future expansion to other languages (French, German, etc.) would require manual string replacements rather than being handled by the existing i18n infrastructure.
+
+## Acceptance Criteria
+
+1. All user-visible strings in `practice_screen.dart` and `practice_session_screen.dart` are replaced with `AppLocalizations.of(context).<key>` calls using keys defined in `app_en.arb`.
+2. All new keys are added to `app_en.arb` with `description` metadata, and corresponding translations are added to `app_es.arb`.
+3. The ARB files are regenerated via `flutter gen-l10n` (or equivalent) to update the generated `app_localizations_*.dart` files.
+4. The Spanish translations use natural phrasing (e.g., `'Práctica'` not `'Práctica'` on every label — some labels like `'No Questions Available'` should be `'No hay preguntas disponibles'` not a literal word-for-word translation).
+5. No regressions: build passes and existing localized strings continue to display correctly.

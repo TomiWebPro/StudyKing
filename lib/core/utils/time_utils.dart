@@ -1,60 +1,83 @@
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
-/// Formats a [Duration] as a human-readable string (e.g. "1h 2m 3s").
-/// Negative durations are returned as their absolute value.
-/// If [showDays] is true, durations >= 24 hours are shown with a day component
-/// (e.g. "1d 2h 3m 4s").
-String formatDuration(Duration duration, {bool showDays = false}) {
-  if (duration.isNegative) return formatDuration(-duration, showDays: showDays);
+String _getDurationDays(int count, AppLocalizations l10n) {
+  if (count == 1) return '1d';
+  return '${count}d';
+}
+
+String _getDurationHours(int count, AppLocalizations l10n) {
+  if (count == 1) return '1h';
+  return '${count}h';
+}
+
+String _getDurationMinutes(int count, AppLocalizations l10n) {
+  if (count == 1) return '1m';
+  return '${count}m';
+}
+
+String _getDurationSeconds(int count, AppLocalizations l10n) {
+  if (count == 1) return '1s';
+  return '${count}s';
+}
+
+String formatDuration(Duration duration, {bool showDays = false, AppLocalizations? l10n}) {
+  if (duration.isNegative) return formatDuration(-duration, showDays: showDays, l10n: l10n);
   if (showDays) {
     final days = duration.inDays;
     final hours = duration.inHours.remainder(24);
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
     if (days > 0) {
-      return '${days}d ${hours}h ${minutes}m ${seconds}s';
+      return '${_getDurationDays(days, l10n!)} ${_getDurationHours(hours, l10n)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
     } else if (hours > 0) {
-      return '${hours}h ${minutes}m ${seconds}s';
+      return '${_getDurationHours(hours, l10n!)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
     } else if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
+      return '${_getDurationMinutes(minutes, l10n!)} ${_getDurationSeconds(seconds, l10n)}';
     } else {
-      return '${seconds}s';
+      return _getDurationSeconds(seconds, l10n!);
     }
   }
   final hours = duration.inHours;
   final minutes = duration.inMinutes.remainder(60);
   final seconds = duration.inSeconds.remainder(60);
   if (hours > 0) {
-    return '${hours}h ${minutes}m ${seconds}s';
+    return '${_getDurationHours(hours, l10n!)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
   } else if (minutes > 0) {
-    return '${minutes}m ${seconds}s';
+    return '${_getDurationMinutes(minutes, l10n!)} ${_getDurationSeconds(seconds, l10n)}';
   } else {
-    return '${seconds}s';
+    return _getDurationSeconds(seconds, l10n!);
   }
 }
 
-/// Formats a [DateTime] as a human-readable relative date string.
-/// Returns "Today", "Yesterday", or a locale-aware formatted date.
-/// If [date] is null, returns "Unknown".
-/// Comparisons use normalized local dates for timezone safety.
-String formatDate(DateTime? date) {
-  if (date == null) return 'Unknown';
+String formatDate(DateTime? date, {AppLocalizations? l10n}) {
+  final unknown = l10n?.unknown ?? 'Unknown';
+  if (date == null) return unknown;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final sessionDate = DateTime(date.year, date.month, date.day);
   if (sessionDate.isSameDay(today)) {
-    return 'Today';
+    return l10n?.today ?? 'Today';
   }
   final diff = today.difference(sessionDate);
   if (diff == const Duration(days: 1)) {
-    return 'Yesterday';
+    return l10n?.yesterday ?? 'Yesterday';
   }
   return DateFormat.yMd().format(date);
 }
 
-/// Extension on [DateTime] providing convenient comparison methods.
+String formatDurationFromContext(BuildContext context, Duration duration, {bool showDays = false}) {
+  final l10n = AppLocalizations.of(context);
+  return formatDuration(duration, showDays: showDays, l10n: l10n);
+}
+
+String formatDateFromContext(BuildContext context, DateTime? date) {
+  final l10n = AppLocalizations.of(context);
+  return formatDate(date, l10n: l10n);
+}
+
 extension DateTimeX on DateTime {
-  /// Returns true if this [DateTime] falls on the same calendar day as [other].
   bool isSameDay(DateTime other) =>
       year == other.year && month == other.month && day == other.day;
 }

@@ -1,0 +1,37 @@
+Analyzing StudyKing...                                          
+
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:12:9 • undefined_named_parameter
+  error • The named parameter 'markschemePoints' isn't defined • test/features/questions/services/answer_validator_test.dart:16:9 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:76:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:145:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:157:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:168:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:179:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:190:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:203:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:215:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:226:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:245:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:256:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:267:11 • undefined_named_parameter
+  error • The argument type 'List<Map<dynamic, dynamic>>' can't be assigned to the parameter type 'List<Map<String, dynamic>>'.  • test/features/questions/services/answer_validator_test.dart:362:56 • argument_type_not_assignable
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:378:11 • undefined_named_parameter
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:381:13 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:382:13 • undefined_function
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:394:11 • undefined_named_parameter
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:397:13 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:398:13 • undefined_function
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:410:11 • undefined_named_parameter
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:413:13 • undefined_function
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:433:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:451:11 • undefined_named_parameter
+  error • The named parameter 'questionId' isn't defined • test/features/questions/services/answer_validator_test.dart:479:11 • undefined_named_parameter
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:482:13 • undefined_function
+warning • The value of the local variable 'dataReceived' isn't used • test/features/questions/ui/widgets/canvas_drawing_widget_test.dart:129:14 • unused_local_variable
+warning • Unused import: 'dart:typed_data' • test/widgets/canvas_drawing_widget_test.dart:1:8 • unused_import
+warning • Unused import: 'dart:typed_data' • test/widgets/question_card_widget_test.dart:1:8 • unused_import
+warning • The value of the local variable 'submittedAnswer' isn't used • test/widgets/question_card_widget_test.dart:111:15 • unused_local_variable
+warning • The value of the local variable 'lastAnswer' isn't used • test/widgets/question_card_widget_test.dart:299:15 • unused_local_variable
+
+
+32 issues found. (ran in 3.2s)

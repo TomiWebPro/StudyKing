@@ -1,0 +1,423 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/settings/presentation/settings_screen.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/main.dart';
+
+class FakeSettingsRepository {
+  SettingsBox _settings = SettingsBox();
+
+  Future<SettingsBox> getSettings() async => _settings;
+
+  Future<void> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+  }) async {
+    _settings = SettingsBox(
+      apiKey: apiKey ?? _settings.apiKey,
+      apiBaseUrl: apiBaseUrl ?? _settings.apiBaseUrl,
+      selectedModel: selectedModel ?? _settings.selectedModel,
+      themeMode: themeMode?.index ?? _settings.themeMode,
+      fontSize: fontSize ?? _settings.fontSize,
+      totalSessionCount: _settings.totalSessionCount,
+      totalStudyTimeMs: _settings.totalStudyTimeMs,
+      totalQuestions: _settings.totalQuestions,
+      studyRemindersEnabled: studyRemindersEnabled ?? _settings.studyRemindersEnabled,
+      requestTimeoutSeconds: requestTimeoutSeconds ?? _settings.requestTimeoutSeconds,
+      sessionDurationMinutes: sessionDurationMinutes ?? _settings.sessionDurationMinutes,
+    );
+  }
+
+  Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
+  Future<void> saveApiKey({required String service, required String key}) async {}
+  Future<void> saveProfileData(ProfileData profile) async {}
+  Future<ProfileData?> getProfileData() async => null;
+  Future<void> clearProfile() async {}
+  Future<void> init() async {}
+}
+
+final fakeRepo = FakeSettingsRepository();
+
+class _TestSettingsNotifier extends StateNotifier<SettingsBox> {
+  _TestSettingsNotifier(super.initial);
+
+  Future<void> updateTheme(ThemeMode mode) async {
+    await fakeRepo.updateSettings(themeMode: mode);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateFontSize(double size) async {
+    await fakeRepo.updateSettings(fontSize: size);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateModel(String model) async {
+    await fakeRepo.updateSettings(selectedModel: model);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateStudyReminders(bool enabled) async {
+    await fakeRepo.updateSettings(studyRemindersEnabled: enabled);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateRequestTimeout(int timeoutSeconds) async {
+    await fakeRepo.updateSettings(requestTimeoutSeconds: timeoutSeconds);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateSessionDuration(int minutes) async {
+    await fakeRepo.updateSettings(sessionDurationMinutes: minutes);
+    state = await fakeRepo.getSettings();
+  }
+
+  Future<void> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+  }) async {
+    await fakeRepo.updateSettings(
+      apiKey: apiKey,
+      apiBaseUrl: apiBaseUrl,
+      selectedModel: selectedModel,
+      themeMode: themeMode,
+      fontSize: fontSize,
+      studyRemindersEnabled: studyRemindersEnabled,
+      requestTimeoutSeconds: requestTimeoutSeconds,
+      sessionDurationMinutes: sessionDurationMinutes,
+    );
+    state = await fakeRepo.getSettings();
+  }
+}
+
+final testSettingsProvider = StateNotifierProvider<_TestSettingsNotifier, SettingsBox>((ref) {
+  return _TestSettingsNotifier(fakeRepo._settings);
+});
+
+Widget buildSettingsScreen({
+  SettingsBox? initialSettings,
+  String apiKey = '',
+  String selectedModel = '',
+}) {
+  if (initialSettings != null) {
+    fakeRepo._settings = initialSettings;
+  }
+  return ProviderScope(
+    overrides: [
+      testSettingsProvider.overrideWith((ref) => _TestSettingsNotifier(fakeRepo._settings)),
+      apiKeyProvider.overrideWith((ref) => apiKey),
+      selectedModelProvider.overrideWith((ref) => selectedModel),
+    ],
+    child: MaterialApp(
+      home: const SettingsScreen(),
+    ),
+  );
+}
+
+void main() {
+  setUp(() {
+    fakeRepo._settings = SettingsBox(
+      themeMode: 0,
+      fontSize: 16.0,
+      totalSessionCount: 5,
+      totalStudyTimeMs: 3600000,
+      totalQuestions: 100,
+    );
+  });
+
+  group('SettingsScreen', () {
+    testWidgets('renders all sections with correct titles', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('User Management'), findsOneWidget);
+      expect(find.text('Quick Access'), findsOneWidget);
+      expect(find.text('Appearance'), findsOneWidget);
+      expect(find.text('AI Configuration'), findsOneWidget);
+      expect(find.text('Study Preferences'), findsOneWidget);
+      expect(find.text('Study Analytics'), findsOneWidget);
+      expect(find.text('About'), findsOneWidget);
+    });
+
+    testWidgets('shows user management tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      final currentUserTile = find.widgetWithText(ListTile, 'Current User');
+      expect(currentUserTile, findsOneWidget);
+      expect(find.text('Manage your profile'), findsOneWidget);
+    });
+
+    testWidgets('shows Quick Guide tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ListTile, 'Quick Guide'), findsOneWidget);
+      expect(find.text('AI-powered study assistant'), findsOneWidget);
+    });
+
+    testWidgets('shows theme tile with correct label', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 2)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Theme'), findsOneWidget);
+      expect(find.text('System'), findsOneWidget);
+    });
+
+    testWidgets('shows font size tile with correct label', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(fontSize: 14.0)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Font Size'), findsOneWidget);
+      expect(find.text('Small'), findsOneWidget);
+    });
+
+    testWidgets('shows API key status as Not configured when empty', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(apiKey: ''));
+      await tester.pumpAndSettle();
+
+      expect(find.text('API Keys'), findsOneWidget);
+      expect(find.text('Not configured'), findsOneWidget);
+    });
+
+    testWidgets('shows API key status as Configured when set', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('API Keys'), findsOneWidget);
+      expect(find.text('Configured'), findsOneWidget);
+    });
+
+    testWidgets('shows request timeout tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 60)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Request Timeout'), findsOneWidget);
+      expect(find.text('60 seconds'), findsOneWidget);
+    });
+
+    testWidgets('shows session duration tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(sessionDurationMinutes: 45)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Duration'), findsOneWidget);
+      expect(find.text('45 minutes'), findsOneWidget);
+    });
+
+    testWidgets('shows study reminders switch', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(studyRemindersEnabled: true)));
+      await tester.pumpAndSettle();
+
+      final switchTile = find.widgetWithText(SwitchListTile, 'Study Reminders');
+      expect(switchTile, findsOneWidget);
+    });
+
+    testWidgets('shows total study sessions tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(totalSessionCount: 10)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total Study Sessions'), findsOneWidget);
+      expect(find.text('10 sessions'), findsOneWidget);
+    });
+
+    testWidgets('shows total study time tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(totalStudyTimeMs: 7200000)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total Study Time'), findsOneWidget);
+      expect(find.text('2h'), findsOneWidget);
+    });
+
+    testWidgets('shows About StudyKing tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ListTile, 'About StudyKing'), findsOneWidget);
+      expect(find.text('Version 0.1.0'), findsOneWidget);
+    });
+
+    testWidgets('shows Sign Out tile', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ListTile, 'Sign Out'), findsOneWidget);
+    });
+
+    testWidgets('tapping theme tile opens theme dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 0)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Theme'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Light'), findsOneWidget);
+      expect(find.text('Dark'), findsOneWidget);
+    });
+
+    testWidgets('can select dark theme from dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 0)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Theme'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Dark').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dark'), findsWidgets);
+    });
+
+    testWidgets('tapping font size tile opens font size dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(fontSize: 16.0)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Font Size'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Font Size'), findsWidgets);
+      expect(find.byType(Slider), findsOneWidget);
+    });
+
+    testWidgets('tapping session duration opens duration dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(sessionDurationMinutes: 30)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Session Duration'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('15 minutes'), findsOneWidget);
+      expect(find.text('30 minutes'), findsOneWidget);
+      expect(find.text('45 minutes'), findsOneWidget);
+      expect(find.text('60 minutes'), findsOneWidget);
+      expect(find.text('90 minutes'), findsOneWidget);
+    });
+
+    testWidgets('tapping analytics shows analytics sheet', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(
+        totalSessionCount: 5,
+        totalQuestions: 100,
+      )));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Total Study Sessions'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sessions'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('Questions'), findsOneWidget);
+      expect(find.text('100'), findsOneWidget);
+    });
+
+    testWidgets('tapping about shows about dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'About StudyKing'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AboutDialog), findsOneWidget);
+      expect(find.text('StudyKing'), findsWidgets);
+    });
+
+    testWidgets('tapping sign out shows confirmation dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign Out'), findsWidgets);
+      expect(find.text('Are you sure you want to sign out?'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('cancel sign out closes dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(apiKey: 'test-key'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cancel'), findsNothing);
+    });
+
+    testWidgets('AI model label shows default text when empty', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(selectedModel: ''));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI Model'), findsOneWidget);
+      expect(find.text('Select a model from API'), findsOneWidget);
+    });
+
+    testWidgets('AI model label parses model path correctly', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(selectedModel: 'anthropic/claude-3-haiku'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI Model'), findsOneWidget);
+      expect(find.text('Claude 3 haiku'), findsOneWidget);
+    });
+
+    testWidgets('AI model label handles single word model', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(selectedModel: 'gpt-4'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI Model'), findsOneWidget);
+      expect(find.text('Gpt 4'), findsOneWidget);
+    });
+
+    testWidgets('tapping AI model with empty API key shows warning dialog', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(apiKey: '', selectedModel: ''));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('API Key Required'), findsOneWidget);
+      expect(find.text('Please configure your API key first.'), findsOneWidget);
+      expect(find.text('OK'), findsOneWidget);
+    });
+
+    testWidgets('tapping timeout shows timeout dialog with slider', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 120)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Request Timeout'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Request Timeout'), findsWidgets);
+      expect(find.byType(Slider), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+    });
+
+    testWidgets('timeout dialog has slider that can be adjusted', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 120)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Request Timeout'));
+      await tester.pumpAndSettle();
+
+      final slider = find.byType(Slider);
+      expect(slider, findsOneWidget);
+
+      final saveButton = find.widgetWithText(TextButton, 'Save');
+      expect(saveButton, findsOneWidget);
+    });
+  });
+}

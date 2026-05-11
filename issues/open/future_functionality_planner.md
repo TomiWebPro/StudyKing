@@ -1,77 +1,80 @@
-# Issue: Build a Unified Mastery Graph and Personal Learning Plan Engine
+# [Feature] Wire Up Spaced Repetition Mode — Backend Exists, UI is a Dead Button
 
-## Why this matters
-StudyKing already has the raw signals for adaptive learning (attempt history, topic progress, question review scheduling, confidence, and time-on-task), but those signals are split across multiple disconnected models and services. This makes personalization shallow and hard to scale into roadmap features like reliable study plans, prerequisite-aware sequencing, and teacher-grade analytics.
+**Date:** May 11, 2026
+**Priority:** High
+**Type:** Future Functionality / Missing Feature Wiring
+**Status:** Open
 
-This issue proposes a high-leverage future functionality initiative: a **Unified Mastery Graph** that powers a **Personal Learning Plan Engine**.
+---
 
-## Current gaps observed in codebase
-- Redundant/overlapping answer schema creates ambiguity around the source of truth for correctness and feedback.
-  - `lib/core/data/models/question_model.dart` (inline `markscheme`, `correctAnswer`)
-  - `lib/core/data/models/markscheme_model.dart` (Markscheme model)
-  - `lib/features/questions/models/markscheme_model.dart` (second Markscheme model with different shape)
-- Progress and adaptivity logic is fragmented across repositories/services with inconsistent granularity.
-  - `lib/core/data/models/topic_progress_model.dart`
-  - `lib/core/data/models/study_session_model.dart`
-  - `lib/core/data/models/student_attempt_model.dart`
-  - `lib/core/services/adaptive_practice_engine.dart` (in-memory `_questionStates`, not persisted)
-  - `lib/core/data/repositories/spaced_repetition_repository.dart` (question-level due dates)
-- Topic intelligence is under-modeled for roadmap features (no explicit prerequisite graph, dependency weighting, or mastery confidence intervals).
-  - `lib/core/data/models/topic_model.dart`
-- Analytics currently infer topic mapping from string patterns rather than stable relationships.
-  - `lib/core/services/study_progress_tracker.dart` (e.g., `questionId` parsing/contains checks)
+## Context
 
-## Proposed functionality (future plan)
-Create a **Mastery Graph domain** that normalizes learning state at student x topic x question level, then use it to generate dynamic study plans.
+StudyKing presents **four practice modes** on the Practice home screen (`lib/features/practice/presentation/practice_screen.dart:173-209`):
 
-### Phase 1: Data contract unification
-- Define canonical models for:
-  - Question evaluation schema (single markscheme contract)
-  - Mastery state per topic/question (accuracy, confidence trend, speed trend, forgetting risk)
-  - Topic dependency metadata (prerequisites, downstream topics, syllabus weight)
-- Introduce versioned DTO/adapters so existing data can still load during migration.
+| Mode | Icon | Subtitle | Status |
+|------|------|----------|--------|
+| Quick Practice | `flash_on` | "10 random questions" | ✅ Functional |
+| **Spaced Repetition** | `schedule` | "Coming soon" | ❌ **Dead button** |
+| Topic Focus | `category` | "Practice specific topics" | ⚠️ Snackbars "coming soon" |
+| Weak Areas | `bar_chart` | "Focus on mistakes" | ❌ Dead button |
 
-### Phase 2: Persisted mastery engine
-- Replace ephemeral adaptivity state with persisted mastery snapshots updated after every attempt/session.
-- Compute a stable readiness score per topic and a review urgency score per question.
-- Keep both short-cycle signals (recent streak) and long-cycle signals (retention decay).
+Two modes are displayed as enticing cards with icons and colors — but both **"Coming soon" modes** are entirely non-functional (`onTap: null`). Users see the cards, tap them, and get nothing. This creates a broken promise and erodes trust in the app's feature depth.
 
-### Phase 3: Personal Learning Plan generation
-- Generate a rolling 7-day plan with:
-  - Daily targets (time + question count)
-  - Priority topics (weakness + prerequisite pressure)
-  - Review queue (due + at-risk items)
-  - Stretch goals for high-performing learners
-- Return explainable recommendations ("why this is next") for user trust.
+Critically, **Spaced Repetition has a complete backend** (`lib/core/data/repositories/spaced_repetition_repository.dart`) with:
+- `getQuestionsDueForReview()` — fetch questions whose `nextReview` date has passed
+- `updateNextReviewDate()` — schedule next review based on mastery (7d, 3d, 1d, 12h, 30m)
+- `getSubjectDueCount()` — count due questions per subject
+- `SpacedRepetitionQueries` static helpers for filtering
 
-### Phase 4: Product surfaces
-- Student dashboard widgets: "Today’s Plan", "At Risk Topics", "Ready to Advance".
-- Optional teacher/mentor view: cohort risk heatmap and intervention suggestions.
+The infrastructure is ready. The UI is a placeholder.
 
-## Affected files/systems (expected)
-- Models:
-  - `lib/core/data/models/question_model.dart`
-  - `lib/core/data/models/topic_model.dart`
-  - `lib/core/data/models/topic_progress_model.dart`
-  - `lib/core/data/models/student_attempt_model.dart`
-  - `lib/core/data/models/study_session_model.dart`
-  - `lib/core/data/models/markscheme_model.dart`
-  - `lib/features/questions/models/markscheme_model.dart`
-- Repositories/services:
-  - `lib/core/data/repositories/attempt_repository.dart`
-  - `lib/core/data/repositories/progress_repository.dart`
-  - `lib/core/data/repositories/spaced_repetition_repository.dart`
-  - `lib/core/services/adaptive_practice_engine.dart`
-  - `lib/core/services/study_progress_tracker.dart`
+---
 
-## Acceptance criteria
-- A single canonical markscheme/evaluation contract is defined and used by new logic; legacy format is supported via adapters.
-- Mastery state is persisted (not only in memory) and updated on each attempt with deterministic rules.
-- A topic dependency representation exists and is used when ranking what to study next.
-- A plan-generation API/service returns a 7-day personal plan with explainability fields.
-- Existing progress and spaced-repetition flows continue to function during migration (no data loss for existing users).
-- At least one dashboard surface can consume and display the generated plan.
-- Instrumentation is added for plan adherence and mastery improvement so impact can be measured.
+## Affected Files
 
-## Rationale for prioritization
-This is a roadmap-level multiplier: it consolidates confusing/redundant data paths and unlocks high-value future features (truly adaptive sequencing, credible progress guidance, better retention outcomes, and eventually cohort intelligence) without repeatedly patching isolated services.
+- **Primary UI:** `lib/features/practice/presentation/practice_screen.dart` (lines 188-194 — disabled Spaced Repetition card)
+- **Backend:** `lib/core/data/repositories/spaced_repetition_repository.dart`
+- **Question Model:** `lib/core/data/models/question_model.dart` (`nextReview` field at line 64)
+- **Session Tracking:** `lib/core/data/repositories/study_session_repository.dart`
+- **Attempts:** `lib/core/data/repositories/attempt_repository.dart`
+
+---
+
+## Rationale
+
+1. **Spaced repetition is a core differentiator** for a study app — it directly impacts learning retention and user stickiness
+2. **Backend is complete but unused** — `SpacedRepetitionRepository` has been built but never connected to the practice workflow
+3. **User-visible dead buttons** damage first impressions — two of four practice modes do nothing
+4. **Topic Focus is also non-functional** but shown as a mode — `_showTopicSelector()` only shows a snackbar (line 479)
+5. **"Weak Areas"** mode would require analytics infrastructure, but Spaced Repetition is a prerequisite for meaningful weakness detection
+
+---
+
+## Acceptance Criteria
+
+1. **Spaced Repetition card becomes interactive** — tapping opens a subject selector, then begins a practice session with due questions
+2. **Due questions are fetched** via `SpacedRepetitionRepository.getQuestionsDueForReview()` filtered by subject
+3. **Session completion updates `nextReview`** — after each answer, call `updateNextReviewDate()` with the mastery level
+4. **Due count badge** appears on the Spaced Repetition card showing how many questions are ready for review (using `getSubjectDueCount`)
+5. **Empty state** shown when no questions are due ("All caught up! No reviews scheduled.")
+6. **Topic Focus card** becomes functional with actual topic selection from the lessons feature
+7. **"Weak Areas"** mode can remain as a placeholder or be scoped to a future analytics iteration
+
+### Test Scenarios
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Tap Spaced Repetition with 0 due questions | Show "All caught up" empty state |
+| Tap Spaced Repetition with due questions | Show subject selector, then start session |
+| Complete a question in SR mode | Update `nextReview` based on correctness |
+| Tap Topic Focus | Show actual topic list from lessons |
+| Tap Weak Areas | Either work or show "Coming soon" message |
+
+---
+
+## Supporting Notes
+
+- The `SpacedRepetitionRepository` uses Hive boxes — ensure `init()` is called before use
+- Mastery level calculation should use attempt history (correct/total attempts ratio)
+- The interval scaling in `updateNextReviewDate()` already exists with 5 tiers (0.9+, 0.7+, 0.5+, 0.3+, below 0.3)
+- Consider adding a "due today" home screen widget for quick access

@@ -1,0 +1,158 @@
+{
+  "@@locale": "en",
+  "appTitle": "StudyKing",
+  "@appTitle": {
+    "description": "The application title"
+  },
+  "subjects": "Subjects",
+  "@subjects": {
+    "description": "Bottom navigation label for subjects"
+  },
+  "practice": "Practice",
+  "@practice": {
+    "description": "Bottom navigation label for practice"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Bottom navigation label for settings"
+  },
+  "studyPlanner": "Study Planner",
+  "@studyPlanner": {
+    "description": "App bar title for planner screen"
+  },
+  "createStudyPlan": "Create Study Plan",
+  "@createStudyPlan": {
+    "description": "Title for study plan creation section"
+  },
+  "courseSubject": "Course/Subject",
+  "@courseSubject": {
+    "description": "Label for course/subject text field"
+  },
+  "courseHint": "e.g., IB Physics",
+  "@courseHint": {
+    "description": "Hint text for course input"
+  },
+  "days": "Days",
+  "@days": {
+    "description": "Label for days input"
+  },
+  "hoursPerDay": "Hours/Day",
+  "@hoursPerDay": {
+    "description": "Label for hours per day input"
+  },
+  "generatePlan": "Generate Plan",
+  "@generatePlan": {
+    "description": "Button label to generate study plan"
+  },
+  "generating": "Generating...",
+  "@generating": {
+    "description": "Button label when plan is being generated"
+  },
+  "yourStudySchedule": "Your Study Schedule",
+  "@yourStudySchedule": {
+    "description": "Title for the generated study schedule"
+  },
+  "topicLabel": "Topic {number}",
+  "@topicLabel": {
+    "description": "Label for a topic with number",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionDurationMinutes": "{minutes} min session",
+  "@sessionDurationMinutes": {
+    "description": "Session duration in minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "fillAllFieldsCorrectly": "Please fill in all fields correctly",
+  "@fillAllFieldsCorrectly": {
+    "description": "Error message when form fields are invalid"
+  },
+  "generatedPlanOverDays": "Generated plan for {course} over {days} days ({totalHours} total hours)",
+  "@generatedPlanOverDays": {
+    "description": "Snackbar message when plan is generated",
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "totalHours": {
+        "type": "int"
+      }
+    }
+  },
+  "overDaysPlural": "over {count, plural, =0{no days} =1{1 day} other{{count} days}}",
+  "@overDaysPlural": {
+    "description": "Pluralized phrase for days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "totalHoursPlural": "{count, plural, =1{1 total hour} other{{count} total hours}}",
+  "@totalHoursPlural": {
+    "description": "Pluralized phrase for total hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Label for today's date"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Label for yesterday's date"
+  },
+  "unknown": "Unknown",
+  "@unknown": {
+    "description": "Fallback label when date is null"
+  },
+  "durationDays": "{count, plural, =1{1d} other{{count}d}}",
+  "@durationDays": {
+    "description": "Duration in days abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHours": "{count, plural, =1{1h} other{{count}h}}",
+  "@durationHours": {
+    "description": "Duration in hours abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutes": "{count, plural, =1{1m} other{{count}m}}",
+  "@durationMinutes": {
+    "description": "Duration in minutes abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "durationSeconds": "{count, plural, =1{1s} other{{count}s}}",
+  "@durationSeconds": {
+    "description": "Duration in seconds abbreviated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   vector_math: ^2.2.0
 
   # State Management
@@ -34,7 +36,7 @@ dependencies:
   http: ^1.6.0
 
   # Date formatting
-  intl: ^0.18.0
+  intl: ^0.20.2
 
   # State management (used by legacy pages)
   provider: ^6.1.1
@@ -61,3 +63,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  generate: true

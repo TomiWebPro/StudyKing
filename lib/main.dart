@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'core/constants/app_constants.dart';
 import 'features/settings/data/models/settings_box.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
@@ -47,6 +49,9 @@ final apiBaseUrlProvider = StateProvider<String>((ref) => 'https://openrouter.ai
 
 // Selected model provider
 final selectedModelProvider = StateProvider<String>((ref) => '');
+
+// Locale provider
+final localeProvider = StateProvider<Locale>((ref) => const Locale('en'));
 
 class SettingsController extends StateNotifier<SettingsBox> {
   final SettingsRepository _repository;
@@ -213,6 +218,7 @@ class StudyKingApp extends ConsumerWidget {
     // Listen to settings changes
     final settings = ref.watch(settingsProvider);
     final isLoading = ref.watch(settingsLoadingProvider);
+    final locale = ref.watch(localeProvider);
     
     // Initialize providers with saved values from main()
     if (isLoading) {
@@ -225,8 +231,19 @@ class StudyKingApp extends ConsumerWidget {
     }
     
     return MaterialApp(
+      locale: locale,
       title: 'StudyKing',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('es'),
+      ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
@@ -307,21 +324,21 @@ class _MainScreenState extends State<MainScreen> {
             _selectedIndex = index;
           });
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
-            label: 'Subjects',
+            label: AppLocalizations.of(context)!.subjects,
           ),
           NavigationDestination(
             icon: Icon(Icons.play_arrow_outlined),
             selectedIcon: Icon(Icons.play_arrow),
-            label: 'Practice',
+            label: AppLocalizations.of(context)!.practice,
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            label: AppLocalizations.of(context)!.settings,
           ),
         ],
       ),

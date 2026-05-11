@@ -1,0 +1,314 @@
+import 'package:flutter/foundation.dart';
+import '../data/repositories/mastery_graph_repository.dart';
+import '../data/models/mastery_state_model.dart';
+
+class PlanAdherenceMetric {
+  final DateTime date;
+  final String studentId;
+  final int plannedQuestions;
+  final int actualQuestions;
+  final int plannedMinutes;
+  final int actualMinutes;
+  final double adherenceScore;
+  final Map<String, dynamic>? metadata;
+
+  PlanAdherenceMetric({
+    required this.date,
+    required this.studentId,
+    required this.plannedQuestions,
+    required this.actualQuestions,
+    required this.plannedMinutes,
+    required this.actualMinutes,
+    required this.adherenceScore,
+    this.metadata,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'date': date.toIso8601String(),
+    'studentId': studentId,
+    'plannedQuestions': plannedQuestions,
+    'actualQuestions': actualQuestions,
+    'plannedMinutes': plannedMinutes,
+    'actualMinutes': actualMinutes,
+    'adherenceScore': adherenceScore,
+    'metadata': metadata,
+  };
+}
+
+class MasteryImprovementMetric {
+  final DateTime date;
+  final String studentId;
+  final String topicId;
+  final double previousAccuracy;
+  final double currentAccuracy;
+  final double accuracyDelta;
+  final double previousMasteryLevel;
+  final double currentMasteryLevel;
+  final MasteryLevel previousLevel;
+  final MasteryLevel currentLevel;
+  final Map<String, dynamic>? metadata;
+
+  MasteryImprovementMetric({
+    required this.date,
+    required this.studentId,
+    required this.topicId,
+    required this.previousAccuracy,
+    required this.currentAccuracy,
+    required this.accuracyDelta,
+    required this.previousMasteryLevel,
+    required this.currentMasteryLevel,
+    required this.previousLevel,
+    required this.currentLevel,
+    this.metadata,
+  });
+
+  bool get leveledUp => currentLevel.index > previousLevel.index;
+
+  Map<String, dynamic> toJson() => {
+    'date': date.toIso8601String(),
+    'studentId': studentId,
+    'topicId': topicId,
+    'previousAccuracy': previousAccuracy,
+    'currentAccuracy': currentAccuracy,
+    'accuracyDelta': accuracyDelta,
+    'previousMasteryLevel': previousMasteryLevel,
+    'currentMasteryLevel': currentMasteryLevel,
+    'previousLevel': previousLevel.index,
+    'currentLevel': currentLevel.index,
+    'leveledUp': leveledUp,
+    'metadata': metadata,
+  };
+}
+
+class PlanAdherenceTracker {
+  final List<PlanAdherenceMetric> _metrics = [];
+
+  void recordDay({
+    required String studentId,
+    required DateTime date,
+    required int plannedQuestions,
+    required int actualQuestions,
+    required int plannedMinutes,
+    required int actualMinutes,
+    Map<String, dynamic>? metadata,
+  }) {
+    final adherenceScore = _calculateAdherenceScore(
+      plannedQuestions: plannedQuestions,
+      actualQuestions: actualQuestions,
+      plannedMinutes: plannedMinutes,
+      actualMinutes: actualMinutes,
+    );
+
+    _metrics.add(PlanAdherenceMetric(
+      date: date,
+      studentId: studentId,
+      plannedQuestions: plannedQuestions,
+      actualQuestions: actualQuestions,
+      plannedMinutes: plannedMinutes,
+      actualMinutes: actualMinutes,
+      adherenceScore: adherenceScore,
+      metadata: metadata,
+    ));
+  }
+
+  double _calculateAdherenceScore({
+    required int plannedQuestions,
+    required int actualQuestions,
+    required int plannedMinutes,
+    required int actualMinutes,
+  }) {
+    if (plannedQuestions == 0 && plannedMinutes == 0) return 1.0;
+
+    final questionScore = plannedQuestions > 0
+        ? (actualQuestions / plannedQuestions).clamp(0.0, 1.0)
+        : 0.5;
+    final timeScore = plannedMinutes > 0
+        ? (actualMinutes / plannedMinutes).clamp(0.0, 1.5)
+        : 0.5;
+
+    return (questionScore * 0.6 + timeScore * 0.4).clamp(0.0, 1.0);
+  }
+
+  double getAverageAdherence(String studentId) {
+    final studentMetrics = _metrics.where((m) => m.studentId == studentId).toList();
+    if (studentMetrics.isEmpty) return 0.0;
+    return studentMetrics.map((m) => m.adherenceScore).reduce((a, b) => a + b) / studentMetrics.length;
+  }
+
+  List<PlanAdherenceMetric> getWeeklyMetrics(String studentId) {
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+    return _metrics.where((m) =>
+        m.studentId == studentId &&
+        m.date.isAfter(weekAgo)
+    ).toList();
+  }
+
+  List<PlanAdherenceMetric> getAllMetrics(String studentId) {
+    return _metrics.where((m) => m.studentId == studentId).toList();
+  }
+}
+
+class MasteryImprovementTracker {
+  final Map<String, MasteryState> _previousStates = {};
+  final List<MasteryImprovementMetric> _metrics = [];
+
+  void trackImprovement({
+    required MasteryState currentState,
+    required String studentId,
+  }) {
+    final key = '${studentId}_${currentState.topicId}';
+    final previousState = _previousStates[key];
+
+    if (previousState != null && previousState.accuracy != currentState.accuracy) {
+      final metric = MasteryImprovementMetric(
+        date: DateTime.now(),
+        studentId: studentId,
+        topicId: currentState.topicId,
+        previousAccuracy: previousState.accuracy,
+        currentAccuracy: currentState.accuracy,
+        accuracyDelta: currentState.accuracy - previousState.accuracy,
+        previousMasteryLevel: previousState.readinessScore,
+        currentMasteryLevel: currentState.readinessScore,
+        previousLevel: previousState.masteryLevel,
+        currentLevel: currentState.masteryLevel,
+      );
+      _metrics.add(metric);
+    }
+
+    _previousStates[key] = currentState;
+  }
+
+  List<MasteryImprovementMetric> getImprovements(String studentId) {
+    return _metrics.where((m) => m.studentId == studentId).toList();
+  }
+
+  List<MasteryImprovementMetric> getRecentImprovements(String studentId, {int days = 7}) {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    return _metrics.where((m) =>
+        m.studentId == studentId &&
+        m.date.isAfter(cutoff)
+    ).toList();
+  }
+
+  int getLevelUpCount(String studentId) {
+    return _metrics.where((m) => m.studentId == studentId && m.leveledUp).length;
+  }
+
+  double getAverageImprovement(String studentId) {
+    final studentMetrics = _metrics.where((m) => m.studentId == studentId).toList();
+    if (studentMetrics.isEmpty) return 0.0;
+    return studentMetrics.map((m) => m.accuracyDelta).reduce((a, b) => a + b) / studentMetrics.length;
+  }
+}
+
+class InstrumentationService {
+  final MasteryGraphRepository _repository;
+  final PlanAdherenceTracker _adherenceTracker;
+  final MasteryImprovementTracker _improvementTracker;
+
+  InstrumentationService({
+    MasteryGraphRepository? repository,
+  })  : _repository = repository ?? MasteryGraphRepository(),
+        _adherenceTracker = PlanAdherenceTracker(),
+        _improvementTracker = MasteryImprovementTracker();
+
+  Future<Result<void>> init() async {
+    return _repository.init();
+  }
+
+  void recordPlanAdherence({
+    required String studentId,
+    required int plannedQuestions,
+    required int actualQuestions,
+    required int plannedMinutes,
+    required int actualMinutes,
+    DateTime? date,
+  }) {
+    _adherenceTracker.recordDay(
+      studentId: studentId,
+      date: date ?? DateTime.now(),
+      plannedQuestions: plannedQuestions,
+      actualQuestions: actualQuestions,
+      plannedMinutes: plannedMinutes,
+      actualMinutes: actualMinutes,
+    );
+  }
+
+  Future<Result<void>> trackMasteryImprovement(String studentId, String topicId) async {
+    final result = await _repository.getMasteryState(studentId, topicId);
+    if (result.isFailure) {
+      return Result.failure(result.error);
+    }
+
+    _improvementTracker.trackImprovement(
+      currentState: result.data!,
+      studentId: studentId,
+    );
+
+    return Result.success(null);
+  }
+
+  Future<Result<Map<String, dynamic>>> getInstrumentationDashboard(String studentId) async {
+    try {
+      final avgAdherence = _adherenceTracker.getAverageAdherence(studentId);
+      final weeklyMetrics = _adherenceTracker.getWeeklyMetrics(studentId);
+      final improvements = _improvementTracker.getRecentImprovements(studentId, days: 7);
+      final levelUps = _improvementTracker.getLevelUpCount(studentId);
+      final avgImprovement = _improvementTracker.getAverageImprovement(studentId);
+
+      final snapshotResult = await _repository.getMasterySnapshot(studentId);
+
+      return Result.success({
+        'planAdherence': {
+          'averageAdherence': avgAdherence,
+          'weeklyMetricsCount': weeklyMetrics.length,
+          'weeklyAdherenceAvg': weeklyMetrics.isEmpty
+              ? 0.0
+              : weeklyMetrics.map((m) => m.adherenceScore).reduce((a, b) => a + b) / weeklyMetrics.length,
+        },
+        'masteryImprovement': {
+          'recentImprovementsCount': improvements.length,
+          'levelUpsThisWeek': levelUps,
+          'averageAccuracyDelta': avgImprovement,
+          'totalTopicsTracked': snapshotResult.isSuccess
+              ? snapshotResult.data!['totalTopics']
+              : 0,
+          'masteredTopics': snapshotResult.isSuccess
+              ? snapshotResult.data!['masteredTopics']
+              : 0,
+        },
+        'generatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  List<PlanAdherenceMetric> getAdherenceHistory(String studentId) {
+    return _adherenceTracker.getAllMetrics(studentId);
+  }
+
+  List<MasteryImprovementMetric> getImprovementHistory(String studentId) {
+    return _improvementTracker.getImprovements(studentId);
+  }
+
+  Future<Result<void>> exportInstrumentationData(String studentId) async {
+    try {
+      final adherence = getAdherenceHistory(studentId);
+      final improvements = getImprovementHistory(studentId);
+
+      final data = {
+        'studentId': studentId,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'adherenceMetrics': adherence.map((m) => m.toJson()).toList(),
+        'improvementMetrics': improvements.map((m) => m.toJson()).toList(),
+      };
+
+      debugPrint('Instrumentation data exported: ${data.keys.length} categories');
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+}

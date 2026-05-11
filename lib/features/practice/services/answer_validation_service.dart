@@ -1,5 +1,5 @@
-import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/models/markscheme_model.dart';
 import 'package:studyking/features/questions/services/answer_validator.dart';
 
 class AnswerValidationService {
@@ -26,6 +26,7 @@ class AnswerValidationService {
 
   ValidationResult validateAnswer(Question question, String answer) {
     final markscheme = Markscheme(
+      questionId: question.id,
       correctAnswer: question.markscheme ?? '',
       acceptableAnswers: question.options,
       explanation: question.explanation ?? '',

@@ -1,5 +1,5 @@
 import '../../../core/data/enums.dart';
-import '../../../core/data/models/markscheme_model.dart';
+import '../models/markscheme_model.dart';
 
 /// Question answer validator service
 /// 
@@ -33,7 +33,7 @@ class QuestionAnswerValidator {
     if (normalizedUserAnswer == normalizedCorrectAnswer) {
       return ValidationResult(
         isCorrect: true,
-        explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Correct!',
+        explanation: (_markscheme.explanation?.isNotEmpty ?? false) ? _markscheme.explanation! : 'Correct!',
       );
     }
     
@@ -42,14 +42,14 @@ class QuestionAnswerValidator {
       if (normalizedUserAnswer == acceptable.trim().toLowerCase()) {
         return ValidationResult(
           isCorrect: true,
-          explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Correct!',
+          explanation: (_markscheme.explanation?.isNotEmpty ?? false) ? _markscheme.explanation! : 'Correct!',
         );
       }
     }
     
     return ValidationResult(
       isCorrect: false,
-      explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 'Incorrect',
+      explanation: (_markscheme.explanation?.isNotEmpty ?? false) ? _markscheme.explanation! : 'Incorrect',
     );
   }
 
@@ -81,7 +81,7 @@ class QuestionAnswerValidator {
     
     return ValidationResult(
       isCorrect: normalizedUser == normalizedCorrect,
-      explanation: markscheme.explanation.isNotEmpty ? markscheme.explanation : 'Incorrect',
+      explanation: (markscheme.explanation?.isNotEmpty ?? false) ? markscheme.explanation! : 'Incorrect',
     );
   }
 
@@ -104,7 +104,7 @@ class QuestionAnswerValidator {
 
     return ValidationResult(
       isCorrect: isAllCorrect,
-      explanation: markscheme.explanation.isNotEmpty ? markscheme.explanation : 
+      explanation: (markscheme.explanation?.isNotEmpty ?? false) ? markscheme.explanation! : 
           'Some answers are incorrect',
     );
   }
@@ -125,7 +125,7 @@ class QuestionAnswerValidator {
 
     return ValidationResult(
       isCorrect: normalizedUser == normalizedCorrect,
-      explanation: _markscheme.explanation.isNotEmpty ? _markscheme.explanation : 
+      explanation: (_markscheme.explanation?.isNotEmpty ?? false) ? _markscheme.explanation! : 
           'The correct answer is: ${_markscheme.correctAnswer}',
     );
   }
@@ -236,7 +236,7 @@ class QuestionAnswerValidator {
 
     // Check if answer contains required steps
     final hasRequiredSteps = _markscheme.steps.every((step) {
-      return answer.contains(step.toLowerCase());
+      return answer.toLowerCase().contains(step.requiredAnswer.toLowerCase());
     });
 
     return ValidationResult(
