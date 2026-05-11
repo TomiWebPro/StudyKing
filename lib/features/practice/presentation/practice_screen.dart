@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+final spacedRepetitionRepositoryProvider = Provider<SpacedRepetitionRepository>((ref) {
+  return SpacedRepetitionRepository();
+});
+
+final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
+  return QuestionRepository();
+});
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -17,10 +27,16 @@ class PracticeScreen extends ConsumerStatefulWidget {
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   List<Subject> _subjects = [];
   bool _isLoading = true;
+  Map<String, int> _dueCounts = {};
+  bool _isLoadingDueCounts = false;
+  late SpacedRepetitionRepository _srRepo;
+  late QuestionRepository _questionRepo;
 
   @override
   void initState() {
     super.initState();
+    _srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    _questionRepo = ref.read(questionRepositoryProvider);
     _loadSubjects();
   }
 
@@ -32,6 +48,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           _subjects = subjects;
           _isLoading = false;
         });
+        _loadDueCounts();
       }
     } catch (e) {
       if (mounted) {
@@ -48,6 +65,34 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Future<void> _retryLoadSubjects() => _loadSubjects();
+
+  Future<void> _loadDueCounts() async {
+    if (_subjects.isEmpty) return;
+    
+    setState(() => _isLoadingDueCounts = true);
+    
+    try {
+      final dueCounts = <String, int>{};
+      for (final subject in _subjects) {
+        final result = await _srRepo.getSubjectDueCount(subject.id);
+        if (result.isSuccess && result.data != null) {
+          dueCounts[subject.id] = result.data!;
+        } else {
+          dueCounts[subject.id] = 0;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _dueCounts = dueCounts;
+          _isLoadingDueCounts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDueCounts = false);
+      }
+    }
+  }
 
   Future<List<Subject>> _fetchSubjects() async {
     final repo = await ref.read(subjectsRepositoryProvider.future);
@@ -191,9 +236,17 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             _PracticeModeCard(
               icon: Icons.schedule,
               title: l10n.spacedRepetition,
-              subtitle: l10n.comingSoon,
+              subtitle: _isLoadingDueCounts 
+                  ? l10n.comingSoon 
+                  : _getSpacedRepetitionSubtitle(l10n),
               color: Colors.orange,
-              onTap: null,
+              onTap: _dueCounts.values.any((c) => c > 0) 
+                  ? () => _showSpacedRepetitionSubjectSelector()
+                  : null,
+              badge: () {
+                  final total = _dueCounts.values.fold(0, (a, b) => a + b);
+                  return total > 0 ? total : null;
+                }(),
             ),
             _PracticeModeCard(
               icon: Icons.category,
@@ -480,10 +533,263 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     );
   }
 
-  void _showTopicSelector() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.topicSelectionComingSoon)),
+  void _showTopicSelector() async {
+    final l10n = AppLocalizations.of(context)!;
+    
+    try {
+      final result = await _questionRepo.getAll();
+      if (result.isFailure || result.data == null || result.data!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noTopicsAvailable)),
+          );
+        }
+        return;
+      }
+
+      final questions = result.data!;
+      final topics = questions
+          .where((q) => q.topic != null && q.topic!.isNotEmpty)
+          .map((q) => q.topic!)
+          .toSet()
+          .toList();
+
+      if (topics.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noTopicsAvailable)),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.selectTopic,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...topics.map((topic) => ListTile(
+                leading: const Icon(Icons.topic),
+                title: Text(topic),
+                onTap: () {
+                  Navigator.pop(context);
+                  _startTopicPractice(topic);
+                },
+              )),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noTopicsAvailable)),
+        );
+      }
+    }
+  }
+
+  void _startTopicPractice(String topic) async {
+    try {
+      final result = await _questionRepo.getAll();
+      if (result.isFailure || result.data == null) return;
+
+      final topicQuestions = result.data!
+          .where((q) => q.topic == topic)
+          .toList();
+
+      if (topicQuestions.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.noQuestionsAvailable)),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PracticeSessionScreen(
+            subjectId: topicQuestions.first.subjectId,
+            topicId: topicQuestions.first.topicId,
+            questionCount: topicQuestions.length,
+          ),
+        ),
+      );
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  String _getSpacedRepetitionSubtitle(AppLocalizations l10n) {
+    final totalDue = _dueCounts.values.fold(0, (a, b) => a + b);
+    if (totalDue == 0) {
+      return l10n.noReviewsScheduled;
+    }
+    return l10n.dueQuestionsCount(totalDue);
+  }
+
+  void _showSpacedRepetitionSubjectSelector() {
+    final l10n = AppLocalizations.of(context)!;
+    
+    final subjectsWithDue = _subjects
+        .where((s) => (_dueCounts[s.id] ?? 0) > 0)
+        .toList();
+
+    if (subjectsWithDue.isEmpty) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle,
+                size: 64,
+                color: Colors.green.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.allCaughtUp,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.noReviewsScheduled,
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.selectSubject,
+              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...subjectsWithDue.map((subject) => ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                child: Icon(
+                  Icons.school,
+                  color: _getSubjectColor(subject.name),
+                ),
+              ),
+              title: Text(subject.name),
+              subtitle: Text(l10n.dueQuestionsCount(_dueCounts[subject.id] ?? 0)),
+              onTap: () {
+                Navigator.pop(context);
+                _startSpacedRepetitionSession(subject);
+              },
+            )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
+  }
+
+  void _startSpacedRepetitionSession(Subject subject) async {
+    try {
+      final result = await _srRepo.getPracticeQuestions(subject.id);
+      
+      if (result.isFailure || result.data == null || result.data!.isEmpty) {
+        if (!mounted) return;
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (sheetContext) => Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: 64,
+                  color: Colors.green.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context)!.allCaughtUp,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.noReviewsScheduled,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PracticeSessionScreen(
+            subjectId: subject.id,
+            questionCount: result.data!.length,
+            isSpacedRepetition: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.noQuestionsAvailable)),
+        );
+      }
+    }
   }
 }
 
@@ -493,6 +799,7 @@ class _PracticeModeCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback? onTap;
+  final int? badge;
 
   const _PracticeModeCard({
     required this.icon,
@@ -500,6 +807,7 @@ class _PracticeModeCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     this.onTap,
+    this.badge,
   });
 
   @override
@@ -509,44 +817,68 @@ class _PracticeModeCard extends StatelessWidget {
       child: InkWell(
         onTap: isAvailable ? onTap : null,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isAvailable ? color : Colors.grey.shade400,
-                size: 32,
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
               ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isAvailable ? color : Colors.grey.shade400,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: isAvailable ? color : Colors.grey.shade400,
+                    size: 32,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isAvailable ? color : Colors.grey.shade400,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isAvailable ? color : Colors.grey.shade400,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (badge != null && badge! > 0)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badge.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isAvailable ? color : Colors.grey.shade400,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );

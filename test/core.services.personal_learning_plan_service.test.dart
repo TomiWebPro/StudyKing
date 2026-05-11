@@ -3,6 +3,8 @@ import 'package:studyking/core/services/personal_learning_plan_service.dart';
 import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 
@@ -63,10 +65,18 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<void>> migrateFromLegacy({required String questionId, String? markscheme, String? correctAnswer, List<String>? options, String? explanation}) async => Result.success(null);
 
   @override
-  Future<Result<dynamic>> getEvaluation(String questionId) async => Result.success(null);
+  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {
+    final evaluation = QuestionEvaluation(
+      questionId: questionId,
+      correctAnswer: 'test',
+      acceptableAnswers: ['A', 'B', 'C', 'D'],
+      explanation: 'test',
+    );
+    return Result.success(evaluation);
+  }
 
   @override
-  Future<Result<void>> saveEvaluation(dynamic evaluation) async => Result.success(null);
+  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async => Result.success(null);
 
   @override
   Future<Result<List<TopicDependency>>> getAllDependencies() async {
@@ -75,6 +85,15 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
       TopicDependency(topicId: 'topic2', prerequisites: ['topic1'], downstreamTopics: []),
     ]);
   }
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
+    final dep = TopicDependency(topicId: topicId);
+    return Result.success(dep);
+  }
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
 class MockTopicRepository implements TopicRepository {
@@ -370,12 +389,20 @@ class _FailingMasteryGraphRepository implements MasteryGraphRepository {
       Result.success(null);
 
   @override
-  Future<Result<dynamic>> getEvaluation(String questionId) async => Result.success(null);
+  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async =>
+      Result.failure('Failed to get evaluation');
 
   @override
-  Future<Result<void>> saveEvaluation(dynamic evaluation) async => Result.success(null);
+  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async => Result.success(null);
 
   @override
   Future<Result<List<TopicDependency>>> getAllDependencies() async =>
       Result.failure('Failed to get dependencies');
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async =>
+      Result.failure('Failed to get topic dependency');
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }

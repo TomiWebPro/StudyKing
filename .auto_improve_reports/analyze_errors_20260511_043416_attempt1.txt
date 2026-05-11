@@ -1,0 +1,50 @@
+Analyzing StudyKing...                                          
+
+  error • The argument type 'List<StudySession>' can't be assigned to the parameter type 'Map<String, StudySession>'.  • test/core/data/repositories/study_session_repository_test.dart:9:24 • argument_type_not_assignable
+  error • The function 'AppLocalizationsEn' isn't defined • test/core/utils/time_utils_test.dart:10:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:14:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:18:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:22:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:26:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:30:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:34:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:38:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:43:11 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:48:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:52:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:56:14 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:62:13 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:72:13 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:78:13 • undefined_function
+  error • The function 'formatDuration' isn't defined • test/core/utils/time_utils_test.dart:88:13 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:100:14 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:105:14 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:110:14 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:115:14 • undefined_function
+  error • The function 'AppLocalizationsEn' isn't defined • test/core/utils/time_utils_test.dart:120:20 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:121:14 • undefined_function
+  error • The function 'AppLocalizationsEn' isn't defined • test/core/utils/time_utils_test.dart:126:20 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:127:14 • undefined_function
+  error • The function 'AppLocalizationsEn' isn't defined • test/core/utils/time_utils_test.dart:131:20 • undefined_function
+  error • The function 'formatDate' isn't defined • test/core/utils/time_utils_test.dart:132:14 • undefined_function
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/core/utils/time_utils_test.dart:140:20 • undefined_method
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/core/utils/time_utils_test.dart:146:20 • undefined_method
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/core/utils/time_utils_test.dart:152:20 • undefined_method
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/core/utils/time_utils_test.dart:158:20 • undefined_method
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/core/utils/time_utils_test.dart:164:20 • undefined_method
+  error • The method 'isSameDay' isn't defined for the type 'DateTime' • test/features/sessions/session_analytics_test.dart:60:56 • undefined_method
+warning • The value of the local variable 'tapped' isn't used • test/features/sessions/session_analytics_test.dart:187:12 • unused_local_variable
+  error • Undefined name 'DatePicker' • test/features/sessions/session_history_screen_test.dart:154:26 • undefined_identifier
+  error • Expected to find ',' • test/features/sessions/session_history_screen_test.dart:175:47 • expected_token
+  error • Too many positional arguments: 1 expected, but 3 found • test/features/sessions/session_history_screen_test.dart:175:47 • extra_positional_arguments_could_be_named
+  error • Unterminated string literal • test/features/sessions/session_history_screen_test.dart:175:50 • unterminated_string_literal
+  error • Expected to find ',' • test/features/sessions/session_history_screen_test.dart:176:7 • expected_token
+  error • Expected to find ')' • test/features/sessions/session_history_screen_test.dart:176:35 • expected_token
+  error • Expected to find ',' • test/features/sessions/session_history_screen_test.dart:222:47 • expected_token
+  error • Too many positional arguments: 1 expected, but 3 found • test/features/sessions/session_history_screen_test.dart:222:47 • extra_positional_arguments_could_be_named
+  error • Unterminated string literal • test/features/sessions/session_history_screen_test.dart:222:50 • unterminated_string_literal
+  error • Expected to find ',' • test/features/sessions/session_history_screen_test.dart:223:7 • expected_token
+  error • Expected to find ')' • test/features/sessions/session_history_screen_test.dart:223:35 • expected_token
+
+
+45 issues found. (ran in 3.9s)

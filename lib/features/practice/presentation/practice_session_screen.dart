@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
@@ -16,17 +17,23 @@ final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
   return QuestionRepository();
 });
 
+final spacedRepetitionRepositoryProvider = Provider<SpacedRepetitionRepository>((ref) {
+  return SpacedRepetitionRepository();
+});
+
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
   final String subjectId;
   final String? topicId;
   final int? questionCount;
+  final bool isSpacedRepetition;
 
   const PracticeSessionScreen({
     super.key,
     required this.subjectId,
     this.topicId,
     this.questionCount = 10,
+    this.isSpacedRepetition = false,
   });
 
   @override
@@ -35,6 +42,7 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
+  late SpacedRepetitionRepository _srRepo;
   final AnswerValidationService _validationService = AnswerValidationService();
   List<Question> _questions = [];
   int _currentIndex = 0;
@@ -60,6 +68,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   void initState() {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
+    _srRepo = ref.read(spacedRepetitionRepositoryProvider);
     _loadQuestions();
     _startTimer();
   }
@@ -185,14 +194,27 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       questionId: question.id,
       questionType: question.type,
       isCorrect: isCorrect,
-      timeSpent: const Duration(seconds: 0), // Will track actual time
+      timeSpent: const Duration(seconds: 0),
       userAnswer: _currentAnswer!,
     ));
+
+    if (widget.isSpacedRepetition) {
+      _updateNextReview(question.id, isCorrect);
+    }
     
     setState(() {
       _isSubmitted = true;
       _isFeedbackVisible = true;
     });
+  }
+
+  Future<void> _updateNextReview(String questionId, bool isCorrect) async {
+    try {
+      final masteryLevel = isCorrect ? 0.8 : 0.2;
+      await _srRepo.updateNextReviewDate(questionId, masteryLevel);
+    } catch (e) {
+      debugPrint('Error updating next review date: $e');
+    }
   }
 
   void _nextQuestion() {
@@ -258,7 +280,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     if (_questions.isEmpty && !_isSessionComplete) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppLocalizations.of(context)!.practice)),
+        appBar: AppBar(
+          title: Text(widget.isSpacedRepetition 
+              ? AppLocalizations.of(context)!.spacedRepetitionMode 
+              : AppLocalizations.of(context)!.practice),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -272,7 +298,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${AppLocalizations.of(context)!.practice} - ${question.type.name}'),
+        title: Text(widget.isSpacedRepetition 
+            ? '${AppLocalizations.of(context)!.spacedRepetitionMode} - ${question.type.name}'
+            : '${AppLocalizations.of(context)!.practice} - ${question.type.name}'),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),

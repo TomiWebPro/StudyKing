@@ -69,5 +69,13 @@
   "totalQuestions": "Total de Preguntas",
   "correctAnswers": "Respuestas Correctas",
   "accuracy": "Precisión",
-  "practiceAgain": "Practicar de Nuevo"
+  "practiceAgain": "Practicar de Nuevo",
+  "allCaughtUp": "¡Todo al día!",
+  "noReviewsScheduled": "No hay repasos programados.",
+  "dueQuestionsCount": "{count} pendientes",
+  "reviewDueQuestions": "Repasar preguntas pendientes",
+  "selectTopic": "Seleccionar Tema",
+  "noTopicsAvailable": "No hay temas disponibles",
+  "questionsDueForReview": "preguntas pendientes de repaso",
+  "spacedRepetitionMode": "Repetición Espaciada"
 }

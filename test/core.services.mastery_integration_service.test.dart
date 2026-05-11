@@ -5,6 +5,8 @@ import 'package:studyking/core/services/adaptive_practice_engine.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/data/models/topic_dependency_model.dart';
 
 class MockMasteryGraphRepository implements MasteryGraphRepository {
   @override
@@ -32,7 +34,7 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
     final state = QuestionMasteryState.initial(studentId: studentId, questionId: questionId);
     state.correctCount = 3;
     state.incorrectCount = 1;
-    state.averageConfidence = 4.0;
+    state.confidenceHistory.add(4);
     return Result.success(state);
   }
 
@@ -64,10 +66,30 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<void>> migrateFromLegacy({required String questionId, String? markscheme, String? correctAnswer, List<String>? options, String? explanation}) async => Result.success(null);
 
   @override
-  Future<Result<dynamic>> getEvaluation(String questionId) async => Result.success(null);
+  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {
+    final evaluation = QuestionEvaluation(
+      questionId: questionId,
+      correctAnswer: 'test',
+      acceptableAnswers: ['A', 'B', 'C', 'D'],
+      explanation: 'test',
+    );
+    return Result.success(evaluation);
+  }
 
   @override
-  Future<Result<void>> saveEvaluation(dynamic evaluation) async => Result.success(null);
+  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async => Result.success(null);
+
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async => Result.success([]);
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
+    final dep = TopicDependency(topicId: topicId);
+    return Result.success(dep);
+  }
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
 void main() {

@@ -12,6 +12,9 @@ class MockAttemptRepository implements AttemptRepository {
   }
 
   @override
+  Future<void> init() async {}
+
+  @override
   Future<List<StudentAttempt>> getByStudent(String studentId) async {
     return _attempts.where((a) => a.studentId == studentId).toList();
   }
@@ -54,11 +57,6 @@ class MockAttemptRepository implements AttemptRepository {
   @override
   Future<void> delete(String id) async {
     _attempts.removeWhere((a) => a.id == id);
-  }
-
-  @override
-  Future<void> deleteAll() async {
-    _attempts.clear();
   }
 }
 
@@ -179,9 +177,9 @@ void main() {
       test('calculates topic progress correctly', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: true, timeSpentMs: 60000, timestamp: now),
-          Attempt(id: 'a2', studentId: 'student1', questionId: 'topic1_q2', isCorrect: true, timeSpentMs: 60000, timestamp: now),
-          Attempt(id: 'a3', studentId: 'student1', questionId: 'topic1_q3', isCorrect: false, timeSpentMs: 60000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'topic1_q2', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'topic1_q3', isCorrect: false, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
         ]);
 
         final progress = await tracker.getTopicProgress('student1', 'topic1');
@@ -194,7 +192,7 @@ void main() {
       test('includes last attempted timestamp', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final progress = await tracker.getTopicProgress('student1', 'topic1');
@@ -207,7 +205,7 @@ void main() {
       test('returns trend data', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final trend = await tracker.getWeeklyTrend(4);
@@ -228,11 +226,11 @@ void main() {
       test('returns review recommendation for low accuracy', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: false, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: false, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: false, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a4', studentId: 'student1', questionId: 'q4', isCorrect: false, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a5', studentId: 'student1', questionId: 'q5', isCorrect: false, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a4', studentId: 'student1', questionId: 'q4', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a5', studentId: 'student1', questionId: 'q5', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final recommendations = await tracker.getRecommendations('student1');
@@ -243,12 +241,12 @@ void main() {
       test('returns advanced recommendation for high accuracy', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: true, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: true, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a4', studentId: 'student1', questionId: 'q4', isCorrect: true, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a5', studentId: 'student1', questionId: 'q5', isCorrect: true, timeSpentMs: 5000, timestamp: now),
-          Attempt(id: 'a6', studentId: 'student1', questionId: 'q6', isCorrect: true, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a4', studentId: 'student1', questionId: 'q4', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a5', studentId: 'student1', questionId: 'q5', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a6', studentId: 'student1', questionId: 'q6', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final recommendations = await tracker.getRecommendations('student1');
@@ -260,7 +258,7 @@ void main() {
         final now = DateTime.now();
         final yesterday = now.subtract(const Duration(days: 2));
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 500000, timestamp: yesterday),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 500000, timestamp: yesterday, subjectId: 'math'),
         ]);
 
         final recommendations = await tracker.getRecommendations('student1');
@@ -272,7 +270,7 @@ void main() {
         final now = DateTime.now();
         final lastWeek = now.subtract(const Duration(days: 10));
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: lastWeek),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: lastWeek, subjectId: 'math'),
         ]);
 
         final recommendations = await tracker.getRecommendations('student1');
@@ -285,7 +283,7 @@ void main() {
       test('returns first attempt badge', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final badges = await tracker.getBadges('student1');
@@ -295,8 +293,8 @@ void main() {
 
       test('returns century badge for 100+ attempts', () async {
         final now = DateTime.now();
-        final attempts = List.generate(100, (i) => Attempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now,
+        final attempts = List.generate(100, (i) => StudentAttempt(
+          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
         ));
         mockRepo.setAttempts(attempts);
 
@@ -307,8 +305,8 @@ void main() {
 
       test('returns accuracy gold badge for 90%+ accuracy', () async {
         final now = DateTime.now();
-        final attempts = List.generate(10, (i) => Attempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now,
+        final attempts = List.generate(10, (i) => StudentAttempt(
+          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
         ));
         mockRepo.setAttempts(attempts);
 
@@ -319,8 +317,8 @@ void main() {
 
       test('returns daily streak badge for 5+ daily attempts', () async {
         final now = DateTime.now();
-        final attempts = List.generate(5, (i) => Attempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now,
+        final attempts = List.generate(5, (i) => StudentAttempt(
+          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
         ));
         mockRepo.setAttempts(attempts);
 
@@ -341,7 +339,7 @@ void main() {
       test('exports CSV with stats', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
-          Attempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now),
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
         final csv = await tracker.exportProgressCSV('student1');

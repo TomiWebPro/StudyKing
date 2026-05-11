@@ -4,6 +4,7 @@ import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/core/data/models/question_evaluation_model.dart';
 
 class MockMasteryGraphRepository implements MasteryGraphRepository {
   @override
@@ -52,7 +53,7 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<void>> migrateFromLegacy({required String questionId, String? markscheme, String? correctAnswer, List<String>? options, String? explanation}) async => Result.success(null);
 
   @override
-  Future<Result<dynamic>> getEvaluation(String questionId) async => Result.success(null);
+  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async => Result.success(QuestionEvaluation(questionId: questionId, correctAnswer: ''));
 
   @override
   Future<Result<void>> saveEvaluation(dynamic evaluation) async => Result.success(null);

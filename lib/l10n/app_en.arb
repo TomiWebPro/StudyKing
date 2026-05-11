@@ -340,5 +340,42 @@
   "practiceAgain": "Practice Again",
   "@practiceAgain": {
     "description": "Button label to restart practice"
+  },
+  "allCaughtUp": "All caught up!",
+  "@allCaughtUp": {
+    "description": "Message when no questions are due for review"
+  },
+  "noReviewsScheduled": "No reviews scheduled.",
+  "@noReviewsScheduled": {
+    "description": "Subtitle when no questions are due for review"
+  },
+  "dueQuestionsCount": "{count} due",
+  "@dueQuestionsCount": {
+    "description": "Badge showing number of due questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewDueQuestions": "Review due questions",
+  "@reviewDueQuestions": {
+    "description": "Button to start reviewing due questions"
+  },
+  "selectTopic": "Select Topic",
+  "@selectTopic": {
+    "description": "Title for topic selector"
+  },
+  "noTopicsAvailable": "No topics available",
+  "@noTopicsAvailable": {
+    "description": "Message when no topics are available for a subject"
+  },
+  "questionsDueForReview": "questions due for review",
+  "@questionsDueForReview": {
+    "description": "Subtitle showing questions due for a subject"
+  },
+  "spacedRepetitionMode": "Spaced Repetition",
+  "@spacedRepetitionMode": {
+    "description": "Title for spaced repetition practice session"
   }
 }

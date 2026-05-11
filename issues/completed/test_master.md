@@ -1,62 +1,70 @@
-# Strengthen practice question UI test coverage (interaction matrix + edge paths)
+# Critical Test Coverage Gap: Subjects Feature Has Zero Tests
 
-## Why this matters
+## Context
+The StudyKing project has a dedicated `features/subjects` module that manages subjects, topics, and their relationships. However, **this entire feature has zero test coverage** across all layers.
 
-The practice flow currently has only basic happy-path coverage and almost no direct tests for the question UI widgets that drive answer capture and grading behavior. This leaves high-risk paths unprotected: question-type rendering switches, submit gating, feedback visibility, and drawing/math-specific interactions.
+## Affected Files
+- `lib/features/subjects/data/repositories/subject_repository.dart`
+- `lib/features/subjects/models/subject_model.dart`
+- `lib/features/subjects/presentation/subject_list_view.dart`
+- `lib/features/subjects/presentation/subject_selection_screen.dart`
+- `lib/features/subjects/presentation/subject_management_screen.dart`
+- `lib/features/subjects/presentation/subject_detail_view.dart`
+- `lib/features/subjects/presentation/subject_form_widgets.dart`
+- `lib/features/subjects/providers/subjects_repository_provider.dart`
 
-Current tests (`test/features.practice.test.dart`, `test/screens.practice.test.dart`, `test/widget_test.dart`) mostly validate app boot, loading states, and a single typed-answer flow. Regressions in other question types can ship undetected.
+## Rationale
+1. **SubjectRepository** contains critical business logic:
+   - CRUD operations for subjects
+   - Topic-subject relationship management (`addTopicToSubject`, `removeTopicFromSubject`)
+   - Filtering subjects by topics (`getWithTopics`)
+   - Code-based lookups (`getByCode`)
+   - Student-subject associations
 
-## Coverage gaps to address
+2. **SubjectModel** is a Hive-persisted model with:
+   - JSON serialization/deserialization
+   - Deep copy via `copyWith`
+   - Custom field handling (optional fields, defaults)
 
-1. **Question type rendering matrix is largely untested**
-   - `PracticeSessionScreen._buildQuestionWidget` has multiple branches (`singleChoice`, `multiChoice`, `mathExpression`, `canvas`, `typedAnswer`, `essay`, fallback), but tests only exercise typed-answer behavior.
-   - Multi-choice and single-choice currently share `SingleAnswerWidget`; without tests, incorrect selection semantics can slip through.
+3. **Current state**: No tests exist in `test/features/subjects/` - this is verified by glob search returning zero matches.
 
-2. **Question UI widget behavior is untested in isolation**
-   - `QuestionCardWidget` contains substantial state logic (`didUpdateWidget`, local answer syncing, submit enablement, correctness evaluation, multi-select serialization with `||`), but there are no widget tests covering this.
-   - `SingleAnswerWidget` feedback states (`isSubmitted`, `isFeedbackVisible`, option color semantics, disabled tap after submit) are not tested.
+4. **Contrast with other features**: The `questions` feature has well-structured tests (e.g., `answer_validator_test.dart` with 550+ lines, model tests). The subjects feature is at equal architectural importance but completely untested.
 
-3. **Canvas and math paths lack interaction tests**
-   - `CanvasDrawingWidget` has undo/clear/save state transitions and initial drawing parsing; no tests verify save button gating, message states, or malformed payload handling.
-   - `MathExpressionWidget` token styling and `showPrefix`/`isSolution` variants are untested, creating risk when refactoring rendering.
+## Missing Test Scenarios
 
-4. **Existing baseline test is overly basic**
-   - `test/widget_test.dart` only checks app load/material presence and does not protect feature behavior.
+### SubjectRepository Tests
+- `init()`: Handles Hive box initialization
+- `getAll()`: Returns all subjects, handles empty box
+- `get()`: Returns subject by ID, returns null for non-existent
+- `save()`: Creates new subject, updates existing
+- `delete()`: Removes subject, handles non-existent ID
+- `getWithTopics()`: Filters correctly by topic IDs
+- `addTopicToSubject()`: Adds topic without duplicates
+- `removeTopicFromSubject()`: Removes topic correctly
+- `getByCode()`: Finds subject by code, case sensitivity
+- `getStudentSubjects()`: Returns student-specific subjects
 
-## Affected files
+### SubjectModel Tests
+- Constructor with required/optional fields
+- `toJson()`: Produces correct JSON structure
+- `fromJson()`: Parses JSON correctly, handles nulls
+- `copyWith()`: Creates modified copy correctly
+- Hive adapter integration
 
-- `lib/features/practice/presentation/practice_session_screen.dart`
-- `lib/features/questions/ui/widgets/question_card_widget.dart`
-- `lib/features/questions/ui/widgets/single_answer_widget.dart`
-- `lib/features/questions/ui/widgets/canvas_drawing_widget.dart`
-- `lib/features/questions/ui/widgets/math_expression_widget.dart`
-- `test/features.practice.test.dart`
-- `test/screens.practice.test.dart`
-- `test/widget_test.dart`
+### Presentation Layer Tests
+- Subject list renders correctly
+- Subject CRUD operations via UI
+- Provider integration
 
-## Proposed test additions
+## Acceptance Criteria
+1. Create `test/features/subjects/data/repositories/subject_repository_test.dart` with >90% line coverage
+2. Create `test/features/subjects/models/subject_model_test.dart` with full model coverage
+3. All repository methods must have tests for:
+   - Happy path
+   - Edge cases (empty data, null returns)
+   - Error handling
+4. Model tests must verify JSON round-trip for all fields
+5. Tests must mock Hive boxes appropriately
 
-- Add focused widget tests for each questions UI widget (`QuestionCardWidget`, `SingleAnswerWidget`, `CanvasDrawingWidget`, `MathExpressionWidget`).
-- Expand `PracticeSessionScreen` tests to cover each question type branch and answer submission lifecycle.
-- Add negative/edge tests (empty options fallback, malformed initial drawing JSON, submit disabled with empty answer, post-submit controls disabled).
-
-## Acceptance criteria
-
-- New widget tests cover all `QuestionType` branches used in `PracticeSessionScreen._buildQuestionWidget`.
-- `QuestionCardWidget` tests verify:
-  - submit button enable/disable transitions,
-  - answer sync behavior when `currentAnswer` changes,
-  - multi-select serialization/parsing (`||`),
-  - correctness chip for submitted answers.
-- `SingleAnswerWidget` tests verify:
-  - selection callback only when not submitted,
-  - feedback container visibility rules,
-  - correct/incorrect visual state behavior.
-- `CanvasDrawingWidget` tests verify:
-  - save disabled when empty,
-  - undo/clear behavior updates state,
-  - graceful handling of invalid `initialDrawing` payload.
-- `MathExpressionWidget` tests verify:
-  - prefix rendering when `showPrefix=true`,
-  - solution container variant when `isSolution=true`.
-- Existing broad smoke test(s) are either replaced or complemented so they assert meaningful practice-flow behavior rather than only app boot.
+## Priority
+**HIGH** - This is a core feature with no test coverage, posing significant risk to data integrity and business logic correctness.

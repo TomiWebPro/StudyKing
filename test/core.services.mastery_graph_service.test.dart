@@ -3,6 +3,7 @@ import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
 class MockMasteryGraphRepository implements MasteryGraphRepository {
@@ -131,6 +132,21 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   @override
   Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async {
     _evaluations[evaluation.questionId] = evaluation;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
+    return Result.success(TopicDependency(topicId: topicId));
+  }
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async {
     return Result.success(null);
   }
 }

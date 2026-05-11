@@ -280,4 +280,30 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get practiceAgain => 'Practicar de Nuevo';
+
+  @override
+  String get allCaughtUp => '¡Todo al día!';
+
+  @override
+  String get noReviewsScheduled => 'No hay repasos programados.';
+
+  @override
+  String dueQuestionsCount(int count) {
+    return '$count pendientes';
+  }
+
+  @override
+  String get reviewDueQuestions => 'Repasar preguntas pendientes';
+
+  @override
+  String get selectTopic => 'Seleccionar Tema';
+
+  @override
+  String get noTopicsAvailable => 'No hay temas disponibles';
+
+  @override
+  String get questionsDueForReview => 'preguntas pendientes de repaso';
+
+  @override
+  String get spacedRepetitionMode => 'Repetición Espaciada';
 }

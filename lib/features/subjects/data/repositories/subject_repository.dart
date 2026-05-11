@@ -2,26 +2,35 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 
 class SubjectRepository {
-  late Box<Subject> _subjectBox;
+  Box<Subject>? _subjectBox;
+
+  SubjectRepository({Box<Subject>? subjectBox}) : _subjectBox = subjectBox;
 
   Future<void> init() async {
     _subjectBox = Hive.box<Subject>('subjects');
   }
 
+  Box<Subject> get _box {
+    if (_subjectBox == null) {
+      throw StateError('SubjectRepository not initialized. Call init() first or inject a Box.');
+    }
+    return _subjectBox!;
+  }
+
   Future<List<Subject>> getAll() async {
-    return _subjectBox.values.toList();
+    return _box.values.toList();
   }
 
   Future<Subject?> get(String id) async {
-    return _subjectBox.get(id);
+    return _box.get(id);
   }
 
   Future<void> save(Subject subject) async {
-    await _subjectBox.put(subject.id, subject);
+    await _box.put(subject.id, subject);
   }
 
   Future<void> delete(String id) async {
-    await _subjectBox.delete(id);
+    await _box.delete(id);
   }
 
   Future<List<Subject>> getWithTopics(List<String> topicIds) async {
@@ -34,6 +43,9 @@ class SubjectRepository {
   Future<void> addTopicToSubject(String subjectId, String topicId) async {
     final subject = await get(subjectId);
     if (subject != null) {
+      if (subject.topicIds.contains(topicId)) {
+        return;
+      }
       final updated = subject.copyWith(
         topicIds: [...subject.topicIds, topicId],
       );
@@ -51,16 +63,12 @@ class SubjectRepository {
     }
   }
 
-  /// Get subject by code (e.g., 'IB-PHYS')
   Future<Subject?> getByCode(String code) async {
     final subjects = await getAll();
     return subjects.where((s) => s.code == code).firstOrNull;
   }
 
-  /// Get all subjects for a student (could be filtered by student later)
   Future<List<Subject>> getStudentSubjects(String studentId) async {
-    // For now, return all subjects
-    // This would be more sophisticated with actual student-subject relationships
     return getAll();
   }
 }

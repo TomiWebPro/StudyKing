@@ -517,6 +517,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Practice Again'**
   String get practiceAgain;
+
+  /// Message when no questions are due for review
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up!'**
+  String get allCaughtUp;
+
+  /// Subtitle when no questions are due for review
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews scheduled.'**
+  String get noReviewsScheduled;
+
+  /// Badge showing number of due questions
+  ///
+  /// In en, this message translates to:
+  /// **'{count} due'**
+  String dueQuestionsCount(int count);
+
+  /// Button to start reviewing due questions
+  ///
+  /// In en, this message translates to:
+  /// **'Review due questions'**
+  String get reviewDueQuestions;
+
+  /// Title for topic selector
+  ///
+  /// In en, this message translates to:
+  /// **'Select Topic'**
+  String get selectTopic;
+
+  /// Message when no topics are available for a subject
+  ///
+  /// In en, this message translates to:
+  /// **'No topics available'**
+  String get noTopicsAvailable;
+
+  /// Subtitle showing questions due for a subject
+  ///
+  /// In en, this message translates to:
+  /// **'questions due for review'**
+  String get questionsDueForReview;
+
+  /// Title for spaced repetition practice session
+  ///
+  /// In en, this message translates to:
+  /// **'Spaced Repetition'**
+  String get spacedRepetitionMode;
 }
 
 class _AppLocalizationsDelegate
