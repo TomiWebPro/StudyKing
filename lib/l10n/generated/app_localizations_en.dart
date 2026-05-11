@@ -140,4 +140,142 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get practiceMode => 'Practice Mode';
+
+  @override
+  String get practiceOptions => 'Practice Options';
+
+  @override
+  String get noSubjects => 'No Subjects';
+
+  @override
+  String get noPracticeSessionsYet => 'No Practice Sessions Yet';
+
+  @override
+  String get addSubjectsAndQuestionsToStartPracticing =>
+      'Add subjects and questions to start practicing';
+
+  @override
+  String get addSubjectsFromSubjectsTab => 'Add subjects from the Subjects tab';
+
+  @override
+  String get addSubject => 'Add Subject';
+
+  @override
+  String get practiceModes => 'Practice Modes';
+
+  @override
+  String get quickPractice => 'Quick Practice';
+
+  @override
+  String randomQuestions(int count) {
+    return '$count random questions';
+  }
+
+  @override
+  String get comingSoon => 'Coming soon';
+
+  @override
+  String get spacedRepetition => 'Spaced Repetition';
+
+  @override
+  String get topicFocus => 'Topic Focus';
+
+  @override
+  String get practiceSpecificTopics => 'Practice specific topics';
+
+  @override
+  String get weakAreas => 'Weak Areas';
+
+  @override
+  String get focusOnMistakes => 'Focus on mistakes';
+
+  @override
+  String get yourSubjects => 'Your Subjects';
+
+  @override
+  String get readyForPractice => 'Ready for practice';
+
+  @override
+  String get practiceAvailable => 'Practice available';
+
+  @override
+  String get selectSubject => 'Select Subject';
+
+  @override
+  String get practiceModeTitle => 'Practice Mode';
+
+  @override
+  String get autoSelect => 'Auto Select';
+
+  @override
+  String get aiPicksOptimalQuestions => 'AI picks optimal questions';
+
+  @override
+  String get chooseSubject => 'Choose Subject';
+
+  @override
+  String get noCode => 'No code';
+
+  @override
+  String get topicSelectionComingSoon => 'Topic selection coming soon!';
+
+  @override
+  String get noQuestionsAvailable => 'No Questions Available';
+
+  @override
+  String get noQuestionsForSelectedSubject =>
+      'There are no questions for the selected subject/topic. Start creating questions!';
+
+  @override
+  String get time => 'Time';
+
+  @override
+  String get score => 'Score';
+
+  @override
+  String get correct => 'Correct';
+
+  @override
+  String get yourAnswer => 'Your Answer';
+
+  @override
+  String yourAnswerCharacters(int count) {
+    return 'Your Answer ($count characters)';
+  }
+
+  @override
+  String get submitAnswer => 'Submit Answer';
+
+  @override
+  String get correctFeedback => 'Correct!';
+
+  @override
+  String get incorrectFeedback => 'Incorrect';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get sessionResults => 'Session Results';
+
+  @override
+  String get practiceComplete => 'Practice Complete!';
+
+  @override
+  String get totalQuestions => 'Total Questions';
+
+  @override
+  String get correctAnswers => 'Correct Answers';
+
+  @override
+  String get accuracy => 'Accuracy';
+
+  @override
+  String get practiceAgain => 'Practice Again';
 }

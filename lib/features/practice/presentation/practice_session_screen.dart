@@ -10,6 +10,7 @@ import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.da
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/features/practice/services/answer_validation_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
   return QuestionRepository();
@@ -143,11 +144,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _showNoQuestionsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('No Questions Available'),
-        content: const Text('There are no questions for the selected subject/topic. Start creating questions!'),
+        title: Text(l10n.noQuestionsAvailable),
+        content: Text(l10n.noQuestionsForSelectedSubject),
       ),
     );
   }
@@ -256,7 +258,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Widget build(BuildContext context) {
     if (_questions.isEmpty && !_isSessionComplete) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Practice')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.practice)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -270,7 +272,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Practice - ${question.type.name}'),
+        title: Text('${AppLocalizations.of(context)!.practice} - ${question.type.name}'),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
@@ -280,30 +282,29 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-    // Header with progress info
-    Container(
-      padding: const EdgeInsets.all(16),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildMiniStat(
-            context,
-            'Time',
-            _elapsedTimeFormatted ?? '0 min 0 sec',
-            Icons.access_time,
-            Colors.blue,
-          ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
                   _buildMiniStat(
                     context,
-                    'Score',
+                    AppLocalizations.of(context)!.time,
+                    _elapsedTimeFormatted ?? '0 min 0 sec',
+                    Icons.access_time,
+                    Colors.blue,
+                  ),
+                  _buildMiniStat(
+                    context,
+                    AppLocalizations.of(context)!.score,
                     '${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
                     Icons.star,
                     _getColorForScore(_correctAnswers / (_currentIndex + 1)),
                   ),
                   _buildMiniStat(
                     context,
-                    'Correct',
+                    AppLocalizations.of(context)!.correct,
                     _correctAnswers.toString(),
                     Icons.check_circle,
                     Colors.green,
@@ -373,7 +374,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                     if (!_isSubmitted)
                       FilledButton(
                         onPressed: _currentAnswer != null ? _submitAnswer : null,
-                        child: const Text('Submit Answer'),
+                        child: Text(AppLocalizations.of(context)!.submitAnswer),
                       ),
 
                     // Feedback and navigation
@@ -442,7 +443,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Widget _buildTypedAnswerWidget(Question question) {
     return TextField(
       decoration: InputDecoration(
-        labelText: 'Your Answer',
+        labelText: AppLocalizations.of(context)!.yourAnswer,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -457,7 +458,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Widget _buildEssayWidget(Question question) {
     return TextField(
       decoration: InputDecoration(
-        labelText: 'Your Answer (${_currentAnswer?.length ?? 0} characters)',
+        labelText: AppLocalizations.of(context)!.yourAnswerCharacters(_currentAnswer?.length ?? 0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -474,6 +475,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Widget _buildFeedback(BuildContext context, Question question) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -494,7 +496,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                _isCorrect ? 'Correct!' : 'Incorrect',
+                _isCorrect ? l10n.correctFeedback : l10n.incorrectFeedback,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -515,18 +517,19 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Widget _buildNavigationButtons(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         ElevatedButton.icon(
           onPressed: _previousQuestion,
           icon: const Icon(Icons.arrow_back),
-          label: const Text('Previous'),
+          label: Text(l10n.previous),
         ),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: _nextQuestion,
           icon: const Icon(Icons.arrow_forward),
-          label: const Text('Next'),
+          label: Text(l10n.next),
         ),
       ],
     );
@@ -565,32 +568,33 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Widget _buildResultsScreen() {
+    final l10n = AppLocalizations.of(context)!;
     final accuracy = _questions.isEmpty
         ? 0.0
         : (_correctAnswers / _questions.length) * 100;
     return Scaffold(
-      appBar: AppBar(title: const Text('Session Results')),
+      appBar: AppBar(title: Text(l10n.sessionResults)),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Practice Complete!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              l10n.practiceComplete,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildStatRow('Total Questions', _questions.length.toString()),
+            _buildStatRow(l10n.totalQuestions, _questions.length.toString()),
             const SizedBox(height: 12),
-            _buildStatRow('Correct Answers', '$_correctAnswers/${_questions.length}'),
+            _buildStatRow(l10n.correctAnswers, '$_correctAnswers/${_questions.length}'),
             const SizedBox(height: 12),
-            _buildStatRow('Accuracy', '${accuracy.toStringAsFixed(0)}%'),
+            _buildStatRow(l10n.accuracy, '${accuracy.toStringAsFixed(0)}%'),
             const SizedBox(height: 24),
             Center(
               child: ElevatedButton.icon(
                 onPressed: _restartSession,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Practice Again'),
+                label: Text(l10n.practiceAgain),
               ),
             ),
           ],

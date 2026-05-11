@@ -151,8 +151,6 @@ class _TestableTopicListViewState extends State<TestableTopicListView> {
     }
   }
 
-  Future<void> _retryLoadTopics() => _loadTopics();
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());

@@ -4,6 +4,7 @@ import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -68,7 +69,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Practice Mode'),
+        title: Text(AppLocalizations.of(context)!.practiceMode),
         actions: [
           if (_subjects.isNotEmpty)
             IconButton(
@@ -76,7 +77,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               onPressed: () {
                 _showPracticeModeDialog();
               },
-              tooltip: 'Practice Options',
+              tooltip: AppLocalizations.of(context)!.practiceOptions,
             ),
         ],
       ),
@@ -93,7 +94,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               },
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.play_arrow),
-        label: Text(_subjects.isEmpty ? 'No Subjects' : 'Practice'),
+        label: Text(_subjects.isEmpty ? AppLocalizations.of(context)!.noSubjects : AppLocalizations.of(context)!.practice),
       ),
     );
   }
@@ -116,6 +117,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -129,7 +131,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No Practice Sessions Yet',
+              l10n.noPracticeSessionsYet,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -137,7 +139,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Add subjects and questions to start practicing',
+              l10n.addSubjectsAndQuestionsToStartPracticing,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey.shade600,
               ),
@@ -147,11 +149,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             ElevatedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Add subjects from the Subjects tab')),
+                  SnackBar(content: Text(l10n.addSubjectsFromSubjectsTab)),
                 );
               },
               icon: const Icon(Icons.add),
-              label: const Text('Add Subject'),
+              label: Text(l10n.addSubject),
             ),
           ],
         ),
@@ -160,11 +162,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Widget _buildModeSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Practice Modes',
+          l10n.practiceModes,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -180,29 +183,29 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           children: [
             _PracticeModeCard(
               icon: Icons.flash_on,
-              title: 'Quick Practice',
-              subtitle: '10 random questions',
+              title: l10n.quickPractice,
+              subtitle: l10n.randomQuestions(10),
               color: Colors.blue,
               onTap: () => _showPracticeModeDialog(),
             ),
             _PracticeModeCard(
               icon: Icons.schedule,
-              title: 'Spaced Repetition',
-              subtitle: 'Coming soon',
+              title: l10n.spacedRepetition,
+              subtitle: l10n.comingSoon,
               color: Colors.orange,
               onTap: null,
             ),
             _PracticeModeCard(
               icon: Icons.category,
-              title: 'Topic Focus',
-              subtitle: 'Practice specific topics',
+              title: l10n.topicFocus,
+              subtitle: l10n.practiceSpecificTopics,
               color: Colors.purple,
               onTap: () => _showTopicSelector(),
             ),
             _PracticeModeCard(
               icon: Icons.bar_chart,
-              title: 'Weak Areas',
-              subtitle: 'Focus on mistakes',
+              title: l10n.weakAreas,
+              subtitle: l10n.focusOnMistakes,
               color: Colors.red,
               onTap: null,
             ),
@@ -222,7 +225,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Your Subjects',
+          AppLocalizations.of(context)!.yourSubjects,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -267,7 +270,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Ready for practice',
+                      AppLocalizations.of(context)!.readyForPractice,
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,
@@ -339,7 +342,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Practice available',
+                          AppLocalizations.of(context)!.practiceAvailable,
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 12,
@@ -377,6 +380,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _showSubjectSelector() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -389,7 +393,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Select Subject',
+              l10n.selectSubject,
               style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -418,6 +422,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _showPracticeModeDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -430,7 +435,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Practice Mode',
+              l10n.practiceModeTitle,
               style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -439,8 +444,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             if (_subjects.length == 1)
               _PracticeModeOption(
                 icon: Icons.auto_fix_high,
-                title: 'Auto Select',
-                subtitle: 'AI picks optimal questions',
+                title: l10n.autoSelect,
+                subtitle: l10n.aiPicksOptimalQuestions,
                 onTap: () {
                   Navigator.pop(context);
                   _startPractice(_subjects.first);
@@ -451,7 +456,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Choose Subject',
+                    l10n.chooseSubject,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -460,7 +465,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                   ..._subjects.map((subject) => _PracticeModeOption(
                     icon: Icons.school,
                     title: subject.name,
-                    subtitle: subject.code ?? 'No code',
+                    subtitle: subject.code ?? l10n.noCode,
                     onTap: () {
                       Navigator.pop(context);
                       _startPractice(subject);
@@ -477,7 +482,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   void _showTopicSelector() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Topic selection coming soon!')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.topicSelectionComingSoon)),
     );
   }
 }

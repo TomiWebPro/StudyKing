@@ -253,6 +253,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1s} other{{count}s}}'**
   String durationSeconds(int count);
+
+  /// AppBar title for practice screen
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Mode'**
+  String get practiceMode;
+
+  /// Tooltip for practice options button
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Options'**
+  String get practiceOptions;
+
+  /// FAB label when no subjects available
+  ///
+  /// In en, this message translates to:
+  /// **'No Subjects'**
+  String get noSubjects;
+
+  /// Empty state heading for practice screen
+  ///
+  /// In en, this message translates to:
+  /// **'No Practice Sessions Yet'**
+  String get noPracticeSessionsYet;
+
+  /// Empty state body text for practice screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add subjects and questions to start practicing'**
+  String get addSubjectsAndQuestionsToStartPracticing;
+
+  /// Snackbar message directing to subjects tab
+  ///
+  /// In en, this message translates to:
+  /// **'Add subjects from the Subjects tab'**
+  String get addSubjectsFromSubjectsTab;
+
+  /// Button label to add a subject
+  ///
+  /// In en, this message translates to:
+  /// **'Add Subject'**
+  String get addSubject;
+
+  /// Section heading for practice modes
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Modes'**
+  String get practiceModes;
+
+  /// Quick practice mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Practice'**
+  String get quickPractice;
+
+  /// Subtitle for quick practice mode
+  ///
+  /// In en, this message translates to:
+  /// **'{count} random questions'**
+  String randomQuestions(int count);
+
+  /// Label for unavailable features
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get comingSoon;
+
+  /// Spaced repetition mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Spaced Repetition'**
+  String get spacedRepetition;
+
+  /// Topic focus mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Focus'**
+  String get topicFocus;
+
+  /// Subtitle for topic focus mode
+  ///
+  /// In en, this message translates to:
+  /// **'Practice specific topics'**
+  String get practiceSpecificTopics;
+
+  /// Weak areas mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Weak Areas'**
+  String get weakAreas;
+
+  /// Subtitle for weak areas mode
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on mistakes'**
+  String get focusOnMistakes;
+
+  /// Section heading for subjects
+  ///
+  /// In en, this message translates to:
+  /// **'Your Subjects'**
+  String get yourSubjects;
+
+  /// Subtitle for single subject card
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for practice'**
+  String get readyForPractice;
+
+  /// Label showing practice is available
+  ///
+  /// In en, this message translates to:
+  /// **'Practice available'**
+  String get practiceAvailable;
+
+  /// Title for subject selector bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Select Subject'**
+  String get selectSubject;
+
+  /// Title for practice mode bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Mode'**
+  String get practiceModeTitle;
+
+  /// Auto select option title
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Select'**
+  String get autoSelect;
+
+  /// Auto select option subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'AI picks optimal questions'**
+  String get aiPicksOptimalQuestions;
+
+  /// Title for choose subject section
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Subject'**
+  String get chooseSubject;
+
+  /// Fallback for missing subject code
+  ///
+  /// In en, this message translates to:
+  /// **'No code'**
+  String get noCode;
+
+  /// Snackbar message for unavailable topic selection
+  ///
+  /// In en, this message translates to:
+  /// **'Topic selection coming soon!'**
+  String get topicSelectionComingSoon;
+
+  /// Dialog title when no questions available
+  ///
+  /// In en, this message translates to:
+  /// **'No Questions Available'**
+  String get noQuestionsAvailable;
+
+  /// Dialog content when no questions available
+  ///
+  /// In en, this message translates to:
+  /// **'There are no questions for the selected subject/topic. Start creating questions!'**
+  String get noQuestionsForSelectedSubject;
+
+  /// Label for time stat
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get time;
+
+  /// Label for score stat
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get score;
+
+  /// Label for correct answers stat
+  ///
+  /// In en, this message translates to:
+  /// **'Correct'**
+  String get correct;
+
+  /// Label for answer input field
+  ///
+  /// In en, this message translates to:
+  /// **'Your Answer'**
+  String get yourAnswer;
+
+  /// Label for essay answer input with character count
+  ///
+  /// In en, this message translates to:
+  /// **'Your Answer ({count} characters)'**
+  String yourAnswerCharacters(int count);
+
+  /// Button label to submit answer
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Answer'**
+  String get submitAnswer;
+
+  /// Feedback message for correct answer
+  ///
+  /// In en, this message translates to:
+  /// **'Correct!'**
+  String get correctFeedback;
+
+  /// Feedback message for incorrect answer
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect'**
+  String get incorrectFeedback;
+
+  /// Button label for previous question
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get previous;
+
+  /// Button label for next question
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// AppBar title for results screen
+  ///
+  /// In en, this message translates to:
+  /// **'Session Results'**
+  String get sessionResults;
+
+  /// Heading for completed practice session
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Complete!'**
+  String get practiceComplete;
+
+  /// Label for total questions stat
+  ///
+  /// In en, this message translates to:
+  /// **'Total Questions'**
+  String get totalQuestions;
+
+  /// Label for correct answers stat in results
+  ///
+  /// In en, this message translates to:
+  /// **'Correct Answers'**
+  String get correctAnswers;
+
+  /// Label for accuracy stat
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy'**
+  String get accuracy;
+
+  /// Button label to restart practice
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Again'**
+  String get practiceAgain;
 }
 
 class _AppLocalizationsDelegate

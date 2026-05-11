@@ -154,5 +154,191 @@
         "type": "int"
       }
     }
+  },
+  "practiceMode": "Practice Mode",
+  "@practiceMode": {
+    "description": "AppBar title for practice screen"
+  },
+  "practiceOptions": "Practice Options",
+  "@practiceOptions": {
+    "description": "Tooltip for practice options button"
+  },
+  "noSubjects": "No Subjects",
+  "@noSubjects": {
+    "description": "FAB label when no subjects available"
+  },
+  "noPracticeSessionsYet": "No Practice Sessions Yet",
+  "@noPracticeSessionsYet": {
+    "description": "Empty state heading for practice screen"
+  },
+  "addSubjectsAndQuestionsToStartPracticing": "Add subjects and questions to start practicing",
+  "@addSubjectsAndQuestionsToStartPracticing": {
+    "description": "Empty state body text for practice screen"
+  },
+  "addSubjectsFromSubjectsTab": "Add subjects from the Subjects tab",
+  "@addSubjectsFromSubjectsTab": {
+    "description": "Snackbar message directing to subjects tab"
+  },
+  "addSubject": "Add Subject",
+  "@addSubject": {
+    "description": "Button label to add a subject"
+  },
+  "practiceModes": "Practice Modes",
+  "@practiceModes": {
+    "description": "Section heading for practice modes"
+  },
+  "quickPractice": "Quick Practice",
+  "@quickPractice": {
+    "description": "Quick practice mode title"
+  },
+  "randomQuestions": "{count} random questions",
+  "@randomQuestions": {
+    "description": "Subtitle for quick practice mode",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "comingSoon": "Coming soon",
+  "@comingSoon": {
+    "description": "Label for unavailable features"
+  },
+  "spacedRepetition": "Spaced Repetition",
+  "@spacedRepetition": {
+    "description": "Spaced repetition mode title"
+  },
+  "topicFocus": "Topic Focus",
+  "@topicFocus": {
+    "description": "Topic focus mode title"
+  },
+  "practiceSpecificTopics": "Practice specific topics",
+  "@practiceSpecificTopics": {
+    "description": "Subtitle for topic focus mode"
+  },
+  "weakAreas": "Weak Areas",
+  "@weakAreas": {
+    "description": "Weak areas mode title"
+  },
+  "focusOnMistakes": "Focus on mistakes",
+  "@focusOnMistakes": {
+    "description": "Subtitle for weak areas mode"
+  },
+  "yourSubjects": "Your Subjects",
+  "@yourSubjects": {
+    "description": "Section heading for subjects"
+  },
+  "readyForPractice": "Ready for practice",
+  "@readyForPractice": {
+    "description": "Subtitle for single subject card"
+  },
+  "practiceAvailable": "Practice available",
+  "@practiceAvailable": {
+    "description": "Label showing practice is available"
+  },
+  "selectSubject": "Select Subject",
+  "@selectSubject": {
+    "description": "Title for subject selector bottom sheet"
+  },
+  "practiceModeTitle": "Practice Mode",
+  "@practiceModeTitle": {
+    "description": "Title for practice mode bottom sheet"
+  },
+  "autoSelect": "Auto Select",
+  "@autoSelect": {
+    "description": "Auto select option title"
+  },
+  "aiPicksOptimalQuestions": "AI picks optimal questions",
+  "@aiPicksOptimalQuestions": {
+    "description": "Auto select option subtitle"
+  },
+  "chooseSubject": "Choose Subject",
+  "@chooseSubject": {
+    "description": "Title for choose subject section"
+  },
+  "noCode": "No code",
+  "@noCode": {
+    "description": "Fallback for missing subject code"
+  },
+  "topicSelectionComingSoon": "Topic selection coming soon!",
+  "@topicSelectionComingSoon": {
+    "description": "Snackbar message for unavailable topic selection"
+  },
+  "noQuestionsAvailable": "No Questions Available",
+  "@noQuestionsAvailable": {
+    "description": "Dialog title when no questions available"
+  },
+  "noQuestionsForSelectedSubject": "There are no questions for the selected subject/topic. Start creating questions!",
+  "@noQuestionsForSelectedSubject": {
+    "description": "Dialog content when no questions available"
+  },
+  "time": "Time",
+  "@time": {
+    "description": "Label for time stat"
+  },
+  "score": "Score",
+  "@score": {
+    "description": "Label for score stat"
+  },
+  "correct": "Correct",
+  "@correct": {
+    "description": "Label for correct answers stat"
+  },
+  "yourAnswer": "Your Answer",
+  "@yourAnswer": {
+    "description": "Label for answer input field"
+  },
+  "yourAnswerCharacters": "Your Answer ({count} characters)",
+  "@yourAnswerCharacters": {
+    "description": "Label for essay answer input with character count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "submitAnswer": "Submit Answer",
+  "@submitAnswer": {
+    "description": "Button label to submit answer"
+  },
+  "correctFeedback": "Correct!",
+  "@correctFeedback": {
+    "description": "Feedback message for correct answer"
+  },
+  "incorrectFeedback": "Incorrect",
+  "@incorrectFeedback": {
+    "description": "Feedback message for incorrect answer"
+  },
+  "previous": "Previous",
+  "@previous": {
+    "description": "Button label for previous question"
+  },
+  "next": "Next",
+  "@next": {
+    "description": "Button label for next question"
+  },
+  "sessionResults": "Session Results",
+  "@sessionResults": {
+    "description": "AppBar title for results screen"
+  },
+  "practiceComplete": "Practice Complete!",
+  "@practiceComplete": {
+    "description": "Heading for completed practice session"
+  },
+  "totalQuestions": "Total Questions",
+  "@totalQuestions": {
+    "description": "Label for total questions stat"
+  },
+  "correctAnswers": "Correct Answers",
+  "@correctAnswers": {
+    "description": "Label for correct answers stat in results"
+  },
+  "accuracy": "Accuracy",
+  "@accuracy": {
+    "description": "Label for accuracy stat"
+  },
+  "practiceAgain": "Practice Again",
+  "@practiceAgain": {
+    "description": "Button label to restart practice"
   }
 }

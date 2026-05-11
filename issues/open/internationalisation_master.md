@@ -1,40 +1,73 @@
-# Internationalisation: Practice Module Has 50+ Hardcoded Strings
+# Internationalisation: Hardcoded Strings and Locale-Ignoring Duration Formatting
 
 ## Context
 
-The StudyKing app uses a Flutter ARB-based localisation system (`lib/l10n/`) with `AppLocalizations` for English and Spanish. However, the practice feature screens contain **over 50 hardcoded English strings** that bypass the localisation system entirely. These strings cover critical user-facing content including prompts, labels, feedback messages, empty states, and navigation buttons.
+The StudyKing app uses Flutter's `flutter_localizations` and `intl` package with ARB files for English and Spanish. However, several critical i18n issues were found that cause incorrect or missing translations for end users.
 
-### Affected Files
+## Affected Files
 
-- `lib/features/practice/presentation/practice_screen.dart` (lines: 71, 79, 96, 131–136, 140, 150, 154, 167, 183–184, 189–191, 196–198, 203–205, 225, 269–271, 342, 392, 443–444, 460)
-- `lib/features/practice/presentation/practice_session_screen.dart` (lines: 149–150, 259, 273, 292, 298, 306, 376, 445, 460, 473, 497, 523, 529, 572, 579, 583–587, 593)
+- `lib/core/utils/time_utils.dart` (lines 5–51) — Duration formatting functions receive `AppLocalizations` but completely ignore it
+- `lib/core/utils/time_utils.dart:67` — `DateFormat.yMd()` uses system locale instead of app locale
+- `lib/core/utils/color_utils.dart:29–52` — `getColorLabel()` returns hardcoded English color names
+- `lib/l10n/app_es.arb` — Missing translations for several keys present in `app_en.arb`
+- `lib/l10n/app_es.arb` — Grammatically incorrect Spanish translations
 
-### Examples of Missing Translations
+## Issue 1: Duration helpers ignore localization entirely
 
-From `practice_screen.dart`:
-- `'Practice Mode'` (AppBar title)
-- `'No Practice Sessions Yet'` (empty state heading)
-- `'Add subjects and questions to start practicing'` (empty state body)
-- `'Practice Modes'`, `'Quick Practice'`, `'10 random questions'`, `'Coming soon'`, `'Spaced Repetition'`, `'Topic Focus'`, `'Practice specific topics'`, `'Weak Areas'`, `'Focus on mistakes'`
-- `'Your Subjects'`, `'Ready for practice'`
-- `'Practice Options'` (tooltip), `'No Subjects'` / `'Practice'` (FAB label)
+The private helpers `_getDurationDays`, `_getDurationHours`, `_getDurationMinutes`, and `_getDurationSeconds` each accept an `AppLocalizations l10n` parameter but return **hardcoded English abbreviations** ("1d", "2h", etc.) regardless of locale:
 
-From `practice_session_screen.dart`:
-- `'No Questions Available'`, `'There are no questions for the selected subject/topic. Start creating questions!'`
-- `'Practice'`, `'Time'`, `'Score'`, `'Correct'` (stat labels)
-- `'Your Answer'`, `'Your Answer (N characters)'` (input labels)
-- `'Submit Answer'`, `'Correct!'`, `'Incorrect'`
-- `'Previous'`, `'Next'`
-- `'Session Results'`, `'Practice Complete!'`, `'Total Questions'`, `'Correct Answers'`, `'Accuracy'`, `'Practice Again'`
+```dart
+String _getDurationDays(int count, AppLocalizations l10n) {
+  if (count == 1) return '1d';  // l10n unused
+  return '${count}d';             // l10n unused
+}
+```
+
+The ARB files **do** define `durationDays`, `durationHours`, `durationMinutes`, `durationSeconds` plural strings, but the code never calls them. This means every user — whether their locale is Spanish, English, or any future language — sees English duration abbreviations like "2d 3h 5m".
+
+**Expected**: `l10n.durationDays(count)` etc. should be called so each locale returns its own formatted string.
+
+## Issue 2: `DateFormat.yMd()` bypasses app locale
+
+In `formatDate()` (line 67), the date for non-special dates is formatted using `DateFormat.yMd().format(date)`, which uses the **system** locale rather than the Flutter app's configured locale. Users with a Spanish system locale but English app locale will see mixed locales.
+
+**Expected**: Use `DateFormat.yMd(l10nLocale)` with the app's locale, or a locale-aware `DateFormat`.
+
+## Issue 3: Color labels are hardcoded English
+
+`ColorUtils.getColorLabel()` returns hardcoded English color names ("Blue", "Green", "Orange", "Purple", "Pink", "Cyan", "Amber", "Deep Orange", "Blue Grey"). These are displayed in the UI with no localization.
+
+**Expected**: Add color label translations to the ARB files and retrieve them via `l10n` in a new `getColorLabel(l10n)` overload or static utility.
+
+## Issue 4: Missing Spanish ARB translations
+
+Several translation keys from `app_en.arb` are absent from `app_es.arb`:
+- `practiceOptions` (tooltip for practice options button)
+- `appTitle` (transcribed as "StudyKing" but should likely be localized or have a justification comment)
+
+Additionally, several keys from `app_en.arb` that exist in `app_es.arb` lack `@description` metadata, making future translation work harder.
+
+## Issue 5: Spanish grammar — "Enfócate" is informal imperative
+
+In `app_es.arb`, the translation for `focusOnMistakes` is "Enfócate en tus errores" (informal "focus yourself"). For an educational/study app, the standard formal register is "Enfóquese en sus errores".
+
+Also, "Precisión" for `accuracy` is technically valid but in the context of quiz results, "Exactitud" is more idiomatic in Spanish educational software.
 
 ## Rationale
 
-Users with a device language set to Spanish see a mixed-experience: the planner, subjects tab, and settings are fully localised, but every screen within the practice flow remains in English. This is a degraded experience for non-English users and makes the app appear unfinished. Additionally, any future expansion to other languages (French, German, etc.) would require manual string replacements rather than being handled by the existing i18n infrastructure.
+These are high-value i18n improvements because they affect **every non-English user** in real, visible ways:
+- Duration abbreviations appear in study sessions and study plans — a core app feature
+- Date formatting appears in session history — a core app feature
+- Color labels appear in subject management — a visible UI element
+- Missing/wrong translations degrade trust in localized apps
+- The duration and date formatting issues cannot be fixed by adding more ARB entries alone — the code logic must be corrected first
 
 ## Acceptance Criteria
 
-1. All user-visible strings in `practice_screen.dart` and `practice_session_screen.dart` are replaced with `AppLocalizations.of(context).<key>` calls using keys defined in `app_en.arb`.
-2. All new keys are added to `app_en.arb` with `description` metadata, and corresponding translations are added to `app_es.arb`.
-3. The ARB files are regenerated via `flutter gen-l10n` (or equivalent) to update the generated `app_localizations_*.dart` files.
-4. The Spanish translations use natural phrasing (e.g., `'Práctica'` not `'Práctica'` on every label — some labels like `'No Questions Available'` should be `'No hay preguntas disponibles'` not a literal word-for-word translation).
-5. No regressions: build passes and existing localized strings continue to display correctly.
+1. `_getDurationDays`, `_getDurationHours`, `_getDurationMinutes`, `_getDurationSeconds` in `time_utils.dart` call `l10n.durationDays(count)`, `l10n.durationHours(count)`, etc. instead of returning hardcoded strings.
+2. `formatDate()` in `time_utils.dart` uses a locale-aware `DateFormat` that respects the app's current locale (not the system locale).
+3. `ColorUtils.getColorLabel()` is either removed (if the UI already uses localized labels) or replaced with a localized version using the ARB translation system.
+4. `app_es.arb` contains translations for all keys present in `app_es.arb` that exist in `app_en.arb`.
+5. "Enfócate en tus errores" → "Enfóquese en sus errores" in `app_es.arb`.
+6. "Precisión" → "Exactitud" (or the equivalent idiomatic Spanish term for quiz accuracy) in `app_es.arb`.
+7. Regenerate `app_localizations_es.dart` and `app_localizations.dart` after fixes.

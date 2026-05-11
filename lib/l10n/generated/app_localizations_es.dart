@@ -141,4 +141,143 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get practiceMode => 'Modo de Práctica';
+
+  @override
+  String get practiceOptions => 'Opciones de Práctica';
+
+  @override
+  String get noSubjects => 'Sin Materias';
+
+  @override
+  String get noPracticeSessionsYet => 'Sin Sesiones de Práctica';
+
+  @override
+  String get addSubjectsAndQuestionsToStartPracticing =>
+      'Agrega materias y preguntas para comenzar a practicar';
+
+  @override
+  String get addSubjectsFromSubjectsTab =>
+      'Agrega materias desde la pestaña Materias';
+
+  @override
+  String get addSubject => 'Agregar Materia';
+
+  @override
+  String get practiceModes => 'Modos de Práctica';
+
+  @override
+  String get quickPractice => 'Práctica Rápida';
+
+  @override
+  String randomQuestions(int count) {
+    return '$count preguntas aleatorias';
+  }
+
+  @override
+  String get comingSoon => 'Próximamente';
+
+  @override
+  String get spacedRepetition => 'Repetición Espaciada';
+
+  @override
+  String get topicFocus => 'Enfoque por Tema';
+
+  @override
+  String get practiceSpecificTopics => 'Practica temas específicos';
+
+  @override
+  String get weakAreas => 'Áreas Débiles';
+
+  @override
+  String get focusOnMistakes => 'Enfócate en tus errores';
+
+  @override
+  String get yourSubjects => 'Tus Materias';
+
+  @override
+  String get readyForPractice => 'Listo para practicar';
+
+  @override
+  String get practiceAvailable => 'Práctica disponible';
+
+  @override
+  String get selectSubject => 'Seleccionar Materia';
+
+  @override
+  String get practiceModeTitle => 'Modo de Práctica';
+
+  @override
+  String get autoSelect => 'Selección Automática';
+
+  @override
+  String get aiPicksOptimalQuestions => 'La IA selecciona preguntas óptimas';
+
+  @override
+  String get chooseSubject => 'Elegir Materia';
+
+  @override
+  String get noCode => 'Sin código';
+
+  @override
+  String get topicSelectionComingSoon => '¡Selección de temas próximamente!';
+
+  @override
+  String get noQuestionsAvailable => 'No Hay Preguntas Disponibles';
+
+  @override
+  String get noQuestionsForSelectedSubject =>
+      'No hay preguntas para la materia/tema seleccionado. ¡Comienza a crear preguntas!';
+
+  @override
+  String get time => 'Tiempo';
+
+  @override
+  String get score => 'Puntuación';
+
+  @override
+  String get correct => 'Correctas';
+
+  @override
+  String get yourAnswer => 'Tu Respuesta';
+
+  @override
+  String yourAnswerCharacters(int count) {
+    return 'Tu Respuesta ($count caracteres)';
+  }
+
+  @override
+  String get submitAnswer => 'Enviar Respuesta';
+
+  @override
+  String get correctFeedback => '¡Correcto!';
+
+  @override
+  String get incorrectFeedback => 'Incorrecto';
+
+  @override
+  String get previous => 'Anterior';
+
+  @override
+  String get next => 'Siguiente';
+
+  @override
+  String get sessionResults => 'Resultados de la Sesión';
+
+  @override
+  String get practiceComplete => '¡Práctica Completada!';
+
+  @override
+  String get totalQuestions => 'Total de Preguntas';
+
+  @override
+  String get correctAnswers => 'Respuestas Correctas';
+
+  @override
+  String get accuracy => 'Precisión';
+
+  @override
+  String get practiceAgain => 'Practicar de Nuevo';
 }
