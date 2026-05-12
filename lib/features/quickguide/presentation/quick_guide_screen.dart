@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:studyking/core/services/llm_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class QuickGuideScreen extends StatefulWidget {
-  const QuickGuideScreen({super.key});
+  final LlmService? llmService;
+
+  const QuickGuideScreen({super.key, this.llmService});
 
   @override
   State<QuickGuideScreen> createState() => _QuickGuideScreenState();
@@ -42,17 +45,22 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
     _scrollToBottom();
     _inputFocusNode.unfocus();
 
-    await Future.delayed(const Duration(milliseconds: 1000));
-
     String response;
-    if (text.toLowerCase().contains('explain')) {
-      response = 'Sure! I can help explain concepts. What topic would you like me to explain?';
-    } else if (text.toLowerCase().contains('question') || text.toLowerCase().contains('quiz')) {
-      response = 'I can help with questions! Ask away and I\'ll do my best.';
-    } else if (text.toLowerCase().contains('math') || text.toLowerCase().contains('calculate')) {
-      response = 'I\'d be happy to help with math! What specific problem or topic would you like to work on?';
-    } else {
-      response = 'That\'s an interesting question! Let me help you understand it better.';
+    try {
+      final llm = widget.llmService;
+      if (llm != null && llm.config.apiKey.isNotEmpty) {
+        response = await llm.chat(
+          message: text,
+          modelId: 'google/gemini-2.5-flash-preview-05-20',
+          systemPrompt: 'You are StudyKing Quick Guide, a helpful AI study assistant. '
+              'Provide concise, educational answers. Help with explanations, quiz questions, '
+              'and math problems. Respond conversationally.',
+        );
+      } else {
+        response = _fallbackResponse(text);
+      }
+    } catch (_) {
+      response = _fallbackResponse(text);
     }
 
     setState(() {
@@ -61,6 +69,18 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
     });
 
     _scrollToBottom();
+  }
+
+  String _fallbackResponse(String text) {
+    if (text.toLowerCase().contains('explain')) {
+      return 'Sure! I can help explain concepts. What topic would you like me to explain?';
+    } else if (text.toLowerCase().contains('question') || text.toLowerCase().contains('quiz')) {
+      return 'I can help with questions! Ask away and I\'ll do my best.';
+    } else if (text.toLowerCase().contains('math') || text.toLowerCase().contains('calculate')) {
+      return 'I\'d be happy to help with math! What specific problem or topic would you like to work on?';
+    } else {
+      return 'That\'s an interesting question! Let me help you understand it better.';
+    }
   }
 
   void _scrollToBottom() {

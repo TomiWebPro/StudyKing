@@ -211,6 +211,79 @@ Provide validation result with explanation.
     }
   }
 
+  Future<String> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+  }) async {
+    if (config.apiKey.isEmpty) {
+      return _mockChatResponse(message);
+    }
+
+    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing Quick Guide. Keep responses concise and educational.';
+
+    try {
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (config.provider == LlmProvider.openRouter) {
+        headers['Authorization'] = 'Bearer ${config.apiKey}';
+
+        final response = await http.post(
+          Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+          headers: headers,
+          body: jsonEncode({
+            'model': modelId,
+            'messages': [
+              {'role': 'system', 'content': effectiveSystemPrompt},
+              {'role': 'user', 'content': message},
+            ],
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return data['choices'][0]['message']['content'];
+        }
+      } else if (config.provider == LlmProvider.ollama) {
+        final response = await http.post(
+          Uri.parse('${config.baseUrl}/api/chat'),
+          headers: headers,
+          body: jsonEncode({
+            'model': modelId,
+            'messages': [
+              {'role': 'user', 'content': message},
+            ],
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return data['message']['content'];
+        }
+      }
+
+      return _mockChatResponse(message);
+    } catch (e) {
+      debugPrint('LLM Chat Error: $e');
+      return _mockChatResponse(message);
+    }
+  }
+
+  String _mockChatResponse(String message) {
+    if (message.toLowerCase().contains('explain')) {
+      return 'As an AI study assistant, I can help explain various concepts. Could you tell me which specific topic you\'d like me to explain?';
+    }
+    if (message.toLowerCase().contains('quiz') || message.toLowerCase().contains('question')) {
+      return 'I can quiz you on various subjects! What topic would you like to be quizzed on?';
+    }
+    if (message.toLowerCase().contains('math') || message.toLowerCase().contains('calculate')) {
+      return 'I\'m ready to help with math! Please share the specific problem or concept you\'re working on.';
+    }
+    return 'That\'s a great question! Let me help you understand it better. Could you provide more details about what you\'re studying?';
+  }
+
   Future<Map<String, dynamic>> generateStudyPlan({
     required String subjectId,
     required String course,

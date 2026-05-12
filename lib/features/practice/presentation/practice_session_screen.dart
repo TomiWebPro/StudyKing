@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
@@ -43,6 +46,7 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
   late SpacedRepetitionRepository _srRepo;
+  late StudySessionRepository _sessionRepo;
   final AnswerValidationService _validationService = AnswerValidationService();
   List<Question> _questions = [];
   int _currentIndex = 0;
@@ -50,13 +54,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   bool _isSubmitted = false;
   bool _isFeedbackVisible = false;
   bool _isSessionComplete = false;
+  bool _sessionAutoSaved = false;
 
   // Tracking
   int _correctAnswers = 0;
   Timer? _timer;
   DateTime _sessionStartTime = DateTime.now();
   String? _elapsedTimeFormatted;
-
 
   // Results tracking
   final List<PracticeAnswerRecord> _answerRecords = [];
@@ -69,6 +73,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    _sessionRepo = StudySessionRepository();
     _loadQuestions();
     _startTimer();
   }
@@ -238,18 +243,45 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     }
   }
 
-  void _completeSession() {
+  Future<void> _completeSession() async {
     _timer?.cancel();
-    
-    // Update UI to show results
+
+    if (!_sessionAutoSaved) {
+      _sessionAutoSaved = true;
+      try {
+        await _sessionRepo.init();
+        final endTime = DateTime.now();
+        final startTime = _sessionStartTime;
+        final duration = endTime.difference(startTime).inMilliseconds;
+        final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+
+        await _sessionRepo.create(StudySession(
+          id: id,
+          startTime: startTime,
+          endTime: endTime,
+          timeSpentMs: duration,
+          questionsAnswered: _questions.length,
+          correctAnswers: _correctAnswers,
+          studentId: 'anonymous',
+          subjectId: widget.subjectId,
+        ));
+      } catch (e) {
+        debugPrint('Failed to auto-save session: $e');
+      }
+    }
+
+    if (!mounted) return;
+
     setState(() {
       _isSessionComplete = true;
     });
-    
-    // Wait briefly for UI update, then navigate
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, PracticeSessionResult(
+          questionsAnswered: _questions.length,
+          correctAnswers: _correctAnswers,
+        ));
       }
     });
   }
@@ -646,4 +678,11 @@ class PracticeAnswerRecord {
     required this.timeSpent,
     required this.userAnswer,
   });
+}
+
+class PracticeSessionResult {
+  final int questionsAnswered;
+  final int correctAnswers;
+
+  PracticeSessionResult({required this.questionsAnswered, required this.correctAnswers});
 }

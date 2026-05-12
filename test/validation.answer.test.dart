@@ -26,7 +26,14 @@ void main() {
         type: type,
         subjectId: 'sub-1',
         topicId: 'topic-1',
-        markscheme: markschemeText != null ? Markscheme(questionId: id, correctAnswer: markschemeText) : null,
+        markscheme: markschemeText != null
+            ? Markscheme(
+                questionId: id,
+                correctAnswer: markschemeText,
+                acceptableAnswers: options,
+                explanation: explanation,
+              )
+            : null,
         options: options,
         explanation: explanation,
         createdAt: now,
@@ -337,6 +344,7 @@ void main() {
       required QuestionType type,
       String? markschemeText,
       List<String> options = const [],
+      String? explanation,
     }) {
       return Question(
         id: id,
@@ -344,7 +352,14 @@ void main() {
         type: type,
         subjectId: 'sub-1',
         topicId: 'topic-1',
-        markscheme: markschemeText != null ? Markscheme(questionId: id, correctAnswer: markschemeText) : null,
+        markscheme: markschemeText != null
+            ? Markscheme(
+                questionId: id,
+                correctAnswer: markschemeText,
+                acceptableAnswers: options,
+                explanation: explanation,
+              )
+            : null,
         options: options,
         createdAt: now,
         updatedAt: now,

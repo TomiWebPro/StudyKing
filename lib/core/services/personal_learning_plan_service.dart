@@ -259,7 +259,9 @@ class PersonalLearningPlanService {
 
   Future<double> _getReadinessScore(String topicId) async {
     try {
-      return 0.5;
+      final studentId = _getStudentId();
+      final result = await _masteryService.getReadinessScore(studentId, topicId);
+      return result.isSuccess ? result.data! : 0.5;
     } catch (_) {
       return 0.5;
     }
@@ -267,11 +269,15 @@ class PersonalLearningPlanService {
 
   Future<double> _getReviewUrgency(String topicId) async {
     try {
-      return 0.3;
+      final studentId = _getStudentId();
+      final result = await _masteryService.getReviewUrgency(studentId, topicId);
+      return result.isSuccess ? result.data! : 0.3;
     } catch (_) {
       return 0.3;
     }
   }
+
+  String _getStudentId() => 'anonymous';
 
   String _generateFocus(List<PlannedTopic> topics) {
     if (topics.isEmpty) return 'General review';

@@ -553,6 +553,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No topics available'**
   String get noTopicsAvailable;
+  String get noWeakAreasFound;
+  String get noWeakAreasQuestions;
 
   /// Subtitle showing questions due for a subject
   ///

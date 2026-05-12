@@ -302,6 +302,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noTopicsAvailable => 'No hay temas disponibles';
 
   @override
+  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Sigue así!';
+
+  @override
+  String get noWeakAreasQuestions => 'No hay preguntas disponibles para tus áreas débiles.';
+
+  @override
   String get questionsDueForReview => 'preguntas pendientes de repaso';
 
   @override

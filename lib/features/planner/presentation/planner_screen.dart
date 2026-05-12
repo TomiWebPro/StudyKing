@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../../../core/data/repositories/topic_repository.dart';
+import '../../../features/subjects/data/repositories/subject_repository.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class PlannerScreen extends StatefulWidget {
@@ -16,6 +18,42 @@ class _PlannerScreenState extends State<PlannerScreen> {
   bool _isGenerating = false;
   List<_ScheduleItem> _schedule = [];
 
+  Future<List<String>> _fetchCurriculumTopics(String courseName) async {
+    try {
+      final subjectRepo = SubjectRepository();
+      final topicRepo = TopicRepository();
+      await subjectRepo.init();
+      await topicRepo.init();
+
+      final subjects = await subjectRepo.getAll();
+      final matchingSubjects = subjects.where((s) =>
+        s.name.toLowerCase().contains(courseName.toLowerCase()) ||
+        (s.code?.toLowerCase().contains(courseName.toLowerCase()) ?? false)
+      ).toList();
+
+      final topics = <String>[];
+      for (final subject in matchingSubjects) {
+        final subjectTopics = await topicRepo.getBySubject(subject.id);
+        for (final topic in subjectTopics) {
+          topics.add(topic.title);
+        }
+        if (topics.length >= 7) break;
+      }
+
+      if (topics.isEmpty) {
+        final allTopics = await topicRepo.getAll();
+        for (final topic in allTopics) {
+          topics.add(topic.title);
+          if (topics.length >= 7) break;
+        }
+      }
+
+      return topics;
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> _generatePlan() async {
     final course = _courseController.text.trim();
     final daysValue = int.tryParse(_daysController.text);
@@ -31,7 +69,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
     }
 
     setState(() => _isGenerating = true);
-    await Future.delayed(const Duration(seconds: 2));
+
+    final curriculumTopics = await _fetchCurriculumTopics(course);
 
     if (!mounted) return;
 
@@ -41,10 +80,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
     setState(() {
       _schedule = List.generate(daysValue, (dayIndex) {
+        final topicLabel = curriculumTopics.isNotEmpty
+            ? curriculumTopics[dayIndex % curriculumTopics.length]
+            : '$course - Session ${(dayIndex * sessionDuration) + 1}';
         return _ScheduleItem(
           day: dayIndex + 1,
           session: 1,
-          topic: '$course - Topic ${(dayIndex * sessionDuration) + 1}',
+          topic: topicLabel,
           duration: sessionDuration,
           totalSessions: totalSessions,
         );

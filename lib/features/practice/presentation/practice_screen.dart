@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
@@ -260,7 +261,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               title: l10n.weakAreas,
               subtitle: l10n.focusOnMistakes,
               color: Colors.red,
-              onTap: null,
+              onTap: _subjects.isNotEmpty ? () => _startWeakAreasPractice() : null,
             ),
           ],
         ),
@@ -728,6 +729,119 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _startWeakAreasPractice() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final masteryService = MasteryGraphService();
+      await masteryService.init();
+
+      if (_subjects.isEmpty) return;
+
+      if (_subjects.length == 1) {
+        await _launchWeakAreasForSubject(masteryService, _subjects.first, l10n);
+        return;
+      }
+
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.selectSubject,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._subjects.map((subject) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                  child: Icon(Icons.school, color: _getSubjectColor(subject.name)),
+                ),
+                title: Text(subject.name),
+                onTap: () {
+                  Navigator.pop(context);
+                  _launchWeakAreasForSubject(masteryService, subject, l10n);
+                },
+              )),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasFound)),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWeakAreasForSubject(
+    MasteryGraphService masteryService,
+    Subject subject,
+    AppLocalizations l10n,
+  ) async {
+    try {
+      final weakTopicsResult = await masteryService.getWeakTopics('anonymous');
+      if (weakTopicsResult.isFailure || weakTopicsResult.data == null || weakTopicsResult.data!.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasFound)),
+        );
+        return;
+      }
+
+      final weakTopicIds = weakTopicsResult.data!.map((s) => s.topicId).toSet();
+
+      final questionsResult = await _questionRepo.getAll();
+      if (questionsResult.isFailure || questionsResult.data == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noQuestionsAvailable)),
+        );
+        return;
+      }
+
+      final weakQuestions = questionsResult.data!
+          .where((q) => weakTopicIds.contains(q.topicId))
+          .toList();
+
+      if (weakQuestions.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasQuestions)),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PracticeSessionScreen(
+            subjectId: subject.id,
+            questionCount: weakQuestions.length,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasFound)),
+        );
+      }
+    }
   }
 
   void _startSpacedRepetitionSession(Subject subject) async {
