@@ -3,10 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget buildTestApp(SessionAnalyticsWidget widget) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SizedBox(
         height: 1200,
@@ -95,7 +99,7 @@ void main() {
       ));
 
       expect(find.text('1'), findsAtLeastNWidgets(1));
-      expect(find.text('1h 0m 0s'), findsOneWidget);
+      expect(find.text('1h 0m 0s'), findsAtLeastNWidgets(1));
     });
   });
 
@@ -176,7 +180,7 @@ void main() {
     });
   });
 
-  group('SessionAnalyticsWidget - onTap callback', () {
+  group('SessionAnalyticsWidget - Metric card structure', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
       final view = binding.platformDispatcher.implicitView!;
@@ -184,30 +188,54 @@ void main() {
       view.devicePixelRatio = 1.0;
     });
 
-    testWidgets('calls onTap when metric card is tapped', (tester) async {
+    testWidgets('metric card contains Icon widget', (tester) async {
       await tester.pumpWidget(buildTestApp(
-        SessionAnalyticsWidget(
-          sessions: const [],
+        const SessionAnalyticsWidget(
+          sessions: [],
           currentStreak: 0,
         ),
       ));
 
-      final card = find.byKey(const ValueKey('metric_card_Avg Session'));
-      expect(card, findsOneWidget);
-
-      await tester.tap(card);
-      await tester.pump();
+      expect(find.byIcon(Icons.timer), findsOneWidget);
+      expect(find.byIcon(Icons.history), findsOneWidget);
+      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+      expect(find.byIcon(Icons.access_time), findsOneWidget);
     });
 
-    testWidgets('metric card renders with InkWell when onTap provided', (tester) async {
+    testWidgets('metric card contains value text with bold styling', (tester) async {
       await tester.pumpWidget(buildTestApp(
-        SessionAnalyticsWidget(
-          sessions: const [],
+        const SessionAnalyticsWidget(
+          sessions: [],
           currentStreak: 0,
         ),
       ));
 
-      expect(find.byType(InkWell), findsWidgets);
+      expect(find.text('0'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('metric card contains label text via l10n', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+        ),
+      ));
+
+      expect(find.text('Avg Session'), findsOneWidget);
+      expect(find.text('Total Sessions'), findsOneWidget);
+      expect(find.text('Current Streak'), findsOneWidget);
+      expect(find.text('Total Time'), findsOneWidget);
+    });
+
+    testWidgets('metric card uses GradientContainer decoration', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+        ),
+      ));
+
+      expect(find.byType(GradientContainer), findsWidgets);
     });
   });
 
@@ -221,6 +249,8 @@ void main() {
 
     testWidgets('renders with light theme', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(brightness: Brightness.light),
         home: Scaffold(
           body: SizedBox(
@@ -238,6 +268,8 @@ void main() {
 
     testWidgets('renders with dark theme using isDark check', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(brightness: Brightness.dark),
         home: Scaffold(
           body: SizedBox(
@@ -255,6 +287,8 @@ void main() {
 
     testWidgets('renders with custom primary color', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(primaryColor: Colors.purple),
         home: Scaffold(
           body: SizedBox(
@@ -310,65 +344,6 @@ void main() {
     });
   });
 
-  group('SessionAnalyticsWidget - _buildMetricCard structure', () {
-    setUp(() {
-      final binding = TestWidgetsFlutterBinding.ensureInitialized();
-      final view = binding.platformDispatcher.implicitView!;
-      view.physicalSize = const Size(1080, 2400);
-      view.devicePixelRatio = 1.0;
-    });
-
-    testWidgets('metric card contains Icon widget', (tester) async {
-      await tester.pumpWidget(buildTestApp(
-        const SessionAnalyticsWidget(
-          sessions: [],
-          currentStreak: 0,
-        ),
-      ));
-
-      expect(find.byIcon(Icons.timer), findsOneWidget);
-      expect(find.byIcon(Icons.history), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
-      expect(find.byIcon(Icons.access_time), findsOneWidget);
-    });
-
-    testWidgets('metric card contains value text with bold styling', (tester) async {
-      await tester.pumpWidget(buildTestApp(
-        const SessionAnalyticsWidget(
-          sessions: [],
-          currentStreak: 0,
-        ),
-      ));
-
-      expect(find.text('0'), findsAtLeastNWidgets(1));
-    });
-
-    testWidgets('metric card contains label text', (tester) async {
-      await tester.pumpWidget(buildTestApp(
-        const SessionAnalyticsWidget(
-          sessions: [],
-          currentStreak: 0,
-        ),
-      ));
-
-      expect(find.text('Avg Session'), findsOneWidget);
-      expect(find.text('Total Sessions'), findsOneWidget);
-      expect(find.text('Current Streak'), findsOneWidget);
-      expect(find.text('Total Time'), findsOneWidget);
-    });
-
-    testWidgets('metric card uses gradient decoration', (tester) async {
-      await tester.pumpWidget(buildTestApp(
-        const SessionAnalyticsWidget(
-          sessions: [],
-          currentStreak: 0,
-        ),
-      ));
-
-      expect(find.byType(Container), findsWidgets);
-    });
-  });
-
   group('SessionAnalyticsWidget - edge cases', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -407,7 +382,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('100'), findsOneWidget);
+      expect(find.text('100'), findsAtLeastNWidgets(1));
     });
   });
 

@@ -225,6 +225,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicSelectionComingSoon => '¡Selección de temas próximamente!';
 
   @override
+  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Sigue así!';
+
+  @override
+  String get noWeakAreasQuestions =>
+      'No hay preguntas disponibles para tus áreas débiles.';
+
+  @override
   String get noQuestionsAvailable => 'No Hay Preguntas Disponibles';
 
   @override
@@ -300,12 +307,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noTopicsAvailable => 'No hay temas disponibles';
-
-  @override
-  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Sigue así!';
-
-  @override
-  String get noWeakAreasQuestions => 'No hay preguntas disponibles para tus áreas débiles.';
 
   @override
   String get questionsDueForReview => 'preguntas pendientes de repaso';
@@ -408,7 +409,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notifications => 'Notificaciones';
 
   @override
-  String get deleteAccountWarning => 'Eliminar su cuenta eliminará permanentemente todos los datos de estudio';
+  String get deleteAccountWarning =>
+      'Eliminar su cuenta eliminará permanentemente todos los datos de estudio';
 
   @override
   String get delete => 'Eliminar';
@@ -417,7 +419,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get deleteAccount => 'Eliminar Cuenta';
 
   @override
-  String get deleteAccountConfirmation => '¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer y eliminará permanentemente todos sus datos de estudio.';
+  String get deleteAccountConfirmation =>
+      '¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer y eliminará permanentemente todos sus datos de estudio.';
 
   @override
   String get save => 'Guardar';
@@ -543,22 +546,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get apiKeyRequired => 'Clave API Requerida';
 
   @override
-  String get pleaseConfigureApiKey => 'Por favor configure su clave API primero.';
+  String get pleaseConfigureApiKey =>
+      'Por favor configure su clave API primero.';
 
   @override
   String get ok => 'OK';
 
   @override
-  String get unableToLoadModels => 'No se pueden cargar los modelos en este momento.';
+  String get unableToLoadModels =>
+      'No se pueden cargar los modelos en este momento.';
 
   @override
   String get searchModels => 'Buscar modelos';
 
   @override
-  String get modelRequestTimedOut => 'La solicitud del modelo superó el tiempo de espera. Intente de nuevo.';
+  String get modelRequestTimedOut =>
+      'La solicitud del modelo superó el tiempo de espera. Intente de nuevo.';
 
   @override
-  String get unableToLoadModelsTryAgain => 'No se pueden cargar los modelos. Intente de nuevo.';
+  String get unableToLoadModelsTryAgain =>
+      'No se pueden cargar los modelos. Intente de nuevo.';
 
   @override
   String get signOutConfirmation => '¿Está seguro de que desea cerrar sesión?';
@@ -611,7 +618,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get pleaseEnterSubjectName => 'Por favor ingrese un nombre para la materia';
+  String get pleaseEnterSubjectName =>
+      'Por favor ingrese un nombre para la materia';
 
   @override
   String get descriptionOptional => 'Descripción (Opcional)';
@@ -635,13 +643,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get teacherNameHint => 'Ingrese el nombre del profesor';
 
   @override
-  String get syllabusDescriptionHint => 'Ingrese la descripción del plan de estudios';
+  String get syllabusDescriptionHint =>
+      'Ingrese la descripción del plan de estudios';
 
   @override
   String get noSubjectsYet => 'Sin materias todavía';
 
   @override
-  String get addFirstSubject => 'Agregue su primera materia para comenzar a estudiar';
+  String get addFirstSubject =>
+      'Agregue su primera materia para comenzar a estudiar';
 
   @override
   String get practiceSessions => 'Sesiones de práctica';
@@ -662,7 +672,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get deleteSubject => 'Eliminar Materia';
 
   @override
-  String get deleteSubjectConfirmation => '¿Está seguro de que desea eliminar esta materia? Esto también eliminará todas las lecciones y preguntas asociadas.';
+  String get deleteSubjectConfirmation =>
+      '¿Está seguro de que desea eliminar esta materia? Esto también eliminará todas las lecciones y preguntas asociadas.';
 
   @override
   String get sessionDetails => 'Detalles de la Sesión';
@@ -695,7 +706,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noLessonsYet => 'Sin lecciones todavía';
 
   @override
-  String get startLearningByCreatingTopics => 'Comience a aprender creando temas y preguntas';
+  String get startLearningByCreatingTopics =>
+      'Comience a aprender creando temas y preguntas';
 
   @override
   String get addTopic => 'Agregar Tema';
@@ -836,7 +848,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get uploadDataFileDialog => 'Subir Archivo de Datos';
 
   @override
-  String get fileUploadImplemented => 'La funcionalidad de carga de archivos se implementaría aquí.';
+  String get fileUploadImplemented =>
+      'La funcionalidad de carga de archivos se implementaría aquí.';
 
   @override
   String get graphValidation => 'Validación de Gráfico';
@@ -847,19 +860,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get considerUsingPieChart => 'Considere usar un Gráfico Circular para conjuntos pequeños de datos';
+  String get considerUsingPieChart =>
+      'Considere usar un Gráfico Circular para conjuntos pequeños de datos';
 
   @override
-  String get considerUsingBarChart => 'Considere usar un Gráfico de Barras para conjuntos grandes de datos';
+  String get considerUsingBarChart =>
+      'Considere usar un Gráfico de Barras para conjuntos grandes de datos';
 
   @override
-  String get graphTypeMatchesData => 'El tipo de gráfico coincide con la estructura de datos';
+  String get graphTypeMatchesData =>
+      'El tipo de gráfico coincide con la estructura de datos';
 
   @override
   String get graphRefreshed => 'Gráfico actualizado';
 
   @override
-  String get pleaseSelectGraphType => 'Por favor seleccione un tipo de gráfico primero';
+  String get pleaseSelectGraphType =>
+      'Por favor seleccione un tipo de gráfico primero';
 
   @override
   String get validationComplete => 'Validación completada';
@@ -870,7 +887,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get graphTypeDetectionError => 'La detección del tipo de gráfico falló';
+  String get graphTypeDetectionError =>
+      'La detección del tipo de gráfico falló';
 
   @override
   String get lessonScheduler => 'Planificador de Lecciones';
@@ -896,7 +914,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get scheduleLesson => 'Programar Lección';
 
   @override
-  String get selectCalendarDate => 'Seleccione una fecha de calendario para la lección';
+  String get selectCalendarDate =>
+      'Seleccione una fecha de calendario para la lección';
 
   @override
   String get done => 'Hecho';
@@ -944,7 +963,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gotIt => 'Entendido';
 
   @override
-  String get addAnswerBeforeSubmitting => 'Agregue una respuesta antes de enviar.';
+  String get addAnswerBeforeSubmitting =>
+      'Agregue una respuesta antes de enviar.';
 
   @override
   String get nextQuestion => 'Siguiente Pregunta';
@@ -956,7 +976,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get writeYourEssayAnswer => 'Escriba su respuesta de ensayo...';
 
   @override
-  String get questionTypeNotSupported => 'Este tipo de pregunta aún no es compatible en esta vista.';
+  String get questionTypeNotSupported =>
+      'Este tipo de pregunta aún no es compatible en esta vista.';
 
   @override
   String get multipleChoice => 'Opción Múltiple';
@@ -1032,7 +1053,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get drawingCanvas => 'Lienzo de dibujo';
 
   @override
-  String get drawYourAnswer => 'Dibuje su respuesta en el lienzo usando su dedo o lápiz';
+  String get drawYourAnswer =>
+      'Dibuje su respuesta en el lienzo usando su dedo o lápiz';
 
   @override
   String get apiConfiguration => 'Configuración de API';
@@ -1041,7 +1063,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get configureApiKeys => 'Configurar Claves API';
 
   @override
-  String get configureApiKeysDescription => 'Ingrese sus credenciales de OpenRouter a continuación. Se utilizan para impulsar las funciones de IA.';
+  String get configureApiKeysDescription =>
+      'Ingrese sus credenciales de OpenRouter a continuación. Se utilizan para impulsar las funciones de IA.';
 
   @override
   String get openRouterApiKey => 'Clave API de OpenRouter';
@@ -1056,10 +1079,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get apiBaseUrlHint => 'https://openrouter.ai/api/v1';
 
   @override
-  String get apiKeyDescription => 'Requerido para la generación de contenido con LLM. Obtenga su clave en https://openrouter.ai/keys';
+  String get apiKeyDescription =>
+      'Requerido para la generación de contenido con LLM. Obtenga su clave en https://openrouter.ai/keys';
 
   @override
-  String get apiBaseUrlDescription => 'La URL del endpoint para el servicio de IA';
+  String get apiBaseUrlDescription =>
+      'La URL del endpoint para el servicio de IA';
 
   @override
   String get saveApiKeys => 'Guardar Claves API';
@@ -1071,7 +1096,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get apiKeysSavedSuccessfully => 'Claves API guardadas exitosamente';
 
   @override
-  String get unableToSaveApiConfig => 'No se puede guardar la configuración de API. Intente de nuevo.';
+  String get unableToSaveApiConfig =>
+      'No se puede guardar la configuración de API. Intente de nuevo.';
 
   @override
   String get currentSession => 'Sesión Actual';
@@ -1118,13 +1144,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get average => 'Promedio';
 
   @override
-  String get noSessionsFoundForFilters => 'No se encontraron sesiones para los filtros seleccionados';
+  String get noSessionsFoundForFilters =>
+      'No se encontraron sesiones para los filtros seleccionados';
 
   @override
   String get tryAdjustingFilters => 'Intente ajustar sus filtros';
 
   @override
-  String get startStudyingToTrack => 'Comience a estudiar para rastrear su progreso';
+  String get startStudyingToTrack =>
+      'Comience a estudiar para rastrear su progreso';
 
   @override
   String get sessionDeleted => 'Sesión eliminada';
@@ -1141,7 +1169,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get deleteSession => 'Eliminar Sesión';
 
   @override
-  String get deleteSessionConfirmation => '¿Está seguro de que desea eliminar esta sesión?';
+  String get deleteSessionConfirmation =>
+      '¿Está seguro de que desea eliminar esta sesión?';
 
   @override
   String get noQuestions => 'Sin preguntas';
@@ -1174,4 +1203,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String failedToSaveSession(String error) {
     return 'Error al guardar la sesión: $error';
   }
+
+  @override
+  String get avgSession => 'Sesión Prom.';
+
+  @override
+  String get totalSessionsLabel => 'Sesiones Totales';
+
+  @override
+  String get currentStreakLabel => 'Racha Actual';
+
+  @override
+  String get sessionsByDayOfWeek => 'Sesiones por Día de la Semana';
+
+  @override
+  String get performanceMetrics => 'Métricas de Rendimiento';
 }

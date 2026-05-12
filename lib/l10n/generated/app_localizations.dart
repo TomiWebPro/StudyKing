@@ -46,12 +46,12 @@ import 'app_localizations_es.dart';
 ///
 /// iOS applications define key application metadata, including supported
 /// locales, in an Info.plist file that is built into the application bundle.
-/// To configure the locales supported by your app, you'll need to edit this
+/// To configure the locales supported by your app, you’ll need to edit this
 /// file.
 ///
-/// First, open your project's ios/Runner.xcworkspace Xcode workspace file.
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
 /// Then, in the Project Navigator, open the Info.plist file under the Runner
-/// project's Runner folder.
+/// project’s Runner folder.
 ///
 /// Next, select the Information Property List item, select Add Item from the
 /// Editor menu, then select Localizations from the pop-up menu.
@@ -410,6 +410,18 @@ abstract class AppLocalizations {
   /// **'Topic selection coming soon!'**
   String get topicSelectionComingSoon;
 
+  /// Message when no weak areas are found
+  ///
+  /// In en, this message translates to:
+  /// **'No weak areas found. Keep up the great work!'**
+  String get noWeakAreasFound;
+
+  /// Message when no questions found for weak areas
+  ///
+  /// In en, this message translates to:
+  /// **'No questions available for your weak areas.'**
+  String get noWeakAreasQuestions;
+
   /// Dialog title when no questions available
   ///
   /// In en, this message translates to:
@@ -553,8 +565,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No topics available'**
   String get noTopicsAvailable;
-  String get noWeakAreasFound;
-  String get noWeakAreasQuestions;
 
   /// Subtitle showing questions due for a subject
   ///
@@ -856,7 +866,7 @@ abstract class AppLocalizations {
   /// **'Small'**
   String get small;
 
-  /// Medium font size label
+  /// Medium difficulty level
   ///
   /// In en, this message translates to:
   /// **'Medium'**
@@ -2199,6 +2209,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to save session: {error}'**
   String failedToSaveSession(String error);
+
+  /// Metric card label for average session time
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Session'**
+  String get avgSession;
+
+  /// Metric card label for total sessions count
+  ///
+  /// In en, this message translates to:
+  /// **'Total Sessions'**
+  String get totalSessionsLabel;
+
+  /// Metric card label for current streak
+  ///
+  /// In en, this message translates to:
+  /// **'Current Streak'**
+  String get currentStreakLabel;
+
+  /// Section header for day-of-week chart
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions by Day of Week'**
+  String get sessionsByDayOfWeek;
+
+  /// Section header for performance metrics
+  ///
+  /// In en, this message translates to:
+  /// **'Performance Metrics'**
+  String get performanceMetrics;
 }
 
 class _AppLocalizationsDelegate

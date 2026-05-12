@@ -37,5 +37,13 @@ void main() {
       expect(service.isEnabled(AppFeature.analytics), isFalse);
       expect(service.isEnabled(AppFeature.performanceOptimization), isTrue);
     });
+
+    test('overrides map cannot be modified externally', () {
+      final overrides = <AppFeature, bool>{AppFeature.analytics: true};
+      final service = FeatureFlagService(overrides: overrides);
+      expect(service.isEnabled(AppFeature.analytics), isTrue);
+      overrides[AppFeature.analytics] = false;
+      expect(service.isEnabled(AppFeature.analytics), isTrue);
+    });
   });
 }

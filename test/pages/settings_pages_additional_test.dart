@@ -24,7 +24,7 @@ class _SyncErrorAdapter implements HttpClientAdapter {
 }
 
 class TestLLMAIEngineProvider extends LLMAIEngineProvider {
-  TestLLMAIEngineProvider({Dio? dio}) : super(dio: dio);
+  TestLLMAIEngineProvider({super.dio});
 
   bool _overrideIsLoading = false;
 
@@ -306,7 +306,6 @@ void main() {
     });
 
     testWidgets('builds and shows model options via PopupMenuButton', (tester) async {
-      String? selected;
 
       await tester.pumpWidget(
         ChangeNotifierProvider<LLMAIEngineProvider>.value(
@@ -314,9 +313,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: ModelSelectorWidget(
-                onModelSelected: (model) {
-                  selected = model;
-                },
+                onModelSelected: (_) {},
               ),
             ),
           ),

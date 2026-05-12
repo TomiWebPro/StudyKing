@@ -35,13 +35,28 @@ void main() {
         expect(secrets.googleApiKey, 'google-key');
       });
 
+      test('sets optional keys to null when not provided', () {
+        final secrets = ApiSecrets.fromRuntime(
+          openRouterApiKey: 'runtime-key',
+        );
+        expect(secrets.googleApiKey, isNull);
+        expect(secrets.whisperApiKey, isNull);
+      });
+
       test('throws in production with empty key', () {
         expect(
           () => ApiSecrets.fromRuntime(openRouterApiKey: ''),
-          // Only throws when BuildConfig.environment == production
-          // In test environment it should be development, so no throw
           isNot(throwsA(anything)),
         );
+      });
+    });
+
+    group('fromEnvironment', () {
+      test('creates secrets from environment with defaults in test mode', () {
+        final secrets = ApiSecrets.fromEnvironment();
+        expect(secrets.openRouterApiKey, isEmpty);
+        expect(secrets.googleApiKey, isNull);
+        expect(secrets.whisperApiKey, isNull);
       });
     });
   });

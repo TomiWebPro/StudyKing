@@ -96,11 +96,13 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           children: [
             Text(
               l10n.configureApiKeys,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               l10n.configureApiKeysDescription,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
             _buildApiSection(
@@ -150,7 +152,9 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -175,10 +179,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         const SizedBox(height: 4),
         Text(
           description,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

@@ -74,11 +74,51 @@ void main() {
 
       test('clamps to max allowed by chunk size', () {
         final result = PdfConfig.validatedChunkOverlap(2000, chunkSize: 4096);
-        expect(result, lessThanOrEqualTo(4096 ~/ 4));
+        expect(result, 4096 ~/ 4);
       });
 
       test('returns value when in valid range', () {
         expect(PdfConfig.validatedChunkOverlap(500, chunkSize: 8192), 500);
+      });
+
+      test('clamps to maxChunkOverlapBytes when chunkSize allows larger', () {
+        final result = PdfConfig.validatedChunkOverlap(10000, chunkSize: 64000);
+        expect(result, PdfConfig.maxChunkOverlapBytes);
+      });
+
+      test('normalizes chunkSize before computing max allowed overlap', () {
+        final result = PdfConfig.validatedChunkOverlap(500, chunkSize: -10);
+        expect(result, PdfConfig.minChunkSizeBytes ~/ 4);
+      });
+    });
+
+    group('adaptiveChunkSize boundaries', () {
+      test('returns small chunk at exactly 256KB', () {
+        expect(
+          PdfConfig.adaptiveChunkSize(documentSizeBytes: 256 * 1024),
+          4 * 1024,
+        );
+      });
+
+      test('returns medium chunk at exactly 2MB', () {
+        expect(
+          PdfConfig.adaptiveChunkSize(documentSizeBytes: 2 * 1024 * 1024),
+          8 * 1024,
+        );
+      });
+
+      test('returns large chunk at exactly 8MB', () {
+        expect(
+          PdfConfig.adaptiveChunkSize(documentSizeBytes: 8 * 1024 * 1024),
+          12 * 1024,
+        );
+      });
+
+      test('returns max chunk just above 8MB', () {
+        expect(
+          PdfConfig.adaptiveChunkSize(documentSizeBytes: 8 * 1024 * 1024 + 1),
+          16 * 1024,
+        );
       });
     });
   });
@@ -101,10 +141,36 @@ void main() {
         expect(SecurityConfig.requireAuthentication(AppEnvironment.production), isTrue);
       });
 
-      test('returns false for development by default', () {
+      test('returns true for development by default', () {
         // In development without ALLOW_UNAUTHENTICATED_MODE override
         expect(SecurityConfig.requireAuthentication(AppEnvironment.development), isTrue);
       });
+    });
+
+    group('encryptionKeyOrThrow', () {
+      test('throws StateError when STUDYKING_ENCRYPTION_KEY is not set', () {
+        // In test environment, STUDYKING_ENCRYPTION_KEY is empty
+        expect(
+          () => SecurityConfig.encryptionKeyOrThrow(),
+          throwsA(isA<StateError>()),
+        );
+      });
+    });
+
+    group('enforceStartupGuards', () {
+      test('completes without error in test environment', () {
+        // In test mode, kReleaseMode is false and env is development,
+        // so the production guard block is skipped
+        expect(() => SecurityConfig.enforceStartupGuards(), returnsNormally);
+      });
+    });
+  });
+
+  group('ErrorKeys', () {
+    test('has correct error key constants', () {
+      expect(ErrorKeys.unexpected, 'error.unexpected');
+      expect(ErrorKeys.networkConnectionFailed, 'error.network.connection_failed');
+      expect(ErrorKeys.authenticationFailed, 'error.auth.failed');
     });
   });
 
@@ -152,6 +218,11 @@ void main() {
       final config = AppConfig.bootstrap();
       final snapshot = config.redactedRuntimeSnapshot();
       expect(snapshot['appName'], 'StudyKing');
+    });
+
+    test('debugLogSnapshot does not throw', () {
+      final config = AppConfig.bootstrap();
+      expect(() => config.debugLogSnapshot(), returnsNormally);
     });
   });
 

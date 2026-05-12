@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeStudySessionRepository extends StudySessionRepository {
   _FakeStudySessionRepository({List<StudySession>? seed})
@@ -30,6 +31,8 @@ class _FakeStudySessionRepository extends StudySessionRepository {
 
 Widget _buildTestApp(_FakeStudySessionRepository repository) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: SessionHistoryScreen(sessionRepository: repository),
   );
 }

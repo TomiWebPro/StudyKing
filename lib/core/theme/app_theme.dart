@@ -22,81 +22,101 @@ class AppTheme {
   }
 
   static ThemeData lightTheme({double fontSize = 16}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF673AB7),
+      brightness: Brightness.light,
+    );
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
       ),
-      scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF673AB7),
-        brightness: Brightness.light,
-      ),
       textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        color: colorScheme.surfaceContainerHighest,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 2,
+          elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      navigationBarTheme: NavigationBarThemeData(
+        elevation: 2,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        indicatorColor: colorScheme.secondaryContainer,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
       ),
     );
   }
 
   static ThemeData darkTheme({double fontSize = 16}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF9575CD),
+      brightness: Brightness.dark,
+    );
     return ThemeData(
-      useMaterial3: false,
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
       ),
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF9575CD),
-        brightness: Brightness.dark,
-      ),
       textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        color: colorScheme.surfaceContainerHighest,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 2,
+          elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      navigationBarTheme: NavigationBarThemeData(
+        elevation: 2,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        indicatorColor: colorScheme.secondaryContainer,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
       ),
     );
   }

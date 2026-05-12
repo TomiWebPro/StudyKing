@@ -131,7 +131,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Text(
                 l10n.chooseAvatar,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -357,7 +359,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     Text(
                       l10n.accountInformation,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ListTile(
@@ -393,23 +397,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // Delete Account Warning
             Card(
-              color: _dangerColor.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.errorContainer,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning, color: _dangerColor),
+                    Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         l10n.deleteAccountWarning,
-                         style: const TextStyle(color: _dangerColor),
+                         style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                     ),
                     TextButton(
                       onPressed: () => _showDeleteConfirmation(context),
                       style: TextButton.styleFrom(
-                         foregroundColor: _dangerColor,
+                         foregroundColor: Theme.of(context).colorScheme.error,
                       ),
                       child: Text(l10n.delete),
                     ),
@@ -467,7 +471,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (required) ...[
               const SizedBox(width: 4),
@@ -491,5 +497,3 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 }
-
-const Color _dangerColor = Colors.redAccent;

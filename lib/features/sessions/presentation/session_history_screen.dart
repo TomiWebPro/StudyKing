@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
@@ -88,7 +89,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),
           ),
         ],
@@ -145,7 +146,6 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sessionHistory),
-        centerTitle: true,
         elevation: 0,
         actions: [
           if (_selectedDate != null || _selectedSubject != null)
@@ -206,12 +206,13 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryStat(l10n.sessionsLabel, _filteredSessions.length.toString(), Icons.history),
-                      _buildSummaryStat(l10n.totalTime, formatDuration(Duration(minutes: totalMinutes)), Icons.access_time),
+                      _buildSummaryStat(context, l10n.sessionsLabel, _filteredSessions.length.toString(), Icons.history),
+                      _buildSummaryStat(context, l10n.totalTime, formatDurationFromContext(context, Duration(minutes: totalMinutes)), Icons.access_time),
                       _buildSummaryStat(
+                        context,
                         l10n.average,
                         _filteredSessions.isNotEmpty
-                            ? formatDuration(Duration(minutes: totalMinutes ~/ _filteredSessions.length))
+                            ? formatDurationFromContext(context, Duration(minutes: totalMinutes ~/ _filteredSessions.length))
                             : '0m',
                         Icons.schedule,
                       ),
@@ -229,21 +230,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     );
   }
 
-  Widget _buildSummaryStat(String label, String value, IconData icon) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Icon(icon, color: theme.primaryColor, size: 28),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.primaryColor,
-          ),
-        ),
-        Text(label, style: theme.textTheme.bodySmall),
-      ],
+  Widget _buildSummaryStat(BuildContext context, String label, String value, IconData icon) {
+    return MetricCard(
+      label: label,
+      value: value,
+      icon: icon,
+      accent: Theme.of(context).primaryColor,
     );
   }
 
@@ -292,7 +284,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 16),
-            color: Colors.red,
+            color: Theme.of(context).colorScheme.error,
             child: const Icon(Icons.delete, color: Colors.white),
           ),
           child: Card(
@@ -334,7 +326,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 ],
               ),
               trailing: Text(
-                formatDuration(timeSpent),
+                formatDurationFromContext(context, timeSpent),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.primaryColor,

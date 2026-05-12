@@ -103,8 +103,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 14, bottom: 8),
             child: Text(title,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                )),
           ),
           ...children,
           const Divider(height: 1),
@@ -145,6 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
         ListTile(
           title: Text(l10n.light),
+          leading: const Icon(Icons.light_mode),
           selected: currentMode == ThemeMode.light,
           onTap: () {
             ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
@@ -153,9 +155,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         ListTile(
           title: Text(l10n.dark),
+          leading: const Icon(Icons.dark_mode),
           selected: currentMode == ThemeMode.dark,
           onTap: () {
             ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
+            Navigator.pop(context);
+          },
+        ),
+        ListTile(
+          title: Text(l10n.system),
+          leading: const Icon(Icons.settings_brightness),
+          selected: currentMode == ThemeMode.system,
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.system);
             Navigator.pop(context);
           },
         ),

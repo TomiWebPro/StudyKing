@@ -333,7 +333,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         title: Text(widget.isSpacedRepetition 
             ? '${AppLocalizations.of(context)!.spacedRepetitionMode} - ${question.type.name}'
             : '${AppLocalizations.of(context)!.practice} - ${question.type.name}'),
-        centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(value: progress),
@@ -601,9 +600,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 14,
           ),
         ),
       ],

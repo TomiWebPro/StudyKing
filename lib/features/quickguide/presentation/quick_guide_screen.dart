@@ -154,18 +154,14 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                               : colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Text(
-                            message.text,
-                            style: TextStyle(
-                              color: message.isUser
-                                  ? colorScheme.onPrimary
-                                  : colorScheme.onSurface,
-                              fontSize: 15,
-                              height: 1.4,
-                            ),
+                        child: Text(
+                          message.text,
+                          style: TextStyle(
+                            color: message.isUser
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurface,
+                            fontSize: 15,
+                            height: 1.4,
                           ),
                         ),
                       ),
@@ -240,14 +236,11 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
               return Semantics(
                 label: 'Send prompt: $prompt',
                 button: true,
-                child: ActionChip(
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
+                  child: ActionChip(
+                    label: Text(
                       prompt,
                       style: const TextStyle(fontSize: 13),
                     ),
-                  ),
                   onPressed: () => _selectPrompt(prompt),
                   backgroundColor: colorScheme.secondaryContainer,
                   side: BorderSide.none,

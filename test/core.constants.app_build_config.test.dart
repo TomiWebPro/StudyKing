@@ -27,5 +27,12 @@ void main() {
       // Default APP_ENV is 'development'
       expect(BuildConfig.environment, AppEnvironment.development);
     });
+
+    group('validateOrThrow', () {
+      test('completes without error in non-release mode', () {
+        // kReleaseMode is false in tests, so validateOrThrow returns early
+        expect(() => BuildConfig.validateOrThrow(), returnsNormally);
+      });
+    });
   });
 }

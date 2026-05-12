@@ -26,25 +26,30 @@ String formatDuration(Duration duration, {bool showDays = false, AppLocalization
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
     if (days > 0) {
-      return '${_getDurationDays(days, l10n!)} ${_getDurationHours(hours, l10n)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
+      return '${_durationPart(days, l10n, _getDurationDays, 'd')} ${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else if (hours > 0) {
-      return '${_getDurationHours(hours, l10n!)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
+      return '${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else if (minutes > 0) {
-      return '${_getDurationMinutes(minutes, l10n!)} ${_getDurationSeconds(seconds, l10n)}';
+      return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else {
-      return _getDurationSeconds(seconds, l10n!);
+      return _durationPart(seconds, l10n, _getDurationSeconds, 's');
     }
   }
   final hours = duration.inHours;
   final minutes = duration.inMinutes.remainder(60);
   final seconds = duration.inSeconds.remainder(60);
   if (hours > 0) {
-    return '${_getDurationHours(hours, l10n!)} ${_getDurationMinutes(minutes, l10n)} ${_getDurationSeconds(seconds, l10n)}';
+    return '${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
   } else if (minutes > 0) {
-    return '${_getDurationMinutes(minutes, l10n!)} ${_getDurationSeconds(seconds, l10n)}';
+    return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
   } else {
-    return _getDurationSeconds(seconds, l10n!);
+    return _durationPart(seconds, l10n, _getDurationSeconds, 's');
   }
+}
+
+String _durationPart(int count, AppLocalizations? l10n, String Function(int, AppLocalizations) localized, String fallback) {
+  if (l10n != null) return localized(count, l10n);
+  return '$count$fallback';
 }
 
 String formatDate(DateTime? date, {AppLocalizations? l10n}) {

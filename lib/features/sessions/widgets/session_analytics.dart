@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionAnalyticsWidget extends StatelessWidget {
   final List<StudySession> sessions;
@@ -25,6 +27,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final now = asOf ?? DateTime.now();
     final dayOfWeekCounts = _getSessionCountByDayOfWeek(now);
     final avgTimePerSession = sessions.isNotEmpty
@@ -34,13 +37,16 @@ class SessionAnalyticsWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Sessions by Day of Week', Icons.calendar_month, theme),
+        _buildSectionHeader(l10n.sessionsByDayOfWeek, Icons.calendar_month, theme),
         const SizedBox(height: 12),
-        _buildDayOfWeekChart(dayOfWeekCounts, theme),
+        AnimatedBarChart(
+          data: dayOfWeekCounts,
+          accentColor: theme.primaryColor,
+        ),
         const SizedBox(height: 24),
-        _buildSectionHeader('Performance Metrics', Icons.show_chart, theme),
+        _buildSectionHeader(l10n.performanceMetrics, Icons.show_chart, theme),
         const SizedBox(height: 12),
-        _buildMetricCards(theme, avgTimePerSession),
+        _buildMetricCards(context, l10n, avgTimePerSession),
       ],
     );
   }
@@ -78,101 +84,30 @@ class SessionAnalyticsWidget extends StatelessWidget {
     );
   }
 
-  static const _cardBorderRadius = BorderRadius.all(Radius.circular(12));
-  static const _barBorderRadius = BorderRadius.all(Radius.circular(6));
-  static const _chartPadding = EdgeInsets.all(16);
-  static const _cardPadding = EdgeInsets.all(16);
-  static const _chartMinBarHeight = 40.0;
-  static const _chartMaxBarHeight = 120.0;
-
-  Widget _buildDayOfWeekChart(Map<String, int> counts, ThemeData theme) {
-    final rawMax = counts.values.isNotEmpty
-        ? counts.values.reduce((a, b) => a > b ? a : b)
-        : 0;
-    final maxCount = rawMax > 0 ? rawMax : 1;
-
-    return Container(
-      padding: _chartPadding,
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: _cardBorderRadius,
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: counts.keys.map((day) {
-          final count = counts[day] ?? 0;
-          final height = _chartMinBarHeight + (count / maxCount * (_chartMaxBarHeight - _chartMinBarHeight));
-
-          return Column(
-            key: ValueKey('bar_$day'),
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: height),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Container(
-                    width: 32,
-                    height: value,
-                    decoration: BoxDecoration(
-                      color: count > 0
-                          ? theme.primaryColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
-                          : theme.disabledColor.withValues(alpha: 0.2),
-                      borderRadius: _barBorderRadius,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                day,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _bodySmallColor(theme),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: count > 0 ? theme.primaryColor : _bodySmallColor(theme),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMetricCards(ThemeData theme, Duration avgTimePerSession) {
-    final scheme = theme.colorScheme;
+  Widget _buildMetricCards(BuildContext context, AppLocalizations l10n, Duration avgTimePerSession) {
+    final scheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
         Row(
           children: [
             Expanded(
-              child: _buildMetricCard(
-                'Avg Session',
-                avgTimePerSession > Duration.zero ? formatDuration(avgTimePerSession) : '\u2014',
-                Icons.timer,
-                scheme.primary,
-                theme,
+              child: MetricCard(
+                label: l10n.avgSession,
+                value: avgTimePerSession > Duration.zero
+                    ? formatDurationFromContext(context, avgTimePerSession)
+                    : '\u2014',
+                icon: Icons.timer,
+                accent: scheme.primary,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMetricCard(
-                'Total Sessions',
-                sessions.length.toString(),
-                Icons.history,
-                scheme.secondary,
-                theme,
+              child: MetricCard(
+                label: l10n.totalSessionsLabel,
+                value: sessions.length.toString(),
+                icon: Icons.history,
+                accent: scheme.secondary,
               ),
             ),
           ],
@@ -181,87 +116,27 @@ class SessionAnalyticsWidget extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _buildMetricCard(
-                'Current Streak',
-                '$currentStreak days',
-                Icons.emoji_events,
-                scheme.tertiary,
-                theme,
+              child: MetricCard(
+                label: l10n.currentStreakLabel,
+                value: '$currentStreak days',
+                icon: Icons.emoji_events,
+                accent: scheme.tertiary,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildMetricCard(
-                'Total Time',
-                _totalStudyTime > Duration.zero ? formatDuration(_totalStudyTime) : '0s',
-                Icons.access_time,
-                scheme.error,
-                theme,
+              child: MetricCard(
+                label: l10n.totalTime,
+                value: _totalStudyTime > Duration.zero
+                    ? formatDurationFromContext(context, _totalStudyTime)
+                    : '0s',
+                icon: Icons.access_time,
+                accent: scheme.error,
               ),
             ),
           ],
         ),
       ],
     );
-  }
-
-  Widget _buildMetricCard(String label, String value, IconData icon, Color color, ThemeData theme, {VoidCallback? onTap}) {
-    final isDark = theme.brightness == Brightness.dark;
-
-    final card = Container(
-      key: ValueKey('metric_card_$label'),
-      padding: _cardPadding,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withValues(alpha: isDark ? 0.3 : 0.2),
-            color.withValues(alpha: isDark ? 0.1 : 0.05),
-          ],
-        ),
-        borderRadius: _cardBorderRadius,
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 28),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: _bodySmallColor(theme),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        borderRadius: _cardBorderRadius,
-        child: InkWell(
-          borderRadius: _cardBorderRadius,
-          onTap: onTap,
-          child: card,
-        ),
-      );
-    }
-    return card;
   }
 }

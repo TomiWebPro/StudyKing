@@ -7,6 +7,7 @@ import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
@@ -157,7 +158,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             bottom: TabBar(
               controller: _tabController,
               labelColor: theme.primaryColor,
-              unselectedLabelColor: Colors.grey,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               indicatorColor: color,
               tabs: [
                 Tab(icon: const Icon(Icons.book), text: l10n.lessonsTab),
@@ -222,7 +223,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.book_outlined, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.book_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
                   const SizedBox(height: 16),
                   Text(
                     l10n.noLessonsYet,
@@ -232,7 +233,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Text(
                     l10n.startLearningByCreatingTopics,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -293,8 +294,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           const SizedBox(height: 16),
           Text(
             l10n.practiceQuestionsFrom(widget.subjectName),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 24),
@@ -347,7 +348,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.history, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
                   const SizedBox(height: 16),
                   Text(l10n.noPracticeHistory),
                   const SizedBox(height: 8),
@@ -405,7 +406,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   ),
                   title: Text(l10n.sessionNumber(index + 1)),
                   subtitle: Text(
-                    '${formatDate((session as dynamic).startTime)} • ${formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
+                    '${formatDate((session as dynamic).startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -504,7 +505,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Expanded(
                     child: _buildStatCard(
                       l10n.time,
-                      formatDuration(Duration(milliseconds: totalTime)),
+                      formatDurationFromContext(context, Duration(milliseconds: totalTime)),
                       Icons.access_time,
                       Colors.purple,
                     ),
@@ -539,7 +540,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
                         value: avgScore / 100,
-                        backgroundColor: Colors.grey[200],
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           avgScore >= 80 ? Colors.green : avgScore >= 50 ? Colors.orange : Colors.red,
                         ),
@@ -575,30 +576,11 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
+    return MetricCard(
+      label: label,
+      value: value,
+      icon: icon,
+      accent: color,
     );
   }
 
@@ -680,7 +662,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow(l10n.date, formatDate((session as dynamic).startTime)),
-            _detailRow(l10n.duration, formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
+            _detailRow(l10n.duration, formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
             _detailRow(l10n.questions, questions.toString()),
             if (correct > 0)
               Padding(

@@ -264,6 +264,14 @@
   "@topicSelectionComingSoon": {
     "description": "Snackbar message for unavailable topic selection"
   },
+  "noWeakAreasFound": "No weak areas found. Keep up the great work!",
+  "@noWeakAreasFound": {
+    "description": "Message when no weak areas are found"
+  },
+  "noWeakAreasQuestions": "No questions available for your weak areas.",
+  "@noWeakAreasQuestions": {
+    "description": "Message when no questions found for weak areas"
+  },
   "noQuestionsAvailable": "No Questions Available",
   "@noQuestionsAvailable": {
     "description": "Dialog title when no questions available"
@@ -1613,5 +1621,25 @@
         "type": "String"
       }
     }
+  },
+  "avgSession": "Avg Session",
+  "@avgSession": {
+    "description": "Metric card label for average session time"
+  },
+  "totalSessionsLabel": "Total Sessions",
+  "@totalSessionsLabel": {
+    "description": "Metric card label for total sessions count"
+  },
+  "currentStreakLabel": "Current Streak",
+  "@currentStreakLabel": {
+    "description": "Metric card label for current streak"
+  },
+  "sessionsByDayOfWeek": "Sessions by Day of Week",
+  "@sessionsByDayOfWeek": {
+    "description": "Section header for day-of-week chart"
+  },
+  "performanceMetrics": "Performance Metrics",
+  "@performanceMetrics": {
+    "description": "Section header for performance metrics"
   }
 }

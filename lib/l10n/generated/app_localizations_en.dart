@@ -223,6 +223,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicSelectionComingSoon => 'Topic selection coming soon!';
 
   @override
+  String get noWeakAreasFound => 'No weak areas found. Keep up the great work!';
+
+  @override
+  String get noWeakAreasQuestions =>
+      'No questions available for your weak areas.';
+
+  @override
   String get noQuestionsAvailable => 'No Questions Available';
 
   @override
@@ -298,12 +305,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noTopicsAvailable => 'No topics available';
-
-  @override
-  String get noWeakAreasFound => 'No weak areas found. Keep up the great work!';
-
-  @override
-  String get noWeakAreasQuestions => 'No questions available for your weak areas.';
 
   @override
   String get questionsDueForReview => 'questions due for review';
@@ -406,7 +407,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifications => 'Notifications';
 
   @override
-  String get deleteAccountWarning => 'Deleting your account will permanently remove all study data';
+  String get deleteAccountWarning =>
+      'Deleting your account will permanently remove all study data';
 
   @override
   String get delete => 'Delete';
@@ -415,7 +417,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccount => 'Delete Account';
 
   @override
-  String get deleteAccountConfirmation => 'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.';
+  String get deleteAccountConfirmation =>
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.';
 
   @override
   String get save => 'Save';
@@ -553,10 +556,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchModels => 'Search models';
 
   @override
-  String get modelRequestTimedOut => 'Model request timed out. Please try again.';
+  String get modelRequestTimedOut =>
+      'Model request timed out. Please try again.';
 
   @override
-  String get unableToLoadModelsTryAgain => 'Unable to load models. Please try again.';
+  String get unableToLoadModelsTryAgain =>
+      'Unable to load models. Please try again.';
 
   @override
   String get signOutConfirmation => 'Are you sure you want to sign out?';
@@ -660,7 +665,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteSubject => 'Delete Subject';
 
   @override
-  String get deleteSubjectConfirmation => 'Are you sure you want to delete this subject? This will also delete all associated lessons and questions.';
+  String get deleteSubjectConfirmation =>
+      'Are you sure you want to delete this subject? This will also delete all associated lessons and questions.';
 
   @override
   String get sessionDetails => 'Session Details';
@@ -693,7 +699,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noLessonsYet => 'No lessons yet';
 
   @override
-  String get startLearningByCreatingTopics => 'Start learning by creating topics and questions';
+  String get startLearningByCreatingTopics =>
+      'Start learning by creating topics and questions';
 
   @override
   String get addTopic => 'Add Topic';
@@ -834,7 +841,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadDataFileDialog => 'Upload Data File';
 
   @override
-  String get fileUploadImplemented => 'File upload functionality would be implemented here.';
+  String get fileUploadImplemented =>
+      'File upload functionality would be implemented here.';
 
   @override
   String get graphValidation => 'Graph Validation';
@@ -845,10 +853,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get considerUsingPieChart => 'Consider using Pie Chart for small datasets';
+  String get considerUsingPieChart =>
+      'Consider using Pie Chart for small datasets';
 
   @override
-  String get considerUsingBarChart => 'Consider using Bar Chart for larger datasets';
+  String get considerUsingBarChart =>
+      'Consider using Bar Chart for larger datasets';
 
   @override
   String get graphTypeMatchesData => 'Graph type matches data structure';
@@ -954,7 +964,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get writeYourEssayAnswer => 'Write your essay answer...';
 
   @override
-  String get questionTypeNotSupported => 'This question type is not yet supported in this view.';
+  String get questionTypeNotSupported =>
+      'This question type is not yet supported in this view.';
 
   @override
   String get multipleChoice => 'Multiple Choice';
@@ -1030,7 +1041,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawingCanvas => 'Drawing canvas';
 
   @override
-  String get drawYourAnswer => 'Draw your answer on the canvas using your finger or stylus';
+  String get drawYourAnswer =>
+      'Draw your answer on the canvas using your finger or stylus';
 
   @override
   String get apiConfiguration => 'API Configuration';
@@ -1039,7 +1051,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get configureApiKeys => 'Configure API Keys';
 
   @override
-  String get configureApiKeysDescription => 'Enter your OpenRouter API credentials below. These are used to power the AI features.';
+  String get configureApiKeysDescription =>
+      'Enter your OpenRouter API credentials below. These are used to power the AI features.';
 
   @override
   String get openRouterApiKey => 'OpenRouter API Key';
@@ -1054,7 +1067,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiBaseUrlHint => 'https://openrouter.ai/api/v1';
 
   @override
-  String get apiKeyDescription => 'Required for LLM content generation. Get your key from https://openrouter.ai/keys';
+  String get apiKeyDescription =>
+      'Required for LLM content generation. Get your key from https://openrouter.ai/keys';
 
   @override
   String get apiBaseUrlDescription => 'The endpoint URL for the AI service';
@@ -1069,7 +1083,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiKeysSavedSuccessfully => 'API keys saved successfully';
 
   @override
-  String get unableToSaveApiConfig => 'Unable to save API configuration. Please try again.';
+  String get unableToSaveApiConfig =>
+      'Unable to save API configuration. Please try again.';
 
   @override
   String get currentSession => 'Current Session';
@@ -1116,7 +1131,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get average => 'Average';
 
   @override
-  String get noSessionsFoundForFilters => 'No sessions found for selected filters';
+  String get noSessionsFoundForFilters =>
+      'No sessions found for selected filters';
 
   @override
   String get tryAdjustingFilters => 'Try adjusting your filters';
@@ -1139,7 +1155,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteSession => 'Delete Session';
 
   @override
-  String get deleteSessionConfirmation => 'Are you sure you want to delete this session?';
+  String get deleteSessionConfirmation =>
+      'Are you sure you want to delete this session?';
 
   @override
   String get noQuestions => 'No questions';
@@ -1172,4 +1189,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String failedToSaveSession(String error) {
     return 'Failed to save session: $error';
   }
+
+  @override
+  String get avgSession => 'Avg Session';
+
+  @override
+  String get totalSessionsLabel => 'Total Sessions';
+
+  @override
+  String get currentStreakLabel => 'Current Streak';
+
+  @override
+  String get sessionsByDayOfWeek => 'Sessions by Day of Week';
+
+  @override
+  String get performanceMetrics => 'Performance Metrics';
 }
