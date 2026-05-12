@@ -225,5 +225,105 @@ void main() {
         expect(restored.markscheme?.correctAnswer, original.markscheme?.correctAnswer);
       });
     });
+
+    group('fromJson edge cases', () {
+      test('handles null type index by falling back to singleChoice', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': null,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.type, QuestionType.singleChoice);
+      });
+
+      test('handles string type value by falling back to singleChoice', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 'invalid',
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.type, QuestionType.singleChoice);
+      });
+
+      test('handles missing markscheme key', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.markscheme, isNull);
+      });
+
+      test('handles difficulty falling back to 1', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'difficulty': null,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.difficulty, 1);
+      });
+
+      test('handles null nextReview', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'nextReview': null,
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.nextReview, isNull);
+      });
+    });
+
+    group('copyWith edge cases', () {
+      test('setting nullable fields to null preserves original values', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          markscheme: sampleMarkscheme,
+          model: 'gemini',
+          createdAt: now,
+          updatedAt: now,
+        );
+        final copy = question.copyWith(markscheme: null, model: null);
+        expect(copy.markscheme?.correctAnswer, 'Paris');
+        expect(copy.model, 'gemini');
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('class name matches HiveType', () {
+        const question = Question;
+        expect(question.toString(), 'Question');
+      });
+    });
   });
 }

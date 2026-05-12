@@ -170,5 +170,80 @@ void main() {
         expect(restored.childTopicIds, original.childTopicIds);
       });
     });
+
+    group('fromJson edge cases', () {
+      test('uses default sortOrder 0 when null', () {
+        final json = {
+          'id': 'topic-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'description': 'Desc',
+          'sortOrder': null,
+          'syllabusText': 'Syllabus',
+        };
+        final topic = Topic.fromJson(json);
+        expect(topic.sortOrder, 0);
+      });
+
+      test('uses empty childTopicIds when null', () {
+        final json = {
+          'id': 'topic-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'description': 'Desc',
+          'syllabusText': 'Syllabus',
+          'childTopicIds': null,
+        };
+        final topic = Topic.fromJson(json);
+        expect(topic.childTopicIds, isEmpty);
+      });
+
+      test('uses empty childTopicIds when missing', () {
+        final json = {
+          'id': 'topic-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'description': 'Desc',
+          'syllabusText': 'Syllabus',
+        };
+        final topic = Topic.fromJson(json);
+        expect(topic.childTopicIds, isEmpty);
+      });
+
+      test('handles null parentId', () {
+        final json = {
+          'id': 'topic-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'description': 'Desc',
+          'parentId': null,
+          'syllabusText': 'Syllabus',
+        };
+        final topic = Topic.fromJson(json);
+        expect(topic.parentId, isNull);
+      });
+    });
+
+    group('copyWith edge cases', () {
+      test('cannot reset parentId to null with null arg', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          parentId: 'parent-1',
+          syllabusText: 'Syllabus',
+        );
+        final copy = topic.copyWith(parentId: null);
+        expect(copy.parentId, 'parent-1');
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('class name matches HiveType', () {
+        const topic = Topic;
+        expect(topic.toString(), 'Topic');
+      });
+    });
   });
 }

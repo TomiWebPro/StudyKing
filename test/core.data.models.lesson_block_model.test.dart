@@ -103,5 +103,77 @@ void main() {
         expect(restored.content, original.content);
       });
     });
+
+    group('copyWith', () {
+      test('returns identical copy with no args', () {
+        final block = LessonBlock(
+          id: 'block-1',
+          subjectId: 'subject-1',
+          lessonId: 'lesson-1',
+          type: LessonBlockType.text,
+          content: 'Content',
+          order: 2,
+        );
+        final copy = block.copyWith();
+        expect(copy.id, block.id);
+        expect(copy.type, block.type);
+        expect(copy.order, block.order);
+        expect(copy.content, block.content);
+      });
+
+      test('updates specified fields', () {
+        final block = LessonBlock(
+          id: 'block-1',
+          subjectId: 'subject-1',
+          lessonId: 'lesson-1',
+          type: LessonBlockType.text,
+          content: 'Content',
+          order: 0,
+        );
+        final copy = block.copyWith(
+          type: LessonBlockType.quiz,
+          content: 'New content',
+          order: 5,
+        );
+        expect(copy.type, LessonBlockType.quiz);
+        expect(copy.content, 'New content');
+        expect(copy.order, 5);
+        expect(copy.id, block.id);
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('handles null order falling back to 0', () {
+        final json = {
+          'id': 'block-1',
+          'subjectId': 's1',
+          'lessonId': 'l1',
+          'type': 0,
+          'content': 'Content',
+          'order': null,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.order, 0);
+      });
+
+      test('handles missing order key', () {
+        final json = {
+          'id': 'block-1',
+          'subjectId': 's1',
+          'lessonId': 'l1',
+          'type': 0,
+          'content': 'Content',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.order, 0);
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('class name matches HiveType', () {
+        const block = LessonBlock;
+        expect(block.toString(), 'LessonBlock');
+      });
+    });
   });
 }

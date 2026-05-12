@@ -66,4 +66,28 @@ class Lesson extends HiveObject {
     createdAt: DateTime.parse(json['createdAt']),
     markscheme: json['markscheme'],
   );
+
+  Lesson copyWith({
+    String? id,
+    String? subjectId,
+    String? title,
+    String? topicId,
+    List<LessonBlock>? blocks,
+    int? difficulty,
+    GeneratedBy? generatedBy,
+    DateTime? createdAt,
+    String? markscheme,
+  }) {
+    return Lesson(
+      id: id ?? this.id,
+      subjectId: subjectId ?? this.subjectId,
+      title: title ?? this.title,
+      topicId: topicId ?? this.topicId,
+      blocks: blocks ?? this.blocks,
+      difficulty: difficulty ?? this.difficulty,
+      generatedBy: generatedBy ?? this.generatedBy,
+      createdAt: createdAt ?? this.createdAt,
+      markscheme: markscheme ?? this.markscheme,
+    );
+  }
 }

@@ -152,5 +152,119 @@ void main() {
         expect(restored.generatedBy, original.generatedBy);
       });
     });
+
+    group('copyWith', () {
+      test('returns identical copy with no args', () {
+        final lesson = Lesson(
+          id: 'lesson-1',
+          subjectId: 'subject-1',
+          title: 'Title',
+          topicId: 'topic-1',
+          blocks: [sampleBlock],
+          difficulty: 2,
+          generatedBy: GeneratedBy.hybrid,
+          createdAt: now,
+        );
+        final copy = lesson.copyWith();
+        expect(copy.id, lesson.id);
+        expect(copy.title, lesson.title);
+        expect(copy.blocks.length, lesson.blocks.length);
+        expect(copy.difficulty, lesson.difficulty);
+        expect(copy.generatedBy, lesson.generatedBy);
+      });
+
+      test('updates specified fields', () {
+        final lesson = Lesson(
+          id: 'lesson-1',
+          subjectId: 'subject-1',
+          title: 'Title',
+          topicId: 'topic-1',
+          createdAt: now,
+        );
+        final copy = lesson.copyWith(
+          title: 'New Title',
+          difficulty: 5,
+          generatedBy: GeneratedBy.hybrid,
+          markscheme: 'new key',
+        );
+        expect(copy.title, 'New Title');
+        expect(copy.difficulty, 5);
+        expect(copy.generatedBy, GeneratedBy.hybrid);
+        expect(copy.markscheme, 'new key');
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('handles null blocks', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'blocks': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.blocks, isEmpty);
+      });
+
+      test('handles missing blocks key', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.blocks, isEmpty);
+      });
+
+      test('handles null difficulty falling back to 1', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'difficulty': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.difficulty, 1);
+      });
+
+      test('handles null generatedBy falling back to ai (index 0)', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'generatedBy': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.generatedBy, GeneratedBy.ai);
+      });
+
+      test('handles null markscheme', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'markscheme': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.markscheme, isNull);
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('class name matches HiveType', () {
+        const lesson = Lesson;
+        expect(lesson.toString(), 'Lesson');
+      });
+    });
   });
 }

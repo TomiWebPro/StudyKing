@@ -47,4 +47,22 @@ class LessonBlock extends HiveObject {
     content: json['content'],
     order: json['order'] ?? 0,
   );
+
+  LessonBlock copyWith({
+    String? id,
+    String? subjectId,
+    String? lessonId,
+    LessonBlockType? type,
+    String? content,
+    int? order,
+  }) {
+    return LessonBlock(
+      id: id ?? this.id,
+      subjectId: subjectId ?? this.subjectId,
+      lessonId: lessonId ?? this.lessonId,
+      type: type ?? this.type,
+      content: content ?? this.content,
+      order: order ?? this.order,
+    );
+  }
 }

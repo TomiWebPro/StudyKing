@@ -148,7 +148,8 @@ class _LLMApplcationPageState extends State<LLMApplcationPage> {
   }
 
   void _scrollToBottom() {
-    if (_autoScroll && _scrollController.offset < _scrollController.position.maxScrollExtent) {
+    if (_autoScroll && _scrollController.hasClients &&
+        _scrollController.offset < _scrollController.position.maxScrollExtent) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
   }
