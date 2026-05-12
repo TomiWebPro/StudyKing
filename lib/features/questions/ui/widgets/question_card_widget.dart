@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'dart:convert';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
@@ -86,6 +87,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
@@ -99,7 +101,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                 Chip(
                   label: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(_getTypeLabel()),
+                    child: Text(_getTypeLabel(l10n)),
                   ),
                   backgroundColor: _getTypeColor(),
                   shape: RoundedRectangleBorder(
@@ -111,7 +113,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   child: Chip(
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text('Difficulty: ${_difficultyLabel(widget.question.difficulty)}'),
+                      child: Text(l10n.difficultyLabel(_difficultyLabel(widget.question.difficulty, l10n))),
                     ),
                     backgroundColor: _getDifficultyColor(),
                     shape: RoundedRectangleBorder(
@@ -124,7 +126,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   Chip(
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(_isCurrentAnswerCorrect() ? 'Correct' : 'Incorrect'),
+                      child: Text(_isCurrentAnswerCorrect() ? l10n.correctFeedback : l10n.incorrectFeedback),
                     ),
                     backgroundColor: _isCurrentAnswerCorrect()
                         ? Colors.green
@@ -159,14 +161,14 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                           widget.onAnswerSubmitted(_localAnswer);
                         }
                       : null,
-                  child: const Text('Submit Answer'),
+                  child: Text(l10n.submitAnswer),
                 ),
               ),
             if (!widget.isSubmitted && !_canSubmit)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Add an answer before submitting.',
+                  l10n.addAnswerBeforeSubmitting,
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -180,7 +182,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                 child: OutlinedButton.icon(
                   onPressed: widget.onNext,
                   icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Next Question'),
+                  label: Text(l10n.nextQuestion),
                 ),
               ),
           ],
@@ -208,11 +210,12 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
         return _buildCanvasContent(context);
 
       default:
+        final l10n = AppLocalizations.of(context)!;
         return Row(
-          children: const [
-            Icon(Icons.info_outline),
-            SizedBox(width: 8),
-            Expanded(child: Text('This question type is not yet supported in this view.')),
+          children: [
+            const Icon(Icons.info_outline),
+            const SizedBox(width: 8),
+            Expanded(child: Text(l10n.questionTypeNotSupported)),
           ],
         );
     }
@@ -276,11 +279,12 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildTextAnswerContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: _textController,
       maxLines: 3,
       decoration: InputDecoration(
-        hintText: 'Type your answer here...',
+        hintText: l10n.typeYourAnswerHere,
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -292,11 +296,12 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildEssayContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: _essayController,
       maxLines: 10,
       decoration: InputDecoration(
-        hintText: 'Write your essay answer...',
+        hintText: l10n.writeYourEssayAnswer,
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -344,24 +349,24 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
     return answer.trim().isNotEmpty;
   }
 
-  String _getTypeLabel() {
+  String _getTypeLabel(AppLocalizations l10n) {
     switch (widget.question.type) {
       case QuestionType.singleChoice:
-        return 'Multiple Choice';
+        return l10n.multipleChoice;
       case QuestionType.multiChoice:
-        return 'Multiple Select';
+        return l10n.multipleSelect;
       case QuestionType.typedAnswer:
-        return 'Text Answer';
+        return l10n.textAnswer;
       case QuestionType.mathExpression:
-        return 'Math';
+        return l10n.math;
       case QuestionType.essay:
-        return 'Essay';
+        return l10n.essay;
       case QuestionType.canvas:
-        return 'Diagram';
+        return l10n.diagram;
       case QuestionType.graphDrawing:
-        return 'Graph';
+        return l10n.graphQuestion;
       case QuestionType.stepByStep:
-        return 'Step-by-Step';
+        return l10n.stepByStep;
       default:
         return 'Question';
     }
@@ -398,14 +403,14 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
     }
   }
 
-  String _difficultyLabel(int value) {
+  String _difficultyLabel(int value, AppLocalizations l10n) {
     switch (value) {
       case 1:
-        return 'Easy';
+        return l10n.easy;
       case 2:
-        return 'Medium';
+        return l10n.medium;
       case 3:
-        return 'Hard';
+        return l10n.hard;
       default:
         return value.toString();
     }

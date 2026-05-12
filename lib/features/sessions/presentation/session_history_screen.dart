@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   final StudySessionRepository? sessionRepository;
@@ -74,20 +75,21 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Future<bool> _deleteSession(StudySession session) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Session'),
-        content: Text('Are you sure you want to delete this session?'),
+        title: Text(l10n.deleteSession),
+        content: Text(l10n.deleteSessionConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -103,9 +105,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Session deleted'),
+              content: Text(l10n.sessionDeleted),
               action: SnackBarAction(
-                label: 'Undo',
+                label: l10n.undo,
                 onPressed: () {
                   _sessionRepository.create(session);
                   _loadSessions();
@@ -118,7 +120,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete session: $e')),
+            SnackBar(content: Text(l10n.failedToDeleteSession(e.toString()))),
           );
         }
         return false;
@@ -134,6 +136,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final totalMinutes = _filteredSessions.fold<int>(
       0,
       (sum, s) => sum + _formatTimeMinutes(Duration(milliseconds: s.timeSpentMs)),
@@ -141,7 +144,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Session History'),
+        title: Text(l10n.sessionHistory),
         centerTitle: true,
         elevation: 0,
         actions: [
@@ -149,7 +152,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: _clearFilters,
-              tooltip: 'Clear filters',
+              tooltip: l10n.clearFilters,
             ),
         ],
       ),
@@ -172,7 +175,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                               label: Text(
                                 _selectedDate != null
                                     ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                                    : 'Filter by Date',
+                                    : l10n.filterByDate,
                               ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: theme.primaryColor,
@@ -185,7 +188,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                               onPressed: () => _showSubjectFilter(),
                               icon: Icon(Icons.folder, color: theme.primaryColor),
                               label: Text(
-                                _selectedSubject != null ? _selectedSubject! : 'Filter by Subject',
+                                _selectedSubject != null ? _selectedSubject! : l10n.filterBySubject,
                               ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: theme.primaryColor,
@@ -203,10 +206,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryStat('Sessions', _filteredSessions.length.toString(), Icons.history),
-                      _buildSummaryStat('Total Time', formatDuration(Duration(minutes: totalMinutes)), Icons.access_time),
+                      _buildSummaryStat(l10n.sessionsLabel, _filteredSessions.length.toString(), Icons.history),
+                      _buildSummaryStat(l10n.totalTime, formatDuration(Duration(minutes: totalMinutes)), Icons.access_time),
                       _buildSummaryStat(
-                        'Average',
+                        l10n.average,
                         _filteredSessions.isNotEmpty
                             ? formatDuration(Duration(minutes: totalMinutes ~/ _filteredSessions.length))
                             : '0m',
@@ -245,6 +248,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -253,8 +257,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           const SizedBox(height: 16),
           Text(
             _selectedDate != null || _selectedSubject != null
-                ? 'No sessions found for selected filters'
-                : 'No sessions yet',
+                ? l10n.noSessionsFoundForFilters
+                : l10n.noSessionsYet,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodySmall?.color,
             ),
@@ -262,8 +266,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           const SizedBox(height: 8),
           Text(
             _selectedDate != null || _selectedSubject != null
-                ? 'Try adjusting your filters'
-                : 'Start studying to track your progress',
+                ? l10n.tryAdjustingFilters
+                : l10n.startStudyingToTrack,
             style: theme.textTheme.bodyMedium,
           ),
         ],
@@ -272,6 +276,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Widget _buildSessionsList(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView.separated(
       itemCount: _filteredSessions.length,
       separatorBuilder: (context, index) => const Divider(height: 1),
@@ -302,7 +307,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 child: Icon(Icons.play_arrow, color: theme.primaryColor),
               ),
               title: Text(
-                'Session ${_allSessions.length - position}',
+                l10n.sessionNumber(_allSessions.length - position),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -313,12 +318,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '${formatDate(session.startTime)} • '
-                    '${session.questionsAnswered > 0 ? '${session.questionsAnswered} questions' : 'No questions'}',
+                    '${session.questionsAnswered > 0 ? l10n.questionsCountLabel(session.questionsAnswered) : l10n.noQuestions}',
                     style: theme.textTheme.bodySmall,
                   ),
                   if (session.correctAnswers > 0)
                     Text(
-                      'Correct: ${session.correctAnswers}/${session.questionsAnswered}',
+                      l10n.correctOf(session.correctAnswers, session.questionsAnswered),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: session.questionsAnswered > 0 &&
                                 session.correctAnswers >= (session.questionsAnswered / 2)
@@ -344,12 +349,13 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Future<void> _showDatePicker() async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now(),
-      helpText: 'Select a date to filter sessions',
+      helpText: l10n.selectDateToFilter,
     );
 
     if (picked != null) {
@@ -361,6 +367,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Future<void> _showSubjectFilter() async {
+    final l10n = AppLocalizations.of(context)!;
     final subjects = _allSessions.map((s) => s.subjectId).toSet().toList()..sort();
 
     if (subjects.isEmpty) return;
@@ -368,7 +375,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     final selected = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Filter by Subject'),
+        title: Text(l10n.filterBySubjectTitle),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -387,7 +394,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Clear'),
+            child: Text(l10n.clearFilterLabel),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class QuickGuideScreen extends StatefulWidget {
   const QuickGuideScreen({super.key});
@@ -90,17 +91,18 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quick Guide'),
+        title: Text(l10n.quickGuide),
         actions: [
           Semantics(
-            label: 'Quick Guide help',
+            label: l10n.quickGuideHelp,
             button: true,
             child: IconButton(
               icon: const Icon(Icons.help_outline),
-              tooltip: 'Help',
+              tooltip: l10n.help,
               onPressed: () => _showHelpDialog(context),
             ),
           ),
@@ -172,7 +174,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Quick Guide is thinking...',
+                        l10n.quickGuideIsThinking,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 13,
@@ -194,6 +196,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
 
   Widget _buildSuggestedPrompts(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
@@ -202,7 +205,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Suggested prompts',
+              l10n.suggestedPrompts,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -239,6 +242,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
 
   Widget _buildMessageComposer(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -256,7 +260,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
           Expanded(
             child: Semantics(
               label: 'Message input for Quick Guide',
-              hint: 'Type your question here',
+              hint: l10n.messageInputHint,
               child: TextField(
                 controller: _textController,
                 focusNode: _inputFocusNode,
@@ -264,7 +268,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                 minLines: 1,
                 textInputAction: TextInputAction.send,
                 decoration: InputDecoration(
-                  hintText: 'Ask anything...',
+                  hintText: l10n.askAnything,
                   hintStyle: TextStyle(
                     color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                   ),
@@ -296,12 +300,12 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
           ),
           const SizedBox(width: 8),
           Semantics(
-            label: 'Send message',
+            label: l10n.sendMessage,
             button: true,
             child: IconButton.filled(
               icon: const Icon(Icons.send),
               onPressed: _sendMessage,
-              tooltip: 'Send message',
+              tooltip: l10n.sendMessage,
               style: IconButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
@@ -315,10 +319,11 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   }
 
   void _showHelpDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Quick Guide Help'),
+        title: Text(l10n.quickGuideHelpTitle),
         content: const Text(
           'Quick Guide is your AI study assistant. You can:\n\n'
           '• Ask questions about any subject\n'
@@ -329,7 +334,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
+            child: Text(l10n.gotIt),
           ),
         ],
       ),

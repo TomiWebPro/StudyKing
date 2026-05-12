@@ -2,6 +2,7 @@
 // Renders graphs and allows LLM input to check graph type
 
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../providers/llm_engine_provider.dart';
 
 class GraphRenderingPage extends StatefulWidget {
@@ -36,19 +37,20 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Graph Renderer'),
+        title: Text(l10n.graphRenderer),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _hasData ? _reRenderGraph : null,
-            tooltip: 'Refresh graph',
+            tooltip: l10n.refreshGraph,
           ),
           IconButton(
             icon: const Icon(Icons.verified),
             onPressed: _hasData ? _validateGraphType : null,
-            tooltip: 'Validate graph type',
+            tooltip: l10n.validateGraphType,
           ),
         ],
       ),
@@ -61,21 +63,21 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Upload Data'),
+                    Text(l10n.uploadData),
                     const SizedBox(height: 16),
                     TextButton.icon(
                       onPressed: _showUploadDialog,
                       icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload Data File'),
+                      label: Text(l10n.uploadDataFile),
                     ),
                     const SizedBox(height: 8),
-                    const Text('Or paste data directly:'),
+                    Text(l10n.orPasteDataDirectly),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _dataController,
-                      decoration: const InputDecoration(
-                        hintText: 'Paste comma-separated data...',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: l10n.pasteDataHint,
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 4,
                       onChanged: (value) {
@@ -97,13 +99,13 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Graph Type Detection'),
+                    Text(l10n.graphTypeDetection),
                     const SizedBox(height: 16),
                     Row(
-                      children: const [
-                        Icon(Icons.show_chart),
-                        SizedBox(width: 8),
-                        Text('Auto-detect from data:'),
+                      children: [
+                        const Icon(Icons.show_chart),
+                        const SizedBox(width: 8),
+                        Text(l10n.autoDetectFromData),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -111,28 +113,28 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                       spacing: 12,
                       children: [
                         ActionChip(
-                          label: const Text('Line Graph'),
+                          label: Text(l10n.lineGraph),
                           onPressed: () => _setGraphType('line'),
                           backgroundColor: _selectedGraphType == 'line'
                               ? Theme.of(context).colorScheme.primaryContainer
                               : null,
                         ),
                         ActionChip(
-                          label: const Text('Bar Chart'),
+                          label: Text(l10n.barChart),
                           onPressed: () => _setGraphType('bar'),
                           backgroundColor: _selectedGraphType == 'bar'
                               ? Theme.of(context).colorScheme.primaryContainer
                               : null,
                         ),
                         ActionChip(
-                          label: const Text('Scatter Plot'),
+                          label: Text(l10n.scatterPlot),
                           onPressed: () => _setGraphType('scatter'),
                           backgroundColor: _selectedGraphType == 'scatter'
                               ? Theme.of(context).colorScheme.primaryContainer
                               : null,
                         ),
                         ActionChip(
-                          label: const Text('Pie Chart'),
+                          label: Text(l10n.pieChart),
                           onPressed: () => _setGraphType('pie'),
                           backgroundColor: _selectedGraphType == 'pie'
                               ? Theme.of(context).colorScheme.primaryContainer
@@ -151,15 +153,15 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('LLM Validation'),
+                    Text(l10n.llmValidation),
                     const SizedBox(height: 16),
-                    const Text('Use LLM to validate graph:'),
+                    Text(l10n.useLlmToValidateGraph),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _validationController,
-                      decoration: const InputDecoration(
-                        hintText: 'Describe what you see in the graph...',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: l10n.describeWhatYouSee,
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                     ),
@@ -173,7 +175,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.check_circle),
-                      label: Text(_isLoading ? 'Validating...' : 'Validate with LLM'),
+                      label: Text(_isLoading ? l10n.validating : l10n.validateWithLlm),
                     ),
                     if (_validationResult != null) ...[
                       const SizedBox(height: 16),
@@ -226,7 +228,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Rendered Graph'),
+                    Text(l10n.renderedGraph),
                     const SizedBox(height: 16),
                     _buildGraphDisplay(),
                   ],
@@ -240,6 +242,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
   }
 
   Widget _buildGraphDisplay() {
+    final l10n = AppLocalizations.of(context)!;
     if (!_hasData) {
       return SizedBox(
         height: 300,
@@ -254,7 +257,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No data uploaded',
+                l10n.noDataUploaded,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 16,
@@ -262,7 +265,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Upload or paste data to visualize',
+                l10n.uploadOrPasteData,
                 style: TextStyle(
                   color: Colors.grey.shade500,
                   fontSize: 14,
@@ -288,7 +291,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Select a graph type to visualize',
+                l10n.selectGraphType,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 16,
@@ -313,7 +316,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${_getGraphTypeName()} Visualization',
+              l10n.graphVisualization(_getGraphTypeName()),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontSize: 18,
@@ -322,7 +325,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Data points: ${_graphData.split(',').length}',
+              l10n.dataPointsCount(_graphData.split(',').length),
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontSize: 14,
@@ -365,14 +368,15 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
   }
 
   void _showUploadDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Upload Data File'),
-        content: const Text('File upload functionality would be implemented here.'),
+        title: Text(l10n.uploadDataFileDialog),
+        content: Text(l10n.fileUploadImplemented),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text(l10n.ok),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -381,6 +385,7 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
   }
 
   void _setGraphType(String type) {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _selectedGraphType = type;
       _validationResult = null;
@@ -388,13 +393,14 @@ class _GraphRenderingPageState extends State<GraphRenderingPage> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Graph type set to ${_getGraphTypeName()}'),
+        content: Text(l10n.graphTypeSetTo(_getGraphTypeName())),
         duration: const Duration(seconds: 1),
       ),
     );
   }
 
   void _validateWithLLM() {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
       _validationResult = null;
@@ -424,37 +430,39 @@ Please respond with whether the graph type matches the data and provide a brief 
           _isLoading = false;
           _validationResult = response.choices.isNotEmpty
               ? response.choices[0].content
-              : 'Validation complete';
+              : l10n.validationComplete;
         });
       },
       onError: (error) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Validation failed: $error';
+          _errorMessage = l10n.validationFailed(error.toString());
         });
       },
     );
   }
 
   void _reRenderGraph() {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _validationResult = null;
       _errorMessage = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Graph refreshed'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: Text(l10n.graphRefreshed),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
 
   void _validateGraphType() {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedGraphType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a graph type first'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(l10n.pleaseSelectGraphType),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
@@ -464,31 +472,31 @@ Please respond with whether the graph type matches the data and provide a brief 
     String recommendation;
 
     if (dataPoints <= 3 && _selectedGraphType != 'pie') {
-      recommendation = 'Consider using Pie Chart for small datasets';
+      recommendation = l10n.considerUsingPieChart;
     } else if (dataPoints > 10 && _selectedGraphType == 'pie') {
-      recommendation = 'Consider using Bar Chart for larger datasets';
+      recommendation = l10n.considerUsingBarChart;
     } else {
-      recommendation = 'Graph type matches data structure';
+      recommendation = l10n.graphTypeMatchesData;
     }
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Graph Validation'),
+        title: Text(l10n.graphValidation),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Type: ${_getGraphTypeName()}'),
+            Text(l10n.typeLabel(_getGraphTypeName())),
             const SizedBox(height: 8),
-            Text('Data points: $dataPoints'),
+            Text(l10n.dataPointsCount(dataPoints)),
             const SizedBox(height: 8),
             Text(recommendation),
           ],
         ),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text(l10n.ok),
             onPressed: () => Navigator.pop(context),
           ),
         ],

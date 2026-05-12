@@ -22,6 +22,18 @@ class MasteryGraphRepository {
   late Box<TopicDependency> _dependencyBox;
   late Box<QuestionEvaluation> _evaluationBox;
 
+  MasteryGraphRepository();
+
+  MasteryGraphRepository.test({
+    required Box<MasteryState> masteryBox,
+    required Box<QuestionMasteryState> questionMasteryBox,
+    required Box<TopicDependency> dependencyBox,
+    required Box<QuestionEvaluation> evaluationBox,
+  })  : _masteryBox = masteryBox,
+        _questionMasteryBox = questionMasteryBox,
+        _dependencyBox = dependencyBox,
+        _evaluationBox = evaluationBox;
+
   Future<Result<void>> init() async {
     try {
       _masteryBox = await Hive.openBox<MasteryState>('mastery_states');

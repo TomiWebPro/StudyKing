@@ -1,0 +1,15 @@
+Analyzing StudyKing...                                          
+
+warning • Unused import: 'package:dio/dio.dart' • test/services.batch_processor_service.test.dart:2:8 • unused_import
+warning • Unused import: 'package:dio/dio.dart' • test/services.lesson_scheduler_engine.test.dart:2:8 • unused_import
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.lesson_scheduler_engine.test.dart:123:25 • non_type_as_type_argument
+  error • Undefined name 'price' • test/services.llm_api_service.test.dart:261:18 • undefined_identifier
+  error • Classes can only extend other classes • test/services.pdf_processing_service.test.dart:6:39 • extends_non_class
+warning • The method doesn't override an inherited method • test/services.pdf_processing_service.test.dart:10:18 • override_on_non_overriding_member
+  error • The argument type 'MockLLMAIEngineProvider' can't be assigned to the parameter type 'LLMAIEngineProvider'.  • test/services.pdf_processing_service.test.dart:22:57 • argument_type_not_assignable
+  error • The argument type 'MockLLMAIEngineProvider' can't be assigned to the parameter type 'LLMAIEngineProvider'.  • test/services.pdf_processing_service.test.dart:73:59 • argument_type_not_assignable
+warning • Unused import: 'package:dio/dio.dart' • test/services.pdf_upload_coordinator.test.dart:2:8 • unused_import
+warning • Unused import: 'dart:io' • test/services.pdf_upload_coordinator.test.dart:4:8 • unused_import
+
+
+10 issues found. (ran in 2.1s)

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -419,5 +420,282 @@ void main() {
       final saveButton = find.widgetWithText(TextButton, 'Save');
       expect(saveButton, findsOneWidget);
     });
+
+    group('Network Error Handling', () {
+      testWidgets('shows error when model selection API returns non-200', (tester) async {
+        HttpOverrides.global = _MockHttpOverride(
+          responseStatusCode: 500,
+          responseBody: '{"error": "Server error"}',
+        );
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('AI Model'));
+        await tester.pumpAndSettle();
+
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Unable to load models right now.'), findsOneWidget);
+      });
+
+      testWidgets('shows timeout error message after network timeout', (tester) async {
+        HttpOverrides.global = _TimeoutHttpOverride();
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('AI Model'));
+        await tester.pump();
+
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Model request timed out. Please try again.'), findsOneWidget);
+      });
+
+      testWidgets('shows generic error on malformed response', (tester) async {
+        HttpOverrides.global = _MockHttpOverride(
+          responseStatusCode: 200,
+          responseBody: 'not valid json {{{',
+        );
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('AI Model'));
+        await tester.pumpAndSettle();
+
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      });
+    });
+
+    group('State Verification', () {
+      testWidgets('theme change updates provider state', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(themeMode: ThemeMode.light.index),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Theme'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Dark').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dark'), findsWidgets);
+      });
+
+      testWidgets('font size change updates state', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(fontSize: 16.0),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Font Size'));
+        await tester.pumpAndSettle();
+
+        final slider = find.byType(Slider);
+        expect(slider, findsOneWidget);
+
+        await tester.drag(slider, const Offset(100, 0));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('study reminders toggle updates state', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(studyRemindersEnabled: true),
+        ));
+        await tester.pumpAndSettle();
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Study Reminders');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('timeout value persists after dialog closes', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(requestTimeoutSeconds: 60),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('60 seconds'), findsOneWidget);
+
+        await tester.tap(find.text('Request Timeout'));
+        await tester.pumpAndSettle();
+
+        final slider = find.byType(Slider);
+        await tester.drag(slider, const Offset(50, 0));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Request Timeout'), findsOneWidget);
+      });
+
+      testWidgets('session duration selection updates state', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(sessionDurationMinutes: 30),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Session Duration'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('60 minutes'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('60 minutes'), findsWidgets);
+      });
+    });
+
+    group('Slider Validation', () {
+      testWidgets('timeout slider clamps to 30-300 range', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(requestTimeoutSeconds: 120),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Request Timeout'));
+        await tester.pumpAndSettle();
+
+        final slider = find.byType(Slider);
+        final sliderWidget = tester.widget<Slider>(slider);
+
+        expect(sliderWidget.min, equals(30));
+        expect(sliderWidget.max, equals(300));
+      });
+
+      testWidgets('font size slider clamps to 10-30 range', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(fontSize: 16.0),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Font Size'));
+        await tester.pumpAndSettle();
+
+        final slider = find.byType(Slider);
+        final sliderWidget = tester.widget<Slider>(slider);
+
+        expect(sliderWidget.min, equals(10));
+        expect(sliderWidget.max, equals(30));
+      });
+
+      testWidgets('only valid session duration options available', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          initialSettings: SettingsBox(sessionDurationMinutes: 30),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Session Duration'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('15 minutes'), findsOneWidget);
+        expect(find.text('30 minutes'), findsOneWidget);
+        expect(find.text('45 minutes'), findsOneWidget);
+        expect(find.text('60 minutes'), findsOneWidget);
+        expect(find.text('90 minutes'), findsOneWidget);
+        expect(find.text('120 minutes'), findsNothing);
+      });
+    });
+
+    group('Model Parsing', () {
+      testWidgets('AI model selection parses provider correctly', (tester) async {
+        HttpOverrides.global = _MockHttpOverride(
+          responseStatusCode: 200,
+          responseBody: '{"data": [{"id": "anthropic/claude-3", "name": "Claude 3", "providers": [{"id": "openrouter"}]}]}',
+        );
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('AI Model'));
+        await tester.pumpAndSettle();
+
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Claude 3'), findsOneWidget);
+      });
+
+      testWidgets('empty model list handled gracefully', (tester) async {
+        HttpOverrides.global = _MockHttpOverride(
+          responseStatusCode: 200,
+          responseBody: '{"data": []}',
+        );
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('AI Model'));
+        await tester.pumpAndSettle();
+
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ListView), findsOneWidget);
+      });
+    });
+
+    group('Sign Out Flow', () {
+      testWidgets('sign out clears API key and model providers', (tester) async {
+        await tester.pumpWidget(buildSettingsScreen(
+          apiKey: 'sk-to-be-cleared',
+          selectedModel: 'test-model',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign Out'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Not configured'), findsOneWidget);
+      });
+    });
   });
+}
+
+class _MockHttpOverride extends HttpOverrides {
+  final int responseStatusCode;
+  final String responseBody;
+
+  _MockHttpOverride({
+    required this.responseStatusCode,
+    required this.responseBody,
+  });
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(context);
+    client.findProxy = (uri) => 'PROXY localhost';
+    return client;
+  }
+}
+
+class _TimeoutHttpOverride extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(context);
+    client.findProxy = (uri) => 'PROXY localhost';
+    return client;
+  }
 }

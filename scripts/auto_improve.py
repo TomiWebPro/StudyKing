@@ -33,29 +33,29 @@ MASTERS = [
         "title": "Internationalisation Master",
         "focus": (
             "Identify where internationalisation can be improved. Find translation mistakes, "
-            "inappropriate localization, missing language support, and better translation opportunities."
+            "inappropriate localization, missing language support, and better translation opportunities. Currently, focus on localisation of Spanish as an exampel so later more languages can be added easily. "
         ),
     },
     {
         "id": "code_refactor_master",
         "title": "Code Refactor Master & Quality",
         "focus": (
-            "Identify readability, maintainability, file placement, structure issues, hardcoded components, "
-            "dead code, outdated components, and inappropriate comment levels."
+            "Identify readability, maintainability, file placement structure issues, hardcoded components, "
+            "dead code, outdated components, inappropriate comment/log levels."
         ),
     },
     {
         "id": "test_master",
         "title": "Test Master",
         "focus": (
-            "Identify test coverage gaps, missing test scenarios, and outdated or overly basic tests."
+            "Identify test coverage gaps, missing test scenarios, and outdated or overly basic tests. Identify improvement oppotunities in the structure of test file placements. "
         ),
     },
     {
         "id": "future_functionality_planner",
         "title": "Future Functionality Planner",
         "focus": (
-            "Propose future functionality plans and feature suggestions. Identify redundant or confusing components, "
+            "Propose future functionality plans and feature suggestions. You must read agent_must_read.md ; Identify currently redundant or confusing components, "
             "lack of functionality, and high-level roadmap opportunities."
         ),
     },
@@ -201,6 +201,7 @@ def step2_act_on_oldest_open_master_issue():
         f"Implement the issue in the StudyKing codebase thoroughly. "
         f"Hint: start with folder `{random_hint}` (or another folder if no further improvement is possible there). "
         f"Do not move or edit issue files."
+	f"You are advised to read agent_must_read.md before you start coding and update changelog outlined by changelogs/RULES.md once you have completed your task. "
     )
     rc, output = run_opencode(prompt, timeout_seconds=900)
     if rc != 0:
@@ -249,7 +250,7 @@ def step3_fix_flutter_analyze():
             f"Then fix EVERY single error, warning, and info issue in the source code. "
             f"After fixing, run `flutter analyze` again. "
             f"If any issues remain, fix them too. "
-            f"Keep fixing until `flutter analyze` exits with code 0 (no issues). "
+            f"Keep fixing until `flutter analyze` exits with code 0 (no issues). Do not remove any existing functionalities when doing so. "
             f"Do NOT stop until flutter analyze is completely clean."
         )
         rc2, output2 = run_opencode(prompt, timeout_seconds=900)
@@ -318,11 +319,12 @@ def step5_commit_to_github():
     # Use opencode to commit
     prompt = (
         f"Commit all current changes in the StudyKing project to the git repository. "
-        f"First run `git status` and `git diff --staged` to understand the changes. "
+        f"First run `git status` and `git diff --staged` to understand the changes. Then read changelogs to deepen understanding."
         f"Then stage all changes with `git add -A` (but NOT .git-credentials or .env files). "
         f"Create a meaningful commit message summarizing the improvements made. "
-        f"Then push to the remote 'origin' on the current branch. "
+        f"Then push to the remote 'origin' on the current branch. Confirm it. "
         f"The remote is already configured with credentials."
+	f"After pushing to main, remove all md files in changelogs folder except RULES.md "
     )
     rc, output = run_opencode(prompt, timeout_seconds=300)
     if rc != 0:

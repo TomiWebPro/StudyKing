@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../main.dart' show settingsRepository;
 import '../data/models/settings_box.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -62,17 +63,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final l10n = AppLocalizations.of(context)!;
     final trimmedName = _nameController.text.trim();
     final trimmedStudentId = _studentIdController.text.trim();
     if (trimmedName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
+        SnackBar(content: Text(l10n.nameIsRequired)),
       );
       return;
     }
     if (trimmedStudentId.isNotEmpty && int.tryParse(trimmedStudentId) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student ID must be numeric')),
+        SnackBar(content: Text(l10n.studentIdMustBeNumeric)),
       );
       return;
     }
@@ -97,8 +99,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile saved successfully'),
+          SnackBar(
+            content: Text(l10n.profileSavedSuccessfully),
             backgroundColor: Colors.green,
           ),
         );
@@ -107,7 +109,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving profile: $e')),
+          SnackBar(content: Text(l10n.errorSavingProfile(e.toString()))),
         );
       }
     } finally {
@@ -118,6 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _pickAvatar() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -126,9 +129,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Choose Avatar',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                l10n.chooseAvatar,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -148,7 +151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
             ],
           ),
@@ -158,6 +161,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildAvatarChoice(String iconKey) {
+    final l10n = AppLocalizations.of(context)!;
     IconData icon;
     switch (iconKey) {
       case 'Icons.face':
@@ -186,7 +190,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     return Semantics(
-      label: 'Select avatar $iconKey',
+      label: l10n.selectAvatar(iconKey),
       button: true,
       child: InkWell(
         onTap: () {
@@ -249,9 +253,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profile),
         actions: [
           if (_isSaving)
             const SizedBox(
@@ -302,8 +307,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Name field
             _buildTextField(
               controller: _nameController,
-              label: 'Full Name',
-              hintText: 'Enter your name',
+              label: l10n.fullName,
+              hintText: l10n.enterYourName,
               prefixIcon: Icons.person,
               required: true,
               inputFormatters: [LengthLimitingTextInputFormatter(60)],
@@ -313,8 +318,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Student ID field
             _buildTextField(
               controller: _studentIdController,
-              label: 'Student ID (Optional)',
-              hintText: 'Your student ID number',
+              label: l10n.studentIdOptional,
+              hintText: l10n.yourStudentIdNumber,
               prefixIcon: Icons.badge,
               inputType: TextInputType.number,
               inputFormatters: [
@@ -327,8 +332,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Learning Goal
             _buildTextField(
               controller: _learningGoalController,
-              label: 'Learning Goal',
-              hintText: 'e.g., Final Exams, Certifications',
+              label: l10n.learningGoal,
+              hintText: l10n.learningGoalHint,
               prefixIcon: Icons.school,
               inputType: TextInputType.text,
             ),
@@ -337,8 +342,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Preferred Study Time
             _buildTextField(
               controller: _studyTimeController,
-              label: 'Preferred Study Time',
-              hintText: 'e.g., Evening (6-9 PM)',
+              label: l10n.preferredStudyTime,
+              hintText: l10n.preferredStudyTimeHint,
               prefixIcon: Icons.access_time,
             ),
             const SizedBox(height: 32),
@@ -350,20 +355,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Account Information',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Text(
+                      l10n.accountInformation,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     ListTile(
                       leading: const Icon(Icons.language),
-                      title: const Text('Language'),
-                      subtitle: Text(_language == 'en' ? 'English' : 'Spanish'),
+                      title: Text(l10n.language),
+                      subtitle: Text(_language == 'en' ? l10n.english : l10n.spanish),
                       trailing: DropdownButton<String>(
                         value: _language,
-                        items: const [
-                          DropdownMenuItem(value: 'en', child: Text('English')),
-                          DropdownMenuItem(value: 'es', child: Text('Spanish')),
+                        items: [
+                          DropdownMenuItem(value: 'en', child: Text(l10n.english)),
+                          DropdownMenuItem(value: 'es', child: Text(l10n.spanish)),
                         ],
                         onChanged: (value) {
                           if (value != null) {
@@ -378,7 +383,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         setState(() => _notificationsEnabled = value);
                       },
                       secondary: const Icon(Icons.notifications_active),
-                      title: const Text('Notifications'),
+                      title: Text(l10n.notifications),
                     ),
                   ],
                 ),
@@ -397,7 +402,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        'Deleting your account will permanently remove all study data',
+                        l10n.deleteAccountWarning,
                          style: const TextStyle(color: _dangerColor),
                       ),
                     ),
@@ -406,7 +411,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       style: TextButton.styleFrom(
                          foregroundColor: _dangerColor,
                       ),
-                      child: const Text('Delete'),
+                      child: Text(l10n.delete),
                     ),
                   ],
                 ),
@@ -420,15 +425,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.'),
+        title: Text(l10n.deleteAccount),
+        content: Text(l10n.deleteAccountConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -438,7 +444,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                Navigator.maybePop(context);
             },
             style: FilledButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),

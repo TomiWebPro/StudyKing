@@ -25,12 +25,12 @@ class SubjectColorSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Subject Color',
+        Text(
+          l10n.subjectColor,
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
@@ -105,6 +105,7 @@ class SubjectFormFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Form(
       key: formKey,
       child: ListView(
@@ -113,14 +114,14 @@ class SubjectFormFields extends StatelessWidget {
         children: [
           TextFormField(
             controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Subject Name',
-              hintText: 'e.g., Physics',
+            decoration: InputDecoration(
+              labelText: l10n.subjectName,
+              hintText: l10n.subjectNameHint,
               border: OutlineInputBorder(),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Please enter a subject name';
+                return l10n.pleaseEnterSubjectName;
               }
               return null;
             },
@@ -128,9 +129,9 @@ class SubjectFormFields extends StatelessWidget {
           const SizedBox(height: 16),
           TextFormField(
             controller: codeController,
-            decoration: const InputDecoration(
-              labelText: 'Subject Code (Optional)',
-              hintText: 'e.g., IB-PHYS',
+            decoration: InputDecoration(
+              labelText: l10n.subjectCodeOptional,
+              hintText: l10n.subjectCodeHint,
               border: OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.characters,
@@ -138,18 +139,18 @@ class SubjectFormFields extends StatelessWidget {
           const SizedBox(height: 16),
           TextFormField(
             controller: teacherController,
-            decoration: const InputDecoration(
-              labelText: 'Teacher (Optional)',
-              hintText: 'Enter teacher name',
+            decoration: InputDecoration(
+              labelText: l10n.teacherOptional,
+              hintText: l10n.teacherNameHint,
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: syllabusController,
-            decoration: const InputDecoration(
-              labelText: 'Syllabus (Optional)',
-              hintText: 'Enter syllabus description',
+            decoration: InputDecoration(
+              labelText: l10n.syllabusScopeOptional,
+              hintText: l10n.syllabusDescriptionHint,
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
@@ -157,9 +158,9 @@ class SubjectFormFields extends StatelessWidget {
           const SizedBox(height: 16),
           TextFormField(
             controller: descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'Description (Optional)',
-              hintText: 'Brief description of the subject',
+            decoration: InputDecoration(
+              labelText: l10n.descriptionOptional,
+              hintText: l10n.descriptionHint,
               border: OutlineInputBorder(),
             ),
             maxLines: 2,

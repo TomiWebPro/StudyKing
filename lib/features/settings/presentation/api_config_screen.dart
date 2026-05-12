@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart'
     show apiBaseUrlProvider, apiKeyProvider, settingsProvider;
 
@@ -38,10 +39,11 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   }
 
   Future<void> _saveKeys() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('API key cannot be empty'),
+        SnackBar(
+          content: Text(l10n.apiKeyCannotBeEmpty),
           backgroundColor: Colors.red,
         ),
       );
@@ -61,8 +63,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('API keys saved successfully'),
+        SnackBar(
+          content: Text(l10n.apiKeysSavedSuccessfully),
           backgroundColor: Colors.green,
         ),
       );
@@ -70,8 +72,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to save API configuration. Please try again.'),
+        SnackBar(
+          content: Text(l10n.unableToSaveApiConfig),
           backgroundColor: Colors.red,
         ),
       );
@@ -84,36 +86,36 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('API Configuration')),
+      appBar: AppBar(title: Text(l10n.apiConfiguration)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Configure API Keys',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.configureApiKeys,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const Text(
-              'Enter your OpenRouter API credentials below. These are used to power the AI features.',
-              style: TextStyle(fontSize: 14),
+            Text(
+              l10n.configureApiKeysDescription,
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 24),
             _buildApiSection(
-              title: 'OpenRouter API Key',
+              title: l10n.openRouterApiKey,
               controller: _apiKeyController,
-              hint: 'sk-or-v1-...',
-              description:
-                  'Required for LLM content generation. Get your key from https://openrouter.ai/keys',
+              hint: l10n.apiKeyHint,
+              description: l10n.apiKeyDescription,
               obscureText: _obscureApiKey,
             ),
             const SizedBox(height: 24),
             _buildApiSection(
-              title: 'API Base URL',
+              title: l10n.apiBaseUrl,
               controller: _baseUrlController,
-              hint: 'https://openrouter.ai/api/v1',
-              description: 'The endpoint URL for the AI service',
+              hint: l10n.apiBaseUrlHint,
+              description: l10n.apiBaseUrlDescription,
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -127,7 +129,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save),
-                label: const Text('Save API Keys'),
+                label: Text(l10n.saveApiKeys),
               ),
             ),
           ],

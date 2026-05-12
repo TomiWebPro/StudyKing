@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectSelectionScreen extends ConsumerStatefulWidget {
   const SubjectSelectionScreen({super.key});
@@ -41,6 +42,7 @@ class _SubjectSelectionScreenState
   }
 
   Future<void> _saveSubject() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -73,7 +75,7 @@ class _SubjectSelectionScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving subject: $e')),
+          SnackBar(content: Text(l10n.errorSavingSubject(e.toString()))),
         );
       }
     } finally {
@@ -85,9 +87,10 @@ class _SubjectSelectionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Subject'),
+        title: Text(l10n.addSubject),
         actions: [
           if (_isLoading)
             const SizedBox(
@@ -98,7 +101,7 @@ class _SubjectSelectionScreenState
           else
             TextButton(
               onPressed: _saveSubject,
-              child: const Text('Save'),
+              child: Text(l10n.save),
             ),
         ],
       ),

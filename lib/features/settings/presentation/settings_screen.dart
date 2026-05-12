@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart'
     show apiBaseUrlProvider, apiKeyProvider, selectedModelProvider, settingsProvider;
 
@@ -29,64 +30,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
     final apiKey = ref.watch(apiKeyProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _section('User Management', [
-            _tile('Current User', 'Manage your profile', Icons.account_circle,
+          _section(l10n.userManagement, [
+            _tile(l10n.currentUser, l10n.manageYourProfile, Icons.account_circle,
                 () => Navigator.pushNamed(context, '/profile')),
           ]),
-          _section('Quick Access', [
-            _tile('Quick Guide', 'AI-powered study assistant', Icons.auto_awesome,
+          _section(l10n.quickAccess, [
+            _tile(l10n.quickGuide, l10n.aiPoweredStudyAssistant, Icons.auto_awesome,
                 () => Navigator.pushNamed(context, '/quick-guide')),
           ]),
-          _section('Appearance', [
-            _tile('Theme', _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
+          _section(l10n.appearance, [
+            _tile(l10n.theme, _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
                 () => _showThemeDialog(settings.themeModeEnum)),
-            _tile('Font Size', _getFontSizeLabel(settings.fontSize), Icons.text_fields,
+            _tile(l10n.fontSize, _getFontSizeLabel(settings.fontSize), Icons.text_fields,
                 () => _showFontSizeDialog(settings.fontSize)),
           ]),
-          _section('AI Configuration', [
-            _tile('API Keys', apiKey.isNotEmpty ? 'Configured' : 'Not configured',
+          _section(l10n.aiConfiguration, [
+            _tile(l10n.apiKeys, apiKey.isNotEmpty ? l10n.configured : l10n.notConfigured,
                 Icons.key, () => Navigator.pushNamed(context, '/api-config')),
-            _tile('AI Model', _getAiModelLabel(settings.selectedModel), Icons.chat,
+            _tile(l10n.aiModel, _getAiModelLabel(settings.selectedModel), Icons.chat,
                 () => _showAiModelSelection(settings.selectedModel, apiKey)),
-            _tile('Request Timeout', '${settings.requestTimeoutSeconds} seconds',
+            _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
                 Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
           ]),
-          _section('Study Preferences', [
+          _section(l10n.studyPreferences, [
             SwitchListTile(
               secondary: const Icon(Icons.notifications),
-              title: const Text('Study Reminders'),
-              subtitle: const Text('Enable notification alerts'),
+              title: Text(l10n.studyReminders),
+              subtitle: Text(l10n.enableNotificationAlerts),
               value: settings.studyRemindersEnabled,
               onChanged: (value) =>
                   ref.read(settingsProvider.notifier).updateStudyReminders(value),
             ),
-            _tile('Session Duration', '${settings.sessionDurationMinutes} minutes',
+            _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                 Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
           ]),
-          _section('Study Analytics', [
-            _tile('Total Study Sessions', '${settings.totalSessionCount} sessions',
+          _section(l10n.studyAnalytics, [
+            _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
                 Icons.show_chart, () => _showAnalytics(settings)),
             ListTile(
               leading: const Icon(Icons.access_time),
-              title: const Text('Total Study Time'),
+              title: Text(l10n.totalStudyTime),
               subtitle: Text(formatDuration(
                   Duration(milliseconds: settings.totalStudyTimeMs),
                   showDays: true)),
             ),
           ]),
-          _section('About', [
-            _tile('About StudyKing', 'Version 0.1.0', Icons.info,
+          _section(l10n.aboutSection, [
+            _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
                 () => _showAboutDialog(context)),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              title: Text(l10n.signOut, style: const TextStyle(color: Colors.red)),
               onTap: _showSignOutDialog,
             ),
           ]),
@@ -118,12 +120,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         onTap: onTap,
       );
 
-  String _getThemeLabel(ThemeMode mode) =>
-      mode == ThemeMode.light ? 'Light' : mode == ThemeMode.dark ? 'Dark' : 'System';
-  String _getFontSizeLabel(double size) =>
-      size < 14 ? 'Small' : size < 17 ? 'Medium' : size < 23 ? 'Large' : 'Extra Large';
+  String _getThemeLabel(ThemeMode mode) {
+    final l10n = AppLocalizations.of(context)!;
+    return mode == ThemeMode.light ? l10n.light : mode == ThemeMode.dark ? l10n.dark : l10n.system;
+  }
+  String _getFontSizeLabel(double size) {
+    final l10n = AppLocalizations.of(context)!;
+    return size < 14 ? l10n.small : size < 17 ? l10n.medium : size < 23 ? l10n.large : l10n.extraLarge;
+  }
   String _getAiModelLabel(String model) {
-    if (model.isEmpty) return 'Select a model from API';
+    final l10n = AppLocalizations.of(context)!;
+    if (model.isEmpty) return l10n.selectModelFromApi;
     final parts = model.split('/');
     if (parts.length < 2) return model;
     final name = parts.last.replaceAll('-', ' ').replaceAll('_', ' ').trim();
@@ -132,11 +139,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showThemeDialog(ThemeMode currentMode) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
         ListTile(
-          title: const Text('Light'),
+          title: Text(l10n.light),
           selected: currentMode == ThemeMode.light,
           onTap: () {
             ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
@@ -144,7 +152,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           },
         ),
         ListTile(
-          title: const Text('Dark'),
+          title: Text(l10n.dark),
           selected: currentMode == ThemeMode.dark,
           onTap: () {
             ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
@@ -156,10 +164,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showFontSizeDialog(double currentSize) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Font Size'),
+        title: Text(l10n.fontSize),
         content: StatefulBuilder(builder: (context, setInnerState) {
           double localSize = currentSize;
           return Slider(
@@ -179,19 +188,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _showAiModelSelection(String currentModel, String apiKey) async {
+    final l10n = AppLocalizations.of(context)!;
     if (apiKey.isEmpty) {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('API Key Required'),
-          content: const Text('Please configure your API key first.'),
+          title: Text(l10n.apiKeyRequired),
+          content: Text(l10n.pleaseConfigureApiKey),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/api-config');
               },
-              child: const Text('OK'),
+              child: Text(l10n.ok),
             ),
           ],
         ),
@@ -219,7 +229,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (Navigator.canPop(context)) Navigator.pop(context);
 
       if (response.statusCode != 200) {
-        _showError('Unable to load models right now.');
+        _showError(l10n.unableToLoadModels);
         return;
       }
 
@@ -233,8 +243,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: _modelSearchController,
-              decoration: const InputDecoration(
-                  hintText: 'Search models', prefixIcon: Icon(Icons.search)),
+              decoration: InputDecoration(
+                  hintText: l10n.searchModels, prefixIcon: const Icon(Icons.search)),
               onChanged: (_) => setState(() {}),
             ),
           ),
@@ -263,10 +273,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     } on TimeoutException {
       if (Navigator.canPop(context)) Navigator.pop(context);
-      _showError('Model request timed out. Please try again.');
+      _showError(l10n.modelRequestTimedOut);
     } catch (_) {
       if (Navigator.canPop(context)) Navigator.pop(context);
-      _showError('Unable to load models. Please try again.');
+      _showError(l10n.unableToLoadModelsTryAgain);
     }
   }
 
@@ -293,14 +303,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showTimeoutDialog(int currentTimeout) {
+    final l10n = AppLocalizations.of(context)!;
     double selected = currentTimeout.toDouble();
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInnerState) => AlertDialog(
-          title: const Text('Request Timeout'),
+          title: Text(l10n.requestTimeout),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('${selected.round()} seconds'),
+            Text(l10n.secondsValue(selected.round())),
             Slider(
               value: selected,
               min: 30,
@@ -310,7 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: () {
                 ref
@@ -318,7 +329,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     .updateRequestTimeout(selected.round());
                 Navigator.pop(ctx);
               },
-              child: const Text('Save'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -327,13 +338,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showSessionDurationDialog(int currentMinutes) {
+    final l10n = AppLocalizations.of(context)!;
     final options = [15, 30, 45, 60, 90];
     showModalBottomSheet(
       context: context,
       builder: (_) => ListView(
         children: options
             .map((m) => ListTile(
-                  title: Text('$m minutes'),
+                  title: Text(l10n.minutesValue(m)),
                   trailing: m == currentMinutes
                       ? const Icon(Icons.check, color: Colors.green)
                       : null,
@@ -348,26 +360,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showAnalytics(SettingsBox settings) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (_) => Padding(
         padding: const EdgeInsets.all(16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(title: const Text('Sessions'), subtitle: Text('${settings.totalSessionCount}')),
-          ListTile(title: const Text('Questions'), subtitle: Text('${settings.totalQuestions}')),
+          ListTile(title: Text(l10n.sessionsLabel), subtitle: Text('${settings.totalSessionCount}')),
+          ListTile(title: Text(l10n.questionsLabel), subtitle: Text('${settings.totalQuestions}')),
         ]),
       ),
     );
   }
 
   void _showSignOutDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: Text(l10n.signOut),
+        content: Text(l10n.signOutConfirmation),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
           FilledButton(
             onPressed: () {
               ref.read(apiKeyProvider.notifier).state = '';
@@ -375,7 +389,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
               Navigator.pop(context);
             },
-            child: const Text('Sign Out'),
+            child: Text(l10n.signOut),
           ),
         ],
       ),

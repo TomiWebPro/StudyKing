@@ -7,6 +7,7 @@ import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 
 const String _defaultStudentId = 'anonymous';
@@ -153,7 +154,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save session: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveSession(e.toString()))),
         );
       }
     }
@@ -181,11 +182,12 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Study Session Tracker'),
+          title: Text(l10n.studySessionTracker),
           centerTitle: true,
           elevation: 0,
         ),
@@ -195,7 +197,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Study Session Tracker'),
+        title: Text(l10n.studySessionTracker),
         centerTitle: true,
         elevation: 0,
       ),
@@ -228,7 +230,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _isTrackingSession ? 'Current Session' : 'No Active Session',
+                          _isTrackingSession ? l10n.currentSession : l10n.noActiveSession,
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
                             fontWeight: FontWeight.bold,
@@ -242,7 +244,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isTrackingSession ? _formatElapsed(_elapsedSeconds) : 'Tap start to begin tracking',
+                      _isTrackingSession ? _formatElapsed(_elapsedSeconds) : l10n.tapStartToBegin,
                       style: theme.textTheme.displayLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
@@ -255,7 +257,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                         ElevatedButton.icon(
                           onPressed: _isTrackingSession ? null : _startSession,
                           icon: const Icon(Icons.play_arrow),
-                          label: const Text('Start'),
+                          label: Text(l10n.start),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _isTrackingSession ? theme.disabledColor : Colors.green,
                             foregroundColor: Colors.white,
@@ -266,7 +268,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                           ElevatedButton.icon(
                             onPressed: _endSession,
                             icon: const Icon(Icons.stop),
-                            label: const Text('End'),
+                            label: Text(l10n.end),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
@@ -290,7 +292,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Recent Sessions',
+                    l10n.recentSessions,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -301,7 +303,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                         Padding(
                           padding: const EdgeInsets.only(right: 4),
                           child: Text(
-                            '${_sortedSessions.take(5).length} of ${_allSessions.length}',
+                            l10n.ofLabel(_sortedSessions.take(5).length, _allSessions.length),
                             style: theme.textTheme.bodySmall,
                           ),
                         ),
@@ -314,7 +316,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                             ),
                           );
                         },
-                        child: const Text('View All'),
+                        child: Text(l10n.viewAll),
                       ),
                     ],
                   ),
@@ -331,6 +333,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
   }
 
   Widget _buildRecentSessionsList(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     if (_allSessions.isEmpty) {
       return Center(
         child: Column(
@@ -338,9 +341,9 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
           children: [
             Icon(Icons.history, size: 48, color: theme.disabledColor),
             const SizedBox(height: 8),
-            Text('No sessions yet', style: theme.textTheme.bodyMedium),
+            Text(l10n.noSessionsYet, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),
-            Text('Start your first session!', style: theme.textTheme.bodySmall),
+            Text(l10n.startYourFirstSession, style: theme.textTheme.bodySmall),
           ],
         ),
       );
@@ -361,7 +364,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
           child: ListTile(
             leading: Icon(Icons.play_arrow, color: theme.primaryColor),
             title: Text(
-              'Session ${_sortedSessions.length - position}',
+              l10n.sessionNumber(_sortedSessions.length - position),
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
@@ -409,28 +412,29 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Session Complete'),
+      title: Text(l10n.sessionComplete),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('How many questions did you answer?'),
+          Text(l10n.howManyQuestions),
           const SizedBox(height: 8),
           TextField(
             controller: _questionsController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Questions Answered',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.questionsAnswered,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _correctController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Correct Answers',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.correctAnswers,
+              border: const OutlineInputBorder(),
             ),
           ),
         ],
@@ -439,7 +443,7 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
         TextButton(
           onPressed: () =>
               Navigator.pop(context, const _SessionEndStats(questionsAnswered: 0, correctAnswers: 0)),
-          child: const Text('Skip'),
+          child: Text(l10n.skip),
         ),
         ElevatedButton(
           onPressed: () {
@@ -450,7 +454,7 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
               _SessionEndStats(questionsAnswered: questions, correctAnswers: correct),
             );
           },
-          child: const Text('Save'),
+          child: Text(l10n.save),
         ),
       ],
     );

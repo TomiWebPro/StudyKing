@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import '../models/subject_model.dart';
 import 'package:studyking/main.dart' show database;
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectManagementScreen extends ConsumerStatefulWidget {
   const SubjectManagementScreen({super.key});
@@ -44,9 +45,10 @@ class _SubjectManagementScreenState
   }
 
   Future<void> _createSubject() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a subject name')),
+        SnackBar(content: Text(l10n.pleaseEnterSubjectName)),
       );
       return;
     }
@@ -72,8 +74,8 @@ class _SubjectManagementScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Subject created successfully'),
+          SnackBar(
+            content: Text(l10n.subjectCreatedSuccessfully),
             backgroundColor: Colors.green,
           ),
         );
@@ -82,7 +84,7 @@ class _SubjectManagementScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating subject: $e')),
+          SnackBar(content: Text(l10n.errorCreatingSubject(e.toString()))),
         );
       }
     } finally {
@@ -93,9 +95,10 @@ class _SubjectManagementScreenState
   }
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add New Subject'),
+        title: Text(l10n.addNewSubject),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -104,9 +107,9 @@ class _SubjectManagementScreenState
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Subject Name *',
-                hintText: 'e.g., Physics',
+              decoration: InputDecoration(
+                labelText: '${l10n.subjectName} *',
+                hintText: l10n.subjectNameHint,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -114,17 +117,17 @@ class _SubjectManagementScreenState
 
             TextFormField(
               controller: _codeController,
-              decoration: const InputDecoration(
-                labelText: 'Subject Code (Optional)',
-                hintText: 'e.g., IB-PHYS',
+              decoration: InputDecoration(
+                labelText: l10n.subjectCodeOptional,
+                hintText: l10n.subjectCodeHint,
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
 
             // Color selection
-            const Text('Theme Color',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            Text(l10n.themeColor,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -162,9 +165,9 @@ class _SubjectManagementScreenState
 
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (Optional)',
-                hintText: 'Brief description of the subject',
+              decoration: InputDecoration(
+                labelText: l10n.descriptionOptional,
+                hintText: l10n.descriptionHint,
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
@@ -173,9 +176,9 @@ class _SubjectManagementScreenState
 
             TextFormField(
               controller: _teacherController,
-              decoration: const InputDecoration(
-                labelText: 'Teacher (Optional)',
-                hintText: 'e.g., Dr. John Smith',
+              decoration: InputDecoration(
+                labelText: l10n.teacherOptional,
+                hintText: l10n.teacherHint,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -183,9 +186,9 @@ class _SubjectManagementScreenState
 
             TextFormField(
               controller: _syllabusController,
-              decoration: const InputDecoration(
-                labelText: 'Syllabus/Scope (Optional)',
-                hintText: 'Brief overview of the syllabus',
+              decoration: InputDecoration(
+                labelText: l10n.syllabusScopeOptional,
+                hintText: l10n.syllabusHint,
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -194,7 +197,7 @@ class _SubjectManagementScreenState
 
             Row(
               children: [
-                const Text('Exam Date (Optional): '),
+                Text('${l10n.examDateOptional}: '),
                 TextButton.icon(
                   onPressed: _selectExamDate,
                   icon: Icon(
@@ -206,7 +209,7 @@ class _SubjectManagementScreenState
                   label: Text(
                     _examDate != null
                         ? '${_examDate!.month}/${_examDate!.day}/${_examDate!.year}'
-                        : 'Select date',
+                        : l10n.selectDate,
                   ),
                 ),
               ],
@@ -224,7 +227,7 @@ class _SubjectManagementScreenState
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Create Subject'),
+                    : Text(l10n.createSubject),
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'subject_selection_screen.dart';
 import 'subject_detail_view.dart';
 
@@ -12,11 +13,12 @@ class SubjectListView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final subjectsAsync = ref.watch(subjectsRepositoryProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Subjects'),
+        title: Text(l10n.mySubjects),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -41,6 +43,7 @@ class SubjectListView extends ConsumerWidget {
 
   Widget _buildSubjectList(
       BuildContext context, WidgetRef ref, SubjectRepository repository) {
+    final l10n = AppLocalizations.of(context)!;
     return FutureBuilder<List<Subject>>(
       future: repository.getAll(),
       builder: (context, snapshot) {
@@ -66,12 +69,12 @@ class SubjectListView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No subjects yet',
+                  l10n.noSubjectsYet,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Add your first subject to begin studying',
+                  l10n.addFirstSubject,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
@@ -85,7 +88,7 @@ class SubjectListView extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Subject'),
+                  label: Text(l10n.addSubject),
                 ),
               ],
             ),
@@ -105,6 +108,7 @@ class SubjectListView extends ConsumerWidget {
   }
 
   Widget _buildSubjectCard(BuildContext context, Subject subject) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -167,7 +171,7 @@ class SubjectListView extends ConsumerWidget {
                         const Icon(Icons.timer, size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          'Practice sessions',
+                          l10n.practiceSessions,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade500,

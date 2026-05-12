@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Single Answer Widget (Multiple Choice)
 class SingleAnswerWidget extends StatelessWidget {
@@ -21,6 +22,7 @@ class SingleAnswerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -32,7 +34,7 @@ class SingleAnswerWidget extends StatelessWidget {
               selected: selectedAnswer == option,
               button: true,
               label: option,
-              hint: 'Select as answer',
+              hint: l10n.selectAsAnswer,
               child: InkWell(
                 onTap: !isSubmitted ? () => onAnswerSelected(option) : null,
                 borderRadius: BorderRadius.circular(8),
@@ -107,8 +109,8 @@ class SingleAnswerWidget extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       selectedAnswer == correctAnswer
-                        ? 'Correct!'
-                        : 'Incorrect',
+                        ? l10n.correctFeedback
+                        : l10n.incorrectFeedback,
                       style: TextStyle(
                         color: selectedAnswer == correctAnswer
                           ? Theme.of(context).colorScheme.tertiary
@@ -118,7 +120,7 @@ class SingleAnswerWidget extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      selectedAnswer == correctAnswer ? 'Selected right option' : 'Try again',
+                      selectedAnswer == correctAnswer ? l10n.selectedRightOption : l10n.tryAgain,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

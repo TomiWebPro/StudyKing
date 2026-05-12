@@ -3,6 +3,7 @@
 // Shows progress and lesson types
 
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../providers/llm_engine_provider.dart';
 
@@ -17,9 +18,10 @@ class LessonSchedulingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lesson Scheduler'),
+        title: Text(l10n.lessonScheduler),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
@@ -42,7 +44,7 @@ class LessonSchedulingPage extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Upcoming Lessons'),
+                    Text(l10n.upcomingLessons),
                     const SizedBox(height: 16),
                       TableCalendar(
                         firstDay: DateTime(2024),
@@ -61,7 +63,7 @@ class LessonSchedulingPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Select Subject'),
+                    Text(l10n.selectSubjectLabel),
                     DropdownButton<String>(
                       isExpanded: true,
                       value: 'math',
@@ -84,25 +86,25 @@ class LessonSchedulingPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Generate Question Types'),
+                    Text(l10n.generateQuestionTypes),
                     const SizedBox(height: 8),
-                    const Text('Select question format:'),
+                    Text(l10n.selectFormat),
                     Wrap(
                       spacing: 16,
                       runSpacing: 16,
-                      children: const [
+                      children: [
                         FilterChip(
-                          label: Text('MCQ'),
+                          label: Text(l10n.mcq),
                           selected: true,
                           onSelected: null,
                         ),
                         FilterChip(
-                          label: Text('Input'),
+                          label: Text(l10n.inputLabel),
                           selected: false,
                           onSelected: null,
                         ),
                         FilterChip(
-                          label: Text('Graph'),
+                          label: Text(l10n.graphLabel),
                           selected: false,
                           onSelected: null,
                         ),
@@ -118,12 +120,12 @@ class LessonSchedulingPage extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Lesson Progress'),
+                    Text(l10n.lessonProgress),
                     LinearProgressIndicator(
                       value: 0.65,
                     ),
                     const SizedBox(height: 8),
-                    Text('65% Complete: 5/8 questions generated'),
+                    Text(l10n.percentComplete(65, 5, 8)),
                   ],
                 ),
               ),
@@ -135,14 +137,15 @@ class LessonSchedulingPage extends StatelessWidget {
   }
 
   void _showScheduleCalendar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Schedule Lesson'),
-        content: const Text('Select calendar date for lesson'),
+        title: Text(l10n.scheduleLesson),
+        content: Text(l10n.selectCalendarDate),
         actions: [
           TextButton(
-            child: const Text('Done'),
+            child: Text(l10n.done),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -154,6 +157,7 @@ class LessonSchedulingPage extends StatelessWidget {
     BuildContext context,
     LLMAIEngineProvider llmProvider,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -162,12 +166,12 @@ class LessonSchedulingPage extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.public),
-              title: const Text('Create New Lesson'),
+              title: Text(l10n.createNewLesson),
               onTap: () => _handleCreateLesson(context),
             ),
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('Edit Existing Lesson'),
+              title: Text(l10n.editExistingLesson),
               onTap: () {},
             ),
           ],

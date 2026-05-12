@@ -555,5 +555,167 @@ void main() {
         expect(result, isEmpty);
       });
     });
+
+    group('edge cases', () {
+      test('save and get round-trip preserves all fields', () async {
+        final createdAt = DateTime(2024, 6, 15, 10, 30, 0);
+        final examDate = DateTime(2025, 6, 15);
+        final subject = createTestSubject(
+          id: 'full-subject',
+          name: 'Full Subject',
+          description: 'A detailed description',
+          syllabus: 'Syllabus content',
+          code: 'FS-101',
+          teacher: 'Dr. Teacher',
+          topicIds: ['topic-1', 'topic-2', 'topic-3'],
+          color: '#FF5722',
+          createdAt: createdAt,
+          examDate: examDate,
+        );
+
+        await repository.save(subject);
+        final retrieved = await repository.get('full-subject');
+
+        expect(retrieved, isNotNull);
+        expect(retrieved!.id, 'full-subject');
+        expect(retrieved.name, 'Full Subject');
+        expect(retrieved.description, 'A detailed description');
+        expect(retrieved.syllabus, 'Syllabus content');
+        expect(retrieved.code, 'FS-101');
+        expect(retrieved.teacher, 'Dr. Teacher');
+        expect(retrieved.topicIds, ['topic-1', 'topic-2', 'topic-3']);
+        expect(retrieved.color, '#FF5722');
+        expect(retrieved.createdAt, createdAt);
+        expect(retrieved.examDate, examDate);
+      });
+
+      test('save preserves null optional fields', () async {
+        final subject = createTestSubject(
+          id: 'minimal',
+          name: 'Minimal',
+        );
+
+        await repository.save(subject);
+        final retrieved = await repository.get('minimal');
+
+        expect(retrieved, isNotNull);
+        expect(retrieved!.description, isNull);
+        expect(retrieved.syllabus, isNull);
+        expect(retrieved.code, isNull);
+        expect(retrieved.teacher, isNull);
+        expect(retrieved.examDate, isNull);
+      });
+
+      test('addTopicToSubject adds multiple topics sequentially', () async {
+        mockBox.addSubject(createTestSubject(id: 's1', name: 'Subject', topicIds: []));
+
+        await repository.addTopicToSubject('s1', 'topic-a');
+        await repository.addTopicToSubject('s1', 'topic-b');
+        await repository.addTopicToSubject('s1', 'topic-c');
+
+        final result = await repository.get('s1');
+        expect(result!.topicIds, ['topic-a', 'topic-b', 'topic-c']);
+      });
+
+      test('removeTopicFromSubject removes last topic', () async {
+        mockBox.addSubject(createTestSubject(id: 's1', name: 'Subject', topicIds: ['only-topic']));
+
+        await repository.removeTopicFromSubject('s1', 'only-topic');
+
+        final result = await repository.get('s1');
+        expect(result!.topicIds, isEmpty);
+      });
+
+      test('getByCode returns subject with all fields when found', () async {
+        mockBox.addSubject(createTestSubject(
+          id: 's1',
+          name: 'Physics HL',
+          code: 'IB-PHYS-HL',
+          description: 'Higher Level',
+        ));
+
+        final result = await repository.getByCode('IB-PHYS-HL');
+
+        expect(result, isNotNull);
+        expect(result!.id, 's1');
+        expect(result.name, 'Physics HL');
+        expect(result.description, 'Higher Level');
+      });
+
+      test('delete all subjects leaves empty box', () async {
+        mockBox.addSubject(createTestSubject(id: '1', name: 'A'));
+        mockBox.addSubject(createTestSubject(id: '2', name: 'B'));
+        mockBox.addSubject(createTestSubject(id: '3', name: 'C'));
+
+        await repository.delete('1');
+        await repository.delete('2');
+        await repository.delete('3');
+
+        final result = await repository.getAll();
+        expect(result, isEmpty);
+      });
+
+      test('delete non-existent id does not affect other subjects', () async {
+        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
+        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
+
+        await repository.delete('non-existent');
+
+        final all = await repository.getAll();
+        expect(all.length, 2);
+      });
+
+      test('getWithTopics handles subject matching multiple filter topics', () async {
+        mockBox.addSubject(createTestSubject(
+          id: '1',
+          name: 'Comprehensive',
+          topicIds: ['topic-a', 'topic-b', 'topic-c'],
+        ));
+        mockBox.addSubject(createTestSubject(
+          id: '2',
+          name: 'Simple',
+          topicIds: ['topic-a'],
+        ));
+
+        final result = await repository.getWithTopics(['topic-b', 'topic-c']);
+
+        expect(result.length, 1);
+        expect(result.first.name, 'Comprehensive');
+      });
+
+      test('getStudentSubjects ignores studentId parameter and returns all', () async {
+        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
+        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
+
+        final result1 = await repository.getStudentSubjects('student-a');
+        final result2 = await repository.getStudentSubjects('student-b');
+
+        expect(result1.length, 2);
+        expect(result2.length, 2);
+      });
+
+      test('multiple operations in sequence work correctly', () async {
+        await repository.save(createTestSubject(id: '1', name: 'Physics', code: 'PHY'));
+        await repository.save(createTestSubject(id: '2', name: 'Chemistry', code: 'CHE'));
+
+        expect(await repository.getByCode('PHY'), isNotNull);
+        expect(await repository.getByCode('CHE'), isNotNull);
+
+        await repository.addTopicToSubject('1', 'topic-x');
+        final s1 = await repository.get('1');
+        expect(s1!.topicIds, ['topic-x']);
+
+        await repository.addTopicToSubject('1', 'topic-y');
+        final s1Again = await repository.get('1');
+        expect(s1Again!.topicIds, ['topic-x', 'topic-y']);
+
+        await repository.removeTopicFromSubject('1', 'topic-x');
+        final s1Final = await repository.get('1');
+        expect(s1Final!.topicIds, ['topic-y']);
+
+        await repository.delete('2');
+        expect(await repository.getAll(), hasLength(1));
+      });
+    });
   });
 }

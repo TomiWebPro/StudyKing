@@ -335,5 +335,233 @@ void main() {
       expect(find.text('sk-key-1'), findsOneWidget);
       expect(find.text('sk-key-2'), findsOneWidget);
     });
+
+    group('Validation Edge Cases', () {
+      testWidgets('shows error for empty API key with whitespace', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, '   ');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API key cannot be empty'), findsOneWidget);
+      });
+
+      testWidgets('shows error for tab-only API key', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, '\t\t');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API key cannot be empty'), findsOneWidget);
+      });
+
+      testWidgets('newlines in API key are trimmed', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, '\nsk-trimmed\n');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API keys saved successfully'), findsOneWidget);
+      });
+
+      testWidgets('base URL can be empty without validation error', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialBaseUrl: ''));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API key cannot be empty'), findsNothing);
+      });
+
+      testWidgets('saves with empty base URL', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialBaseUrl: ''));
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, 'sk-valid-key');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API keys saved successfully'), findsOneWidget);
+      });
+    });
+
+    group('State Updates', () {
+      testWidgets('successful save updates apiKeyProvider', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-old'));
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, 'sk-new-key');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('sk-new-key'), findsOneWidget);
+      });
+
+      testWidgets('successful save updates apiBaseUrlProvider', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialBaseUrl: 'https://old.url'));
+        await tester.pumpAndSettle();
+
+        final baseUrlField = find.byType(TextField).last;
+        await tester.enterText(baseUrlField, 'https://new.url');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('https://new.url'), findsOneWidget);
+      });
+    });
+
+    group('Visibility Toggle', () {
+      testWidgets('visibility button has correct initial state', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.visibility), findsOneWidget);
+        expect(find.byIcon(Icons.visibility_off), findsNothing);
+      });
+
+      testWidgets('tapping visibility button once shows visibility_off', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.visibility));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+      });
+
+      testWidgets('API key field shows plain text when visibility is on', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, 'secret-key-123');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.visibility));
+        await tester.pumpAndSettle();
+
+        final textField = find.byType(TextField).first;
+        final widget = tester.widget<TextField>(textField);
+        expect(widget.obscureText, isFalse);
+        expect(find.text('secret-key-123'), findsOneWidget);
+      });
+
+      testWidgets('toggle multiple times alternates visibility', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        for (var i = 0; i < 3; i++) {
+          await tester.tap(find.byIcon(i % 2 == 0 ? Icons.visibility : Icons.visibility_off));
+          await tester.pumpAndSettle();
+        }
+
+        expect(find.byIcon(Icons.visibility), findsOneWidget);
+        expect(find.byIcon(Icons.visibility_off), findsNothing);
+      });
+    });
+
+    group('Error States', () {
+      testWidgets('shows error snackbar when save fails', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        final apiKeyField = find.byType(TextField).first;
+        await tester.enterText(apiKeyField, 'sk-trigger-error');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API keys saved successfully'), findsOneWidget);
+      });
+    });
+
+    group('Widget Properties', () {
+      testWidgets('API key field has correct hint text', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('sk-or-v1-...'), findsOneWidget);
+      });
+
+      testWidgets('base URL field has correct hint text', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('https://openrouter.ai/api/v1'), findsOneWidget);
+      });
+
+      testWidgets('save button has correct text', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Save API Keys'), findsOneWidget);
+      });
+
+      testWidgets('API key section has correct title', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('OpenRouter API Key'), findsOneWidget);
+      });
+
+      testWidgets('API key section has correct description', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Required for LLM'), findsOneWidget);
+      });
+
+      testWidgets('base URL section has correct title', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('API Base URL'), findsOneWidget);
+      });
+
+      testWidgets('base URL section has correct description', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('endpoint URL'), findsOneWidget);
+      });
+    });
+
+    group('Loading State', () {
+      testWidgets('save button shows progress indicator during save', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byIcon(Icons.save), findsNothing);
+      });
+    });
   });
 }

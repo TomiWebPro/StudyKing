@@ -7,6 +7,7 @@ import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
 class SubjectDetailScreen extends ConsumerStatefulWidget {
@@ -56,6 +57,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = ColorUtils.stringToColor(widget.subjectColor);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: CustomScrollView(
@@ -157,11 +159,11 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               labelColor: theme.primaryColor,
               unselectedLabelColor: Colors.grey,
               indicatorColor: color,
-              tabs: const [
-                Tab(icon: Icon(Icons.book), text: 'Lessons'),
-                Tab(icon: Icon(Icons.play_arrow), text: 'Practice'),
-                Tab(icon: Icon(Icons.history), text: 'History'),
-                Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
+              tabs: [
+                Tab(icon: const Icon(Icons.book), text: l10n.lessonsTab),
+                Tab(icon: const Icon(Icons.play_arrow), text: l10n.practiceTab),
+                Tab(icon: const Icon(Icons.history), text: l10n.historyTab),
+                Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
               ],
             ),
           ),
@@ -193,6 +195,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
   Widget _buildLessonsTab() {
     return Consumer(builder: (context, ref, child) {
+      final l10n = AppLocalizations.of(context)!;
       final lessonRepo = LessonRepository();
       
       Future<List<dynamic>> loadLessons() async {
@@ -222,12 +225,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Icon(Icons.book_outlined, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
-                    'No lessons yet',
+                    l10n.noLessonsYet,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Start learning by creating topics and questions',
+                    l10n.startLearningByCreatingTopics,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                     ),
@@ -238,7 +241,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       // Navigate to topic creation
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Topic'),
+                    label: Text(l10n.addTopic),
                   ),
                 ],
               ),
@@ -258,7 +261,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     child: Icon(Icons.book, color: ColorUtils.stringToColor(widget.subjectColor)),
                   ),
                   title: Text((lesson as dynamic).title ?? 'Lesson'),
-                  subtitle: Text('Questions: $questionCount'),
+                  subtitle: Text(l10n.questionsCount(questionCount)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -281,6 +284,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   Widget _buildPracticeTab() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -288,12 +292,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           Icon(Icons.workspace_premium, size: 64, color: ColorUtils.stringToColor(widget.subjectColor)),
           const SizedBox(height: 16),
           Text(
-            'Practice Mode',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: ColorUtils.stringToColor(widget.subjectColor)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Practice questions from ${widget.subjectName}',
+            l10n.practiceQuestionsFrom(widget.subjectName),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
@@ -312,7 +311,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               );
             },
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Start Practice'),
+            label: Text(l10n.startPractice),
           ),
         ],
       ),
@@ -321,6 +320,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
   Widget _buildHistoryTab() {
     return Consumer(builder: (context, ref, child) {
+      final l10n = AppLocalizations.of(context)!;
       final sessionRepo = StudySessionRepository();
       
       Future<List<dynamic>> loadSessions() async {
@@ -349,7 +349,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 children: [
                   Icon(Icons.history, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
-                  const Text('No practice history'),
+                  Text(l10n.noPracticeHistory),
                   const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: () {
@@ -361,7 +361,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       );
                     },
                     icon: const Icon(Icons.view_list),
-                    label: const Text('View All Sessions'),
+                    label: Text(l10n.viewAllSessions),
                   ),
                 ],
               ),
@@ -403,7 +403,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                               : Colors.red,
                     ),
                   ),
-                  title: Text('Session ${index + 1}'),
+                  title: Text(l10n.sessionNumber(index + 1)),
                   subtitle: Text(
                     '${formatDate((session as dynamic).startTime)} • ${formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
                   ),
@@ -441,6 +441,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
   Widget _buildStatsTab() {
     return Consumer(builder: (context, ref, child) {
+      final l10n = AppLocalizations.of(context)!;
       final sessionRepo = StudySessionRepository();
       
       Future<List<dynamic>> loadSessions() async {
@@ -471,7 +472,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      'Sessions',
+                      l10n.sessionsLabel,
                       totalSessions.toString(),
                       Icons.how_to_vote,
                       Theme.of(context).colorScheme.primary,
@@ -480,7 +481,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildStatCard(
-                      'Accuracy',
+                      l10n.accuracy,
                       '${avgScore.toStringAsFixed(1)}%',
                       Icons.star,
                       avgScore >= 80 ? Colors.green : avgScore >= 50 ? Colors.orange : Colors.red,
@@ -493,7 +494,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      'Questions',
+                      l10n.questionsLabel,
                       totalQuestions.toString(),
                       Icons.question_answer,
                       Colors.blue,
@@ -502,7 +503,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildStatCard(
-                      'Time',
+                      l10n.time,
                       formatDuration(Duration(milliseconds: totalTime)),
                       Icons.access_time,
                       Colors.purple,
@@ -514,7 +515,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               const SizedBox(height: 24),
               
               // Practice Progress
-              _buildSectionHeader('Practice Progress'),
+              _buildSectionHeader(l10n.practiceProgress),
               const SizedBox(height: 12),
               Card(
                 child: Padding(
@@ -525,7 +526,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Overall Score'),
+                          Text(l10n.overallScore),
                           Text(
                             '${avgScore.toStringAsFixed(1)}%',
                             style: TextStyle(
@@ -545,7 +546,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Keep practicing to improve your score!',
+                        l10n.keepPracticing,
                         style: Theme.of(context).textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
@@ -602,6 +603,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   void _showMoreOptions() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -610,7 +612,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('Edit Subject'),
+              title: Text(l10n.editSubject),
               onTap: () {
                 Navigator.pop(context);
                 // Navigate to edit screen
@@ -618,7 +620,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             ),
             ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
+              title: Text(l10n.settings),
               onTap: () {
                 Navigator.pop(context);
                 // Add settings
@@ -626,7 +628,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Subject', style: TextStyle(color: Colors.red)),
+              title: Text(l10n.deleteSubject, style: const TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 _confirmDelete();
@@ -639,15 +641,16 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   void _confirmDelete() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Subject'),
-        content: const Text('Are you sure you want to delete this subject? This will also delete all associated lessons and questions.'),
+        title: Text(l10n.deleteSubject),
+        content: Text(l10n.deleteSubjectConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -656,7 +659,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               if (mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -666,26 +669,35 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   void _showSessionDetails(dynamic session) {
     final questions = ((session as dynamic).questionsAnswered ?? 0).toInt();
     final correct = ((session as dynamic).correctAnswers ?? 0).toInt();
+    final l10n = AppLocalizations.of(context)!;
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Session Details'),
+        title: Text(l10n.sessionDetails),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow('Date', formatDate((session as dynamic).startTime)),
-            _detailRow('Duration', formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
-            _detailRow('Questions', questions.toString()),
+            _detailRow(l10n.date, formatDate((session as dynamic).startTime)),
+            _detailRow(l10n.duration, formatDuration(Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
+            _detailRow(l10n.questions, questions.toString()),
             if (correct > 0)
-              _detailRow('Correct', '$correct/$questions'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(l10n.correctOf(correct, questions)),
+                  ],
+                ),
+              ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(l10n.close),
           ),
         ],
       ),

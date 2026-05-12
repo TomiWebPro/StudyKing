@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Canvas/Drawing Widget for graph drawing and diagram questions
 class CanvasDrawingWidget extends StatefulWidget {
@@ -36,54 +37,77 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isEmpty = _strokes.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.instruction != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(widget.instruction!, style: const TextStyle(fontSize: 14)),
+          Semantics(
+            header: true,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(widget.instruction!, style: const TextStyle(fontSize: 14)),
+            ),
           ),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onPanStart: _handlePanStart,
-          onPanUpdate: _handlePanUpdate,
-          onPanEnd: _handlePanEnd,
-          child: RepaintBoundary(
-            key: _paintKey,
-            child: Container(
-              width: double.infinity,
-              height: 300,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Stack(
-                children: [
-                  RepaintBoundary(child: _buildGrid(context)),
-                  CustomPaint(size: Size.infinite, painter: DrawingPainter(strokes: _strokes)),
-                  if (isEmpty && !_isDrawing)
-                    const Center(
-                      child: Text(
-                        'Draw here...',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
+        Semantics(
+          container: true,
+          label: widget.instruction ?? l10n.drawingCanvas,
+          hint: l10n.drawYourAnswer,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanStart: _handlePanStart,
+            onPanUpdate: _handlePanUpdate,
+            onPanEnd: _handlePanEnd,
+            child: RepaintBoundary(
+              key: _paintKey,
+              child: Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: _isDrawing ? Colors.blue.shade400 : Colors.grey.shade300, width: _isDrawing ? 2 : 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Stack(
+                  children: [
+                    RepaintBoundary(child: _buildGrid(context)),
+                    CustomPaint(size: Size.infinite, painter: DrawingPainter(strokes: _strokes)),
+                    if (isEmpty && !_isDrawing)
+                      Semantics(
+                        label: l10n.canvasIsEmpty,
+                        excludeSemantics: true,
+                        child: Center(
+                          child: Text(
+                            l10n.drawHere,
+                            style: const TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildIconButton(icon: Icons.undo, onTap: _handleUndo, label: l10n.undoLastStroke),
+                          const SizedBox(width: 8),
+                          _buildIconButton(icon: Icons.delete_outline, onTap: _handleClear, label: l10n.clearAllDrawings),
+                        ],
                       ),
                     ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildIconButton(icon: Icons.undo, onTap: _handleUndo),
-                        const SizedBox(width: 8),
-                        _buildIconButton(icon: Icons.delete_outline, onTap: _handleClear),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+          ),
+        ),
+        Semantics(
+          liveRegion: true,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              _strokes.isEmpty ? l10n.canvasIsEmpty : l10n.drawingWithStrokes(_strokes.length, _strokes.length == 1 ? '' : 's'),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
         ),
@@ -99,7 +123,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                         width: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Save Drawing'),
+                    : Text(l10n.saveDrawing),
               ),
             ),
             if (_saveMessage != null) ...[
@@ -119,17 +143,21 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     );
   }
 
-  Widget _buildIconButton({required IconData icon, required VoidCallback onTap}) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
+  Widget _buildIconButton({required IconData icon, required VoidCallback onTap, String? label}) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(icon, size: 20, color: Colors.grey.shade700),
+        elevation: 2,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Icon(icon, size: 20, color: Colors.grey.shade700),
+          ),
         ),
       ),
     );
@@ -175,6 +203,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   }
 
   Future<void> _handleSave() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
       _saveMessage = null;
@@ -184,13 +213,13 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       widget.onDrawingComplete(data);
       if (mounted) {
         setState(() {
-          _saveMessage = 'Drawing saved.';
+          _saveMessage = l10n.drawingSaved;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _saveMessage = 'Failed to save drawing. Retry.';
+          _saveMessage = l10n.failedToSaveDrawing;
         });
       }
     } finally {

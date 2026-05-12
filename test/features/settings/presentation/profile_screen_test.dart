@@ -431,5 +431,376 @@ void main() {
 
       expect(find.text('Weekend mornings'), findsOneWidget);
     });
+
+    group('Save Verification', () {
+      testWidgets('save triggers repository call with correct data', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Save Test User',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile, isNotNull);
+        expect(fakeProfileRepo._profile!.name, equals('Save Test User'));
+      });
+
+      testWidgets('save includes student ID when provided', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'ID Test User',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Student ID (Optional)'),
+          '12345',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.studentId, equals('12345'));
+      });
+
+      testWidgets('save includes learning goal when provided', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Goal Test User',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Learning Goal'),
+          'Pass Final Exam',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.learningGoal, equals('Pass Final Exam'));
+      });
+
+      testWidgets('save includes preferred study time when provided', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Time Test User',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Preferred Study Time'),
+          'Evening 7-10 PM',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.preferredStudyTime, equals('Evening 7-10 PM'));
+      });
+
+      testWidgets('save shows loading indicator during save', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Loading Test',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      });
+    });
+
+    group('Validation Implementation', () {
+      testWidgets('empty name shows Name is required error', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Name is required'), findsOneWidget);
+        expect(fakeProfileRepo._profile, isNull);
+      });
+
+      testWidgets('whitespace-only name shows error', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          '   ',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Name is required'), findsOneWidget);
+      });
+
+      testWidgets('name field trims whitespace before save', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          '  Trimmed User  ',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.name, equals('Trimmed User'));
+      });
+
+      testWidgets('student ID accepts numeric values only', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Valid User',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Student ID (Optional)'),
+          '9876543210',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.studentId, equals('9876543210'));
+      });
+
+      testWidgets('empty student ID is stored as null', (tester) async {
+        fakeProfileRepo._profile = null;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'No ID User',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile!.studentId, isNull);
+      });
+    });
+
+    group('Delete Account Flow', () {
+      testWidgets('delete confirmation calls clearProfile', (tester) async {
+        fakeProfileRepo._profile = ProfileData(
+          id: 'delete-test',
+          name: 'Delete Test',
+        );
+
+        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Are you sure'), findsOneWidget);
+        expect(find.text('Delete Account'), findsWidgets);
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Delete').last);
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile, isNull);
+      });
+
+      testWidgets('delete confirmation shows warning message', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('cannot be undone'), findsOneWidget);
+        expect(find.textContaining('permanently delete'), findsOneWidget);
+      });
+
+      testWidgets('cancel delete does not clear profile', (tester) async {
+        fakeProfileRepo._profile = ProfileData(
+          id: 'cancel-delete-test',
+          name: 'Cancel Delete Test',
+        );
+
+        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Cancel').first);
+        await tester.pumpAndSettle();
+
+        expect(fakeProfileRepo._profile, isNotNull);
+        expect(fakeProfileRepo._profile!.name, equals('Cancel Delete Test'));
+      });
+
+      testWidgets('delete button has danger styling', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        final deleteButton = find.widgetWithText(TextButton, 'Delete');
+        expect(deleteButton, findsOneWidget);
+
+        final button = tester.widget<TextButton>(deleteButton);
+        expect(button.style, isNotNull);
+      });
+    });
+
+    group('Language Switch Side Effects', () {
+      testWidgets('language dropdown shows current language', (tester) async {
+        fakeProfileRepo._profile = ProfileData(
+          id: 'lang-test',
+          name: 'Lang User',
+          language: 'es',
+        );
+
+        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Spanish'), findsAtLeastNWidgets(1));
+      });
+
+      testWidgets('can switch from Spanish to English', (tester) async {
+        fakeProfileRepo._profile = ProfileData(
+          id: 'lang-switch-test',
+          name: 'Switch User',
+          language: 'es',
+        );
+
+        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButton<String>));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('English').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('English'), findsWidgets);
+      });
+    });
+
+    group('Notifications Toggle', () {
+      testWidgets('notifications can be enabled', (tester) async {
+        fakeProfileRepo._profile = ProfileData(
+          id: 'notif-test',
+          name: 'Notif User',
+          notificationsEnabled: false,
+        );
+
+        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpAndSettle();
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Notifications');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isFalse);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+
+        final updatedSwitch = tester.widget<SwitchListTile>(switchTile);
+        expect(updatedSwitch.value, isTrue);
+      });
+    });
+
+    group('Avatar Selection', () {
+      testWidgets('selecting avatar updates state', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.person).first);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.school));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choose Avatar'), findsNothing);
+      });
+
+      testWidgets('all avatar options are selectable', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.person).first);
+        await tester.pumpAndSettle();
+
+        final avatarIcons = [
+          Icons.face,
+          Icons.school,
+          Icons.local_hospital,
+          Icons.leaderboard,
+          Icons.emoji_events,
+          Icons.sports_tennis,
+          Icons.coffee,
+        ];
+
+        for (final icon in avatarIcons) {
+          await tester.tap(find.byIcon(Icons.person).first);
+          await tester.pumpAndSettle();
+          await tester.tap(find.byIcon(icon));
+          await tester.pumpAndSettle();
+        }
+      });
+    });
+
+    group('Error Handling', () {
+      testWidgets('shows generic error message on save failure', (tester) async {
+        fakeProfileRepo.shouldThrow = true;
+
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Error User',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Error'), findsWidgets);
+      });
+    });
   });
 }

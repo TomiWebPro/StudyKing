@@ -413,5 +413,1205 @@
   "colorBlueGrey": "Blue Grey",
   "@colorBlueGrey": {
     "description": "Color label for blue grey"
+  },
+
+  "profile": "Profile",
+  "@profile": {
+    "description": "Title for profile screen"
+  },
+  "nameIsRequired": "Name is required",
+  "@nameIsRequired": {
+    "description": "Error message when name field is empty"
+  },
+  "studentIdMustBeNumeric": "Student ID must be numeric",
+  "@studentIdMustBeNumeric": {
+    "description": "Error message when student ID is not numeric"
+  },
+  "profileSavedSuccessfully": "Profile saved successfully",
+  "@profileSavedSuccessfully": {
+    "description": "Snackbar message when profile is saved"
+  },
+  "errorSavingProfile": "Error saving profile: {error}",
+  "@errorSavingProfile": {
+    "description": "Error message when saving profile fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseAvatar": "Choose Avatar",
+  "@chooseAvatar": {
+    "description": "Title for avatar picker bottom sheet"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+  "selectAvatar": "Select avatar {iconKey}",
+  "@selectAvatar": {
+    "description": "Semantic label for avatar selection",
+    "placeholders": {
+      "iconKey": {
+        "type": "String"
+      }
+    }
+  },
+  "fullName": "Full Name",
+  "@fullName": {
+    "description": "Label for full name input field"
+  },
+  "enterYourName": "Enter your name",
+  "@enterYourName": {
+    "description": "Hint text for name input field"
+  },
+  "studentIdOptional": "Student ID (Optional)",
+  "@studentIdOptional": {
+    "description": "Label for student ID input field"
+  },
+  "yourStudentIdNumber": "Your student ID number",
+  "@yourStudentIdNumber": {
+    "description": "Hint text for student ID input field"
+  },
+  "learningGoal": "Learning Goal",
+  "@learningGoal": {
+    "description": "Label for learning goal input field"
+  },
+  "learningGoalHint": "e.g., Final Exams, Certifications",
+  "@learningGoalHint": {
+    "description": "Hint text for learning goal input field"
+  },
+  "preferredStudyTime": "Preferred Study Time",
+  "@preferredStudyTime": {
+    "description": "Label for preferred study time input field"
+  },
+  "preferredStudyTimeHint": "e.g., Evening (6-9 PM)",
+  "@preferredStudyTimeHint": {
+    "description": "Hint text for preferred study time input field"
+  },
+  "accountInformation": "Account Information",
+  "@accountInformation": {
+    "description": "Section title for account information"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Label for language selector"
+  },
+  "english": "English",
+  "@english": {
+    "description": "Language option: English"
+  },
+  "spanish": "Spanish",
+  "@spanish": {
+    "description": "Language option: Spanish"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Label for notifications toggle"
+  },
+  "deleteAccountWarning": "Deleting your account will permanently remove all study data",
+  "@deleteAccountWarning": {
+    "description": "Warning text about account deletion"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button label"
+  },
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {
+    "description": "Title for delete account confirmation dialog"
+  },
+  "deleteAccountConfirmation": "Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.",
+  "@deleteAccountConfirmation": {
+    "description": "Confirmation text for account deletion"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button label"
+  },
+
+  "userManagement": "User Management",
+  "@userManagement": {
+    "description": "Section title for user management in settings"
+  },
+  "currentUser": "Current User",
+  "@currentUser": {
+    "description": "Tile title for current user in settings"
+  },
+  "manageYourProfile": "Manage your profile",
+  "@manageYourProfile": {
+    "description": "Subtitle for current user settings tile"
+  },
+  "quickAccess": "Quick Access",
+  "@quickAccess": {
+    "description": "Section title for quick access in settings"
+  },
+  "quickGuide": "Quick Guide",
+  "@quickGuide": {
+    "description": "Title for quick guide screen"
+  },
+  "aiPoweredStudyAssistant": "AI-powered study assistant",
+  "@aiPoweredStudyAssistant": {
+    "description": "Subtitle for quick guide settings tile"
+  },
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Section title for appearance settings"
+  },
+  "theme": "Theme",
+  "@theme": {
+    "description": "Tile title for theme selection"
+  },
+  "light": "Light",
+  "@light": {
+    "description": "Light theme option"
+  },
+  "dark": "Dark",
+  "@dark": {
+    "description": "Dark theme option"
+  },
+  "system": "System",
+  "@system": {
+    "description": "System default theme option"
+  },
+  "fontSize": "Font Size",
+  "@fontSize": {
+    "description": "Tile title for font size setting"
+  },
+  "small": "Small",
+  "@small": {
+    "description": "Small font size label"
+  },
+  "medium": "Medium",
+  "@medium": {
+    "description": "Medium font size label"
+  },
+  "large": "Large",
+  "@large": {
+    "description": "Large font size label"
+  },
+  "extraLarge": "Extra Large",
+  "@extraLarge": {
+    "description": "Extra large font size label"
+  },
+  "aiConfiguration": "AI Configuration",
+  "@aiConfiguration": {
+    "description": "Section title for AI configuration in settings"
+  },
+  "apiKeys": "API Keys",
+  "@apiKeys": {
+    "description": "Tile title for API keys"
+  },
+  "configured": "Configured",
+  "@configured": {
+    "description": "Status label when API key is configured"
+  },
+  "notConfigured": "Not configured",
+  "@notConfigured": {
+    "description": "Status label when API key is not configured"
+  },
+  "aiModel": "AI Model",
+  "@aiModel": {
+    "description": "Tile title for AI model selection"
+  },
+  "selectModelFromApi": "Select a model from API",
+  "@selectModelFromApi": {
+    "description": "Default label when no AI model is selected"
+  },
+  "requestTimeout": "Request Timeout",
+  "@requestTimeout": {
+    "description": "Tile title for request timeout setting"
+  },
+  "secondsValue": "{count} seconds",
+  "@secondsValue": {
+    "description": "Duration in seconds",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyPreferences": "Study Preferences",
+  "@studyPreferences": {
+    "description": "Section title for study preferences"
+  },
+  "studyReminders": "Study Reminders",
+  "@studyReminders": {
+    "description": "Title for study reminders toggle"
+  },
+  "enableNotificationAlerts": "Enable notification alerts",
+  "@enableNotificationAlerts": {
+    "description": "Subtitle for study reminders toggle"
+  },
+  "sessionDuration": "Session Duration",
+  "@sessionDuration": {
+    "description": "Tile title for session duration setting"
+  },
+  "minutesValue": "{count} minutes",
+  "@minutesValue": {
+    "description": "Duration in minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyAnalytics": "Study Analytics",
+  "@studyAnalytics": {
+    "description": "Section title for study analytics"
+  },
+  "totalStudySessions": "Total Study Sessions",
+  "@totalStudySessions": {
+    "description": "Tile title for total study sessions"
+  },
+  "sessionsCount": "{count} sessions",
+  "@sessionsCount": {
+    "description": "Number of sessions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "totalStudyTime": "Total Study Time",
+  "@totalStudyTime": {
+    "description": "Tile title for total study time"
+  },
+  "aboutSection": "About",
+  "@aboutSection": {
+    "description": "Section title for about section"
+  },
+  "aboutStudyKing": "About StudyKing",
+  "@aboutStudyKing": {
+    "description": "Tile title for about"
+  },
+  "versionInfo": "Version 0.1.0",
+  "@versionInfo": {
+    "description": "App version info"
+  },
+  "signOut": "Sign Out",
+  "@signOut": {
+    "description": "Sign out button label"
+  },
+  "apiKeyRequired": "API Key Required",
+  "@apiKeyRequired": {
+    "description": "Dialog title when API key is missing"
+  },
+  "pleaseConfigureApiKey": "Please configure your API key first.",
+  "@pleaseConfigureApiKey": {
+    "description": "Dialog content when API key is missing"
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "OK button label"
+  },
+  "unableToLoadModels": "Unable to load models right now.",
+  "@unableToLoadModels": {
+    "description": "Error message when models fail to load"
+  },
+  "searchModels": "Search models",
+  "@searchModels": {
+    "description": "Hint text for model search field"
+  },
+  "modelRequestTimedOut": "Model request timed out. Please try again.",
+  "@modelRequestTimedOut": {
+    "description": "Error message when model request times out"
+  },
+  "unableToLoadModelsTryAgain": "Unable to load models. Please try again.",
+  "@unableToLoadModelsTryAgain": {
+    "description": "Error message when models cannot be loaded"
+  },
+  "signOutConfirmation": "Are you sure you want to sign out?",
+  "@signOutConfirmation": {
+    "description": "Confirmation text for sign out"
+  },
+  "sessionsLabel": "Sessions",
+  "@sessionsLabel": {
+    "description": "Label for sessions count"
+  },
+  "questionsLabel": "Questions",
+  "@questionsLabel": {
+    "description": "Label for questions count"
+  },
+
+  "mySubjects": "My Subjects",
+  "@mySubjects": {
+    "description": "Title for subjects list screen"
+  },
+  "addNewSubject": "Add New Subject",
+  "@addNewSubject": {
+    "description": "Title for add new subject screen"
+  },
+  "subjectName": "Subject Name",
+  "@subjectName": {
+    "description": "Label for subject name field"
+  },
+  "subjectNameHint": "e.g., Physics",
+  "@subjectNameHint": {
+    "description": "Hint text for subject name"
+  },
+  "subjectCodeOptional": "Subject Code (Optional)",
+  "@subjectCodeOptional": {
+    "description": "Label for subject code field"
+  },
+  "subjectCodeHint": "e.g., IB-PHYS",
+  "@subjectCodeHint": {
+    "description": "Hint text for subject code"
+  },
+  "themeColor": "Theme Color",
+  "@themeColor": {
+    "description": "Label for theme color selection"
+  },
+  "subjectColor": "Subject Color",
+  "@subjectColor": {
+    "description": "Label for subject color picker"
+  },
+  "examDateOptional": "Exam Date (Optional)",
+  "@examDateOptional": {
+    "description": "Label for exam date picker"
+  },
+  "selectDate": "Select date",
+  "@selectDate": {
+    "description": "Hint text for date picker button"
+  },
+  "createSubject": "Create Subject",
+  "@createSubject": {
+    "description": "Button label to create a subject"
+  },
+  "subjectCreatedSuccessfully": "Subject created successfully",
+  "@subjectCreatedSuccessfully": {
+    "description": "Snackbar message when subject is created"
+  },
+  "errorCreatingSubject": "Error creating subject: {error}",
+  "@errorCreatingSubject": {
+    "description": "Error message when creating subject fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseEnterSubjectName": "Please enter a subject name",
+  "@pleaseEnterSubjectName": {
+    "description": "Validation error when subject name is empty"
+  },
+  "descriptionOptional": "Description (Optional)",
+  "@descriptionOptional": {
+    "description": "Label for description field"
+  },
+  "descriptionHint": "Brief description of the subject",
+  "@descriptionHint": {
+    "description": "Hint text for description field"
+  },
+  "teacherOptional": "Teacher (Optional)",
+  "@teacherOptional": {
+    "description": "Label for teacher name field"
+  },
+  "teacherHint": "e.g., Dr. John Smith",
+  "@teacherHint": {
+    "description": "Hint text for teacher name"
+  },
+  "syllabusScopeOptional": "Syllabus/Scope (Optional)",
+  "@syllabusScopeOptional": {
+    "description": "Label for syllabus field"
+  },
+  "syllabusHint": "Brief overview of the syllabus",
+  "@syllabusHint": {
+    "description": "Hint text for syllabus field"
+  },
+  "teacherNameHint": "Enter teacher name",
+  "@teacherNameHint": {
+    "description": "Hint text for teacher name field in form"
+  },
+  "syllabusDescriptionHint": "Enter syllabus description",
+  "@syllabusDescriptionHint": {
+    "description": "Hint text for syllabus description in form"
+  },
+  "noSubjectsYet": "No subjects yet",
+  "@noSubjectsYet": {
+    "description": "Empty state message for subjects list"
+  },
+  "addFirstSubject": "Add your first subject to begin studying",
+  "@addFirstSubject": {
+    "description": "Empty state subtitle for subjects list"
+  },
+  "practiceSessions": "Practice sessions",
+  "@practiceSessions": {
+    "description": "Label for practice sessions in subject card"
+  },
+  "startPractice": "Start Practice",
+  "@startPractice": {
+    "description": "Button label to start practice"
+  },
+  "noPracticeHistory": "No practice history",
+  "@noPracticeHistory": {
+    "description": "Empty state message for practice history"
+  },
+  "viewAllSessions": "View All Sessions",
+  "@viewAllSessions": {
+    "description": "Button label to view all sessions"
+  },
+  "editSubject": "Edit Subject",
+  "@editSubject": {
+    "description": "Menu option to edit subject"
+  },
+  "deleteSubject": "Delete Subject",
+  "@deleteSubject": {
+    "description": "Menu option to delete subject"
+  },
+  "deleteSubjectConfirmation": "Are you sure you want to delete this subject? This will also delete all associated lessons and questions.",
+  "@deleteSubjectConfirmation": {
+    "description": "Confirmation text for subject deletion"
+  },
+  "sessionDetails": "Session Details",
+  "@sessionDetails": {
+    "description": "Title for session details dialog"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close button label"
+  },
+  "date": "Date",
+  "@date": {
+    "description": "Label for date field"
+  },
+  "duration": "Duration",
+  "@duration": {
+    "description": "Label for duration field"
+  },
+  "questions": "Questions",
+  "@questions": {
+    "description": "Label for questions field"
+  },
+  "lessonsTab": "Lessons",
+  "@lessonsTab": {
+    "description": "Tab label for lessons"
+  },
+  "practiceTab": "Practice",
+  "@practiceTab": {
+    "description": "Tab label for practice"
+  },
+  "historyTab": "History",
+  "@historyTab": {
+    "description": "Tab label for history"
+  },
+  "statsTab": "Stats",
+  "@statsTab": {
+    "description": "Tab label for stats"
+  },
+  "noLessonsYet": "No lessons yet",
+  "@noLessonsYet": {
+    "description": "Empty state message for lessons"
+  },
+  "startLearningByCreatingTopics": "Start learning by creating topics and questions",
+  "@startLearningByCreatingTopics": {
+    "description": "Empty state subtitle for lessons"
+  },
+  "addTopic": "Add Topic",
+  "@addTopic": {
+    "description": "Button label to add a topic"
+  },
+  "lesson": "Lesson",
+  "@lesson": {
+    "description": "Default lesson label"
+  },
+  "questionsCount": "Questions: {count}",
+  "@questionsCount": {
+    "description": "Label showing number of questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceQuestionsFrom": "Practice questions from {subjectName}",
+  "@practiceQuestionsFrom": {
+    "description": "Subtitle for practice tab showing subject name",
+    "placeholders": {
+      "subjectName": {
+        "type": "String"
+      }
+    }
+  },
+  "practiceProgress": "Practice Progress",
+  "@practiceProgress": {
+    "description": "Section header for practice progress"
+  },
+  "overallScore": "Overall Score",
+  "@overallScore": {
+    "description": "Label for overall score"
+  },
+  "keepPracticing": "Keep practicing to improve your score!",
+  "@keepPracticing": {
+    "description": "Encouragement message for practice"
+  },
+  "sessionNumber": "Session {number}",
+  "@sessionNumber": {
+    "description": "Label for a session with number",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "selectFormat": "Select question format:",
+  "@selectFormat": {
+    "description": "Label for question format selection"
+  },
+  "studySessionTracker": "Study Session Tracker",
+  "@studySessionTracker": {
+    "description": "Title for session tracker screen"
+  },
+  "start": "Start",
+  "@start": {
+    "description": "Start button label"
+  },
+  "end": "End",
+  "@end": {
+    "description": "End button label"
+  },
+  "sessionComplete": "Session Complete",
+  "@sessionComplete": {
+    "description": "Title for session end dialog"
+  },
+  "howManyQuestions": "How many questions did you answer?",
+  "@howManyQuestions": {
+    "description": "Prompt for questions answered in session"
+  },
+  "questionsAnswered": "Questions Answered",
+  "@questionsAnswered": {
+    "description": "Label for questions answered field"
+  },
+  "skip": "Skip",
+  "@skip": {
+    "description": "Skip button label"
+  },
+
+  "graphRenderer": "Graph Renderer",
+  "@graphRenderer": {
+    "description": "Title for graph rendering page"
+  },
+  "refreshGraph": "Refresh graph",
+  "@refreshGraph": {
+    "description": "Tooltip for refresh graph button"
+  },
+  "validateGraphType": "Validate graph type",
+  "@validateGraphType": {
+    "description": "Tooltip for validate graph type button"
+  },
+  "uploadData": "Upload Data",
+  "@uploadData": {
+    "description": "Section title for data upload"
+  },
+  "uploadDataFile": "Upload Data File",
+  "@uploadDataFile": {
+    "description": "Button label to upload data file"
+  },
+  "orPasteDataDirectly": "Or paste data directly:",
+  "@orPasteDataDirectly": {
+    "description": "Label for manual data entry option"
+  },
+  "pasteDataHint": "Paste comma-separated data...",
+  "@pasteDataHint": {
+    "description": "Hint text for data input field"
+  },
+  "graphTypeDetection": "Graph Type Detection",
+  "@graphTypeDetection": {
+    "description": "Section title for graph type detection"
+  },
+  "autoDetectFromData": "Auto-detect from data:",
+  "@autoDetectFromData": {
+    "description": "Label for auto-detection option"
+  },
+  "lineGraph": "Line Graph",
+  "@lineGraph": {
+    "description": "Line graph type option"
+  },
+  "barChart": "Bar Chart",
+  "@barChart": {
+    "description": "Bar chart type option"
+  },
+  "scatterPlot": "Scatter Plot",
+  "@scatterPlot": {
+    "description": "Scatter plot type option"
+  },
+  "pieChart": "Pie Chart",
+  "@pieChart": {
+    "description": "Pie chart type option"
+  },
+  "llmValidation": "LLM Validation",
+  "@llmValidation": {
+    "description": "Section title for LLM validation"
+  },
+  "useLlmToValidateGraph": "Use LLM to validate graph:",
+  "@useLlmToValidateGraph": {
+    "description": "Label for LLM validation option"
+  },
+  "describeWhatYouSee": "Describe what you see in the graph...",
+  "@describeWhatYouSee": {
+    "description": "Hint text for validation input"
+  },
+  "validateWithLlm": "Validate with LLM",
+  "@validateWithLlm": {
+    "description": "Button label to validate with LLM"
+  },
+  "validating": "Validating...",
+  "@validating": {
+    "description": "Button label while validating"
+  },
+  "renderedGraph": "Rendered Graph",
+  "@renderedGraph": {
+    "description": "Section title for rendered graph"
+  },
+  "noDataUploaded": "No data uploaded",
+  "@noDataUploaded": {
+    "description": "Empty state message when no data is uploaded"
+  },
+  "uploadOrPasteData": "Upload or paste data to visualize",
+  "@uploadOrPasteData": {
+    "description": "Empty state subtitle for graph"
+  },
+  "selectGraphType": "Select a graph type to visualize",
+  "@selectGraphType": {
+    "description": "Message when no graph type is selected"
+  },
+  "graphVisualization": "{graphType} Visualization",
+  "@graphVisualization": {
+    "description": "Graph visualization title with type",
+    "placeholders": {
+      "graphType": {
+        "type": "String"
+      }
+    }
+  },
+  "dataPointsCount": "Data points: {count}",
+  "@dataPointsCount": {
+    "description": "Label showing number of data points",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "graphTypeSetTo": "Graph type set to {graphType}",
+  "@graphTypeSetTo": {
+    "description": "Snackbar message when graph type is changed",
+    "placeholders": {
+      "graphType": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadDataFileDialog": "Upload Data File",
+  "@uploadDataFileDialog": {
+    "description": "Title for upload file dialog"
+  },
+  "fileUploadImplemented": "File upload functionality would be implemented here.",
+  "@fileUploadImplemented": {
+    "description": "Content for upload file dialog"
+  },
+  "graphValidation": "Graph Validation",
+  "@graphValidation": {
+    "description": "Title for graph validation dialog"
+  },
+  "typeLabel": "Type: {graphType}",
+  "@typeLabel": {
+    "description": "Label showing graph type",
+    "placeholders": {
+      "graphType": {
+        "type": "String"
+      }
+    }
+  },
+  "considerUsingPieChart": "Consider using Pie Chart for small datasets",
+  "@considerUsingPieChart": {
+    "description": "Recommendation when data has few points"
+  },
+  "considerUsingBarChart": "Consider using Bar Chart for larger datasets",
+  "@considerUsingBarChart": {
+    "description": "Recommendation when data has many points"
+  },
+  "graphTypeMatchesData": "Graph type matches data structure",
+  "@graphTypeMatchesData": {
+    "description": "Message when graph type is appropriate for data"
+  },
+  "graphRefreshed": "Graph refreshed",
+  "@graphRefreshed": {
+    "description": "Snackbar message when graph is refreshed"
+  },
+  "pleaseSelectGraphType": "Please select a graph type first",
+  "@pleaseSelectGraphType": {
+    "description": "Error message when no graph type is selected"
+  },
+  "validationComplete": "Validation complete",
+  "@validationComplete": {
+    "description": "Message when validation completes without content"
+  },
+  "validationFailed": "Validation failed: {error}",
+  "@validationFailed": {
+    "description": "Error message when validation fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "graphTypeDetectionError": "Graph type detection failed",
+  "@graphTypeDetectionError": {
+    "description": "Error message for graph type detection failure"
+  },
+
+  "lessonScheduler": "Lesson Scheduler",
+  "@lessonScheduler": {
+    "description": "Title for lesson scheduling page"
+  },
+  "upcomingLessons": "Upcoming Lessons",
+  "@upcomingLessons": {
+    "description": "Section title for upcoming lessons"
+  },
+  "selectSubjectLabel": "Select Subject",
+  "@selectSubjectLabel": {
+    "description": "Label for subject selection"
+  },
+  "generateQuestionTypes": "Generate Question Types",
+  "@generateQuestionTypes": {
+    "description": "Section title for question types"
+  },
+  "lessonProgress": "Lesson Progress",
+  "@lessonProgress": {
+    "description": "Section title for lesson progress"
+  },
+  "percentComplete": "{percent}% Complete: {completed}/{total} questions generated",
+  "@percentComplete": {
+    "description": "Progress message showing completion percentage",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "scheduleLesson": "Schedule Lesson",
+  "@scheduleLesson": {
+    "description": "Title for schedule lesson dialog"
+  },
+  "selectCalendarDate": "Select calendar date for lesson",
+  "@selectCalendarDate": {
+    "description": "Content for schedule lesson dialog"
+  },
+  "done": "Done",
+  "@done": {
+    "description": "Done button label"
+  },
+  "createNewLesson": "Create New Lesson",
+  "@createNewLesson": {
+    "description": "Menu option to create new lesson"
+  },
+  "editExistingLesson": "Edit Existing Lesson",
+  "@editExistingLesson": {
+    "description": "Menu option to edit existing lesson"
+  },
+  "mcq": "MCQ",
+  "@mcq": {
+    "description": "Multiple choice question type label"
+  },
+  "inputLabel": "Input",
+  "@inputLabel": {
+    "description": "Input question type label"
+  },
+  "graphLabel": "Graph",
+  "@graphLabel": {
+    "description": "Graph question type label"
+  },
+
+  "quickGuide": "Quick Guide",
+  "@quickGuide": {
+    "description": "Title for quick guide screen"
+  },
+  "quickGuideHelp": "Quick Guide help",
+  "@quickGuideHelp": {
+    "description": "Semantic label for help button"
+  },
+  "help": "Help",
+  "@help": {
+    "description": "Help button tooltip"
+  },
+  "quickGuideIsThinking": "Quick Guide is thinking...",
+  "@quickGuideIsThinking": {
+    "description": "Status indicator when AI is thinking"
+  },
+  "suggestedPrompts": "Suggested prompts",
+  "@suggestedPrompts": {
+    "description": "Label for suggested prompt chips"
+  },
+  "askAnything": "Ask anything...",
+  "@askAnything": {
+    "description": "Hint text for message input"
+  },
+  "sendMessage": "Send message",
+  "@sendMessage": {
+    "description": "Tooltip for send button"
+  },
+  "messageInputHint": "Type your question here",
+  "@messageInputHint": {
+    "description": "Semantic hint for message input"
+  },
+  "quickGuideHelpTitle": "Quick Guide Help",
+  "@quickGuideHelpTitle": {
+    "description": "Title for help dialog"
+  },
+  "gotIt": "Got it",
+  "@gotIt": {
+    "description": "Button label to dismiss help dialog"
+  },
+
+  "addAnswerBeforeSubmitting": "Add an answer before submitting.",
+  "@addAnswerBeforeSubmitting": {
+    "description": "Error message when answer is empty"
+  },
+  "nextQuestion": "Next Question",
+  "@nextQuestion": {
+    "description": "Button label for next question"
+  },
+  "typeYourAnswerHere": "Type your answer here...",
+  "@typeYourAnswerHere": {
+    "description": "Hint text for text answer input"
+  },
+  "writeYourEssayAnswer": "Write your essay answer...",
+  "@writeYourEssayAnswer": {
+    "description": "Hint text for essay answer input"
+  },
+  "questionTypeNotSupported": "This question type is not yet supported in this view.",
+  "@questionTypeNotSupported": {
+    "description": "Message for unsupported question types"
+  },
+  "multipleChoice": "Multiple Choice",
+  "@multipleChoice": {
+    "description": "Label for single choice question type"
+  },
+  "multipleSelect": "Multiple Select",
+  "@multipleSelect": {
+    "description": "Label for multi choice question type"
+  },
+  "textAnswer": "Text Answer",
+  "@textAnswer": {
+    "description": "Label for text answer question type"
+  },
+  "math": "Math",
+  "@math": {
+    "description": "Label for math question type"
+  },
+  "essay": "Essay",
+  "@essay": {
+    "description": "Label for essay question type"
+  },
+  "diagram": "Diagram",
+  "@diagram": {
+    "description": "Label for diagram question type"
+  },
+  "graphQuestion": "Graph",
+  "@graphQuestion": {
+    "description": "Label for graph question type"
+  },
+  "stepByStep": "Step-by-Step",
+  "@stepByStep": {
+    "description": "Label for step-by-step question type"
+  },
+  "difficultyLabel": "Difficulty: {level}",
+  "@difficultyLabel": {
+    "description": "Label showing difficulty level",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "easy": "Easy",
+  "@easy": {
+    "description": "Easy difficulty level"
+  },
+  "medium": "Medium",
+  "@medium": {
+    "description": "Medium difficulty level"
+  },
+  "hard": "Hard",
+  "@hard": {
+    "description": "Hard difficulty level"
+  },
+  "selectAsAnswer": "Select as answer",
+  "@selectAsAnswer": {
+    "description": "Semantic hint for selecting an answer"
+  },
+  "selectedRightOption": "Selected right option",
+  "@selectedRightOption": {
+    "description": "Feedback text when correct option is selected"
+  },
+  "tryAgain": "Try again",
+  "@tryAgain": {
+    "description": "Feedback text when wrong option is selected"
+  },
+  "drawHere": "Draw here...",
+  "@drawHere": {
+    "description": "Placeholder text for empty canvas"
+  },
+  "undoLastStroke": "Undo last stroke",
+  "@undoLastStroke": {
+    "description": "Semantic label for undo button"
+  },
+  "clearAllDrawings": "Clear all drawings",
+  "@clearAllDrawings": {
+    "description": "Semantic label for clear button"
+  },
+  "canvasIsEmpty": "Canvas is empty",
+  "@canvasIsEmpty": {
+    "description": "Status text when canvas is empty"
+  },
+  "drawingWithStrokes": "Drawing with {count} stroke{plural}",
+  "@drawingWithStrokes": {
+    "description": "Status text showing stroke count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "plural": {
+        "type": "String"
+      }
+    }
+  },
+  "saveDrawing": "Save Drawing",
+  "@saveDrawing": {
+    "description": "Button label to save drawing"
+  },
+  "drawingSaved": "Drawing saved.",
+  "@drawingSaved": {
+    "description": "Success message for drawing save"
+  },
+  "failedToSaveDrawing": "Failed to save drawing. Retry.",
+  "@failedToSaveDrawing": {
+    "description": "Error message for drawing save failure"
+  },
+  "drawingCanvas": "Drawing canvas",
+  "@drawingCanvas": {
+    "description": "Semantic label for drawing canvas"
+  },
+  "drawYourAnswer": "Draw your answer on the canvas using your finger or stylus",
+  "@drawYourAnswer": {
+    "description": "Semantic hint for drawing canvas"
+  },
+
+  "apiConfiguration": "API Configuration",
+  "@apiConfiguration": {
+    "description": "Title for API configuration screen"
+  },
+  "configureApiKeys": "Configure API Keys",
+  "@configureApiKeys": {
+    "description": "Section title for API key configuration"
+  },
+  "configureApiKeysDescription": "Enter your OpenRouter API credentials below. These are used to power the AI features.",
+  "@configureApiKeysDescription": {
+    "description": "Description text for API key configuration"
+  },
+  "openRouterApiKey": "OpenRouter API Key",
+  "@openRouterApiKey": {
+    "description": "Label for API key field"
+  },
+  "apiBaseUrl": "API Base URL",
+  "@apiBaseUrl": {
+    "description": "Label for API base URL field"
+  },
+  "apiKeyHint": "sk-or-v1-...",
+  "@apiKeyHint": {
+    "description": "Hint text for API key input"
+  },
+  "apiBaseUrlHint": "https://openrouter.ai/api/v1",
+  "@apiBaseUrlHint": {
+    "description": "Hint text for API base URL input"
+  },
+  "apiKeyDescription": "Required for LLM content generation. Get your key from https://openrouter.ai/keys",
+  "@apiKeyDescription": {
+    "description": "Description text for API key"
+  },
+  "apiBaseUrlDescription": "The endpoint URL for the AI service",
+  "@apiBaseUrlDescription": {
+    "description": "Description text for API base URL"
+  },
+  "saveApiKeys": "Save API Keys",
+  "@saveApiKeys": {
+    "description": "Button label to save API keys"
+  },
+  "apiKeyCannotBeEmpty": "API key cannot be empty",
+  "@apiKeyCannotBeEmpty": {
+    "description": "Error message when API key is empty"
+  },
+  "apiKeysSavedSuccessfully": "API keys saved successfully",
+  "@apiKeysSavedSuccessfully": {
+    "description": "Success message when API keys are saved"
+  },
+  "unableToSaveApiConfig": "Unable to save API configuration. Please try again.",
+  "@unableToSaveApiConfig": {
+    "description": "Error message when API config save fails"
+  },
+
+  "currentSession": "Current Session",
+  "@currentSession": {
+    "description": "Label for active study session"
+  },
+  "noActiveSession": "No Active Session",
+  "@noActiveSession": {
+    "description": "Label when no session is active"
+  },
+  "tapStartToBegin": "Tap start to begin tracking",
+  "@tapStartToBegin": {
+    "description": "Hint text when session is not started"
+  },
+  "recentSessions": "Recent Sessions",
+  "@recentSessions": {
+    "description": "Section title for recent sessions"
+  },
+  "ofLabel": "{count1} of {count2}",
+  "@ofLabel": {
+    "description": "Label showing count of items",
+    "placeholders": {
+      "count1": {
+        "type": "int"
+      },
+      "count2": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAll": "View All",
+  "@viewAll": {
+    "description": "Button label to view all items"
+  },
+  "noSessionsYet": "No sessions yet",
+  "@noSessionsYet": {
+    "description": "Empty state message for sessions"
+  },
+  "startYourFirstSession": "Start your first session!",
+  "@startYourFirstSession": {
+    "description": "Empty state subtitle for sessions"
+  },
+  "filterByDate": "Filter by Date",
+  "@filterByDate": {
+    "description": "Button label for date filter"
+  },
+  "filterBySubject": "Filter by Subject",
+  "@filterBySubject": {
+    "description": "Button label for subject filter"
+  },
+  "clearFilters": "Clear filters",
+  "@clearFilters": {
+    "description": "Tooltip for clearing filters"
+  },
+  "clearFilterLabel": "Clear",
+  "@clearFilterLabel": {
+    "description": "Clear button label in filter dialog"
+  },
+  "totalTime": "Total Time",
+  "@totalTime": {
+    "description": "Label for total time stat"
+  },
+  "average": "Average",
+  "@average": {
+    "description": "Label for average stat"
+  },
+  "noSessionsFoundForFilters": "No sessions found for selected filters",
+  "@noSessionsFoundForFilters": {
+    "description": "Empty state when filters yield no results"
+  },
+  "tryAdjustingFilters": "Try adjusting your filters",
+  "@tryAdjustingFilters": {
+    "description": "Suggestion when filters yield no results"
+  },
+  "startStudyingToTrack": "Start studying to track your progress",
+  "@startStudyingToTrack": {
+    "description": "Empty state message for session history"
+  },
+  "sessionDeleted": "Session deleted",
+  "@sessionDeleted": {
+    "description": "Snackbar message when session is deleted"
+  },
+  "undo": "Undo",
+  "@undo": {
+    "description": "Undo action label"
+  },
+  "failedToDeleteSession": "Failed to delete session: {error}",
+  "@failedToDeleteSession": {
+    "description": "Error message when session deletion fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteSession": "Delete Session",
+  "@deleteSession": {
+    "description": "Title for delete session dialog"
+  },
+  "deleteSessionConfirmation": "Are you sure you want to delete this session?",
+  "@deleteSessionConfirmation": {
+    "description": "Confirmation text for session deletion"
+  },
+  "noQuestions": "No questions",
+  "@noQuestions": {
+    "description": "Label when there are no questions"
+  },
+  "questionsCountLabel": "{count} questions",
+  "@questionsCountLabel": {
+    "description": "Label showing number of questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "correctOf": "Correct: {correct}/{total}",
+  "@correctOf": {
+    "description": "Label showing correct answers out of total",
+    "placeholders": {
+      "correct": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDateToFilter": "Select a date to filter sessions",
+  "@selectDateToFilter": {
+    "description": "Help text for date picker in session filter"
+  },
+  "filterBySubjectTitle": "Filter by Subject",
+  "@filterBySubjectTitle": {
+    "description": "Title for subject filter dialog"
+  },
+  "sessionHistory": "Session History",
+  "@sessionHistory": {
+    "description": "Title for session history screen"
+  },
+
+  "errorSavingSubject": "Error saving subject: {error}",
+  "@errorSavingSubject": {
+    "description": "Error message when saving subject fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSaveSession": "Failed to save session: {error}",
+  "@failedToSaveSession": {
+    "description": "Error message when saving session fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }
