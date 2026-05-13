@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/app_runtime_config.dart';
 import 'package:studyking/core/constants/app_build_config.dart';
-import 'package:studyking/core/constants/app_features.dart';
 import 'package:studyking/core/constants/app_api_config.dart';
 import 'package:studyking/core/constants/app_config.dart';
 import 'package:studyking/core/constants/security_config.dart';
@@ -77,17 +76,14 @@ void main() {
       test('constructs with explicit parameters', () {
         final secrets = ApiSecrets.fromRuntime(openRouterApiKey: 'test-key');
         final apiConfig = ApiConfig.forEnvironment(AppEnvironment.development);
-        final featureFlags = FeatureFlagService();
         final config = AppConfig(
           environment: AppEnvironment.staging,
           apiConfig: apiConfig,
           secrets: secrets,
-          featureFlags: featureFlags,
         );
         expect(config.environment, AppEnvironment.staging);
         expect(config.apiConfig, apiConfig);
         expect(config.secrets, secrets);
-        expect(config.featureFlags, featureFlags);
       });
     });
 
@@ -97,20 +93,6 @@ void main() {
         expect(config.environment, AppEnvironment.development);
         expect(config.apiConfig, isA<ApiConfig>());
         expect(config.secrets, isA<ApiSecrets>());
-        expect(config.featureFlags, isA<FeatureFlagService>());
-      });
-
-      test('bootstrap accepts feature overrides', () {
-        final config = AppConfig.bootstrap(featureOverrides: {
-          AppFeature.analytics: true,
-        });
-        expect(config.featureFlags.isEnabled(AppFeature.analytics), isTrue);
-        expect(config.featureFlags.isEnabled(AppFeature.crashReporting), isFalse);
-      });
-
-      test('bootstrap applies empty feature overrides', () {
-        final config = AppConfig.bootstrap(featureOverrides: {});
-        expect(config.featureFlags.isEnabled(AppFeature.performanceOptimization), isTrue);
       });
     });
 
@@ -271,9 +253,7 @@ void main() {
 
     test('injectForTesting overrides existing instance', () {
       AppConstants.initialize();
-      final newConfig = AppConfig.bootstrap(featureOverrides: {
-        AppFeature.analytics: true,
-      });
+      final newConfig = AppConfig.bootstrap();
       AppConstants.injectForTesting(newConfig);
       expect(AppConstants.instance, same(newConfig));
     });

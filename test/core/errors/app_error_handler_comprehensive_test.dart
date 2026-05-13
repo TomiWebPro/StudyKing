@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Future<BuildContext> captureContext(WidgetTester tester) async {
   BuildContext? context;
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (c) {

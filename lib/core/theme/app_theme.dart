@@ -121,6 +121,38 @@ class AppTheme {
     );
   }
 
+  static Color progressColor(double value, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (value >= 0.8) return cs.primary;
+    if (value >= 0.6) return cs.tertiary;
+    return cs.error;
+  }
+
+  static Color urgencyColor(double value, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (value > 0.7) return cs.error;
+    if (value > 0.4) return cs.tertiary;
+    return cs.primary;
+  }
+
+  static Color masteryColor(double value, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (value >= 0.8) return cs.primary;
+    if (value >= 0.6) return cs.tertiary;
+    return cs.error;
+  }
+
+  static Color priorityColor(double priority, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (priority > 2.0) return cs.error;
+    if (priority > 1.0) return cs.tertiary;
+    return cs.primary;
+  }
+
+  static Color badgeColor(BuildContext context) {
+    return Theme.of(context).colorScheme.primary;
+  }
+
   static ThemeData highContrastDarkTheme({double fontSize = 16}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF9575CD),

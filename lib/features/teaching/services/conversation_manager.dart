@@ -22,7 +22,7 @@ class ConversationManager {
   final Uuid _uuid = const Uuid();
   final String sessionId;
 
-  String _studentId = 'anonymous';
+  String _studentId = '';
   String _topicTitle = '';
   String _subjectId = '';
   String _topicId = '';
@@ -342,16 +342,3 @@ Keep it concise and constructive.
   }
 }
 
-class AdaptiveMetrics {
-  final double pace;
-  final int consecutiveCorrect;
-  final int consecutiveIncorrect;
-  final double confidenceRating;
-
-  AdaptiveMetrics({
-    required this.pace,
-    required this.consecutiveCorrect,
-    required this.consecutiveIncorrect,
-    required this.confidenceRating,
-  });
-}

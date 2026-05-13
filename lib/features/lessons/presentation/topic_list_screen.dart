@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
+import '../../../core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_list_screen.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class TopicListScreen extends StatefulWidget {
-  const TopicListScreen({super.key});
+  final TopicRepository? topicRepository;
+
+  const TopicListScreen({super.key, this.topicRepository});
 
   @override
   State<TopicListScreen> createState() => _TopicListScreenState();
@@ -23,9 +26,12 @@ class _TopicListScreenState extends State<TopicListScreen> {
     _loadTopics();
   }
 
+  TopicRepository get _topicRepo =>
+      widget.topicRepository ?? database.topicRepository;
+
   Future<void> _loadTopics() async {
     try {
-      final topics = await database.topicRepository.getAll();
+      final topics = await _topicRepo.getAll();
       setState(() {
         _topics = topics;
         _isLoading = false;

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../utils/logger.dart';
 import 'app_api_config.dart';
 import 'app_build_config.dart';
-import 'app_features.dart';
 import 'app_runtime_config.dart';
 import 'security_config.dart';
 
@@ -14,22 +13,19 @@ class AppConfig {
     required this.environment,
     required this.apiConfig,
     required this.secrets,
-    required this.featureFlags,
   });
 
   final AppEnvironment environment;
   final ApiConfig apiConfig;
   final ApiSecrets secrets;
-  final FeatureFlagService featureFlags;
 
-  factory AppConfig.bootstrap({Map<AppFeature, bool>? featureOverrides}) {
+  factory AppConfig.bootstrap() {
     final env = BuildConfig.environment;
     SecurityConfig.enforceStartupGuards();
     return AppConfig(
       environment: env,
       apiConfig: ApiConfig.forEnvironment(env),
       secrets: ApiSecrets.fromEnvironment(),
-      featureFlags: FeatureFlagService(overrides: featureOverrides),
     );
   }
 
@@ -44,7 +40,7 @@ class AppConfig {
       'youtubeTimeoutMs': apiConfig.youtubeRequestTimeout.inMilliseconds,
       'defaultThemeMode': UiConfig.defaultThemeMode.name,
       'cacheExpirationHours': CacheConfig.cacheExpiration.inHours,
-      'performanceOptimization': featureFlags.isEnabled(AppFeature.performanceOptimization),
+      'performanceOptimization': true,
       'requireAuthentication': SecurityConfig.requireAuthentication(environment),
     };
   }
@@ -92,8 +88,8 @@ class AppConstants {
     );
   }
 
-  static AppConfig initialize({Map<AppFeature, bool>? featureOverrides}) {
-    return _instance ??= AppConfig.bootstrap(featureOverrides: featureOverrides);
+  static AppConfig initialize() {
+    return _instance ??= AppConfig.bootstrap();
   }
 
   static void resetForTesting() {

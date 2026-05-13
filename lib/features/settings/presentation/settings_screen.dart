@@ -52,27 +52,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   () => _showFontSizeDialog(settings.fontSize)),
             ]),
             _section(l10n.accessibility, [
-              Semantics(
-                label: l10n.highContrastMode,
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.contrast),
-                  title: Text(l10n.highContrastMode),
-                  subtitle: Text(l10n.highContrastDescription),
-                  value: settings.highContrastEnabled,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateHighContrast(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.contrast),
+                title: Text(l10n.highContrastMode),
+                subtitle: Text(l10n.highContrastDescription),
+                value: settings.highContrastEnabled,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateHighContrast(value),
               ),
-              Semantics(
-                label: l10n.largeTouchTargets,
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.touch_app),
-                  title: Text(l10n.largeTouchTargets),
-                  subtitle: Text(l10n.largeTouchTargetsDescription),
-                  value: settings.largeTouchTargets,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateLargeTouchTargets(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.touch_app),
+                title: Text(l10n.largeTouchTargets),
+                subtitle: Text(l10n.largeTouchTargetsDescription),
+                value: settings.largeTouchTargets,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateLargeTouchTargets(value),
               ),
             ]),
             _section(l10n.aiConfiguration, [
@@ -84,16 +78,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
             ]),
             _section(l10n.studyPreferences, [
-              Semantics(
-                label: l10n.studyReminders,
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.notifications),
-                  title: Text(l10n.studyReminders),
-                  subtitle: Text(l10n.enableNotificationAlerts),
-                  value: settings.studyRemindersEnabled,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateStudyReminders(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications),
+                title: Text(l10n.studyReminders),
+                subtitle: Text(l10n.enableNotificationAlerts),
+                value: settings.studyRemindersEnabled,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateStudyReminders(value),
               ),
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                   Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
@@ -101,27 +92,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _section(l10n.studyAnalytics, [
               _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
                   Icons.show_chart, () => _showAnalytics(settings)),
-              Semantics(
-                label: l10n.totalStudyTime,
-                child: ListTile(
-                  leading: const Icon(Icons.access_time),
-                  title: Text(l10n.totalStudyTime),
-                  subtitle: Text(formatDuration(
-                      Duration(milliseconds: settings.totalStudyTimeMs),
-                      showDays: true)),
-                ),
+              ListTile(
+                leading: const Icon(Icons.access_time),
+                title: Text(l10n.totalStudyTime),
+                subtitle: Text(formatDuration(
+                    Duration(milliseconds: settings.totalStudyTimeMs),
+                    showDays: true)),
               ),
             ]),
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
                   () => _showAboutDialog(context)),
-              Semantics(
-                label: l10n.signOut,
-                child: ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: Text(l10n.signOut, style: const TextStyle(color: Colors.red)),
-                  onTap: _showSignOutDialog,
-                ),
+              ListTile(
+                leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+                title: Text(l10n.signOut, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                onTap: _showSignOutDialog,
               ),
             ]),
           ],
@@ -149,15 +134,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
 
   Widget _tile(String title, String subtitle, IconData icon, VoidCallback onTap) =>
-      Semantics(
-        label: title,
-        child: ListTile(
-          leading: Icon(icon),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.arrow_forward_ios),
-          onTap: onTap,
-        ),
+      ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: onTap,
       );
 
   String _getThemeLabel(ThemeMode mode) {
@@ -183,44 +165,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
-        Semantics(
-          label: l10n.light,
+        ListTile(
+          title: Text(l10n.light),
+          leading: const Icon(Icons.light_mode),
           selected: currentMode == ThemeMode.light,
-          child: ListTile(
-            title: Text(l10n.light),
-            leading: const Icon(Icons.light_mode),
-            selected: currentMode == ThemeMode.light,
-            onTap: () {
-              ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
-              Navigator.pop(context);
-            },
-          ),
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
+            Navigator.pop(context);
+          },
         ),
-        Semantics(
-          label: l10n.dark,
+        ListTile(
+          title: Text(l10n.dark),
+          leading: const Icon(Icons.dark_mode),
           selected: currentMode == ThemeMode.dark,
-          child: ListTile(
-            title: Text(l10n.dark),
-            leading: const Icon(Icons.dark_mode),
-            selected: currentMode == ThemeMode.dark,
-            onTap: () {
-              ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
-              Navigator.pop(context);
-            },
-          ),
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
+            Navigator.pop(context);
+          },
         ),
-        Semantics(
-          label: l10n.system,
+        ListTile(
+          title: Text(l10n.system),
+          leading: const Icon(Icons.settings_brightness),
           selected: currentMode == ThemeMode.system,
-          child: ListTile(
-            title: Text(l10n.system),
-            leading: const Icon(Icons.settings_brightness),
-            selected: currentMode == ThemeMode.system,
-            onTap: () {
-              ref.read(settingsProvider.notifier).updateTheme(ThemeMode.system);
-              Navigator.pop(context);
-            },
-          ),
+          onTap: () {
+            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.system);
+            Navigator.pop(context);
+          },
         ),
       ]),
     );
@@ -286,65 +256,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      isScrollControlled: true,
+      builder: (_) => _AiModelLoadingSheet(
+        apiKey: apiKey,
+        currentModel: currentModel,
+        searchController: _modelSearchController,
+        onModelSelected: (modelId) {
+          ref.read(settingsProvider.notifier).updateModel(modelId);
+          ref.read(selectedModelProvider.notifier).state = modelId;
+        },
+      ),
     );
-
-    try {
-      final modelService = ModelListingService(apiKey: apiKey);
-      final models = await modelService.fetchAvailableModels();
-      if (!mounted) return;
-      if (Navigator.canPop(context)) Navigator.pop(context);
-
-      final filtered = models.take(100).toList();
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => Column(children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _modelSearchController,
-              decoration: InputDecoration(
-                  hintText: l10n.searchModels, prefixIcon: const Icon(Icons.search)),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              children: filtered
-                  .where((m) => m.name
-                      .toLowerCase()
-                      .contains(_modelSearchController.text.toLowerCase()))
-                  .map((m) => Semantics(
-                        label: m.name,
-                        child: ListTile(
-                          title: Text(m.name),
-                          subtitle: Text(m.provider),
-                          trailing: m.id == currentModel
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : null,
-                          onTap: () {
-                            ref.read(settingsProvider.notifier).updateModel(m.id);
-                            ref.read(selectedModelProvider.notifier).state = m.id;
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-        ]),
-      );
-    } on TimeoutException {
-      if (Navigator.canPop(context)) Navigator.pop(context);
-      _showError(l10n.modelRequestTimedOut);
-    } catch (_) {
-      if (Navigator.canPop(context)) Navigator.pop(context);
-      _showError(l10n.unableToLoadModelsTryAgain);
-    }
   }
 
   void _showTimeoutDialog(int currentTimeout) {
@@ -394,18 +318,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (_) => ListView(
         children: options
-            .map((m) => Semantics(
-                  label: l10n.minutesValue(m),
-                  child: ListTile(
-                    title: Text(l10n.minutesValue(m)),
-                    trailing: m == currentMinutes
-                        ? const Icon(Icons.check, color: Colors.green)
-                        : null,
-                    onTap: () {
-                      ref.read(settingsProvider.notifier).updateSessionDuration(m);
-                      Navigator.pop(context);
-                    },
-                  ),
+            .map((m) => ListTile(
+                  title: Text(l10n.minutesValue(m)),
+                  trailing: m == currentMinutes
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).updateSessionDuration(m);
+                    Navigator.pop(context);
+                  },
                 ))
             .toList(),
       ),
@@ -419,14 +340,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (_) => Padding(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Semantics(
-            label: l10n.sessionsLabel,
-            child: ListTile(title: Text(l10n.sessionsLabel), subtitle: Text('${settings.totalSessionCount}')),
-          ),
-          Semantics(
-            label: l10n.questionsLabel,
-            child: ListTile(title: Text(l10n.questionsLabel), subtitle: Text('${settings.totalQuestions}')),
-          ),
+          ListTile(title: Text(l10n.sessionsLabel), subtitle: Text('${settings.totalSessionCount}')),
+          ListTile(title: Text(l10n.questionsLabel), subtitle: Text('${settings.totalQuestions}')),
         ]),
       ),
     );
@@ -455,9 +370,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
 }
 
 void _showAboutDialog(BuildContext context) {
@@ -470,4 +382,123 @@ void _showAboutDialog(BuildContext context) {
       applicationLegalese: l10n.aboutLegalese,
     ),
   );
+}
+
+class _AiModelLoadingSheet extends StatefulWidget {
+  final String apiKey;
+  final String currentModel;
+  final TextEditingController searchController;
+  final void Function(String modelId) onModelSelected;
+
+  const _AiModelLoadingSheet({
+    required this.apiKey,
+    required this.currentModel,
+    required this.searchController,
+    required this.onModelSelected,
+  });
+
+  @override
+  State<_AiModelLoadingSheet> createState() => _AiModelLoadingSheetState();
+}
+
+class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
+  List<_ModelItem>? _models;
+  String? _error;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadModels();
+  }
+
+  Future<void> _loadModels() async {
+    try {
+      final modelService = ModelListingService(apiKey: widget.apiKey);
+      final models = await modelService.fetchAvailableModels().timeout(
+        const Duration(seconds: 10),
+      );
+      if (!mounted) return;
+      final items = models.take(100).map((m) => _ModelItem(name: m.name, provider: m.provider, id: m.id)).toList();
+      setState(() {
+        _models = items;
+        _isLoading = false;
+      });
+    } on TimeoutException {
+      if (mounted) setState(() => _error = 'Request timed out. Please try again.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Unable to load models. Please try again.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (_isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(48),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: 16),
+            TextButton(onPressed: _loadModels, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    final filtered = _models!
+        .where((m) => m.name.toLowerCase().contains(widget.searchController.text.toLowerCase()))
+        .toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            controller: widget.searchController,
+            decoration: InputDecoration(
+              hintText: l10n.searchModels,
+              prefixIcon: const Icon(Icons.search),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            children: filtered
+                .map((m) => ListTile(
+                  title: Text(m.name),
+                  subtitle: Text(m.provider),
+                  trailing: m.id == widget.currentModel
+                      ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    widget.onModelSelected(m.id);
+                    Navigator.pop(context);
+                  },
+                ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModelItem {
+  final String name;
+  final String provider;
+  final String id;
+
+  const _ModelItem({required this.name, required this.provider, required this.id});
 }

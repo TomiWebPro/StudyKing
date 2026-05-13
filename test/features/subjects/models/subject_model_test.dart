@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/data/models/subject_model.dart';
 
 void main() {
   group('Subject', () {
@@ -412,6 +412,29 @@ void main() {
         expect(original.examDate, DateTime(2024, 6, 15));
       });
 
+      test('copyWith with examDate null preserves original examDate', () {
+        final original = Subject(
+          id: 'subject-1',
+          name: 'Physics',
+          examDate: DateTime(2024, 6, 15),
+        );
+        final copy = original.copyWith(examDate: null);
+
+        expect(copy.examDate, equals(original.examDate));
+      });
+
+      test('copyWith can set examDate when original was null', () {
+        final original = Subject(
+          id: 'subject-1',
+          name: 'Physics',
+        );
+        final examDate = DateTime(2025, 6, 15);
+        final copy = original.copyWith(examDate: examDate);
+
+        expect(copy.examDate, examDate);
+        expect(original.examDate, isNull);
+      });
+
       test('preserves original values when no params provided', () {
         final original = Subject(
           id: 'subject-1',
@@ -506,6 +529,21 @@ void main() {
         );
 
         expect(subject.toString(), 'Subject(id: subject-1, name: Physics)');
+      });
+
+      test('toString with all fields includes only id and name', () {
+        final subject = Subject(
+          id: 'subject-2',
+          name: 'Chemistry',
+          description: 'IB Chemistry SL',
+          code: 'IB-CHEM',
+          teacher: 'Dr. Smith',
+          topicIds: ['topic-1'],
+          color: '#FF5722',
+          examDate: DateTime(2024, 6, 15),
+        );
+
+        expect(subject.toString(), 'Subject(id: subject-2, name: Chemistry)');
       });
     });
   });

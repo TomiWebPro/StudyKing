@@ -7,7 +7,9 @@ Runs opencode agents in a loop to continuously improve the project.
 import datetime
 import os
 import random
+import re
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -27,6 +29,29 @@ CYCLE_COUNT = 0
 MASTER_LOOP_DELAY_SECONDS = 20
 MAIN_LOOP_DELAY_SECONDS = 5
 MASTER_TIMEOUT_SECONDS = 600
+IDLE_TIMEOUT_SECONDS = 90
+CONNECTION_RETRY_DELAYS = [5, 15, 45]
+
+CONNECTION_ERROR_PATTERNS = [
+    "connection refused",
+    "connection reset",
+    "connection aborted",
+    "connection timed out",
+    "network is unreachable",
+    "econnrefused",
+    "econnreset",
+    "econnaborted",
+    "etimedout",
+    "rate limit exceeded",
+    "too many requests",
+    "bad gateway",
+    "service unavailable",
+    "gateway timeout",
+    "internal server error",
+    "api key authentication failed",
+    "invalid api key",
+    "unauthorized",
+]
 MASTERS = [
     {
         "id": "internationalisation_master",
@@ -72,10 +97,16 @@ os.makedirs(REPORT_DIR, exist_ok=True)
 os.makedirs(ISSUES_OPEN_DIR, exist_ok=True)
 os.makedirs(ISSUES_COMPLETED_DIR, exist_ok=True)
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(SCRIPT_DIR, "auto_improve.log")
+
 
 def log(msg, level="INFO"):
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{ts}] [{level}] {msg}", flush=True)
+    line = f"[{ts}] [{level}] {msg}"
+    print(line, flush=True)
+    with open(LOG_FILE, "a") as f:
+        f.write(line + "\n")
 
 
 def get_all_subdirs(base):
@@ -103,8 +134,8 @@ def pick_random_subdir(base="lib"):
     return chosen
 
 
-def _run_process(cmd, cwd, timeout_seconds, input_data=None):
-    """Run a command with a timeout, killing the process if it exceeds the limit."""
+def _run_process_simple(cmd, cwd, timeout_seconds, input_data=None):
+    """Run a command with a simple timeout. Kills hard if exceeded."""
     proc = subprocess.Popen(
         cmd,
         cwd=cwd,
@@ -120,6 +151,100 @@ def _run_process(cmd, cwd, timeout_seconds, input_data=None):
         proc.kill()
         proc.wait()
         return -1, "TIMEOUT"
+
+
+def _run_process_monitored(cmd, cwd, timeout_seconds, input_data=None, idle_timeout=IDLE_TIMEOUT_SECONDS):
+    """Run a command with real-time output monitoring.
+
+    - Reads stdout/stderr incrementally via background threads.
+    - Kills the process (SIGINT → 5s grace → SIGKILL) if:
+      a) idle_timeout seconds pass with zero output (suggests dead connection)
+      b) a connection-error pattern is spotted in the output
+      c) the wall-clock timeout_seconds is exceeded
+    - Returns (-2, output) for connection/idle failures so the caller can retry.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE if input_data is not None else None,
+    )
+
+    output_lines = []
+    lock = threading.Lock()
+    last_output_time = [time.time()]
+    flag_connection_error = [False]
+
+    def reader(stream):
+        for raw in iter(stream.readline, b''):
+            line = raw.decode(errors='replace')
+            with lock:
+                output_lines.append(line)
+                last_output_time[0] = time.time()
+                lower = line.lower()
+                for pat in CONNECTION_ERROR_PATTERNS:
+                    if re.search(pat, lower):
+                        flag_connection_error[0] = True
+                        break
+        stream.close()
+
+    tout = threading.Thread(target=reader, args=(proc.stdout,), daemon=True)
+    terr = threading.Thread(target=reader, args=(proc.stderr,), daemon=True)
+    tout.start()
+    terr.start()
+
+    if input_data is not None:
+        proc.stdin.write(input_data)
+        proc.stdin.close()
+
+    def _terminate():
+        """SIGINT → 5s grace → SIGKILL, then reap."""
+        proc.send_signal(signal.SIGINT)
+        time.sleep(5)
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+        tout.join(timeout=5)
+        terr.join(timeout=5)
+
+    start_time = time.time()
+
+    while True:
+        ret = proc.poll()
+        if ret is not None:
+            tout.join(timeout=10)
+            terr.join(timeout=10)
+            with lock:
+                output = "".join(output_lines).strip()
+                ce = flag_connection_error[0]
+            return (-2 if ce else ret, output)
+
+        elapsed = time.time() - start_time
+
+        with lock:
+            idle = time.time() - last_output_time[0]
+            ce = flag_connection_error[0]
+
+        if ce:
+            _terminate()
+            with lock:
+                output = "".join(output_lines).strip()
+            return -2, output
+
+        if idle > idle_timeout:
+            _terminate()
+            with lock:
+                output = "".join(output_lines).strip()
+            return -2, output + "\nIDLE_TIMEOUT"
+
+        if elapsed > timeout_seconds:
+            _terminate()
+            with lock:
+                output = "".join(output_lines).strip()
+            return -1, output + "\nTIMEOUT"
+
+        time.sleep(0.5)
 
 
 def check_md_created(path, wait_max=30):
@@ -162,22 +287,41 @@ def run_opencode(prompt, cwd=PROJECT_DIR, timeout_seconds=600):
         "--dangerously-skip-permissions",
         prompt,
     ]
-    start = time.time()
-    rc, output = _run_process(cmd, cwd, timeout_seconds)
-    elapsed = time.time() - start
-    log(f"opencode exited code={rc} in {elapsed:.1f}s")
-    if rc == -1 and output == "TIMEOUT":
-        log(f"opencode TIMEOUT after {timeout_seconds}s", "WARN")
-    elif rc != 0:
-        log(f"opencode FAILED (exit {rc})", "WARN")
-    return rc, output
+
+    last_output = ""
+    for attempt, delay in enumerate([0] + CONNECTION_RETRY_DELAYS):
+        if attempt > 0:
+            log(f"Connection retry {attempt}/{len(CONNECTION_RETRY_DELAYS)} after {delay}s...")
+            time.sleep(delay)
+
+        start = time.time()
+        rc, output = _run_process_monitored(cmd, cwd, timeout_seconds)
+        elapsed = time.time() - start
+        last_output = output
+
+        if rc == -2:
+            log(f"opencode CONNECTION LOST after {elapsed:.1f}s (idle/error pattern)", "WARN")
+            continue
+
+        if rc == -1 and "TIMEOUT" in output:
+            log(f"opencode TIMEOUT after {timeout_seconds}s", "WARN")
+        elif rc != 0:
+            log(f"opencode FAILED (exit {rc}) in {elapsed:.1f}s", "WARN")
+        else:
+            log(f"opencode SUCCESS in {elapsed:.1f}s")
+
+        log(f"opencode exited code={rc} in {elapsed:.1f}s")
+        return rc, output
+
+    log(f"All {len(CONNECTION_RETRY_DELAYS)} connection retries exhausted", "ERROR")
+    return -2, last_output
 
 
 def run_flutter_analyze(cwd=PROJECT_DIR):
     log("   → flutter analyze")
     cmd = [FLUTTER_BIN, "analyze"]
     start = time.time()
-    rc, output = _run_process(cmd, cwd, 120)
+    rc, output = _run_process_simple(cmd, cwd, 120)
     elapsed = time.time() - start
     issue_count = 0
     for line in output.split("\n"):
@@ -367,26 +511,35 @@ def step6_review_changes():
 
     prompt = (
         "## 任务说明\n\n"
-        "请阅读以下所有 issue 文档的内容，然后写一份总结报告。\n"
-        "注意：代码已成功推送至 GitHub，所有变更已完成，无需再执行 git 操作。\n\n"
+        "请阅读以下所有问题文档的内容，然后写一封邮件给投资人。\n"
+        "注意：所有更新已推送至开源仓库，无需再执行版本控制操作。\n\n"
         "---\n\n"
-        "### 一、已完成的 Issue（全部已完成并推送至 GitHub）\n\n"
+        "### 一、已完成的问题\n\n"
     )
     for name, body in completed_bodies:
         prompt += f"#### {name}\n\n```\n{body}\n```\n\n"
     if open_bodies:
-        prompt += "---\n\n### 二、待处理的 Issue（需要在本批次或下一批次完成的工作）\n\n"
+        prompt += "---\n\n### 二、待处理的问题\n\n"
         for name, body in open_bodies:
             prompt += f"#### {name}\n\n```\n{body}\n```\n\n"
     prompt += (
         "---\n\n"
-        "请直接输出总结报告（中文），不要保存文件。\n"
-        "报告结构如下：\n\n"
-        "1. **本次已完成工作摘要** — 描述上一批次完成了哪些内容、解决了什么问题\n"
-        "2. **具体修复/改进清单** — 列出已解决的具体 issue 条目\n"
-        "3. **下一阶段改进计划** — 根据待处理 issue，说明下一步需要做什么，优先级如何\n"
-        "4. **总体评价与建议** — 对代码库当前状况的评价及改进方向建议\n\n"
-        "请全程使用中文撰写。\n"
+        "请直接输出邮件正文 不要保存文件 不要加任何额外说明\n"
+        "邮件必须严格遵守以下要求：\n"
+        "一 邮件开头必须严格如下 一字不可差 一行不可差：\n"
+        "尊敬的投资人刘女士：\n"
+        "我是杨子轩的小龙虾，\n\n"
+        "二 正文必须全部使用中文 不得出现任何英文单词 英文文件名 代码片段 或技术术语\n"
+        "三 正文不得使用任何标记符号和LLM格式标记 包括但不限于星号井号减号下划线反引号中括号小括号尖括号斜线句点逗号分号冒号感叹号问号at符号百分号and符号美元符号波浪号等号加号竖线花括号at符号等 任何用于加粗斜体标题列表代码块引用的格式字符一律禁止\n"
+        "四 正文必须使用纯段落形式 不得分点列举 不得使用编号 不得使用横线分隔\n"
+        "五 语气正式 礼貌 简洁 面向非技术背景的投资人 不使用任何技术行话或项目文件名\n"
+        "六 正文必须包含三个段落 顺序如下：\n"
+        "第一段 说明本次完成了哪些修复和改进 突出重点 让投资人清楚了解进展\n"
+        "第二段 指出当前仍然存在的不足和弱点 表述直接但不夸张\n"
+        "第三段 说明下一步的改进计划 给出清晰方向\n"
+        "七 邮件末尾必须严格如下 一字不可差 一行不可差：\n"
+        "祝安，\n"
+        "deepseek-v4-flash\n"
     )
     rc, output = run_opencode(prompt, timeout_seconds=300)
     if rc != 0:

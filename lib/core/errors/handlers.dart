@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_en.dart';
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
 
@@ -12,6 +14,7 @@ import '../utils/logger.dart';
 /// - Proper error UI feedback
 class AppErrorHandler {
   static final Logger _logger = const Logger('AppErrorHandler');
+  static AppLocalizations get _defaultL10n => AppLocalizationsEn();
 
   /// Handles an error and displays appropriate feedback
   static Future<void> handleError(
@@ -34,10 +37,11 @@ class AppErrorHandler {
   /// Handles sync errors (for operations that aren't async)
   static void handleSyncError(BuildContext context, Object error, String contextName, {bool retry = false, void Function()? retryCallback}) {
     _logError(error, contextName);
-    
+
+    final l10n = AppLocalizations.of(context)!;
     final exception = _convertToAppException(error);
-    final errorMessage = _getErrorMessage(exception);
-    
+    final errorMessage = _getErrorMessage(exception, l10n);
+
     if (retry && retryCallback != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -48,7 +52,7 @@ class AppErrorHandler {
               Expanded(child: Text(errorMessage)),
               TextButton(
                 onPressed: retryCallback,
-                child: const Text('Retry'),
+                child: Text(l10n.retry),
               ),
             ],
           ),
@@ -76,8 +80,9 @@ class AppErrorHandler {
     bool retry = false,
     void Function()? retryCallback,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     // Map exception types to user-friendly messages
-    final errorMessage = _getErrorMessage(exception);
+    final errorMessage = _getErrorMessage(exception, l10n);
     final snackBar = SnackBar(
       content: retry && retryCallback != null
           ? Row(
@@ -87,7 +92,7 @@ class AppErrorHandler {
                 Expanded(child: Text(errorMessage)),
                 TextButton(
                   onPressed: retryCallback,
-                  child: const Text('Retry'),
+                  child: Text(l10n.retry),
                 ),
               ],
             )
@@ -110,34 +115,35 @@ class AppErrorHandler {
   }
   
   /// Get user-friendly error message based on exception type
-  static String _getErrorMessage(AppException exception) {
+  static String _getErrorMessage(AppException exception, [AppLocalizations? l10n]) {
+    l10n ??= _defaultL10n;
     switch (exception) {
       case NetworkException _:
-        return 'Unable to connect to the server. Please check your internet connection and try again.';
+        return l10n.errorNetworkConnection;
       case ApiKeyMissingException _:
-        return 'API key is required. Please configure it in Settings.';
+        return l10n.errorApiKeyMissing;
       case InvalidApiKeyException _:
-        return 'Invalid API key. Please check your credentials in Settings.';
+        return l10n.errorInvalidApiKey;
       case ApiRateLimitException _:
-        return 'Too many requests. Please wait a moment and try again.';
+        return l10n.errorApiRateLimit;
       case ApiNotFoundException _:
-        return 'The requested resource was not found.';
+        return l10n.errorApiNotFound;
       case ApiInternalServerError _:
-        return 'The server encountered an error. Please try again later.';
+        return l10n.errorApiInternalServer;
       case DatabaseException _:
-        return 'A database error occurred. Please try again.';
+        return l10n.errorDatabase;
       case ValidationException _:
         return exception.message;
       case PdfParseException _:
-        return 'Unable to parse the PDF file. Please ensure it is a valid PDF.';
+        return l10n.errorPdfParse;
       case ContentGenerationException _:
-        return 'Failed to generate content. Please try again.';
+        return l10n.errorContentGeneration;
       case LlmException _:
-        return 'The AI service is temporarily unavailable. Please try again.';
+        return l10n.errorLlmUnavailable;
       case ApiAuthException _:
-        return 'Authentication failed. Please check your API credentials.';
+        return l10n.errorApiAuth;
       default:
-        return 'An unexpected error occurred. Please try again.';
+        return l10n.errorUnexpected;
     }
   }
   
@@ -170,16 +176,17 @@ class AppErrorHandler {
   }
   
   /// Get retry button text based on error type
-  static String getRetryText(AppException exception) {
+  static String getRetryText(AppException exception, [AppLocalizations? l10n]) {
+    l10n ??= _defaultL10n;
     switch (exception) {
       case NetworkException _:
-        return 'Retry Connection';
+        return l10n.retryConnection;
       case ApiRateLimitException _:
-        return 'Retry After Wait';
+        return l10n.retryAfterWait;
       case ApiInternalServerError _:
-        return 'Try Again';
+        return l10n.tryAgain;
       default:
-        return 'Retry';
+        return l10n.retry;
     }
   }
   

@@ -18,20 +18,6 @@ Widget buildWidget({
   );
 }
 
-Widget buildFormulaWidget({
-  required String formula,
-  String? variable,
-}) {
-  return MaterialApp(
-    home: Scaffold(
-      body: FormulaWidget(
-        formula: formula,
-        variable: variable,
-      ),
-    ),
-  );
-}
-
 void main() {
   group('MathExpressionWidget', () {
     group('basic rendering', () {
@@ -355,86 +341,4 @@ void main() {
     });
   });
 
-  group('FormulaWidget', () {
-    group('basic rendering', () {
-      testWidgets('renders formula text', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(formula: 'E = mc^2'));
-        expect(find.text('E = mc^2'), findsOneWidget);
-      });
-
-      testWidgets('renders formula with variable', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: 'x^2',
-          variable: 'x',
-        ));
-        expect(find.text('x = x^2'), findsOneWidget);
-      });
-
-      testWidgets('renders with empty variable string', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: 'y = mx + b',
-          variable: '',
-        ));
-        expect(find.text('y = mx + b'), findsOneWidget);
-      });
-
-      testWidgets('renders with whitespace variable', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: 'A = πr^2',
-          variable: '   ',
-        ));
-        expect(find.text('A = πr^2'), findsOneWidget);
-      });
-
-      testWidgets('renders null variable as just formula', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: 'v = u + at',
-          variable: null,
-        ));
-        expect(find.text('v = u + at'), findsOneWidget);
-      });
-    });
-
-    group('styling', () {
-      testWidgets('has BoxDecoration', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(formula: 'x = 1'));
-
-        final container = tester.widget<Container>(
-          find.descendant(
-            of: find.byType(FormulaWidget),
-            matching: find.byType(Container),
-          ),
-        );
-        expect(container.decoration, isA<BoxDecoration>());
-      });
-
-      testWidgets('has monospace font', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(formula: 'a + b = c'));
-
-        expect(find.byType(Container), findsWidgets);
-      });
-
-      testWidgets('renders grey background', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(formula: 'test'));
-        expect(find.byType(Container), findsWidgets);
-      });
-    });
-
-    group('edge cases', () {
-      testWidgets('handles very long formula', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: 'a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p',
-        ));
-        expect(find.byType(FormulaWidget), findsOneWidget);
-      });
-
-      testWidgets('handles formula with only variable and no formula content', (tester) async {
-        await tester.pumpWidget(buildFormulaWidget(
-          formula: '',
-          variable: 'x',
-        ));
-        expect(find.text('x = '), findsOneWidget);
-      });
-    });
-  });
 }

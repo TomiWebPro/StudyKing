@@ -6,7 +6,6 @@ const int _typeIdQuestionModel = 2;
 const int _typeIdAnswerModel = 3;
 const int _typeIdSettingsBox = 4;
 const int _typeIdSourceModel = 26;
-const int _typeIdProfileData = 5;
 const int _typeIdLessonBlockModel = 6;
 const int _typeIdLessonModel = 7;
 const int _typeIdStudySessionModel = 8;
@@ -29,6 +28,8 @@ const int _typeIdStudentAttempt = 24;
 const int _typeIdMarkschemeLegacy = 25;
 const int _typeIdConversationMessage = 27;
 const int _typeIdTutorSession = 28;
+const int _typeIdPlanAdherenceMetric = 30;
+const int _typeIdMasteryImprovementMetric = 31;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -37,7 +38,6 @@ const List<int> _allTypeIds = [
   _typeIdAnswerModel,
   _typeIdSettingsBox,
   _typeIdSourceModel,
-  _typeIdProfileData,
   _typeIdLessonBlockModel,
   _typeIdLessonModel,
   _typeIdStudySessionModel,
@@ -60,6 +60,8 @@ const List<int> _allTypeIds = [
   _typeIdMarkschemeLegacy,
   _typeIdConversationMessage,
   _typeIdTutorSession,
+  _typeIdPlanAdherenceMetric,
+  _typeIdMasteryImprovementMetric,
 ];
 
 bool _checkUniqueIds() {

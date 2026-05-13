@@ -311,7 +311,7 @@ abstract class AppLocalizations {
   /// Subtitle for quick practice mode
   ///
   /// In en, this message translates to:
-  /// **'{count} random questions'**
+  /// **'{count, plural, =1{1 random question} other{{count} random questions}}'**
   String randomQuestions(int count);
 
   /// Label for unavailable features
@@ -977,7 +977,7 @@ abstract class AppLocalizations {
   /// Number of sessions
   ///
   /// In en, this message translates to:
-  /// **'{count} sessions'**
+  /// **'{count, plural, =1{1 session} other{{count} sessions}}'**
   String sessionsCount(int count);
 
   /// Tile title for total study time
@@ -2177,7 +2177,7 @@ abstract class AppLocalizations {
   /// Label showing number of questions
   ///
   /// In en, this message translates to:
-  /// **'{count} questions'**
+  /// **'{count, plural, =1{1 question} other{{count} questions}}'**
   String questionsCountLabel(int count);
 
   /// Label showing correct answers out of total
@@ -2203,6 +2203,456 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session History'**
   String get sessionHistory;
+
+  /// Dashboard screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Study Dashboard'**
+  String get studyDashboard;
+
+  /// Label for total study time metric
+  ///
+  /// In en, this message translates to:
+  /// **'Study Time'**
+  String get studyTime;
+
+  /// Section title for plan adherence
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Adherence'**
+  String get planAdherence;
+
+  /// Section title for mastery overview
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Overview'**
+  String get masteryOverview;
+
+  /// Section header for topic performance breakdown
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Performance'**
+  String get topicPerformance;
+
+  /// Section header for achievements/badges
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get achievements;
+
+  /// Button label to export data as CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get exportCsv;
+
+  /// Button label for instrumentation export
+  ///
+  /// In en, this message translates to:
+  /// **'Instrumentation'**
+  String get instrumentation;
+
+  /// Label for overall stat
+  ///
+  /// In en, this message translates to:
+  /// **'Overall'**
+  String get overall;
+
+  /// Label for current week activity stat
+  ///
+  /// In en, this message translates to:
+  /// **'This Week'**
+  String get thisWeek;
+
+  /// Label for total topics stat
+  ///
+  /// In en, this message translates to:
+  /// **'Total Topics'**
+  String get totalTopics;
+
+  /// Label for mastered count
+  ///
+  /// In en, this message translates to:
+  /// **'Mastered'**
+  String get mastered;
+
+  /// Label for topics count
+  ///
+  /// In en, this message translates to:
+  /// **'Topics'**
+  String get topics;
+
+  /// Button to practice all weak areas
+  ///
+  /// In en, this message translates to:
+  /// **'Practice All Weak Areas'**
+  String get practiceAllWeakAreas;
+
+  /// Tooltip for practice topic button
+  ///
+  /// In en, this message translates to:
+  /// **'Practice this topic'**
+  String get practiceThisTopic;
+
+  /// Empty state message when no topic mastery data exists
+  ///
+  /// In en, this message translates to:
+  /// **'No topic data yet. Start studying to see your progress!'**
+  String get noTopicDataYet;
+
+  /// Mastery level label for novice
+  ///
+  /// In en, this message translates to:
+  /// **'Novice'**
+  String get masteryLevelNovice;
+
+  /// Mastery level label for browsing
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing'**
+  String get masteryLevelBrowsing;
+
+  /// Mastery level label for developing
+  ///
+  /// In en, this message translates to:
+  /// **'Developing'**
+  String get masteryLevelDeveloping;
+
+  /// Mastery level label for proficient
+  ///
+  /// In en, this message translates to:
+  /// **'Proficient'**
+  String get masteryLevelProficient;
+
+  /// Mastery level label for expert
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get masteryLevelExpert;
+
+  /// Snackbar when CSV is generated
+  ///
+  /// In en, this message translates to:
+  /// **'Progress CSV generated ({length} chars)'**
+  String progressCsvGenerated(int length);
+
+  /// Error message when export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String exportFailed(String error);
+
+  /// Snackbar for instrumentation export
+  ///
+  /// In en, this message translates to:
+  /// **'Instrumentation data exported'**
+  String get instrumentationDataExported;
+
+  /// Label showing number of attempts
+  ///
+  /// In en, this message translates to:
+  /// **'{count} attempts'**
+  String attemptsCount(int count);
+
+  /// Section title for weak areas with accuracy threshold
+  ///
+  /// In en, this message translates to:
+  /// **'Weak Areas (Accuracy < 60%)'**
+  String get weakAreasAccuracy;
+
+  /// Title for upload screen
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Content'**
+  String get uploadContent;
+
+  /// Subtitle for upload screen
+  ///
+  /// In en, this message translates to:
+  /// **'Add study materials to your library'**
+  String get addStudyMaterials;
+
+  /// Label for title field
+  ///
+  /// In en, this message translates to:
+  /// **'Title *'**
+  String get titleRequired;
+
+  /// Hint text for title field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Chapter 5 Notes'**
+  String get titleHint;
+
+  /// Label for subject dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Subject (optional)'**
+  String get subjectOptional;
+
+  /// Dropdown option for no selection
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get none;
+
+  /// Chip label for text input mode
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Text'**
+  String get pasteText;
+
+  /// Chip label for URL input mode
+  ///
+  /// In en, this message translates to:
+  /// **'URL / Link'**
+  String get urlLink;
+
+  /// Label for URL field
+  ///
+  /// In en, this message translates to:
+  /// **'URL *'**
+  String get urlRequired;
+
+  /// Hint text for URL field
+  ///
+  /// In en, this message translates to:
+  /// **'https://example.com/notes'**
+  String get urlHint;
+
+  /// Label for content field
+  ///
+  /// In en, this message translates to:
+  /// **'Content *'**
+  String get contentRequired;
+
+  /// Hint text for content field
+  ///
+  /// In en, this message translates to:
+  /// **'Paste your study material here...'**
+  String get contentHint;
+
+  /// Button label while uploading
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading...'**
+  String get uploading;
+
+  /// Error message when required fields are empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in all required fields.'**
+  String get fillRequiredFields;
+
+  /// Success message after upload
+  ///
+  /// In en, this message translates to:
+  /// **'Content uploaded successfully!'**
+  String get contentUploadedSuccessfully;
+
+  /// Error message when upload fails
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed: {error}'**
+  String uploadFailed(String error);
+
+  /// Section title for plan summary
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Summary'**
+  String get planSummary;
+
+  /// Label for total count
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// Label for new topics
+  ///
+  /// In en, this message translates to:
+  /// **'new'**
+  String get newTopics;
+
+  /// Label for review topics
+  ///
+  /// In en, this message translates to:
+  /// **'review'**
+  String get reviewTopics;
+
+  /// Label for coverage percentage
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage'**
+  String get coverage;
+
+  /// Label showing focus areas
+  ///
+  /// In en, this message translates to:
+  /// **'Focus: {areas}'**
+  String focusLabel(String areas);
+
+  /// Default label for a study day
+  ///
+  /// In en, this message translates to:
+  /// **'Study Day'**
+  String get studyDay;
+
+  /// Label for rest day
+  ///
+  /// In en, this message translates to:
+  /// **'Rest'**
+  String get rest;
+
+  /// Tooltip for tutoring button
+  ///
+  /// In en, this message translates to:
+  /// **'Start tutoring'**
+  String get startTutoring;
+
+  /// Label showing questions and minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{questions}Q · {minutes}min'**
+  String questionsAndMinutes(int questions, int minutes);
+
+  /// Label showing topic questions and minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{questions}Q · {minutes}min'**
+  String topicQuestionsAndMinutes(int questions, int minutes);
+
+  /// Error message when plan generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to generate plan'**
+  String get failedToGeneratePlan;
+
+  /// Title for LLM task manager screen
+  ///
+  /// In en, this message translates to:
+  /// **'LLM Task Manager'**
+  String get llmTaskManager;
+
+  /// Label showing active task count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} active'**
+  String activeCount(int count);
+
+  /// Empty state for task manager
+  ///
+  /// In en, this message translates to:
+  /// **'No LLM tasks yet'**
+  String get noLlmTasksYet;
+
+  /// Label showing model ID
+  ///
+  /// In en, this message translates to:
+  /// **'Model: {modelId}'**
+  String modelLabel(String modelId);
+
+  /// Label showing start time
+  ///
+  /// In en, this message translates to:
+  /// **'Started: {time}'**
+  String startedLabel(String time);
+
+  /// Label showing end time
+  ///
+  /// In en, this message translates to:
+  /// **'Ended: {time}'**
+  String endedLabel(String time);
+
+  /// Label showing token count and cost
+  ///
+  /// In en, this message translates to:
+  /// **'Tokens: {count} (\${cost})'**
+  String tokensAndCost(int count, String cost);
+
+  /// Button to cancel a task
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelTask;
+
+  /// Button to test API connection
+  ///
+  /// In en, this message translates to:
+  /// **'Test Connection'**
+  String get testConnection;
+
+  /// Button label while testing connection
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get testing;
+
+  /// Success message for connection test
+  ///
+  /// In en, this message translates to:
+  /// **'Connection successful! Latency: {latency}ms'**
+  String connectionSuccessful(int latency);
+
+  /// Error message for connection test
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed: {error}'**
+  String connectionFailed(String error);
+
+  /// Snackbar for session history CSV export
+  ///
+  /// In en, this message translates to:
+  /// **'Session history CSV generated ({length} chars)'**
+  String sessionHistoryCsvGenerated(int length);
+
+  /// Today's plan target
+  ///
+  /// In en, this message translates to:
+  /// **'Today: {questions}Q, {minutes}min'**
+  String dailyPlanTarget(int questions, int minutes);
+
+  /// When there is no plan for today
+  ///
+  /// In en, this message translates to:
+  /// **'No plan for today'**
+  String get noPlanForToday;
+
+  /// Nudge to adjust plan due to low adherence
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve had {count} days of low plan adherence. Would you like to adjust your study plan?'**
+  String planAdjustmentSuggested(int count);
+
+  /// Button to adjust study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust Plan'**
+  String get adjustPlan;
+
+  /// Button to dismiss a nudge
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// Tooltip for voice input button
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Input'**
+  String get voiceInput;
+
+  /// Tooltip for capture image button
+  ///
+  /// In en, this message translates to:
+  /// **'Capture Image'**
+  String get captureImage;
+
+  /// Camera option label
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
 
   /// Error message when saving subject fails
   ///
@@ -2447,7 +2897,7 @@ abstract class AppLocalizations {
   /// Metric label for question count
   ///
   /// In en, this message translates to:
-  /// **'{count} questions'**
+  /// **'{count, plural, =1{1 question} other{{count} questions}}'**
   String questionsCountMetric(int count);
 
   /// Metric label for minutes
@@ -2485,12 +2935,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep practicing to unlock advanced topics!'**
   String get keepPracticingToUnlock;
-
-  /// Section title for mastery overview
-  ///
-  /// In en, this message translates to:
-  /// **'Mastery Overview'**
-  String get masteryOverview;
 
   /// Label for total topics count
   ///
@@ -2695,6 +3139,450 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Increase tap target sizes'**
   String get largeTouchTargetsDescription;
+
+  /// Error message when network connection fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to the server. Please check your internet connection and try again.'**
+  String get errorNetworkConnection;
+
+  /// Error message when API key is missing
+  ///
+  /// In en, this message translates to:
+  /// **'API key is required. Please configure it in Settings.'**
+  String get errorApiKeyMissing;
+
+  /// Error message when API key is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid API key. Please check your credentials in Settings.'**
+  String get errorInvalidApiKey;
+
+  /// Error message when API rate limit is hit
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Please wait a moment and try again.'**
+  String get errorApiRateLimit;
+
+  /// Error message when API resource is not found
+  ///
+  /// In en, this message translates to:
+  /// **'The requested resource was not found.'**
+  String get errorApiNotFound;
+
+  /// Error message when server error occurs
+  ///
+  /// In en, this message translates to:
+  /// **'The server encountered an error. Please try again later.'**
+  String get errorApiInternalServer;
+
+  /// Error message for database errors
+  ///
+  /// In en, this message translates to:
+  /// **'A database error occurred. Please try again.'**
+  String get errorDatabase;
+
+  /// Error message when PDF parsing fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to parse the PDF file. Please ensure it is a valid PDF.'**
+  String get errorPdfParse;
+
+  /// Error message when content generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to generate content. Please try again.'**
+  String get errorContentGeneration;
+
+  /// Error message when AI service is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'The AI service is temporarily unavailable. Please try again.'**
+  String get errorLlmUnavailable;
+
+  /// Error message when API authentication fails
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Please check your API credentials.'**
+  String get errorApiAuth;
+
+  /// Generic unexpected error message
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred. Please try again.'**
+  String get errorUnexpected;
+
+  /// Generic retry button label
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// Button label to retry connection
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Connection'**
+  String get retryConnection;
+
+  /// Button label to retry after rate limit wait
+  ///
+  /// In en, this message translates to:
+  /// **'Retry After Wait'**
+  String get retryAfterWait;
+
+  /// Label for weekly activity metric
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Activity'**
+  String get weeklyActivity;
+
+  /// Label for topics count metric
+  ///
+  /// In en, this message translates to:
+  /// **'Topics'**
+  String get topicsLabel;
+
+  /// Label for readiness metric
+  ///
+  /// In en, this message translates to:
+  /// **'Readiness'**
+  String get readiness;
+
+  /// Label for overall mastery progress section
+  ///
+  /// In en, this message translates to:
+  /// **'Overall Mastery'**
+  String get overallMastery;
+
+  /// Label for average time per question
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Time'**
+  String get avgTime;
+
+  /// Label for badges count
+  ///
+  /// In en, this message translates to:
+  /// **'Badges'**
+  String get badges;
+
+  /// Button label to export session history
+  ///
+  /// In en, this message translates to:
+  /// **'Session History'**
+  String get sessionHistoryExport;
+
+  /// Snackbar message when progress CSV is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Progress exported to CSV'**
+  String get progressExportedCsv;
+
+  /// Snackbar message when session history CSV is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Session history exported to CSV'**
+  String get sessionHistoryExportedCsv;
+
+  /// Error message when practice session fails to start
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start practice session'**
+  String get failedToStartPractice;
+
+  /// Mode card title for AI Tutor
+  ///
+  /// In en, this message translates to:
+  /// **'AI Tutor'**
+  String get aiTutor;
+
+  /// Mode card subtitle for AI Tutor
+  ///
+  /// In en, this message translates to:
+  /// **'Interactive conversational lessons'**
+  String get interactiveConversationalLessons;
+
+  /// Mode card subtitle for Mentor
+  ///
+  /// In en, this message translates to:
+  /// **'Personal study assistant & planner'**
+  String get personalStudyAssistantPlanner;
+
+  /// Heading for mode selection cards
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a study mode'**
+  String get chooseStudyMode;
+
+  /// Tooltip/label for clearing chat conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Clear conversation'**
+  String get clearConversation;
+
+  /// Sender label for the student in chat
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get senderYou;
+
+  /// Sender label for the AI tutor in chat
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get senderTutor;
+
+  /// Sender label for system messages in chat
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get senderSystem;
+
+  /// Label showing remaining minutes in lesson
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 min remaining} other{{count} min remaining}}'**
+  String remainingMinLabel(int count);
+
+  /// Label showing correct answer count
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 correct} other{{count} correct}}'**
+  String correctCountLabel(int count);
+
+  /// Welcome message body in mentor screen
+  ///
+  /// In en, this message translates to:
+  /// **'I can help with:\n• Scheduling and rescheduling lessons\n• Reviewing your study progress\n• Planning long-term study goals\n• Motivation and encouragement\n• Deciding what to study next\n\nHow can I help you today?'**
+  String get mentorWelcomeBody;
+
+  /// Initial greeting prompt from student to AI tutor
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m ready to learn about {topic}. Please teach me!'**
+  String readyToLearnAbout(String topic);
+
+  /// Label showing correct count in summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 correct} other{{count} correct}}'**
+  String correctCount(int count);
+
+  /// Label showing adaptive pace percentage
+  ///
+  /// In en, this message translates to:
+  /// **'{pace}% pace'**
+  String paceLabel(int pace);
+
+  /// Error message when AI response fails
+  ///
+  /// In en, this message translates to:
+  /// **'Sorry, I encountered an error. Please try again.'**
+  String get errorWithResponse;
+
+  /// Mentor response when user rejects a pending action
+  ///
+  /// In en, this message translates to:
+  /// **'No problem! I won\'t make any changes. Let me know if you need anything else.'**
+  String get mentorRejectionResponse;
+
+  /// Mentor message when no lessons are scheduled
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.'**
+  String get mentorNoLessonsScheduled;
+
+  /// Header for upcoming lessons list
+  ///
+  /// In en, this message translates to:
+  /// **'Here are your upcoming lessons:\n'**
+  String get mentorUpcomingLessonsHeader;
+
+  /// Single lesson entry in schedule list
+  ///
+  /// In en, this message translates to:
+  /// **'• {topic} on {date} ({duration} min)\n'**
+  String mentorLessonEntry(String topic, String date, int duration);
+
+  /// Prompt asking if user wants to reschedule
+  ///
+  /// In en, this message translates to:
+  /// **'\nWould you like to reschedule any of these?'**
+  String get mentorReschedulePrompt;
+
+  /// Message showing recent session date
+  ///
+  /// In en, this message translates to:
+  /// **'Your most recent study session was on {date}. Would you like to schedule a new lesson?'**
+  String mentorRecentSessionOnDate(String date);
+
+  /// Mentor message when student hasn't started studying
+  ///
+  /// In en, this message translates to:
+  /// **'It looks like you haven\'t started yet. Would you like me to help you schedule your first lesson?'**
+  String get mentorNotStarted;
+
+  /// Error message when schedule lookup fails
+  ///
+  /// In en, this message translates to:
+  /// **'I had trouble looking up your schedule. Please try again later.'**
+  String get mentorScheduleError;
+
+  /// Error message when progress report generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'I had trouble generating your progress report. Please try again later.'**
+  String get mentorProgressError;
+
+  /// Mentor message when no study sessions exist
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t started studying yet! Would you like me to help you create a study plan to get started?'**
+  String get mentorNotStartedStudying;
+
+  /// Word for today (used in inactivity check)
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get mentorToday;
+
+  /// Formatted days ago string
+  ///
+  /// In en, this message translates to:
+  /// **'{daysCount} days ago'**
+  String mentorDaysAgo(int daysCount);
+
+  /// Mentor message when student has been inactive for 3+ days
+  ///
+  /// In en, this message translates to:
+  /// **'I noticed you haven\'t studied in {daysCount} days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!'**
+  String mentorInactiveDays(int daysCount);
+
+  /// Mentor praise when student is active
+  ///
+  /// In en, this message translates to:
+  /// **'Great job staying active! Your last study session was {daysAgo}. Keep up the good work!'**
+  String mentorGreatJobStayingActive(String daysAgo);
+
+  /// Mentor welcome message for new students
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome! Let\'s get started with your studies. Would you like to schedule a lesson?'**
+  String get mentorWelcomeStart;
+
+  /// Error message when activity check fails
+  ///
+  /// In en, this message translates to:
+  /// **'I had trouble checking your activity. How can I help you today?'**
+  String get mentorActivityCheckError;
+
+  /// Confirmation after rescheduling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve noted the change. Your lesson \"{topic}\" has been rescheduled. Is there anything else I can help with?'**
+  String mentorRescheduledConfirmation(String topic);
+
+  /// Confirmation after adding a new session
+  ///
+  /// In en, this message translates to:
+  /// **'Great! I\'ve added a new study session to your schedule. You can check your planner for details.'**
+  String get mentorNewSessionAdded;
+
+  /// Generic confirmation after schedule changes
+  ///
+  /// In en, this message translates to:
+  /// **'Done! The changes have been made to your schedule.'**
+  String get mentorChangesDone;
+
+  /// Title for the progress report
+  ///
+  /// In en, this message translates to:
+  /// **'📊 **Your Study Progress Report**\n'**
+  String get mentorProgressReportTitle;
+
+  /// Overall accuracy line in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'**Overall Accuracy:** {accuracy}% ({correct}/{total} correct)'**
+  String mentorOverallAccuracy(String accuracy, String correct, String total);
+
+  /// Total study time line in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'**Total Study Time:** {hours} hours'**
+  String mentorTotalStudyTime(String hours);
+
+  /// Weekly activity line in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'**Weekly Activity:** {attempts} attempts'**
+  String mentorWeeklyActivity(String attempts);
+
+  /// Completed lessons line in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'**Completed Lessons:** {count}'**
+  String mentorCompletedLessons(String count);
+
+  /// Topics studied line in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'**Topics Studied:** {count}'**
+  String mentorTopicsStudied(String count);
+
+  /// Section header for weak topics
+  ///
+  /// In en, this message translates to:
+  /// **'\n**Areas needing attention:**'**
+  String get mentorAreasNeedingAttention;
+
+  /// Single topic accuracy entry
+  ///
+  /// In en, this message translates to:
+  /// **'• {topic} (accuracy: {accuracy}%)'**
+  String mentorTopicAccuracyEntry(String topic, int accuracy);
+
+  /// Section header for badges
+  ///
+  /// In en, this message translates to:
+  /// **'\n**Badges earned:**'**
+  String get mentorBadgesEarned;
+
+  /// Single badge entry
+  ///
+  /// In en, this message translates to:
+  /// **'• {name}: {description}'**
+  String mentorBadgeEntry(String name, String description);
+
+  /// Section header for recommendations
+  ///
+  /// In en, this message translates to:
+  /// **'\n**Recommendations:**'**
+  String get mentorRecommendations;
+
+  /// Single recommendation entry
+  ///
+  /// In en, this message translates to:
+  /// **'• {message}'**
+  String mentorRecommendationEntry(String message);
+
+  /// Error when progress report generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to generate progress report. Please try again later.'**
+  String get mentorProgressReportError;
+
+  /// Mentor message when no subjects exist
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t added any subjects yet. Would you like help setting up your first subject?'**
+  String get mentorNoSubjects;
+
+  /// Mentor suggestion when student is doing well
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?'**
+  String get mentorDoingWell;
 }
 
 class _AppLocalizationsDelegate

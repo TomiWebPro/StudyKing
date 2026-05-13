@@ -4,12 +4,17 @@ import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
 import '../data/models/question_evaluation_model.dart';
 import 'answer_validation_service.dart';
+import 'mastery_calculation_service.dart';
 
 class MasteryGraphService {
   final MasteryGraphRepository _repository;
+  final MasteryCalculationService _calculationService;
 
-  MasteryGraphService({MasteryGraphRepository? repository})
-      : _repository = repository ?? MasteryGraphRepository();
+  MasteryGraphService({
+    MasteryGraphRepository? repository,
+    MasteryCalculationService? calculationService,
+  })  : _repository = repository ?? MasteryGraphRepository(),
+        _calculationService = calculationService ?? MasteryCalculationService();
 
   Future<void> init() => _repository.init();
 
@@ -27,15 +32,15 @@ class MasteryGraphService {
       return Result.failure(topicMasteryResult.error);
     }
 
-    final topicMastery = topicMasteryResult.data!;
-    topicMastery.recordAttempt(
+    final updatedTopicMastery = _calculationService.recordAttempt(
+      current: topicMasteryResult.data!,
       isCorrect: isCorrect,
       confidence: confidence,
       timeSpentMs: timeSpentMs,
       subtopicId: subtopicId,
     );
 
-    final updateResult = await _repository.updateMasteryState(topicMastery);
+    final updateResult = await _repository.updateMasteryState(updatedTopicMastery);
     if (updateResult.isFailure) {
       return updateResult;
     }

@@ -15,7 +15,7 @@ class UserProfile extends HiveObject {
   final String? studentId;
 
   @HiveField(3)
-  final String? avatarUrl;
+  final String? avatarIcon;
 
   @HiveField(4)
   final String? learningGoal;
@@ -36,7 +36,7 @@ class UserProfile extends HiveObject {
     required this.id,
     required this.name,
     this.studentId,
-    this.avatarUrl,
+    this.avatarIcon,
     this.learningGoal,
     this.preferredStudyTime,
     this.notificationsEnabled = true,
@@ -48,7 +48,7 @@ class UserProfile extends HiveObject {
         'id': id,
         'name': name,
         'studentId': studentId,
-        'avatarUrl': avatarUrl,
+        'avatarIcon': avatarIcon,
         'learningGoal': learningGoal,
         'preferredStudyTime': preferredStudyTime,
         'notificationsEnabled': notificationsEnabled,
@@ -60,7 +60,7 @@ class UserProfile extends HiveObject {
         id: json['id'] is String ? json['id'] as String : '',
         name: json['name'] is String ? json['name'] as String : '',
         studentId: json['studentId'] as String?,
-        avatarUrl: json['avatarUrl'] as String?,
+        avatarIcon: json['avatarIcon'] as String?,
         learningGoal: json['learningGoal'] as String?,
         preferredStudyTime: json['preferredStudyTime'] as String?,
         notificationsEnabled: json['notificationsEnabled'] is bool
@@ -77,7 +77,7 @@ class UserProfile extends HiveObject {
     String? id,
     String? name,
     String? studentId,
-    String? avatarUrl,
+    String? avatarIcon,
     String? learningGoal,
     String? preferredStudyTime,
     bool? notificationsEnabled,
@@ -88,7 +88,7 @@ class UserProfile extends HiveObject {
       id: id ?? this.id,
       name: name ?? this.name,
       studentId: studentId ?? this.studentId,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
+      avatarIcon: avatarIcon ?? this.avatarIcon,
       learningGoal: learningGoal ?? this.learningGoal,
       preferredStudyTime: preferredStudyTime ?? this.preferredStudyTime,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,

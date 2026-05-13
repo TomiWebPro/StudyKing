@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/data/models/subject_model.dart';
 
 class MockSubjectBox implements Box<Subject> {
   final Map<String, Subject> _storage = {};

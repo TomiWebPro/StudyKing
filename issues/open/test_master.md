@@ -1,92 +1,110 @@
-# Critical Test Coverage Gaps & Improvements for Teaching Feature
+# Test Coverage Audit: Questions Feature — Gaps, Misplaced Tests, and Overly Basic Coverage
 
 ## Context
 
-The `lib/features/teaching/` module implements an AI-powered tutor with LLM streaming, adaptive conversation pacing, exercise evaluation, and lesson lifecycle management. It is one of the most complex modules in the project (5 source files, ~1000+ lines total), yet it has **zero test coverage**. Meanwhile, some other feature tests (e.g. `lesson_presentation_test.dart`, `topic_list_screen_test.dart`) test raw Flutter primitives rather than actual application widgets.
+The questions feature (`lib/features/questions/`) is the core instructional component of StudyKing, handling 8+ question types (singleChoice, multiChoice, typedAnswer, mathExpression, essay, canvas, graphDrawing, stepByStep). A thorough audit of its 7 test files (~2,781 lines) and surrounding test infrastructure revealed: a production rendering bug for `stepByStep` questions, a memory leak in `AnswerValidationService`'s static cache, a test file that superficially only checks widget existence (440 lines of shallow assertions), structurally misplaced core-model tests, and two entirely untested features.
 
-## Affected Files
+---
 
-1. **`lib/features/teaching/presentation/tutor_screen.dart`** — StatefulWidget with timer, LLM streaming, lesson lifecycle
-2. **`lib/features/teaching/presentation/widgets/chat_bubble.dart`** — Chat bubble with role-based styling, streaming dots
-3. **`lib/features/teaching/presentation/widgets/lesson_progress_bar.dart`** — Progress bar with color-coded time states
-4. **`lib/features/teaching/services/conversation_manager.dart`** — State machine (6 phases), adaptive pacing, exercise evaluation
-5. **`lib/features/teaching/services/tutor_service.dart`** — Orchestrates lesson start/end, persistence, mastery recording
+## Issues Found
 
-## Rationale
+### 1. Production Bug: `stepByStep` Question Type Falls to "Not Supported" (Missing Test Scenario)
 
-### Gap 1: Zero coverage for the teaching feature
+**Affected file:** `lib/features/questions/ui/widgets/question_card_widget.dart:214`
 
-Every other feature module has at least some tests. Teaching has none. This is especially problematic because:
+The `_buildQuestionContent` switch statement handles: singleChoice, multiChoice, typedAnswer, mathExpression, essay, canvas, graphDrawing — but NOT `stepByStep`. It falls to the `default` branch rendering "This question type is not yet supported in this view." The type label IS defined (line 379: "Step-by-Step"), so users see a label suggesting the type works but get a broken UI.
 
-- **`ConversationManager._evaluateExerciseResponse`** (`conversation_manager.dart:228-255`) uses fragile keyword-matching to determine if the student's free-text response is correct/incorrect. A response like "That doesn't sound right" would be counted as **correct** (contains "right"). A response like "No, I don't understand" containing "no" would be counted as **incorrect** even if the student's actual answer was correct. There are no tests for the keyword lists, confidence ratings, or adaptive pace adjustments.
+**Root cause:** No test covered the `stepByStep` rendering path. The test file (`question_card_widget_test.dart`) tests the label (line 410-414) but never tests the content rendering. A simple `testWidgets('renders step-by-step content')` would have caught this before deployment.
 
-- **`TutorService.startLesson/endLesson`** (`tutor_service.dart:28-100`) orchestrates database persistence, lesson plan generation via LLM, and mastery graph recording. Zero tests for: correct session creation, message persistence on end-lesson, mastery recording conditions (only records if `questionsAsked > 0`), edge cases (empty messages, duplicate saves).
+**Action:** Add a switch case for `QuestionType.stepByStep` in `_buildQuestionContent` and add corresponding widget tests that verify actual content renders.
 
-- **`TutorScreen._initializeTutor`** (`tutor_screen.dart:52-68`) hardcodes `LlmService` with an empty `apiKey: ''` and `MasteryGraphService`. This makes the screen untestable — there is no way to inject fake dependencies. This is a design flaw that blocks widget-level testing.
+---
 
-- **`LessonProgressBar`** (`lesson_progress_bar.dart`) has three visual states: normal (blue), warning (orange, <=5 min remaining), and overtime (red). None are tested.
+### 2. Memory Leak: `AnswerValidationService` Static Cache Has No Eviction Policy
 
-- **`ChatBubble`** (`chat_bubble.dart`) has conditional rendering for streaming vs. streaming-complete states, role-based alignment, and sender label visibility. None tested.
+**Affected file:** `lib/features/questions/services/answer_validator.dart:36-37`
 
-### Gap 2: Tests that test Flutter framework, not application code
+```dart
+static final Map<String, QuestionAnswerValidator> _cache = {};
+static final Map<String, String> _cacheSignatures = {};
+```
 
-Files like `lesson_presentation_test.dart` and `topic_list_screen_test.dart` contain tests that re-implement widget trees inline with raw `CircularProgressIndicator`, `ListView`, `Card`, etc. rather than importing and testing the actual `TopicListScreen`, `LessonListScreen`, etc. widgets from `lib/features/lessons/presentation/`. For example:
+These static `Map` fields grow unboundedly for the lifetime of the application process. Every unique question ID ever encountered accumulates an entry. In a long tutoring session or repeated practice runs, this leaks memory. There is no:
+- Maximum size limit
+- LRU/aging eviction
+- `clear()` or reset mechanism
+- Any test verifying cache behavior under memory pressure or sequential question loads
 
-- `lesson_presentation_test.dart:148-158` wraps a `CircularProgressIndicator` in a `MaterialApp` — this tests Flutter's built-in widget, not any application code.
-- `topic_list_screen_test.dart:113-122` does the same pattern.
+**Action:** Implement a cache eviction strategy (e.g., `LinkedHashMap` with `maxSize`, or `sweep` on configurable threshold) and add tests that verify:
+- Cache does not grow beyond a configured limit
+- Old entries are evicted when limit is exceeded
+- Evicted entries are re-created correctly on subsequent access
 
-These tests provide near-zero regression value and create maintenance burden.
+---
 
-### Gap 3: Orphaned test files outside feature structure
+### 3. Overly Basic Tests: `math_expression_widget_test.dart` (440 Lines, Nearly Zero Behavior Verification)
 
-Several test files live outside the `test/features/` hierarchy:
-- `test/validation/answer_test.dart` — should be `test/features/questions/services/`
-- `test/repository/repository_test.dart` — should be `test/features/subjects/data/repositories/` or similar
-- `test/screens/practice_test.dart` — should be `test/features/practice/`
-- `test/models/llm_models_test.dart` — should be under appropriate feature
+**Affected file:** `test/features/questions/ui/widgets/math_expression_widget_test.dart`
 
-This makes it harder to assess feature-level coverage and maintain test placement conventions.
+This file contains ~40 individual `testWidgets` blocks, but **every single one** only asserts that `find.byType(RichText)` finds at least one widget. None verify:
+- The actual text content of the generated `TextSpan`s
+- Font styling (italic for variables, bold for numbers, superscript for exponents)
+- Color coding (deep orange for decimals, default for operators)
+- Correct substitution of LaTeX-like command tokens (e.g., `\sqrt{x}` should produce √ symbol, `\frac{a}{b}` should produce numerator/denominator)
+- The `isSolution` prop's effect on Container decoration/color
+- The `showPrefix` prop beyond checking the first child exists
 
-### Gap 4: ConversationManager adaptive chunking bug
+This is **40 structurally identical tests** that add very little value beyond "the widget doesn't crash." A single test verifying one rendered `TextSpan`'s properties would be more valuable than all 40 combined.
 
-`ConversationManager._buildAdaptiveChunks` (`conversation_manager.dart:162-174`) yields progressively larger chunks of the **entire accumulated buffer** on each iteration, not just the new content. This means the consuming stream receives repeated content. This is likely a bug and has no test coverage.
+**Action:** Replace/reduce the shallow rich-text-existence checks with targeted tests that verify parsed output correctness (span text, style, nesting), removing the ~30 tests that provide zero behavioral coverage.
+
+---
+
+### 4. Misplaced Test Files: Core Model Tests in Feature Directory
+
+**Affected files:**
+- `test/features/questions/models/markscheme_model_test.dart` — tests `lib/core/data/models/markscheme_model.dart`
+- `test/features/questions/services/answer_test.dart` — tests `lib/core/services/answer_validation_service.dart`
+
+The project follows a `test/core/` ↔ `test/features/` split. Core data models and services should have tests under `test/core/data/models/` and `test/core/services/` respectively. These two files are the only core-level tests misplaced under `test/features/questions/`. This creates inconsistency: future developers might hesitate to add core tests, and coverage reports misattribute test ownership.
+
+**Action:** Move `markscheme_model_test.dart` to `test/core/data/models/markscheme_model_test.dart` and `answer_test.dart` to `test/core/services/answer_validation_service_test.dart`. Keep a forwarding import (or just move and update CI paths).
+
+---
+
+### 5. Entirely Untested Features: `ingestion` and `llm_tasks`
+
+**Affected directories:**
+- `lib/features/ingestion/` (3 source files: `ingestion.dart`, `upload_screen.dart`, `content_pipeline.dart`) — **zero test files**
+- `lib/features/llm_tasks/` (1 source file: `llm_task_manager_screen.dart`) — **zero test files**
+
+The `content_pipeline.dart` service and `upload_screen.dart` (293 lines, with image picker, form validation, state management) have no test coverage at all. Neither does `llm_task_manager_screen.dart`. This is a blind spot for two relatively complex features.
+
+**Action:** Create `test/features/ingestion/` and `test/features/llm_tasks/` directories with at minimum:
+- Unit tests for `ContentPipeline` service methods
+- Widget tests for `UploadScreen` (form validation, submission, error states)
+- Widget tests for `LlmTaskManagerScreen`
+
+---
+
+### 6. Additional Minor Findings
+
+| Finding | File | Severity |
+|---------|------|----------|
+| Test named "kanji builder with zero difficulty color" at line 617 doesn't match the code — no kanji builder exists in question_card_widget | `question_card_widget_test.dart:617` | Low |
+| `DrawingPainter` tests instantiate `Stroke`/`DrawingPoint` directly but never test the `paint()` method's path/rendering logic | `canvas_drawing_widget_test.dart:268-289` | Medium |
+| No test for `_handleSave` exception path (line 222-228 in source) showing `failedToSaveDrawing` when `_generateDrawingData()` throws | `canvas_drawing_widget_test.dart` (missing) | Medium |
+| `widget_test.dart` duplicates coverage from `test/features/practice/` (both test the practice flow with identical fake providers) | `test/widget_test.dart` | Low |
+| `run_full_coverage.sh` only targets `test/core/constants/*_test.dart` — does not run feature tests or aggregate overall coverage | `scripts/run_full_coverage.sh` | Medium |
+
+---
 
 ## Acceptance Criteria
 
-1. **Add unit tests for `ConversationManager`:**
-   - Test all 6 conversation phases and transitions
-   - Test `_evaluateExerciseResponse` with controlled inputs covering correct, incorrect, and ambiguous student responses
-   - Test `confidenceRating` calculation at various exercise counts and correct/incorrect ratios
-   - Test `adaptivePace` adjustments (bounds clamping at 0.5/1.5, increment/decrement by 0.15)
-   - Test `_buildAdaptiveChunks` to verify only new content is yielded (regression for the chunking bug)
-   - Test `generateLessonPlan` and `generateSummary` with mock `LlmService`
-
-2. **Add widget tests for `ChatBubble`:**
-   - Test rendering for `MessageRole.student` vs `MessageRole.tutor`
-   - Test streaming state (animated dots visible when `isStreaming` and content is empty)
-   - Test sender label visibility via `showSender` parameter
-   - Test theme-aware colors applied correctly
-
-3. **Add widget tests for `LessonProgressBar`:**
-   - Test normal state (elapsed < planned)
-   - Test warning state (remaining <= 5 minutes) — orange bar
-   - Test overtime state (elapsed > planned) — red bar
-   - Test color-coded text for remaining time
-
-4. **Refactor `TutorScreen` for testability:**
-   - Inject `TutorService` (and its dependencies) via constructor or provider rather than hardcoding in `_initializeTutor`
-   - Add widget tests verifying loading state, progress bar visibility, message list population, and end-lesson dialog
-
-5. **Add unit tests for `TutorService`:**
-   - Test `startLesson` creates session, initializes manager, generates lesson plan
-   - Test `endLesson` saves messages, saves final session, records mastery (only when questions asked)
-   - Test `getLessonHistory`, `getSessionMessages`, `getStats` delegation to repositories
-   - Test edge cases: `endLesson` with no manager, empty messages list, `questionsAsked == 0`
-
-6. **Relocate orphaned tests:**
-   - Move `test/validation/answer_test.dart` → `test/features/questions/services/`
-   - Move `test/repository/repository_test.dart` → appropriate feature
-   - Move `test/screens/practice_test.dart` → `test/features/practice/`
-   - Move `test/models/llm_models_test.dart` → appropriate feature
-
-7. **Remove or replace low-value tests in `lesson_presentation_test.dart` and `topic_list_screen_test.dart`** that test Flutter built-in widgets rather than application code — replace with actual widget-level tests that import and exercise the real screen widgets.
+1. `QuestionType.stepByStep` renders content (not "not supported") in `QuestionCardWidget` and a widget test verifies this
+2. `AnswerValidationService._cache` / `_cacheSignatures` has an eviction policy with tests proving bounded growth
+3. `math_expression_widget_test.dart` has at least 3 tests verifying span text content, style, and token substitution (and the 30+ shallow RichText-existence checks are removed/reduced)
+4. `markscheme_model_test.dart` and `answer_test.dart` are relocated to `test/core/data/models/` and `test/core/services/` respectively
+5. `test/features/ingestion/` exists with at least one test file for `ContentPipeline` or `UploadScreen`
+6. No test in the suite is named in a way that contradicts the code under test (fix "kanji builder")
+7. CI/coverage scripts (`scripts/run_full_coverage.sh`) are updated to run the full test suite, not just `test/core/constants/`

@@ -121,75 +121,6 @@ void main() {
     });
   });
 
-  group('ProfileData edge cases', () {
-    test('fromJson with null values for optional fields', () {
-      final profile = ProfileData.fromJson({
-        'id': 'test-id',
-        'name': 'Test',
-        'studentId': null,
-        'avatarIcon': null,
-        'learningGoal': null,
-        'preferredStudyTime': null,
-      });
-
-      expect(profile.id, 'test-id');
-      expect(profile.name, 'Test');
-      expect(profile.studentId, isNull);
-      expect(profile.avatarIcon, isNull);
-      expect(profile.learningGoal, isNull);
-      expect(profile.preferredStudyTime, isNull);
-    });
-
-    test('fromJson with missing id and name uses empty strings', () {
-      final profile = ProfileData.fromJson({});
-      expect(profile.id, '');
-      expect(profile.name, '');
-    });
-
-    test('fromJson with non-bool notificationsEnabled defaults to true', () {
-      final profile = ProfileData.fromJson({
-        'id': 'test',
-        'name': 'Test',
-        'notificationsEnabled': 'yes',
-      });
-      expect(profile.notificationsEnabled, isTrue);
-    });
-
-    test('fromJson with non-string language defaults to en', () {
-      final profile = ProfileData.fromJson({
-        'id': 'test',
-        'name': 'Test',
-        'language': 123,
-      });
-      expect(profile.language, equals('en'));
-    });
-
-    test('round-trip preserves all fields', () {
-      final original = ProfileData(
-        id: 'rt-id',
-        name: 'Round Trip',
-        studentId: 'ST-999',
-        avatarIcon: 'Icons.person',
-        learningGoal: 'Master Dart',
-        preferredStudyTime: 'Afternoon',
-        notificationsEnabled: false,
-        language: 'de',
-      );
-
-      final json = original.toJson();
-      final restored = ProfileData.fromJson(json);
-
-      expect(restored.id, original.id);
-      expect(restored.name, original.name);
-      expect(restored.studentId, original.studentId);
-      expect(restored.avatarIcon, original.avatarIcon);
-      expect(restored.learningGoal, original.learningGoal);
-      expect(restored.preferredStudyTime, original.preferredStudyTime);
-      expect(restored.notificationsEnabled, original.notificationsEnabled);
-      expect(restored.language, original.language);
-    });
-  });
-
   group('UserProfile edge cases', () {
     test('fromJson with non-bool notificationsEnabled defaults to true', () {
       final profile = UserProfile.fromJson({
@@ -229,13 +160,13 @@ void main() {
         'id': 'test',
         'name': 'Test',
         'studentId': null,
-        'avatarUrl': null,
+        'avatarIcon': null,
         'learningGoal': null,
         'preferredStudyTime': null,
       });
 
       expect(profile.studentId, isNull);
-      expect(profile.avatarUrl, isNull);
+      expect(profile.avatarIcon, isNull);
       expect(profile.learningGoal, isNull);
       expect(profile.preferredStudyTime, isNull);
     });
@@ -245,7 +176,7 @@ void main() {
         id: 'original-id',
         name: 'Original Name',
         studentId: 'ST-001',
-        avatarUrl: 'https://example.com/avatar.png',
+        avatarIcon: 'https://example.com/avatar.png',
         learningGoal: 'Learn Flutter',
         preferredStudyTime: 'Morning',
         notificationsEnabled: true,
@@ -257,7 +188,7 @@ void main() {
       expect(copy.id, 'original-id');
       expect(copy.name, 'Updated Name');
       expect(copy.studentId, 'ST-001');
-      expect(copy.avatarUrl, 'https://example.com/avatar.png');
+      expect(copy.avatarIcon, 'https://example.com/avatar.png');
       expect(copy.learningGoal, 'Learn Flutter');
       expect(copy.preferredStudyTime, 'Morning');
       expect(copy.notificationsEnabled, isTrue);
@@ -270,7 +201,7 @@ void main() {
         id: 'original-id',
         name: 'Original Name',
         studentId: null,
-        avatarUrl: null,
+        avatarIcon: null,
         learningGoal: null,
         preferredStudyTime: null,
         notificationsEnabled: true,
@@ -281,7 +212,7 @@ void main() {
         id: 'new-id',
         name: 'New Name',
         studentId: 'ST-999',
-        avatarUrl: 'https://new.com/avatar.png',
+        avatarIcon: 'https://new.com/avatar.png',
         learningGoal: 'Master Dart',
         preferredStudyTime: 'Evening',
         notificationsEnabled: false,
@@ -292,7 +223,7 @@ void main() {
       expect(copy.id, 'new-id');
       expect(copy.name, 'New Name');
       expect(copy.studentId, 'ST-999');
-      expect(copy.avatarUrl, 'https://new.com/avatar.png');
+      expect(copy.avatarIcon, 'https://new.com/avatar.png');
       expect(copy.learningGoal, 'Master Dart');
       expect(copy.preferredStudyTime, 'Evening');
       expect(copy.notificationsEnabled, isFalse);
@@ -306,7 +237,7 @@ void main() {
         id: 'rt-id',
         name: 'Round Trip User',
         studentId: 'ST-777',
-        avatarUrl: 'https://example.com/rt.png',
+        avatarIcon: 'https://example.com/rt.png',
         learningGoal: 'Go Language',
         preferredStudyTime: 'Night',
         notificationsEnabled: false,
@@ -320,7 +251,7 @@ void main() {
       expect(restored.id, original.id);
       expect(restored.name, original.name);
       expect(restored.studentId, original.studentId);
-      expect(restored.avatarUrl, original.avatarUrl);
+      expect(restored.avatarIcon, original.avatarIcon);
       expect(restored.learningGoal, original.learningGoal);
       expect(restored.preferredStudyTime, original.preferredStudyTime);
       expect(restored.notificationsEnabled, original.notificationsEnabled);
@@ -336,7 +267,7 @@ void main() {
         id: 'adapter-test',
         name: 'Adapter User',
         studentId: 'ST-001',
-        avatarUrl: 'https://example.com/avatar.png',
+        avatarIcon: 'https://example.com/avatar.png',
         learningGoal: 'Learn Testing',
         preferredStudyTime: 'Anytime',
         notificationsEnabled: false,
@@ -352,7 +283,7 @@ void main() {
       expect(restored.id, source.id);
       expect(restored.name, source.name);
       expect(restored.studentId, source.studentId);
-      expect(restored.avatarUrl, source.avatarUrl);
+      expect(restored.avatarIcon, source.avatarIcon);
       expect(restored.learningGoal, source.learningGoal);
       expect(restored.preferredStudyTime, source.preferredStudyTime);
       expect(restored.notificationsEnabled, source.notificationsEnabled);
@@ -372,7 +303,7 @@ void main() {
       expect(restored.id, 'min');
       expect(restored.name, 'Minimal');
       expect(restored.studentId, isNull);
-      expect(restored.avatarUrl, isNull);
+      expect(restored.avatarIcon, isNull);
       expect(restored.learningGoal, isNull);
       expect(restored.preferredStudyTime, isNull);
       expect(restored.notificationsEnabled, isTrue);

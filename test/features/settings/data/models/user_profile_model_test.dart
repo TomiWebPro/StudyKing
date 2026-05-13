@@ -10,7 +10,7 @@ void main() {
       expect(profile.id, '1');
       expect(profile.name, 'Alice');
       expect(profile.studentId, isNull);
-      expect(profile.avatarUrl, isNull);
+      expect(profile.avatarIcon, isNull);
       expect(profile.notificationsEnabled, isTrue);
       expect(profile.language, 'en');
       expect(profile.accessibilityPrefs, isNull);
@@ -21,7 +21,7 @@ void main() {
         id: '2',
         name: 'Bob',
         studentId: 'STU123',
-        avatarUrl: 'https://example.com/avatar.png',
+        avatarIcon: 'https://example.com/avatar.png',
         learningGoal: 'Master IB Physics',
         preferredStudyTime: 'Evening',
         notificationsEnabled: false,
@@ -32,7 +32,7 @@ void main() {
       expect(profile.id, '2');
       expect(profile.name, 'Bob');
       expect(profile.studentId, 'STU123');
-      expect(profile.avatarUrl, 'https://example.com/avatar.png');
+      expect(profile.avatarIcon, 'https://example.com/avatar.png');
       expect(profile.learningGoal, 'Master IB Physics');
       expect(profile.preferredStudyTime, 'Evening');
       expect(profile.notificationsEnabled, isFalse);
@@ -47,7 +47,7 @@ void main() {
           id: '1',
           name: 'Alice',
           studentId: 'STU001',
-          avatarUrl: 'https://example.com/avatar.png',
+          avatarIcon: 'https://example.com/avatar.png',
           learningGoal: 'Learn Flutter',
           preferredStudyTime: 'Morning',
           notificationsEnabled: false,
@@ -59,7 +59,7 @@ void main() {
         expect(json['id'], '1');
         expect(json['name'], 'Alice');
         expect(json['studentId'], 'STU001');
-        expect(json['avatarUrl'], 'https://example.com/avatar.png');
+        expect(json['avatarIcon'], 'https://example.com/avatar.png');
         expect(json['learningGoal'], 'Learn Flutter');
         expect(json['preferredStudyTime'], 'Morning');
         expect(json['notificationsEnabled'], isFalse);
@@ -83,7 +83,7 @@ void main() {
           'id': '1',
           'name': 'Alice',
           'studentId': 'STU001',
-          'avatarUrl': null,
+          'avatarIcon': null,
           'learningGoal': null,
           'preferredStudyTime': null,
           'notificationsEnabled': false,
@@ -96,7 +96,7 @@ void main() {
         expect(profile.id, '1');
         expect(profile.name, 'Alice');
         expect(profile.studentId, 'STU001');
-        expect(profile.avatarUrl, isNull);
+        expect(profile.avatarIcon, isNull);
         expect(profile.notificationsEnabled, isFalse);
         expect(profile.language, 'es');
         expect(profile.accessibilityPrefs, isNotNull);
@@ -114,7 +114,7 @@ void main() {
         expect(profile.id, '2');
         expect(profile.name, 'Bob');
         expect(profile.studentId, isNull);
-        expect(profile.avatarUrl, isNull);
+        expect(profile.avatarIcon, isNull);
         expect(profile.notificationsEnabled, isTrue);
         expect(profile.language, 'en');
         expect(profile.accessibilityPrefs, isNull);
@@ -175,11 +175,11 @@ void main() {
         id: '1',
         name: 'Alice',
         studentId: 'STU001',
-        avatarUrl: 'https://example.com/avatar.png',
+        avatarIcon: 'https://example.com/avatar.png',
       );
       final copy = original.copyWith();
 
-      expect(copy.avatarUrl, 'https://example.com/avatar.png');
+      expect(copy.avatarIcon, 'https://example.com/avatar.png');
       expect(copy.studentId, 'STU001');
     });
     });

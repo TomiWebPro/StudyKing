@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/data/models/subject_model.dart';
 
 class SubjectRepository {
   Box<Subject>? _subjectBox;

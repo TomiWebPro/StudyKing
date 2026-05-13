@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'subject_selection_screen.dart';
-import 'subject_detail_view.dart';
 
 class SubjectListView extends ConsumerWidget {
   const SubjectListView({super.key});
@@ -26,12 +25,7 @@ class SubjectListView extends ConsumerWidget {
             child: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SubjectSelectionScreen(),
-                  ),
-                );
+                Navigator.pushNamed(context, AppRoutes.subjectSelection);
               },
             ),
           ),
@@ -66,11 +60,11 @@ class SubjectListView extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.school_outlined,
-                  size: ResponsiveUtils.emptyStateIconSize(context),
-                  color: Colors.grey.shade400,
-                ),
+                  Icon(
+                    Icons.school_outlined,
+                    size: ResponsiveUtils.emptyStateIconSize(context),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
                 SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 1.5),
                 Text(
                   l10n.noSubjectsYet,
@@ -84,12 +78,7 @@ class SubjectListView extends ConsumerWidget {
                 SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
                 ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SubjectSelectionScreen(),
-                      ),
-                    );
+                    Navigator.pushNamed(context, AppRoutes.subjectSelection);
                   },
                   icon: const Icon(Icons.add),
                   label: Text(l10n.addSubject),
@@ -119,15 +108,14 @@ class SubjectListView extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 12),
         child: InkWell(
           onTap: () {
-            Navigator.push(
+            Navigator.pushNamed(
               context,
-              MaterialPageRoute(
-                builder: (context) => SubjectDetailScreen(
-                  subjectId: subject.id,
-                  subjectName: subject.name,
-                  subjectColor: subject.color,
-                  topicIds: [],
-                ),
+              AppRoutes.subjectDetail,
+              arguments: SubjectDetailArgs(
+                subjectId: subject.id,
+                subjectName: subject.name,
+                subjectColor: subject.color,
+                topicIds: [],
               ),
             );
           },
@@ -149,9 +137,9 @@ class SubjectListView extends ConsumerWidget {
                     color: SubjectColors.stringToColor(subject.color),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.school,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -168,7 +156,7 @@ class SubjectListView extends ConsumerWidget {
                           subject.code!,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       const SizedBox(height: 4),
@@ -180,7 +168,7 @@ class SubjectListView extends ConsumerWidget {
                             l10n.practiceSessions,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade500,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],

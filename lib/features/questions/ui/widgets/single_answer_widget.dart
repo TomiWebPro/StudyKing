@@ -48,7 +48,7 @@ class SingleAnswerWidget extends StatelessWidget {
                     border: Border.all(
                       color: selectedAnswer == option
                           ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade300,
+                          : Theme.of(context).colorScheme.outline,
                       width: 2,
                     ),
                   ),
@@ -60,7 +60,7 @@ class SingleAnswerWidget extends StatelessWidget {
                             : Icons.radio_button_unchecked,
                         color: selectedAnswer == option
                             ? Theme.of(context).colorScheme.primary
-                            : Colors.grey,
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
                       Expanded(

@@ -1,3 +1,4 @@
+import 'package:hive_flutter/hive_flutter.dart';
 import '../errors/result.dart';
 import '../data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
@@ -82,7 +83,16 @@ class MasteryImprovementMetric {
 }
 
 class PlanAdherenceTracker {
-  final List<PlanAdherenceMetric> _metrics = [];
+  List<PlanAdherenceMetric> _metrics = [];
+  late Box _box;
+  bool _initialized = false;
+
+  Future<void> init() async {
+    if (_initialized) return;
+    _box = await Hive.openBox('plan_adherence_metrics');
+    _metrics = _box.values.cast<PlanAdherenceMetric>().toList();
+    _initialized = true;
+  }
 
   void recordDay({
     required String studentId,
@@ -100,7 +110,7 @@ class PlanAdherenceTracker {
       actualMinutes: actualMinutes,
     );
 
-    _metrics.add(PlanAdherenceMetric(
+    final metric = PlanAdherenceMetric(
       date: date,
       studentId: studentId,
       plannedQuestions: plannedQuestions,
@@ -109,7 +119,9 @@ class PlanAdherenceTracker {
       actualMinutes: actualMinutes,
       adherenceScore: adherenceScore,
       metadata: metadata,
-    ));
+    );
+    _metrics.add(metric);
+    _box.add(metric);
   }
 
   double _calculateAdherenceScore({
@@ -148,11 +160,35 @@ class PlanAdherenceTracker {
   List<PlanAdherenceMetric> getAllMetrics(String studentId) {
     return _metrics.where((m) => m.studentId == studentId).toList();
   }
+
+  int getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) {
+    final metrics = _metrics.where((m) => m.studentId == studentId).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    int consecutive = 0;
+    for (final metric in metrics) {
+      if (metric.adherenceScore < threshold) {
+        consecutive++;
+      } else {
+        break;
+      }
+    }
+    return consecutive;
+  }
 }
 
 class MasteryImprovementTracker {
   final Map<String, MasteryState> _previousStates = {};
-  final List<MasteryImprovementMetric> _metrics = [];
+  List<MasteryImprovementMetric> _metrics = [];
+  late Box _box;
+  bool _initialized = false;
+
+  Future<void> init() async {
+    if (_initialized) return;
+    _box = await Hive.openBox('mastery_improvement_metrics');
+    _metrics = _box.values.cast<MasteryImprovementMetric>().toList();
+    _initialized = true;
+  }
 
   void trackImprovement({
     required MasteryState currentState,
@@ -175,6 +211,7 @@ class MasteryImprovementTracker {
         currentLevel: currentState.masteryLevel,
       );
       _metrics.add(metric);
+      _box.add(metric);
     }
 
     _previousStates[key] = currentState;
@@ -201,6 +238,10 @@ class MasteryImprovementTracker {
     if (studentMetrics.isEmpty) return 0.0;
     return studentMetrics.map((m) => m.accuracyDelta).reduce((a, b) => a + b) / studentMetrics.length;
   }
+
+  MasteryState? getPreviousState(String studentId, String topicId) {
+    return _previousStates['${studentId}_$topicId'];
+  }
 }
 
 class InstrumentationService {
@@ -216,7 +257,9 @@ class InstrumentationService {
         _improvementTracker = MasteryImprovementTracker();
 
   Future<void> init() async {
-    return _repository.init();
+    await _repository.init();
+    await _adherenceTracker.init();
+    await _improvementTracker.init();
   }
 
   void recordPlanAdherence({
@@ -255,6 +298,7 @@ class InstrumentationService {
     try {
       final avgAdherence = _adherenceTracker.getAverageAdherence(studentId);
       final weeklyMetrics = _adherenceTracker.getWeeklyMetrics(studentId);
+      final consecutiveLowDays = _adherenceTracker.getConsecutiveLowAdherenceDays(studentId);
       final improvements = _improvementTracker.getRecentImprovements(studentId, days: 7);
       final levelUps = _improvementTracker.getLevelUpCount(studentId);
       final avgImprovement = _improvementTracker.getAverageImprovement(studentId);
@@ -268,6 +312,7 @@ class InstrumentationService {
           'weeklyAdherenceAvg': weeklyMetrics.isEmpty
               ? 0.0
               : weeklyMetrics.map((m) => m.adherenceScore).reduce((a, b) => a + b) / weeklyMetrics.length,
+          'consecutiveLowDays': consecutiveLowDays,
         },
         'masteryImprovement': {
           'recentImprovementsCount': improvements.length,

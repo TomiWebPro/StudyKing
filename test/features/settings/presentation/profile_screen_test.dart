@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 
 class FakeSettingsRepositoryProfile {
-  ProfileData? _profile;
+  UserProfile? _profile;
   bool shouldThrow = false;
 
-  Future<ProfileData?> getProfileData() async {
+  Future<UserProfile?> getProfileData() async {
     if (shouldThrow) throw Exception('Test error');
     return _profile;
   }
 
-  Future<void> saveProfileData(ProfileData profile) async {
+  Future<void> saveProfileData(UserProfile profile) async {
     _profile = profile;
   }
 
@@ -60,7 +61,7 @@ final testSettingsProvider = StateNotifierProvider<_TestSettingsNotifier, Settin
 });
 
 Widget buildProfileScreen({
-  ProfileData? initialProfile,
+  UserProfile? initialProfile,
   bool shouldThrowLoad = false,
 }) {
   fakeProfileRepo._profile = initialProfile;
@@ -331,7 +332,7 @@ void main() {
     });
 
     testWidgets('loads existing profile data into fields', (tester) async {
-      fakeProfileRepo._profile = ProfileData(
+      fakeProfileRepo._profile = UserProfile(
         id: 'test-id',
         name: 'Jane Doe',
         studentId: '12345',
@@ -624,7 +625,7 @@ void main() {
 
     group('Delete Account Flow', () {
       testWidgets('delete confirmation calls clearProfile', (tester) async {
-        fakeProfileRepo._profile = ProfileData(
+        fakeProfileRepo._profile = UserProfile(
           id: 'delete-test',
           name: 'Delete Test',
         );
@@ -656,7 +657,7 @@ void main() {
       });
 
       testWidgets('cancel delete does not clear profile', (tester) async {
-        fakeProfileRepo._profile = ProfileData(
+        fakeProfileRepo._profile = UserProfile(
           id: 'cancel-delete-test',
           name: 'Cancel Delete Test',
         );
@@ -688,7 +689,7 @@ void main() {
 
     group('Language Switch Side Effects', () {
       testWidgets('language dropdown shows current language', (tester) async {
-        fakeProfileRepo._profile = ProfileData(
+        fakeProfileRepo._profile = UserProfile(
           id: 'lang-test',
           name: 'Lang User',
           language: 'es',
@@ -701,7 +702,7 @@ void main() {
       });
 
       testWidgets('can switch from Spanish to English', (tester) async {
-        fakeProfileRepo._profile = ProfileData(
+        fakeProfileRepo._profile = UserProfile(
           id: 'lang-switch-test',
           name: 'Switch User',
           language: 'es',
@@ -722,7 +723,7 @@ void main() {
 
     group('Notifications Toggle', () {
       testWidgets('notifications can be enabled', (tester) async {
-        fakeProfileRepo._profile = ProfileData(
+        fakeProfileRepo._profile = UserProfile(
           id: 'notif-test',
           name: 'Notif User',
           notificationsEnabled: false,

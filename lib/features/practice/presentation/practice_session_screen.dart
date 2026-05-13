@@ -17,6 +17,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../core/utils/logger.dart';
 
@@ -257,7 +258,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           timeSpentMs: duration,
           questionsAnswered: _questions.length,
           correctAnswers: _correctAnswers,
-          studentId: 'anonymous',
+          studentId: StudentIdService().getStudentId(),
           subjectId: widget.subjectId,
         ));
       } catch (e) {
@@ -391,7 +392,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),
@@ -405,13 +406,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     question.type.name,
                                     style: TextStyle(
-                                      color: Theme.of(context).primaryColor,
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -623,7 +624,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Widget _buildMiniStat(BuildContext context, String label, String value, IconData icon, [Color? color]) {
     return Column(
       children: [
-        Icon(icon, size: 16, color: color ?? Theme.of(context).primaryColor),
+        Icon(icon, size: 16, color: color ?? Theme.of(context).colorScheme.primary),
         const SizedBox(height: 4),
         Text(
           value,
@@ -666,7 +667,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           children: [
             Text(
               l10n.practiceComplete,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildStatRow(l10n.totalQuestions, _questions.length.toString()),

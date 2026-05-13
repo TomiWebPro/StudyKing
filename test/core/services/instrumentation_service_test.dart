@@ -13,10 +13,11 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
-    final state = MasteryState.initial(studentId: studentId, topicId: topicId);
-    state.accuracy = 0.8;
-    state.readinessScore = 0.8;
-    state.masteryLevel = MasteryLevel.proficient;
+      final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
+        accuracy: 0.8,
+        readinessScore: 0.8,
+        masteryLevel: MasteryLevel.proficient,
+      );
     return Result.success(state);
   }
 
@@ -337,11 +338,11 @@ void main() {
 
     group('trackImprovement', () {
       test('tracks improvement with changed accuracy', () {
-        final state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
+        var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
-        state.accuracy = 0.7;
+        state = state.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final improvements = tracker.getImprovements('student1');
@@ -349,8 +350,8 @@ void main() {
       });
 
       test('does not track when accuracy unchanged', () {
-        final state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
+        var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final improvements = tracker.getImprovements('student1');
@@ -359,15 +360,15 @@ void main() {
 
       test('tracks multiple topics', () {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
+        state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.7;
+        state = state.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         state = MasteryState.initial(studentId: 'student1', topicId: 'topic2');
-        state.accuracy = 0.3;
+        state = state.copyWith(accuracy: 0.3);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final improvements = tracker.getImprovements('student1');
@@ -377,12 +378,12 @@ void main() {
 
     group('getImprovements', () {
       test('returns all improvements for student', () {
-        final state1 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state1.accuracy = 0.5;
+        var state1 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state1 = state1.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state1, studentId: 'student1');
 
-        final state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state2.accuracy = 0.7;
+        var state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state2 = state2.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state2, studentId: 'student1');
 
         final improvements = tracker.getImprovements('student1');
@@ -397,12 +398,12 @@ void main() {
 
     group('getRecentImprovements', () {
       test('returns recent improvements within days', () {
-        final state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
+        var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
-        final state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state2.accuracy = 0.7;
+        var state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state2 = state2.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state2, studentId: 'student1');
 
         final improvements = tracker.getRecentImprovements('student1', days: 7);
@@ -413,13 +414,13 @@ void main() {
     group('getLevelUpCount', () {
       test('returns count of level ups', () {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
-        state.masteryLevel = MasteryLevel.novice;
+        state = state.copyWith(accuracy: 0.5);
+        state = state.copyWith(masteryLevel: MasteryLevel.novice);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.7;
-        state.masteryLevel = MasteryLevel.browsing;
+        state = state.copyWith(accuracy: 0.7);
+        state = state.copyWith(masteryLevel: MasteryLevel.browsing);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final count = tracker.getLevelUpCount('student1');
@@ -427,9 +428,9 @@ void main() {
       });
 
       test('returns 0 when no level ups', () {
-        final state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
-        state.masteryLevel = MasteryLevel.novice;
+        var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+        state = state.copyWith(accuracy: 0.5);
+        state = state.copyWith(masteryLevel: MasteryLevel.novice);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final count = tracker.getLevelUpCount('student1');
@@ -440,11 +441,11 @@ void main() {
     group('getAverageImprovement', () {
       test('calculates average improvement', () {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.5;
+        state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state.accuracy = 0.7;
+        state = state.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final avg = tracker.getAverageImprovement('student1');

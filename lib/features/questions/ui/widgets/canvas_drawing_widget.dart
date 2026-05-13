@@ -68,7 +68,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                 width: double.infinity,
                 height: 300,
                 decoration: BoxDecoration(
-                  border: Border.all(color: _isDrawing ? Colors.blue.shade400 : Colors.grey.shade300, width: _isDrawing ? 2 : 1),
+                  border: Border.all(color: _isDrawing ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline, width: _isDrawing ? 2 : 1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Stack(
@@ -82,7 +82,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                         child: Center(
                           child: Text(
                             l10n.drawHere,
-                            style: const TextStyle(color: Colors.grey, fontSize: 16),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16),
                           ),
                         ),
                       ),
@@ -110,7 +110,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               _strokes.isEmpty ? l10n.canvasIsEmpty : l10n.drawingWithStrokes(_strokes.length, _strokes.length == 1 ? '' : 's'),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -141,8 +141,11 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
 
   Widget _buildGrid(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200)),
-      child: CustomPaint(size: Size.infinite, painter: GridPainter()),
+      decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.outlineVariant)),
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: GridPainter(gridColor: Theme.of(context).colorScheme.outlineVariant),
+      ),
     );
   }
 
@@ -151,7 +154,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       button: true,
       label: label,
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         elevation: 2,
         child: InkWell(
@@ -159,7 +162,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: EdgeInsets.all(ResponsiveUtils.minTouchTarget * 0.3),
-            child: Icon(icon, size: 20, color: Colors.grey.shade700),
+            child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -321,9 +324,13 @@ class DrawingPainter extends CustomPainter {
 }
 
 class GridPainter extends CustomPainter {
+  final Color gridColor;
+
+  GridPainter({this.gridColor = const Color(0xFFE0E0E0)});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.grey.shade200..strokeWidth = 1.0;
+    final paint = Paint()..color = gridColor..strokeWidth = 1.0;
     for (double y = 0; y < size.height; y += 20) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
@@ -333,5 +340,6 @@ class GridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant GridPainter oldDelegate) => false;
+  bool shouldRepaint(covariant GridPainter oldDelegate) =>
+      oldDelegate.gridColor != gridColor;
 }

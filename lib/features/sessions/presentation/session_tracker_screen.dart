@@ -6,13 +6,14 @@ import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/widgets.dart';
-import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/student_id_service.dart';
 import '../../../../core/services/instrumentation_service.dart';
+import '../../../../core/services/mastery_graph_service.dart';
 import '../../../../core/data/repositories/plan_repository.dart';
 
 class SessionTrackerScreen extends StatefulWidget {
@@ -164,19 +165,20 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
       }
     }
 
-    // Track plan adherence
+    // Track plan adherence via InstrumentationService
     try {
       final planRepo = PlanRepository();
       await planRepo.init();
       final plan = await planRepo.loadPlan(studentId);
       if (plan != null) {
-        final adherenceTracker = PlanAdherenceTracker();
         final todayPlan = plan.dailyPlans.where((d) =>
             d.date.year == DateTime.now().year &&
             d.date.month == DateTime.now().month &&
             d.date.day == DateTime.now().day).firstOrNull;
         if (todayPlan != null) {
-          adherenceTracker.recordDay(
+          final instrumentation = InstrumentationService();
+          await instrumentation.init();
+          instrumentation.recordPlanAdherence(
             studentId: studentId,
             date: DateTime.now(),
             plannedQuestions: todayPlan.targetQuestions,
@@ -184,6 +186,20 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
             plannedMinutes: todayPlan.targetMinutes,
             actualMinutes: duration ~/ 60000,
           );
+        }
+      }
+    } catch (_) {}
+
+    // Track mastery improvement for topics practiced
+    try {
+      final instrumentation = InstrumentationService();
+      await instrumentation.init();
+      final masteryService = MasteryGraphService();
+      await masteryService.init();
+      final weakResult = await masteryService.getWeakTopics(studentId);
+      if (weakResult.isSuccess) {
+        for (final state in weakResult.data!) {
+          await instrumentation.trackMasteryImprovement(studentId, state.topicId);
         }
       }
     } catch (_) {}
@@ -268,8 +284,8 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                           icon: const Icon(Icons.play_arrow),
                           label: Text(l10n.start),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _isTrackingSession ? theme.disabledColor : Colors.green,
-                            foregroundColor: Colors.white,
+                            backgroundColor: _isTrackingSession ? theme.disabledColor : theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             minimumSize: const Size(48, 48),
                           ),
@@ -280,8 +296,8 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                             icon: const Icon(Icons.stop),
                             label: Text(l10n.end),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                              backgroundColor: theme.colorScheme.error,
+                              foregroundColor: theme.colorScheme.onError,
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               minimumSize: const Size(48, 48),
                             ),
@@ -322,12 +338,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                         label: l10n.viewAll,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SessionHistoryScreen(),
-                              ),
-                            );
+                            Navigator.pushNamed(context, AppRoutes.sessionHistory);
                           },
                           child: Text(l10n.viewAll),
                         ),
@@ -462,7 +473,7 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
               Navigator.pop(context, const _SessionEndStats(questionsAnswered: 0, correctAnswers: 0)),
           child: Text(l10n.skip),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: () {
             final questions = int.tryParse(_questionsController.text) ?? 0;
             final correct = int.tryParse(_correctController.text) ?? 0;

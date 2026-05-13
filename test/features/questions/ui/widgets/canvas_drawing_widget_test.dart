@@ -170,11 +170,8 @@ void main() {
       });
 
       testWidgets('save button enabled after drawing and calls callback', (tester) async {
-        bool dataReceived = false;
         await tester.pumpWidget(buildWidget(
-          onDrawingComplete: (data) {
-            dataReceived = data.isNotEmpty;
-          },
+          onDrawingComplete: (_) {},
         ));
 
         final gesture = await tester.startGesture(const Offset(100, 100));
@@ -203,11 +200,8 @@ void main() {
       });
 
       testWidgets('save triggers callback with data', (tester) async {
-        bool dataReceived = false;
         await tester.pumpWidget(buildWidget(
-          onDrawingComplete: (data) {
-            dataReceived = true;
-          },
+          onDrawingComplete: (_) {},
         ));
 
         final gesture = await tester.startGesture(const Offset(100, 100));

@@ -207,8 +207,7 @@ void main() {
       });
 
       test('returns existing state', () async {
-        final state = MasteryState.initial(studentId: 's1', topicId: 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 1000);
+        final state = MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(totalAttempts: 1);
         await repository.updateMasteryState(state);
         final result = await repository.getMasteryState('s1', 't1');
         expect(result.data?.totalAttempts, 1);

@@ -246,7 +246,6 @@ void main() {
       });
 
       testWidgets('shows submitted correct for multi choice with correct answer', (tester) async {
-        String? submittedAnswer;
         final question = _questionWithOptions(
           id: 'q3', text: 'Select all:', type: QuestionType.multiChoice,
           options: ['A', 'B', 'C'], correctAnswer: 'A,B',
@@ -255,7 +254,7 @@ void main() {
           question: question,
           currentAnswer: 'A||B',
           isSubmitted: true,
-          onAnswerSubmitted: (answer) => submittedAnswer = answer,
+          onAnswerSubmitted: (_) {},
         ));
 
         expect(find.text('Correct!'), findsOneWidget);

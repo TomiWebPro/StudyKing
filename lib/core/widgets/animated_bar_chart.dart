@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
-class AnimatedBarChart extends StatelessWidget {
+class AnimatedBarChart extends StatefulWidget {
   final Map<String, int> data;
   final Color accentColor;
   final double minBarHeight;
@@ -24,31 +24,46 @@ class AnimatedBarChart extends StatelessWidget {
   });
 
   @override
+  State<AnimatedBarChart> createState() => _AnimatedBarChartState();
+}
+
+class _AnimatedBarChartState extends State<AnimatedBarChart> {
+  bool _hasAnimated = false;
+
+  @override
+  void didUpdateWidget(AnimatedBarChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data != widget.data) {
+      _hasAnimated = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rawMax = data.values.isNotEmpty
-        ? data.values.reduce((a, b) => a > b ? a : b)
+    final rawMax = widget.data.values.isNotEmpty
+        ? widget.data.values.reduce((a, b) => a > b ? a : b)
         : 0;
     final maxCount = rawMax > 0 ? rawMax : 1;
 
     return Container(
       padding: ResponsiveUtils.cardPadding(context),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        border: Border.all(color: theme.dividerColor),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (yAxisLabel != null)
+          if (widget.yAxisLabel != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                yAxisLabel!,
+                widget.yAxisLabel!,
                 style: TextStyle(
                   fontSize: 11,
-                  color: theme.textTheme.bodySmall?.color ?? Colors.grey,
+                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -56,17 +71,17 @@ class AnimatedBarChart extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: data.keys.map((day) {
-              final count = data[day] ?? 0;
-              final height = minBarHeight +
-                  (count / maxCount * (maxBarHeight - minBarHeight));
+            children: widget.data.keys.map((day) {
+              final count = widget.data[day] ?? 0;
+              final height = widget.minBarHeight +
+                  (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
               return Expanded(
                 child: Column(
                   key: ValueKey('bar_$day'),
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showValueTooltips && count > 0)
+                    if (widget.showValueTooltips && count > 0)
                       Tooltip(
                         message: '$count',
                         child: Text(
@@ -75,26 +90,29 @@ class AnimatedBarChart extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: count > 0
-                                ? accentColor
-                                : (theme.textTheme.bodySmall?.color ?? Colors.grey),
+                                ? widget.accentColor
+                                : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ),
                     const SizedBox(height: 4),
                     TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: height),
+                      tween: Tween<double>(
+                        begin: _hasAnimated ? height : 0,
+                        end: height,
+                      ),
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOutCubic,
                       builder: (context, value, child) {
                         return Container(
-                          width: barWidth,
+                          width: widget.barWidth,
                           height: value,
                           decoration: BoxDecoration(
                             color: count > 0
-                                ? accentColor.withValues(
+                                ? widget.accentColor.withValues(
                                     alpha: 0.7 + (count / maxCount * 0.3))
                                 : theme.disabledColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(borderRadius),
+                            borderRadius: BorderRadius.circular(widget.borderRadius),
                           ),
                         );
                       },
@@ -104,7 +122,7 @@ class AnimatedBarChart extends StatelessWidget {
                       day,
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.textTheme.bodySmall?.color ?? Colors.grey,
+                        color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,

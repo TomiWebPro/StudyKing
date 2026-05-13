@@ -1,8 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/services/mastery_calculation_service.dart';
 
-/// Creates a MasteryState with mutable lists for testing recordAttempt
-/// (the source code has const [] for defaults which are unmodifiable)
 MasteryState _createTestState(String studentId, String topicId) {
   final now = DateTime(2026, 5, 12, 10, 0, 0);
   return MasteryState(
@@ -17,6 +16,12 @@ MasteryState _createTestState(String studentId, String topicId) {
 }
 
 void main() {
+  late MasteryCalculationService calculationService;
+
+  setUp(() {
+    calculationService = MasteryCalculationService();
+  });
+
   group('MasteryState', () {
     late DateTime now;
 
@@ -82,122 +87,183 @@ void main() {
       });
     });
 
-    group('recordAttempt', () {
+    group('MasteryCalculationService.recordAttempt', () {
       test('records first correct attempt', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 5000);
+        final result = calculationService.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 5000,
+        );
 
-        expect(state.totalAttempts, 1);
-        expect(state.correctAttempts, 1);
-        expect(state.currentStreak, 1);
-        expect(state.bestStreak, 1);
-        expect(state.averageTimeMs, 5000);
-        expect(state.recentConfidence, [4]);
-        expect(state.recentAccuracy, [1.0]);
-        expect(state.masteryLevel, MasteryLevel.browsing);
+        expect(result.totalAttempts, 1);
+        expect(result.correctAttempts, 1);
+        expect(result.currentStreak, 1);
+        expect(result.bestStreak, 1);
+        expect(result.averageTimeMs, 5000);
+        expect(result.recentConfidence, [4]);
+        expect(result.recentAccuracy, [1.0]);
+        expect(result.masteryLevel, MasteryLevel.browsing);
       });
 
       test('records first incorrect attempt', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: false, confidence: 2, timeSpentMs: 10000);
+        final result = calculationService.recordAttempt(
+          current: state,
+          isCorrect: false,
+          confidence: 2,
+          timeSpentMs: 10000,
+        );
 
-        expect(state.totalAttempts, 1);
-        expect(state.correctAttempts, 0);
-        expect(state.currentStreak, 0);
-        expect(state.bestStreak, 0);
-        expect(state.masteryLevel, MasteryLevel.browsing);
+        expect(result.totalAttempts, 1);
+        expect(result.correctAttempts, 0);
+        expect(result.currentStreak, 0);
+        expect(result.bestStreak, 0);
+        expect(result.masteryLevel, MasteryLevel.browsing);
       });
 
       test('increments streak on consecutive correct', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 5000);
-        state.recordAttempt(isCorrect: true, confidence: 5, timeSpentMs: 3000);
+        final first = calculationService.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 5000,
+        );
+        final result = calculationService.recordAttempt(
+          current: first,
+          isCorrect: true,
+          confidence: 5,
+          timeSpentMs: 3000,
+        );
 
-        expect(state.totalAttempts, 2);
-        expect(state.currentStreak, 2);
-        expect(state.bestStreak, 2);
+        expect(result.totalAttempts, 2);
+        expect(result.currentStreak, 2);
+        expect(result.bestStreak, 2);
       });
 
       test('resets streak on incorrect', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 5000);
-        state.recordAttempt(isCorrect: true, confidence: 5, timeSpentMs: 3000);
-        state.recordAttempt(isCorrect: false, confidence: 2, timeSpentMs: 8000);
+        final first = calculationService.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 5000,
+        );
+        final second = calculationService.recordAttempt(
+          current: first,
+          isCorrect: true,
+          confidence: 5,
+          timeSpentMs: 3000,
+        );
+        final result = calculationService.recordAttempt(
+          current: second,
+          isCorrect: false,
+          confidence: 2,
+          timeSpentMs: 8000,
+        );
 
-        expect(state.currentStreak, 0);
-        expect(state.bestStreak, 2);
+        expect(result.currentStreak, 0);
+        expect(result.bestStreak, 2);
       });
 
       test('computes accuracy correctly', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 1000);
-        state.recordAttempt(isCorrect: false, confidence: 3, timeSpentMs: 1000);
-        state.recordAttempt(isCorrect: true, confidence: 5, timeSpentMs: 1000);
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 1000);
+        var current = state;
+        current = calculationService.recordAttempt(current: current, isCorrect: true, confidence: 4, timeSpentMs: 1000);
+        current = calculationService.recordAttempt(current: current, isCorrect: false, confidence: 3, timeSpentMs: 1000);
+        current = calculationService.recordAttempt(current: current, isCorrect: true, confidence: 5, timeSpentMs: 1000);
+        current = calculationService.recordAttempt(current: current, isCorrect: true, confidence: 4, timeSpentMs: 1000);
 
-        expect(state.totalAttempts, 4);
-        expect(state.correctAttempts, 3);
-        expect(state.accuracy, 0.75);
+        expect(current.totalAttempts, 4);
+        expect(current.correctAttempts, 3);
+        expect(current.accuracy, 0.75);
       });
 
       test('updates average time', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 2000);
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 4000);
+        final first = calculationService.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 2000,
+        );
+        final result = calculationService.recordAttempt(
+          current: first,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 4000,
+        );
 
-        expect(state.averageTimeMs, 3000);
+        expect(result.averageTimeMs, 3000);
       });
 
       test('recentConfidence capped at 20', () {
         final state = _createTestState('s1', 't1');
+        var current = state;
         for (int i = 0; i < 25; i++) {
-          state.recordAttempt(isCorrect: i % 2 == 0, confidence: 3, timeSpentMs: 1000);
+          current = calculationService.recordAttempt(
+            current: current,
+            isCorrect: i % 2 == 0,
+            confidence: 3,
+            timeSpentMs: 1000,
+          );
         }
-        expect(state.recentConfidence.length, 20);
-        expect(state.recentAccuracy.length, 20);
+        expect(current.recentConfidence.length, 20);
+        expect(current.recentAccuracy.length, 20);
       });
 
       test('reaches expert level', () {
         final state = _createTestState('s1', 't1');
+        var current = state;
         for (int i = 0; i < 10; i++) {
-          state.recordAttempt(isCorrect: true, confidence: 5, timeSpentMs: 1000);
+          current = calculationService.recordAttempt(
+            current: current,
+            isCorrect: true,
+            confidence: 5,
+            timeSpentMs: 1000,
+          );
         }
-        expect(state.totalAttempts, 10);
-        expect(state.currentStreak, 10);
-        expect(state.accuracy, 1.0);
-        expect(state.masteryLevel, MasteryLevel.expert);
+        expect(current.totalAttempts, 10);
+        expect(current.currentStreak, 10);
+        expect(current.accuracy, 1.0);
+        expect(current.masteryLevel, MasteryLevel.expert);
       });
 
       test('reaches developing level', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(isCorrect: true, confidence: 4, timeSpentMs: 1000);
-        state.recordAttempt(isCorrect: true, confidence: 3, timeSpentMs: 1000);
-        state.recordAttempt(isCorrect: false, confidence: 2, timeSpentMs: 1000);
+        var current = state;
+        current = calculationService.recordAttempt(current: current, isCorrect: true, confidence: 4, timeSpentMs: 1000);
+        current = calculationService.recordAttempt(current: current, isCorrect: true, confidence: 3, timeSpentMs: 1000);
+        current = calculationService.recordAttempt(current: current, isCorrect: false, confidence: 2, timeSpentMs: 1000);
 
-        expect(state.totalAttempts, 3);
-        expect(state.accuracy, 2 / 3);
+        expect(current.totalAttempts, 3);
+        expect(current.accuracy, 2 / 3);
       });
 
       test('adds weak subtopic on incorrect', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(
+        final result = calculationService.recordAttempt(
+          current: state,
           isCorrect: false,
           confidence: 2,
           timeSpentMs: 1000,
           subtopicId: 'subtopic-1',
         );
-        expect(state.weakSubtopics, ['subtopic-1']);
+        expect(result.weakSubtopics, ['subtopic-1']);
       });
 
       test('does not add weak subtopic on correct', () {
         final state = _createTestState('s1', 't1');
-        state.recordAttempt(
+        final result = calculationService.recordAttempt(
+          current: state,
           isCorrect: true,
           confidence: 4,
           timeSpentMs: 1000,
           subtopicId: 'subtopic-1',
         );
-        expect(state.weakSubtopics, isEmpty);
+        expect(result.weakSubtopics, isEmpty);
       });
     });
 

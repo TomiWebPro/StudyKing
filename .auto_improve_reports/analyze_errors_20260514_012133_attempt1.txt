@@ -1,0 +1,6 @@
+Analyzing StudyKing...                                          
+
+   info • The variable name 'AppRoutes_All' isn't a lowerCamelCase identifier • test/core/routes/app_router_test.dart:576:20 • non_constant_identifier_names
+
+
+1 issue found. (ran in 2.2s)

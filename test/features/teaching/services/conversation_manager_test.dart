@@ -500,20 +500,6 @@ void main() {
       });
     });
 
-    group('AdaptiveMetrics', () {
-      test('creates AdaptiveMetrics with given values', () {
-        final metrics = AdaptiveMetrics(
-          pace: 1.2,
-          consecutiveCorrect: 3,
-          consecutiveIncorrect: 1,
-          confidenceRating: 0.8,
-        );
 
-        expect(metrics.pace, equals(1.2));
-        expect(metrics.consecutiveCorrect, equals(3));
-        expect(metrics.consecutiveIncorrect, equals(1));
-        expect(metrics.confidenceRating, equals(0.8));
-      });
-    });
   });
 }

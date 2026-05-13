@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
+import '../models/user_profile_model.dart';
 
 /// Real implementation of settings repository using Hive storage
 class SettingsRepository {
@@ -61,23 +62,23 @@ class SettingsRepository {
   }
 
   /// Save profile data
-  Future<void> saveProfileData(ProfileData profile) async {
+  Future<void> saveProfileData(UserProfile profile) async {
     final box = _requireProfileBox();
     await box.put(profile.id, profile);
     await box.put(_currentProfileKey, profile.id);
   }
 
   /// Get profile data
-  Future<ProfileData?> getProfileData() async {
+  Future<UserProfile?> getProfileData() async {
     final box = _requireProfileBox();
     final currentId = box.get(_currentProfileKey);
     if (currentId is String) {
       final profile = box.get(currentId);
-      if (profile is ProfileData) return profile;
+      if (profile is UserProfile) return profile;
     }
 
     if (box.keys.isEmpty) {
-      return ProfileData(
+      return UserProfile(
         id: 'default_profile',
         name: '',
       );
@@ -85,7 +86,7 @@ class SettingsRepository {
 
     for (final key in box.keys) {
       final value = box.get(key);
-      if (value is ProfileData) {
+      if (value is UserProfile) {
         await box.put(_currentProfileKey, value.id);
         return value;
       }

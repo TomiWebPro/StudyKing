@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/enums.dart';
+import '../../../core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../../core/utils/logger.dart';
+import '../../../core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../teaching/presentation/tutor_screen.dart';
 
@@ -13,6 +14,7 @@ class LessonDetailScreen extends StatefulWidget {
   final String topicId;
   final String topicTitle;
   final String subjectId;
+  final LessonRepository? lessonRepository;
 
   const LessonDetailScreen({
     super.key,
@@ -20,6 +22,7 @@ class LessonDetailScreen extends StatefulWidget {
     required this.topicId,
     required this.topicTitle,
     this.subjectId = '',
+    this.lessonRepository,
   });
 
   @override
@@ -39,6 +42,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     _startTimer();
   }
 
+  LessonRepository get _lessonRepo =>
+      widget.lessonRepository ?? database.lessonRepository;
+
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
@@ -49,7 +55,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   Future<void> _loadLesson() async {
     try {
-      final lesson = await database.lessonRepository.get(widget.lessonId);
+      final lesson = await _lessonRepo.get(widget.lessonId);
       if (mounted && lesson != null) setState(() => _lesson = lesson);
     } catch (e) {
       _logger.e('Error loading lesson', e);

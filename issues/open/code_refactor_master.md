@@ -1,45 +1,76 @@
-# Issue: Data Layer Fragmentation — Duplicate Profile Models, Inconsistent File Placement, and Missing Domain Abstractions
+# Refactor: Mitigate God Widgets, Production-Blocking Error Logging, and Feature Structure Inconsistencies
 
 ## Context
 
-The codebase follows a feature-based architecture but lacks consistent enforcement of its conventions. An audit of `lib/features/settings/data/models/` and neighboring feature directories uncovered fragmentation across the data layer: duplicate Hive types representing the same concept (`ProfileData` vs `UserProfile`), non-uniform directory layouts across features, mutable models mixing business logic with serialization, and deep cross-feature imports from `main.dart` — all of which erode maintainability and increase the risk of data corruption bugs.
+Several screens in the codebase have grown into monolithic widgets exceeding 600–1000+ lines, violating the Single Responsibility Principle. These screens mix data loading, state management, widget building, navigation, and export logic into single files. Additionally, critical production issues (error logs guarded by `kDebugMode`) and inconsistent feature directory structures reduce maintainability and reliability.
 
 ## Affected Files
 
-| File | Issue |
-|------|-------|
-| `lib/features/settings/data/models/settings_box.dart` (L126-195) | Defines `ProfileData` (Hive typeId: 5) — a profile model partially overlapping with `UserProfile` |
-| `lib/features/settings/data/models/user_profile_model.dart` (L1-99) | Defines `UserProfile` (Hive typeId: 10) — same domain concept as `ProfileData`, different Hive type, different fields |
-| `lib/features/subjects/models/subject_model.dart` | Placed directly in `models/` (no `data/` parent), breaking the `data/models/` convention used by every other feature |
-| `lib/core/data/models/mastery_state_model.dart` (L1-322) | 322-line model mixing Hive serialization with mutable business logic (`recordAttempt` contains inline spaced-repetition algorithm) |
-| `lib/features/settings/data/models/settings_model.dart` (L106-112) | `UsageRecord.calculateTotalCost` hardcodes LLM token pricing constants that change frequently |
-| `lib/features/settings/presentation/settings_screen.dart` (L10-11) | Imports `main.dart` for providers (`apiKeyProvider`, `selectedModelProvider`, `settingsProvider`) |
-| `lib/features/settings/presentation/api_config_screen.dart` (L5-6) | Imports `main.dart` for providers |
-| `lib/features/settings/presentation/profile_screen.dart` (L5) | Imports `main.dart` for `settingsRepository` and `localeProvider` |
-| `lib/features/settings/settings.dart` | Barrel file only exports presentation screens; models/repository are not re-exported, forcing deep relative imports |
-| `lib/features/subjects/data/repositories/subject_repository.dart` | `getStudentSubjects` ignores `studentId` param and returns `getAll()` — dead parameter |
-| `lib/features/lessons/data/models/` | Empty directory (leftover scaffolding) |
-| `lib/features/lessons/services/`, `lib/features/planner/services/`, `lib/features/sessions/services/` | Empty directories |
-| `lib/features/settings/data/repositories/settings_repository.dart` | `SettingsRepository` is a singleton DAO with no interface/abstraction; directly exposes Hive `Box` semantics |
+### God Widgets / SRP Violations
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/features/practice/presentation/practice_screen.dart` | 1029 | Contains 2 private inner widget classes (`_PracticeModeCard`, `_PracticeModeOption`). Mixes data fetching, navigation, state, and UI. |
+| `lib/features/practice/presentation/practice_session_screen.dart` | 718 | Contains 2 export-only helper classes (`PracticeAnswerRecord`, `PracticeSessionResult`). Mixes timer logic, session persistence, answer validation, and UI. |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | 699 | Mixes service init, data loading (6 sources), CSV export, navigation, and 12+ `_build*` widget methods. |
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | 678 | Large single-file screen with embedded data and UI logic. |
+| `lib/features/subjects/presentation/subject_detail_view.dart` | 748 | Excessive length for a detail view. |
+
+### Production-Blocking Anti-Pattern
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/core/errors/handlers.dart` | 224–226 | `_logError` wraps `_logger.e(...)` in `if (kDebugMode)` — production error logs are **silently discarded**, making production debugging impossible. |
+
+### Non-Localized Hardcoded Strings
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/core/services/answer_validation_service.dart` | 57, 92, 96–97, 131, 133, 135, 186–216, 261–273 | 20+ hardcoded English strings (`'Correct!'`, `'Incorrect.'`, `'No markscheme available'`, step feedback messages) bypass the l10n system. |
+| `lib/core/errors/handlers.dart` | 242–294 | Hardcoded English error messages (`'Network request failed'`, `'Invalid API key or credentials'`, etc.) returned via `AppException.message` without localization. |
+
+### Feature Structure Inconsistency
+
+Many features lack conventional subdirectories (`providers/`, `services/`, `data/`, `models/`), leading to business logic leaking into presentation code:
+
+- `lib/features/dashboard/` — only `presentation/`, no `services/`, `providers/`, `data/`, `widgets/`
+- `lib/features/lessons/` — only `presentation/`
+- `lib/features/planner/` — only `presentation/`
+- `lib/features/quickguide/` — only `presentation/`
+- `lib/features/llm_tasks/` — only `presentation/`
 
 ## Rationale
 
-1. **Duplicate profile models risk silent data loss.** `ProfileData` (typeId: 5) and `UserProfile` (typeId: 10) are persisted to separate Hive boxes. When the profile screen writes via `ProfileData` but other code reads via `UserProfile`, the two fall out of sync. The `settings_box.g.dart` generated file is never regenerated for `ProfileData` because `settings_box.dart` lacks a `part` directive. This means `ProfileData` serialization is entirely manual while `UserProfile` uses auto-generated serialization — yet both claim to represent user profile data.
+1. **God widgets** directly hinder onboarding, testing, and future changes. A single 1029-line file cannot be meaningfully unit-tested. Developers must understand the entire file to make any change, increasing merge conflicts and regressions. Each `_build*` method that accesses `setState` or `context` is tightly coupled to the parent widget, preventing reuse.
 
-2. **Inconsistent directory structure creates cognitive overhead.** `Subject` model lives at `lib/features/subjects/models/subject_model.dart` while every other feature nests models under `data/models/`. The `subjects` feature also lacks a `presentation/` subdirectory for *all* its screen files — `subject_list_view.dart` is in `presentation/` but `subject_management_screen.dart`, `subject_selection_screen.dart`, etc. are also there; this is correct but the `data/models` directory is missing from `subjects`.
+2. **Error logging behind `kDebugMode`** is a critical reliability issue. Production crashes, API failures, and data inconsistencies become invisible. This single guard makes the entire error handling layer unreliable for diagnosing production issues.
 
-3. **Mutable models violate immutability conventions.** `MasteryState` uses `late` mutable fields and mutation methods (`recordAttempt`, `_updateAccuracy`, etc.) on a `HiveObject`, making it impossible to track state changes, complicates testing, and prevents reliable change detection in Riverpod. The `recordAttempt` method is 40 lines of business logic embedded in a model class.
+3. **Hardcoded strings** create an internationalization debt that grows with every new feature. Having some strings go through `AppLocalizations` and others bypass it creates an inconsistent user experience for non-English users.
 
-4. **`main.dart` imports from feature code create circular-dependency risk.** Three presentation files in the settings feature import `package:studyking/main.dart`. This couples feature code to the app's root composition root, making it impossible to test features in isolation and creating a build-time circular dependency hazard.
-
-5. **Hardcoded token pricing will silently produce wrong costs.** The `calculateTotalCost` function embeds per-token rates for a specific LLM provider. When prices change (which they do frequently), the displayed usage costs will be silently incorrect with no mechanism to update them without a code deploy.
+4. **Missing feature directory structure** means there is no natural home for repositories, providers, or widget tests. Components that logically belong to a feature (e.g., a `DashboardMetricCard` widget) instead live in `core/widgets/` or are inlined, eroding the feature-boundary design.
 
 ## Acceptance Criteria
 
-- [ ] Consolidate `ProfileData` and `UserProfile` into a single model class; migrate Hive typeId; update all consumers (profile_screen, settings_repository, etc.)
-- [ ] Move `subject_model.dart` into `lib/features/subjects/data/models/subject_model.dart` and update imports/barrel file
-- [ ] Extract mutable business logic from `MasteryState` into a dedicated service class (e.g. `MasteryCalculationService`); make `MasteryState` immutable with a single `copyWith` mutation path
-- [ ] Remove `main.dart` imports from feature presentation files; inject dependencies via Riverpod providers defined in the feature's own provider files or via constructor injection
-- [ ] Extract hardcoded token pricing into a configurable provider or runtime configuration source
-- [ ] Either populate or remove the 4 empty scaffolding directories
-- [ ] Update the settings barrel file to re-export models and repository so consumers use clean imports
+### A. God Widget Decomposition
+- [ ] `lib/features/practice/presentation/practice_screen.dart` is split into at most 400 lines per file:
+  - Extract `_PracticeModeCard` to `lib/features/practice/presentation/widgets/practice_mode_card.dart`
+  - Extract `_PracticeModeOption` to `lib/features/practice/presentation/widgets/practice_mode_option.dart`
+  - Extract a presenter/service for the data-loading logic
+- [ ] `lib/features/dashboard/presentation/dashboard_screen.dart` is split:
+  - Extract sections into standalone widgets under `lib/features/dashboard/presentation/widgets/` (e.g., `mastery_progress_card.dart`, `weak_areas_card.dart`, `export_section.dart`)
+  - Move all service instantiation out of `initState` (use dependency injection already available via Riverpod)
+  - `/lib/features/dashboard/` gains the standard subdirectories (`services/`, `widgets/`, `providers/`)
+- [ ] `lib/features/practice/presentation/practice_session_screen.dart` is split:
+  - Extract `PracticeAnswerRecord` and `PracticeSessionResult` into a separate `models/` file
+  - Extract timer and session persistence logic into a dedicated service/provider
+
+### B. Production Logging Fix
+- [ ] `lib/core/errors/handlers.dart:224` — remove `kDebugMode` guard from `_logError`, or demote it to a `kDebugMode` guard on verbose logging only — error-level logs (`_logger.e`) must always fire.
+
+### C. Localization Compliance
+- [ ] All hardcoded English strings in `lib/core/services/answer_validation_service.dart` are replaced with `AppLocalizations.of(context)` calls or pass-through `String` parameters
+- [ ] All hardcoded error messages in `lib/core/errors/handlers.dart` are routed through the l10n system or defined as constants in a single locale-bundled file
+
+### D. Feature Structure Standardization
+- [ ] `lib/features/dashboard/` follows the established convention with `widgets/`, `services/`, `providers/` subdirectories
+- [ ] Every feature's barrel file (`feature_name.dart`) exports all public symbols from its subdirectories (not just presentation screens)

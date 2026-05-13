@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/models/tutor_session_model.dart';
+import '../../../core/data/repositories/lesson_repository.dart';
+import '../../../core/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/services/student_id_service.dart';
@@ -15,12 +17,16 @@ class LessonListScreen extends StatefulWidget {
   final String topicId;
   final String topicTitle;
   final String subjectId;
+  final LessonRepository? lessonRepository;
+  final TutorSessionRepository? tutorSessionRepository;
 
   const LessonListScreen({
     super.key,
     required this.topicId,
     required this.topicTitle,
     this.subjectId = '',
+    this.lessonRepository,
+    this.tutorSessionRepository,
   });
 
   @override
@@ -40,9 +46,14 @@ class _LessonListScreenState extends State<LessonListScreen> {
     _loadTutorSessionStatuses();
   }
 
+  LessonRepository get _lessonRepo =>
+      widget.lessonRepository ?? database.lessonRepository;
+  TutorSessionRepository get _tutorSessionRepo =>
+      widget.tutorSessionRepository ?? database.tutorSessionRepository;
+
   Future<void> _loadLessons() async {
     try {
-      final all = await database.lessonRepository.getAll();
+      final all = await _lessonRepo.getAll();
       setState(() {
         _lessons = all.where((l) => l.topicId == widget.topicId).toList();
         _isLoading = false;
@@ -54,7 +65,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
 
   Future<void> _loadTutorSessionStatuses() async {
     try {
-      final sessions = await database.tutorSessionRepository
+      final sessions = await _tutorSessionRepo
           .getStudentSessions(StudentIdService().getStudentId());
       for (final session in sessions) {
         final lessonId = session.topicId;
@@ -167,6 +178,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
                   topicId: widget.topicId,
                   topicTitle: widget.topicTitle,
                   subjectId: widget.subjectId,
+                  lessonRepository: widget.lessonRepository,
                 ),
               )),
             ),
@@ -178,11 +190,12 @@ class _LessonListScreenState extends State<LessonListScreen> {
   }
 
   Widget _buildStatusIcon(LessonStatus? status) {
+    final cs = Theme.of(context).colorScheme;
     switch (status) {
       case LessonStatus.completed:
-        return const Icon(Icons.check_circle, color: Colors.green);
+        return Icon(Icons.check_circle, color: cs.primary);
       case LessonStatus.inProgress:
-        return const Icon(Icons.play_circle_filled, color: Colors.orange);
+        return Icon(Icons.play_circle_filled, color: cs.tertiary);
       case LessonStatus.notStarted:
       case null:
         return const Icon(Icons.book);
@@ -190,10 +203,11 @@ class _LessonListScreenState extends State<LessonListScreen> {
   }
 
   Widget _buildStatusChip(BuildContext context, LessonStatus status, AppLocalizations l10n) {
+    final cs = Theme.of(context).colorScheme;
     final (label, color) = switch (status) {
-      LessonStatus.completed => (l10n.completed, Colors.green),
-      LessonStatus.inProgress => (l10n.inProgress, Colors.orange),
-      LessonStatus.notStarted => (l10n.notStarted, Colors.grey),
+      LessonStatus.completed => (l10n.completed, cs.primary),
+      LessonStatus.inProgress => (l10n.inProgress, cs.tertiary),
+      LessonStatus.notStarted => (l10n.notStarted, cs.onSurfaceVariant),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

@@ -1,81 +1,88 @@
-# Internationalisation Overhaul: Spanish Quality & Localisation Architecture
+# Spanish (es) ARB: Missing ICU Plural Rules & MentorService Hardcoded English
 
 ## Context
 
-The app currently supports English (`app_en.arb`) and Spanish (`app_es.arb`) with ~200+ ARB keys each. However, a significant gap exists between what's in the ARB files and what's actually rendered in the UI. Many user-facing strings are hardcoded in English in widget/build methods, bypassing the `AppLocalizations` system entirely. The Spanish translation also contains inconsistencies and quality issues that would compound if this serves as the template for adding more languages.
+Spanish localization (`lib/l10n/app_es.arb`) contains keys that use simple `{count}` placeholders where the English template uses proper ICU plural syntax (`{count, plural, =1{...} other{...}}`). This produces grammatically incorrect Spanish when `count == 1` (e.g. renders `"1 preguntas"` instead of `"1 pregunta"`).
 
-## Issues Found
-
-### 1. ~70+ Strings Hardcoded in English (Bypass Localisation Entirely)
-
-**Files affected (most impactful):**
-
-| File | Count | Examples |
-|------|-------|---------|
-| `lib/core/errors/handlers.dart:114-140` | 17 | All error messages: `'Unable to connect to the server...'`, `'API key is required...'`, `'Too many requests...'`, `'A database error occurred...'` |
-| `lib/features/practice/presentation/analytics_dashboard.dart` | 30+ | Section headings: `'Accuracy'`, `'Weekly Activity'`, `'Mastery Overview'`, `'Topic Performance'`, empty states: `'No topic data yet...'` |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart:308-331` | 6 | Mode cards: `'AI Tutor'`, `'Mentor'`, `'Interactive conversational lessons'`, `'Personal study assistant & planner'` |
-| `lib/features/teaching/presentation/widgets/chat_bubble.dart:54` | 3 | Sender labels: `'You'`, `'Tutor'`, `'System'` |
-| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:55-92` | 3 | `'$remaining min remaining'`, `'$exerciseCount questions'`, `'$correctCount correct'` |
-| `lib/features/mentor/presentation/mentor_screen.dart:74-83` | 1 | Welcome message body (only greeting is localised) |
-| `lib/features/teaching/presentation/tutor_screen.dart:101` | 1 | Initial AI greeting prompt |
-| `lib/features/practice/presentation/practice_screen.dart:648` | 1 | Snackbar error |
-
-**Rationale:** None of these strings exist in `app_en.arb` or `app_es.arb`. A Spanish user sees every error message, analytics label, and mode picker card in English. This is the most impactful issue because it's a complete blind spot — the ARB files show coverage that doesn't reflect reality.
-
-### 2. Spanish Translation Inconsistencies
-
-| Key | English | Spanish (current) | Problem |
-|-----|---------|-------------------|---------|
-| `accuracy` (line 344) | Accuracy | `Exactitud` | Inconsistent with `accuracyLabel` |
-| `accuracyLabel` (line 1827) | Accuracy: {percent} | `Precisión: {percent}` | Same English word "Accuracy" → two different Spanish words |
-| `weakLabel` (line 1856) | Weak | `Débil` | Unnatural as a noun; `Por mejorar` or `Con dificultad` is more natural |
-| `atRiskTopics` (line 1819) | At Risk Topics | `Temas en Riesgo` | Awkward; `Temas con dificultades` or `Temas en riesgo de quedarse atrás` reads better |
-| `weakAreas` (line 219) | Weak Areas | `Áreas Débiles` | Consider `Áreas por mejorar` (positive framing, common in education) |
-| `masteredLabel` (line 1852) | Mastered | `Dominado` | Better: `Dominado` is OK but `Adquirido` or `Superado` is more common in educational contexts |
-
-**Rationale:** A Spanish-speaking user will see "Exactitud" in one place and "Precisión" in another for the same English concept. If Spanish — the only non-English locale — has these issues, they will propagate when more languages are added without a style guide.
-
-### 3. Missing ICU Plural Forms in English ARB
-
-| Key | Current | Issue |
-|-----|---------|-------|
-| `randomQuestions` | `{count} random questions` | No ICU plural: `1 random questions` is grammatically wrong. Should use ICU: `{count, plural, =1{1 random question} other{{count} random questions}}` |
-| `sessionsCount` | `{count} sessions` | No ICU plural: `1 sessions`. Should use ICU: `{count, plural, =1{1 session} other{{count} sessions}}` |
-| `questionsCountLabel` | `{count} questions` | Same issue: `1 questions` |
-
-**Rationale:** The English base locale itself has grammatically incorrect plurals. Since ARB tooling uses ICU MessageFormat, these should use `plural` syntax. Note that Spanish versions are OK because "1 preguntas" vs "0 preguntas" vs "2 preguntas" are all grammatically the same, but the tooling still won't handle them correctly for English.
-
-### 4. No Extensible Language Architecture
-
-**Issues:**
-- Only 2 locales (`en`, `es`) are in `supportedLocales`. Adding a third (e.g. `fr`, `de`) requires manual ARB creation without any guide or checklist.
-- No `l10n.yaml` or `AGENTS.md` documenting how to add a new locale, run code generation, or test it.
-- No CI check that all `app_en.arb` keys exist in other locale ARB files.
-- The coverage test (`test/l10n/app_localizations_coverage_test.dart`) only tests keys that already exist — it cannot detect missing keys from hardcoded strings.
+Additionally, `MentorService` (`lib/features/mentor/services/mentor_service.dart`) contains ~30+ user-facing strings hardcoded in English, with no mechanism to receive the current locale. Its intent-detection keywords (confirmation, rejection, schedule, progress, inactivity) are English-only, making the mentor feature effectively unlocalizable.
 
 ## Affected Files
 
-- `lib/l10n/app_en.arb` — English source of truth
-- `lib/l10n/app_es.arb` — Spanish translation (inconsistencies to fix)
-- `lib/core/errors/handlers.dart` — 17 hardcoded error messages
-- `lib/features/practice/presentation/analytics_dashboard.dart` — Entirely unlocalised dashboard
-- `lib/features/quickguide/presentation/quick_guide_screen.dart` — Mode picker cards
-- `lib/features/teaching/presentation/widgets/chat_bubble.dart` — Sender role labels
-- `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` — Progress stat labels
-- `lib/features/mentor/presentation/mentor_screen.dart` — Welcome message body
-- `lib/features/teaching/presentation/tutor_screen.dart` — Initial greeting
-- `lib/features/practice/presentation/practice_screen.dart` — Error snackbar
-- `test/l10n/app_localizations_coverage_test.dart` — Coverage test that needs extension
+| File | Issue |
+|------|-------|
+| `lib/l10n/app_es.arb` (lines 194, 675, 1569, 1801) | 4 keys lack ICU plural rules |
+| `lib/l10n/app_en.arb` (lines 194, 675, 1569, 1801) | Reference template (all use correct plurals) |
+| `lib/features/mentor/services/mentor_service.dart` (entire file) | All user-facing strings hardcoded in English |
+| `lib/features/mentor/presentation/mentor_screen.dart` | No locale passed to `MentorService` |
+
+## Detailed Breakdown
+
+### A. Missing ICU Plural Rules in `app_es.arb`
+
+**English (correct):**
+```json
+"randomQuestions": "{count, plural, =1{1 random question} other{{count} random questions}}",
+```
+
+**Spanish (broken — uses simple `{count}` without plural selectors):**
+```json
+"randomQuestions": "{count} preguntas aleatorias",
+```
+
+**Affected keys (all use simple `{count}` instead of `{count, plural, =1{...} other{...}}`):**
+| Key | Current Spanish (incorrect) | Should be |
+|-----|----------------------------|-----------|
+| `randomQuestions` (line 194) | `{count} preguntas aleatorias` | `{count, plural, =1{1 pregunta aleatoria} other{{count} preguntas aleatorias}}` |
+| `sessionsCount` (line 675) | `{count} sesiones` | `{count, plural, =1{1 sesión} other{{count} sesiones}}` |
+| `questionsCountLabel` (line 1569) | `{count} preguntas` | `{count, plural, =1{1 pregunta} other{{count} preguntas}}` |
+| `questionsCountMetric` (line 1801) | `{count} preguntas` | `{count, plural, =1{1 pregunta} other{{count} preguntas}}` |
+
+All 4 keys are plural-sensitive (type: `int`). When `count == 1`, the current code produces `"1 preguntas"` instead of `"1 pregunta"`.
+
+### B. Hardcoded English Strings in `MentorService`
+
+**All user-facing strings in `mentor_service.dart` are hardcoded in English:**
+
+| Method | Example hardcoded string | Lines |
+|--------|-------------------------|-------|
+| `_handleScheduleRequest` | `"You don't have any lessons scheduled yet…"` | 141 |
+| `_handleScheduleRequest` | `"Here are your upcoming lessons:\n"` | 146 |
+| `_handleScheduleRequest` | `"Would you like to reschedule any of these?"` | 154 |
+| `_handleInactivityCheck` | `"Great job staying active! …"` | 203 |
+| `_handleInactivityCheck` | `"You haven't started studying yet! …"` | 187 |
+| `_handleInactivityCheck` | `"I noticed you haven't studied in $daysSince days…"` | 201 |
+| `_executePendingAction` | `"I've noted the change. …"` | 221 |
+| `_executePendingAction` | `"Great! I've added a new study session…"` | 223 |
+| `getProgressReport` | `"📊 **Your Study Progress Report**\n"` | 312 |
+| `getProgressReport` | `"Areas needing attention:"` | 322 |
+| `suggestNextAction` | `"You haven't added any subjects yet…"` | 414 |
+| `suggestNextAction` | `"You're doing well! Would you like to…"` | 417 |
+| `_mentorSystemPrompt` | Full system prompt in English | 232–260 |
+| `_buildContextPrompt` | Context template in English | 280–298 |
+
+**English-only keyword patterns** — intent detection will not match Spanish input:
+- `_isConfirmation` (line 90): matches `yes`, `sure`, `ok` — fails for `sí`, `claro`, `vale`, `confirmar`
+- `_isRejection` (line 99): matches `no`, `don't` — fails for `no quiero`, `cancelar`
+- `_isScheduleRequest` (line 107): matches `schedule`, `plan` — fails for `programar`, `planificar`
+- `_isProgressRequest` (line 116): matches `progress`, `stats` — fails for `progreso`, `estadísticas`
+- `_isInactivityCheck` (line 125): matches `inactive`, `reminder` — fails for `inactivo`, `recordatorio`
+
+**No locale injection point** — `MentorService` constructor (line 22) has no `Locale` or `AppLocalizations` parameter. The class is instantiated in `_MentorScreenState._initializeMentor()` (line 52) where `AppLocalizations.of(context)!` is available in the same class, but never passed through.
+
+## Rationale
+
+1. **Spanish correctness**: Displaying `"1 preguntas"` is a grammatical error that degrades user trust. All 1149 keys in `app_es.arb` should follow the English template's pattern.
+2. **Mentor feature unusable for Spanish speakers**: Even with UI fully localized, the chatbot's canned responses and intent detection remain English-only. A Spanish-speaking user who types `"sí"` to confirm an action will be treated as a rejection.
+3. **Architecture**: Fixing `MentorService` establishes a pattern for all future service-layer localization (e.g. `TutorService`, `PlannerService`) and makes adding French, German, etc. straightforward.
+4. **Leverages existing infrastructure**: The project already has `AppLocalizations`, `l10n.yaml`, and `flutter gen-l10n`. Adding more ARB keys is the intended path — no new dependencies needed.
 
 ## Acceptance Criteria
 
-1. **All error messages in `handlers.dart`** are extracted to ARB keys in both `app_en.arb` and `app_es.arb` with proper ICU placeholders. Hardcoded strings replaced with `AppLocalizations.of(context)!` calls.
-2. **`analytics_dashboard.dart`** — Every label, section heading, empty state, and stat string is localised via ARB keys.
-3. **Mode picker cards** in `quick_guide_screen.dart` use localised strings instead of `'AI Tutor'` / `'Mentor'`.
-4. **Sender labels** in `chat_bubble.dart` (`'You'`, `'Tutor'`, `'System'`) are localised.
-5. **Lesson progress bar** labels in `lesson_progress_bar.dart` and `tutor_screen.dart` use localised strings.
-6. **Spanish consistency** — `accuracy` and `accuracyLabel` use the same translation; `weakLabel` and `atRiskTopics` reviewed for naturalness; one style chosen per concept.
-7. **English ICU plurals** — `randomQuestions`, `sessionsCount`, `questionsCountLabel` updated to proper ICU `plural` syntax in `app_en.arb`.
-8. **Coverage test** updated to detect missing keys between English and Spanish ARB files (fails if any `app_en.arb` key lacks a `app_es.arb` counterpart, and vice versa).
-9. **`AGENTS.md` or `CONTRIBUTING.md`** contains a "Adding a new locale" checklist documenting: creating the ARB, running `flutter gen-l10n`, adding the locale to `supportedLocales`, adding it to the coverage test.
+- [ ] **A1.** All 4 Spanish ARB keys (`randomQuestions`, `sessionsCount`, `questionsCountLabel`, `questionsCountMetric`) use proper ICU plural syntax matching the English template, including accent marks for singular forms (`pregunta` / `sesión`).
+- [ ] **A2.** `app_localizations_coverage_test.dart` still passes (all keys present) and the new plural values are tested for both `count=1` and `count>1`.
+- [ ] **A3.** `MentorService` receives the current `Locale` (or `AppLocalizations`) from `MentorScreen`.
+- [ ] **A4.** All hardcoded user-facing strings in `MentorService` are replaced with calls to `AppLocalizations` via the injected locale.
+- [ ] **A5.** Intent-detection keyword patterns (`_isConfirmation`, `_isRejection`, `_isScheduleRequest`, `_isProgressRequest`, `_isInactivityCheck`) are expanded to match Spanish equivalents (`sí`, `claro`, `programar`, `progreso`, `inactivo`, etc.) or replaced with a locale-aware matching strategy.
+- [ ] **A6.** Generated Dart files are regenerated (`scripts/gen_l10n.sh`) with no compiler errors.
+- [ ] **A7.** Running `flutter test` passes (existing Spanish localization tests continue to work).
+- [ ] **A8.** Mentor chatbot renders localized response strings when device locale is `es`.

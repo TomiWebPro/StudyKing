@@ -96,9 +96,9 @@ void main() {
     });
   });
 
-  group('ProfileData', () {
+  group('UserProfile', () {
     test('serializes/deserializes full and default values', () {
-      final profile = ProfileData(
+      final profile = UserProfile(
         id: 'u1',
         name: 'Tomi',
         studentId: 'S123',
@@ -110,7 +110,7 @@ void main() {
       );
 
       final json = profile.toJson();
-      final restored = ProfileData.fromJson(json);
+      final restored = UserProfile.fromJson(json);
 
       expect(restored.id, 'u1');
       expect(restored.name, 'Tomi');
@@ -121,7 +121,7 @@ void main() {
       expect(restored.notificationsEnabled, isFalse);
       expect(restored.language, 'fr');
 
-      final withDefaults = ProfileData.fromJson({});
+      final withDefaults = UserProfile.fromJson({});
       expect(withDefaults.id, '');
       expect(withDefaults.name, '');
       expect(withDefaults.notificationsEnabled, isTrue);
@@ -129,8 +129,8 @@ void main() {
     });
 
     test('toString contains key fields', () {
-      final profile = ProfileData(id: 'u2', name: 'Ana', studentId: 'A-1');
-      expect(profile.toString(), 'ProfileData(id: u2, name: Ana, studentId: A-1)');
+      final profile = UserProfile(id: 'u2', name: 'Ana', studentId: 'A-1');
+      expect(profile.toString(), 'UserProfile(id: u2, name: Ana, studentId: A-1)');
     });
   });
 
@@ -140,7 +140,7 @@ void main() {
         id: 'p1',
         name: 'Neo',
         studentId: 'ST-1',
-        avatarUrl: 'https://img',
+        avatarIcon: 'https://img',
         learningGoal: 'Physics',
         preferredStudyTime: 'morning',
         notificationsEnabled: false,
@@ -154,7 +154,7 @@ void main() {
       expect(restored.id, profile.id);
       expect(restored.name, profile.name);
       expect(restored.studentId, profile.studentId);
-      expect(restored.avatarUrl, profile.avatarUrl);
+      expect(restored.avatarIcon, profile.avatarIcon);
       expect(restored.learningGoal, profile.learningGoal);
       expect(restored.preferredStudyTime, profile.preferredStudyTime);
       expect(restored.notificationsEnabled, isFalse);
@@ -172,7 +172,7 @@ void main() {
         id: 'p1',
         name: 'Neo',
         studentId: 'ST-1',
-        avatarUrl: 'https://img',
+        avatarIcon: 'https://img',
         learningGoal: 'Physics',
         preferredStudyTime: 'morning',
         notificationsEnabled: true,
@@ -188,7 +188,7 @@ void main() {
       expect(copy.id, 'p1');
       expect(copy.name, 'Trinity');
       expect(copy.studentId, 'ST-1');
-      expect(copy.avatarUrl, 'https://img');
+      expect(copy.avatarIcon, 'https://img');
       expect(copy.learningGoal, 'Physics');
       expect(copy.preferredStudyTime, 'morning');
       expect(copy.notificationsEnabled, isFalse);
@@ -220,12 +220,12 @@ void main() {
       expect(adapter.typeId, 4);
       expect(adapter.hashCode, 4.hashCode);
       expect(adapter == SettingsBoxAdapter(), isTrue);
-      expect(adapter, isNot(isA<ProfileDataAdapter>()));
+      expect(adapter, isNot(isA<UserProfileAdapter>()));
     });
 
-    test('ProfileDataAdapter writes/reads all fields and equality', () {
-      final adapter = ProfileDataAdapter();
-      final source = ProfileData(
+    test('UserProfileAdapter writes/reads all fields and equality', () {
+      final adapter = UserProfileAdapter();
+      final source = UserProfile(
         id: 'u1',
         name: 'Tomi',
         studentId: 'S123',
@@ -244,7 +244,7 @@ void main() {
       expect(restored.toJson(), source.toJson());
       expect(adapter.typeId, 5);
       expect(adapter.hashCode, 5.hashCode);
-      expect(adapter == ProfileDataAdapter(), isTrue);
+      expect(adapter == UserProfileAdapter(), isTrue);
       expect(adapter, isNot(isA<SettingsBoxAdapter>()));
     });
   });

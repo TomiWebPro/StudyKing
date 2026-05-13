@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/data/repositories/plan_repository.dart';
+import '../../../core/data/repositories/mastery_graph_repository.dart';
+import '../../../core/data/repositories/topic_repository.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/data/models/personal_learning_plan_model.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import '../../teaching/presentation/tutor_screen.dart';
 
 class PlannerScreen extends StatefulWidget {
-  const PlannerScreen({super.key});
+  final PlanRepository? planRepository;
+  final MasteryGraphRepository? masteryGraphRepository;
+  final TopicRepository? topicRepository;
+
+  const PlannerScreen({
+    super.key,
+    this.planRepository,
+    this.masteryGraphRepository,
+    this.topicRepository,
+  });
 
   @override
   State<PlannerScreen> createState() => _PlannerScreenState();
@@ -30,8 +41,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
   @override
   void initState() {
     super.initState();
-    _planRepo = PlanRepository();
-    _masteryService = MasteryGraphService();
+    _planRepo = widget.planRepository ?? PlanRepository();
+    _masteryService = MasteryGraphService(
+      repository: widget.masteryGraphRepository,
+    );
     _loadExistingPlan();
   }
 
@@ -81,6 +94,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
       _planService = PersonalLearningPlanService(
         masteryService: _masteryService,
+        repository: widget.masteryGraphRepository,
+        topicRepository: widget.topicRepository,
+        planRepository: _planRepo,
         config: PlanGenerationConfig(
           planDurationDays: daysValue,
           targetMinutesPerDay: (hoursValue * 60).toDouble(),
@@ -105,7 +121,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
       } else {
         setState(() {
           _isGenerating = false;
-          _error = result.error ?? 'Failed to generate plan';
+          _error = result.error ?? AppLocalizations.of(context)!.failedToGeneratePlan;
         });
       }
     } catch (e) {
@@ -120,14 +136,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   void _openTutorMode(String topicId, String topicTitle, String subjectId) {
     if (topicId.isEmpty) return;
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (_) => TutorScreen(
-          topicId: topicId,
-          topicTitle: topicTitle,
-          subjectId: subjectId,
-        ),
+      AppRoutes.tutor,
+      arguments: TutorArgs(
+        topicId: topicId,
+        topicTitle: topicTitle,
+        subjectId: subjectId,
       ),
     );
   }
@@ -160,7 +175,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final narrow = constraints.maxWidth < 400;
+                  final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
                   if (narrow) {
                     return Column(
                       children: [
@@ -229,17 +244,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
               ),
               const SizedBox(height: 16),
               if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   ),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                ),
               const SizedBox(height: 24),
               if (_plan != null) ...[
-                _buildPlanSummary(context),
+                _buildPlanSummary(context, l10n),
                 const SizedBox(height: 16),
                 _buildDailyPlans(context),
               ],
@@ -250,7 +265,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  Widget _buildPlanSummary(BuildContext context) {
+  Widget _buildPlanSummary(BuildContext context, AppLocalizations l10n) {
     final summary = _plan!.summary;
     return Card(
       child: Padding(
@@ -262,7 +277,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               children: [
                 Icon(Icons.summarize, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('Plan Summary', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.planSummary, style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             const Divider(),
@@ -270,16 +285,16 @@ class _PlannerScreenState extends State<PlannerScreen> {
               spacing: 16,
               runSpacing: 8,
               children: [
-                _buildSummaryChip('${summary.totalQuestions}Q', 'Total'),
-                _buildSummaryChip('${summary.totalMinutes}min', 'Total Time'),
-                _buildSummaryChip('${summary.newTopics} new', 'Topics'),
-                _buildSummaryChip('${summary.reviewTopics} review', 'Review'),
-                _buildSummaryChip('${(summary.estimatedCoverage * 100).round()}%', 'Coverage'),
+                _buildSummaryChip('${summary.totalQuestions}Q', l10n.total),
+                _buildSummaryChip('${summary.totalMinutes}min', l10n.totalTime),
+                _buildSummaryChip('${summary.newTopics} ${l10n.newTopics}', l10n.topics),
+                _buildSummaryChip('${summary.reviewTopics} ${l10n.reviewTopics}', l10n.reviewTopics),
+                _buildSummaryChip('${(summary.estimatedCoverage * 100).round()}%', l10n.coverage),
               ],
             ),
             if (summary.focusAreas.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text('Focus: ${summary.focusAreas.join(", ")}', style: Theme.of(context).textTheme.bodySmall),
+              Text(l10n.focusLabel(summary.focusAreas.join(", ")), style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),
@@ -317,6 +332,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _buildDayCard(DailyPlan day) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -340,18 +356,18 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    day.focus ?? 'Study Day',
+                    day.focus ?? l10n.studyDay,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
                 if (day.isRestDay)
-                  Chip(
-                    label: const Text('Rest', style: TextStyle(fontSize: 10)),
+                    Chip(
+                    label: Text(l10n.rest, style: const TextStyle(fontSize: 10)),
                     padding: EdgeInsets.zero,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 if (!day.isRestDay)
-                  Text('${day.targetQuestions}Q \u00b7 ${day.targetMinutes}min',
+                  Text(l10n.questionsAndMinutes(day.targetQuestions, day.targetMinutes),
                       style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
@@ -362,12 +378,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 dense: true,
                 leading: Icon(Icons.school, size: 18, color: Theme.of(context).colorScheme.primary),
                 title: Text(topic.topicTitle, style: Theme.of(context).textTheme.bodyMedium),
-                subtitle: Text('${topic.estimatedQuestions}Q \u00b7 ${topic.estimatedMinutes}min',
+                subtitle: Text(l10n.topicQuestionsAndMinutes(topic.estimatedQuestions, topic.estimatedMinutes),
                     style: Theme.of(context).textTheme.bodySmall),
                 trailing: topic.topicId.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.smart_toy_outlined, size: 20),
-                        tooltip: 'Start tutoring',
+                        tooltip: l10n.startTutoring,
                         onPressed: () => _openTutorMode(topic.topicId, topic.topicTitle, ''),
                       )
                     : null,

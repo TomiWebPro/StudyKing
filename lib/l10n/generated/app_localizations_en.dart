@@ -171,7 +171,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String randomQuestions(int count) {
-    return '$count random questions';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count random questions',
+      one: '1 random question',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -522,7 +528,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sessionsCount(int count) {
-    return '$count sessions';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1166,7 +1178,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String questionsCountLabel(int count) {
-    return '$count questions';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions',
+      one: '1 question',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1182,6 +1200,266 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionHistory => 'Session History';
+
+  @override
+  String get studyDashboard => 'Study Dashboard';
+
+  @override
+  String get studyTime => 'Study Time';
+
+  @override
+  String get planAdherence => 'Plan Adherence';
+
+  @override
+  String get masteryOverview => 'Mastery Overview';
+
+  @override
+  String get topicPerformance => 'Topic Performance';
+
+  @override
+  String get achievements => 'Achievements';
+
+  @override
+  String get exportCsv => 'Export CSV';
+
+  @override
+  String get instrumentation => 'Instrumentation';
+
+  @override
+  String get overall => 'Overall';
+
+  @override
+  String get thisWeek => 'This Week';
+
+  @override
+  String get totalTopics => 'Total Topics';
+
+  @override
+  String get mastered => 'Mastered';
+
+  @override
+  String get topics => 'Topics';
+
+  @override
+  String get practiceAllWeakAreas => 'Practice All Weak Areas';
+
+  @override
+  String get practiceThisTopic => 'Practice this topic';
+
+  @override
+  String get noTopicDataYet =>
+      'No topic data yet. Start studying to see your progress!';
+
+  @override
+  String get masteryLevelNovice => 'Novice';
+
+  @override
+  String get masteryLevelBrowsing => 'Browsing';
+
+  @override
+  String get masteryLevelDeveloping => 'Developing';
+
+  @override
+  String get masteryLevelProficient => 'Proficient';
+
+  @override
+  String get masteryLevelExpert => 'Expert';
+
+  @override
+  String progressCsvGenerated(int length) {
+    return 'Progress CSV generated ($length chars)';
+  }
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get instrumentationDataExported => 'Instrumentation data exported';
+
+  @override
+  String attemptsCount(int count) {
+    return '$count attempts';
+  }
+
+  @override
+  String get weakAreasAccuracy => 'Weak Areas (Accuracy < 60%)';
+
+  @override
+  String get uploadContent => 'Upload Content';
+
+  @override
+  String get addStudyMaterials => 'Add study materials to your library';
+
+  @override
+  String get titleRequired => 'Title *';
+
+  @override
+  String get titleHint => 'e.g. Chapter 5 Notes';
+
+  @override
+  String get subjectOptional => 'Subject (optional)';
+
+  @override
+  String get none => 'None';
+
+  @override
+  String get pasteText => 'Paste Text';
+
+  @override
+  String get urlLink => 'URL / Link';
+
+  @override
+  String get urlRequired => 'URL *';
+
+  @override
+  String get urlHint => 'https://example.com/notes';
+
+  @override
+  String get contentRequired => 'Content *';
+
+  @override
+  String get contentHint => 'Paste your study material here...';
+
+  @override
+  String get uploading => 'Uploading...';
+
+  @override
+  String get fillRequiredFields => 'Please fill in all required fields.';
+
+  @override
+  String get contentUploadedSuccessfully => 'Content uploaded successfully!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get planSummary => 'Plan Summary';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get newTopics => 'new';
+
+  @override
+  String get reviewTopics => 'review';
+
+  @override
+  String get coverage => 'Coverage';
+
+  @override
+  String focusLabel(String areas) {
+    return 'Focus: $areas';
+  }
+
+  @override
+  String get studyDay => 'Study Day';
+
+  @override
+  String get rest => 'Rest';
+
+  @override
+  String get startTutoring => 'Start tutoring';
+
+  @override
+  String questionsAndMinutes(int questions, int minutes) {
+    return '${questions}Q · ${minutes}min';
+  }
+
+  @override
+  String topicQuestionsAndMinutes(int questions, int minutes) {
+    return '${questions}Q · ${minutes}min';
+  }
+
+  @override
+  String get failedToGeneratePlan => 'Failed to generate plan';
+
+  @override
+  String get llmTaskManager => 'LLM Task Manager';
+
+  @override
+  String activeCount(int count) {
+    return '$count active';
+  }
+
+  @override
+  String get noLlmTasksYet => 'No LLM tasks yet';
+
+  @override
+  String modelLabel(String modelId) {
+    return 'Model: $modelId';
+  }
+
+  @override
+  String startedLabel(String time) {
+    return 'Started: $time';
+  }
+
+  @override
+  String endedLabel(String time) {
+    return 'Ended: $time';
+  }
+
+  @override
+  String tokensAndCost(int count, String cost) {
+    return 'Tokens: $count (\$$cost)';
+  }
+
+  @override
+  String get cancelTask => 'Cancel';
+
+  @override
+  String get testConnection => 'Test Connection';
+
+  @override
+  String get testing => 'Testing...';
+
+  @override
+  String connectionSuccessful(int latency) {
+    return 'Connection successful! Latency: ${latency}ms';
+  }
+
+  @override
+  String connectionFailed(String error) {
+    return 'Connection failed: $error';
+  }
+
+  @override
+  String sessionHistoryCsvGenerated(int length) {
+    return 'Session history CSV generated ($length chars)';
+  }
+
+  @override
+  String dailyPlanTarget(int questions, int minutes) {
+    return 'Today: ${questions}Q, ${minutes}min';
+  }
+
+  @override
+  String get noPlanForToday => 'No plan for today';
+
+  @override
+  String planAdjustmentSuggested(int count) {
+    return 'You\'ve had $count days of low plan adherence. Would you like to adjust your study plan?';
+  }
+
+  @override
+  String get adjustPlan => 'Adjust Plan';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get voiceInput => 'Voice Input';
+
+  @override
+  String get captureImage => 'Capture Image';
+
+  @override
+  String get camera => 'Camera';
 
   @override
   String errorSavingSubject(String error) {
@@ -1332,7 +1610,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String questionsCountMetric(int count) {
-    return '$count questions';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions',
+      one: '1 question',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1357,9 +1641,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get keepPracticingToUnlock =>
       'Keep practicing to unlock advanced topics!';
-
-  @override
-  String get masteryOverview => 'Mastery Overview';
 
   @override
   String get totalTopicsLabel => 'Total Topics';
@@ -1483,4 +1764,310 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get largeTouchTargetsDescription => 'Increase tap target sizes';
+
+  @override
+  String get errorNetworkConnection =>
+      'Unable to connect to the server. Please check your internet connection and try again.';
+
+  @override
+  String get errorApiKeyMissing =>
+      'API key is required. Please configure it in Settings.';
+
+  @override
+  String get errorInvalidApiKey =>
+      'Invalid API key. Please check your credentials in Settings.';
+
+  @override
+  String get errorApiRateLimit =>
+      'Too many requests. Please wait a moment and try again.';
+
+  @override
+  String get errorApiNotFound => 'The requested resource was not found.';
+
+  @override
+  String get errorApiInternalServer =>
+      'The server encountered an error. Please try again later.';
+
+  @override
+  String get errorDatabase => 'A database error occurred. Please try again.';
+
+  @override
+  String get errorPdfParse =>
+      'Unable to parse the PDF file. Please ensure it is a valid PDF.';
+
+  @override
+  String get errorContentGeneration =>
+      'Failed to generate content. Please try again.';
+
+  @override
+  String get errorLlmUnavailable =>
+      'The AI service is temporarily unavailable. Please try again.';
+
+  @override
+  String get errorApiAuth =>
+      'Authentication failed. Please check your API credentials.';
+
+  @override
+  String get errorUnexpected =>
+      'An unexpected error occurred. Please try again.';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get retryConnection => 'Retry Connection';
+
+  @override
+  String get retryAfterWait => 'Retry After Wait';
+
+  @override
+  String get weeklyActivity => 'Weekly Activity';
+
+  @override
+  String get topicsLabel => 'Topics';
+
+  @override
+  String get readiness => 'Readiness';
+
+  @override
+  String get overallMastery => 'Overall Mastery';
+
+  @override
+  String get avgTime => 'Avg Time';
+
+  @override
+  String get badges => 'Badges';
+
+  @override
+  String get sessionHistoryExport => 'Session History';
+
+  @override
+  String get progressExportedCsv => 'Progress exported to CSV';
+
+  @override
+  String get sessionHistoryExportedCsv => 'Session history exported to CSV';
+
+  @override
+  String get failedToStartPractice => 'Failed to start practice session';
+
+  @override
+  String get aiTutor => 'AI Tutor';
+
+  @override
+  String get interactiveConversationalLessons =>
+      'Interactive conversational lessons';
+
+  @override
+  String get personalStudyAssistantPlanner =>
+      'Personal study assistant & planner';
+
+  @override
+  String get chooseStudyMode => 'Choose a study mode';
+
+  @override
+  String get clearConversation => 'Clear conversation';
+
+  @override
+  String get senderYou => 'You';
+
+  @override
+  String get senderTutor => 'Tutor';
+
+  @override
+  String get senderSystem => 'System';
+
+  @override
+  String remainingMinLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count min remaining',
+      one: '1 min remaining',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String correctCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count correct',
+      one: '1 correct',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mentorWelcomeBody =>
+      'I can help with:\n• Scheduling and rescheduling lessons\n• Reviewing your study progress\n• Planning long-term study goals\n• Motivation and encouragement\n• Deciding what to study next\n\nHow can I help you today?';
+
+  @override
+  String readyToLearnAbout(String topic) {
+    return 'I\'m ready to learn about $topic. Please teach me!';
+  }
+
+  @override
+  String correctCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count correct',
+      one: '1 correct',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceLabel(int pace) {
+    return '$pace% pace';
+  }
+
+  @override
+  String get errorWithResponse =>
+      'Sorry, I encountered an error. Please try again.';
+
+  @override
+  String get mentorRejectionResponse =>
+      'No problem! I won\'t make any changes. Let me know if you need anything else.';
+
+  @override
+  String get mentorNoLessonsScheduled =>
+      'You don\'t have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.';
+
+  @override
+  String get mentorUpcomingLessonsHeader => 'Here are your upcoming lessons:\n';
+
+  @override
+  String mentorLessonEntry(String topic, String date, int duration) {
+    return '• $topic on $date ($duration min)\n';
+  }
+
+  @override
+  String get mentorReschedulePrompt =>
+      '\nWould you like to reschedule any of these?';
+
+  @override
+  String mentorRecentSessionOnDate(String date) {
+    return 'Your most recent study session was on $date. Would you like to schedule a new lesson?';
+  }
+
+  @override
+  String get mentorNotStarted =>
+      'It looks like you haven\'t started yet. Would you like me to help you schedule your first lesson?';
+
+  @override
+  String get mentorScheduleError =>
+      'I had trouble looking up your schedule. Please try again later.';
+
+  @override
+  String get mentorProgressError =>
+      'I had trouble generating your progress report. Please try again later.';
+
+  @override
+  String get mentorNotStartedStudying =>
+      'You haven\'t started studying yet! Would you like me to help you create a study plan to get started?';
+
+  @override
+  String get mentorToday => 'today';
+
+  @override
+  String mentorDaysAgo(int daysCount) {
+    return '$daysCount days ago';
+  }
+
+  @override
+  String mentorInactiveDays(int daysCount) {
+    return 'I noticed you haven\'t studied in $daysCount days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!';
+  }
+
+  @override
+  String mentorGreatJobStayingActive(String daysAgo) {
+    return 'Great job staying active! Your last study session was $daysAgo. Keep up the good work!';
+  }
+
+  @override
+  String get mentorWelcomeStart =>
+      'Welcome! Let\'s get started with your studies. Would you like to schedule a lesson?';
+
+  @override
+  String get mentorActivityCheckError =>
+      'I had trouble checking your activity. How can I help you today?';
+
+  @override
+  String mentorRescheduledConfirmation(String topic) {
+    return 'I\'ve noted the change. Your lesson \"$topic\" has been rescheduled. Is there anything else I can help with?';
+  }
+
+  @override
+  String get mentorNewSessionAdded =>
+      'Great! I\'ve added a new study session to your schedule. You can check your planner for details.';
+
+  @override
+  String get mentorChangesDone =>
+      'Done! The changes have been made to your schedule.';
+
+  @override
+  String get mentorProgressReportTitle => '📊 **Your Study Progress Report**\n';
+
+  @override
+  String mentorOverallAccuracy(String accuracy, String correct, String total) {
+    return '**Overall Accuracy:** $accuracy% ($correct/$total correct)';
+  }
+
+  @override
+  String mentorTotalStudyTime(String hours) {
+    return '**Total Study Time:** $hours hours';
+  }
+
+  @override
+  String mentorWeeklyActivity(String attempts) {
+    return '**Weekly Activity:** $attempts attempts';
+  }
+
+  @override
+  String mentorCompletedLessons(String count) {
+    return '**Completed Lessons:** $count';
+  }
+
+  @override
+  String mentorTopicsStudied(String count) {
+    return '**Topics Studied:** $count';
+  }
+
+  @override
+  String get mentorAreasNeedingAttention => '\n**Areas needing attention:**';
+
+  @override
+  String mentorTopicAccuracyEntry(String topic, int accuracy) {
+    return '• $topic (accuracy: $accuracy%)';
+  }
+
+  @override
+  String get mentorBadgesEarned => '\n**Badges earned:**';
+
+  @override
+  String mentorBadgeEntry(String name, String description) {
+    return '• $name: $description';
+  }
+
+  @override
+  String get mentorRecommendations => '\n**Recommendations:**';
+
+  @override
+  String mentorRecommendationEntry(String message) {
+    return '• $message';
+  }
+
+  @override
+  String get mentorProgressReportError =>
+      'Unable to generate progress report. Please try again later.';
+
+  @override
+  String get mentorNoSubjects =>
+      'You haven\'t added any subjects yet. Would you like help setting up your first subject?';
+
+  @override
+  String get mentorDoingWell =>
+      'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?';
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 
@@ -22,8 +23,8 @@ abstract class MockSettingsRepository {
   });
   Future<void> saveApiKey({required String service, required String key});
   Future<String?> getApiKey({required String service});
-  Future<void> saveProfileData(ProfileData profile);
-  Future<ProfileData?> getProfileData();
+  Future<void> saveProfileData(UserProfile profile);
+  Future<UserProfile?> getProfileData();
   Future<void> clearSettings();
   Future<void> clearProfile();
 }
@@ -127,28 +128,28 @@ class InMemorySettingsRepository implements MockSettingsRepository {
   }
 
   @override
-  Future<void> saveProfileData(ProfileData profile) async {
+  Future<void> saveProfileData(UserProfile profile) async {
     _ensureInitialized();
     _profile[profile.id] = profile;
     _profile['current_profile'] = profile.id;
   }
 
   @override
-  Future<ProfileData?> getProfileData() async {
+  Future<UserProfile?> getProfileData() async {
     _ensureInitialized();
     final currentId = _profile['current_profile'];
     if (currentId is String) {
       final profile = _profile[currentId];
-      if (profile is ProfileData) return profile;
+      if (profile is UserProfile) return profile;
     }
 
     if (_profile.isEmpty) {
-      return ProfileData(id: 'default_profile', name: '');
+      return UserProfile(id: 'default_profile', name: '');
     }
 
     for (final key in _profile.keys) {
       final value = _profile[key];
-      if (value is ProfileData) {
+      if (value is UserProfile) {
         _profile['current_profile'] = value.id;
         return value;
       }
@@ -375,7 +376,7 @@ void main() {
 
     group('saveProfileData', () {
       test('saves profile data successfully', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'test-profile',
           name: 'Test User',
           studentId: '12345',
@@ -394,8 +395,8 @@ void main() {
       });
 
       test('saves multiple profiles and tracks current', () async {
-        final profile1 = ProfileData(id: 'profile-1', name: 'User 1');
-        final profile2 = ProfileData(id: 'profile-2', name: 'User 2');
+        final profile1 = UserProfile(id: 'profile-1', name: 'User 1');
+        final profile2 = UserProfile(id: 'profile-2', name: 'User 2');
 
         await repository.saveProfileData(profile1);
         await repository.saveProfileData(profile2);
@@ -406,14 +407,14 @@ void main() {
       });
 
       test('updates existing profile', () async {
-        final original = ProfileData(
+        final original = UserProfile(
           id: 'update-test',
           name: 'Original Name',
           studentId: '111',
         );
         await repository.saveProfileData(original);
 
-        final updated = ProfileData(
+        final updated = UserProfile(
           id: 'update-test',
           name: 'Updated Name',
           studentId: '222',
@@ -426,7 +427,7 @@ void main() {
       });
 
       test('preserves profile avatar icon', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'avatar-test',
           name: 'Avatar User',
           avatarIcon: 'Icons.school',
@@ -438,7 +439,7 @@ void main() {
       });
 
       test('preserves notifications and language settings', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'settings-test',
           name: 'Settings User',
           notificationsEnabled: false,
@@ -482,7 +483,7 @@ void main() {
 
     group('clearProfile', () {
       test('clears profile data and returns default', () async {
-        final profile = ProfileData(id: 'clear-test', name: 'Clear Test');
+        final profile = UserProfile(id: 'clear-test', name: 'Clear Test');
         await repository.saveProfileData(profile);
         await repository.clearProfile();
 

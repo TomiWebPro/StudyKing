@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 
 void main() {
@@ -41,7 +41,7 @@ void main() {
       dir = await Directory.systemTemp.createTemp('settings_hive_test_');
       Hive.init(dir.path);
       if (!Hive.isAdapterRegistered(5)) {
-        Hive.registerAdapter(ProfileDataAdapter());
+        Hive.registerAdapter(UserProfileAdapter());
       }
       repo = SettingsRepository();
       await repo.init();
@@ -272,7 +272,7 @@ void main() {
 
     group('saveProfileData', () {
       test('saves profile data successfully', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'test-profile',
           name: 'Test User',
           studentId: '12345',
@@ -291,8 +291,8 @@ void main() {
       });
 
       test('saves multiple profiles and tracks current', () async {
-        final profile1 = ProfileData(id: 'profile-1', name: 'User 1');
-        final profile2 = ProfileData(id: 'profile-2', name: 'User 2');
+        final profile1 = UserProfile(id: 'profile-1', name: 'User 1');
+        final profile2 = UserProfile(id: 'profile-2', name: 'User 2');
 
         await repo.saveProfileData(profile1);
         await repo.saveProfileData(profile2);
@@ -303,14 +303,14 @@ void main() {
       });
 
       test('updates existing profile', () async {
-        final original = ProfileData(
+        final original = UserProfile(
           id: 'update-test',
           name: 'Original Name',
           studentId: '111',
         );
         await repo.saveProfileData(original);
 
-        final updated = ProfileData(
+        final updated = UserProfile(
           id: 'update-test',
           name: 'Updated Name',
           studentId: '222',
@@ -323,7 +323,7 @@ void main() {
       });
 
       test('preserves profile avatar icon', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'avatar-test',
           name: 'Avatar User',
           avatarIcon: 'Icons.school',
@@ -335,7 +335,7 @@ void main() {
       });
 
       test('preserves notifications and language settings', () async {
-        final profile = ProfileData(
+        final profile = UserProfile(
           id: 'settings-test',
           name: 'Settings User',
           notificationsEnabled: false,
@@ -379,7 +379,7 @@ void main() {
 
     group('clearProfile', () {
       test('clears profile data and returns default', () async {
-        final profile = ProfileData(id: 'clear-test', name: 'Clear Test');
+        final profile = UserProfile(id: 'clear-test', name: 'Clear Test');
         await repo.saveProfileData(profile);
         await repo.clearProfile();
 
@@ -410,7 +410,7 @@ void main() {
       test('finds profile by scanning when current_profile is not set', () async {
         await repo.clearProfile();
         final box = Hive.box('profile');
-        final profile = ProfileData(id: 'scanned', name: 'Found by scan');
+        final profile = UserProfile(id: 'scanned', name: 'Found by scan');
         await box.put('scanned', profile);
         final result = await repo.getProfileData();
         expect(result, isNotNull);

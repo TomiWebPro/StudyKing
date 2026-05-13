@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class LessonProgressBar extends StatelessWidget {
   final int elapsedMinutes;
@@ -19,6 +20,7 @@ class LessonProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final progress =
         (elapsedMinutes / plannedDurationMinutes).clamp(0.0, 1.0);
     final remaining = (plannedDurationMinutes - elapsedMinutes)
@@ -52,7 +54,7 @@ class LessonProgressBar extends StatelessWidget {
               Text(
                 isOvertime
                     ? '+${elapsedMinutes - plannedDurationMinutes}m'
-                    : '$remaining min remaining',
+                    : l10n.remainingMinLabel(remaining),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: isOvertime
                           ? Theme.of(context).colorScheme.error
@@ -84,12 +86,12 @@ class LessonProgressBar extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              _statChip(context, Icons.quiz_outlined, '$exerciseCount questions'),
+              _statChip(context, Icons.quiz_outlined, l10n.questionsCountLabel(exerciseCount)),
               const SizedBox(width: 12),
               _statChip(
                 context,
                 Icons.check_circle_outline,
-                '$correctCount correct',
+                l10n.correctCountLabel(correctCount),
                 color: correctCount > 0
                     ? Theme.of(context).colorScheme.primary
                     : null,

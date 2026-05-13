@@ -20,7 +20,7 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       id: fields[0] as String,
       name: fields[1] as String,
       studentId: fields[2] as String?,
-      avatarUrl: fields[3] as String?,
+      avatarIcon: fields[3] as String?,
       learningGoal: fields[4] as String?,
       preferredStudyTime: fields[5] as String?,
       notificationsEnabled: fields[6] as bool,
@@ -40,7 +40,7 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(2)
       ..write(obj.studentId)
       ..writeByte(3)
-      ..write(obj.avatarUrl)
+      ..write(obj.avatarIcon)
       ..writeByte(4)
       ..write(obj.learningGoal)
       ..writeByte(5)

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,8 +39,8 @@ class FakeSettingsRepository {
 
   Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
   Future<void> saveApiKey({required String service, required String key}) async {}
-  Future<void> saveProfileData(ProfileData profile) async {}
-  Future<ProfileData?> getProfileData() async => null;
+  Future<void> saveProfileData(UserProfile profile) async {}
+  Future<UserProfile?> getProfileData() async => null;
   Future<void> clearProfile() async {}
   Future<void> init() async {}
 }

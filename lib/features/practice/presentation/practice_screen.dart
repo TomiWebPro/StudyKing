@@ -3,15 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/subjects/models/subject_model.dart';
+import 'package:studyking/features/subjects/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -98,13 +99,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _startPractice(Subject subject) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => PracticeSessionScreen(
-          subjectId: subject.id,
-        ),
-      ),
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(subjectId: subject.id),
     );
   }
 
@@ -222,10 +220,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: ResponsiveUtils.gridCrossAxisCount(context).toInt(),
+          crossAxisCount: ResponsiveUtils.gridCrossAxisCount(context),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.2 / MediaQuery.textScalerOf(context).scale(1.0),
+          childAspectRatio: (1.2 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(0.6, 2.0),
           children: [
             _PracticeModeCard(
               icon: Icons.flash_on,
@@ -270,77 +268,20 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Widget _buildSubjectSection(BuildContext context) {
-    if (_subjects.length == 1) {
-      final subject = _subjects.first;
-      return _buildSingleSubjectCard(context, subject);
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppLocalizations.of(context)!.yourSubjects,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+        if (_subjects.length > 1) ...[
+          Text(
+            AppLocalizations.of(context)!.yourSubjects,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         ..._subjects.map((subject) => _buildSubjectPracticeCard(context, subject)),
       ],
-    );
-  }
-
-  Widget _buildSingleSubjectCard(BuildContext context, Subject subject) {
-    return Card(
-      child: InkWell(
-        onTap: () => _startPractice(subject),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: ResponsiveUtils.cardPadding(context),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.school,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subject.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      AppLocalizations.of(context)!.readyForPractice,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -646,7 +587,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       _logger.e('Error starting practice session', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to start practice session')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToStartPractice)),
       );
     }
   }
@@ -881,7 +822,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 Icon(
                   Icons.check_circle,
                   size: 64,
-                  color: Colors.green.shade400,
+                  color: Theme.of(sheetContext).colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -893,7 +834,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 const SizedBox(height: 8),
                 Text(
                   AppLocalizations.of(context)!.noReviewsScheduled,
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -1002,14 +943,14 @@ class _PracticeModeCard extends StatelessWidget {
                       color: Theme.of(context).colorScheme.error,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      badge.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      child: Text(
+                        badge.toString(),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onError,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
                   ),
                 ),
             ],

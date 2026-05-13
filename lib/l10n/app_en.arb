@@ -191,7 +191,7 @@
   "@quickPractice": {
     "description": "Quick practice mode title"
   },
-  "randomQuestions": "{count} random questions",
+  "randomQuestions": "{count, plural, =1{1 random question} other{{count} random questions}}",
   "@randomQuestions": {
     "description": "Subtitle for quick practice mode",
     "placeholders": {
@@ -672,7 +672,7 @@
   "@totalStudySessions": {
     "description": "Tile title for total study sessions"
   },
-  "sessionsCount": "{count} sessions",
+  "sessionsCount": "{count, plural, =1{1 session} other{{count} sessions}}",
   "@sessionsCount": {
     "description": "Number of sessions",
     "placeholders": {
@@ -1566,7 +1566,7 @@
   "@noQuestions": {
     "description": "Label when there are no questions"
   },
-  "questionsCountLabel": "{count} questions",
+  "questionsCountLabel": "{count, plural, =1{1 question} other{{count} questions}}",
   "@questionsCountLabel": {
     "description": "Label showing number of questions",
     "placeholders": {
@@ -1598,6 +1598,409 @@
   "sessionHistory": "Session History",
   "@sessionHistory": {
     "description": "Title for session history screen"
+  },
+
+  "studyDashboard": "Study Dashboard",
+  "@studyDashboard": {
+    "description": "Dashboard screen title"
+  },
+  "studyTime": "Study Time",
+  "@studyTime": {
+    "description": "Label for study time metric"
+  },
+  "planAdherence": "Plan Adherence",
+  "@planAdherence": {
+    "description": "Section title for plan adherence"
+  },
+  "masteryOverview": "Mastery Overview",
+  "@masteryOverview": {
+    "description": "Section title for mastery overview"
+  },
+  "topicPerformance": "Topic Performance",
+  "@topicPerformance": {
+    "description": "Section title for topic performance"
+  },
+  "achievements": "Achievements",
+  "@achievements": {
+    "description": "Section title for achievements"
+  },
+  "exportCsv": "Export CSV",
+  "@exportCsv": {
+    "description": "Button label to export CSV"
+  },
+  "instrumentation": "Instrumentation",
+  "@instrumentation": {
+    "description": "Button label for instrumentation export"
+  },
+  "overall": "Overall",
+  "@overall": {
+    "description": "Label for overall stat"
+  },
+  "thisWeek": "This Week",
+  "@thisWeek": {
+    "description": "Label for this week stat"
+  },
+  "totalTopics": "Total Topics",
+  "@totalTopics": {
+    "description": "Label for total topics stat"
+  },
+  "mastered": "Mastered",
+  "@mastered": {
+    "description": "Label for mastered count"
+  },
+  "topics": "Topics",
+  "@topics": {
+    "description": "Label for topics count"
+  },
+  "practiceAllWeakAreas": "Practice All Weak Areas",
+  "@practiceAllWeakAreas": {
+    "description": "Button to practice all weak areas"
+  },
+  "practiceThisTopic": "Practice this topic",
+  "@practiceThisTopic": {
+    "description": "Tooltip for practice topic button"
+  },
+  "noTopicDataYet": "No topic data yet. Start studying to see your progress!",
+  "@noTopicDataYet": {
+    "description": "Empty state when no topic data exists"
+  },
+  "masteryLevelNovice": "Novice",
+  "@masteryLevelNovice": {
+    "description": "Novice mastery level label"
+  },
+  "masteryLevelBrowsing": "Browsing",
+  "@masteryLevelBrowsing": {
+    "description": "Browsing mastery level label"
+  },
+  "masteryLevelDeveloping": "Developing",
+  "@masteryLevelDeveloping": {
+    "description": "Developing mastery level label"
+  },
+  "masteryLevelProficient": "Proficient",
+  "@masteryLevelProficient": {
+    "description": "Proficient mastery level label"
+  },
+  "masteryLevelExpert": "Expert",
+  "@masteryLevelExpert": {
+    "description": "Expert mastery level label"
+  },
+  "progressCsvGenerated": "Progress CSV generated ({length} chars)",
+  "@progressCsvGenerated": {
+    "description": "Snackbar when CSV is generated",
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "description": "Error message when export fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "instrumentationDataExported": "Instrumentation data exported",
+  "@instrumentationDataExported": {
+    "description": "Snackbar for instrumentation export"
+  },
+  "attemptsCount": "{count} attempts",
+  "@attemptsCount": {
+    "description": "Label showing number of attempts",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "weakAreasAccuracy": "Weak Areas (Accuracy < 60%)",
+  "@weakAreasAccuracy": {
+    "description": "Section title for weak areas with accuracy threshold"
+  },
+
+  "uploadContent": "Upload Content",
+  "@uploadContent": {
+    "description": "Title for upload screen"
+  },
+  "addStudyMaterials": "Add study materials to your library",
+  "@addStudyMaterials": {
+    "description": "Subtitle for upload screen"
+  },
+  "titleRequired": "Title *",
+  "@titleRequired": {
+    "description": "Label for title field"
+  },
+  "titleHint": "e.g. Chapter 5 Notes",
+  "@titleHint": {
+    "description": "Hint text for title field"
+  },
+  "subjectOptional": "Subject (optional)",
+  "@subjectOptional": {
+    "description": "Label for subject dropdown"
+  },
+  "none": "None",
+  "@none": {
+    "description": "Dropdown option for no selection"
+  },
+  "pasteText": "Paste Text",
+  "@pasteText": {
+    "description": "Chip label for text input mode"
+  },
+  "urlLink": "URL / Link",
+  "@urlLink": {
+    "description": "Chip label for URL input mode"
+  },
+  "urlRequired": "URL *",
+  "@urlRequired": {
+    "description": "Label for URL field"
+  },
+  "urlHint": "https://example.com/notes",
+  "@urlHint": {
+    "description": "Hint text for URL field"
+  },
+  "contentRequired": "Content *",
+  "@contentRequired": {
+    "description": "Label for content field"
+  },
+  "contentHint": "Paste your study material here...",
+  "@contentHint": {
+    "description": "Hint text for content field"
+  },
+  "uploading": "Uploading...",
+  "@uploading": {
+    "description": "Button label while uploading"
+  },
+  "fillRequiredFields": "Please fill in all required fields.",
+  "@fillRequiredFields": {
+    "description": "Error message when required fields are empty"
+  },
+  "contentUploadedSuccessfully": "Content uploaded successfully!",
+  "@contentUploadedSuccessfully": {
+    "description": "Success message after upload"
+  },
+  "uploadFailed": "Upload failed: {error}",
+  "@uploadFailed": {
+    "description": "Error message when upload fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "planSummary": "Plan Summary",
+  "@planSummary": {
+    "description": "Section title for plan summary"
+  },
+  "total": "Total",
+  "@total": {
+    "description": "Label for total count"
+  },
+  "newTopics": "new",
+  "@newTopics": {
+    "description": "Label for new topics"
+  },
+  "reviewTopics": "review",
+  "@reviewTopics": {
+    "description": "Label for review topics"
+  },
+  "coverage": "Coverage",
+  "@coverage": {
+    "description": "Label for coverage percentage"
+  },
+  "focusLabel": "Focus: {areas}",
+  "@focusLabel": {
+    "description": "Label showing focus areas",
+    "placeholders": {
+      "areas": {
+        "type": "String"
+      }
+    }
+  },
+  "studyDay": "Study Day",
+  "@studyDay": {
+    "description": "Default label for a study day"
+  },
+  "rest": "Rest",
+  "@rest": {
+    "description": "Label for rest day"
+  },
+  "startTutoring": "Start tutoring",
+  "@startTutoring": {
+    "description": "Tooltip for tutoring button"
+  },
+  "questionsAndMinutes": "{questions}Q \u00b7 {minutes}min",
+  "@questionsAndMinutes": {
+    "description": "Label showing questions and minutes",
+    "placeholders": {
+      "questions": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "topicQuestionsAndMinutes": "{questions}Q \u00b7 {minutes}min",
+  "@topicQuestionsAndMinutes": {
+    "description": "Label showing topic questions and minutes",
+    "placeholders": {
+      "questions": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "failedToGeneratePlan": "Failed to generate plan",
+  "@failedToGeneratePlan": {
+    "description": "Error message when plan generation fails"
+  },
+
+  "llmTaskManager": "LLM Task Manager",
+  "@llmTaskManager": {
+    "description": "Title for LLM task manager screen"
+  },
+  "activeCount": "{count} active",
+  "@activeCount": {
+    "description": "Label showing active task count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noLlmTasksYet": "No LLM tasks yet",
+  "@noLlmTasksYet": {
+    "description": "Empty state for task manager"
+  },
+  "modelLabel": "Model: {modelId}",
+  "@modelLabel": {
+    "description": "Label showing model ID",
+    "placeholders": {
+      "modelId": {
+        "type": "String"
+      }
+    }
+  },
+  "startedLabel": "Started: {time}",
+  "@startedLabel": {
+    "description": "Label showing start time",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "endedLabel": "Ended: {time}",
+  "@endedLabel": {
+    "description": "Label showing end time",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tokensAndCost": "Tokens: {count} (${cost})",
+  "@tokensAndCost": {
+    "description": "Label showing token count and cost",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelTask": "Cancel",
+  "@cancelTask": {
+    "description": "Button to cancel a task"
+  },
+
+  "testConnection": "Test Connection",
+  "@testConnection": {
+    "description": "Button to test API connection"
+  },
+  "testing": "Testing...",
+  "@testing": {
+    "description": "Button label while testing connection"
+  },
+  "connectionSuccessful": "Connection successful! Latency: {latency}ms",
+  "@connectionSuccessful": {
+    "description": "Success message for connection test",
+    "placeholders": {
+      "latency": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionFailed": "Connection failed: {error}",
+  "@connectionFailed": {
+    "description": "Error message for connection test",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "sessionHistoryCsvGenerated": "Session history CSV generated ({length} chars)",
+  "@sessionHistoryCsvGenerated": {
+    "description": "Snackbar for session history CSV export",
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyPlanTarget": "Today: {questions}Q, {minutes}min",
+  "@dailyPlanTarget": {
+    "description": "Today's plan target",
+    "placeholders": {
+      "questions": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "noPlanForToday": "No plan for today",
+  "@noPlanForToday": {
+    "description": "When there is no plan for today"
+  },
+  "planAdjustmentSuggested": "You've had {count} days of low plan adherence. Would you like to adjust your study plan?",
+  "@planAdjustmentSuggested": {
+    "description": "Nudge to adjust plan due to low adherence",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adjustPlan": "Adjust Plan",
+  "@adjustPlan": {
+    "description": "Button to adjust study plan"
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Button to dismiss a nudge"
+  },
+  "voiceInput": "Voice Input",
+  "@voiceInput": {
+    "description": "Tooltip for voice input button"
+  },
+  "captureImage": "Capture Image",
+  "@captureImage": {
+    "description": "Tooltip for capture image button"
+  },
+  "camera": "Camera",
+  "@camera": {
+    "description": "Camera option label"
   },
 
   "errorSavingSubject": "Error saving subject: {error}",
@@ -1798,7 +2201,7 @@
   "@noStudyPlanToday": {
     "description": "Empty state message when no plan exists for today"
   },
-  "questionsCountMetric": "{count} questions",
+  "questionsCountMetric": "{count, plural, =1{1 question} other{{count} questions}}",
   "@questionsCountMetric": {
     "description": "Metric label for question count",
     "placeholders": {
@@ -2018,5 +2421,426 @@
   "largeTouchTargetsDescription": "Increase tap target sizes",
   "@largeTouchTargetsDescription": {
     "description": "Subtitle for large touch targets toggle"
+  },
+
+  "errorNetworkConnection": "Unable to connect to the server. Please check your internet connection and try again.",
+  "@errorNetworkConnection": {
+    "description": "Error message when network connection fails"
+  },
+  "errorApiKeyMissing": "API key is required. Please configure it in Settings.",
+  "@errorApiKeyMissing": {
+    "description": "Error message when API key is missing"
+  },
+  "errorInvalidApiKey": "Invalid API key. Please check your credentials in Settings.",
+  "@errorInvalidApiKey": {
+    "description": "Error message when API key is invalid"
+  },
+  "errorApiRateLimit": "Too many requests. Please wait a moment and try again.",
+  "@errorApiRateLimit": {
+    "description": "Error message when API rate limit is hit"
+  },
+  "errorApiNotFound": "The requested resource was not found.",
+  "@errorApiNotFound": {
+    "description": "Error message when API resource is not found"
+  },
+  "errorApiInternalServer": "The server encountered an error. Please try again later.",
+  "@errorApiInternalServer": {
+    "description": "Error message when server error occurs"
+  },
+  "errorDatabase": "A database error occurred. Please try again.",
+  "@errorDatabase": {
+    "description": "Error message for database errors"
+  },
+  "errorPdfParse": "Unable to parse the PDF file. Please ensure it is a valid PDF.",
+  "@errorPdfParse": {
+    "description": "Error message when PDF parsing fails"
+  },
+  "errorContentGeneration": "Failed to generate content. Please try again.",
+  "@errorContentGeneration": {
+    "description": "Error message when content generation fails"
+  },
+  "errorLlmUnavailable": "The AI service is temporarily unavailable. Please try again.",
+  "@errorLlmUnavailable": {
+    "description": "Error message when AI service is unavailable"
+  },
+  "errorApiAuth": "Authentication failed. Please check your API credentials.",
+  "@errorApiAuth": {
+    "description": "Error message when API authentication fails"
+  },
+  "errorUnexpected": "An unexpected error occurred. Please try again.",
+  "@errorUnexpected": {
+    "description": "Generic unexpected error message"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Generic retry button label"
+  },
+  "retryConnection": "Retry Connection",
+  "@retryConnection": {
+    "description": "Button label to retry connection"
+  },
+  "retryAfterWait": "Retry After Wait",
+  "@retryAfterWait": {
+    "description": "Button label to retry after rate limit wait"
+  },
+
+  "studyTime": "Study Time",
+  "@studyTime": {
+    "description": "Label for total study time metric"
+  },
+  "weeklyActivity": "Weekly Activity",
+  "@weeklyActivity": {
+    "description": "Label for weekly activity metric"
+  },
+  "topicsLabel": "Topics",
+  "@topicsLabel": {
+    "description": "Label for topics count metric"
+  },
+  "readiness": "Readiness",
+  "@readiness": {
+    "description": "Label for readiness metric"
+  },
+  "overallMastery": "Overall Mastery",
+  "@overallMastery": {
+    "description": "Label for overall mastery progress section"
+  },
+  "topicPerformance": "Topic Performance",
+  "@topicPerformance": {
+    "description": "Section header for topic performance breakdown"
+  },
+  "noTopicDataYet": "No topic data yet. Start studying to see your progress!",
+  "@noTopicDataYet": {
+    "description": "Empty state message when no topic mastery data exists"
+  },
+  "masteryLevelNovice": "Novice",
+  "@masteryLevelNovice": {
+    "description": "Mastery level label for novice"
+  },
+  "masteryLevelBrowsing": "Browsing",
+  "@masteryLevelBrowsing": {
+    "description": "Mastery level label for browsing"
+  },
+  "masteryLevelDeveloping": "Developing",
+  "@masteryLevelDeveloping": {
+    "description": "Mastery level label for developing"
+  },
+  "masteryLevelProficient": "Proficient",
+  "@masteryLevelProficient": {
+    "description": "Mastery level label for proficient"
+  },
+  "masteryLevelExpert": "Expert",
+  "@masteryLevelExpert": {
+    "description": "Mastery level label for expert"
+  },
+  "achievements": "Achievements",
+  "@achievements": {
+    "description": "Section header for achievements/badges"
+  },
+  "avgTime": "Avg Time",
+  "@avgTime": {
+    "description": "Label for average time per question"
+  },
+  "badges": "Badges",
+  "@badges": {
+    "description": "Label for badges count"
+  },
+  "thisWeek": "This Week",
+  "@thisWeek": {
+    "description": "Label for current week activity stat"
+  },
+  "exportCsv": "Export CSV",
+  "@exportCsv": {
+    "description": "Button label to export data as CSV"
+  },
+  "sessionHistoryExport": "Session History",
+  "@sessionHistoryExport": {
+    "description": "Button label to export session history"
+  },
+  "progressExportedCsv": "Progress exported to CSV",
+  "@progressExportedCsv": {
+    "description": "Snackbar message when progress CSV is exported"
+  },
+  "sessionHistoryExportedCsv": "Session history exported to CSV",
+  "@sessionHistoryExportedCsv": {
+    "description": "Snackbar message when session history CSV is exported"
+  },
+  "failedToStartPractice": "Failed to start practice session",
+  "@failedToStartPractice": {
+    "description": "Error message when practice session fails to start"
+  },
+
+  "aiTutor": "AI Tutor",
+  "@aiTutor": {
+    "description": "Mode card title for AI Tutor"
+  },
+  "interactiveConversationalLessons": "Interactive conversational lessons",
+  "@interactiveConversationalLessons": {
+    "description": "Mode card subtitle for AI Tutor"
+  },
+  "personalStudyAssistantPlanner": "Personal study assistant & planner",
+  "@personalStudyAssistantPlanner": {
+    "description": "Mode card subtitle for Mentor"
+  },
+
+  "chooseStudyMode": "Choose a study mode",
+  "@chooseStudyMode": {
+    "description": "Heading for mode selection cards"
+  },
+  "clearConversation": "Clear conversation",
+  "@clearConversation": {
+    "description": "Tooltip/label for clearing chat conversation"
+  },
+
+  "senderYou": "You",
+  "@senderYou": {
+    "description": "Sender label for the student in chat"
+  },
+  "senderTutor": "Tutor",
+  "@senderTutor": {
+    "description": "Sender label for the AI tutor in chat"
+  },
+  "senderSystem": "System",
+  "@senderSystem": {
+    "description": "Sender label for system messages in chat"
+  },
+
+  "remainingMinLabel": "{count, plural, =1{1 min remaining} other{{count} min remaining}}",
+  "@remainingMinLabel": {
+    "description": "Label showing remaining minutes in lesson",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "correctCountLabel": "{count, plural, =1{1 correct} other{{count} correct}}",
+  "@correctCountLabel": {
+    "description": "Label showing correct answer count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "mentorWelcomeBody": "I can help with:\n\u2022 Scheduling and rescheduling lessons\n\u2022 Reviewing your study progress\n\u2022 Planning long-term study goals\n\u2022 Motivation and encouragement\n\u2022 Deciding what to study next\n\nHow can I help you today?",
+  "@mentorWelcomeBody": {
+    "description": "Welcome message body in mentor screen"
+  },
+  "readyToLearnAbout": "I'm ready to learn about {topic}. Please teach me!",
+  "@readyToLearnAbout": {
+    "description": "Initial greeting prompt from student to AI tutor",
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "correctCount": "{count, plural, =1{1 correct} other{{count} correct}}",
+  "@correctCount": {
+    "description": "Label showing correct count in summary",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paceLabel": "{pace}% pace",
+  "@paceLabel": {
+    "description": "Label showing adaptive pace percentage",
+    "placeholders": {
+      "pace": {
+        "type": "int"
+      }
+    }
+  },
+  "errorWithResponse": "Sorry, I encountered an error. Please try again.",
+  "@errorWithResponse": {
+    "description": "Error message when AI response fails"
+  },
+
+  "mentorRejectionResponse": "No problem! I won't make any changes. Let me know if you need anything else.",
+  "@mentorRejectionResponse": {
+    "description": "Mentor response when user rejects a pending action"
+  },
+  "mentorNoLessonsScheduled": "You don't have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.",
+  "@mentorNoLessonsScheduled": {
+    "description": "Mentor message when no lessons are scheduled"
+  },
+  "mentorUpcomingLessonsHeader": "Here are your upcoming lessons:\n",
+  "@mentorUpcomingLessonsHeader": {
+    "description": "Header for upcoming lessons list"
+  },
+  "mentorLessonEntry": "\u2022 {topic} on {date} ({duration} min)\n",
+  "@mentorLessonEntry": {
+    "description": "Single lesson entry in schedule list",
+    "placeholders": {
+      "topic": { "type": "String" },
+      "date": { "type": "String" },
+      "duration": { "type": "int" }
+    }
+  },
+  "mentorReschedulePrompt": "\nWould you like to reschedule any of these?",
+  "@mentorReschedulePrompt": {
+    "description": "Prompt asking if user wants to reschedule"
+  },
+  "mentorRecentSessionOnDate": "Your most recent study session was on {date}. Would you like to schedule a new lesson?",
+  "@mentorRecentSessionOnDate": {
+    "description": "Message showing recent session date",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "mentorNotStarted": "It looks like you haven't started yet. Would you like me to help you schedule your first lesson?",
+  "@mentorNotStarted": {
+    "description": "Mentor message when student hasn't started studying"
+  },
+  "mentorScheduleError": "I had trouble looking up your schedule. Please try again later.",
+  "@mentorScheduleError": {
+    "description": "Error message when schedule lookup fails"
+  },
+  "mentorProgressError": "I had trouble generating your progress report. Please try again later.",
+  "@mentorProgressError": {
+    "description": "Error message when progress report generation fails"
+  },
+  "mentorNotStartedStudying": "You haven't started studying yet! Would you like me to help you create a study plan to get started?",
+  "@mentorNotStartedStudying": {
+    "description": "Mentor message when no study sessions exist"
+  },
+  "mentorToday": "today",
+  "@mentorToday": {
+    "description": "Word for today (used in inactivity check)"
+  },
+  "mentorDaysAgo": "{daysCount} days ago",
+  "@mentorDaysAgo": {
+    "description": "Formatted days ago string",
+    "placeholders": {
+      "daysCount": { "type": "int" }
+    }
+  },
+  "mentorInactiveDays": "I noticed you haven't studied in {daysCount} days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!",
+  "@mentorInactiveDays": {
+    "description": "Mentor message when student has been inactive for 3+ days",
+    "placeholders": {
+      "daysCount": { "type": "int" }
+    }
+  },
+  "mentorGreatJobStayingActive": "Great job staying active! Your last study session was {daysAgo}. Keep up the good work!",
+  "@mentorGreatJobStayingActive": {
+    "description": "Mentor praise when student is active",
+    "placeholders": {
+      "daysAgo": { "type": "String" }
+    }
+  },
+  "mentorWelcomeStart": "Welcome! Let's get started with your studies. Would you like to schedule a lesson?",
+  "@mentorWelcomeStart": {
+    "description": "Mentor welcome message for new students"
+  },
+  "mentorActivityCheckError": "I had trouble checking your activity. How can I help you today?",
+  "@mentorActivityCheckError": {
+    "description": "Error message when activity check fails"
+  },
+  "mentorRescheduledConfirmation": "I've noted the change. Your lesson \"{topic}\" has been rescheduled. Is there anything else I can help with?",
+  "@mentorRescheduledConfirmation": {
+    "description": "Confirmation after rescheduling a lesson",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "mentorNewSessionAdded": "Great! I've added a new study session to your schedule. You can check your planner for details.",
+  "@mentorNewSessionAdded": {
+    "description": "Confirmation after adding a new session"
+  },
+  "mentorChangesDone": "Done! The changes have been made to your schedule.",
+  "@mentorChangesDone": {
+    "description": "Generic confirmation after schedule changes"
+  },
+  "mentorProgressReportTitle": "\ud83d\udcca **Your Study Progress Report**\n",
+  "@mentorProgressReportTitle": {
+    "description": "Title for the progress report"
+  },
+  "mentorOverallAccuracy": "**Overall Accuracy:** {accuracy}% ({correct}/{total} correct)",
+  "@mentorOverallAccuracy": {
+    "description": "Overall accuracy line in progress report",
+    "placeholders": {
+      "accuracy": { "type": "String" },
+      "correct": { "type": "String" },
+      "total": { "type": "String" }
+    }
+  },
+  "mentorTotalStudyTime": "**Total Study Time:** {hours} hours",
+  "@mentorTotalStudyTime": {
+    "description": "Total study time line in progress report",
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "mentorWeeklyActivity": "**Weekly Activity:** {attempts} attempts",
+  "@mentorWeeklyActivity": {
+    "description": "Weekly activity line in progress report",
+    "placeholders": {
+      "attempts": { "type": "String" }
+    }
+  },
+  "mentorCompletedLessons": "**Completed Lessons:** {count}",
+  "@mentorCompletedLessons": {
+    "description": "Completed lessons line in progress report",
+    "placeholders": {
+      "count": { "type": "String" }
+    }
+  },
+  "mentorTopicsStudied": "**Topics Studied:** {count}",
+  "@mentorTopicsStudied": {
+    "description": "Topics studied line in progress report",
+    "placeholders": {
+      "count": { "type": "String" }
+    }
+  },
+  "mentorAreasNeedingAttention": "\n**Areas needing attention:**",
+  "@mentorAreasNeedingAttention": {
+    "description": "Section header for weak topics"
+  },
+  "mentorTopicAccuracyEntry": "\u2022 {topic} (accuracy: {accuracy}%)",
+  "@mentorTopicAccuracyEntry": {
+    "description": "Single topic accuracy entry",
+    "placeholders": {
+      "topic": { "type": "String" },
+      "accuracy": { "type": "int" }
+    }
+  },
+  "mentorBadgesEarned": "\n**Badges earned:**",
+  "@mentorBadgesEarned": {
+    "description": "Section header for badges"
+  },
+  "mentorBadgeEntry": "\u2022 {name}: {description}",
+  "@mentorBadgeEntry": {
+    "description": "Single badge entry",
+    "placeholders": {
+      "name": { "type": "String" },
+      "description": { "type": "String" }
+    }
+  },
+  "mentorRecommendations": "\n**Recommendations:**",
+  "@mentorRecommendations": {
+    "description": "Section header for recommendations"
+  },
+  "mentorRecommendationEntry": "\u2022 {message}",
+  "@mentorRecommendationEntry": {
+    "description": "Single recommendation entry",
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "mentorProgressReportError": "Unable to generate progress report. Please try again later.",
+  "@mentorProgressReportError": {
+    "description": "Error when progress report generation fails"
+  },
+  "mentorNoSubjects": "You haven't added any subjects yet. Would you like help setting up your first subject?",
+  "@mentorNoSubjects": {
+    "description": "Mentor message when no subjects exist"
+  },
+  "mentorDoingWell": "You're doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?",
+  "@mentorDoingWell": {
+    "description": "Mentor suggestion when student is doing well"
   }
 }

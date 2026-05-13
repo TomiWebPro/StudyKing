@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/data/enums.dart';
 import '../../../core/data/repositories/source_repository.dart';
 import '../../../core/utils/responsive.dart';
 import '../../subjects/data/repositories/subject_repository.dart';
-import '../../subjects/models/subject_model.dart';
+import '../../subjects/data/models/subject_model.dart';
 import '../services/content_pipeline.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class UploadScreen extends StatefulWidget {
   final String? preselectedSubjectId;
@@ -61,12 +63,34 @@ class _UploadScreenState extends State<UploadScreen> {
     } catch (_) {}
   }
 
+  Future<void> _captureFromCamera() async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1920);
+      if (!mounted) return;
+      if (photo != null) {
+        setState(() {
+          _contentController.text = 'Image captured: ${photo.path}';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image captured. You can add notes in the content field above.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Camera error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _submitContent() async {
     final title = _titleController.text.trim();
     final content = _useUrlInput ? _urlController.text.trim() : _contentController.text.trim();
 
     if (title.isEmpty || content.isEmpty) {
-      setState(() => _error = 'Please fill in all required fields.');
+      setState(() => _error = AppLocalizations.of(context)!.fillRequiredFields);
       return;
     }
 
@@ -99,7 +123,7 @@ class _UploadScreenState extends State<UploadScreen> {
       }
 
       setState(() {
-        _success = 'Content uploaded successfully!';
+        _success = AppLocalizations.of(context)!.contentUploadedSuccessfully;
         _isUploading = false;
         _titleController.clear();
         _contentController.clear();
@@ -107,7 +131,7 @@ class _UploadScreenState extends State<UploadScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Upload failed: $e';
+        _error = AppLocalizations.of(context)!.uploadFailed(e.toString());
         _isUploading = false;
       });
     }
@@ -115,39 +139,39 @@ class _UploadScreenState extends State<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return       Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Content'),
+        title: Text(AppLocalizations.of(context)!.uploadContent),
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Add study materials to your library',
+            Text(
+              AppLocalizations.of(context)!.addStudyMaterials,
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
 
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title *',
-                hintText: 'e.g. Chapter 5 Notes',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.titleRequired,
+                hintText: AppLocalizations.of(context)!.titleHint,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
               initialValue: _selectedSubjectId,
-              decoration: const InputDecoration(
-                labelText: 'Subject (optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.subjectOptional,
+                border: const OutlineInputBorder(),
               ),
               items: [
-                const DropdownMenuItem(value: '', child: Text('None')),
+                DropdownMenuItem(value: '', child: Text(AppLocalizations.of(context)!.none)),
                 ..._subjects.map((s) => DropdownMenuItem(
                       value: s.id,
                       child: Text(s.name),
@@ -164,15 +188,21 @@ class _UploadScreenState extends State<UploadScreen> {
             Row(
               children: [
                 ChoiceChip(
-                  label: const Text('Paste Text'),
+                  label: Text(AppLocalizations.of(context)!.pasteText),
                   selected: !_useUrlInput,
                   onSelected: (_) => setState(() => _useUrlInput = false),
                 ),
                 const SizedBox(width: 8),
                 ChoiceChip(
-                  label: const Text('URL / Link'),
+                  label: Text(AppLocalizations.of(context)!.urlLink),
                   selected: _useUrlInput,
                   onSelected: (_) => setState(() => _useUrlInput = true),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(AppLocalizations.of(context)!.camera),
+                  selected: false,
+                  onSelected: (_) => _captureFromCamera(),
                 ),
               ],
             ),
@@ -181,20 +211,20 @@ class _UploadScreenState extends State<UploadScreen> {
             if (_useUrlInput)
               TextField(
                 controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'URL *',
-                  hintText: 'https://example.com/notes',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.urlRequired,
+                  hintText: AppLocalizations.of(context)!.urlHint,
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.url,
               )
             else
               TextField(
                 controller: _contentController,
-                decoration: const InputDecoration(
-                  labelText: 'Content *',
-                  hintText: 'Paste your study material here...',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.contentRequired,
+                  hintText: AppLocalizations.of(context)!.contentHint,
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 8,
@@ -249,7 +279,7 @@ class _UploadScreenState extends State<UploadScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.cloud_upload),
-                label: Text(_isUploading ? 'Uploading...' : 'Upload Content'),
+                label: Text(_isUploading ? AppLocalizations.of(context)!.uploading : AppLocalizations.of(context)!.uploadContent),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

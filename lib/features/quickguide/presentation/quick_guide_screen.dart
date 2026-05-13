@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:uuid/uuid.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/data/models/conversation_message_model.dart';
+import '../../../core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/logger.dart';
 import '../../teaching/presentation/tutor_screen.dart';
 
-class QuickGuideScreen extends StatefulWidget {
+class QuickGuideScreen extends ConsumerStatefulWidget {
   final LlmService? llmService;
   final String defaultModelId;
   final String? systemPrompt;
@@ -24,10 +26,10 @@ class QuickGuideScreen extends StatefulWidget {
   });
 
   @override
-  State<QuickGuideScreen> createState() => _QuickGuideScreenState();
+  ConsumerState<QuickGuideScreen> createState() => _QuickGuideScreenState();
 }
 
-class _QuickGuideScreenState extends State<QuickGuideScreen> {
+class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
@@ -68,12 +70,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
 
   LlmService _getLlmService() {
     if (widget.llmService != null) return widget.llmService!;
-    return LlmService(
-      config: const LlmConfiguration(
-        provider: LlmProvider.openRouter,
-        apiKey: '',
-      ),
-    );
+    return ref.read(llmServiceProvider);
   }
 
   Future<void> _sendMessage() async {
@@ -236,11 +233,11 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
         actions: [
           if (_hasInteracted)
             Semantics(
-              label: 'Clear conversation',
+              label: l10n.clearConversation,
               button: true,
               child: IconButton(
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Clear conversation',
+                tooltip: l10n.clearConversation,
                 onPressed: _clearConversation,
               ),
             ),
@@ -279,6 +276,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   }
 
   Widget _buildModeNavigation(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -293,7 +291,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choose a study mode',
+                l10n.chooseStudyMode,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -305,8 +303,8 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                     child: _buildModeCard(
                       context,
                       icon: Icons.smart_toy,
-                      title: 'AI Tutor',
-                      subtitle: 'Interactive conversational lessons',
+                      title: l10n.aiTutor,
+                      subtitle: l10n.interactiveConversationalLessons,
                       color: colorScheme.primary,
                       onTap: () {
                         Navigator.push(
@@ -327,8 +325,8 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                     child: _buildModeCard(
                       context,
                       icon: Icons.auto_awesome,
-                      title: 'Mentor',
-                      subtitle: 'Personal study assistant & planner',
+                      title: l10n.mentor,
+                      subtitle: l10n.personalStudyAssistantPlanner,
                       color: colorScheme.secondary,
                       onTap: () {
                         Navigator.pushNamed(context, '/mentor');

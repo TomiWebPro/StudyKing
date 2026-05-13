@@ -9,6 +9,8 @@ import 'adapters/question_mastery_state_adapter.dart';
 import 'adapters/personal_learning_plan_adapter.dart';
 import 'adapters/markscheme_adapter.dart';
 import 'adapters/conversation_message_adapter.dart';
+import 'adapters/plan_adherence_adapter.dart';
+import 'adapters/mastery_improvement_adapter.dart';
 import 'models/question_evaluation_model.dart';
 import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
@@ -45,6 +47,8 @@ class HiveInitializer {
 
     await Hive.openBox<ConversationMessage>('conversations');
     await Hive.openBox<TutorSession>('tutor_sessions');
+    await Hive.openBox('plan_adherence_metrics');
+    await Hive.openBox('mastery_improvement_metrics');
 
     _logger.i('Hive initialized successfully with migrations');
   }
@@ -82,6 +86,12 @@ class HiveInitializer {
     }
     if (!Hive.isAdapterRegistered(28)) {
       Hive.registerAdapter(TutorSessionAdapter());
+    }
+    if (!Hive.isAdapterRegistered(30)) {
+      Hive.registerAdapter(PlanAdherenceMetricAdapter());
+    }
+    if (!Hive.isAdapterRegistered(31)) {
+      Hive.registerAdapter(MasteryImprovementMetricAdapter());
     }
   }
 }

@@ -69,7 +69,7 @@ class ResponsiveUtils {
     }
   }
 
-  static double gridCrossAxisCount(BuildContext context) {
+  static int gridCrossAxisCount(BuildContext context) {
     final bp = breakpointOf(context);
     switch (bp) {
       case ScreenBreakpoint.xs:

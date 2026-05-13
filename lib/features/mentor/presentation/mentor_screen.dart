@@ -1,25 +1,27 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
+import '../../../core/services/student_id_service.dart';
 import '../../../core/data/repositories/attempt_repository.dart';
 import '../../../core/widgets/conversation_input.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/mentor_service.dart';
 import '../../teaching/presentation/widgets/chat_bubble.dart';
 import '../../../core/data/models/conversation_message_model.dart';
 
-class MentorScreen extends StatefulWidget {
+class MentorScreen extends ConsumerStatefulWidget {
   const MentorScreen({super.key});
 
   @override
-  State<MentorScreen> createState() => _MentorScreenState();
+  ConsumerState<MentorScreen> createState() => _MentorScreenState();
 }
 
-class _MentorScreenState extends State<MentorScreen> {
+class _MentorScreenState extends ConsumerState<MentorScreen> {
   late final MentorService _mentorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
@@ -38,24 +40,23 @@ class _MentorScreenState extends State<MentorScreen> {
   }
 
   void _initializeMentor() {
-    final llmConfig = LlmConfiguration(
-      provider: LlmProvider.openRouter,
-      apiKey: '',
-    );
-    final llmService = LlmService(config: llmConfig);
+    final llmService = ref.read(llmServiceProvider);
     final masteryService = MasteryGraphService();
     final progressTracker = StudyProgressTracker(
       attemptRepo: AttemptRepository(),
       masteryService: masteryService,
     );
 
+    final studentId = StudentIdService().getStudentId();
+    final l10n = AppLocalizations.of(context)!;
     _mentorService = MentorService(
       database: database,
       llmService: llmService,
       masteryService: masteryService,
       progressTracker: progressTracker,
       modelId: 'openai/gpt-4o-mini',
-      studentId: 'anonymous',
+      studentId: studentId,
+      l10n: l10n,
     );
 
     if (mounted) {
@@ -71,16 +72,7 @@ class _MentorScreenState extends State<MentorScreen> {
       sessionId: 'mentor',
       role: MessageRole.mentor,
       type: MessageType.text,
-      content: '''$l10n.mentorGreeting
-
-I can help you with:
-• Scheduling and rescheduling lessons
-• Reviewing your study progress
-• Planning long-term study goals
-• Motivation and encouragement
-• Deciding what to study next
-
-How can I help you today?''',
+      content: '${l10n.mentorGreeting}\n\n${l10n.mentorWelcomeBody}',
       timestamp: DateTime.now(),
     );
 
@@ -153,11 +145,12 @@ How can I help you today?''',
         _isSending = false;
       });
     } catch (e) {
+      final l10n = AppLocalizations.of(context)!;
       final idx = _messages.length - 1;
       setState(() {
         _messages[idx] = _ChatMessage(
           message: _messages[idx].message.copyWith(
-            content: 'Sorry, I encountered an error. Please try again.',
+            content: l10n.errorWithResponse,
             isStreaming: false,
           ),
           isComplete: true,

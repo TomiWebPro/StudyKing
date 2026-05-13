@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/widgets/conversation_input.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
@@ -12,11 +13,12 @@ import '../services/tutor_service.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/lesson_progress_bar.dart';
 
-class TutorScreen extends StatefulWidget {
+class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
   final String topicTitle;
   final String subjectId;
   final int durationMinutes;
+  final TutorService? tutorService;
 
   const TutorScreen({
     super.key,
@@ -24,13 +26,14 @@ class TutorScreen extends StatefulWidget {
     required this.topicTitle,
     required this.subjectId,
     this.durationMinutes = 45,
+    this.tutorService,
   });
 
   @override
-  State<TutorScreen> createState() => _TutorScreenState();
+  ConsumerState<TutorScreen> createState() => _TutorScreenState();
 }
 
-class _TutorScreenState extends State<TutorScreen> {
+class _TutorScreenState extends ConsumerState<TutorScreen> {
   late final TutorService _tutorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
@@ -38,6 +41,7 @@ class _TutorScreenState extends State<TutorScreen> {
   ConversationManager? _manager;
   bool _isInitialized = false;
   bool _isSending = false;
+  bool _isVoiceListening = false;
   Timer? _timer;
   int _elapsedMinutes = 0;
 
@@ -51,20 +55,20 @@ class _TutorScreenState extends State<TutorScreen> {
   }
 
   void _initializeTutor() {
-    final llmConfig = LlmConfiguration(
-      provider: LlmProvider.openRouter,
-      apiKey: '',
-    );
-    final llmService = LlmService(config: llmConfig);
-    final masteryService = MasteryGraphService();
-    final modelId = 'openai/gpt-4o-mini';
+    if (widget.tutorService != null) {
+      _tutorService = widget.tutorService!;
+    } else {
+      final llmService = ref.read(llmServiceProvider);
+      final masteryService = MasteryGraphService();
+      final modelId = 'openai/gpt-4o-mini';
 
-    _tutorService = TutorService(
-      database: database,
-      llmService: llmService,
-      masteryService: masteryService,
-      modelId: modelId,
-    );
+      _tutorService = TutorService(
+        database: database,
+        llmService: llmService,
+        masteryService: masteryService,
+        modelId: modelId,
+      );
+    }
 
     _startLesson();
   }
@@ -99,8 +103,9 @@ class _TutorScreenState extends State<TutorScreen> {
     setState(() => _isSending = true);
     final buffer = StringBuffer();
 
+    final l10n = AppLocalizations.of(context)!;
     await for (final chunk in _manager!.sendMessage(
-        "I'm ready to learn about ${widget.topicTitle}. Please teach me!")) {
+        l10n.readyToLearnAbout(widget.topicTitle))) {
       buffer.write(chunk);
       setState(() {});
       _scrollToBottom();
@@ -127,6 +132,19 @@ class _TutorScreenState extends State<TutorScreen> {
     if (mounted) setState(() => _isSending = false);
     _scrollToBottom();
     _inputFocusNode.requestFocus();
+  }
+
+  void _toggleVoiceInput() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
+    );
+    setState(() => _isVoiceListening = !_isVoiceListening);
+  }
+
+  Future<void> _pickImage() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
+    );
   }
 
   Future<void> _endLesson() async {
@@ -178,11 +196,11 @@ class _TutorScreenState extends State<TutorScreen> {
         const SizedBox(height: 8),
           Row(
             children: [
-              _statChip(context, Icons.quiz_outlined, '${manager.exerciseCount} ${l10n.questionsLabel.toLowerCase()}'),
+              _statChip(context, Icons.quiz_outlined, l10n.questionsCountLabel(manager.exerciseCount)),
               const SizedBox(width: 8),
-              _statChip(context, Icons.check_circle_outline, '${manager.correctCount} correct', color: Colors.green),
+              _statChip(context, Icons.check_circle_outline, l10n.correctCount(manager.correctCount), color: Colors.green),
               const SizedBox(width: 8),
-              _statChip(context, Icons.speed, '${(manager.adaptivePace * 100).round()}% pace'),
+              _statChip(context, Icons.speed, l10n.paceLabel((manager.adaptivePace * 100).round())),
             ],
           ),
       ],
@@ -272,6 +290,24 @@ class _TutorScreenState extends State<TutorScreen> {
             hintText: l10n.typeYourMessage,
             sendTooltip: l10n.send,
             onSend: _sendMessage,
+            leading: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _isVoiceListening ? Icons.mic : Icons.mic_none,
+                    color: _isVoiceListening ? Colors.red : null,
+                  ),
+                  onPressed: _isInitialized && !_isSending ? _toggleVoiceInput : null,
+                  tooltip: l10n.voiceInput,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.image_outlined),
+                  onPressed: _isInitialized && !_isSending ? _pickImage : null,
+                  tooltip: l10n.captureImage,
+                ),
+              ],
+            ),
           ),
         ],
       ),

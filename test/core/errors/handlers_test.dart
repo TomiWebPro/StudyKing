@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget buildTestApp() {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => const SizedBox(),
@@ -18,6 +21,8 @@ Future<BuildContext> captureContext(WidgetTester tester) async {
   BuildContext? context;
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (c) {
@@ -74,9 +79,9 @@ void main() {
       expect(AppErrorHandler.getRetryText(exception), equals('Retry After Wait'));
     });
 
-    test('returns "Try Again" for ApiInternalServerError', () {
+    test('returns "Try again" for ApiInternalServerError', () {
       final exception = ApiInternalServerError(message: 'test');
-      expect(AppErrorHandler.getRetryText(exception), equals('Try Again'));
+      expect(AppErrorHandler.getRetryText(exception), equals('Try again'));
     });
 
     test('returns "Retry" for other exception types', () {

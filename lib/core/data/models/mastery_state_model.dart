@@ -17,55 +17,55 @@ class MasteryState extends HiveObject {
   final String topicId;
 
   @HiveField(2)
-  double accuracy;
+  final double accuracy;
 
   @HiveField(3)
-  double confidenceTrend;
+  final double confidenceTrend;
 
   @HiveField(4)
-  double speedTrend;
+  final double speedTrend;
 
   @HiveField(5)
-  double forgettingRisk;
+  final double forgettingRisk;
 
   @HiveField(6)
-  int totalAttempts;
+  final int totalAttempts;
 
   @HiveField(7)
-  int correctAttempts;
+  final int correctAttempts;
 
   @HiveField(8)
-  double averageTimeMs;
+  final double averageTimeMs;
 
   @HiveField(9)
-  DateTime lastAttempt;
+  final DateTime lastAttempt;
 
   @HiveField(10)
-  DateTime lastUpdated;
+  final DateTime lastUpdated;
 
   @HiveField(11)
-  int currentStreak;
+  final int currentStreak;
 
   @HiveField(12)
-  int bestStreak;
+  final int bestStreak;
 
   @HiveField(13)
-  List<int> recentConfidence;
+  final List<int> recentConfidence;
 
   @HiveField(14)
-  List<double> recentAccuracy;
+  final List<double> recentAccuracy;
 
   @HiveField(15)
-  MasteryLevel masteryLevel;
+  final MasteryLevel masteryLevel;
 
   @HiveField(16)
-  double readinessScore;
+  final double readinessScore;
 
   @HiveField(17)
-  double reviewUrgency;
+  final double reviewUrgency;
 
   @HiveField(18)
-  List<String> weakSubtopics;
+  final List<String> weakSubtopics;
 
   MasteryState({
     required this.studentId,
@@ -100,136 +100,6 @@ class MasteryState extends HiveObject {
       lastAttempt: now,
       lastUpdated: now,
     );
-  }
-
-  void recordAttempt({
-    required bool isCorrect,
-    required int confidence,
-    required int timeSpentMs,
-    String? subtopicId,
-  }) {
-    totalAttempts++;
-    if (isCorrect) correctAttempts++;
-
-    final newAvgTime = (averageTimeMs * (totalAttempts - 1) + timeSpentMs) / totalAttempts;
-    averageTimeMs = newAvgTime;
-
-    recentConfidence.add(confidence);
-    if (recentConfidence.length > 20) recentConfidence.removeAt(0);
-
-    final recentAccuracyVal = isCorrect ? 1.0 : 0.0;
-    recentAccuracy.add(recentAccuracyVal);
-    if (recentAccuracy.length > 20) recentAccuracy.removeAt(0);
-
-    if (isCorrect) {
-      currentStreak++;
-      if (currentStreak > bestStreak) bestStreak = currentStreak;
-    } else {
-      currentStreak = 0;
-    }
-
-    _updateAccuracy();
-    _updateConfidenceTrend();
-    _updateSpeedTrend();
-    _updateForgettingRisk();
-    _updateMasteryLevel();
-    _updateReadinessScore();
-    _updateReviewUrgency();
-
-    if (subtopicId != null && !isCorrect && !weakSubtopics.contains(subtopicId)) {
-      weakSubtopics.add(subtopicId);
-    }
-
-    lastAttempt = DateTime.now();
-    lastUpdated = DateTime.now();
-  }
-
-  void _updateAccuracy() {
-    if (totalAttempts == 0) {
-      accuracy = 0.0;
-    } else {
-      accuracy = correctAttempts / totalAttempts;
-    }
-  }
-
-  void _updateConfidenceTrend() {
-    if (recentConfidence.isEmpty) {
-      confidenceTrend = 0.5;
-    } else {
-      confidenceTrend = recentConfidence.reduce((a, b) => a + b) / recentConfidence.length / 5.0;
-    }
-  }
-
-  void _updateSpeedTrend() {
-    const expectedTimeMs = 60000.0;
-    if (averageTimeMs > 0) {
-      speedTrend = (expectedTimeMs / averageTimeMs).clamp(0.0, 1.0);
-    }
-  }
-
-  void _updateForgettingRisk() {
-    final daysSinceLastAttempt = DateTime.now().difference(lastAttempt).inDays;
-    final retentionDecay = accuracy * (1 - (daysSinceLastAttempt / 30.0).clamp(0.0, 1.0));
-    forgettingRisk = 1 - retentionDecay;
-  }
-
-  void _updateMasteryLevel() {
-    if (accuracy >= 0.9 && currentStreak >= 5 && totalAttempts >= 10) {
-      masteryLevel = MasteryLevel.expert;
-    } else if (accuracy >= 0.8 && totalAttempts >= 5) {
-      masteryLevel = MasteryLevel.proficient;
-    } else if (accuracy >= 0.6 && totalAttempts >= 3) {
-      masteryLevel = MasteryLevel.developing;
-    } else if (totalAttempts >= 1) {
-      masteryLevel = MasteryLevel.browsing;
-    } else {
-      masteryLevel = MasteryLevel.novice;
-    }
-  }
-
-  void _updateReadinessScore() {
-    final accuracyWeight = 0.4;
-    final streakWeight = 0.2;
-    final confidenceWeight = 0.2;
-    final recencyWeight = 0.2;
-
-    final streakNorm = (currentStreak / 10.0).clamp(0.0, 1.0);
-    final recencyScore = _recencyScore();
-
-    readinessScore = (accuracy * accuracyWeight) +
-        (streakNorm * streakWeight) +
-        (confidenceTrend * confidenceWeight) +
-        (recencyScore * recencyWeight);
-  }
-
-  double _recencyScore() {
-    final daysSince = DateTime.now().difference(lastAttempt).inDays;
-    if (daysSince == 0) return 1.0;
-    if (daysSince <= 1) return 0.9;
-    if (daysSince <= 3) return 0.7;
-    if (daysSince <= 7) return 0.5;
-    if (daysSince <= 14) return 0.3;
-    return 0.1;
-  }
-
-  void _updateReviewUrgency() {
-    final decayFactor = forgettingRisk;
-    final daysSinceAttempt = DateTime.now().difference(lastAttempt).inDays;
-
-    double urgency;
-    if (daysSinceAttempt == 0) {
-      urgency = 0.1;
-    } else if (daysSinceAttempt <= 1) {
-      urgency = 0.3;
-    } else if (daysSinceAttempt <= 3) {
-      urgency = 0.5 + (decayFactor * 0.2);
-    } else if (daysSinceAttempt <= 7) {
-      urgency = 0.7 + (decayFactor * 0.15);
-    } else {
-      urgency = 0.9 + (decayFactor * 0.1);
-    }
-
-    reviewUrgency = urgency.clamp(0.0, 1.0);
   }
 
   Map<String, dynamic> toJson() => {

@@ -382,35 +382,3 @@ class MathExpressionWidget extends StatelessWidget {
   }
 }
 
-/// Formula Renderer Widget
-class FormulaWidget extends StatelessWidget {
-  final String formula;
-  final String? variable;
-
-  const FormulaWidget({
-    super.key,
-    required this.formula,
-    this.variable,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Text(
-        variable == null || variable!.trim().isEmpty
-            ? formula
-            : '$variable = $formula',
-        style: const TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-}

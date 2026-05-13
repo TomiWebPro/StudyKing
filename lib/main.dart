@@ -11,16 +11,15 @@ import 'core/providers/app_providers.dart';
 import 'core/constants/app_constants.dart';
 import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
-import 'core/services/mastery_graph_service.dart';
+import 'core/data/adapters/plan_adherence_adapter.dart';
+import 'core/data/adapters/mastery_improvement_adapter.dart';
+
+import 'core/routes/app_router.dart';
+import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
-import 'features/settings/presentation/api_config_screen.dart';
-import 'features/settings/presentation/profile_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_view.dart';
-import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/practice/presentation/practice_screen.dart';
-import 'features/ingestion/presentation/upload_screen.dart';
-import 'features/quickguide/quickguide.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
 
 final Logger _mainLogger = const Logger('App');
@@ -35,8 +34,11 @@ void main() async {
     // Initialize Hive database
     Hive.initFlutter();
     
-    // Register accessibility preferences adapter
+    // Register adapters
     Hive.registerAdapter(AccessibilityPreferencesAdapter());
+    Hive.registerAdapter(UserProfileAdapter());
+    Hive.registerAdapter(PlanAdherenceMetricAdapter());
+    Hive.registerAdapter(MasteryImprovementMetricAdapter());
     
       // Run database migrations and open all boxes
     await HiveInitializer.initialize();
@@ -144,8 +146,9 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
       actions: {
         _CloseDialogIntent: CallbackAction<_CloseDialogIntent>(
           onInvoke: (intent) {
-            if (Navigator.of(context, rootNavigator: true).canPop()) {
-              Navigator.of(context, rootNavigator: true).pop();
+            final navigator = Navigator.of(context, rootNavigator: true);
+            if (navigator.canPop()) {
+              navigator.pop();
             }
             return null;
           },
@@ -159,18 +162,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
           : AppTheme.darkTheme(fontSize: effectiveFontSize),
       themeMode: settings.themeModeEnum,
       home: const MainScreen(),
-      routes: {
-        '/api-config': (context) => const ApiConfigScreen(),
-        '/profile': (context) => const ProfileScreen(),
-        '/settings': (context) => const SettingsScreen(),
-        '/quick-guide': (context) => const QuickGuideScreen(),
-        '/mentor': (context) => const MentorScreen(),
-        '/dashboard': (context) => DashboardScreen(
-          studentId: StudentIdService().getStudentId(),
-          masteryService: MasteryGraphService(),
-        ),
-        '/upload': (context) => const UploadScreen(),
-      },
+      onGenerateRoute: onGenerateRoute,
     );
   }
 }
@@ -222,16 +214,7 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   void _openDashboard() {
-    final studentId = StudentIdService().getStudentId();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DashboardScreen(
-          studentId: studentId,
-          masteryService: MasteryGraphService(),
-        ),
-      ),
-    );
+    Navigator.pushNamed(context, AppRoutes.dashboard);
   }
 
   @override
@@ -257,37 +240,25 @@ class _MainScreenState extends State<MainScreen> {
             });
           },
           destinations: [
-            Semantics(
+            NavigationDestination(
+              icon: Icon(Icons.school_outlined),
+              selectedIcon: Icon(Icons.school),
               label: l10n.subjects,
-              child: NavigationDestination(
-                icon: Icon(Icons.school_outlined),
-                selectedIcon: Icon(Icons.school),
-                label: l10n.subjects,
-              ),
             ),
-            Semantics(
+            NavigationDestination(
+              icon: Icon(Icons.play_arrow_outlined),
+              selectedIcon: Icon(Icons.play_arrow),
               label: l10n.practice,
-              child: NavigationDestination(
-                icon: Icon(Icons.play_arrow_outlined),
-                selectedIcon: Icon(Icons.play_arrow),
-                label: l10n.practice,
-              ),
             ),
-            Semantics(
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(Icons.auto_awesome),
               label: l10n.mentor,
-              child: NavigationDestination(
-                icon: Icon(Icons.auto_awesome_outlined),
-                selectedIcon: Icon(Icons.auto_awesome),
-                label: l10n.mentor,
-              ),
             ),
-            Semantics(
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
               label: l10n.settings,
-              child: NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: l10n.settings,
-              ),
             ),
           ],
         ),

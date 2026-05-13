@@ -48,5 +48,5 @@ final studentIdProvider = FutureProvider<String>((ref) async {
 });
 
 final studentIdValueProvider = Provider<String>((ref) {
-  return ref.watch(studentIdProvider).valueOrNull ?? 'anonymous';
+  return ref.watch(studentIdProvider).valueOrNull ?? '';
 });

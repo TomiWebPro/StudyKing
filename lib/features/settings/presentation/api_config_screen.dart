@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
@@ -17,6 +19,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   final TextEditingController _baseUrlController = TextEditingController();
 
   bool _isSaving = false;
+  bool _isTesting = false;
   bool _obscureApiKey = true;
 
   @override
@@ -85,6 +88,59 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     }
   }
 
+  Future<void> _testConnection() async {
+    final l10n = AppLocalizations.of(context)!;
+    final apiKey = _apiKeyController.text.trim();
+    final baseUrl = _baseUrlController.text.trim();
+
+    if (apiKey.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.apiKeyCannotBeEmpty), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isTesting = true);
+
+    try {
+      final stopwatch = Stopwatch()..start();
+      final url = baseUrl.isNotEmpty ? '$baseUrl/models' : 'https://openrouter.ai/api/v1/models';
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $apiKey'},
+      ).timeout(const Duration(seconds: 15));
+      stopwatch.stop();
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.connectionSuccessful(stopwatch.elapsedMilliseconds)),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.connectionFailed('HTTP ${response.statusCode}')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.connectionFailed(e.toString())),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isTesting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -133,6 +189,21 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                       )
                     : const Icon(Icons.save),
                 label: Text(l10n.saveApiKeys),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isTesting ? null : _testConnection,
+                icon: _isTesting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.wifi_tethering),
+                label: Text(_isTesting ? l10n.testing : l10n.testConnection),
               ),
             ),
           ],

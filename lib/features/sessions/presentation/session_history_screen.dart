@@ -90,9 +90,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(l10n.cancel),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),
           ),
         ],
@@ -168,7 +168,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               children: [
                 Container(
                   padding: ResponsiveUtils.screenPadding(context),
-                  color: theme.primaryColor.withValues(alpha: 0.05),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -176,37 +176,31 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          Semantics(
-                            label: l10n.filterByDate,
-                            child: SizedBox(
-                              width: MediaQuery.sizeOf(context).width > 400 ? null : double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _showDatePicker(),
-                                icon: Icon(Icons.calendar_today, color: theme.primaryColor),
-                                label: Text(
-                                  _selectedDate != null
-                                      ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                                      : l10n.filterByDate,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: theme.primaryColor,
-                                ),
+                          SizedBox(
+                            width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showDatePicker(),
+                              icon: Icon(Icons.calendar_today, color: theme.colorScheme.primary),
+                              label: Text(
+                                _selectedDate != null
+                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                    : l10n.filterByDate,
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.colorScheme.primary,
                               ),
                             ),
                           ),
-                          Semantics(
-                            label: l10n.filterBySubject,
-                            child: SizedBox(
-                              width: MediaQuery.sizeOf(context).width > 400 ? null : double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _showSubjectFilter(),
-                                icon: Icon(Icons.folder, color: theme.primaryColor),
-                                label: Text(
-                                  _selectedSubject != null ? _selectedSubject! : l10n.filterBySubject,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: theme.primaryColor,
-                                ),
+                          SizedBox(
+                            width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showSubjectFilter(),
+                              icon: Icon(Icons.folder, color: theme.colorScheme.primary),
+                              label: Text(
+                                _selectedSubject != null ? _selectedSubject! : l10n.filterBySubject,
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.colorScheme.primary,
                               ),
                             ),
                           ),
@@ -252,7 +246,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       label: label,
       value: value,
       icon: icon,
-      accent: Theme.of(context).primaryColor,
+      accent: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -262,7 +256,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: ResponsiveUtils.emptyStateIconSize(context), color: theme.disabledColor.withValues(alpha: 0.5)),
+          Icon(Icons.history, size: ResponsiveUtils.emptyStateIconSize(context), color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             _selectedDate != null || _selectedSubject != null
@@ -302,7 +296,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 16),
             color: Theme.of(context).colorScheme.error,
-            child: const Icon(Icons.delete, color: Colors.white),
+            child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
           ),
           child: Card(
             margin: EdgeInsets.symmetric(horizontal: ResponsiveUtils.horizontalSpacing(context), vertical: 4),
@@ -310,10 +304,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.play_arrow, color: theme.primaryColor),
+                child: Icon(Icons.play_arrow, color: theme.colorScheme.primary),
               ),
               title: Text(
                 l10n.sessionNumber(_allSessions.length - position),
@@ -336,8 +330,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: session.questionsAnswered > 0 &&
                                 session.correctAnswers >= (session.questionsAnswered / 2)
-                            ? Colors.green
-                            : Colors.orange,
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.tertiary,
                       ),
                     ),
                 ],
@@ -346,7 +340,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 formatDurationFromContext(context, timeSpent),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.primaryColor,
+                  color: theme.colorScheme.primary,
                 ),
               ),
               isThreeLine: true,

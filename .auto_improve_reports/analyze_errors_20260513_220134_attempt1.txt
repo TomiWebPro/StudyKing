@@ -1,0 +1,23 @@
+Analyzing StudyKing...                                          
+
+  error • Expected to find ']' • lib/features/practice/presentation/learning_plan_dashboard.dart:340:13 • expected_token
+  error • Expected an identifier • lib/features/practice/presentation/learning_plan_dashboard.dart:342:13 • missing_identifier
+  error • Expected to find ')' • lib/features/practice/presentation/learning_plan_dashboard.dart:342:13 • expected_token
+  error • Expected to find ';' • lib/features/practice/presentation/learning_plan_dashboard.dart:375:7 • expected_token
+warning • Dead code • lib/features/practice/presentation/learning_plan_dashboard.dart:375:8 • dead_code
+  error • Expected an identifier • lib/features/practice/presentation/learning_plan_dashboard.dart:375:8 • missing_identifier
+  error • Expected to find ';' • lib/features/practice/presentation/learning_plan_dashboard.dart:375:8 • expected_token
+  error • Unexpected text ';' • lib/features/practice/presentation/learning_plan_dashboard.dart:375:8 • unexpected_token
+  error • Expected an identifier • lib/features/practice/presentation/learning_plan_dashboard.dart:376:5 • missing_identifier
+  error • Unexpected text ';' • lib/features/practice/presentation/learning_plan_dashboard.dart:376:5 • unexpected_token
+   info • Unnecessary empty statement • lib/features/practice/presentation/learning_plan_dashboard.dart:376:6 • empty_statements
+  error • The method 'PracticeSessionScreen' isn't defined for the type '_PracticeScreenState' • lib/features/practice/presentation/practice_screen.dart:578:33 • undefined_method
+  error • The method 'PracticeSessionScreen' isn't defined for the type '_PracticeScreenState' • lib/features/practice/presentation/practice_screen.dart:790:33 • undefined_method
+  error • The method 'PracticeSessionScreen' isn't defined for the type '_PracticeScreenState' • lib/features/practice/presentation/practice_screen.dart:851:33 • undefined_method
+warning • The declaration '_showError' isn't referenced • lib/features/settings/presentation/settings_screen.dart:373:8 • unused_element
+warning • The value of the local variable 'timeout' isn't used • lib/features/settings/presentation/settings_screen.dart:420:13 • unused_local_variable
+  error • The getter 'retry' isn't defined for the type 'AppLocalizations' • lib/features/settings/presentation/settings_screen.dart:456:65 • undefined_getter
+warning • Unused import: 'core/services/mastery_graph_service.dart' • lib/main.dart:14:8 • unused_import
+
+
+18 issues found. (ran in 6.3s)

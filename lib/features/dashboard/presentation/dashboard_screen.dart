@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
 import '../../../core/services/instrumentation_service.dart';
@@ -8,17 +10,22 @@ import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/animated_bar_chart.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/data/repositories/topic_repository.dart';
-import '../../practice/presentation/practice_session_screen.dart';
-import '../../practice/presentation/practice_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String studentId;
   final MasteryGraphService masteryService;
+  final StudyProgressTracker? tracker;
+  final InstrumentationService? instrumentation;
+  final TopicRepository? topicRepo;
 
   const DashboardScreen({
     super.key,
     required this.studentId,
     required this.masteryService,
+    this.tracker,
+    this.instrumentation,
+    this.topicRepo,
   });
 
   @override
@@ -26,11 +33,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final StudyProgressTracker _tracker = StudyProgressTracker(
-    attemptRepo: AttemptRepository(),
-  );
-  final InstrumentationService _instrumentation = InstrumentationService();
-  final TopicRepository _topicRepo = TopicRepository();
+  late final StudyProgressTracker _tracker;
+  late final InstrumentationService _instrumentation;
+  late final TopicRepository _topicRepo;
 
   List<MasteryState> _allMastery = [];
   Map<String, dynamic>? _snapshot;
@@ -44,6 +49,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _tracker = widget.tracker ?? StudyProgressTracker(
+      attemptRepo: AttemptRepository(),
+    );
+    _instrumentation = widget.instrumentation ?? InstrumentationService();
+    _topicRepo = widget.topicRepo ?? TopicRepository();
     _loadData();
   }
 
@@ -79,6 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -99,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            _buildHeader(context, AppLocalizations.of(context)!),
             const SizedBox(height: 24),
             _buildSummaryRow(),
             const SizedBox(height: 24),
@@ -122,13 +133,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
     return Row(
       children: [
         Icon(Icons.dashboard, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Text(
-          'Study Dashboard',
+          l10n.studyDashboard,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -138,6 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildSummaryRow() {
+    final l10n = AppLocalizations.of(context)!;
     final stats = _overallStats ?? {};
     final accuracy = stats['accuracy'] ?? 0;
     final totalHours = stats['totalStudyTimeHours'] ?? '0';
@@ -156,10 +168,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: MetricCard(
                 icon: Icons.check_circle,
                 value: '$accuracy%',
-                label: 'Accuracy',
-                accent: accuracy >= 80
-                    ? Colors.green
-                    : accuracy >= 60 ? Colors.orange : Colors.red,
+                label: l10n.accuracy,
+                accent: AppTheme.progressColor(accuracy / 100.0, context),
               ),
             ),
             SizedBox(
@@ -167,8 +177,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: MetricCard(
                 icon: Icons.timer,
                 value: '${totalHours}h',
-                label: 'Study Time',
-                accent: Colors.blue,
+                label: l10n.studyTime,
+                accent: Theme.of(context).colorScheme.primary,
               ),
             ),
             SizedBox(
@@ -176,8 +186,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: MetricCard(
                 icon: Icons.trending_up,
                 value: '$weeklyActivity',
-                label: 'Weekly Activity',
-                accent: Colors.teal,
+                label: l10n.weeklyActivity,
+                accent: Theme.of(context).colorScheme.tertiary,
               ),
             ),
             SizedBox(
@@ -185,8 +195,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: MetricCard(
                 icon: Icons.book,
                 value: '$topicsStudied',
-                label: 'Topics',
-                accent: Colors.purple,
+                label: l10n.topics,
+                accent: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ],
@@ -196,6 +206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildWeeklyChart(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final trend = _weeklyTrend.take(7).toList();
     final chartData = <String, int>{};
     for (var i = 0; i < trend.length; i++) {
@@ -214,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icon(Icons.show_chart, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Text(
-                'Weekly Activity',
+                l10n.weeklyActivity,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ],
@@ -231,6 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildPlanAdherence(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final adherence = _instrumentationData?['planAdherence'] as Map<String, dynamic>?;
     final avgAdherence = adherence?['averageAdherence'] as double? ?? 0.0;
     final weeklyAvg = adherence?['weeklyAdherenceAvg'] as double? ?? 0.0;
@@ -246,7 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(Icons.event_note, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Plan Adherence',
+                  l10n.planAdherence,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -254,8 +266,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const Divider(),
             Row(
               children: [
-                Expanded(child: _buildAdherenceMetric(context, 'Overall', '${(avgAdherence * 100).round()}%', avgAdherence)),
-                Expanded(child: _buildAdherenceMetric(context, 'This Week', '${(weeklyAvg * 100).round()}%', weeklyAvg)),
+                Expanded(child: _buildAdherenceMetric(context, l10n.overall, '${(avgAdherence * 100).round()}%', avgAdherence)),
+                Expanded(child: _buildAdherenceMetric(context, l10n.thisWeek, '${(weeklyAvg * 100).round()}%', weeklyAvg)),
               ],
             ),
           ],
@@ -265,7 +277,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAdherenceMetric(BuildContext context, String label, String value, double score) {
-    final color = score >= 0.7 ? Colors.green : score >= 0.4 ? Colors.orange : Colors.red;
+    final color = score >= 0.7
+        ? Theme.of(context).colorScheme.primary
+        : score >= 0.4
+            ? Theme.of(context).colorScheme.tertiary
+            : Theme.of(context).colorScheme.error;
     return Column(
       children: [
         Text(
@@ -281,6 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMasteryProgress(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final snapshot = _snapshot ?? {};
     final totalTopics = snapshot['totalTopics'] ?? 0;
     final masteredTopics = snapshot['masteredTopics'] ?? 0;
@@ -300,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(Icons.analytics, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Mastery Overview',
+                  l10n.masteryOverview,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -308,9 +325,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const Divider(),
             Row(
               children: [
-                Expanded(child: _statColumn('$totalTopics', 'Total Topics', Theme.of(context).colorScheme.primary)),
-                Expanded(child: _statColumn('$masteredTopics', 'Mastered', Colors.green)),
-                Expanded(child: _statColumn('${totalTopics - masteredTopics - weakTopics}', 'In Progress', Colors.orange)),
+                Expanded(child: _statColumn('$totalTopics', l10n.totalTopics, Theme.of(context).colorScheme.primary)),
+                Expanded(child: _statColumn('$masteredTopics', l10n.mastered, Theme.of(context).colorScheme.primary)),
+                Expanded(child: _statColumn('${totalTopics - masteredTopics - weakTopics}', l10n.inProgress, Theme.of(context).colorScheme.tertiary)),
               ],
             ),
             const SizedBox(height: 16),
@@ -327,9 +344,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _miniStat(context, 'Accuracy', '${(avgAccuracy * 100).round()}%', _getProgressColor(avgAccuracy)),
-                _miniStat(context, 'Readiness', '${(avgReadiness * 100).round()}%', Colors.teal),
-                _miniStat(context, 'Weak Areas', '$weakTopics', Colors.red),
+                _miniStat(context, l10n.accuracy, '${(avgAccuracy * 100).round()}%', AppTheme.progressColor(avgAccuracy, context)),
+                _miniStat(context, l10n.readiness, '${(avgReadiness * 100).round()}%', Theme.of(context).colorScheme.tertiary),
+                _miniStat(context, l10n.weakAreas, '$weakTopics', Theme.of(context).colorScheme.error),
               ],
             ),
           ],
@@ -339,6 +356,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildWeakAreas(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weakStates = _allMastery.where((s) => s.accuracy < 0.6).toList();
     if (weakStates.isEmpty) return const SizedBox.shrink();
 
@@ -350,11 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.warning_amber, color: Colors.red),
+                Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: 8),
                 Text(
-                  'Weak Areas (Accuracy < 60%)',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.red),
+                  l10n.weakAreasAccuracy,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
                 ),
               ],
             ),
@@ -373,13 +391,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     '${(state.accuracy * 100).round()}%',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.red,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.play_arrow, size: 20),
-                    tooltip: 'Practice this topic',
+                    tooltip: l10n.practiceThisTopic,
                     onPressed: () => _practiceWeakArea(state.topicId),
                   ),
                 ],
@@ -393,8 +411,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _practiceAllWeakAreas,
                     icon: const Icon(Icons.play_arrow),
-                    label: const Text('Practice All Weak Areas'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    label: Text(l10n.practiceAllWeakAreas),
+                    style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                   ),
                 ),
               ),
@@ -405,34 +423,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _practiceWeakArea(String topicId) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => PracticeSessionScreen(
-          subjectId: '',
-          topicId: topicId,
-        ),
-      ),
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(subjectId: '', topicId: topicId),
     );
   }
 
   void _practiceAllWeakAreas() {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => PracticeScreen(),
-      ),
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(subjectId: ''),
     );
   }
 
   Widget _buildTopicBreakdown(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_allMastery.isEmpty) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Center(
             child: Text(
-              'No topic data yet. Start studying to see your progress!',
+              l10n.noTopicDataYet,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -456,7 +470,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(Icons.pie_chart, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Topic Performance',
+                  l10n.topicPerformance,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -470,6 +484,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTopicRow(MasteryState state) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _getProgressColor(state.accuracy);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -505,7 +520,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               Text(
-                '${state.totalAttempts} attempts',
+                l10n.attemptsCount(state.totalAttempts),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
@@ -524,16 +539,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _masteryLabel(MasteryLevel level) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return level.name;
     switch (level) {
-      case MasteryLevel.novice: return 'Novice';
-      case MasteryLevel.browsing: return 'Browsing';
-      case MasteryLevel.developing: return 'Developing';
-      case MasteryLevel.proficient: return 'Proficient';
-      case MasteryLevel.expert: return 'Expert';
+      case MasteryLevel.novice: return l10n.masteryLevelNovice;
+      case MasteryLevel.browsing: return l10n.masteryLevelBrowsing;
+      case MasteryLevel.developing: return l10n.masteryLevelDeveloping;
+      case MasteryLevel.proficient: return l10n.masteryLevelProficient;
+      case MasteryLevel.expert: return l10n.masteryLevelExpert;
     }
   }
 
   Widget _buildBadges(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_badges.isEmpty) return const SizedBox.shrink();
 
     return Card(
@@ -546,7 +564,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('Achievements', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.achievements, style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             const Divider(),
@@ -555,9 +573,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               runSpacing: 12,
               children: _badges.map((badge) {
                 return Chip(
-                  avatar: Icon(Icons.emoji_events, color: Colors.amber.shade700, size: 18),
+                  avatar: Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary, size: 18),
                   label: Text(badge['name'] as String? ?? ''),
-                  backgroundColor: Colors.amber.shade50,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                 );
               }).toList(),
             ),
@@ -568,6 +586,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildExportSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -579,17 +598,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 TextButton.icon(
                   onPressed: _exportProgressCSV,
                   icon: const Icon(Icons.download),
-                  label: const Text('Export CSV'),
+                  label: Text(l10n.exportCsv),
                 ),
                 TextButton.icon(
                   onPressed: _exportSessionHistoryCSV,
                   icon: const Icon(Icons.history),
-                  label: const Text('Session History'),
+                  label: Text(l10n.sessionHistory),
                 ),
                 TextButton.icon(
                   onPressed: _exportInstrumentation,
                   icon: const Icon(Icons.analytics),
-                  label: const Text('Instrumentation'),
+                  label: Text(l10n.instrumentation),
                 ),
               ],
             ),
@@ -600,46 +619,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _exportProgressCSV() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final csv = await _tracker.exportProgressCSV(widget.studentId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Progress CSV generated (${csv.length} chars)')),
+        SnackBar(content: Text(l10n.progressCsvGenerated(csv.length))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
       );
     }
   }
 
   Future<void> _exportSessionHistoryCSV() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final csv = await _tracker.exportSessionHistoryCSV(widget.studentId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Session history CSV generated (${csv.length} chars)')),
+        SnackBar(content: Text(l10n.sessionHistoryCsvGenerated(csv.length))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
       );
     }
   }
 
   Future<void> _exportInstrumentation() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       await _instrumentation.exportInstrumentationData(widget.studentId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Instrumentation data exported')),
+        SnackBar(content: Text(l10n.instrumentationDataExported)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
       );
     }
   }
@@ -672,8 +694,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Color _getProgressColor(double value) {
-    if (value >= 0.8) return Colors.green;
-    if (value >= 0.6) return Colors.orange;
-    return Colors.red;
+    return AppTheme.progressColor(value, context);
   }
 }

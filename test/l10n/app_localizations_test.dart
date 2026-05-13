@@ -588,7 +588,7 @@ void main() {
       test('randomQuestions', () {
         expect(l10n.randomQuestions(5), '5 random questions');
         expect(l10n.randomQuestions(10), '10 random questions');
-        expect(l10n.randomQuestions(1), '1 random questions');
+        expect(l10n.randomQuestions(1), '1 random question');
       });
 
       test('yourAnswerCharacters', () {
@@ -617,7 +617,7 @@ void main() {
 
       test('sessionsCount', () {
         expect(l10n.sessionsCount(0), '0 sessions');
-        expect(l10n.sessionsCount(1), '1 sessions');
+        expect(l10n.sessionsCount(1), '1 session');
         expect(l10n.sessionsCount(10), '10 sessions');
       });
 
@@ -784,7 +784,7 @@ void main() {
         expect(l10n.spacedRepetition, 'Repetición Espaciada');
         expect(l10n.topicFocus, 'Enfoque por Tema');
         expect(l10n.practiceSpecificTopics, 'Practique temas específicos');
-        expect(l10n.weakAreas, 'Áreas Débiles');
+        expect(l10n.weakAreas, 'Áreas por mejorar');
         expect(l10n.focusOnMistakes, 'Concéntrese en sus errores');
         expect(l10n.yourSubjects, 'Sus Materias');
         expect(l10n.readyForPractice, 'Listo para practicar');
@@ -814,7 +814,7 @@ void main() {
         expect(l10n.practiceComplete, '¡Práctica Completada!');
         expect(l10n.totalQuestions, 'Total de Preguntas');
         expect(l10n.correctAnswers, 'Respuestas Correctas');
-        expect(l10n.accuracy, 'Exactitud');
+        expect(l10n.accuracy, 'Precisión');
         expect(l10n.practiceAgain, 'Practicar de Nuevo');
       });
 

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsRepository, localeProvider;
-import '../data/models/settings_box.dart';
+import '../data/models/user_profile_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 
@@ -37,20 +37,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       // Get the settings repository from main
       final repository = settingsRepository;
-      final profileData = await repository.getProfileData();
+      final profile = await repository.getProfileData();
       
-      if (profileData != null && mounted) {
+      if (profile != null && mounted) {
         setState(() {
-          _profileId = profileData.id;
-          _avatarIconKey = profileData.avatarIcon;
-          _nameController.text = profileData.name;
-          _studentIdController.text = profileData.studentId ?? '';
-          _learningGoalController.text = profileData.learningGoal ?? '';
-          _studyTimeController.text = profileData.preferredStudyTime ?? '';
-          _notificationsEnabled = profileData.notificationsEnabled;
-          _language = profileData.language;
+          _profileId = profile.id;
+          _avatarIconKey = profile.avatarIcon;
+          _nameController.text = profile.name;
+          _studentIdController.text = profile.studentId ?? '';
+          _learningGoalController.text = profile.learningGoal ?? '';
+          _studyTimeController.text = profile.preferredStudyTime ?? '';
+          _notificationsEnabled = profile.notificationsEnabled;
+          _language = profile.language;
         });
-        ref.read(localeProvider.notifier).state = Locale(profileData.language);
+        ref.read(localeProvider.notifier).state = Locale(profile.language);
       } else if (mounted) {
         setState(() {
           _avatarIconKey = 'Icons.person';
@@ -87,7 +87,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     try {
       // Create profile data
-      final profileData = ProfileData(
+      final profile = UserProfile(
         id: _profileId,
         name: trimmedName,
         studentId: trimmedStudentId.isEmpty ? null : trimmedStudentId,
@@ -99,13 +99,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       // Save to repository
-      await settingsRepository.saveProfileData(profileData);
+      await settingsRepository.saveProfileData(profile);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.profileSavedSuccessfully),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         Navigator.pop(context);
@@ -302,10 +302,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             size: 50,
                             color: Theme.of(context).primaryColor,
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.person,
                             size: 50,
-                            color: Colors.grey,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                   ),
                 ),
@@ -492,7 +492,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                Navigator.pop(context);
                Navigator.maybePop(context);
             },
-            style: FilledButton.styleFrom(foregroundColor: Colors.red),
+            style: FilledButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),
           ),
         ],
@@ -522,7 +522,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (required) ...[
               const SizedBox(width: 4),
-               const Text('*', style: TextStyle(color: Colors.red)),
+               Text('*', style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
           ],
         ),

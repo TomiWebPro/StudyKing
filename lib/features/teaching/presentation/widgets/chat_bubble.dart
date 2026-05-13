@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class ChatBubble extends StatelessWidget {
   final ConversationMessage message;
@@ -51,7 +52,7 @@ class ChatBubble extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        isStudent ? 'You' : (isTutor ? 'Tutor' : 'System'),
+                        isStudent ? AppLocalizations.of(context)!.senderYou : (isTutor ? AppLocalizations.of(context)!.senderTutor : AppLocalizations.of(context)!.senderSystem),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: isStudent
                                   ? Theme.of(context)
@@ -96,16 +97,7 @@ class ChatBubble extends StatelessWidget {
     final content = message.content;
 
     if (message.isStreaming && content.isEmpty) {
-      return SizedBox(
-        width: 40,
-        child: Row(
-          children: [
-            _dot(context, 0),
-            _dot(context, 0.3),
-            _dot(context, 0.6),
-          ],
-        ),
-      );
+      return const _TypingIndicator();
     }
 
     return Text(
@@ -117,20 +109,77 @@ class ChatBubble extends StatelessWidget {
           ),
     );
   }
+}
 
-  Widget _dot(BuildContext context, double delay) {
-    return AnimatedOpacity(
-      opacity: 1.0,
-      duration: const Duration(milliseconds: 500),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          shape: BoxShape.circle,
-        ),
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      child: Row(
+        children: [
+          _animatedDot(context, 0),
+          _animatedDot(context, 0.2),
+          _animatedDot(context, 0.4),
+        ],
       ),
     );
+  }
+
+  Widget _animatedDot(BuildContext context, double delay) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final phase = (_controller.value - delay).clamp(0.0, 1.0);
+        final value = (phase * 4.0) % 1.0;
+        final opacity = 0.3 + (0.7 * _easeInOut(value));
+        final scale = 1.0;
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: opacity),
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  double _easeInOut(double t) {
+    if (t < 0.5) return 2 * t * t;
+    return -1 + (4 - 2 * t) * t;
   }
 }

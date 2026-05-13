@@ -3,17 +3,21 @@ import '../../../core/data/database_service.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
+import '../../../core/services/instrumentation_service.dart';
 import '../../../core/data/repositories/plan_repository.dart';
 import '../../../core/utils/logger.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class MentorService {
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
   final StudyProgressTracker _progressTracker;
+  final InstrumentationService _instrumentation;
   final String _modelId;
   final ConversationMemory _memory;
   final String _studentId;
+  final AppLocalizations _l10n;
   final Logger _logger = const Logger('MentorService');
 
   bool _pendingConfirmation = false;
@@ -24,14 +28,18 @@ class MentorService {
     required LlmService llmService,
     required MasteryGraphService masteryService,
     required StudyProgressTracker progressTracker,
+    InstrumentationService? instrumentation,
     required String modelId,
     required String studentId,
+    required AppLocalizations l10n,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
         _progressTracker = progressTracker,
+        _instrumentation = instrumentation ?? InstrumentationService(),
         _modelId = modelId,
         _studentId = studentId,
+        _l10n = l10n,
         _memory = ConversationMemory(maxTurns: 50);
 
   ConversationMemory get memory => _memory;
@@ -48,7 +56,7 @@ class MentorService {
       } else if (_isRejection(lower)) {
         _pendingConfirmation = false;
         _pendingAction = null;
-        yield 'No problem! I won\'t make any changes. Let me know if you need anything else.';
+        yield _l10n.mentorRejectionResponse;
         return;
       }
     }
@@ -93,7 +101,12 @@ class MentorService {
         lower.contains('ok') ||
         lower.contains('go ahead') ||
         lower.contains('confirm') ||
-        lower.contains('please do');
+        lower.contains('please do') ||
+        lower.contains('sí') ||
+        lower.contains('claro') ||
+        lower.contains('vale') ||
+        lower.contains('confirmar') ||
+        lower.contains('adelante');
   }
 
   bool _isRejection(String lower) {
@@ -101,7 +114,11 @@ class MentorService {
         lower.contains("don't") ||
         lower.contains("not") ||
         lower.contains("never mind") ||
-        lower.contains("cancel");
+        lower.contains("cancel") ||
+        lower.contains('no quiero') ||
+        lower.contains('cancelar') ||
+        lower.contains('ningún cambio') ||
+        lower.contains('para nada');
   }
 
   bool _isScheduleRequest(String lower) {
@@ -110,7 +127,13 @@ class MentorService {
         lower.contains('plan') ||
         lower.contains('lesson') ||
         lower.contains('when') ||
-        lower.contains('next study');
+        lower.contains('next study') ||
+        lower.contains('programar') ||
+        lower.contains('reprogramar') ||
+        lower.contains('planificar') ||
+        lower.contains('lección') ||
+        lower.contains('cuándo') ||
+        lower.contains('próximo estudio');
   }
 
   bool _isProgressRequest(String lower) {
@@ -119,14 +142,24 @@ class MentorService {
         lower.contains('stats') ||
         lower.contains('performance') ||
         lower.contains('improve') ||
-        lower.contains('weak');
+        lower.contains('weak') ||
+        lower.contains('progreso') ||
+        lower.contains('cómo voy') ||
+        lower.contains('estadísticas') ||
+        lower.contains('rendimiento') ||
+        lower.contains('mejorar') ||
+        lower.contains('débil');
   }
 
   bool _isInactivityCheck(String lower) {
     return lower.contains('inactive') ||
         lower.contains('reminder') ||
         lower.contains('nudge') ||
-        lower.contains('haven\'t studied');
+        lower.contains('haven\'t studied') ||
+        lower.contains('inactivo') ||
+        lower.contains('recordatorio') ||
+        lower.contains('no he estudiado') ||
+        lower.contains('cuánto tiempo');
   }
 
   Stream<String> _handleScheduleRequest(String message) async* {
@@ -138,31 +171,37 @@ class MentorService {
       final recentSessions = schedule['recentSessions'] as List;
 
       if (upcomingLessons.isEmpty && recentSessions.isEmpty) {
-        yield 'You don\'t have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.';
+        yield _l10n.mentorNoLessonsScheduled;
         return;
       }
 
       if (upcomingLessons.isNotEmpty) {
-        yield 'Here are your upcoming lessons:\n';
+        yield _l10n.mentorUpcomingLessonsHeader;
         for (final lesson in upcomingLessons.take(5)) {
           final date = DateTime.tryParse(lesson['plannedDate'] as String? ?? '');
           final dateStr = date != null
               ? '${date.month}/${date.day}'
               : 'unknown date';
-          yield '• ${lesson['topic']} on $dateStr (${lesson['duration']} min)\n';
+          yield _l10n.mentorLessonEntry(
+            lesson['topic'] as String,
+            dateStr,
+            lesson['duration'] as int,
+          );
         }
-        yield '\nWould you like to reschedule any of these?';
+        yield _l10n.mentorReschedulePrompt;
         return;
       }
 
       if (recentSessions.isNotEmpty) {
-        yield 'Your most recent study session was on ${recentSessions.first['date']}. Would you like to schedule a new lesson?';
+        yield _l10n.mentorRecentSessionOnDate(
+          recentSessions.first['date'] as String,
+        );
       } else {
-        yield 'It looks like you haven\'t started yet. Would you like me to help you schedule your first lesson?';
+        yield _l10n.mentorNotStarted;
       }
     } catch (e) {
       _logger.e('Schedule handling error', e);
-      yield 'I had trouble looking up your schedule. Please try again later.';
+      yield _l10n.mentorScheduleError;
     }
   }
 
@@ -174,7 +213,7 @@ class MentorService {
       yield report;
     } catch (e) {
       _logger.e('Progress handling error', e);
-      yield 'I had trouble generating your progress report. Please try again later.';
+      yield _l10n.mentorProgressError;
     }
   }
 
@@ -184,7 +223,7 @@ class MentorService {
           .getStudentSessions(_studentId);
 
       if (sessions.isEmpty) {
-        yield 'You haven\'t started studying yet! Would you like me to help you create a study plan to get started?';
+        yield _l10n.mentorNotStartedStudying;
         return;
       }
 
@@ -198,16 +237,19 @@ class MentorService {
       if (lastSession != null) {
         final daysSince = DateTime.now().difference(lastSession).inDays;
         if (daysSince >= 3) {
-          yield 'I noticed you haven\'t studied in $daysSince days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!';
+          yield _l10n.mentorInactiveDays(daysSince);
         } else {
-          yield 'Great job staying active! Your last study session was ${daysSince == 0 ? 'today' : '$daysSince days ago'}. Keep up the good work!';
+          final daysAgo = daysSince == 0
+              ? _l10n.mentorToday
+              : _l10n.mentorDaysAgo(daysSince);
+          yield _l10n.mentorGreatJobStayingActive(daysAgo);
         }
       } else {
-        yield 'Welcome! Let\'s get started with your studies. Would you like to schedule a lesson?';
+        yield _l10n.mentorWelcomeStart;
       }
     } catch (e) {
       _logger.e('Inactivity check error', e);
-      yield 'I had trouble checking your activity. How can I help you today?';
+      yield _l10n.mentorActivityCheckError;
     }
   }
 
@@ -218,11 +260,11 @@ class MentorService {
     final type = action['type'] as String;
 
     if (type == 'reschedule') {
-      yield 'I\'ve noted the change. Your lesson "${action['topic']}" has been rescheduled. Is there anything else I can help with?';
+      yield _l10n.mentorRescheduledConfirmation(action['topic'] as String);
     } else if (type == 'schedule') {
-      yield 'Great! I\'ve added a new study session to your schedule. You can check your planner for details.';
+      yield _l10n.mentorNewSessionAdded;
     } else {
-      yield 'Done! The changes have been made to your schedule.';
+      yield _l10n.mentorChangesDone;
     }
 
     _pendingConfirmation = false;
@@ -257,6 +299,7 @@ Guidelines:
 - Celebrate milestones and progress
 - Ask one question at a time
 - Use warm, friendly language
+- Respond in the same language the student uses
 ''';
   }
 
@@ -277,6 +320,25 @@ Guidelines:
           ? DateTime.now().difference(recentSession.startTime).inDays
           : -1;
 
+      // Plan adherence data
+      String adherenceInfo = 'No plan adherence data available.';
+      try {
+        final dashboard = await _instrumentation.getInstrumentationDashboard(_studentId);
+        if (dashboard.isSuccess) {
+          final data = dashboard.data!;
+          final adherence = data['planAdherence'] as Map<String, dynamic>?;
+          if (adherence != null) {
+            final avg = (adherence['averageAdherence'] as double? ?? 0.0);
+            final weekly = (adherence['weeklyAdherenceAvg'] as double? ?? 0.0);
+            final lowAdherenceDays = adherence['consecutiveLowDays'] as int? ?? 0;
+            adherenceInfo = 'Plan adherence: ${(avg * 100).round()}% overall, ${(weekly * 100).round()}% this week.';
+            if (lowAdherenceDays >= 3) {
+              adherenceInfo += ' WARNING: Student has had $lowAdherenceDays consecutive days of low adherence — suggest plan adjustment.';
+            }
+          }
+        }
+      } catch (_) {}
+
       return '''
 Current context for the student:
 - Subjects: ${subjects.map((s) => s.name).join(', ')}
@@ -287,6 +349,7 @@ Current context for the student:
 - Completed lessons: $completedSessions
 - Days since last study session: $daysSinceLastStudy
 - ${daysSinceLastStudy >= 3 ? 'Note: Student has been inactive for 3+ days - consider suggesting a gentle return to study' : ''}
+- $adherenceInfo
 - ${badges.isNotEmpty ? 'Recent badges: ${badges.take(3).map((b) => b['name']).join(', ')}' : 'No badges yet'}
 
 Recent recommendations: ${recommendations.map((r) => r['message']).join('; ')}
@@ -309,40 +372,52 @@ Use this context to provide personalized mentoring.
           .getStudentSessions(_studentId);
 
       final buffer = StringBuffer();
-      buffer.writeln('📊 **Your Study Progress Report**\n');
+      buffer.writeln(_l10n.mentorProgressReportTitle);
+      buffer.writeln(_l10n.mentorOverallAccuracy(
+        '${stats['accuracy']}',
+        '${stats['correctAttempts']}',
+        '${stats['totalAttempts']}',
+      ));
       buffer.writeln(
-          '**Overall Accuracy:** ${stats['accuracy']}% (${stats['correctAttempts']}/${stats['totalAttempts']} correct)');
-      buffer.writeln('**Total Study Time:** ${stats['totalStudyTimeHours']} hours');
-      buffer.writeln('**Weekly Activity:** ${stats['weeklyActivity']} attempts');
+          _l10n.mentorTotalStudyTime('${stats['totalStudyTimeHours']}'));
       buffer.writeln(
-          '**Completed Lessons:** ${sessions.where((s) => s.status.toString().contains('completed')).length}');
-      buffer.writeln('**Topics Studied:** ${stats['topicsStudied']}');
+          _l10n.mentorWeeklyActivity('${stats['weeklyActivity']}'));
+      buffer.writeln(_l10n.mentorCompletedLessons(
+          '${sessions.where((s) => s.status.toString().contains('completed')).length}'));
+      buffer.writeln(
+          _l10n.mentorTopicsStudied('${stats['topicsStudied']}'));
 
       if (weakTopics.isSuccess && weakTopics.data!.isNotEmpty) {
-        buffer.writeln('\n**Areas needing attention:**');
+        buffer.writeln(_l10n.mentorAreasNeedingAttention);
         for (final topic in weakTopics.data!.take(3)) {
-          buffer.writeln(
-              '• ${topic.topicId} (accuracy: ${(topic.accuracy * 100).round()}%)');
+          buffer.writeln(_l10n.mentorTopicAccuracyEntry(
+            topic.topicId,
+            (topic.accuracy * 100).round(),
+          ));
         }
       }
 
       if (badges.isNotEmpty) {
-        buffer.writeln('\n**Badges earned:**');
+        buffer.writeln(_l10n.mentorBadgesEarned);
         for (final badge in badges) {
-          buffer.writeln('• ${badge['name']}: ${badge['description']}');
+          buffer.writeln(_l10n.mentorBadgeEntry(
+            badge['name'] as String,
+            badge['description'] as String,
+          ));
         }
       }
 
       if (recommendations.isNotEmpty) {
-        buffer.writeln('\n**Recommendations:**');
+        buffer.writeln(_l10n.mentorRecommendations);
         for (final rec in recommendations.take(3)) {
-          buffer.writeln('• ${rec['message']}');
+          buffer.writeln(
+              _l10n.mentorRecommendationEntry(rec['message'] as String));
         }
       }
 
       return buffer.toString();
     } catch (e) {
-      return 'Unable to generate progress report. Please try again later.';
+      return _l10n.mentorProgressReportError;
     }
   }
 
@@ -411,10 +486,10 @@ Use this context to provide personalized mentoring.
     }
 
     if (subjects.isEmpty) {
-      return "You haven't added any subjects yet. Would you like help setting up your first subject?";
+      return _l10n.mentorNoSubjects;
     }
 
-    return "You're doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?";
+    return _l10n.mentorDoingWell;
   }
 
   Future<void> suggestReschedule(String sessionId) async {

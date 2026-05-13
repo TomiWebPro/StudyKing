@@ -15,12 +15,13 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
-    final state = MasteryState.initial(studentId: studentId, topicId: topicId);
-    state.accuracy = 0.8;
-    state.currentStreak = 5;
-    state.masteryLevel = MasteryLevel.proficient;
-    state.readinessScore = 0.8;
-    state.reviewUrgency = 0.3;
+    final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
+      accuracy: 0.8,
+      currentStreak: 5,
+      masteryLevel: MasteryLevel.proficient,
+      readinessScore: 0.8,
+      reviewUrgency: 0.3,
+    );
     return Result.success(state);
   }
 
@@ -54,9 +55,8 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
     final states = [
-      MasteryState.initial(studentId: studentId, topicId: 'topic1'),
+      MasteryState.initial(studentId: studentId, topicId: 'topic1').copyWith(accuracy: 0.4),
     ];
-    states[0].accuracy = 0.4;
     return Result.success(states);
   }
 

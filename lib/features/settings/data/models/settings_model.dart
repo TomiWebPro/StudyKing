@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/constants/token_pricing_config.dart';
 import '../../../../core/data/models/llm_models.dart';
 
 @immutable
@@ -103,12 +104,10 @@ class UsageRecord {
     );
   }
 
+  static TokenPricingConfig pricingConfig = TokenPricingConfig();
+
   static double calculateTotalCost(int inputTokens, int outputTokens, int cachedTokensCost) {
-    final cachedInputCost = (cachedTokensCost * 0.000005) / 1000000;
-    final inputCost = (inputTokens * 0.000006) / 1000000;
-    final outputCost = (outputTokens * 0.0000024) / 1000000;
-    final total = cachedInputCost + inputCost + outputCost;
-    return total;
+    return pricingConfig.calculateTotalCost(inputTokens, outputTokens, cachedTokensCost);
   }
 
   String get priceDisplay => '\$${totalCost.toStringAsFixed(4)}';
