@@ -1,10 +1,13 @@
 // PDF Ingestion Service
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../constants/app_api_config.dart';
+import '../constants/app_build_config.dart';
+import '../utils/logger.dart';
 
 class PdfIngestionService {
   final String apiKey;
+  final Logger _logger = const Logger('PdfIngestionService');
 
   PdfIngestionService({required this.apiKey});
 
@@ -29,7 +32,7 @@ JSON response.
       final response = await _callLlm(prompt, modelId);
       return _parseContent(response);
     } catch (e) {
-      debugPrint('PDF Parsing Error: $e');
+      _logger.e('PDF Parsing Error', e);
       return _getMockPdfContent(pdfContent, syllabus);
     }
   }
@@ -89,10 +92,12 @@ JSON array.
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
+      'HTTP-Referer': BuildConfig.appName,
     };
 
+    final baseUrl = ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
     final response = await http.post(
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+      Uri.parse('$baseUrl/chat/completions'),
       headers: headers,
       body: jsonEncode({
         'model': model,

@@ -1,16 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
+import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart'
-    show apiBaseUrlProvider, apiKeyProvider, selectedModelProvider, settingsProvider;
-
-const String _defaultReferer = 'https://studyking.app';
+    show apiKeyProvider, selectedModelProvider, settingsProvider;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -228,24 +225,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     try {
-      final response = await http
-          .get(
-            Uri.parse('${ref.read(apiBaseUrlProvider)}/models'),
-            headers: {
-              'Authorization': 'Bearer $apiKey',
-              'HTTP-Referer': _defaultReferer,
-            },
-          )
-          .timeout(const Duration(seconds: 15));
+      final modelService = ModelListingService(apiKey: apiKey);
+      final models = await modelService.fetchAvailableModels();
       if (!mounted) return;
       if (Navigator.canPop(context)) Navigator.pop(context);
 
-      if (response.statusCode != 200) {
-        _showError(l10n.unableToLoadModels);
-        return;
-      }
-
-      final models = _parseModels(response.body, l10n);
       final filtered = models.take(100).toList();
       showModalBottomSheet(
         context: context,
@@ -290,28 +274,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (Navigator.canPop(context)) Navigator.pop(context);
       _showError(l10n.unableToLoadModelsTryAgain);
     }
-  }
-
-  List<_AiModel> _parseModels(String responseBody, AppLocalizations l10n) {
-    final decoded = json.decode(responseBody);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
-    if (data is! List) return [];
-    return data.whereType<Map>().map((raw) {
-      final map = raw.cast<dynamic, dynamic>();
-      final id = map['id'] is String ? map['id'] as String : l10n.unknownModelId;
-      final name = map['name'] is String
-          ? map['name'] as String
-          : id.split('/').last.replaceAll('-', ' ');
-      String provider = l10n.unknownProviderName;
-      final providers = map['providers'];
-      if (providers is Map && providers.isNotEmpty) {
-        final first = providers.values.first;
-        if (first is Map && first['id'] is String) {
-          provider = first['id'] as String;
-        }
-      }
-      return _AiModel(id: id, name: name, provider: provider);
-    }).toList();
   }
 
   void _showTimeoutDialog(int currentTimeout) {
@@ -411,14 +373,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
-}
-
-class _AiModel {
-  final String id;
-  final String name;
-  final String provider;
-
-  const _AiModel({required this.id, required this.name, required this.provider});
 }
 
 void _showAboutDialog(BuildContext context) {

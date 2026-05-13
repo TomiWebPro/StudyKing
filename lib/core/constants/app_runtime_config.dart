@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../utils/logger.dart';
 
 import 'app_api_config.dart';
 import 'app_build_config.dart';
@@ -168,6 +169,8 @@ class MediaConfig {
 }
 
 class AppConfig {
+  static final Logger _logger = const Logger('AppConfig');
+
   AppConfig({
     required this.environment,
     required this.apiConfig,
@@ -233,7 +236,7 @@ class AppConfig {
 
   void debugLogSnapshot() {
     assert(() {
-      debugPrint('AppConfig snapshot: ${redactedRuntimeSnapshot()}');
+      _logger.i('AppConfig snapshot: ${redactedRuntimeSnapshot()}');
       return true;
     }());
   }

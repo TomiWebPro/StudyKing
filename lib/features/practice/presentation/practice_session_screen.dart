@@ -17,6 +17,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,7 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
+  final Logger _logger = const Logger('PracticeSessionScreen');
   late QuestionRepository _questionRepo;
   late SpacedRepetitionRepository _srRepo;
   late StudySessionRepository _sessionRepo;
@@ -210,7 +212,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       final masteryLevel = isCorrect ? 0.8 : 0.2;
       await _srRepo.updateNextReviewDate(questionId, masteryLevel);
     } catch (e) {
-      debugPrint('Error updating next review date: $e');
+      _logger.e('Error updating next review date', e);
     }
   }
 
@@ -258,7 +260,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           subjectId: widget.subjectId,
         ));
       } catch (e) {
-        debugPrint('Failed to auto-save session: $e');
+        _logger.e('Failed to auto-save session', e);
       }
     }
 

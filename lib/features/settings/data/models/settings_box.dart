@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/constants/app_api_config.dart';
 
 part 'settings_box.g.dart';
 
@@ -40,7 +41,7 @@ class SettingsBox {
 
   SettingsBox({
     this.apiKey = '',
-    this.apiBaseUrl = 'https://openrouter.ai/api/v1',
+    this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
     this.selectedModel = '',
     this.themeMode = 0,
     this.fontSize = 16.0,
@@ -82,7 +83,7 @@ class SettingsBox {
       apiKey: json['apiKey'] is String ? json['apiKey'] as String : '',
       apiBaseUrl: json['apiBaseUrl'] is String
           ? json['apiBaseUrl'] as String
-          : 'https://openrouter.ai/api/v1',
+          : ApiConfig.openRouterBaseUrlString,
       selectedModel:
           json['selectedModel'] is String ? json['selectedModel'] as String : '',
       themeMode: (json['themeMode'] as num?)?.toInt() ?? 0,

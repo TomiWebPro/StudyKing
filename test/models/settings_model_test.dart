@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/llm_models.dart';
-import 'package:studyking/models/settings_model.dart';
+import 'package:studyking/features/settings/data/models/settings_model.dart';
 
 void main() {
   group('SettingsAPIKey', () {

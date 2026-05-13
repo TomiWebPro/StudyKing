@@ -53,12 +53,14 @@ class ApiConfig {
     required this.youtubeRequestTimeout,
   });
 
+  static const String openRouterBaseUrlString = 'https://openrouter.ai/api/v1';
+
   final Uri openRouterBaseUrl;
   final Duration openRouterRequestTimeout;
   final Uri youtubeBaseUrl;
   final Duration youtubeRequestTimeout;
 
-  static final Uri _openRouterBaseUrl = Uri.parse('https://openrouter.ai/api/v1');
+  static final Uri _openRouterBaseUrl = Uri.parse(openRouterBaseUrlString);
   static final Uri _youtubeBaseUrl = Uri.parse('https://www.googleapis.com/youtube/v3');
 
   factory ApiConfig.forEnvironment(AppEnvironment environment) {

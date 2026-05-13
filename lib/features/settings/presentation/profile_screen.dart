@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../main.dart' show settingsRepository;
 import '../data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -13,6 +14,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final Logger _logger = const Logger('ProfileScreen');
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _learningGoalController = TextEditingController();
@@ -53,7 +55,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading profile: $e');
+      _logger.e('Error loading profile', e);
       if (mounted) {
         setState(() {
           _avatarIconKey = 'Icons.person';

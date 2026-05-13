@@ -1,50 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/logger.dart';
 
-/// AI Model Service - Dynamically fetches models from OpenRouter API
-class AiModelService {
-  static const String _openRouterBaseUrl = 'https://openrouter.ai/api/v1';
-  
-  final String _apiKey;
-  
-  AiModelService({required String apiKey}) : _apiKey = apiKey;
-
-  /// Fetch available models from OpenRouter API
-  Future<List<AiModel>> fetchAvailableModels() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_openRouterBaseUrl/models'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'HTTP-Referer': 'https://studyking.app',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final models = data['data'] as List;
-        return models.map((model) => AiModel.fromOpenRouter(model)).toList();
-      } else {
-        debugPrint('Failed to fetch models: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      debugPrint('Error fetching models: $e');
-      return [];
-    }
-  }
-
-  /// Get model by ID from fetched list
-  AiModel? getModelById(String id, List<AiModel> models) {
-    return models.firstWhere(
-      (model) => model.id == id,
-      orElse: () => AiModel.fromId(id),
-    );
-  }
-}
-
-/// Represents an AI model - fetched dynamically from API
 class AiModel {
   final String id;
   final String name;
@@ -93,11 +51,56 @@ class AiModel {
   @override
   String toString() => 'AiModel(id: $id, name: $name, provider: $provider)';
 
-  /// Create model from ID
   factory AiModel.fromId(String id) {
     String name = id.split('/').last.replaceAll(':', '').replaceAll('-', ' ');
     String provider = 'Unknown';
 
     return AiModel(id: id, name: name, provider: provider);
+  }
+}
+
+class ModelListingService {
+  final String _apiKey;
+  final http.Client _httpClient;
+  final Logger _logger = const Logger('ModelListingService');
+
+  ModelListingService({
+    required String apiKey,
+    http.Client? httpClient,
+  })  : _apiKey = apiKey,
+        _httpClient = httpClient ?? http.Client();
+
+  Uri get _openRouterBaseUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
+
+  Future<List<AiModel>> fetchAvailableModels() async {
+    try {
+      final url = _openRouterBaseUrl;
+      final response = await _httpClient.get(
+        Uri.parse('$url/models'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'HTTP-Referer': BuildConfig.appName,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final models = data['data'] as List;
+        return models.map((model) => AiModel.fromOpenRouter(model)).toList();
+      } else {
+        _logger.w('Failed to fetch models: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      _logger.e('Error fetching models', e);
+      return [];
+    }
+  }
+
+  AiModel? getModelById(String id, List<AiModel> models) {
+    return models.firstWhere(
+      (model) => model.id == id,
+      orElse: () => AiModel.fromId(id),
+    );
   }
 }

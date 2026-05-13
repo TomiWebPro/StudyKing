@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../errors/exceptions.dart';
+import '../utils/logger.dart';
 
 /// Centralized error handling utility
 /// 
@@ -9,6 +10,8 @@ import '../errors/exceptions.dart';
 /// - Analytics logging
 /// - Proper error UI feedback
 class AppErrorHandler {
+  static final Logger _logger = const Logger('AppErrorHandler');
+
   /// Handles an error and displays appropriate feedback
   static Future<void> handleError(
     BuildContext context,
@@ -212,7 +215,7 @@ class AppErrorHandler {
   static void _logError(Object error, String context) {
     // Log to console in debug mode
     if (const bool.hasEnvironment('flutter.debug')) {
-      debugPrint('[$context] Error: $error');
+      _logger.e('[$context] Error: $error');
     }
   }
   

@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../utils/logger.dart';
 
 /// Migration for StudyKing Hive database
 /// Handles schema updates and ensures robust data persistence
 class DatabaseMigration {
+  static final Logger _logger = const Logger('DatabaseMigration');
   static const String versionBoxName = 'db_version';
   static const int currentVersionNum = 1;
 
@@ -25,13 +26,13 @@ class DatabaseMigration {
       await box.put('version', 1);
     }
 
-    debugPrint('Database migration complete. Current version: $existingVersion');
+    _logger.i('Database migration complete. Current version: $existingVersion');
   }
 
   /// Migration 1: Add subjectId to existing questions and lesson blocks
   /// This migration ensures all questions and lesson blocks have subjectId
   static Future<void> _migrateToV1() async {
-    debugPrint('Running migration v1: Adding subjectId to questions and lessons');
+    _logger.i('Running migration v1: Adding subjectId to questions and lessons');
 
     try {
       // Migrate questions that might be missing subjectId
@@ -42,12 +43,12 @@ class DatabaseMigration {
       final lessonBox = Hive.box<Map<String, dynamic>>('lessons');
       await _migrateLessonSubjectId(lessonBox);
 
-      debugPrint('Migration v1 completed successfully');
+      _logger.i('Migration v1 completed successfully');
     } on Exception catch (e) {
-      debugPrint('Migration error: ${e.toString()}');
+      _logger.e('Migration error', e);
       rethrow;
     } catch (e) {
-      debugPrint('Unexpected migration error: $e');
+      _logger.e('Unexpected migration error', e);
       rethrow;
     }
   }

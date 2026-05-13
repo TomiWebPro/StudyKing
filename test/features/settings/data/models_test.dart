@@ -89,7 +89,7 @@ void main() {
       expect(hidden.toString(), contains('ThemeMode.light'));
       expect(hidden.toString(), contains('16px'));
 
-      expect(shown.toString(), contains('abcdefgh'));
+      expect(shown.toString(), contains('(hidden)'));
       expect(shown.toString(), contains('ThemeMode.dark'));
       expect(shown.toString(), contains('21px'));
     });

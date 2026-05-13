@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../utils/logger.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
@@ -51,6 +51,7 @@ class SpacedRepetitionQueries {
 
 /// Spaced repetition repository for studyKing
 class SpacedRepetitionRepository {
+  final Logger _logger = const Logger('SpacedRepetitionRepository');
   late Box<Question> _questionBox;
   late Box<StudentAttempt> _attemptBox;
 
@@ -60,7 +61,7 @@ class SpacedRepetitionRepository {
       _attemptBox = await Hive.openBox<StudentAttempt>('attempts');
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error initializing spaced repetition repository: $e');
+      _logger.e('Error initializing spaced repetition repository', e);
       return Result.failure('Failed to initialize spaced repetition repository: ${e.toString()}');
     }
   }
@@ -74,7 +75,7 @@ class SpacedRepetitionRepository {
       final dueQuestions = SpacedRepetitionQueries.getQuestionsDueForReview(_questionBox, asOf: asOf);
       return Result.success(dueQuestions);
     } catch (e) {
-      debugPrint('Error getting due questions: $e');
+      _logger.e('Error getting due questions', e);
       return Result.failure('Failed to get due questions: ${e.toString()}');
     }
   }
@@ -106,7 +107,7 @@ class SpacedRepetitionRepository {
 
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error updating next review date: $e');
+      _logger.e('Error updating next review date', e);
       return Result.failure('Failed to update next review date: ${e.toString()}');
     }
   }
@@ -124,7 +125,7 @@ class SpacedRepetitionRepository {
 
       return Result.success(timestamps);
     } catch (e) {
-      debugPrint('Error getting question due times: $e');
+      _logger.e('Error getting question due times', e);
       return Result.failure('Failed to get question due times: ${e.toString()}');
     }
   }
@@ -141,7 +142,7 @@ class SpacedRepetitionRepository {
       
       return Result.success(practiceQuestions.toList());
     } catch (e) {
-      debugPrint('Error getting practice questions: $e');
+      _logger.e('Error getting practice questions', e);
       return Result.failure('Failed to get practice questions: ${e.toString()}');
     }
   }
@@ -158,7 +159,7 @@ class SpacedRepetitionRepository {
 
       return Result.success(topicQuestions.toList());
     } catch (e) {
-      debugPrint('Error getting topic time due questions: $e');
+      _logger.e('Error getting topic time due questions', e);
       return Result.failure('Failed to get topic time due questions: ${e.toString()}');
     }
   }
@@ -169,7 +170,7 @@ class SpacedRepetitionRepository {
       await _questionBox.delete(questionId);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error removing question: $e');
+      _logger.e('Error removing question', e);
       return Result.failure('Failed to remove question: ${e.toString()}');
     }
   }
@@ -186,7 +187,7 @@ class SpacedRepetitionRepository {
 
       return Result.success(dueCount);
     } catch (e) {
-      debugPrint('Error getting subject due count: $e');
+      _logger.e('Error getting subject due count', e);
       return Result.failure('Failed to get subject due count: ${e.toString()}');
     }
   }

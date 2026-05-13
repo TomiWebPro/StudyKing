@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter/foundation.dart';
+import '../../utils/logger.dart';
 import '../models/mastery_state_model.dart';
 import '../models/question_mastery_state_model.dart';
 import '../models/topic_dependency_model.dart';
@@ -17,6 +17,7 @@ class Result<T> {
 }
 
 class MasteryGraphRepository {
+  final Logger _logger = const Logger('MasteryGraphRepository');
   late Box<MasteryState> _masteryBox;
   late Box<QuestionMasteryState> _questionMasteryBox;
   late Box<TopicDependency> _dependencyBox;
@@ -42,7 +43,7 @@ class MasteryGraphRepository {
       _evaluationBox = await Hive.openBox<QuestionEvaluation>('question_evaluations');
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error initializing MasteryGraphRepository: $e');
+      _logger.e('Error initializing MasteryGraphRepository', e);
       return Result.failure('Failed to initialize: ${e.toString()}');
     }
   }
@@ -58,7 +59,7 @@ class MasteryGraphRepository {
       await _masteryBox.put(key, newState);
       return Result.success(newState);
     } catch (e) {
-      debugPrint('Error getting mastery state: $e');
+      _logger.e('Error getting mastery state', e);
       return Result.failure(e.toString());
     }
   }
@@ -69,7 +70,7 @@ class MasteryGraphRepository {
       await _masteryBox.put(key, state);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error updating mastery state: $e');
+      _logger.e('Error updating mastery state', e);
       return Result.failure(e.toString());
     }
   }
@@ -81,7 +82,7 @@ class MasteryGraphRepository {
           .toList();
       return Result.success(states);
     } catch (e) {
-      debugPrint('Error getting all mastery states: $e');
+      _logger.e('Error getting all mastery states', e);
       return Result.failure(e.toString());
     }
   }
@@ -100,7 +101,7 @@ class MasteryGraphRepository {
       await _questionMasteryBox.put(key, newState);
       return Result.success(newState);
     } catch (e) {
-      debugPrint('Error getting question mastery state: $e');
+      _logger.e('Error getting question mastery state', e);
       return Result.failure(e.toString());
     }
   }
@@ -111,7 +112,7 @@ class MasteryGraphRepository {
       await _questionMasteryBox.put(key, state);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error updating question mastery state: $e');
+      _logger.e('Error updating question mastery state', e);
       return Result.failure(e.toString());
     }
   }
@@ -128,7 +129,7 @@ class MasteryGraphRepository {
       states.sort((a, b) => (a.nextReview ?? DateTime.now()).compareTo(b.nextReview ?? DateTime.now()));
       return Result.success(states);
     } catch (e) {
-      debugPrint('Error getting due questions: $e');
+      _logger.e('Error getting due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -144,7 +145,7 @@ class MasteryGraphRepository {
       states.sort((a, b) => a.masteryLevel.compareTo(b.masteryLevel));
       return Result.success(states);
     } catch (e) {
-      debugPrint('Error getting at-risk questions: $e');
+      _logger.e('Error getting at-risk questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -159,7 +160,7 @@ class MasteryGraphRepository {
       await _dependencyBox.put(topicId, newDep);
       return Result.success(newDep);
     } catch (e) {
-      debugPrint('Error getting topic dependency: $e');
+      _logger.e('Error getting topic dependency', e);
       return Result.failure(e.toString());
     }
   }
@@ -169,7 +170,7 @@ class MasteryGraphRepository {
       await _dependencyBox.put(dependency.topicId, dependency);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error updating topic dependency: $e');
+      _logger.e('Error updating topic dependency', e);
       return Result.failure(e.toString());
     }
   }
@@ -178,7 +179,7 @@ class MasteryGraphRepository {
     try {
       return Result.success(_dependencyBox.values.toList());
     } catch (e) {
-      debugPrint('Error getting all dependencies: $e');
+      _logger.e('Error getting all dependencies', e);
       return Result.failure(e.toString());
     }
   }
@@ -191,7 +192,7 @@ class MasteryGraphRepository {
       }
       return Result.failure('No evaluation found for question: $questionId');
     } catch (e) {
-      debugPrint('Error getting evaluation: $e');
+      _logger.e('Error getting evaluation', e);
       return Result.failure(e.toString());
     }
   }
@@ -201,7 +202,7 @@ class MasteryGraphRepository {
       await _evaluationBox.put(evaluation.questionId, evaluation);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error saving evaluation: $e');
+      _logger.e('Error saving evaluation', e);
       return Result.failure(e.toString());
     }
   }
@@ -227,7 +228,7 @@ class MasteryGraphRepository {
       await _evaluationBox.put(questionId, evaluation);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error migrating legacy evaluation: $e');
+      _logger.e('Error migrating legacy evaluation', e);
       return Result.failure(e.toString());
     }
   }
@@ -240,7 +241,7 @@ class MasteryGraphRepository {
       states.sort((a, b) => b.reviewUrgency.compareTo(a.reviewUrgency));
       return Result.success(states);
     } catch (e) {
-      debugPrint('Error getting topics needing review: $e');
+      _logger.e('Error getting topics needing review', e);
       return Result.failure(e.toString());
     }
   }
@@ -253,7 +254,7 @@ class MasteryGraphRepository {
       states.sort((a, b) => a.accuracy.compareTo(b.accuracy));
       return Result.success(states);
     } catch (e) {
-      debugPrint('Error getting weak topics: $e');
+      _logger.e('Error getting weak topics', e);
       return Result.failure(e.toString());
     }
   }
@@ -286,7 +287,7 @@ class MasteryGraphRepository {
             : topicStates.map((s) => s.reviewUrgency).reduce((a, b) => a + b) / topicStates.length,
       });
     } catch (e) {
-      debugPrint('Error getting mastery snapshot: $e');
+      _logger.e('Error getting mastery snapshot', e);
       return Result.failure(e.toString());
     }
   }

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import '../utils/logger.dart';
 import '../../core/data/models/question_model.dart';
 import '../data/models/markscheme_model.dart';
 import '../../core/data/repositories/question_repository.dart';
@@ -8,6 +8,7 @@ import '../../core/data/enums.dart';
 import '../services/llm_service.dart';
 
 class QuestionGenerationService {
+  final Logger _logger = const Logger('QuestionGenerationService');
   final QuestionRepository _questionRepo;
   final MasteryGraphService _masteryService;
   final LlmService _llmService;
@@ -56,7 +57,7 @@ class QuestionGenerationService {
       }
       return GenerationResult.success(questions);
     } catch (e) {
-      debugPrint('Error generating questions: $e');
+      _logger.e('Error generating questions', e);
       return GenerationResult.failure('Failed to generate questions: $e');
     }
   }
@@ -84,7 +85,7 @@ class QuestionGenerationService {
         return GenerationResult.success(question);
       } catch (e) {
         lastError = e.toString();
-        debugPrint('Attempt ${attempt + 1} failed: $e');
+        _logger.w('Attempt ${attempt + 1} failed: $e');
 
         if (attempt < maxRetries - 1) {
           await Future.delayed(retryDelay * (attempt + 1));
@@ -272,7 +273,7 @@ Return ONLY the JSON object, no markdown formatting.''';
         updatedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('Error parsing question response: $e');
+      _logger.e('Error parsing question response', e);
       throw GenerationException('Failed to parse question: $e');
     }
   }

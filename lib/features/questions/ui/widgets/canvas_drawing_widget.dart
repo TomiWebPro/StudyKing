@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../../../core/utils/logger.dart';
 import 'package:flutter/rendering.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -23,6 +24,7 @@ class CanvasDrawingWidget extends StatefulWidget {
 }
 
 class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
+  final Logger _logger = const Logger('CanvasDrawingWidget');
   final GlobalKey _paintKey = GlobalKey();
   final List<Stroke> _strokes = <Stroke>[];
   bool _isDrawing = false;
@@ -267,9 +269,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
         _strokes.addAll(loadedStrokes);
       }
     } catch (_) {
-      if (kDebugMode) {
-        debugPrint('Invalid initial drawing payload');
-      }
+      _logger.d('Invalid initial drawing payload');
     }
   }
 }

@@ -9,6 +9,7 @@ import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 
 
 const String _defaultStudentId = 'anonymous';
@@ -23,6 +24,7 @@ class SessionTrackerScreen extends StatefulWidget {
 }
 
 class _SessionTrackerScreenState extends State<SessionTrackerScreen> with WidgetsBindingObserver {
+  final Logger _logger = const Logger('SessionTrackerScreen');
   late StudySessionRepository _sessionRepository;
   List<StudySession> _allSessions = [];
   List<StudySession> _sortedSessions = [];
@@ -73,7 +75,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
         _calculateStats();
       }
     } catch (e) {
-      debugPrint('Error loading sessions: $e');
+      _logger.e('Error loading sessions', e);
       if (mounted) {
         setState(() => _isLoading = false);
       }

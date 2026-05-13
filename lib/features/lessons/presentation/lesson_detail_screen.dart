@@ -4,6 +4,7 @@ import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/enums.dart';
 import '../../../../main.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String lessonId;
@@ -22,6 +23,7 @@ class LessonDetailScreen extends StatefulWidget {
 }
 
 class _LessonDetailScreenState extends State<LessonDetailScreen> {
+  final Logger _logger = const Logger('LessonDetailScreen');
   Lesson? _lesson;
   final Duration _elapsed = Duration.zero;
   Timer? _timer;
@@ -37,7 +39,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       final lesson = await database.lessonRepository.get(widget.lessonId);
       if (mounted && lesson != null) setState(() => _lesson = lesson);
     } catch (e) {
-      debugPrint('Error loading lesson: $e');
+      _logger.e('Error loading lesson', e);
     }
   }
 

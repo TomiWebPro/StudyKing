@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../data/repositories/mastery_graph_repository.dart';
+import '../utils/logger.dart';
 import '../data/models/mastery_state_model.dart';
 
 class PlanAdherenceMetric {
@@ -203,6 +203,7 @@ class MasteryImprovementTracker {
 }
 
 class InstrumentationService {
+  final Logger _logger = const Logger('InstrumentationService');
   final MasteryGraphRepository _repository;
   final PlanAdherenceTracker _adherenceTracker;
   final MasteryImprovementTracker _improvementTracker;
@@ -305,7 +306,7 @@ class InstrumentationService {
         'improvementMetrics': improvements.map((m) => m.toJson()).toList(),
       };
 
-      debugPrint('Instrumentation data exported: ${data.keys.length} categories');
+      _logger.i('Instrumentation data exported: ${data.keys.length} categories');
       return Result.success(null);
     } catch (e) {
       return Result.failure(e.toString());

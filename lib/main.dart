@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'core/utils/logger.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'features/settings/data/models/settings_box.dart';
@@ -46,7 +47,7 @@ final fontSizeProvider = StateProvider<double>((ref) => 16.0);
 final apiKeyProvider = StateProvider<String>((ref) => '');
 
 // API base URL provider
-final apiBaseUrlProvider = StateProvider<String>((ref) => 'https://openrouter.ai/api/v1');
+final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBaseUrlString);
 
 // Selected model provider
 final selectedModelProvider = StateProvider<String>((ref) => '');
@@ -55,6 +56,7 @@ final selectedModelProvider = StateProvider<String>((ref) => '');
 final localeProvider = StateProvider<Locale>((ref) => const Locale('en'));
 
 class SettingsController extends StateNotifier<SettingsBox> {
+  final Logger _logger = const Logger('SettingsController');
   final SettingsRepository _repository;
   bool _hasLoadedOnce = false;
   
@@ -70,7 +72,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       final settings = await _repository.getSettings();
       state = settings;
     } catch (e) {
-      debugPrint('Error loading settings: $e');
+      _logger.e('Error loading settings', e);
     }
   }
 
@@ -100,7 +102,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       );
       state = await _repository.getSettings();
     } catch (e) {
-      debugPrint('Error updating settings: $e');
+      _logger.e('Error updating settings', e);
     }
   }
 
@@ -109,7 +111,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       await _repository.saveApiKey(service: 'default', key: key);
       await _loadSettings();
     } catch (e) {
-      debugPrint('Error saving API key: $e');
+      _logger.e('Error saving API key', e);
     }
   }
 
@@ -118,7 +120,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       await _repository.updateSettings(themeMode: mode);
       state = await _repository.getSettings();
     } catch (e) {
-      debugPrint('Error updating theme: $e');
+      _logger.e('Error updating theme', e);
     }
   }
 
@@ -127,7 +129,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       await _repository.updateSettings(fontSize: size);
       state = await _repository.getSettings();
     } catch (e) {
-      debugPrint('Error updating font size: $e');
+      _logger.e('Error updating font size', e);
     }
   }
 
@@ -136,7 +138,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       await _repository.updateSettings(selectedModel: model);
       state = await _repository.getSettings();
     } catch (e) {
-      debugPrint('Error updating model: $e');
+      _logger.e('Error updating model', e);
     }
   }
 
@@ -165,10 +167,12 @@ class SettingsController extends StateNotifier<SettingsBox> {
       );
       state = await _repository.getSettings();
     } catch (e) {
-      debugPrint('Error updating stats: $e');
+      _logger.e('Error updating stats', e);
     }
   }
 }
+
+final Logger _mainLogger = const Logger('App');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -198,7 +202,7 @@ void main() async {
     try {
       await settingsRepository.getSettings();
     } catch (e) {
-      debugPrint('Error loading initial settings: $e');
+      _mainLogger.e('Error loading initial settings', e);
     }
     
     // Initialize other providers with saved values
@@ -206,8 +210,7 @@ void main() async {
     
     runApp(StudyKingApp());
   } catch (e, stackTrace) {
-    debugPrint('❌ Error during initialization: $e');
-    debugPrint('Stack trace: $stackTrace');
+    _mainLogger.e('Error during initialization', e, stackTrace);
   }
 }
 

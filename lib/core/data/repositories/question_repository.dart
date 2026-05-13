@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../utils/logger.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import '../models/markscheme_model.dart';
@@ -27,6 +27,7 @@ class FailureResult<T> extends Result<T> {
 }
 
 class QuestionRepository {
+  final Logger _logger = const Logger('QuestionRepository');
   late Box<Question> _box;
 
   Future<Result<void>> init() async {
@@ -34,7 +35,7 @@ class QuestionRepository {
       _box = await Hive.openBox<Question>('questions');
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error initializing question repository: $e');
+      _logger.e('Error initializing question repository', e);
       return Result.failure('Failed to initialize question repository: ${e.toString()}');
     }
   }
@@ -44,7 +45,7 @@ class QuestionRepository {
       await _box.put(question.id, question);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error creating question: $e');
+      _logger.e('Error creating question', e);
       return Result.failure('Failed to create question: ${e.toString()}');
     }
   }
@@ -54,7 +55,7 @@ class QuestionRepository {
       final question = _box.get(id);
       return Result.success(question);
     } catch (e) {
-      debugPrint('Error getting question: $e');
+      _logger.e('Error getting question', e);
       return Result.failure('Failed to get question: ${e.toString()}');
     }
   }
@@ -66,7 +67,7 @@ class QuestionRepository {
       }
       return Result.success(_box.values.toList());
     } catch (e) {
-      debugPrint('Error getting all questions: $e');
+      _logger.e('Error getting all questions', e);
       return Result.failure('Failed to get all questions: ${e.toString()}');
     }
   }
@@ -79,7 +80,7 @@ class QuestionRepository {
       final all = _box.values.toList();
       return SuccessResult<List<Question>>(all.where((q) => q.topicId == topicId).toList());
     } catch (e) {
-      debugPrint('Error getting questions by topic: $e');
+      _logger.e('Error getting questions by topic', e);
       return Result.failure('Failed to get questions by topic: ${e.toString()}');
     }
   }
@@ -92,7 +93,7 @@ class QuestionRepository {
       final all = _box.values.toList();
       return SuccessResult<List<Question>>(all.where((q) => q.subjectId == subjectId).toList());
     } catch (e) {
-      debugPrint('Error getting questions by subject: $e');
+      _logger.e('Error getting questions by subject', e);
       return Result.failure('Failed to get questions by subject: ${e.toString()}');
     }
   }
@@ -110,7 +111,7 @@ class QuestionRepository {
         q.subjectId == subjectId && q.topicId == topicId
       ).toList());
     } catch (e) {
-      debugPrint('Error getting questions by subject and topic: $e');
+      _logger.e('Error getting questions by subject and topic', e);
       return Result.failure('Failed to get questions: ${e.toString()}');
     }
   }
@@ -123,7 +124,7 @@ class QuestionRepository {
       final all = _box.values.toList();
       return SuccessResult<List<Question>>(all.where((q) => q.type == type).toList());
     } catch (e) {
-      debugPrint('Error getting questions by type: $e');
+      _logger.e('Error getting questions by type', e);
       return Result.failure('Failed to get questions by type: ${e.toString()}');
     }
   }
@@ -141,7 +142,7 @@ class QuestionRepository {
         q.subjectId == subjectId && q.type == type
       ).toList());
     } catch (e) {
-      debugPrint('Error getting questions by subject and type: $e');
+      _logger.e('Error getting questions by subject and type', e);
       return Result.failure('Failed to get questions: ${e.toString()}');
     }
   }
@@ -166,7 +167,7 @@ class QuestionRepository {
         )).toList()
       );
     } catch (e) {
-      debugPrint('Error getting questions with markscheme: $e');
+      _logger.e('Error getting questions with markscheme', e);
       return Result.failure('Failed to get questions with markscheme: ${e.toString()}');
     }
   }
@@ -181,7 +182,7 @@ class QuestionRepository {
       await _box.put(questionId, updated);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error updating markscheme: $e');
+      _logger.e('Error updating markscheme', e);
       return Result.failure('Failed to update markscheme: ${e.toString()}');
     }
   }
@@ -191,7 +192,7 @@ class QuestionRepository {
       await _box.delete(id);
       return Result.success(null);
     } catch (e) {
-      debugPrint('Error deleting question: $e');
+      _logger.e('Error deleting question', e);
       return Result.failure('Failed to delete question: ${e.toString()}');
     }
   }

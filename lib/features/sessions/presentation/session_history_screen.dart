@@ -4,6 +4,7 @@ import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   final StudySessionRepository? sessionRepository;
@@ -15,6 +16,7 @@ class SessionHistoryScreen extends StatefulWidget {
 }
 
 class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
+  final Logger _logger = const Logger('SessionHistoryScreen');
   late StudySessionRepository _sessionRepository;
   List<StudySession> _allSessions = [];
   List<StudySession> _filteredSessions = [];
@@ -42,7 +44,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
         _filterSessions();
       }
     } catch (e) {
-      debugPrint('Error loading sessions: $e');
+      _logger.e('Error loading sessions', e);
       if (mounted) {
         setState(() => _isLoading = false);
       }

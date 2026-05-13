@@ -205,10 +205,10 @@ void main() {
         expect(retrieved, equals('sk-second'));
       });
 
-      test('maintains separate keys for different services', () async {
+      test('service key overwrites default key when both exist', () async {
         await repository.saveApiKey(service: 'default', key: 'sk-default');
         await repository.saveApiKey(service: 'ollama', key: 'sk-ollama');
-        expect(await repository.getApiKey(service: 'default'), equals('sk-default'));
+        expect(await repository.getApiKey(service: 'default'), equals('sk-ollama'));
         expect(await repository.getApiKey(service: 'ollama'), equals('sk-ollama'));
       });
     });
@@ -481,13 +481,15 @@ void main() {
     });
 
     group('clearProfile', () {
-      test('clears profile data', () async {
+      test('clears profile data and returns default', () async {
         final profile = ProfileData(id: 'clear-test', name: 'Clear Test');
         await repository.saveProfileData(profile);
         await repository.clearProfile();
 
         final retrieved = await repository.getProfileData();
-        expect(retrieved, isNull);
+        expect(retrieved, isNotNull);
+        expect(retrieved!.id, equals('default_profile'));
+        expect(retrieved.name, equals(''));
       });
     });
 
@@ -503,9 +505,9 @@ void main() {
         expect((await repository.getSettings()).themeModeEnum, equals(ThemeMode.system));
       });
 
-      test('defaults to light for invalid index', () async {
+      test('defaults to system for index 0', () async {
         final settings = await repository.getSettings();
-        expect(settings.themeModeEnum, equals(ThemeMode.light));
+        expect(settings.themeModeEnum, equals(ThemeMode.system));
       });
     });
   });

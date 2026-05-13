@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/models/dynamic_lesson_types.dart';
 import 'package:studyking/core/data/models/llm_models.dart';
 
 void main() {
@@ -397,77 +396,6 @@ void main() {
       final str = message.toString();
       expect(str, contains('assistant'));
       expect(str, matches(RegExp(r'\d+ chars')));
-    });
-  });
-
-  group('DBLessonTypes', () {
-    test('stores, lists, removes, and clears lesson types', () {
-      final store = DBLessonTypes();
-
-      store.setLessonType('math', 'Mathematics');
-      store.setLessonType('phy', 'Physics');
-
-      expect(store.getAllLessonTypes(), containsAll(['math', 'phy']));
-      expect(store.getAllLessonTypesWithMeta().map((e) => e.name), containsAll(['Mathematics', 'Physics']));
-
-      final unmodifiable = store.getStore();
-      expect(() => unmodifiable['new'] = 'X', throwsUnsupportedError);
-
-      store.removeFromStore('math');
-      expect(store.getAllLessonTypes(), isNot(contains('math')));
-
-      store.clearStore();
-      expect(store.getAllLessonTypes(), isEmpty);
-    });
-
-    test('getAllLessonTypesWithMeta returns correct LessonType objects', () {
-      final store = DBLessonTypes();
-      store.setLessonType('chem', 'Chemistry');
-      store.setLessonType('bio', 'Biology');
-
-      final lessons = store.getAllLessonTypesWithMeta();
-      expect(lessons.length, 2);
-      expect(lessons.any((l) => l.id == 'chem' && l.name == 'Chemistry'), isTrue);
-      expect(lessons.any((l) => l.id == 'bio' && l.name == 'Biology'), isTrue);
-    });
-
-    test('getStore returns unmodifiable map', () {
-      final store = DBLessonTypes();
-      store.setLessonType('math', 'Mathematics');
-
-      final map = store.getStore();
-      expect(() => map.clear(), throwsUnsupportedError);
-      expect(() => map.remove('math'), throwsUnsupportedError);
-      expect(() => map['new'] = 'New', throwsUnsupportedError);
-    });
-
-    test('setLessonType overwrites existing value', () {
-      final store = DBLessonTypes();
-      store.setLessonType('math', 'Mathematics');
-      store.setLessonType('math', 'Advanced Mathematics');
-
-      expect(store.getAllLessonTypes().length, 1);
-      expect(store.getAllLessonTypesWithMeta().first.name, 'Advanced Mathematics');
-    });
-
-    test('removeFromStore handles non-existent key', () {
-      final store = DBLessonTypes();
-      store.setLessonType('math', 'Mathematics');
-
-      store.removeFromStore('nonexistent');
-      expect(store.getAllLessonTypes(), contains('math'));
-      expect(store.getAllLessonTypes().length, 1);
-    });
-
-    test('clearStore removes all entries', () {
-      final store = DBLessonTypes();
-      store.setLessonType('math', 'Mathematics');
-      store.setLessonType('phy', 'Physics');
-      store.setLessonType('chem', 'Chemistry');
-
-      store.clearStore();
-      expect(store.getAllLessonTypes(), isEmpty);
-      expect(store.getStore(), isEmpty);
     });
   });
 }

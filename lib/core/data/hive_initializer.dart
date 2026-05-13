@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../utils/logger.dart';
 
 import 'database_migration.dart';
 import 'adapters/question_evaluation_adapter.dart';
@@ -16,6 +16,8 @@ import 'models/personal_learning_plan_model.dart';
 import 'models/student_attempt_model.dart';
 
 class HiveInitializer {
+  static final Logger _logger = const Logger('HiveInitializer');
+
   static Future<void> initialize() async {
     await DatabaseMigration.runMigrations();
     await _registerAdapters();
@@ -39,7 +41,7 @@ class HiveInitializer {
     
     await Hive.openBox('tasks');
     
-    debugPrint('Hive initialized successfully with migrations');
+    _logger.i('Hive initialized successfully with migrations');
   }
   
   static Future<void> _registerAdapters() async {

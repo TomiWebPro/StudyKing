@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
 
 /// Real implementation of settings repository using Hive storage
@@ -98,7 +99,7 @@ class SettingsRepository {
     
     return SettingsBox(
       apiKey: box.get('apiKey', defaultValue: ''),
-      apiBaseUrl: box.get('apiBaseUrl', defaultValue: 'https://openrouter.ai/api/v1'),
+      apiBaseUrl: box.get('apiBaseUrl', defaultValue: ApiConfig.openRouterBaseUrlString),
       selectedModel: box.get('selectedModel', defaultValue: ''),
       themeMode: box.get('themeMode', defaultValue: 0),
       fontSize: box.get('fontSize', defaultValue: 16.0),

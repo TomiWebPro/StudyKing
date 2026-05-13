@@ -1,7 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../enums.dart';
 
-@HiveType(typeId: 4)
+@HiveType(typeId: 26)
 class Source extends HiveObject {
   @HiveField(0)
   final String id;

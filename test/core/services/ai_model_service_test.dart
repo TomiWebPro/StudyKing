@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/services/ai_model_service.dart';
+import 'package:studyking/core/services/llm/llm_model_service.dart';
 
 void main() {
-  group('AiModelService', () {
-    late AiModelService service;
+  group('ModelListingService', () {
+    late ModelListingService service;
 
     setUp(() {
-      service = AiModelService(apiKey: 'test_api_key');
+      service = ModelListingService(apiKey: 'test_api_key');
     });
 
     group('fetchAvailableModels', () {
