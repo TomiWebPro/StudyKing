@@ -1,6 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../enums.dart';
-import '../../../features/questions/models/markscheme_model.dart';
+import 'markscheme_model.dart';
 
 @HiveType(typeId: 2)
 class Question extends HiveObject {

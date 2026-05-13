@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import '../models/llm_config.dart';
-import '../models/llm_models.dart';
+import '../core/data/models/llm_config.dart';
+import '../core/data/models/llm_models.dart';
 import '../services/llm_api_service.dart';
 
 /// Provider for LLM engine with fully dynamic pricing

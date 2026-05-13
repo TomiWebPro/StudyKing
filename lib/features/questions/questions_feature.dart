@@ -1,5 +1,5 @@
 // Question Feature Exports
-export 'models/markscheme_model.dart';
+export 'package:studyking/core/data/models/markscheme_model.dart';
 export 'services/answer_validator.dart';
 export 'ui/widgets/question_card_widget.dart';
 export 'ui/widgets/single_answer_widget.dart';

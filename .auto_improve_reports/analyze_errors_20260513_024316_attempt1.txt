@@ -1,0 +1,448 @@
+Analyzing StudyKing...                                          
+
+  error • The name 'validateAnswer' is already defined • lib/core/services/answer_validation_service.dart:51:20 • duplicate_definition
+  error • The argument type 'String?' can't be assigned to the parameter type 'String'.  • lib/core/services/answer_validation_service.dart:109:20 • argument_type_not_assignable
+  error • The method '_validate' isn't defined for the type 'AnswerValidationService' • lib/core/services/answer_validation_service.dart:156:36 • undefined_method
+warning • Unused import: '../data/models/llm_config.dart' • lib/core/services/llm_service.dart:9:8 • unused_import
+warning • The value of the field '_dio' isn't used • lib/core/services/llm_service.dart:31:13 • unused_field
+  error • The name 'questionRepositoryProvider' is defined in the libraries 'package:studyking/features/practice/presentation/practice_screen.dart' and 'package:studyking/features/practice/presentation/practice_session_screen.dart' • lib/features/practice/practice.dart:2:8 • ambiguous_export
+  error • The method '_validate' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:25:49 • undefined_method
+  error • The method '_validate' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:63:49 • undefined_method
+  error • Class 'AnswerValidationService' can't define static member 'validateWithMarkscheme' and have instance member 'AnswerValidationService.validateWithMarkscheme' with the same name • lib/features/questions/services/answer_validator.dart:72:27 • conflicting_static_and_instance
+  error • The method '_validate' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:73:49 • undefined_method
+  error • The method '_validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:83:49 • undefined_method
+  error • The method '_validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:93:49 • undefined_method
+  error • The method '_validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:103:49 • undefined_method
+  error • The method '_validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:113:49 • undefined_method
+  error • The method '_validateCanvasDrawing' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:123:49 • undefined_method
+  error • The method '_validateStepByStep' isn't defined for the type 'QuestionAnswerValidator' • lib/features/questions/services/answer_validator.dart:133:49 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:45:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:53:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:54:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:62:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:71:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:79:21 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:89:23 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:98:23 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:107:23 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:122:23 • undefined_method
+  error • The method 'isMatch' isn't defined for the type 'QuestionEvaluation' • test/core.data.models.question_evaluation_model.test.dart:135:23 • undefined_method
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/core.data.models.question_model.test.dart:4:8 • uri_does_not_exist
+  error • Undefined class 'Markscheme' • test/core.data.models.question_model.test.dart:9:10 • undefined_class
+  error • The function 'Markscheme' isn't defined • test/core.data.models.question_model.test.dart:13:26 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/core.model.test.dart:4:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/core.model.test.dart:28:21 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/core/services/evaluation_adapter_service.dart' • test/core.services.evaluation_adapter_service.test.dart:2:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/core.services.evaluation_adapter_service.test.dart:5:8 • uri_does_not_exist
+  error • Undefined class 'EvaluationAdapterService' • test/core.services.evaluation_adapter_service.test.dart:10:10 • undefined_class
+  error • The function 'EvaluationAdapterService' isn't defined • test/core.services.evaluation_adapter_service.test.dart:13:17 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/core.services.evaluation_adapter_service.test.dart:28:23 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/core.services.evaluation_adapter_service.test.dart:68:28 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/core.services.evaluation_adapter_service.test.dart:74:13 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/core.services.evaluation_adapter_service.test.dart:79:13 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/core.services.evaluation_adapter_service.test.dart:97:28 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/core.services.evaluation_adapter_service.test.dart:112:28 • undefined_function
+  error • The function 'EvaluationResult' isn't defined • test/core.services.evaluation_adapter_service.test.dart:323:22 • undefined_function
+  error • The function 'EvaluationResult' isn't defined • test/core.services.evaluation_adapter_service.test.dart:337:22 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/features.practice.test.dart:6:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/features.practice.test.dart:42:17 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/features/practice/services/answer_validation_service_test.dart:4:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:studyking/features/practice/services/answer_validation_service.dart' • test/features/practice/services/answer_validation_service_test.dart:5:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/features/practice/services/answer_validation_service_test.dart:19:17 • undefined_function
+  error • Undefined class 'AnswerValidationService' • test/features/practice/services/answer_validation_service_test.dart:31:10 • undefined_class
+  error • The function 'AnswerValidationService' isn't defined • test/features/practice/services/answer_validation_service_test.dart:34:17 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/features/questions/models/markscheme_model_test.dart:2:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:7:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:16:26 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/models/markscheme_model_test.dart:21:11 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/models/markscheme_model_test.dart:22:11 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:33:26 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/models/markscheme_model_test.dart:38:11 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/models/markscheme_model_test.dart:39:11 • undefined_function
+  error • Undefined name 'Markscheme' • test/features/questions/models/markscheme_model_test.dart:63:26 • undefined_identifier
+  error • Undefined name 'Markscheme' • test/features/questions/models/markscheme_model_test.dart:76:26 • undefined_identifier
+  error • Undefined name 'Markscheme' • test/features/questions/models/markscheme_model_test.dart:87:26 • undefined_identifier
+  error • Undefined name 'Markscheme' • test/features/questions/models/markscheme_model_test.dart:97:26 • undefined_identifier
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:103:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:111:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:117:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:124:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:130:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:140:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:146:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:155:26 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:161:24 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/models/markscheme_model_test.dart:170:24 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/features/questions/services/answer_validator_test.dart:3:8 • uri_does_not_exist
+  error • Undefined class 'Markscheme' • test/features/questions/services/answer_validator_test.dart:8:10 • undefined_class
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:11:20 • undefined_function
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:24:26 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:25:26 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:26:26 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:32:26 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:33:26 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:39:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:46:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:53:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:61:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:69:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:75:41 • undefined_function
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:81:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:89:34 • undefined_method
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:98:34 • undefined_method
+  error • The method 'validateTypedAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:106:34 • undefined_method
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:115:34 • undefined_method
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:122:34 • undefined_method
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:129:34 • undefined_method
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:137:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:144:33 • undefined_function
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:151:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:156:33 • undefined_function
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:162:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:167:33 • undefined_function
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:173:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:178:33 • undefined_function
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:184:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:189:33 • undefined_function
+  error • The method 'validateMCQAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:195:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:202:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:209:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:214:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:220:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:225:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:231:34 • undefined_method
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:238:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:244:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:250:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:255:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:261:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:266:32 • undefined_function
+  error • The method 'validateMathExpression' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:272:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:281:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:289:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:297:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:305:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:312:34 • undefined_method
+  error • The method 'validateEssayAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:320:34 • undefined_method
+  error • The method 'validateCanvasDrawing' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:330:34 • undefined_method
+  error • The method 'validateCanvasDrawing' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:338:34 • undefined_method
+  error • The method 'validateCanvasDrawing' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:350:34 • undefined_method
+  error • The method 'validateCanvasDrawing' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:362:34 • undefined_method
+  error • The method 'validateStepByStepAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:371:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:377:37 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:381:13 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:382:13 • undefined_function
+  error • The method 'validateStepByStepAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:387:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:393:37 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:397:13 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:398:13 • undefined_function
+  error • The method 'validateStepByStepAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:403:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:409:37 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:413:13 • undefined_function
+  error • The method 'validateStepByStepAnswer' isn't defined for the type 'QuestionAnswerValidator' • test/features/questions/services/answer_validator_test.dart:418:34 • undefined_method
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:432:33 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:450:32 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/features/questions/services/answer_validator_test.dart:478:37 • undefined_function
+  error • The function 'MarkSchemeStep' isn't defined • test/features/questions/services/answer_validator_test.dart:482:13 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/features/questions/ui/widgets/question_card_widget_test.dart:5:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/features/questions/ui/widgets/question_card_widget_test.dart:23:21 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_config.dart' • test/models.llm_config.test.dart:2:8 • uri_does_not_exist
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:6:20 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:6:20 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:24:20 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:24:20 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:38:25 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:38:25 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:51:23 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:51:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:60:23 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:60:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:83:26 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:83:26 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:96:26 • const_initialized_with_non_constant_value
+  error • The function 'LLMModelConfig' isn't defined • test/models.llm_config.test.dart:96:26 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:114:24 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:131:24 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:146:24 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:157:24 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:167:25 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:174:25 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:186:25 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:192:25 • undefined_function
+  error • The function 'APIEndpointConfig' isn't defined • test/models.llm_config.test.dart:202:24 • undefined_function
+  error • The function 'LLMUsageRecord' isn't defined • test/models.llm_config.test.dart:217:22 • undefined_function
+  error • Undefined name 'LLMUsageRecord' • test/models.llm_config.test.dart:226:24 • undefined_identifier
+  error • The function 'LLMUsageRecord' isn't defined • test/models.llm_config.test.dart:233:22 • undefined_function
+  error • Undefined name 'LLMUsageRecord' • test/models.llm_config.test.dart:255:22 • undefined_identifier
+  error • The function 'LLMUsageRecord' isn't defined • test/models.llm_config.test.dart:263:22 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:284:21 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:284:21 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:291:20 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:291:20 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:307:24 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:307:24 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:319:26 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:319:26 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:331:23 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:331:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_config.test.dart:343:23 • const_initialized_with_non_constant_value
+  error • The function 'LLMUsageSummary' isn't defined • test/models.llm_config.test.dart:343:23 • undefined_function
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:360:26 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:361:23 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:365:51 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:370:21 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:371:21 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:372:21 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:379:22 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:389:22 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:390:47 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:394:22 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:402:22 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/models.llm_config.test.dart:414:14 • undefined_identifier
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_models.dart' • test/models.llm_models.test.dart:3:8 • uri_does_not_exist
+  error • Undefined name 'ModelPrice' • test/models.llm_models.test.dart:8:22 • undefined_identifier
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:23:21 • undefined_function
+  error • Undefined name 'ModelPrice' • test/models.llm_models.test.dart:40:22 • undefined_identifier
+  error • Undefined name 'ModelPrice' • test/models.llm_models.test.dart:55:22 • undefined_identifier
+  error • Undefined name 'ModelPrice' • test/models.llm_models.test.dart:68:22 • undefined_identifier
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:85:21 • undefined_function
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:91:22 • undefined_function
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:96:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:96:11 • non_constant_list_element
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:97:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:97:11 • non_constant_list_element
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:111:22 • undefined_function
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:117:22 • undefined_function
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:123:22 • undefined_function
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:135:21 • undefined_function
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:147:21 • undefined_function
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:152:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:152:11 • non_constant_list_element
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:161:21 • undefined_function
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:166:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:166:11 • non_constant_list_element
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:167:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:167:11 • non_constant_list_element
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:176:21 • undefined_function
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:181:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:181:11 • non_constant_list_element
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:189:21 • undefined_function
+  error • The function 'ModelPrice' isn't defined • test/models.llm_models.test.dart:194:11 • undefined_function
+  error • The values in a const list literal must be constants • test/models.llm_models.test.dart:194:11 • non_constant_list_element
+  error • The function 'DynamicModel' isn't defined • test/models.llm_models.test.dart:203:21 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:218:20 • const_initialized_with_non_constant_value
+  error • The function 'OpenRouterRequest' isn't defined • test/models.llm_models.test.dart:218:20 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:228:23 • const_initialized_with_non_constant_value
+  error • The function 'OpenRouterRequest' isn't defined • test/models.llm_models.test.dart:228:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:248:23 • const_initialized_with_non_constant_value
+  error • The function 'OpenRouterRequest' isn't defined • test/models.llm_models.test.dart:248:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:260:23 • const_initialized_with_non_constant_value
+  error • The function 'OpenRouterRequest' isn't defined • test/models.llm_models.test.dart:260:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:276:23 • const_initialized_with_non_constant_value
+  error • The function 'OpenRouterRequest' isn't defined • test/models.llm_models.test.dart:276:23 • undefined_function
+  error • Undefined name 'OpenRouterResponse' • test/models.llm_models.test.dart:292:24 • undefined_identifier
+  error • Undefined name 'OpenRouterResponse' • test/models.llm_models.test.dart:306:21 • undefined_identifier
+  error • Undefined name 'OpenRouterResponse' • test/models.llm_models.test.dart:312:24 • undefined_identifier
+  error • Undefined name 'OpenRouterResponse' • test/models.llm_models.test.dart:332:24 • undefined_identifier
+  error • Undefined name 'OpenRouterResponse' • test/models.llm_models.test.dart:341:24 • undefined_identifier
+  error • Undefined name 'Message' • test/models.llm_models.test.dart:357:23 • undefined_identifier
+  error • Undefined name 'Message' • test/models.llm_models.test.dart:375:23 • undefined_identifier
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:387:23 • const_initialized_with_non_constant_value
+  error • The function 'Message' isn't defined • test/models.llm_models.test.dart:387:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.llm_models.test.dart:395:23 • const_initialized_with_non_constant_value
+  error • The function 'Message' isn't defined • test/models.llm_models.test.dart:395:23 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_models.dart' • test/models.settings_model.test.dart:3:8 • uri_does_not_exist
+  error • Const variables must be initialized with a constant value • test/models.settings_model.test.dart:266:23 • const_initialized_with_non_constant_value
+  error • The function 'ModelPrice' isn't defined • test/models.settings_model.test.dart:266:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.settings_model.test.dart:311:23 • const_initialized_with_non_constant_value
+  error • The function 'ModelPrice' isn't defined • test/models.settings_model.test.dart:311:23 • undefined_function
+  error • Const variables must be initialized with a constant value • test/models.settings_model.test.dart:388:23 • const_initialized_with_non_constant_value
+  error • The function 'ModelPrice' isn't defined • test/models.settings_model.test.dart:388:23 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_config.dart' • test/pages/llm_settings_and_application_pages_test.dart:4:8 • uri_does_not_exist
+  error • The function 'LLMUsageRecord' isn't defined • test/pages/llm_settings_and_application_pages_test.dart:53:9 • undefined_function
+  error • Undefined name 'AvailableModels' • test/pages/llm_settings_and_application_pages_test.dart:62:31 • undefined_identifier
+  error • Undefined name 'AvailableModels' • test/pages/llm_settings_and_application_pages_test.dart:214:16 • undefined_identifier
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_config.dart' • test/pages/settings_pages_additional_test.dart:7:8 • uri_does_not_exist
+  error • Undefined name 'AvailableModels' • test/pages/settings_pages_additional_test.dart:65:31 • undefined_identifier
+  error • The function 'LLMUsageRecord' isn't defined • test/pages/settings_pages_additional_test.dart:455:9 • undefined_function
+  error • Undefined name 'AvailableModels' • test/pages/settings_pages_additional_test.dart:492:31 • undefined_identifier
+  error • The function 'LLMUsageRecord' isn't defined • test/pages/settings_pages_additional_test.dart:516:9 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/services/graph_rendering_engine.dart' • test/services.graph_rendering_engine.test.dart:4:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:studyking/services/graph_type_detector.dart' • test/services.graph_rendering_engine.test.dart:5:8 • uri_does_not_exist
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:10:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:14:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:18:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:22:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:26:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:30:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:34:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:38:14 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:42:14 • undefined_identifier
+  error • Undefined class 'GraphRenderingEngine' • test/services.graph_rendering_engine.test.dart:47:10 • undefined_class
+  error • The function 'GraphRenderingEngine' isn't defined • test/services.graph_rendering_engine.test.dart:50:16 • undefined_function
+  error • The function 'GraphRenderingEngine' isn't defined • test/services.graph_rendering_engine.test.dart:60:30 • undefined_function
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:75:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:76:48 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:80:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:81:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:82:48 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:88:29 • undefined_identifier
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.graph_rendering_engine.test.dart:100:23 • non_type_as_type_argument
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.graph_rendering_engine.test.dart:108:25 • non_type_as_type_argument
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:117:19 • undefined_identifier
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.graph_rendering_engine.test.dart:120:25 • non_type_as_type_argument
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.graph_rendering_engine.test.dart:132:25 • non_type_as_type_argument
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:178:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:183:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:188:29 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:193:29 • undefined_identifier
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:200:22 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:205:22 • undefined_function
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:207:15 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:214:34 • undefined_identifier
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:224:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:230:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:236:26 • undefined_function
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:236:65 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:237:46 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:238:34 • undefined_identifier
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:242:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:248:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:254:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:260:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:266:26 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:272:26 • undefined_function
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:272:65 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:273:46 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:274:38 • undefined_identifier
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:275:34 • undefined_identifier
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:281:24 • undefined_function
+  error • Undefined name 'GraphType' • test/services.graph_rendering_engine.test.dart:283:17 • undefined_identifier
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:301:24 • undefined_function
+  error • The function 'PlotConfiguration' isn't defined • test/services.graph_rendering_engine.test.dart:309:24 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/services/graph_type_detector.dart' • test/services.graph_type_detector.test.dart:3:8 • uri_does_not_exist
+  error • Undefined name 'GraphDetectionResult' • test/services.graph_type_detector.test.dart:8:14 • undefined_identifier
+  error • Undefined name 'GraphDetectionResult' • test/services.graph_type_detector.test.dart:12:14 • undefined_identifier
+  error • Undefined name 'GraphDetectionResult' • test/services.graph_type_detector.test.dart:16:14 • undefined_identifier
+  error • The function 'GraphValidationError' isn't defined • test/services.graph_type_detector.test.dart:22:21 • undefined_function
+  error • The function 'GraphValidationError' isn't defined • test/services.graph_type_detector.test.dart:31:21 • undefined_function
+  error • The function 'GraphValidationError' isn't defined • test/services.graph_type_detector.test.dart:40:21 • undefined_function
+  error • Undefined class 'GraphTypeValidator' • test/services.graph_type_detector.test.dart:49:10 • undefined_class
+  error • The function 'GraphTypeValidator' isn't defined • test/services.graph_type_detector.test.dart:52:19 • undefined_function
+  error • The name 'GraphValidationResult' isn't a type, so it can't be used as a type argument • test/services.graph_type_detector.test.dart:98:28 • non_type_as_type_argument
+  error • The function 'GraphValidationResult' isn't defined • test/services.graph_type_detector.test.dart:172:22 • undefined_function
+  error • Undefined name 'GraphValidationResult' • test/services.graph_type_detector.test.dart:189:24 • undefined_identifier
+  error • Undefined name 'GraphValidationResult' • test/services.graph_type_detector.test.dart:196:24 • undefined_identifier
+  error • The function 'GraphValidationResult' isn't defined • test/services.graph_type_detector.test.dart:205:24 • undefined_function
+  error • Undefined class 'GraphAnalyzer' • test/services.graph_type_detector.test.dart:219:10 • undefined_class
+  error • The function 'GraphAnalyzer' isn't defined • test/services.graph_type_detector.test.dart:222:18 • undefined_function
+  error • The function 'GraphAnalyzer' isn't defined • test/services.graph_type_detector.test.dart:231:30 • undefined_function
+  error • The name 'GraphAnalysis' isn't a type, so it can't be used as a type argument • test/services.graph_type_detector.test.dart:244:28 • non_type_as_type_argument
+  error • The function 'GraphAnalysis' isn't defined • test/services.graph_type_detector.test.dart:282:24 • undefined_function
+  error • The function 'GraphAnalysis' isn't defined • test/services.graph_type_detector.test.dart:287:24 • undefined_function
+  error • Undefined name 'GraphAnalysis' • test/services.graph_type_detector.test.dart:302:25 • undefined_identifier
+  error • Undefined name 'GraphAnalysis' • test/services.graph_type_detector.test.dart:308:25 • undefined_identifier
+  error • Undefined name 'GraphAnalysis' • test/services.graph_type_detector.test.dart:321:26 • undefined_identifier
+  error • Undefined name 'GraphAnalysis' • test/services.graph_type_detector.test.dart:328:26 • undefined_identifier
+  error • Undefined name 'GraphAnalysis' • test/services.graph_type_detector.test.dart:337:26 • undefined_identifier
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:345:14 • undefined_identifier
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:349:14 • undefined_identifier
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:353:14 • undefined_identifier
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:357:14 • undefined_identifier
+  error • The function 'GraphError' isn't defined • test/services.graph_type_detector.test.dart:363:21 • undefined_function
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:365:38 • undefined_identifier
+  error • The function 'GraphError' isn't defined • test/services.graph_type_detector.test.dart:369:21 • undefined_function
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:369:54 • undefined_identifier
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:370:38 • undefined_identifier
+  error • The function 'GraphError' isn't defined • test/services.graph_type_detector.test.dart:374:21 • undefined_function
+  error • Undefined name 'GraphErrorType' • test/services.graph_type_detector.test.dart:374:59 • undefined_identifier
+  error • Target of URI doesn't exist: 'package:studyking/services/lesson_scheduler_engine.dart' • test/services.lesson_scheduler_engine.test.dart:2:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:studyking/services/graph_type_detector.dart' • test/services.lesson_scheduler_engine.test.dart:3:8 • uri_does_not_exist
+  error • Undefined class 'LessonSchedulerCommands' • test/services.lesson_scheduler_engine.test.dart:7:10 • undefined_class
+  error • The function 'LessonSchedulerCommands' isn't defined • test/services.lesson_scheduler_engine.test.dart:10:18 • undefined_function
+  error • Undefined class 'GraphRenderingService' • test/services.lesson_scheduler_engine.test.dart:104:10 • undefined_class
+  error • The function 'GraphRenderingService' isn't defined • test/services.lesson_scheduler_engine.test.dart:107:17 • undefined_function
+  error • The name 'GraphError' isn't a type, so it can't be used as a type argument • test/services.lesson_scheduler_engine.test.dart:123:25 • non_type_as_type_argument
+  error • Target of URI doesn't exist: 'package:studyking/models/llm_models.dart' • test/services.llm_api_service.test.dart:4:8 • uri_does_not_exist
+  error • The name 'ModelPrice' isn't a type, so it can't be used as a type argument • test/services.llm_api_service.test.dart:65:33 • non_type_as_type_argument
+  error • The name 'ModelPrice' isn't a type, so it can't be used as a type argument • test/services.llm_api_service.test.dart:75:34 • non_type_as_type_argument
+  error • Target of URI doesn't exist: 'package:studyking/services/question_engine.dart' • test/services.question_engine.test.dart:3:8 • uri_does_not_exist
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:8:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:12:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:16:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:20:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:24:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:28:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:32:14 • undefined_identifier
+  error • Undefined name 'McqOptionsConfig' • test/services.question_engine.test.dart:39:16 • undefined_identifier
+  error • Undefined name 'McqOptionsConfig' • test/services.question_engine.test.dart:43:16 • undefined_identifier
+  error • Undefined name 'McqOptionsConfig' • test/services.question_engine.test.dart:47:16 • undefined_identifier
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:53:24 • undefined_function
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:60:24 • undefined_function
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:66:24 • undefined_function
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:74:24 • undefined_function
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:81:24 • undefined_function
+  error • The function 'McqOptionsConfig' isn't defined • test/services.question_engine.test.dart:87:24 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:96:24 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:101:24 • undefined_function
+  error • Undefined name 'LessonQuestion' • test/services.question_engine.test.dart:131:26 • undefined_identifier
+  error • Undefined name 'LessonQuestion' • test/services.question_engine.test.dart:139:26 • undefined_identifier
+  error • Undefined name 'LessonQuestion' • test/services.question_engine.test.dart:149:26 • undefined_identifier
+  error • Undefined name 'LessonQuestion' • test/services.question_engine.test.dart:158:26 • undefined_identifier
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:165:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:181:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:189:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:204:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:212:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:217:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:225:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:233:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:238:26 • undefined_function
+  error • The function 'LessonQuestion' isn't defined • test/services.question_engine.test.dart:246:26 • undefined_function
+  error • Undefined class 'DynamicLessonQuestionGenerator' • test/services.question_engine.test.dart:256:10 • undefined_class
+  error • The function 'DynamicLessonQuestionGenerator' isn't defined • test/services.question_engine.test.dart:259:19 • undefined_function
+  error • The function 'DynamicLessonQuestionGenerator' isn't defined • test/services.question_engine.test.dart:268:31 • undefined_function
+  error • The name 'McqOptionsConfig' isn't a type, so it can't be used as a type argument • test/services.question_engine.test.dart:274:39 • non_type_as_type_argument
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:403:24 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:404:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:411:24 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:412:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:418:24 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:419:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:426:25 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:427:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:429:25 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine.test.dart:430:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:438:24 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:444:24 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:449:25 • undefined_identifier
+  error • Undefined name 'DynamicLessonQuestionPrompts' • test/services.question_engine.test.dart:450:25 • undefined_identifier
+  error • Target of URI doesn't exist: 'package:studyking/services/question_engine_dynamic.dart' • test/services.question_engine_dynamic.test.dart:3:8 • uri_does_not_exist
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:8:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:12:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:16:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:20:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:24:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:28:14 • undefined_identifier
+  error • Undefined name 'DynamicQuestionType' • test/services.question_engine_dynamic.test.dart:32:14 • undefined_identifier
+  error • Undefined class 'DynamicTypeFetcher' • test/services.question_engine_dynamic.test.dart:37:10 • undefined_class
+  error • The function 'DynamicTypeFetcher' isn't defined • test/services.question_engine_dynamic.test.dart:40:17 • undefined_function
+  error • The function 'DynamicTypeFetcher' isn't defined • test/services.question_engine_dynamic.test.dart:50:31 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/practice/services/answer_validation_service.dart' • test/validation.answer.test.dart:4:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/validation.answer.test.dart:5:8 • uri_does_not_exist
+  error • Undefined class 'AnswerValidationService' • test/validation.answer.test.dart:9:10 • undefined_class
+  error • The function 'AnswerValidationService' isn't defined • test/validation.answer.test.dart:13:17 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/validation.answer.test.dart:30:15 • undefined_function
+  error • The function 'AnswerValidationService' isn't defined • test/validation.answer.test.dart:46:26 • undefined_function
+  error • The function 'AnswerValidationService' isn't defined • test/validation.answer.test.dart:47:26 • undefined_function
+  error • The function 'AnswerValidationService' isn't defined • test/validation.answer.test.dart:339:21 • undefined_function
+  error • The function 'Markscheme' isn't defined • test/validation.answer.test.dart:356:15 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/widget_test.dart:6:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/widget_test.dart:32:17 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/widgets/practice_session_screen_test.dart:6:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/widgets/practice_session_screen_test.dart:33:17 • undefined_function
+  error • Target of URI doesn't exist: 'package:studyking/features/questions/models/markscheme_model.dart' • test/widgets/question_card_widget_test.dart:5:8 • uri_does_not_exist
+  error • The function 'Markscheme' isn't defined • test/widgets/question_card_widget_test.dart:23:42 • undefined_function
+
+
+443 issues found. (ran in 6.6s)

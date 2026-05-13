@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/models/llm_config.dart';
+import 'package:studyking/core/data/models/llm_config.dart';
 
 void main() {
   group('LLMModelConfig', () {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/models/dynamic_lesson_types.dart';
-import 'package:studyking/models/llm_models.dart';
+import 'package:studyking/core/data/models/llm_models.dart';
 
 void main() {
   group('ModelPrice', () {

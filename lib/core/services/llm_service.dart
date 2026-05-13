@@ -1,79 +1,152 @@
-// LLM Service - handles AI-powered content generation and validation
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../data/enums.dart';
 import '../data/models/lesson_block_model.dart';
 import '../data/models/question_model.dart';
 import '../data/models/lesson_model.dart';
-import '../../features/questions/models/markscheme_model.dart';
+import '../data/models/markscheme_model.dart';
 
-enum LlmProvider { openRouter, ollama }
+enum LlmProvider { openRouter, ollama, openAI }
 
 class LlmConfiguration {
   final LlmProvider provider;
   final String apiKey;
   final String baseUrl;
+  final void Function(int inputTokens, int outputTokens, String model)? onTokenUsage;
 
   const LlmConfiguration({
     required this.provider,
     required this.apiKey,
     this.baseUrl = '',
+    this.onTokenUsage,
   });
 }
 
 class LlmService {
   final LlmConfiguration config;
+  final http.Client _httpClient;
 
-  LlmService({required this.config});
+  LlmService({
+    required this.config,
+    http.Client? httpClient,
+  })  : _httpClient = httpClient ?? http.Client();
 
-  Future<String> _callLlm(String prompt, String model) async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-
-    if (config.provider == LlmProvider.openRouter) {
-      headers['Authorization'] = 'Bearer ${config.apiKey}';
-
-      final response = await http.post(
-        Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-        headers: headers,
-        body: jsonEncode({
-          'model': model,
-          'messages': [
-            {'role': 'system', 'content': 'You are a helpful AI tutor.'},
-            {'role': 'user', 'content': prompt},
-          ],
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['choices'][0]['message']['content'];
-      } else {
-        throw Exception('OpenRouter API Error: ${response.body}');
-      }
-    } else if (config.provider == LlmProvider.ollama) {
-      final response = await http.post(
-        Uri.parse('${config.baseUrl}/api/chat'),
-        headers: headers,
-        body: jsonEncode({
-          'model': model,
-          'messages': [
-            {'role': 'user', 'content': prompt},
-          ],
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['message']['content'];
-      } else {
-        throw Exception('Ollama API Error: ${response.body}');
-      }
-    } else {
-      throw Exception('Unknown LLM provider');
+  Future<String> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+  }) async {
+    if (config.apiKey.isEmpty) {
+      return _mockChatResponse(message);
     }
+
+    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing Quick Guide. Keep responses concise and educational.';
+
+    try {
+      switch (config.provider) {
+        case LlmProvider.openRouter:
+          return await _callOpenRouter(message, modelId, effectiveSystemPrompt);
+        case LlmProvider.ollama:
+          return await _callOllama(message, modelId);
+        case LlmProvider.openAI:
+          return await _callOpenAI(message, modelId, effectiveSystemPrompt);
+      }
+    } catch (e) {
+      debugPrint('LLM Chat Error: $e');
+      return _mockChatResponse(message);
+    }
+  }
+
+  Future<String> _callOpenRouter(String message, String modelId, String systemPrompt) async {
+    final response = await _httpClient.post(
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${config.apiKey}',
+      },
+      body: jsonEncode({
+        'model': modelId,
+        'messages': [
+          {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': message},
+        ],
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _trackUsage(data, modelId);
+      return data['choices'][0]['message']['content'] as String;
+    }
+    throw Exception('OpenRouter API Error: ${response.body}');
+  }
+
+  Future<String> _callOllama(String message, String modelId) async {
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
+    final response = await _httpClient.post(
+      Uri.parse('$baseUrl/api/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'model': modelId,
+        'messages': [
+          {'role': 'user', 'content': message},
+        ],
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['message']['content'] as String;
+    }
+    throw Exception('Ollama API Error: ${response.body}');
+  }
+
+  Future<String> _callOpenAI(String message, String modelId, String systemPrompt) async {
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
+    final response = await _httpClient.post(
+      Uri.parse('$baseUrl/chat/completions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${config.apiKey}',
+      },
+      body: jsonEncode({
+        'model': modelId,
+        'messages': [
+          {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': message},
+        ],
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _trackUsage(data, modelId);
+      return data['choices'][0]['message']['content'] as String;
+    }
+    throw Exception('OpenAI API Error: ${response.body}');
+  }
+
+  void _trackUsage(Map<String, dynamic> responseData, String modelId) {
+    final usage = responseData['usage'] as Map<String, dynamic>?;
+    if (usage != null && config.onTokenUsage != null) {
+      final inputTokens = usage['prompt_tokens'] as int? ?? 0;
+      final outputTokens = usage['completion_tokens'] as int? ?? 0;
+      config.onTokenUsage!(inputTokens, outputTokens, modelId);
+    }
+  }
+
+  String _mockChatResponse(String message) {
+    if (message.toLowerCase().contains('explain')) {
+      return 'As an AI study assistant, I can help explain various concepts. Could you tell me which specific topic you\'d like me to explain?';
+    }
+    if (message.toLowerCase().contains('quiz') || message.toLowerCase().contains('question')) {
+      return 'I can quiz you on various subjects! What topic would you like to be quizzed on?';
+    }
+    if (message.toLowerCase().contains('math') || message.toLowerCase().contains('calculate')) {
+      return 'I\'m ready to help with math! Please share the specific problem or concept you\'re working on.';
+    }
+    return 'That\'s a great question! Let me help you understand it better. Could you provide more details about what you\'re studying?';
   }
 
   Future<List<Question>> generateQuestions({
@@ -103,7 +176,7 @@ Format as JSON array with subjectId field.
 ''';
 
     try {
-      final response = await _callLlm(prompt, modelId);
+      final response = await chat(message: prompt, modelId: modelId, systemPrompt: 'You are a helpful AI tutor.');
       return _parseQuestions(response, subjectId);
     } catch (e) {
       debugPrint('LLM Question Generation Error: $e');
@@ -131,7 +204,7 @@ Generate blocks with type and content. Include subjectId in each block.
 ''';
 
     try {
-      final response = await _callLlm(prompt, modelId);
+      final response = await chat(message: prompt, modelId: modelId);
       return _parseLessonBlocks(response, subjectId);
     } catch (e) {
       debugPrint('LLM Lesson Generation Error: $e');
@@ -168,7 +241,7 @@ Respond with JSON containing lesson structure.
 ''';
 
     try {
-      final response = await _callLlm(prompt, modelId);
+      final response = await chat(message: prompt, modelId: modelId);
       return _parseLesson(response, title, subjectId, topicId, difficulty);
     } catch (e) {
       debugPrint('LLM Lesson Generation Error: $e');
@@ -204,84 +277,11 @@ Provide validation result with explanation.
 ''';
 
     try {
-      final response = await _callLlm(prompt, modelId);
+      final response = await chat(message: prompt, modelId: modelId);
       return response;
     } catch (e) {
       return _mockValidateAnswer(subjectId);
     }
-  }
-
-  Future<String> chat({
-    required String message,
-    required String modelId,
-    String? systemPrompt,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _mockChatResponse(message);
-    }
-
-    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing Quick Guide. Keep responses concise and educational.';
-
-    try {
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-
-      if (config.provider == LlmProvider.openRouter) {
-        headers['Authorization'] = 'Bearer ${config.apiKey}';
-
-        final response = await http.post(
-          Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-          headers: headers,
-          body: jsonEncode({
-            'model': modelId,
-            'messages': [
-              {'role': 'system', 'content': effectiveSystemPrompt},
-              {'role': 'user', 'content': message},
-            ],
-          }),
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return data['choices'][0]['message']['content'];
-        }
-      } else if (config.provider == LlmProvider.ollama) {
-        final response = await http.post(
-          Uri.parse('${config.baseUrl}/api/chat'),
-          headers: headers,
-          body: jsonEncode({
-            'model': modelId,
-            'messages': [
-              {'role': 'user', 'content': message},
-            ],
-          }),
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return data['message']['content'];
-        }
-      }
-
-      return _mockChatResponse(message);
-    } catch (e) {
-      debugPrint('LLM Chat Error: $e');
-      return _mockChatResponse(message);
-    }
-  }
-
-  String _mockChatResponse(String message) {
-    if (message.toLowerCase().contains('explain')) {
-      return 'As an AI study assistant, I can help explain various concepts. Could you tell me which specific topic you\'d like me to explain?';
-    }
-    if (message.toLowerCase().contains('quiz') || message.toLowerCase().contains('question')) {
-      return 'I can quiz you on various subjects! What topic would you like to be quizzed on?';
-    }
-    if (message.toLowerCase().contains('math') || message.toLowerCase().contains('calculate')) {
-      return 'I\'m ready to help with math! Please share the specific problem or concept you\'re working on.';
-    }
-    return 'That\'s a great question! Let me help you understand it better. Could you provide more details about what you\'re studying?';
   }
 
   Future<Map<String, dynamic>> generateStudyPlan({
@@ -309,7 +309,7 @@ Format as JSON with subject-specific recommendations.
 ''';
 
     try {
-      final response = await _callLlm(prompt, modelId);
+      final response = await chat(message: prompt, modelId: modelId);
       return _parseStudyPlan(response, subjectId);
     } catch (e) {
       return _mockStudyPlan(subjectId, course, days, hoursPerDay);

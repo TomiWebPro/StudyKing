@@ -49,40 +49,6 @@ class QuestionEvaluation extends HiveObject {
     this.version = 1,
   });
 
-  bool isMatch(String userAnswer) {
-    if (evaluationType == EvaluationType.stepBased && steps != null && steps!.isNotEmpty) {
-      final answerLower = userAnswer.toLowerCase();
-      return steps!.every((step) => 
-        answerLower.contains(step.requiredAnswer.toLowerCase()));
-    }
-
-    final answer = userAnswer.toLowerCase().trim();
-    final correct = correctAnswer.toLowerCase().trim();
-    if (answer == correct) return true;
-
-    for (final acceptable in acceptableAnswers) {
-      if (acceptable.toLowerCase().trim() == answer) return true;
-    }
-
-    if (evaluationType == EvaluationType.fuzzyMatch) {
-      return _isSimilar(answer, correct);
-    }
-
-    return false;
-  }
-
-  bool _isSimilar(String answer, String correct) {
-    final answerWords = answer.split(' ');
-    final correctWords = correct.split(' ');
-    if (answerWords.length >= correctWords.length * 0.8) {
-      final matchingRatio = answerWords
-          .where((word) => correctWords.contains(word))
-          .length / correctWords.length;
-      return matchingRatio > 0.7;
-    }
-    return false;
-  }
-
   Map<String, dynamic> toJson() => {
     'questionId': questionId,
     'correctAnswer': correctAnswer,
@@ -164,6 +130,33 @@ class QuestionEvaluation extends HiveObject {
       metadata: metadata ?? this.metadata,
       version: version ?? this.version,
     );
+  }
+
+  bool isMatch(String userAnswer) {
+    final normalizedAnswer = userAnswer.trim().toLowerCase();
+    final normalizedCorrect = correctAnswer.trim().toLowerCase();
+
+    if (normalizedAnswer == normalizedCorrect) return true;
+
+    for (final acceptable in acceptableAnswers) {
+      if (normalizedAnswer == acceptable.trim().toLowerCase()) return true;
+    }
+
+    if (evaluationType == EvaluationType.fuzzyMatch && normalizedAnswer.isNotEmpty) {
+      final answerWords = normalizedAnswer.split(' ');
+      final correctWords = normalizedCorrect.split(' ');
+      if (answerWords.length >= correctWords.length * 0.8) {
+        final matchingRatio = answerWords.where((word) => correctWords.contains(word)).length / correctWords.length;
+        return matchingRatio > 0.7;
+      }
+    }
+
+    if (evaluationType == EvaluationType.stepBased && steps != null && steps!.isNotEmpty) {
+      final answerLower = userAnswer.toLowerCase();
+      return steps!.every((step) => answerLower.contains(step.requiredAnswer.toLowerCase()));
+    }
+
+    return false;
   }
 }
 

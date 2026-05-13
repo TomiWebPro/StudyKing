@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/practice/services/answer_validation_service.dart';
-import 'package:studyking/features/questions/models/markscheme_model.dart';
+import 'package:studyking/core/services/answer_validation_service.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 
 void main() {
   group('AnswerValidationService', () {
@@ -49,8 +49,8 @@ void main() {
         final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Answer A');
         final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Answer B');
 
-        final r1 = service1.validateAnswer(q1, 'Answer A');
-        final r2 = service2.validateAnswer(q2, 'Answer B');
+        final r1 = service1.validateAnswerForQuestion(q1, 'Answer A');
+        final r2 = service2.validateAnswerForQuestion(q2, 'Answer B');
 
         expect(r1.isCorrect, isTrue);
         expect(r2.isCorrect, isTrue);
@@ -60,8 +60,8 @@ void main() {
         final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Correct', options: ['alt1']);
         final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Correct', options: ['alt2']);
 
-        final r1 = service.validateAnswer(q1, 'alt1');
-        final r2 = service.validateAnswer(q2, 'alt2');
+        final r1 = service.validateAnswerForQuestion(q1, 'alt1');
+        final r2 = service.validateAnswerForQuestion(q2, 'alt2');
 
         expect(r1.isCorrect, isTrue);
         expect(r2.isCorrect, isTrue);
@@ -71,8 +71,8 @@ void main() {
         final q1 = buildQuestion(id: 'q1', type: QuestionType.typedAnswer, markschemeText: 'Answer', explanation: 'Explanation 1');
         final q2 = buildQuestion(id: 'q2', type: QuestionType.typedAnswer, markschemeText: 'Answer', explanation: 'Explanation 2');
 
-        final r1 = service.validateAnswer(q1, 'answer');
-        final r2 = service.validateAnswer(q2, 'answer');
+        final r1 = service.validateAnswerForQuestion(q1, 'answer');
+        final r2 = service.validateAnswerForQuestion(q2, 'answer');
 
         expect(r1.isCorrect, isTrue);
         expect(r2.isCorrect, isTrue);
@@ -87,8 +87,8 @@ void main() {
           markschemeText: 'Paris',
         );
 
-        final result1 = service.validateAnswer(question, 'Paris');
-        final result2 = service.validateAnswer(question, 'paris');
+        final result1 = service.validateAnswerForQuestion(question, 'Paris');
+        final result2 = service.validateAnswerForQuestion(question, 'paris');
 
         expect(result1.isCorrect, isTrue);
         expect(result2.isCorrect, isTrue);
@@ -98,8 +98,8 @@ void main() {
         final q1 = buildQuestion(id: 'id-1', type: QuestionType.typedAnswer, markschemeText: 'Answer');
         final q2 = buildQuestion(id: 'id-2', type: QuestionType.typedAnswer, markschemeText: 'Answer');
 
-        final r1 = service.validateAnswer(q1, 'answer');
-        final r2 = service.validateAnswer(q2, 'Answer');
+        final r1 = service.validateAnswerForQuestion(q1, 'answer');
+        final r2 = service.validateAnswerForQuestion(q2, 'Answer');
 
         expect(r1.isCorrect, isTrue);
         expect(r2.isCorrect, isTrue);
@@ -109,9 +109,9 @@ void main() {
         final q1 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markschemeText: 'First');
         final q2 = buildQuestion(id: 'same-id', type: QuestionType.typedAnswer, markschemeText: 'Second');
 
-        final r1 = service.validateAnswer(q1, 'first');
-        final r2 = service.validateAnswer(q2, 'second');
-        final r3 = service.validateAnswer(q2, 'first');
+        final r1 = service.validateAnswerForQuestion(q1, 'first');
+        final r2 = service.validateAnswerForQuestion(q2, 'second');
+        final r3 = service.validateAnswerForQuestion(q2, 'first');
 
         expect(r1.isCorrect, isTrue);
         expect(r2.isCorrect, isTrue);
@@ -122,12 +122,12 @@ void main() {
         final q1 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markschemeText: 'Original');
         final q2 = buildQuestion(id: 'update-cache', type: QuestionType.typedAnswer, markschemeText: 'Updated');
 
-        final firstValidation = service.validateAnswer(q1, 'original');
-        final afterUpdate = service.validateAnswer(q2, 'updated');
+        final firstValidation = service.validateAnswerForQuestion(q1, 'original');
+        final afterUpdate = service.validateAnswerForQuestion(q2, 'updated');
 
         expect(firstValidation.isCorrect, isTrue);
         expect(afterUpdate.isCorrect, isTrue);
-        expect(service.validateAnswer(q2, 'original').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(q2, 'original').isCorrect, isFalse);
       });
 
       test('multiple different questions maintain separate cache entries', () {
@@ -135,12 +135,12 @@ void main() {
         final q2 = buildQuestion(id: 'multi-2', type: QuestionType.typedAnswer, markschemeText: 'ans2');
         final q3 = buildQuestion(id: 'multi-3', type: QuestionType.typedAnswer, markschemeText: 'ans3');
 
-        expect(service.validateAnswer(q1, 'ans1').isCorrect, isTrue);
-        expect(service.validateAnswer(q2, 'ans2').isCorrect, isTrue);
-        expect(service.validateAnswer(q3, 'ans3').isCorrect, isTrue);
-        expect(service.validateAnswer(q1, 'wrong').isCorrect, isFalse);
-        expect(service.validateAnswer(q2, 'wrong').isCorrect, isFalse);
-        expect(service.validateAnswer(q3, 'wrong').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(q1, 'ans1').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(q2, 'ans2').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(q3, 'ans3').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(q1, 'wrong').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(q2, 'wrong').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(q3, 'wrong').isCorrect, isFalse);
       });
     });
 
@@ -153,10 +153,10 @@ void main() {
           options: ['alt1', 'alt2', 'alt3'],
         );
 
-        expect(service.validateAnswer(question, 'alt1').isCorrect, isTrue);
-        expect(service.validateAnswer(question, 'alt2').isCorrect, isTrue);
-        expect(service.validateAnswer(question, 'alt3').isCorrect, isTrue);
-        expect(service.validateAnswer(question, 'wrong').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(question, 'alt1').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, 'alt2').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, 'alt3').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, 'wrong').isCorrect, isFalse);
       });
 
       test('passes explanation from question to validator', () {
@@ -167,7 +167,7 @@ void main() {
           explanation: 'This is the detailed explanation',
         );
 
-        final result = service.validateAnswer(question, 'wrong');
+        final result = service.validateAnswerForQuestion(question, 'wrong');
         expect(result.explanation, 'This is the detailed explanation');
       });
 
@@ -178,8 +178,8 @@ void main() {
           markschemeText: 'Answer',
         );
 
-        final correctResult = service.validateAnswer(question, 'answer');
-        final wrongResult = service.validateAnswer(question, 'wrong');
+        final correctResult = service.validateAnswerForQuestion(question, 'answer');
+        final wrongResult = service.validateAnswerForQuestion(question, 'wrong');
 
         expect(correctResult.explanation, 'Correct!');
         expect(wrongResult.explanation, 'Incorrect');
@@ -193,8 +193,8 @@ void main() {
           options: [],
         );
 
-        expect(service.validateAnswer(question, 'Correct').isCorrect, isTrue);
-        expect(service.validateAnswer(question, 'wrong').isCorrect, isFalse);
+        expect(service.validateAnswerForQuestion(question, 'Correct').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, 'wrong').isCorrect, isFalse);
       });
     });
 
@@ -206,8 +206,8 @@ void main() {
           markschemeText: '2 + 2 = 4',
         );
 
-        expect(service.validateAnswer(question, '2+2=4').isCorrect, isTrue);
-        expect(service.validateAnswer(question, '2 + 2 = 4').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, '2+2=4').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, '2 + 2 = 4').isCorrect, isTrue);
       });
 
       test('essay type uses essay validation', () {
@@ -217,8 +217,8 @@ void main() {
           markschemeText: '',
         );
 
-        final shortAnswer = service.validateAnswer(question, 'Short');
-        final longAnswer = service.validateAnswer(
+        final shortAnswer = service.validateAnswerForQuestion(question, 'Short');
+        final longAnswer = service.validateAnswerForQuestion(
           question,
           'This is a very long answer that contains enough characters to pass the minimum length requirement for essay validation.',
         );
@@ -234,7 +234,7 @@ void main() {
           markschemeText: 'Solution',
         );
 
-        final resultWithSteps = service.validateAnswer(question, 'First do step one, then step two');
+        final resultWithSteps = service.validateAnswerForQuestion(question, 'First do step one, then step two');
         expect(resultWithSteps.isCorrect, isTrue);
       });
 
@@ -245,7 +245,7 @@ void main() {
           markschemeText: '',
         );
 
-        final result = service.validateAnswer(question, '');
+        final result = service.validateAnswerForQuestion(question, '');
         expect(result.isCorrect, isFalse);
         expect(result.explanation, contains('canvas'));
       });
@@ -259,7 +259,7 @@ void main() {
           markschemeText: null,
         );
 
-        final result = service.validateAnswer(question, 'anything');
+        final result = service.validateAnswerForQuestion(question, 'anything');
         expect(result.isCorrect, isFalse);
       });
 
@@ -270,7 +270,7 @@ void main() {
           markschemeText: '',
         );
 
-        final result = service.validateAnswer(question, 'answer');
+        final result = service.validateAnswerForQuestion(question, 'answer');
         expect(result.isCorrect, isFalse);
       });
 
@@ -281,7 +281,7 @@ void main() {
           markschemeText: 'correct',
         );
 
-        final result = service.validateAnswer(question, '   ');
+        final result = service.validateAnswerForQuestion(question, '   ');
         expect(result.isCorrect, isFalse);
       });
 
@@ -293,7 +293,7 @@ void main() {
         );
 
         final longAnswer = 'a' * 1000;
-        final result = service.validateAnswer(question, longAnswer);
+        final result = service.validateAnswerForQuestion(question, longAnswer);
         expect(result.isCorrect, isFalse);
       });
 
@@ -304,7 +304,7 @@ void main() {
           markschemeText: 'Test <>&"\'123',
         );
 
-        expect(service.validateAnswer(question, 'test <>&"\'123').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(question, 'test <>&"\'123').isCorrect, isTrue);
       });
     });
 
@@ -316,9 +316,9 @@ void main() {
           buildQuestion(id: 'seq-3', type: QuestionType.multiChoice, markschemeText: 'A,B', options: ['A', 'B', 'C']),
         ];
 
-        expect(service.validateAnswer(questions[0], 'answer 1').isCorrect, isTrue);
-        expect(service.validateAnswer(questions[1], 'A').isCorrect, isTrue);
-        expect(service.validateAnswer(questions[2], 'B,A').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(questions[0], 'answer 1').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(questions[1], 'A').isCorrect, isTrue);
+        expect(service.validateAnswerForQuestion(questions[2], 'B,A').isCorrect, isTrue);
       });
 
       test('validation result contains explanation', () {
@@ -329,7 +329,7 @@ void main() {
           explanation: 'Detailed explanation here',
         );
 
-        final result = service.validateAnswer(question, 'wrong');
+        final result = service.validateAnswerForQuestion(question, 'wrong');
         expect(result.explanation, isNotEmpty);
       });
     });
@@ -378,8 +378,8 @@ void main() {
         markschemeText: null,
       );
 
-      final correctResult = service.validateAnswer(withMarkscheme, 'paris');
-      final missingResult = service.validateAnswer(withoutMarkscheme, 'anything');
+      final correctResult = service.validateAnswerForQuestion(withMarkscheme, 'paris');
+      final missingResult = service.validateAnswerForQuestion(withoutMarkscheme, 'anything');
 
       expect(correctResult.isCorrect, isTrue);
       expect(missingResult.isCorrect, isFalse);
@@ -393,8 +393,8 @@ void main() {
         options: const ['A', 'B', 'C'],
       );
 
-      expect(service.validateAnswer(question, 'B').isCorrect, isTrue);
-      expect(service.validateAnswer(question, 'A').isCorrect, isFalse);
+      expect(service.validateAnswerForQuestion(question, 'B').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(question, 'A').isCorrect, isFalse);
     });
 
     test('multi-choice accepts equal sets and rejects partial answers', () {
@@ -405,8 +405,8 @@ void main() {
         options: const ['A', 'B', 'C', 'D'],
       );
 
-      expect(service.validateAnswer(question, 'C, A').isCorrect, isTrue);
-      expect(service.validateAnswer(question, 'A').isCorrect, isFalse);
+      expect(service.validateAnswerForQuestion(question, 'C, A').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(question, 'A').isCorrect, isFalse);
     });
 
     test('cache refreshes validator when same question id markscheme changes', () {
@@ -423,9 +423,9 @@ void main() {
         options: const ['A', 'B'],
       );
 
-      final first = service.validateAnswer(original, 'A');
-      final second = service.validateAnswer(updated, 'B');
-      final staleCheck = service.validateAnswer(updated, 'A');
+      final first = service.validateAnswerForQuestion(original, 'A');
+      final second = service.validateAnswerForQuestion(updated, 'B');
+      final staleCheck = service.validateAnswerForQuestion(updated, 'A');
 
       expect(first.isCorrect, isTrue);
       expect(second.isCorrect, isTrue);

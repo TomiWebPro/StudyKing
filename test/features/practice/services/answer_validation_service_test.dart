@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/models/markscheme_model.dart';
-import 'package:studyking/features/practice/services/answer_validation_service.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/services/answer_validation_service.dart';
 
 Question _question({
   required String id,
@@ -46,7 +46,7 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final result = service.validateAnswer(question, 'any answer');
+      final result = service.validateAnswerForQuestion(question, 'any answer');
       expect(result.isCorrect, isFalse);
       expect(result.explanation, contains('No markscheme'));
     });
@@ -58,7 +58,7 @@ void main() {
         correctAnswer: 'Paris',
       );
 
-      final result = service.validateAnswer(question, 'Paris');
+      final result = service.validateAnswerForQuestion(question, 'Paris');
       expect(result.isCorrect, isTrue);
     });
 
@@ -69,7 +69,7 @@ void main() {
         correctAnswer: 'Paris',
       );
 
-      final result = service.validateAnswer(question, 'London');
+      final result = service.validateAnswerForQuestion(question, 'London');
       expect(result.isCorrect, isFalse);
     });
 
@@ -80,8 +80,8 @@ void main() {
         correctAnswer: '42',
       );
 
-      final result1 = service.validateAnswer(question, '42');
-      final result2 = service.validateAnswer(question, '42');
+      final result1 = service.validateAnswerForQuestion(question, '42');
+      final result2 = service.validateAnswerForQuestion(question, '42');
       expect(result1.isCorrect, isTrue);
       expect(result2.isCorrect, isTrue);
     });
@@ -98,10 +98,10 @@ void main() {
         correctAnswer: 'new',
       );
 
-      final result1 = service.validateAnswer(question1, 'old');
+      final result1 = service.validateAnswerForQuestion(question1, 'old');
       expect(result1.isCorrect, isTrue);
 
-      final result2 = service.validateAnswer(question2, 'new');
+      final result2 = service.validateAnswerForQuestion(question2, 'new');
       expect(result2.isCorrect, isTrue);
     });
 
@@ -112,7 +112,7 @@ void main() {
         correctAnswer: 'Option A',
       );
 
-      final result = service.validateAnswer(question, 'Option A');
+      final result = service.validateAnswerForQuestion(question, 'Option A');
       expect(result.isCorrect, isTrue);
     });
 
@@ -123,7 +123,7 @@ void main() {
         correctAnswer: 'A,B',
       );
 
-      final result = service.validateAnswer(question, 'A,B');
+      final result = service.validateAnswerForQuestion(question, 'A,B');
       expect(result.isCorrect, isTrue);
     });
 
@@ -134,7 +134,7 @@ void main() {
         correctAnswer: 'Drawing submitted',
       );
 
-      final result = service.validateAnswer(question, 'Drawing submitted');
+      final result = service.validateAnswerForQuestion(question, 'Drawing submitted');
       expect(result.isCorrect, isTrue);
     });
 
@@ -145,7 +145,7 @@ void main() {
         correctAnswer: '',
       );
 
-      final result = service.validateAnswer(question, 'Long essay text');
+      final result = service.validateAnswerForQuestion(question, 'Long essay text');
       expect(result.isCorrect, isTrue);
     });
 
@@ -157,7 +157,7 @@ void main() {
         acceptableAnswers: ['paris', 'PARIS', 'city of light'],
       );
 
-      final result = service.validateAnswer(question, 'paris');
+      final result = service.validateAnswerForQuestion(question, 'paris');
       expect(result.isCorrect, isTrue);
     });
 
@@ -168,7 +168,7 @@ void main() {
         correctAnswer: 'x=2',
       );
 
-      final result = service.validateAnswer(question, 'x=2');
+      final result = service.validateAnswerForQuestion(question, 'x=2');
       expect(result.isCorrect, isTrue);
     });
   });

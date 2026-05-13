@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../models/llm_models.dart';
+import '../core/data/models/llm_models.dart';
 
 /// OpenRouter API client with dynamic price fetching
 class OpenRouterClient {

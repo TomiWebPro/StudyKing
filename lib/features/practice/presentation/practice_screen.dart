@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/handlers.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-
-final spacedRepetitionRepositoryProvider = Provider<SpacedRepetitionRepository>((ref) {
-  return SpacedRepetitionRepository();
-});
-
-final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
-  return QuestionRepository();
-});
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {

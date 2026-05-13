@@ -1,5 +1,9 @@
 // All features
 export 'lessons/lessons.dart';
-export 'quickguide/quickguide.dart';
 export 'planner/planner.dart';
 export 'practice/practice.dart';
+export 'questions/questions_feature.dart';
+export 'quickguide/quickguide.dart';
+export 'sessions/sessions.dart';
+export 'settings/settings.dart';
+export 'subjects/subject_feature.dart';

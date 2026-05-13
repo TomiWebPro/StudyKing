@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Dynamic model pricing configuration fetched from OpenRouter
-/// All prices are fetched dynamically, no hardcoded values
 @immutable
 class ModelPrice {
   final String modelId;
@@ -18,7 +16,6 @@ class ModelPrice {
     required this.contextWindow,
   });
 
-  /// Convert to JSON for storage
   Map<String, dynamic> toJson() {
     return {
       'modelId': modelId,
@@ -29,7 +26,6 @@ class ModelPrice {
     };
   }
 
-  /// Create from JSON
   factory ModelPrice.fromJson(Map<String, dynamic> json) {
     return ModelPrice(
       modelId: json['modelId'],
@@ -41,7 +37,6 @@ class ModelPrice {
   }
 }
 
-/// Model with both static and dynamic pricing data
 @immutable
 class DynamicModel {
   final String provider;
@@ -61,7 +56,6 @@ class DynamicModel {
   })  : prices = prices ?? <ModelPrice>[],
         metadata = metadata ?? {};
 
-  /// Get current best price (lowest input + output)
   ModelPrice getBestPrice() {
     if (prices.isEmpty) {
       return ModelPrice(
@@ -79,7 +73,6 @@ class DynamicModel {
     });
   }
 
-  /// Calculate cost for given tokens
   double calculateCost(int inputTokens, int outputTokens) {
     if (prices.isEmpty) return 0.0;
     final model = getBestPrice();
@@ -101,7 +94,6 @@ class DynamicModel {
   String toString() => 'Model($modelName, fetched:$pricesFetched)';
 }
 
-/// Request body structure matching OpenRouter API spec
 @immutable
 class OpenRouterRequest {
   final String model;
@@ -124,7 +116,6 @@ class OpenRouterRequest {
     this.extraHeaderKey,
   });
 
-  /// Convert to JSON for API request
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {
       'model': model,
@@ -132,10 +123,8 @@ class OpenRouterRequest {
       'temperature': temperature ?? 0.7,
       'stream': stream,
     };
-
     if (maxTokens != null) json['max_tokens'] = maxTokens;
     if (topP != null) json['top_p'] = topP;
-
     return json;
   }
 
@@ -145,7 +134,6 @@ class OpenRouterRequest {
   }
 }
 
-/// Response structure from OpenRouter API
 @immutable
 class OpenRouterResponse {
   final String id;
@@ -193,7 +181,6 @@ class OpenRouterResponse {
   }
 }
 
-/// Message in chat conversation
 @immutable
 class Message {
   final String role;

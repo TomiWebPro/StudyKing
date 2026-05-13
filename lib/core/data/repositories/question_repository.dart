@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
-import '../../../features/questions/models/markscheme_model.dart';
+import '../models/markscheme_model.dart';
 
 /// Generic Result class for safe error propagation
 sealed class Result<T> {

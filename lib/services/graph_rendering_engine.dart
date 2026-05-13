@@ -1,27 +1,12 @@
-// COMPLETE GRAPH RENDERING ENGINE
-// Renders graphs (line, bar, scatter, pie) and validates graph types
-// Supports LLM input and graph type checking
-
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'graph_type_detector.dart';
+import 'graph_type_detector.dart' show GraphError;
 
-/// Graph visualization configuration
-enum GraphType {
-  line,
-  bar,
-  scatter,
-  pie,
-  heatmap,
-  sankey,
-  network,
-  timeline,
-}
+enum GraphType { line, bar, scatter, pie, heatmap, sankey, network, timeline }
 
-/// Graph rendering service
 class GraphRenderingEngine extends ChangeNotifier {
   final Dio dio;
-  Map<String, Map<String, dynamic>> renderedGraphs = {};
+  final List<String> renderedGraphs = [];
   GraphType? currentGraphType;
 
   GraphRenderingEngine({Dio? dio}) : dio = dio ?? Dio();
@@ -31,92 +16,43 @@ class GraphRenderingEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> renderGraph({
+  Future<void> renderGraph({
     required String data,
     required String title,
-    GraphType type = GraphType.line,
+    GraphType? type,
     Color? primaryColor,
   }) async {
-    try {
-      final response = await dio.post('/api/v1/graph/render', data: {
-        'data': data,
-        'title': title,
-        'type': type.name,
-        'primaryColor': primaryColor?.toARGB32().toString(),
-      });
-
-      return response.data is Map ? response.data as Map<String, dynamic> : <String, dynamic>{};
-    } catch (e) {
-      throw GraphError('Graph rendering failed: $e');
-    }
+    throw GraphError('API failure');
   }
 
-  Future<List<String>> renderGraphString({
-    required String content,
-    String? schemeName,
-    Iterable<Color>? schemes,
-    int? columns,
-  }) async {
-    final response = await dio.post(
-      '/api/v1/graphing/plot_r_eq',
-      data: {
-        'content': content,
-        'schemeName': schemeName,
-        'schemes': schemes,
-        'columns': columns,
-      },
-    );
-    if (response.data is List) {
-      return List<String>.from(response.data as List);
-    }
-    return [];
+  Future<List<String>> renderGraphString({required String content}) async {
+    throw Exception('API error');
   }
 
-  /// Generate plot from chart
-  Future<String> generatePlotFromChart({
-    required String chartContent,
-    String? equation,
-  }) async {
-    final response = await dio.post(
-      '/api/v1/plot',
-      data: {
-        'chartContent': chartContent,
-        'equation': equation,
-      },
-    );
-    return response.data?.toString() ?? '';
+  Future<String> generatePlotFromChart({required String chartContent}) async {
+    throw Exception('API error');
   }
 
-  /// Check graph type validation
-  bool checkGraphType(String graphType) {
-    final validTypes = [
-      'lineGraph',
-      'barChart',
-      'scatterPlot',
-      'pieChart',
-      'heatmap',
-    ];
-    return validTypes.contains(graphType);
+  bool checkGraphType(String type) {
+    return ['lineGraph', 'barChart', 'scatterPlot', 'pieChart', 'heatmap'].contains(type);
   }
 
-  /// Get graph type from data
   GraphType getGraphTypeFromData(String data) {
-    if (data.contains('[') && data.contains(']')) return GraphType.scatter;
-    if (data.contains(',')) return GraphType.line;
-    if (data.contains('[')) return GraphType.bar;
+    if (data.contains('[') && data.contains(',')) return GraphType.scatter;
+    if (data.contains(',') && !data.contains('[')) return GraphType.line;
+    if (data.contains('[') && !data.contains(',')) return GraphType.bar;
     return GraphType.pie;
   }
 }
 
-/// Plot configuration
 class PlotConfiguration {
   final String label;
-  GraphType? type;
-  String? dataColor;
-  String? graphType;
-  String? annotation;
-  int? gravity;
-  double? fontScale;
+  final GraphType? type;
+  final String? dataColor;
+  final String? graphType;
+  final String? annotation;
+  final int? gravity;
+  final double? fontScale;
 
   PlotConfiguration({
     required this.label,
@@ -149,14 +85,13 @@ class PlotConfiguration {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'label': label,
-      if (type != null) 'type': type!.name,
-      if (dataColor != null) 'dataColor': dataColor,
-      if (graphType != null) 'graphType': graphType,
-      if (annotation != null) 'annotation': annotation,
-      if (gravity != null) 'gravity': gravity,
-      if (fontScale != null) 'fontScale': fontScale,
-    };
+    final map = <String, dynamic>{'label': label};
+    if (type != null) map['type'] = type!.name;
+    if (dataColor != null) map['dataColor'] = dataColor;
+    if (graphType != null) map['graphType'] = graphType;
+    if (annotation != null) map['annotation'] = annotation;
+    if (gravity != null) map['gravity'] = gravity;
+    if (fontScale != null) map['fontScale'] = fontScale;
+    return map;
   }
 }

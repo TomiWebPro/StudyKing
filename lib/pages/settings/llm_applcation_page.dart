@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/llm_config.dart';
+import '../../core/data/models/llm_config.dart';
 import '../../providers/llm_engine_provider.dart';
 import 'package:provider/provider.dart';
 

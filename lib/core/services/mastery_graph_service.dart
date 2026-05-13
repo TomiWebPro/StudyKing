@@ -2,6 +2,7 @@ import '../data/repositories/mastery_graph_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
 import '../data/models/question_evaluation_model.dart';
+import 'answer_validation_service.dart';
 
 class MasteryGraphService {
   final MasteryGraphRepository _repository;
@@ -110,13 +111,14 @@ class MasteryGraphService {
     }
 
     final evaluation = evalResult.data!;
-    final isMatch = evaluation.isMatch(userAnswer);
+    final validationService = AnswerValidationService();
+    final result = validationService.validateWithEvaluation(evaluation, userAnswer);
 
     return Result.success(evaluation.copyWith(
       metadata: {
         ...?evaluation.metadata,
         'lastEvaluation': DateTime.now().toIso8601String(),
-        'matched': isMatch,
+        'matched': result.isCorrect,
       },
     ));
   }

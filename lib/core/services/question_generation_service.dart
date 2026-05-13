@@ -1,34 +1,27 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../../core/data/models/question_model.dart';
-import '../../features/questions/models/markscheme_model.dart';
+import '../data/models/markscheme_model.dart';
 import '../../core/data/repositories/question_repository.dart';
 import '../../core/services/mastery_graph_service.dart';
 import '../../core/data/enums.dart';
+import '../services/llm_service.dart';
 
 class QuestionGenerationService {
-  final http.Client _client;
   final QuestionRepository _questionRepo;
   final MasteryGraphService _masteryService;
-  
-  final String _apiBaseUrl;
-  final String _apiKey;
-  
+  final LlmService _llmService;
+
   static const int maxRetries = 3;
   static const Duration retryDelay = Duration(seconds: 2);
 
   QuestionGenerationService({
-    http.Client? client,
     QuestionRepository? questionRepo,
     MasteryGraphService? masteryService,
-    required String apiBaseUrl,
-    required String apiKey,
-  })  : _client = client ?? http.Client(),
-        _questionRepo = questionRepo ?? QuestionRepository(),
+    required LlmService llmService,
+  })  : _questionRepo = questionRepo ?? QuestionRepository(),
         _masteryService = masteryService ?? MasteryGraphService(),
-        _apiBaseUrl = apiBaseUrl,
-        _apiKey = apiKey;
+        _llmService = llmService;
 
   Future<GenerationResult> generateQuestions({
     required String topicId,
@@ -39,7 +32,7 @@ class QuestionGenerationService {
   }) async {
     try {
       final questions = <Question>[];
-      
+
       for (int i = 0; i < count; i++) {
         final result = await _generateSingleQuestion(
           topicId: topicId,
@@ -49,7 +42,7 @@ class QuestionGenerationService {
           totalQuestions: count,
           focusOnWeakAreas: focusOnWeakAreas,
         );
-        
+
         if (result.isSuccess && result.data != null) {
           final saveResult = await _questionRepo.create(result.data!);
           if (saveResult.isSuccess) {
@@ -57,7 +50,7 @@ class QuestionGenerationService {
           }
         }
       }
-      
+
       return GenerationResult.success(questions);
     } catch (e) {
       debugPrint('Error generating questions: $e');
@@ -74,10 +67,10 @@ class QuestionGenerationService {
     String? focusOnWeakAreas,
   }) async {
     String? lastError;
-    
+
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        final question = await _callOpenRouterAPI(
+        final question = await _callLlmAPI(
           topicId: topicId,
           subjectId: subjectId,
           difficulty: difficulty,
@@ -89,17 +82,17 @@ class QuestionGenerationService {
       } catch (e) {
         lastError = e.toString();
         debugPrint('Attempt ${attempt + 1} failed: $e');
-        
+
         if (attempt < maxRetries - 1) {
           await Future.delayed(retryDelay * (attempt + 1));
         }
       }
     }
-    
+
     return GenerationResult.failure('Failed after $maxRetries attempts: $lastError');
   }
 
-  Future<Question> _callOpenRouterAPI({
+  Future<Question> _callLlmAPI({
     required String topicId,
     required String subjectId,
     required int difficulty,
@@ -109,7 +102,7 @@ class QuestionGenerationService {
   }) async {
     final model = _getModelForDifficulty(difficulty);
     final difficultyLabel = _getDifficultyLabel(difficulty);
-    
+
     String prompt = _buildQuestionPrompt(
       topicId: topicId,
       subjectId: subjectId,
@@ -120,39 +113,18 @@ class QuestionGenerationService {
       focusOnWeakAreas: focusOnWeakAreas,
     );
 
-    final response = await _client.post(
-      Uri.parse('$_apiBaseUrl/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': model,
-        'messages': [
-          {'role': 'system', 'content': _systemPrompt},
-          {'role': 'user', 'content': prompt},
-        ],
-        'temperature': 0.7,
-        'max_tokens': 2000,
-      }),
+    final response = await _llmService.chat(
+      message: prompt,
+      modelId: model,
+      systemPrompt: _systemPrompt,
     );
 
-    if (response.statusCode != 200) {
-      throw GenerationException(
-        'API request failed with status ${response.statusCode}: ${response.body}',
-        statusCode: response.statusCode,
-      );
-    }
-
-    final data = jsonDecode(response.body);
-    final content = data['choices']?[0]?['message']?['content'];
-    
-    if (content == null || content.toString().isEmpty) {
-      throw GenerationException('Empty response from OpenRouter API');
+    if (response.isEmpty) {
+      throw GenerationException('Empty response from LLM API');
     }
 
     return _parseQuestionResponse(
-      content.toString(),
+      response,
       topicId: topicId,
       subjectId: subjectId,
       difficulty: difficulty,
@@ -202,7 +174,7 @@ Questions should be educational, clear, and have precise answers.''';
     final weakAreasContext = focusOnWeakAreas != null
         ? ' Focus on: $focusOnWeakAreas'
         : '';
-    
+
     return '''Generate question $questionIndex of $totalQuestions for topic: $topicId, subject: $subjectId.
 Difficulty: $difficultyLabel$weakAreasContext
 
@@ -252,10 +224,10 @@ Return ONLY the JSON object, no markdown formatting.''';
       jsonStr = jsonStr.trim();
 
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-      
+
       final questionId = json['markscheme']?['questionId'] ?? 
           '${topicId}_${DateTime.now().millisecondsSinceEpoch}';
-      
+
       Markscheme? markscheme;
       final markschemeData = json['markscheme'];
       if (markschemeData != null) {
@@ -338,14 +310,14 @@ Return ONLY the JSON object, no markdown formatting.''';
   }) async {
     try {
       final weakTopicsResult = await _masteryService.getWeakTopics(studentId);
-      
+
       if (weakTopicsResult.isFailure) {
         return GenerationResult.failure(weakTopicsResult.error ?? 'Failed to get weak topics');
       }
-      
+
       final weakTopics = weakTopicsResult.data!;
       final questions = <Question>[];
-      
+
       for (final topic in weakTopics) {
         final result = await generateQuestions(
           topicId: topic.topicId,
@@ -356,12 +328,12 @@ Return ONLY the JSON object, no markdown formatting.''';
               ? topic.weakSubtopics.join(', ')
               : null,
         );
-        
+
         if (result.isSuccess && result.data != null) {
           questions.addAll(result.data!);
         }
       }
-      
+
       return GenerationResult.success(questions);
     } catch (e) {
       return GenerationResult.failure('Failed to generate for weak topics: $e');
@@ -384,8 +356,8 @@ class GenerationResult<T> {
   const GenerationResult._({this.data, this.error, this.statusCode});
 
   factory GenerationResult.success(T data) => GenerationResult._(data: data);
-  
-  factory GenerationResult.failure(String error, {int? statusCode}) => 
+
+  factory GenerationResult.failure(String error, {int? statusCode}) =>
       GenerationResult._(error: error, statusCode: statusCode);
 
   bool get isSuccess => error == null && data != null;

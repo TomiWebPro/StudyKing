@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../models/llm_models.dart';
+import '../core/data/models/llm_models.dart';
 
 /// API key settings for storing API credentials
 @immutable

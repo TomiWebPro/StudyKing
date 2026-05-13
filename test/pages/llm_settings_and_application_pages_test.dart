@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:studyking/models/llm_config.dart';
+import 'package:studyking/core/data/models/llm_config.dart';
 import 'package:studyking/pages/settings/llm_applcation_page.dart';
 import 'package:studyking/pages/settings/llm_settings_screen.dart';
 import 'package:studyking/providers/llm_engine_provider.dart';

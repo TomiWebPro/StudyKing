@@ -51,29 +51,16 @@ class Markscheme extends HiveObject {
   );
 
   bool isMatch(String userAnswer) {
-    final answer = userAnswer.toLowerCase().trim();
-    final correct = correctAnswer.toLowerCase().trim();
-    if (answer == correct) return true;
-
+    final normalizedAnswer = userAnswer.trim().toLowerCase();
+    final normalizedCorrect = correctAnswer.trim().toLowerCase();
+    if (normalizedAnswer == normalizedCorrect || normalizedAnswer.contains(normalizedCorrect)) {
+      return true;
+    }
     for (final acceptable in acceptableAnswers) {
-      if (acceptable.toLowerCase().trim() == answer) return true;
+      if (normalizedAnswer == acceptable.trim().toLowerCase()) {
+        return true;
+      }
     }
-
-    return _isSimilar(answer, correct);
-  }
-
-  bool _isSimilar(String answer, String correct) {
-    final answerWords = answer.split(' ');
-    final correctWords = correct.split(' ');
-
-    if (answerWords.length >= correctWords.length * 0.8) {
-      final matchingRatio = answerWords
-          .where((word) => correctWords.contains(word))
-          .length /
-        correctWords.length;
-      return matchingRatio > 0.7;
-    }
-
     return false;
   }
 

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 enum ServiceProvider { openrouter }
 
-/// LLM model configuration with pricing information
 @immutable
 class LLMModelConfig {
   final String provider;
@@ -21,17 +20,12 @@ class LLMModelConfig {
     required this.contextWindow,
   });
 
-  /// Calculate approximate cost for a given input and output token count
-  double calculateCost(
-    int inputTokens,
-    int outputTokens,
-  ) {
+  double calculateCost(int inputTokens, int outputTokens) {
     final inputCost = (inputTokens / 1000000) * inputPricePerMillionTokens;
     final outputCost = (outputTokens / 1000000) * outputPricePerMillionTokens;
     return inputCost + outputCost;
   }
 
-  /// Format pricing for display
   String formatPricing() {
     return '$inputPricePerMillionTokens/\$M input, $outputPricePerMillionTokens/\$M output';
   }
@@ -51,7 +45,6 @@ class LLMModelConfig {
   String toString() => 'LLMConfig($provider, $modelName, ${(inputPricePerMillionTokens + outputPricePerMillionTokens) / 2}/M)';
 }
 
-/// API endpoint configuration
 @immutable
 class APIEndpointConfig {
   final String provider;
@@ -75,7 +68,7 @@ class APIEndpointConfig {
           provider: 'openrouter',
           modelName: modelName,
           providerDisplayName: 'OpenRouter',
-          inputPricePerMillionTokens: 0.5, // default fallback
+          inputPricePerMillionTokens: 0.5,
           outputPricePerMillionTokens: 10.0,
           contextWindow: contextWindow,
         );
@@ -103,7 +96,6 @@ class APIEndpointConfig {
   int get hashCode => Object.hash(provider, baseUrl);
 }
 
-/// Usage tracking record
 @immutable
 class LLMUsageRecord {
   final DateTime timestamp;
@@ -122,10 +114,8 @@ class LLMUsageRecord {
     required this.totalCost,
   });
 
-  /// Calculate total tokens used
   int get totalTokens => inputTokens + outputTokens;
 
-  /// Create JSON representation for storage
   Map<String, dynamic> toJson() {
     return {
       'timestamp': timestamp.toIso8601String(),
@@ -149,7 +139,6 @@ class LLMUsageRecord {
   }
 }
 
-/// Summary of usage statistics
 @immutable
 class LLMUsageSummary {
   final int totalRequests;
@@ -166,11 +155,8 @@ class LLMUsageSummary {
     required this.totalCost,
   });
 
-  /// Cost per token
-  double get costPerToken =>
-      totalTokens > 0 ? (totalCost / totalTokens) : 0.0;
+  double get costPerToken => totalTokens > 0 ? (totalCost / totalTokens) : 0.0;
 
-  /// Monthly projection at current rate
   double get monthlyProjection =>
       totalRequests > 0 ? (totalCost / totalRequests * 30) : 0.0;
 
@@ -181,13 +167,11 @@ class LLMUsageSummary {
   }
 }
 
-/// Available models for different providers
 @immutable
 class AvailableModels {
   const AvailableModels._();
-  /// OpenRouter models with pricing
+
   static const List<LLMModelConfig> openrouterModels = [
-    // Anthropic
     LLMModelConfig(
       provider: 'openrouter',
       modelName: 'anthropic/claude-3.5-sonnet',
@@ -204,8 +188,6 @@ class AvailableModels {
       outputPricePerMillionTokens: 1.25,
       contextWindow: 200000,
     ),
-
-    // Google
     LLMModelConfig(
       provider: 'openrouter',
       modelName: 'google/gemini-1.5-pro',
@@ -222,8 +204,6 @@ class AvailableModels {
       outputPricePerMillionTokens: 0.6,
       contextWindow: 1000000,
     ),
-
-    // Meta
     LLMModelConfig(
       provider: 'openrouter',
       modelName: 'meta/llama-3.1-405b-instruct',
@@ -240,8 +220,6 @@ class AvailableModels {
       outputPricePerMillionTokens: 0.75,
       contextWindow: 8192,
     ),
-
-    // Mistral
     LLMModelConfig(
       provider: 'openrouter',
       modelName: 'mistral/mistral-large',
@@ -258,22 +236,10 @@ class AvailableModels {
       outputPricePerMillionTokens: 0.75,
       contextWindow: 32000,
     ),
-
-    // Other
-    LLMModelConfig(
-      provider: 'openrouter',
-      modelName: '椰子/椰子-1.0',
-      providerDisplayName: 'Nemo 1.0',
-      inputPricePerMillionTokens: 0.25,
-      outputPricePerMillionTokens: 1.0, // estimated
-      contextWindow: 4096,
-    ),
   ];
 
-  /// Default model for OpenRouter
   static const String defaultOpenRouterModel = 'anthropic/claude-3.5-sonnet';
 
-  /// Get models by provider
   static List<LLMModelConfig> getModelsByProvider(String provider) {
     switch (provider.toLowerCase()) {
       case 'openrouter':

@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../features/questions/models/markscheme_model.dart';
+import '../models/markscheme_model.dart';
 
 class MarkschemeAdapter extends TypeAdapter<Markscheme> {
   @override

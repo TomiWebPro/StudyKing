@@ -1,134 +1,6 @@
-import '../data/models/question_evaluation_model.dart';
-import '../data/models/question_model.dart';
-import '../../features/questions/models/markscheme_model.dart';
-
-class EvaluationAdapterService {
-  QuestionEvaluation convertFromQuestion(Question question) {
-    final markscheme = question.markscheme;
-    return QuestionEvaluation.fromLegacy(
-      questionId: question.id,
-      markscheme: markscheme?.correctAnswer,
-      correctAnswer: markscheme?.correctAnswer,
-      options: question.options,
-      explanation: markscheme?.explanation ?? question.explanation,
-    );
-  }
-
-  QuestionEvaluation convertFromFeatureMarkscheme(String questionId, Markscheme markscheme) {
-    final steps = markscheme.steps.isNotEmpty
-        ? markscheme.steps.map((s) => EvaluationStep(
-                  stepNumber: s.stepNumber,
-                  requiredAnswer: s.requiredAnswer,
-                  points: s.points,
-                  description: s.description,
-                )).toList()
-        : null;
-
-    return QuestionEvaluation(
-      questionId: questionId,
-      correctAnswer: markscheme.correctAnswer,
-      acceptableAnswers: markscheme.acceptableAnswers,
-      evaluationType: steps != null ? EvaluationType.stepBased : EvaluationType.exactMatch,
-      explanation: markscheme.explanation,
-      steps: steps,
-      maxPoints: markscheme.markschemePoints,
-      version: 1,
-    );
-  }
-
-  QuestionEvaluation convertFromMarkschemeModel(
-    String questionId,
-    String correctAnswer, {
-    List<String>? acceptableAnswers,
-    String? explanation,
-    List<String>? steps,
-  }) {
-    final evalSteps = steps?.asMap().entries.map((e) => EvaluationStep(
-          stepNumber: '${e.key + 1}',
-          requiredAnswer: e.value,
-          points: 1.0,
-        )).toList();
-
-    return QuestionEvaluation(
-      questionId: questionId,
-      correctAnswer: correctAnswer,
-      acceptableAnswers: acceptableAnswers ?? [],
-      evaluationType: evalSteps != null ? EvaluationType.stepBased : EvaluationType.exactMatch,
-      explanation: explanation,
-      steps: evalSteps,
-    );
-  }
-
-  EvaluationResult validateWithEvaluation(QuestionEvaluation evaluation, String userAnswer) {
-    final isMatch = evaluation.isMatch(userAnswer);
-
-    double score;
-    String feedback;
-
-    if (isMatch) {
-      score = evaluation.maxPoints ?? 1.0;
-      feedback = evaluation.explanation ?? 'Correct!';
-    } else {
-      score = 0.0;
-      feedback = evaluation.explanation != null
-          ? 'Incorrect. ${evaluation.explanation}'
-          : 'Incorrect. The correct answer was: ${evaluation.correctAnswer}';
-    }
-
-    if (evaluation.steps != null && evaluation.steps!.isNotEmpty) {
-      score = _calculateStepScore(evaluation.steps!, userAnswer);
-      feedback = _generateStepFeedback(evaluation.steps!, userAnswer);
-    }
-
-    return EvaluationResult(
-      isCorrect: isMatch,
-      score: score,
-      feedback: feedback,
-      explanation: evaluation.explanation,
-    );
-  }
-
-  double _calculateStepScore(List<EvaluationStep> steps, String userAnswer) {
-    if (steps.isEmpty) return 1.0;
-
-    final userAnswerLower = userAnswer.toLowerCase();
-    var matchedSteps = 0;
-
-    for (final step in steps) {
-      if (userAnswerLower.contains(step.requiredAnswer.toLowerCase())) {
-        matchedSteps++;
-      }
-    }
-
-    final totalPoints = steps.fold(0.0, (sum, step) => sum + step.points);
-    if (totalPoints == 0) return matchedSteps / steps.length;
-    return (matchedSteps / steps.length) * (totalPoints / steps.length);
-  }
-
-  String _generateStepFeedback(List<EvaluationStep> steps, String userAnswer) {
-    final userAnswerLower = userAnswer.toLowerCase();
-    final matchedCount = steps.where((s) => userAnswerLower.contains(s.requiredAnswer.toLowerCase())).length;
-
-    if (matchedCount == steps.length) {
-      return 'All ${steps.length} steps identified correctly!';
-    } else if (matchedCount > 0) {
-      return 'Identified $matchedCount of ${steps.length} steps. Missing: ${steps.where((s) => !userAnswerLower.contains(s.requiredAnswer.toLowerCase())).map((s) => s.requiredAnswer).join(", ")}';
-    } else {
-      return 'No required steps found in your answer. Key steps to include: ${steps.map((s) => s.requiredAnswer).join(", ")}';
-    }
-  }
-
-  Map<String, dynamic> toLegacyFormat(QuestionEvaluation evaluation) {
-    return {
-      'questionId': evaluation.questionId,
-      'correctAnswer': evaluation.correctAnswer,
-      'acceptableAnswers': evaluation.acceptableAnswers,
-      'explanation': evaluation.explanation,
-      'steps': evaluation.steps?.map((s) => s.toJson()).toList(),
-      'markschemePoints': evaluation.maxPoints,
-    };
-  }
-}
+import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 
 class EvaluationResult {
   final bool isCorrect;
@@ -142,4 +14,111 @@ class EvaluationResult {
     required this.feedback,
     this.explanation,
   });
+}
+
+class EvaluationAdapterService {
+  QuestionEvaluation convertFromQuestion(Question question) {
+    return QuestionEvaluation(
+      questionId: question.id,
+      correctAnswer: question.markscheme?.correctAnswer ?? '',
+    );
+  }
+
+  QuestionEvaluation convertFromFeatureMarkscheme(
+    String questionId,
+    Markscheme markscheme,
+  ) {
+    return QuestionEvaluation(
+      questionId: questionId,
+      correctAnswer: markscheme.correctAnswer,
+      evaluationType: markscheme.steps.isNotEmpty
+          ? EvaluationType.stepBased
+          : EvaluationType.exactMatch,
+      steps: markscheme.steps.isNotEmpty
+          ? markscheme.steps
+              .map((s) => EvaluationStep(
+                    stepNumber: s.stepNumber,
+                    requiredAnswer: s.requiredAnswer,
+                    points: s.points,
+                  ))
+              .toList()
+          : null,
+    );
+  }
+
+  QuestionEvaluation convertFromMarkschemeModel(
+    String questionId,
+    String correctAnswer, {
+    List<String>? acceptableAnswers,
+    String? explanation,
+    List<String>? steps,
+  }) {
+    return QuestionEvaluation(
+      questionId: questionId,
+      correctAnswer: correctAnswer,
+      acceptableAnswers: acceptableAnswers ?? [],
+      evaluationType: steps != null && steps.isNotEmpty
+          ? EvaluationType.stepBased
+          : EvaluationType.exactMatch,
+      explanation: explanation,
+      steps: steps?.asMap().entries.map((e) => EvaluationStep(
+            stepNumber: '${e.key + 1}',
+            requiredAnswer: e.value,
+            points: 1.0,
+          )).toList(),
+    );
+  }
+
+  EvaluationResult validateWithEvaluation(
+    QuestionEvaluation evaluation,
+    String answer,
+  ) {
+    final isCorrect = evaluation.correctAnswer.toLowerCase() == answer.toLowerCase() ||
+        evaluation.acceptableAnswers
+            .any((a) => a.toLowerCase() == answer.toLowerCase());
+
+    if (evaluation.evaluationType == EvaluationType.stepBased &&
+        evaluation.steps != null) {
+      final matchedSteps = evaluation.steps!
+          .where((s) => answer.toLowerCase().contains(s.requiredAnswer.toLowerCase()))
+          .toList();
+      if (matchedSteps.isEmpty) {
+        return EvaluationResult(
+          isCorrect: false,
+          score: 0.0,
+          feedback: 'No required steps found',
+          explanation: evaluation.explanation,
+        );
+      }
+      final score = matchedSteps.length / evaluation.steps!.length;
+      final allMatched = matchedSteps.length == evaluation.steps!.length;
+      return EvaluationResult(
+        isCorrect: allMatched,
+        score: score,
+        feedback: allMatched
+            ? (evaluation.explanation ?? 'Correct')
+            : 'Missing ${evaluation.steps!.length - matchedSteps.length} step(s)',
+        explanation: evaluation.explanation,
+      );
+    }
+
+    return EvaluationResult(
+      isCorrect: isCorrect,
+      score: isCorrect ? 1.0 : 0.0,
+      feedback: isCorrect
+          ? (evaluation.explanation ?? 'Correct')
+          : 'Incorrect. Expected: ${evaluation.correctAnswer}',
+      explanation: evaluation.explanation,
+    );
+  }
+
+  Map<String, dynamic> toLegacyFormat(QuestionEvaluation evaluation) {
+    return {
+      'questionId': evaluation.questionId,
+      'correctAnswer': evaluation.correctAnswer,
+      'explanation': evaluation.explanation,
+      'markschemePoints': evaluation.maxPoints,
+      if (evaluation.steps != null) 'steps': evaluation.steps!.map((s) => s.toJson()).toList(),
+    };
+  }
 }

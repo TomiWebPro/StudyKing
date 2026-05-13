@@ -6,24 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
-import 'package:studyking/features/practice/services/answer_validation_service.dart';
+import 'package:studyking/core/services/answer_validation_service.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-
-final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
-  return QuestionRepository();
-});
-
-final spacedRepetitionRepositoryProvider = Provider<SpacedRepetitionRepository>((ref) {
-  return SpacedRepetitionRepository();
-});
 
 /// Practice Session Screen - Complete practice flow with progress tracking
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -179,7 +172,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       return false;
     }
 
-    final result = _validationService.validateAnswer(question, answer);
+    final result = _validationService.validateAnswerForQuestion(question, answer);
     setState(() => _isCorrect = result.isCorrect);
     return result.isCorrect;
   }

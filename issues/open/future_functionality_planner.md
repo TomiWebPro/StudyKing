@@ -1,168 +1,173 @@
-# Feature / Architecture Roadmap: Consolidate Fragmented Answer Validation, Redundant Question Engines, and Scattered LLM Services
+# Future Functionality: Conversational AI Tutor Teaching Mode & Mentor Mode
 
-## Context
+## Summary
 
-The codebase has grown organically, leaving behind several critical architectural problems:
+The current lesson system (`lib/features/lessons/`) is a read-only content viewer — it displays pre-existing lesson blocks with no AI interactivity. The Planner screen (`lib/features/planner/`) generates static, trivial schedules with hardcoded topic cycling. Neither the conversational AI tutor (Teaching Mode) nor the persistent AI mentor (Assistant/Mentor Mode) described in the vision exist.
 
-1. **Four parallel answer-validation systems** — each with its own `isMatch` logic, `ValidationResult`/`EvaluationResult` class, and caching — spread across features and core.
-2. **Two dead question-engine files** that call nonexistent API endpoints, define the same `DynamicQuestionType` enum, and are imported by nothing.
-3. **Scattered LLM service implementations** using different HTTP clients (`http` vs `dio`), different configuration models, and different response-handling patterns.
-4. **A reverse dependency where core imports feature models** — `Question` (in `lib/core/data/models/`) imports `Markscheme` (in `lib/features/questions/models/`), violating layer isolation.
-5. **Incomplete feature-module architecture** — the `features.dart` barrel file exports only 4 of 8 features, and several features lack `services/` or `data/` layers entirely.
-
-These issues block further development: adding a new question type requires touching 4 validation systems, and enabling a new LLM provider requires changes across 3+ different files with incompatible patterns.
+This issue tracks the implementation of both AI interaction modes, which are the core value proposition of StudyKing.
 
 ---
 
-## Affected Files & Structure
+## Context
 
-### Issue 1 — Answer Validation Triple Duplication
+### Current State
 
-| File | Role | Lines |
-|------|------|-------|
-| `lib/features/questions/services/answer_validator.dart` | Contains **both** `QuestionAnswerValidator` (instance) and `AnswerValidationService` (static) classes with identical logic | 368 |
-| `lib/features/practice/services/answer_validation_service.dart` | Thin wrapper re-exporting the above with its own caching layer | 39 |
-| `lib/core/services/evaluation_adapter_service.dart` | Third validation engine with own `EvaluationResult` and step-scoring logic | 145 |
-| `lib/features/questions/models/markscheme_model.dart` | `isMatch()` / `_isSimilar()` baked into model | 133 |
-| `lib/core/data/models/question_evaluation_model.dart` | Another `isMatch()` / `_isSimilar()` — same algorithm, different class | 210 |
+- **LessonDetailScreen** (`lib/features/lessons/presentation/lesson_detail_screen.dart:93-128`): Static `ListView` of pre-saved `LessonBlock` cards. Timer counts elapsed seconds but does nothing else. No AI interaction, no adaptive pacing, no conversational interface.
+- **LessonListScreen** (`lib/features/lessons/presentation/lesson_list_screen.dart`): Simple CRUD list of lessons by topic ID.
+- **PlannerScreen** (`lib/features/planner/presentation/planner_screen.dart:57-105`): Asks user for course name, days, hours. Fetches up to 7 matching topic titles from the database, then cycles them equally across days. No LLM-based plan generation, no mastery-awareness, no persistent schedule.
+- **LlmService** (`lib/core/services/llm_service.dart`): Has mock methods with hardcoded responses for chat, question generation, lesson generation, answer validation, and study plan generation. Falls back to mocks on any error or when API key is empty. No streaming support. No conversation memory.
+- **PersonalLearningPlanService** (`lib/core/services/personal_learning_plan_service.dart`): Generates plans based solely on topic mastery data with a simple priority-ordered static algorithm. No LLM involvement, no student preference modeling, no adaptive rescheduling.
+- **StudyProgressTracker** (`lib/core/services/study_progress_tracker.dart`): Tracks attempts and produces basic stats but has **no UI dashboard** displaying trends, weak areas, or recommendations. `getTopicMasteryLevel()` returns `'Browsing'` for every topic — the real logic is never implemented.
 
-**Duplicated logic includes:**
-- Exact-match normalization (`.trim().toLowerCase()`)
-- Fuzzy word-overlap matching (`_isSimilar`)
-- Step-by-step required-answer matching (`contains()`)
-- Caching strategies (keyed by question ID + markscheme signature)
-- `ValidationResult` / `EvaluationResult` both carrying `isCorrect`, `score`, `explanation`, `feedback`
+### Vision Gap
 
-### Issue 2 — Dead Question Engine Files
+The vision document (`agent_must_read.md`) describes:
 
-| File | Problem | Lines |
-|------|---------|-------|
-| `lib/services/question_engine.dart` | Calls `/api/v1/mcq/options/types`, defines `DynamicQuestionType`, `LessonQuestion`, `DynamicLessonQuestionGenerator` — all unused by any feature | 249 |
-| `lib/services/question_engine_dynamic.dart` | Calls `/api/v1/question/types`, defines identical `DynamicQuestionType`, `DynamicTypeFetcher` — all unused | 93 |
+> *"Teaching mode should be conversational, not static. The student should be able to speak naturally with the AI tutor, ask follow-up questions, interrupt explanations, request clarification, and engage in real-time back-and-forth discussion through both text and voice."*
 
-Both files appear to be early prototypes that were never wired into the feature system. The `question_generation_service.dart` in `lib/core/services/` is the actual active generator, using `Question` (core model) and `Markscheme` (feature model) — not `LessonQuestion`.
+> *"The AI tutor should: dynamically generate the lesson plans and goals beforehand, teach concepts interactively, explain ideas step-by-step, adapt explanations to student understanding, provide examples, assign exercises and homework during and after class, review student answers, interpret handwritten work, provide immediate corrective feedback, guide problem solving rather than simply giving answers, provide encouragement during lesson time, respect the requested class hour, keep a record of how the class went."*
 
-### Issue 3 — Scattered LLM Integration
+> *"Assistant/Mentor Mode: scheduling lessons, rescheduling classes, planning long-term study goals, creating or modifying study roadmaps, motivation and encouragement, accountability, wellbeing support, helping decide what to study next, receiving student suggestions or feedback about lessons, adjusting study pacing, creating new courses or subject plans, modifying learning objectives."*
 
-| File | HTTP client | Config model | Imported by |
-|------|-------------|--------------|-------------|
-| `lib/core/services/llm_service.dart` | `http` | `LlmConfiguration` (local class) | Unknown |
-| `lib/services/llm_api_service.dart` | `dio` | `OpenRouterRequest/Response` | Unknown |
-| `lib/core/services/ai_model_service.dart` | (unknown) | (unknown) | Unknown |
-| `lib/providers/llm_engine_provider.dart` | Riverpod provider wrapper | (unknown) | Unknown |
-| `lib/core/services/question_generation_service.dart` | `http` | Hardcoded OpenRouter URL + API key | Self-contained |
+**None of this exists in the codebase. The gap is essentially 100%.**
 
-- Each file stores its own copy of API base URL, API key, and model selection logic
-- `llm_service.dart` duplicates the OpenRouter and Ollama calling patterns inline (2x identical POST logic)
-- No shared token-usage tracking across calls
+---
 
-### Issue 4 — Reverse Dependency (Core → Feature)
+## Affected Files
+
+### Core files to modify/extend:
+
+| File | Role | Change Required |
+|---|---|---|
+| `lib/core/services/llm_service.dart` | LLM interaction layer | Add streaming support (`Stream<String>`), conversation memory, structured output parsing, token usage tracking |
+| `lib/core/data/models/` | Data models | Add `ConversationMessage`, `LessonSession`, `TutorAction`, `MentorAction` models |
+| `lib/core/data/repositories/` | Persistence | Add `conversation_repository.dart`, `lesson_session_repository.dart` |
+| `lib/features/lessons/presentation/lesson_detail_screen.dart` | Current lesson UI | Complete rewrite into conversational tutor interface |
+| `lib/features/lessons/presentation/lesson_list_screen.dart` | Lesson list | Add lesson status indicators (planned, in-progress, completed) |
+| `lib/features/lessons/services/services.dart` | Lesson services | Add `TutorService`, `LessonPlanGenerator` |
+| `lib/features/planner/presentation/planner_screen.dart` | Planner UI | Replace static schedule with LLM-generated adaptive plan with rescheduling |
+| `lib/core/services/personal_learning_plan_service.dart` | Plan generation | Integrate LLM for dynamic plans respecting student history, preferences |
+| `lib/core/services/study_progress_tracker.dart` | Progress tracking | Implement `getTopicMasteryLevel()` with real data, add dashboard-ready metrics |
+| `lib/providers/llm_engine_provider.dart` | Legacy provider | Migrate to Riverpod or consolidate into new tutor provider |
+
+### New files needed:
+
+| File | Purpose |
+|---|---|
+| `lib/features/teaching/` | New feature module for Teaching Mode |
+| `lib/features/mentor/` | New feature module for Mentor/Assistant Mode |
+| `lib/features/teaching/presentation/tutor_screen.dart` | Main conversational tutor interface |
+| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | Tutor/student message widgets |
+| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` | Visual lesson timeline |
+| `lib/features/teaching/services/tutor_service.dart` | Orchestrates lesson flow: plan → teach → quiz → review |
+| `lib/features/teaching/services/conversation_manager.dart` | Manages conversation state, context window, follow-ups |
+| `lib/features/mentor/presentation/mentor_screen.dart` | Mentor chat interface |
+| `lib/features/mentor/services/mentor_service.dart` | Scheduling, planning, motivation actions |
+| `lib/core/widgets/conversation_input.dart` | Reusable input bar with voice, text, canvas support |
+
+---
+
+## Proposed Architecture
+
+### Teaching Mode Flow
 
 ```
-lib/core/data/models/question_model.dart:3
-  → import '../../../features/questions/models/markscheme_model.dart';
+Student opens lesson
+        │
+        ▼
+TutorService.generatePlan()
+  ├─ Queries LLM for lesson goals & structure
+  ├─ Adapts to student's prior mastery from MasteryGraphService
+  └─ Returns structured lesson plan with checkpoints
+        │
+        ▼
+Conversation begins — TutorService streams LLM responses
+  ├─ LessonBlock content delivered conversationally (not static cards)
+  ├─ Student can interrupt, ask follow-ups
+  ├─ Tutor detects confusion, adapts in real-time
+  ├─ Assigns inline exercises, evaluates answers
+  └─ Tracks elapsed time vs. planned lesson hour
+        │
+        ▼
+Lesson ends — TutorService.saveSession()
+  ├─ Saves lesson_record (what was covered, student engagement)
+  ├─ Updates mastery graph with lesson performance
+  └─ Schedules next lesson based on remaining syllabus
 ```
 
-`Question` (core) carries `Markscheme? markscheme` field. `Markscheme` lives in a **feature module**. This means:
-- Core cannot be extracted or tested independently
-- `Markscheme` and `QuestionEvaluation` are isomorphic types (same fields, same `isMatch` logic) — one should be canonical
+### Mentor Mode Architecture
 
-### Issue 5 — Incomplete Feature Module Exports
-
-`lib/features/features.dart`:
-```dart
-export 'lessons/lessons.dart';      // exists
-export 'quickguide/quickguide.dart'; // exists
-export 'planner/planner.dart';      // exists
-export 'practice/practice.dart';    // exists
-// MISSING: sessions, settings, subjects, questions
 ```
-
-Features missing service layers:
-- `lessons/` — no `services/` directory
-- `sessions/` — no `services/` directory
-- `planner/` — only has `presentation/` (essentially a shell)
+MentorScreen (persistent companion)
+  │
+  ├─ Chat interface using LlmService.conversationStream()
+  ├─ Tool-calling system (execute actions like schedule/reschedule)
+  ├─ Context-aware: knows student's subjects, pending lessons, weak areas
+  ├─ Proactive nudges: "You haven't studied Physics in 3 days"
+  └─ Confirmation gate: never alters schedules without explicit approval
+```
 
 ---
 
 ## Rationale
 
-| Problem | Why it matters now |
-|---------|-------------------|
-| 4x answer validation | Every new question type requires changes in 4 places. Bug fixes to `_isSimilar` or `_normalizeMathExpression` must be repeated. |
-| 2x dead question engines | Confuses new developers. Suggests the architecture is unstable. Unreferenced API endpoint strings will fail at runtime if code is ever reached. |
-| Scattered LLM services | Adding Ollama support requires touching 3 files. Token-cost tracking is impossible. Provider-agnostic routing is not possible. |
-| Core→feature import | Blocks unit-testing `Question` model in isolation. `Markscheme` cannot be versioned or migrated independently. |
-| Half-barreled features | `features.dart` misleads consumers. Planner feature promises scheduling but has only UI scaffolding. |
+1. **Core differentiator**: The conversational AI tutor is what makes StudyKing an "AI-native learning platform" rather than a basic flashcard/tracker app. Without it, the app is just a CRUD interface for subjects and questions.
+
+2. **Existing scaffolding can be leveraged**: `LlmService` already has method signatures for chat, lesson generation, and answer validation. `AnswerValidationService` has validation logic. `MasteryGraphService` tracks topic-level performance. The data layer is ready — only the interactive layer is missing.
+
+3. **Planner is currently misleading**: The `PlannerScreen` claims to generate study plans but only cycles hardcoded topic titles. This creates a poor first impression. A real LLM-backed planner that respects the student's actual syllabus, mastery data, and time constraints is essential.
+
+4. **Progress tracking has no value without a dashboard**: `StudyProgressTracker` computes stats that are never visualized. A dashboard showing trends, weak areas, streaks, and recommendations would provide immediate motivation.
 
 ---
 
-## Proposed Action Plan
+## Acceptance Criteria
 
-### Phase 1 — Consolidate Answer Validation (highest impact)
+### Teaching Mode (Phase 1 — MVP)
 
-1. **Pick the canonical model**: Promote `QuestionEvaluation` (`lib/core/data/models/question_evaluation_model.dart`) as the single evaluation model. It already has `EvaluationType`, `EvaluationStep`, version field, and `isMatch()`. Remove `Markscheme` as a Hive type (migrate existing data) or make `Markscheme` a thin alias.
-2. **Unify validation into one service**: Merge `answer_validator.dart` and `evaluation_adapter_service.dart` into a single `AnswerValidationService` in `lib/core/services/`. Keep the caching layer.
-3. **Delete `lib/features/practice/services/answer_validation_service.dart`** (the thin wrapper).
-4. **Delete `Markscheme.isMatch()` / `_isSimilar()`** — evaluation logic should not live in a data model.
+- [ ] **Conversational lesson delivery**: Student opens a topic and enters a real-time chat with the AI tutor. The tutor explains concepts interactively rather than displaying static blocks.
+- [ ] **Lesson plan generation**: Before teaching, the tutor generates a structured plan with goals, estimated duration, and checkpoints, tailored to the student's mastery level.
+- [ ] **In-line exercises**: Tutor can insert practice questions mid-lesson, evaluate typed answers, and provide corrective feedback without leaving the conversation.
+- [ ] **Adaptive pacing**: If the student answers correctly, tutor accelerates. If struggling, tutor offers simpler explanations or prerequisite review.
+- [ ] **Lesson recording**: After each lesson, a `LessonSession` record is saved with: topics covered, questions asked/answered, student confidence, and tutor notes.
+- [ ] **Time respect**: Tutor shows a remaining-time indicator and wraps up when the lesson hour is approaching.
 
-**Acceptance criteria:**
-- Exactly one `AnswerValidationService` with one `ValidationResult` class
-- `Question` model uses `QuestionEvaluation` instead of `Markscheme`
-- All features import from `lib/core/services/answer_validation_service.dart`
-- No `isMatch()` on any model class
-- All existing validation behavior preserved (exact match, fuzzy match, step-based, math expression normalization)
+### Teaching Mode (Phase 2 — Enhanced)
 
-### Phase 2 — Remove Dead Question Engines
+- [ ] **Streaming responses**: LLM responses stream token-by-token for low-latency feel (not waiting for full response).
+- [ ] **Voice input**: Speech-to-text for student answers (via `speech_to_text` package).
+- [ ] **Handwriting/canvas**: Student can draw on a canvas; tutor interprets via vision API or LLM.
+- [ ] **Follow-up questions**: Student can ask follow-ups mid-explanation; tutor maintains conversational context.
+- [ ] **Slide rendering**: Tutor can present structured slides with diagrams within the conversation.
+- [ ] **Confidence tracking**: After each topic segment, student rates understanding; tutor adjusts remaining lesson accordingly.
 
-1. **Delete** `lib/services/question_engine.dart`
-2. **Delete** `lib/services/question_engine_dynamic.dart`
-3. Verify `question_generation_service.dart` is the sole active generator
-4. Update any dangling imports (search `DynamicQuestionType`, `LessonQuestion`, `DynamicTypeFetcher`)
+### Mentor Mode (Phase 1 — MVP)
 
-**Acceptance criteria:**
-- `rg 'question_engine'` returns zero results outside `lib/core/services/question_generation_service.dart`
-- `rg 'DynamicQuestionType'` returns zero results
-- `rg 'LessonQuestion'` returns zero results
-- `rg '/api/v1/mcq'` returns zero results
+- [ ] **Chat interface**: Persistent chat screen where student can ask scheduling, planning, and motivational questions.
+- [ ] **Schedule awareness**: Mentor reads upcoming lessons from `StudySessionRepository` and can report what's planned.
+- [ ] **Rescheduling with confirmation**: Mentor can propose schedule changes but requires explicit user confirmation ("I see you have a Physics lesson tomorrow. Would you like to reschedule?").
+- [ ] **Progress reporting**: Mentor can answer "How am I doing in Math?" by querying `StudyProgressTracker` / `MasteryGraphService`.
+- [ ] **Proactive reminders**: Mentor detects inactivity (no sessions in 3+ days) and sends an encouraging nudge.
 
-### Phase 3 — Unified LLM Service
+### Mentor Mode (Phase 2 — Enhanced)
 
-1. **Single `LlmService`** in `lib/core/services/llm_service.dart` (promote and refactor the existing one):
-   - Accept provider type (`openRouter`, `ollama`, `openAI`) via a config object
-   - Single `chat()` method that routes to correct HTTP client
-   - Shared token tracking callback
-   - Remove duplicate `_callLlm` / inline HTTP calls from `question_generation_service.dart`
-2. **Deprecate and remove** `lib/services/llm_api_service.dart` after migration
-3. **Move model definitions** (`llm_config.dart`, `llm_models.dart`) into `lib/core/data/models/`
+- [ ] **Long-term goal planning**: "I want to finish IB Physics in 180 days" — mentor breaks into weekly plans, adapts as progress changes.
+- [ ] **Motivation & accountability**: Mentor tracks streaks, celebrates milestones, and intervenes when patterns slip.
+- [ ] **Wellbeing awareness**: Mentor avoids over-scheduling, encourages breaks, respects the student's stated workload limits.
+- [ ] **Feedback loop**: Student can rate lessons and provide feedback; mentor adjusts future recommendations accordingly.
 
-**Acceptance criteria:**
-- One `LlmService` class with provider-agnostic interface
-- Token usage tracked across all calls
-- All `http.post` / `dio.post` LLM calls route through a single entry point
-- `rg 'openrouter.ai'` shows results only inside the unified service
+### Analytics Dashboard (Phase 1)
 
-### Phase 4 — Fix Module Boundaries
-
-1. **Promote `Markscheme` into core**: Move `markscheme_model.dart` from `lib/features/questions/models/` to `lib/core/data/models/`. Update all imports.
-2. **Complete `features.dart`**: Export all 8 feature barrel files.
-3. **Add missing service directories** to `lessons/`, `sessions/`, `planner/` features (can be placeholder barrel files initially).
-
-**Acceptance criteria:**
-- `rg 'from.*features.*models.*markscheme'` returns zero results
-- `features.dart` exports all 8 features
-- Every feature has at minimum a `services/` barrel file
+- [ ] **Dashboard screen** showing: total study hours (by subject), weekly trend chart, accuracy over time, weak/strong topic areas.
+- [ ] **Topic mastery visualization**: Per-topic progress bars or heatmap showing mastery levels (Novice → Expert).
+- [ ] **Session history with insights**: Trends showing study consistency, best study times, improving/declining subjects.
+- [ ] **Exportable progress**: CSV/PDF export of study history, as partially scaffolded in `StudyProgressTracker.exportProgressCSV()`.
 
 ---
 
-## Future Opportunity — Adaptive Practice Engine Consolidation
+## Dependencies
 
-The `AdaptivePracticeEngine` in `lib/core/services/` currently tracks question state only in memory (`Map<String, _QuestionState>`). It should be integrated with the persisted `MasteryGraphService` and `StudyProgressTracker` so that spaced-repetition intervals persist across app restarts. This is a follow-up opportunity once Phase 1 is complete.
-
----
-
-## Notes
-
-- Do NOT attempt all phases in one PR. Phase 1 alone affects 5 files and carries migration risk.
-- The `LessonQuestion` class in `question_engine.dart` has a `clone()` method — no other code calls it, confirming dead code.
-- The `Markscheme` → `QuestionEvaluation` migration needs a Hive type adapter migration or a read-time adapter in `Question.fromJson()`.
+- Add `speech_to_text` and `text_to_speech` for voice support (Mentor/Teaching Phase 2)
+- Add `flutter_markdown` or similar for rich rendering of LLM responses (diagrams, math)
+- Add `fl_chart` or `syncfusion_flutter_charts` for the analytics dashboard
+- LlmService must support streaming before Teaching Mode Phase 2 can ship

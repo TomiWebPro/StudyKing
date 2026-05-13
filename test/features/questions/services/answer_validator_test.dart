@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/features/questions/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/services/answer_validator.dart';
 
 void main() {
@@ -19,54 +19,40 @@ void main() {
 
     group('validateTypedAnswer', () {
       test('returns correct for exact match (case insensitive)', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        expect(validator.validateTypedAnswer('Paris').isCorrect, isTrue);
-        expect(validator.validateTypedAnswer('paris').isCorrect, isTrue);
-        expect(validator.validateTypedAnswer('PARIS').isCorrect, isTrue);
+        expect(AnswerValidationService.validateTypedAnswerWithMarkscheme('Paris', markscheme).isCorrect, isTrue);
+        expect(AnswerValidationService.validateTypedAnswerWithMarkscheme('paris', markscheme).isCorrect, isTrue);
+        expect(AnswerValidationService.validateTypedAnswerWithMarkscheme('PARIS', markscheme).isCorrect, isTrue);
       });
 
       test('returns correct for acceptable answers', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        expect(validator.validateTypedAnswer('paris').isCorrect, isTrue);
-        expect(validator.validateTypedAnswer('french capital').isCorrect, isTrue);
+        expect(AnswerValidationService.validateTypedAnswerWithMarkscheme('paris', markscheme).isCorrect, isTrue);
+        expect(AnswerValidationService.validateTypedAnswerWithMarkscheme('french capital', markscheme).isCorrect, isTrue);
       });
 
       test('returns incorrect for wrong answer', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('London');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('London', markscheme);
         expect(result.isCorrect, isFalse);
       });
 
       test('returns incorrect and explanation for wrong answer', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('Berlin');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('Berlin', markscheme);
         expect(result.explanation, 'Capital of France');
       });
 
       test('returns incorrect for empty answer', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('', markscheme);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Please provide an answer');
       });
 
       test('returns incorrect for whitespace-only answer', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('   ');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('   ', markscheme);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Please provide an answer');
       });
 
       test('returns incorrect when markscheme is null', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateTypedAnswer('anything');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('anything', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'No markscheme available for validation');
       });
@@ -76,65 +62,50 @@ void main() {
           questionId: 'q2',
           correctAnswer: 'Answer',
         );
-        final validator = QuestionAnswerValidator(markschemeNoExplanation);
 
-        final result = validator.validateTypedAnswer('Answer');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('Answer', markschemeNoExplanation);
         expect(result.isCorrect, isTrue);
         expect(result.explanation, 'Correct!');
       });
 
       test('trims answers before validation', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('  Paris  ');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('  Paris  ', markscheme);
         expect(result.isCorrect, isTrue);
       });
     });
 
     group('validateMCQAnswer', () {
       test('returns incorrect when markscheme is null', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateMCQAnswer('A', QuestionType.singleChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('A', QuestionType.singleChoice, null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'No markscheme available');
       });
 
       test('delegates to validateTypedAnswer for non-MCQ types', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateTypedAnswer('Paris');
+        final result = AnswerValidationService.validateTypedAnswerWithMarkscheme('Paris', markscheme);
         expect(result.isCorrect, isTrue);
       });
     });
 
     group('_validateSingleChoice', () {
       test('returns correct for exact match', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateMCQAnswer('Paris', QuestionType.singleChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('Paris', QuestionType.singleChoice, markscheme);
         expect(result.isCorrect, isTrue);
       });
 
       test('returns correct for case-insensitive match', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateMCQAnswer('paris', QuestionType.singleChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('paris', QuestionType.singleChoice, markscheme);
         expect(result.isCorrect, isTrue);
       });
 
       test('returns incorrect for wrong answer', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateMCQAnswer('London', QuestionType.singleChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('London', QuestionType.singleChoice, markscheme);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Capital of France');
       });
 
       test('trims whitespace', () {
-        final validator = QuestionAnswerValidator(markscheme);
-
-        final result = validator.validateMCQAnswer('  Paris  ', QuestionType.singleChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('  Paris  ', QuestionType.singleChoice, markscheme);
         expect(result.isCorrect, isTrue);
       });
     });
@@ -146,9 +117,8 @@ void main() {
           correctAnswer: 'A,B,C',
           explanation: 'Select A, B, and C',
         );
-        final validator = QuestionAnswerValidator(markschemeMulti);
 
-        final result = validator.validateMCQAnswer('A,B', QuestionType.multiChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('A,B', QuestionType.multiChoice, markschemeMulti);
         expect(result.isCorrect, isFalse);
       });
 
@@ -157,9 +127,8 @@ void main() {
           questionId: 'q-multi',
           correctAnswer: 'A,B,C',
         );
-        final validator = QuestionAnswerValidator(markschemeMulti);
 
-        final result = validator.validateMCQAnswer('C,A,B', QuestionType.multiChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('C,A,B', QuestionType.multiChoice, markschemeMulti);
         expect(result.isCorrect, isTrue);
       });
 
@@ -168,9 +137,8 @@ void main() {
           questionId: 'q-multi',
           correctAnswer: 'A,B,C',
         );
-        final validator = QuestionAnswerValidator(markschemeMulti);
 
-        final result = validator.validateMCQAnswer('A,B', QuestionType.multiChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('A,B', QuestionType.multiChoice, markschemeMulti);
         expect(result.isCorrect, isFalse);
       });
 
@@ -179,9 +147,8 @@ void main() {
           questionId: 'q-multi',
           correctAnswer: 'A,B,C',
         );
-        final validator = QuestionAnswerValidator(markschemeMulti);
 
-        final result = validator.validateMCQAnswer('A,D', QuestionType.multiChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('A,D', QuestionType.multiChoice, markschemeMulti);
         expect(result.isCorrect, isFalse);
       });
 
@@ -190,9 +157,8 @@ void main() {
           questionId: 'q-multi',
           correctAnswer: 'A, B, C',
         );
-        final validator = QuestionAnswerValidator(markschemeMulti);
 
-        final result = validator.validateMCQAnswer('A , B , C', QuestionType.multiChoice);
+        final result = AnswerValidationService.validateMCQAnswerWithMarkscheme('A , B , C', QuestionType.multiChoice, markschemeMulti);
         expect(result.isCorrect, isTrue);
       });
     });
@@ -204,9 +170,8 @@ void main() {
           correctAnswer: 'x = 5',
           explanation: 'Solve for x',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('x = 5');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('x = 5', mathMarkscheme);
         expect(result.isCorrect, isTrue);
       });
 
@@ -215,9 +180,8 @@ void main() {
           questionId: 'math-1',
           correctAnswer: '2 x 3 = 6',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('2x3=6');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('2x3=6', mathMarkscheme);
         expect(result.isCorrect, isTrue);
       });
 
@@ -226,16 +190,13 @@ void main() {
           questionId: 'math-1',
           correctAnswer: 'x + 5 = 10',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('x + 3 = 10');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('x + 3 = 10', mathMarkscheme);
         expect(result.isCorrect, isFalse);
       });
 
       test('returns incorrect when markscheme is null', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateMathExpression('2 + 2 = 4');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('2 + 2 = 4', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'No markscheme available');
       });
@@ -245,9 +206,8 @@ void main() {
           questionId: 'math-1',
           correctAnswer: 'x = 10',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('x = 5');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('x = 5', mathMarkscheme);
         expect(result.explanation, 'The correct answer is: x = 10');
       });
 
@@ -256,9 +216,8 @@ void main() {
           questionId: 'math-1',
           correctAnswer: '2*3=6',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('2x3=6');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('2x3=6', mathMarkscheme);
         expect(result.isCorrect, isTrue);
       });
 
@@ -267,57 +226,44 @@ void main() {
           questionId: 'math-1',
           correctAnswer: '1+2=3',
         );
-        final validator = QuestionAnswerValidator(mathMarkscheme);
 
-        final result = validator.validateMathExpression('1 + 2 = 3');
+        final result = AnswerValidationService.validateMathExpressionWithMarkscheme('1 + 2 = 3', mathMarkscheme);
         expect(result.isCorrect, isTrue);
       });
     });
 
     group('validateEssayAnswer', () {
       test('returns incorrect for empty answer', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Please provide an answer');
       });
 
       test('returns incorrect for whitespace-only answer', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('   ');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('   ', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Please provide an answer');
       });
 
       test('returns incorrect for too short answer', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('Short');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('Short', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Answer is too short. Please provide more details.');
       });
 
       test('returns incorrect for answer with 9 characters', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('Some text');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('Some text', null);
         expect(result.isCorrect, isFalse);
       });
 
       test('returns correct for answer with 51+ characters', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('This is a much longer answer that should pass the minimum length requirement for full credit.');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('This is a much longer answer that should pass the minimum length requirement for full credit.', null);
         expect(result.isCorrect, isTrue);
         expect(result.explanation, 'Good response length. Essays require AI-based grading (placeholder).');
       });
 
       test('returns incorrect but valid for answer between 10-50 characters', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateEssayAnswer('Medium length answer here');
+        final result = AnswerValidationService.validateEssayAnswerWithMarkscheme('Medium length answer here', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Answer too short for full credit.');
       });
@@ -325,50 +271,40 @@ void main() {
 
     group('validateCanvasDrawing', () {
       test('returns incorrect for empty canvas data', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateCanvasDrawing([]);
+        final result = AnswerValidationService.validateCanvasDrawingWithMarkscheme([], null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'No drawing detected. Please draw something on the canvas.');
       });
 
       test('returns incorrect for empty point in canvas data', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateCanvasDrawing([{}]);
+        final result = AnswerValidationService.validateCanvasDrawingWithMarkscheme([{}], null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Invalid drawing data detected. Please redraw.');
       });
 
       test('returns correct for valid canvas data', () {
-        final validator = QuestionAnswerValidator(null);
-
         final canvasData = <Map<String, dynamic>>[
           <String, dynamic>{'x': 10.0, 'y': 20.0},
           <String, dynamic>{'x': 30.0, 'y': 40.0},
         ];
-        final result = validator.validateCanvasDrawing(canvasData);
+        final result = AnswerValidationService.validateCanvasDrawingWithMarkscheme(canvasData, null);
         expect(result.isCorrect, isTrue);
         expect(result.explanation, 'Drawing detected');
       });
 
       test('returns incorrect for mixed empty and valid points', () {
-        final validator = QuestionAnswerValidator(null);
-
         final canvasData = <Map<String, dynamic>>[
           {'x': 10.0, 'y': 20.0},
           <String, dynamic>{},
         ];
-        final result = validator.validateCanvasDrawing(canvasData);
+        final result = AnswerValidationService.validateCanvasDrawingWithMarkscheme(canvasData, null);
         expect(result.isCorrect, isFalse);
       });
     });
 
     group('validateStepByStepAnswer', () {
       test('returns incorrect when markscheme is null', () {
-        final validator = QuestionAnswerValidator(null);
-
-        final result = validator.validateStepByStepAnswer('Any answer');
+        final result = AnswerValidationService.validateStepByStepWithMarkscheme('Any answer', null);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'No markscheme available');
       });
@@ -382,9 +318,8 @@ void main() {
             MarkSchemeStep(stepNumber: '2', requiredAnswer: 'step two', points: 1.0),
           ],
         );
-        final validator = QuestionAnswerValidator(markschemeWithSteps);
 
-        final result = validator.validateStepByStepAnswer('First do step one, then step two');
+        final result = AnswerValidationService.validateStepByStepWithMarkscheme('First do step one, then step two', markschemeWithSteps);
         expect(result.isCorrect, isTrue);
         expect(result.explanation, 'All required steps identified');
       });
@@ -398,9 +333,8 @@ void main() {
             MarkSchemeStep(stepNumber: '2', requiredAnswer: 'step two', points: 1.0),
           ],
         );
-        final validator = QuestionAnswerValidator(markschemeWithSteps);
 
-        final result = validator.validateStepByStepAnswer('Only step one here');
+        final result = AnswerValidationService.validateStepByStepWithMarkscheme('Only step one here', markschemeWithSteps);
         expect(result.isCorrect, isFalse);
         expect(result.explanation, 'Some required steps missing');
       });
@@ -413,9 +347,8 @@ void main() {
             MarkSchemeStep(stepNumber: '1', requiredAnswer: 'identify', points: 1.0),
           ],
         );
-        final validator = QuestionAnswerValidator(markschemeWithSteps);
 
-        final result = validator.validateStepByStepAnswer('Something else entirely');
+        final result = AnswerValidationService.validateStepByStepWithMarkscheme('Something else entirely', markschemeWithSteps);
         expect(result.isCorrect, isFalse);
       });
     });

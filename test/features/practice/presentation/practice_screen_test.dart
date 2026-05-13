@@ -8,6 +8,7 @@ import 'package:studyking/features/subjects/data/repositories/subject_repository
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/presentation/practice_screen.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _MockSubjectBox {
