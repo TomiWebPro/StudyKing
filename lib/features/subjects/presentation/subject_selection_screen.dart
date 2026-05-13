@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
@@ -93,20 +94,20 @@ class _SubjectSelectionScreenState
         title: Text(l10n.addSubject),
         actions: [
           if (_isLoading)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+            ResponsiveUtils.loaderInTouchTarget()
           else
-            TextButton(
-              onPressed: _saveSubject,
-              child: Text(l10n.save),
+            Semantics(
+              label: l10n.save,
+              button: true,
+              child: TextButton(
+                onPressed: _saveSubject,
+                child: Text(l10n.save),
+              ),
             ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -1934,5 +1934,25 @@
   "durationSeparator": " ",
   "@durationSeparator": {
     "description": "Separator between duration parts"
+  },
+  "accessibility": "Accessibility",
+  "@accessibility": {
+    "description": "Section title for accessibility settings"
+  },
+  "highContrastMode": "High Contrast Mode",
+  "@highContrastMode": {
+    "description": "Title for high contrast toggle"
+  },
+  "highContrastDescription": "Increase contrast for better visibility",
+  "@highContrastDescription": {
+    "description": "Subtitle for high contrast toggle"
+  },
+  "largeTouchTargets": "Large Touch Targets",
+  "@largeTouchTargets": {
+    "description": "Title for large touch targets toggle"
+  },
+  "largeTouchTargetsDescription": "Increase tap target sizes",
+  "@largeTouchTargetsDescription": {
+    "description": "Subtitle for large touch targets toggle"
   }
 }

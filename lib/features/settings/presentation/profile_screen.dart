@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../../../main.dart' show settingsRepository;
 import '../data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -127,7 +128,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: ResponsiveUtils.screenPadding(context),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -193,31 +194,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         icon = Icons.person;
     }
 
-    return Semantics(
-      label: l10n.selectAvatar(iconKey),
-      button: true,
-      child: InkWell(
-        onTap: () {
-          setState(() => _avatarIconKey = iconKey);
-          Navigator.pop(context);
-        },
-        borderRadius: BorderRadius.circular(30),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-            final size = 48.0 * textScale;
-            return Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: _avatarIconKey == iconKey
-                    ? Border.all(color: Theme.of(context).primaryColor, width: 3)
-                    : null,
-              ),
-              child: Icon(icon, size: size * 0.533),
-            );
+    return MergeSemantics(
+      child: Semantics(
+        label: l10n.selectAvatar(iconKey),
+        button: true,
+        child: InkWell(
+          onTap: () {
+            setState(() => _avatarIconKey = iconKey);
+            Navigator.pop(context);
           },
+          borderRadius: BorderRadius.circular(30),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+              final size = 48.0 * textScale;
+              return Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: _avatarIconKey == iconKey
+                      ? Border.all(color: Theme.of(context).primaryColor, width: 3)
+                      : null,
+                ),
+                child: Icon(icon, size: size * 0.533),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -263,99 +266,128 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: Text(l10n.profile),
         actions: [
           if (_isSaving)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+            ResponsiveUtils.loaderInTouchTarget()
           else
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveProfile,
+              tooltip: l10n.save,
             ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Avatar
             Center(
-              child: InkWell(
-                onTap: _pickAvatar,
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              child: Semantics(
+                label: l10n.chooseAvatar,
+                button: true,
+                child: InkWell(
+                  onTap: _pickAvatar,
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    ),
+                    child: _avatarIconKey != null
+                        ? Icon(
+                            _getIconFromAvatar(),
+                            size: 50,
+                            color: Theme.of(context).primaryColor,
+                          )
+                        : const Icon(
+                            Icons.person,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
                   ),
-                  child: _avatarIconKey != null
-                      ? Icon(
-                          _getIconFromAvatar(),
-                          size: 50,
-                          color: Theme.of(context).primaryColor,
-                        )
-                      : const Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
                 ),
               ),
             ),
             const SizedBox(height: 32),
 
-            // Name field
-            _buildTextField(
-              controller: _nameController,
-              label: l10n.fullName,
-              hintText: l10n.enterYourName,
-              prefixIcon: Icons.person,
-              required: true,
-              inputFormatters: [LengthLimitingTextInputFormatter(60)],
-            ),
-            const SizedBox(height: 16),
+            // Form fields
+            FocusTraversalGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(1),
+                    child: Semantics(
+                      label: l10n.fullName,
+                      child: _buildTextField(
+                        controller: _nameController,
+                        label: l10n.fullName,
+                        hintText: l10n.enterYourName,
+                        prefixIcon: Icons.person,
+                        required: true,
+                        inputFormatters: [LengthLimitingTextInputFormatter(60)],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-            // Student ID field
-            _buildTextField(
-              controller: _studentIdController,
-              label: l10n.studentIdOptional,
-              hintText: l10n.yourStudentIdNumber,
-              prefixIcon: Icons.badge,
-              inputType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(20),
-              ],
-            ),
-            const SizedBox(height: 16),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(2),
+                    child: Semantics(
+                      label: l10n.studentIdOptional,
+                      child: _buildTextField(
+                        controller: _studentIdController,
+                        label: l10n.studentIdOptional,
+                        hintText: l10n.yourStudentIdNumber,
+                        prefixIcon: Icons.badge,
+                        inputType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(20),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-            // Learning Goal
-            _buildTextField(
-              controller: _learningGoalController,
-              label: l10n.learningGoal,
-              hintText: l10n.learningGoalHint,
-              prefixIcon: Icons.school,
-              inputType: TextInputType.text,
-            ),
-            const SizedBox(height: 16),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(3),
+                    child: Semantics(
+                      label: l10n.learningGoal,
+                      child: _buildTextField(
+                        controller: _learningGoalController,
+                        label: l10n.learningGoal,
+                        hintText: l10n.learningGoalHint,
+                        prefixIcon: Icons.school,
+                        inputType: TextInputType.text,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-            // Preferred Study Time
-            _buildTextField(
-              controller: _studyTimeController,
-              label: l10n.preferredStudyTime,
-              hintText: l10n.preferredStudyTimeHint,
-              prefixIcon: Icons.access_time,
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(4),
+                    child: Semantics(
+                      label: l10n.preferredStudyTime,
+                      child: _buildTextField(
+                        controller: _studyTimeController,
+                        label: l10n.preferredStudyTime,
+                        hintText: l10n.preferredStudyTimeHint,
+                        prefixIcon: Icons.access_time,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 32),
 
             // Account Information
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: ResponsiveUtils.cardPadding(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -366,30 +398,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(Icons.language),
-                      title: Text(l10n.language),
-                      subtitle: Text(_language == 'en' ? l10n.english : l10n.spanish),
-                      trailing: DropdownButton<String>(
-                        value: _language,
-                        items: [
-                          DropdownMenuItem(value: 'en', child: Text(l10n.english)),
-                          DropdownMenuItem(value: 'es', child: Text(l10n.spanish)),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _language = value);
-                          }
-                        },
+                    Semantics(
+                      label: l10n.language,
+                      child: ListTile(
+                        leading: const Icon(Icons.language),
+                        title: Text(l10n.language),
+                        subtitle: Text(_language == 'en' ? l10n.english : l10n.spanish),
+                        trailing: DropdownButton<String>(
+                          value: _language,
+                          items: [
+                            DropdownMenuItem(value: 'en', child: Text(l10n.english)),
+                            DropdownMenuItem(value: 'es', child: Text(l10n.spanish)),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _language = value);
+                            }
+                          },
+                        ),
                       ),
                     ),
-                    SwitchListTile(
-                      value: _notificationsEnabled,
-                      onChanged: (value) {
-                        setState(() => _notificationsEnabled = value);
-                      },
-                      secondary: const Icon(Icons.notifications_active),
-                      title: Text(l10n.notifications),
+                    Semantics(
+                      label: l10n.notifications,
+                      child: SwitchListTile(
+                        value: _notificationsEnabled,
+                        onChanged: (value) {
+                          setState(() => _notificationsEnabled = value);
+                        },
+                        secondary: const Icon(Icons.notifications_active),
+                        title: Text(l10n.notifications),
+                      ),
                     ),
                   ],
                 ),
@@ -401,7 +439,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Card(
               color: Theme.of(context).colorScheme.errorContainer,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: ResponsiveUtils.cardPadding(context),
                 child: Row(
                   children: [
                     Icon(Icons.warning, color: Theme.of(context).colorScheme.error),

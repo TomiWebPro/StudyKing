@@ -39,6 +39,12 @@ class SettingsBox {
   @HiveField(10)
   late int sessionDurationMinutes;
 
+  @HiveField(11)
+  late bool highContrastEnabled;
+
+  @HiveField(12)
+  late bool largeTouchTargets;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -51,6 +57,8 @@ class SettingsBox {
     this.studyRemindersEnabled = true,
     this.requestTimeoutSeconds = 120,
     this.sessionDurationMinutes = 30,
+    this.highContrastEnabled = false,
+    this.largeTouchTargets = false,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -75,6 +83,8 @@ class SettingsBox {
       'studyRemindersEnabled': studyRemindersEnabled,
       'requestTimeoutSeconds': requestTimeoutSeconds,
       'sessionDurationMinutes': sessionDurationMinutes,
+      'highContrastEnabled': highContrastEnabled,
+      'largeTouchTargets': largeTouchTargets,
     };
   }
 
@@ -98,12 +108,18 @@ class SettingsBox {
           (json['requestTimeoutSeconds'] as num?)?.toInt() ?? 120,
       sessionDurationMinutes:
           (json['sessionDurationMinutes'] as num?)?.toInt() ?? 30,
+      highContrastEnabled: json['highContrastEnabled'] is bool
+          ? json['highContrastEnabled'] as bool
+          : false,
+      largeTouchTargets: json['largeTouchTargets'] is bool
+          ? json['largeTouchTargets'] as bool
+          : false,
     );
   }
 
   @override
   String toString() {
-    return 'SettingsBox(apiKey: (hidden), themeMode: $themeModeEnum, fontSize: ${fontSize.round()}px)';
+    return 'SettingsBox(apiKey: (hidden), themeMode: $themeModeEnum, fontSize: ${fontSize.round()}px, highContrast: $highContrastEnabled)';
   }
 }
 

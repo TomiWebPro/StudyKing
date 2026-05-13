@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../models/subject_model.dart';
 import 'package:studyking/main.dart' show database;
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -101,136 +102,181 @@ class _SubjectManagementScreenState
         title: Text(l10n.addNewSubject),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: '${l10n.subjectName} *',
-                hintText: l10n.subjectNameHint,
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: l10n.subjectCodeOptional,
-                hintText: l10n.subjectCodeHint,
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Color selection
-            Text(l10n.themeColor,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _availableColors
-                  .map((color) => InkWell(
-                        onTap: () => setState(() => _selectedColor = color),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: ColorUtils.stringToColor(color),
-                            shape: BoxShape.circle,
-                            border: _selectedColor == color
-                                ? Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                    style: BorderStyle.solid,
-                                  )
-                                : null,
-                            boxShadow: _selectedColor == color
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: l10n.descriptionOptional,
-                hintText: l10n.descriptionHint,
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _teacherController,
-              decoration: InputDecoration(
-                labelText: l10n.teacherOptional,
-                hintText: l10n.teacherHint,
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _syllabusController,
-              decoration: InputDecoration(
-                labelText: l10n.syllabusScopeOptional,
-                hintText: l10n.syllabusHint,
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Text(l10n.examDateOptionalLabel),
-                TextButton.icon(
-                  onPressed: _selectExamDate,
-                  icon: Icon(
-                    _examDate != null
-                        ? Icons.calendar_today
-                        : Icons.calendar_today_outlined,
-                    size: 16,
-                  ),
-                  label: Text(
-                    _examDate != null
-                        ? '${_examDate!.month}/${_examDate!.day}/${_examDate!.year}'
-                        : l10n.selectDate,
+        padding: ResponsiveUtils.screenPadding(context),
+        child: FocusTraversalGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: Semantics(
+                  textField: true,
+                  label: l10n.subjectName,
+                  child: TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: '${l10n.subjectName} *',
+                      hintText: l10n.subjectNameHint,
+                      border: const OutlineInputBorder(),
+                    ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _createSubject,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.createSubject),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: Semantics(
+                  textField: true,
+                  label: l10n.subjectCodeOptional,
+                  child: TextFormField(
+                    controller: _codeController,
+                    decoration: InputDecoration(
+                      labelText: l10n.subjectCodeOptional,
+                      hintText: l10n.subjectCodeHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Color selection
+              Text(l10n.themeColor,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableColors
+                    .map((color) => Semantics(
+                          label: ColorUtils.getColorLabel(color, l10n: l10n),
+                          button: true,
+                          selected: _selectedColor == color,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => setState(() => _selectedColor = color),
+                              borderRadius: BorderRadius.circular(22),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: ColorUtils.stringToColor(color),
+                                    shape: BoxShape.circle,
+                                    border: _selectedColor == color
+                                        ? Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                            style: BorderStyle.solid,
+                                          )
+                                        : null,
+                                    boxShadow: _selectedColor == color
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.3),
+                                              blurRadius: 4,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(3),
+                child: Semantics(
+                  textField: true,
+                  label: l10n.descriptionOptional,
+                  child: TextFormField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      labelText: l10n.descriptionOptional,
+                      hintText: l10n.descriptionHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(4),
+                child: Semantics(
+                  textField: true,
+                  label: l10n.teacherOptional,
+                  child: TextFormField(
+                    controller: _teacherController,
+                    decoration: InputDecoration(
+                      labelText: l10n.teacherOptional,
+                      hintText: l10n.teacherHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(5),
+                child: Semantics(
+                  textField: true,
+                  label: l10n.syllabusScopeOptional,
+                  child: TextFormField(
+                    controller: _syllabusController,
+                    decoration: InputDecoration(
+                      labelText: l10n.syllabusScopeOptional,
+                      hintText: l10n.syllabusHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Text(l10n.examDateOptionalLabel),
+                  TextButton.icon(
+                    onPressed: _selectExamDate,
+                    icon: Icon(
+                      _examDate != null
+                          ? Icons.calendar_today
+                          : Icons.calendar_today_outlined,
+                      size: 16,
+                    ),
+                    label: Text(
+                      _examDate != null
+                          ? '${_examDate!.month}/${_examDate!.day}/${_examDate!.year}'
+                          : l10n.selectDate,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _createSubject,
+                  child: _isLoading
+                      ? ResponsiveUtils.loaderInTouchTarget()
+                      : Text(l10n.createSubject),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

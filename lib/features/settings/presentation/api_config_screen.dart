@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart'
     show apiBaseUrlProvider, apiKeyProvider, settingsProvider;
@@ -90,7 +91,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.apiConfiguration)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

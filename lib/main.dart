@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +9,7 @@ import 'core/utils/logger.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'features/settings/data/models/settings_box.dart';
+import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'core/data/data.dart';
 import 'features/settings/presentation/api_config_screen.dart';
@@ -60,10 +63,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
   final SettingsRepository _repository;
   bool _hasLoadedOnce = false;
   
-  SettingsController(this._repository) : super(SettingsBox()) {
-    // Don't auto-load in constructor to avoid race conditions
-    // The loading will be triggered when needed by the widget tree
-  }
+  SettingsController(this._repository) : super(SettingsBox());
 
   Future<void> _loadSettings() async {
     if (_hasLoadedOnce) return;
@@ -85,6 +85,8 @@ class SettingsController extends StateNotifier<SettingsBox> {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
   }) async {
     try {
       await _repository.updateSettings(
@@ -99,6 +101,10 @@ class SettingsController extends StateNotifier<SettingsBox> {
             requestTimeoutSeconds ?? state.requestTimeoutSeconds,
         sessionDurationMinutes:
             sessionDurationMinutes ?? state.sessionDurationMinutes,
+        highContrastEnabled:
+            highContrastEnabled ?? state.highContrastEnabled,
+        largeTouchTargets:
+            largeTouchTargets ?? state.largeTouchTargets,
       );
       state = await _repository.getSettings();
     } catch (e) {
@@ -170,6 +176,14 @@ class SettingsController extends StateNotifier<SettingsBox> {
       _logger.e('Error updating stats', e);
     }
   }
+
+  Future<void> updateHighContrast(bool enabled) async {
+    await updateSettings(highContrastEnabled: enabled);
+  }
+
+  Future<void> updateLargeTouchTargets(bool enabled) async {
+    await updateSettings(largeTouchTargets: enabled);
+  }
 }
 
 final Logger _mainLogger = const Logger('App');
@@ -183,6 +197,9 @@ void main() async {
 
     // Initialize Hive database
     Hive.initFlutter();
+    
+    // Register accessibility preferences adapter
+    Hive.registerAdapter(AccessibilityPreferencesAdapter());
     
     // Run database migrations and open all boxes
     await HiveInitializer.initialize();
@@ -205,13 +222,14 @@ void main() async {
       _mainLogger.e('Error loading initial settings', e);
     }
     
-    // Initialize other providers with saved values
-    // Note: These will be properly loaded by SettingsController in the widget tree
-    
     runApp(StudyKingApp());
   } catch (e, stackTrace) {
     _mainLogger.e('Error during initialization', e, stackTrace);
   }
+}
+
+class _CloseDialogIntent extends Intent {
+  const _CloseDialogIntent();
 }
 
 class StudyKingApp extends ConsumerWidget {
@@ -219,21 +237,28 @@ class StudyKingApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Listen to settings changes
     final settings = ref.watch(settingsProvider);
     final isLoading = ref.watch(settingsLoadingProvider);
     final locale = ref.watch(localeProvider);
     
-    // Initialize providers with saved values from main()
     if (isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(apiKeyProvider.notifier).state = settings.apiKey;
         ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
         ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
-        // Mark as loaded - providers will sync on changes now
       });
     }
     
+    final systemTextScaler = MediaQuery.textScalerOf(context);
+    final systemBoldText = MediaQuery.boldTextOf(context);
+    final systemHighContrast = MediaQuery.highContrastOf(context);
+
+    final userFontSize = settings.fontSize.clamp(14.0, 30.0);
+    final systemScaledSize = systemTextScaler.scale(16.0);
+    final effectiveFontSize = userFontSize < systemScaledSize ? systemScaledSize : userFontSize;
+
+    final useHighContrast = systemHighContrast || settings.highContrastEnabled;
+
     return MaterialApp(
       locale: locale,
       title: 'StudyKing',
@@ -248,8 +273,35 @@ class StudyKingApp extends ConsumerWidget {
         Locale('en'),
         Locale('es'),
       ],
-      theme: AppTheme.lightTheme(fontSize: settings.fontSize),
-      darkTheme: AppTheme.darkTheme(fontSize: settings.fontSize),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            boldText: systemBoldText,
+            textScaler: systemTextScaler,
+          ),
+          child: child!,
+        );
+      },
+      scrollBehavior: const _AppScrollBehavior(),
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.escape): const _CloseDialogIntent(),
+      },
+      actions: {
+        _CloseDialogIntent: CallbackAction<_CloseDialogIntent>(
+          onInvoke: (intent) {
+            if (Navigator.of(context, rootNavigator: true).canPop()) {
+              Navigator.of(context, rootNavigator: true).pop();
+            }
+            return null;
+          },
+        ),
+      },
+      theme: useHighContrast
+          ? AppTheme.highContrastLightTheme(fontSize: effectiveFontSize)
+          : AppTheme.lightTheme(fontSize: effectiveFontSize),
+      darkTheme: useHighContrast
+          ? AppTheme.highContrastDarkTheme(fontSize: effectiveFontSize)
+          : AppTheme.darkTheme(fontSize: effectiveFontSize),
       themeMode: settings.themeModeEnum,
       home: const MainScreen(),
       routes: {
@@ -260,6 +312,35 @@ class StudyKingApp extends ConsumerWidget {
       },
     );
   }
+}
+
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  const _AppScrollBehavior();
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+    switch (getPlatform(context)) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return child;
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        return Scrollbar(
+          controller: details.controller,
+          child: child,
+        );
+    }
+  }
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
 }
 
 class MainScreen extends StatefulWidget {
@@ -280,35 +361,47 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: AppLocalizations.of(context)!.subjects,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.play_arrow_outlined),
-            selectedIcon: Icon(Icons.play_arrow),
-            label: AppLocalizations.of(context)!.practice,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: AppLocalizations.of(context)!.settings,
-          ),
-        ],
+    return Semantics(
+      explicitChildNodes: true,
+      child: Scaffold(
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          destinations: [
+            Semantics(
+              label: AppLocalizations.of(context)!.subjects,
+              child: NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school),
+                label: AppLocalizations.of(context)!.subjects,
+              ),
+            ),
+            Semantics(
+              label: AppLocalizations.of(context)!.practice,
+              child: NavigationDestination(
+                icon: Icon(Icons.play_arrow_outlined),
+                selectedIcon: Icon(Icons.play_arrow),
+                label: AppLocalizations.of(context)!.practice,
+              ),
+            ),
+            Semantics(
+              label: AppLocalizations.of(context)!.settings,
+              child: NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: AppLocalizations.of(context)!.settings,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

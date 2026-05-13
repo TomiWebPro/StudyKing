@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/data/models/personal_learning_plan_model.dart';
@@ -75,7 +76,7 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -28,13 +28,15 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       studyRemindersEnabled: fields[8] as bool,
       requestTimeoutSeconds: fields[9] as int,
       sessionDurationMinutes: fields[10] as int,
+      highContrastEnabled: fields[11] as bool,
+      largeTouchTargets: fields[12] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(9)
       ..write(obj.requestTimeoutSeconds)
       ..writeByte(10)
-      ..write(obj.sessionDurationMinutes);
+      ..write(obj.sessionDurationMinutes)
+      ..writeByte(11)
+      ..write(obj.highContrastEnabled)
+      ..writeByte(12)
+      ..write(obj.largeTouchTargets);
   }
 
   @override

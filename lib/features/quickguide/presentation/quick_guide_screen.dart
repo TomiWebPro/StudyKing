@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:studyking/core/services/llm_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class QuickGuideScreen extends StatefulWidget {
   final LlmService? llmService;
@@ -143,7 +145,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: ResponsiveUtils.listPadding(context),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
@@ -153,11 +155,11 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                     child: Align(
                       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context)),
                         constraints: BoxConstraints(
                           maxWidth: MediaQuery.of(context).size.width * 0.75,
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: ResponsiveUtils.horizontalSpacing(context), vertical: 12),
                         decoration: BoxDecoration(
                           color: message.isUser
                               ? colorScheme.primary
@@ -186,7 +188,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                 opacity: _isTyping ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: ResponsiveUtils.listPadding(context),
                   alignment: Alignment.centerLeft,
                   child: Row(
                     children: [
@@ -224,12 +226,12 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: ResponsiveUtils.listPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
             child: Text(
               l10n.suggestedPrompts,
               style: TextStyle(
@@ -266,77 +268,84 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   Widget _buildMessageComposer(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: colorScheme.outlineVariant,
-            width: 0.5,
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): _sendMessage,
+      },
+      child: FocusTraversalGroup(
+        child: Container(
+        padding: ResponsiveUtils.screenPadding(context),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: colorScheme.outlineVariant,
+              width: 0.5,
+            ),
           ),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Semantics(
-              label: l10n.semanticsMessageInput,
-              hint: l10n.messageInputHint,
-              child: TextField(
-                controller: _textController,
-                focusNode: _inputFocusNode,
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                decoration: InputDecoration(
-                  hintText: l10n.askAnything,
-                  hintStyle: TextStyle(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 1.5,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Semantics(
+                label: l10n.semanticsMessageInput,
+                hint: l10n.messageInputHint,
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _inputFocusNode,
+                  maxLines: 4,
+                  minLines: 1,
+                  textInputAction: TextInputAction.send,
+                  decoration: InputDecoration(
+                    hintText: l10n.askAnything,
+                    hintStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
                     ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
+                  onSubmitted: (_) => _sendMessage(),
                 ),
-                onSubmitted: (_) => _sendMessage(),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Semantics(
-            label: l10n.sendMessage,
-            button: true,
-            child: IconButton.filled(
-              icon: const Icon(Icons.send),
-              onPressed: _sendMessage,
-              tooltip: l10n.sendMessage,
-              style: IconButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                minimumSize: const Size(48, 48),
+            const SizedBox(width: 8),
+            Semantics(
+              label: l10n.sendMessage,
+              button: true,
+              child: IconButton.filled(
+                icon: const Icon(Icons.send),
+                onPressed: _sendMessage,
+                tooltip: l10n.sendMessage,
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  minimumSize: const Size(48, 48),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
       ),
     );
   }

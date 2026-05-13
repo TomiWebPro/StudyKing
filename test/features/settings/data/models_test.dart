@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
+import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 
@@ -144,7 +145,7 @@ void main() {
         preferredStudyTime: 'morning',
         notificationsEnabled: false,
         language: 'es',
-        accessibilitySettings: 'large-text',
+        accessibilityPrefs: AccessibilityPreferences(boldText: true),
       );
 
       final json = profile.toJson();
@@ -158,12 +159,12 @@ void main() {
       expect(restored.preferredStudyTime, profile.preferredStudyTime);
       expect(restored.notificationsEnabled, isFalse);
       expect(restored.language, 'es');
-      expect(restored.accessibilitySettings, 'large-text');
+      expect(restored.accessibilityPrefs?.toJson(), profile.accessibilityPrefs?.toJson());
 
       final withDefaults = UserProfile.fromJson({'id': 'p2', 'name': 'Default'});
       expect(withDefaults.notificationsEnabled, isTrue);
       expect(withDefaults.language, 'en');
-      expect(withDefaults.accessibilitySettings, 'default');
+      expect(withDefaults.accessibilityPrefs, isNull);
     });
 
     test('copyWith preserves unspecified values and overrides provided', () {
@@ -176,7 +177,6 @@ void main() {
         preferredStudyTime: 'morning',
         notificationsEnabled: true,
         language: 'en',
-        accessibilitySettings: 'default',
       );
 
       final copy = profile.copyWith(
@@ -193,7 +193,7 @@ void main() {
       expect(copy.preferredStudyTime, 'morning');
       expect(copy.notificationsEnabled, isFalse);
       expect(copy.language, 'de');
-      expect(copy.accessibilitySettings, 'default');
+      expect(copy.accessibilityPrefs, isNull);
     });
   });
 

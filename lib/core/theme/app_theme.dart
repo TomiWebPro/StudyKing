@@ -21,11 +21,10 @@ class AppTheme {
     );
   }
 
-  static ThemeData lightTheme({double fontSize = 16}) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF673AB7),
-      brightness: Brightness.light,
-    );
+  static ThemeData _baseTheme({
+    required ColorScheme colorScheme,
+    required double fontSize,
+  }) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -62,7 +61,7 @@ class AppTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 4,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         backgroundColor: colorScheme.primaryContainer,
@@ -71,52 +70,88 @@ class AppTheme {
     );
   }
 
+  static ThemeData lightTheme({double fontSize = 16}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF673AB7),
+      brightness: Brightness.light,
+    );
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+  }
+
   static ThemeData darkTheme({double fontSize = 16}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF9575CD),
       brightness: Brightness.dark,
     );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.surface,
-      appBarTheme: const AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+  }
+
+  static ThemeData highContrastLightTheme({double fontSize = 16}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF673AB7),
+      brightness: Brightness.light,
+      contrastLevel: 1.0,
+    );
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize).copyWith(
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 2,
       ),
-      textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 2,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colorScheme.outline, width: 1),
         ),
         color: colorScheme.surfaceContainerHighest,
+        surfaceTintColor: Colors.transparent,
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline, width: 2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
+    );
+  }
+
+  static ThemeData highContrastDarkTheme({double fontSize = 16}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF9575CD),
+      brightness: Brightness.dark,
+      contrastLevel: 1.0,
+    );
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize).copyWith(
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 2,
+      ),
+      cardTheme: CardThemeData(
         elevation: 2,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        backgroundColor: colorScheme.surfaceContainerHigh,
-        indicatorColor: colorScheme.secondaryContainer,
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        elevation: 4,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colorScheme.outline, width: 1),
         ),
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
+        color: colorScheme.surfaceContainerHighest,
+        surfaceTintColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline, width: 2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
       ),
     );
   }

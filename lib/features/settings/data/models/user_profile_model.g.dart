@@ -25,7 +25,7 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       preferredStudyTime: fields[5] as String?,
       notificationsEnabled: fields[6] as bool,
       language: fields[7] as String,
-      accessibilitySettings: fields[8] as String,
+      accessibilityPrefs: fields[8] as AccessibilityPreferences?,
     );
   }
 
@@ -50,7 +50,7 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(7)
       ..write(obj.language)
       ..writeByte(8)
-      ..write(obj.accessibilitySettings);
+      ..write(obj.accessibilityPrefs);
   }
 
   @override

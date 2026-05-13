@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
+import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 
@@ -208,13 +209,13 @@ void main() {
       expect(profile.language, equals('en'));
     });
 
-    test('fromJson with non-string accessibilitySettings defaults to default', () {
+    test('fromJson with non-Map accessibilityPrefs defaults to null', () {
       final profile = UserProfile.fromJson({
         'id': 'test',
         'name': 'Test',
-        'accessibilitySettings': 789,
+        'accessibilityPrefs': 789,
       });
-      expect(profile.accessibilitySettings, equals('default'));
+      expect(profile.accessibilityPrefs, isNull);
     });
 
     test('fromJson with missing id and name uses empty strings', () {
@@ -249,7 +250,6 @@ void main() {
         preferredStudyTime: 'Morning',
         notificationsEnabled: true,
         language: 'en',
-        accessibilitySettings: 'default',
       );
 
       final copy = original.copyWith(name: 'Updated Name', language: 'es');
@@ -262,7 +262,7 @@ void main() {
       expect(copy.preferredStudyTime, 'Morning');
       expect(copy.notificationsEnabled, isTrue);
       expect(copy.language, 'es');
-      expect(copy.accessibilitySettings, 'default');
+      expect(copy.accessibilityPrefs, isNull);
     });
 
     test('copyWith updates all fields', () {
@@ -275,7 +275,6 @@ void main() {
         preferredStudyTime: null,
         notificationsEnabled: true,
         language: 'en',
-        accessibilitySettings: 'default',
       );
 
       final copy = original.copyWith(
@@ -287,7 +286,7 @@ void main() {
         preferredStudyTime: 'Evening',
         notificationsEnabled: false,
         language: 'de',
-        accessibilitySettings: 'large-text',
+        accessibilityPrefs: AccessibilityPreferences(boldText: true),
       );
 
       expect(copy.id, 'new-id');
@@ -298,7 +297,8 @@ void main() {
       expect(copy.preferredStudyTime, 'Evening');
       expect(copy.notificationsEnabled, isFalse);
       expect(copy.language, 'de');
-      expect(copy.accessibilitySettings, 'large-text');
+      expect(copy.accessibilityPrefs, isNotNull);
+      expect(copy.accessibilityPrefs!.boldText, isTrue);
     });
 
     test('round-trip preserves all fields', () {
@@ -311,7 +311,7 @@ void main() {
         preferredStudyTime: 'Night',
         notificationsEnabled: false,
         language: 'fr',
-        accessibilitySettings: 'high-contrast',
+        accessibilityPrefs: AccessibilityPreferences(highContrast: true),
       );
 
       final json = original.toJson();
@@ -325,7 +325,7 @@ void main() {
       expect(restored.preferredStudyTime, original.preferredStudyTime);
       expect(restored.notificationsEnabled, original.notificationsEnabled);
       expect(restored.language, original.language);
-      expect(restored.accessibilitySettings, original.accessibilitySettings);
+      expect(restored.accessibilityPrefs?.toJson(), original.accessibilityPrefs?.toJson());
     });
   });
 
@@ -341,7 +341,7 @@ void main() {
         preferredStudyTime: 'Anytime',
         notificationsEnabled: false,
         language: 'es',
-        accessibilitySettings: 'large-text',
+        accessibilityPrefs: AccessibilityPreferences(boldText: true),
       );
 
       final writer = BinaryWriterImpl(TypeRegistryImpl.nullImpl);
@@ -357,7 +357,7 @@ void main() {
       expect(restored.preferredStudyTime, source.preferredStudyTime);
       expect(restored.notificationsEnabled, source.notificationsEnabled);
       expect(restored.language, source.language);
-      expect(restored.accessibilitySettings, source.accessibilitySettings);
+      expect(restored.accessibilityPrefs?.toJson(), source.accessibilityPrefs?.toJson());
     });
 
     test('write/read with minimal fields', () {
@@ -377,7 +377,7 @@ void main() {
       expect(restored.preferredStudyTime, isNull);
       expect(restored.notificationsEnabled, isTrue);
       expect(restored.language, 'en');
-      expect(restored.accessibilitySettings, 'default');
+      expect(restored.accessibilityPrefs, isNull);
     });
 
     test('typeId is 10', () {

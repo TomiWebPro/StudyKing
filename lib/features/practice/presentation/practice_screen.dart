@@ -9,6 +9,7 @@ import 'package:studyking/features/practice/presentation/practice_session_screen
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -111,12 +112,15 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         title: Text(AppLocalizations.of(context)!.practiceMode),
         actions: [
           if (_subjects.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.tune),
-              onPressed: () {
-                _showPracticeModeDialog();
-              },
-              tooltip: AppLocalizations.of(context)!.practiceOptions,
+            Semantics(
+              label: AppLocalizations.of(context)!.practiceOptions,
+              child: IconButton(
+                icon: const Icon(Icons.tune),
+                onPressed: () {
+                  _showPracticeModeDialog();
+                },
+                tooltip: AppLocalizations.of(context)!.practiceOptions,
+              ),
             ),
         ],
       ),
@@ -145,7 +149,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     return RefreshIndicator(
       onRefresh: _loadSubjects,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.listPadding(context),
         children: [
           _buildModeSection(context),
           const SizedBox(height: 24),
@@ -159,13 +163,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.book_online_outlined,
-              size: 96,
+              size: ResponsiveUtils.emptyStateIconSize(context),
               color: Theme.of(context).colorScheme.primaryContainer,
             ),
             const SizedBox(height: 24),
@@ -215,7 +219,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
+          crossAxisCount: ResponsiveUtils.gridCrossAxisCount(context).toInt(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
           childAspectRatio: 1.2 / MediaQuery.textScalerOf(context).scale(1.0),
@@ -289,7 +293,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         onTap: () => _startPractice(subject),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: ResponsiveUtils.cardPadding(context),
           child: Row(
             children: [
               Container(
@@ -344,7 +348,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         onTap: () => _startPractice(subject),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: ResponsiveUtils.cardPadding(context),
           child: Row(
             children: [
               Container(
@@ -434,7 +438,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.screenPadding(sheetContext),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,20 +450,23 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            ..._subjects.map((subject) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                child: Icon(
-                  Icons.school,
-                  color: _getSubjectColor(subject.name),
+            ..._subjects.map((subject) => Semantics(
+              label: '${l10n.selectSubject} ${subject.name}',
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.school,
+                    color: _getSubjectColor(subject.name),
+                  ),
                 ),
+                title: Text(subject.name),
+                subtitle: subject.code != null ? Text(subject.code ?? '') : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  _startPractice(subject);
+                },
               ),
-              title: Text(subject.name),
-              subtitle: subject.code != null ? Text(subject.code ?? '') : null,
-              onTap: () {
-                Navigator.pop(context);
-                _startPractice(subject);
-              },
             )),
             const SizedBox(height: 16),
           ],
@@ -476,7 +483,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.screenPadding(sheetContext),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,7 +572,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) => Container(
-          padding: const EdgeInsets.all(24),
+          padding: ResponsiveUtils.screenPadding(sheetContext),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,13 +584,16 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              ...topics.map((topic) => ListTile(
-                leading: const Icon(Icons.topic),
-                title: Text(topic),
-                onTap: () {
-                  Navigator.pop(context);
-                  _startTopicPractice(topic);
-                },
+              ...topics.map((topic) => Semantics(
+                label: '${l10n.selectTopic} $topic',
+                child: ListTile(
+                  leading: const Icon(Icons.topic),
+                  title: Text(topic),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startTopicPractice(topic);
+                  },
+                ),
               )),
               const SizedBox(height: 16),
             ],
@@ -655,7 +665,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) => Container(
-          padding: const EdgeInsets.all(24),
+          padding: ResponsiveUtils.screenPadding(sheetContext),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -690,7 +700,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.screenPadding(sheetContext),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,20 +712,23 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            ...subjectsWithDue.map((subject) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                child: Icon(
-                  Icons.school,
-                  color: _getSubjectColor(subject.name),
+            ...subjectsWithDue.map((subject) => Semantics(
+              label: '${l10n.selectSubject} ${subject.name}',
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.school,
+                    color: _getSubjectColor(subject.name),
+                  ),
                 ),
+                title: Text(subject.name),
+                subtitle: Text(l10n.dueQuestionsCount(_dueCounts[subject.id] ?? 0)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _startSpacedRepetitionSession(subject);
+                },
               ),
-              title: Text(subject.name),
-              subtitle: Text(l10n.dueQuestionsCount(_dueCounts[subject.id] ?? 0)),
-              onTap: () {
-                Navigator.pop(context);
-                _startSpacedRepetitionSession(subject);
-              },
             )),
             const SizedBox(height: 16),
           ],
@@ -744,7 +757,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) => Container(
-          padding: const EdgeInsets.all(24),
+          padding: ResponsiveUtils.screenPadding(sheetContext),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,16 +769,19 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              ..._subjects.map((subject) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                  child: Icon(Icons.school, color: _getSubjectColor(subject.name)),
+              ..._subjects.map((subject) => Semantics(
+                label: '${l10n.selectSubject} ${subject.name}',
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                    child: Icon(Icons.school, color: _getSubjectColor(subject.name)),
+                  ),
+                  title: Text(subject.name),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchWeakAreasForSubject(masteryService, subject, l10n);
+                  },
                 ),
-                title: Text(subject.name),
-                onTap: () {
-                  Navigator.pop(context);
-                  _launchWeakAreasForSubject(masteryService, subject, l10n);
-                },
               )),
             ],
           ),
@@ -849,7 +865,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           builder: (sheetContext) => Container(
-            padding: const EdgeInsets.all(24),
+            padding: ResponsiveUtils.screenPadding(sheetContext),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -921,71 +937,74 @@ class _PracticeModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAvailable = onTap != null;
     return Card(
-      child: InkWell(
-        onTap: isAvailable ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    color: isAvailable ? color : Colors.grey.shade400,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
+      child: Semantics(
+        label: '$title, $subtitle',
+        child: InkWell(
+          onTap: isAvailable ? onTap : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
                       color: isAvailable ? color : Colors.grey.shade400,
+                      size: 32,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isAvailable ? color : Colors.grey.shade400,
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: isAvailable ? color : Colors.grey.shade400,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isAvailable ? color : Colors.grey.shade400,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (badge != null && badge! > 0)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    badge.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+              if (badge != null && badge! > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      badge.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1007,49 +1026,52 @@ class _PracticeModeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
+    return Semantics(
+      label: title,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Theme.of(context).colorScheme.primary),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (subtitle != null)
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle!,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey.shade400,
-              size: 20,
-            ),
-          ],
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey.shade400,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1412,4 +1412,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get durationSeparator => ' ';
+
+  @override
+  String get accessibility => 'Accessibility';
+
+  @override
+  String get highContrastMode => 'High Contrast Mode';
+
+  @override
+  String get highContrastDescription =>
+      'Increase contrast for better visibility';
+
+  @override
+  String get largeTouchTargets => 'Large Touch Targets';
+
+  @override
+  String get largeTouchTargetsDescription => 'Increase tap target sizes';
 }

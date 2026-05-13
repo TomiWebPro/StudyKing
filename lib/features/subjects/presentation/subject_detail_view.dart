@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
-import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
+import 'package:studyking/core/data/models/lesson_model.dart';
+import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -93,7 +94,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: ResponsiveUtils.screenPadding(context),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -133,17 +134,23 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  color: Colors.white,
-                                  onPressed: () {
-                                    // Navigate to edit screen
-                                  },
+                                Semantics(
+                                  label: l10n.editSubject,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    color: Colors.white,
+                                    onPressed: () {
+                                      // Navigate to edit screen
+                                    },
+                                  ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.more_vert),
-                                  color: Colors.white,
-                                  onPressed: _showMoreOptions,
+                                Semantics(
+                                  label: l10n.settings,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.more_vert),
+                                    color: Colors.white,
+                                    onPressed: _showMoreOptions,
+                                  ),
                                 ),
                               ],
                             ),
@@ -171,7 +178,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
           // Tab content
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: ResponsiveUtils.screenPadding(context),
             sliver: TabBarView(
               controller: _tabController,
               children: [
@@ -199,17 +206,16 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       final l10n = AppLocalizations.of(context)!;
       final lessonRepo = LessonRepository();
       
-      Future<List<dynamic>> loadLessons() async {
+      Future<List<Lesson>> loadLessons() async {
         try {
           final lessons = await lessonRepo.getAll();
-          final subjectLessons = lessons.where((l) => l.subjectId == widget.subjectId).toList();
-          return subjectLessons;
+          return lessons.where((l) => l.subjectId == widget.subjectId).toList();
         } catch (e) {
           return [];
         }
       }
 
-      return FutureBuilder<List<dynamic>>(
+      return FutureBuilder<List<Lesson>>(
         future: loadLessons(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -238,9 +244,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: () {
-                      // Navigate to topic creation
-                    },
+                    onPressed: () {},
                     icon: const Icon(Icons.add),
                     label: Text(l10n.addTopic),
                   ),
@@ -253,28 +257,20 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             itemCount: subjectLessons.length,
             itemBuilder: (context, index) {
               final lesson = subjectLessons[index];
-              final questionCount = ((lesson as dynamic).questionIds?.length ?? 0).toInt();
               return Card(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: ColorUtils.stringToColor(widget.subjectColor).withValues(alpha: 0.2),
-                    child: Icon(Icons.book, color: ColorUtils.stringToColor(widget.subjectColor)),
+                    backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    child: Icon(Icons.book, color: Theme.of(context).primaryColor),
                   ),
-                  title: Text((lesson as dynamic).title ?? l10n.lessonFallbackTitle),
-                  subtitle: Text(l10n.questionsCount(questionCount)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LessonListScreen(
-                          topicId: (lesson as dynamic).topicId ?? '',
-                          topicTitle: (lesson as dynamic).title ?? l10n.lessonFallbackTitle,
-                        ),
-                      ),
-                    );
-                  },
+                  title: Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    l10n.blocksCount(lesson.blocks.length),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {},
                 ),
               );
             },
@@ -286,35 +282,54 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
   Widget _buildPracticeTab() {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
+    return Padding(
+      padding: ResponsiveUtils.screenPadding(context),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.workspace_premium, size: 64, color: ColorUtils.stringToColor(widget.subjectColor)),
-          const SizedBox(height: 16),
+          Icon(Icons.play_arrow, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+          const SizedBox(height: 24),
           Text(
-            l10n.practiceQuestionsFrom(widget.subjectName),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            l10n.practiceMode,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.practiceModes,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 32),
+          Semantics(
+            label: l10n.startPractice,
+            child: FilledButton.icon(
+              onPressed: () => _startPractice(isSpacedRepetition: false),
+              icon: const Icon(Icons.play_arrow),
+              label: Text(l10n.startPractice),
             ),
           ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PracticeSessionScreen(
-                    subjectId: widget.subjectId,
-                    questionCount: 20,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.play_arrow),
-            label: Text(l10n.startPractice),
+          const SizedBox(height: 16),
+          Semantics(
+            label: l10n.practiceMode,
+            child: OutlinedButton.icon(
+              onPressed: () => _startPractice(isSpacedRepetition: true),
+              icon: const Icon(Icons.repeat),
+              label: Text(l10n.practiceMode),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _startPractice({required bool isSpacedRepetition}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PracticeSessionScreen(
+          subjectId: widget.subjectId,
+          isSpacedRepetition: isSpacedRepetition,
+        ),
       ),
     );
   }
@@ -324,23 +339,18 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       final l10n = AppLocalizations.of(context)!;
       final sessionRepo = StudySessionRepository();
       
-      Future<List<dynamic>> loadSessions() async {
+      Future<List<StudySession>> loadSessions() async {
         try {
           final sessions = await sessionRepo.getAll();
-          final subjectSessions = sessions.where((s) => s.subjectId == widget.subjectId).toList();
-          return subjectSessions;
+          return sessions.where((s) => s.subjectId == widget.subjectId).toList();
         } catch (e) {
           return [];
         }
       }
 
-      return FutureBuilder<List<dynamic>>(
+      return FutureBuilder<List<StudySession>>(
         future: loadSessions(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final subjectSessions = snapshot.data ?? [];
           
           if (subjectSessions.isEmpty) {
@@ -350,63 +360,53 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 children: [
                   Icon(Icons.history, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
                   const SizedBox(height: 16),
-                  Text(l10n.noPracticeHistory),
+                  Text(
+                    l10n.noSessionsYet,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SessionHistoryScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.view_list),
-                    label: Text(l10n.viewAllSessions),
+                  Text(
+                    l10n.startStudyingToTrack,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             );
           }
 
-          // Sort by most recent
-          subjectSessions.sort((a, b) {
-            final aTime = (a as dynamic).startTime?.millisecondsSinceEpoch ?? 0;
-            final bTime = (b as dynamic).startTime?.millisecondsSinceEpoch ?? 0;
-            return bTime.compareTo(aTime);
-          });
-
           return ListView.builder(
             itemCount: subjectSessions.length,
             itemBuilder: (context, index) {
               final session = subjectSessions[index];
-              final questionsAnswered = ((session as dynamic).questionsAnswered ?? 0).toInt();
-              final correctAnswers = ((session as dynamic).correctAnswers ?? 0).toInt();
-              final score = questionsAnswered > 0 ? (correctAnswers / questionsAnswered * 100) : 0;
+              final score = session.questionsAnswered > 0
+                  ? (session.correctAnswers / session.questionsAnswered) * 100
+                  : 0.0;
 
               return Card(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: score >= 80 
+                    backgroundColor: score >= 80
                         ? Colors.green.withValues(alpha: 0.2)
-                        : score >= 50 
+                        : score >= 50
                             ? Colors.orange.withValues(alpha: 0.2)
                             : Colors.red.withValues(alpha: 0.2),
                     child: Icon(
-                      score >= 80 
-                          ? Icons.check_circle 
+                      score >= 80
+                          ? Icons.check_circle
                           : Icons.sticky_note_2,
-                      color: score >= 80 
-                          ? Colors.green 
-                          : score >= 50 
-                              ? Colors.orange 
+                      color: score >= 80
+                          ? Colors.green
+                          : score >= 50
+                              ? Colors.orange
                               : Colors.red,
                     ),
                   ),
                   title: Text(l10n.sessionNumber(index + 1)),
                   subtitle: Text(
-                    '${formatDateFromContext(context, (session as dynamic).startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
+                    '${formatDateFromContext(context, session.startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -416,16 +416,16 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                         '${score.toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: score >= 80 
-                              ? Colors.green 
-                              : score >= 50 
-                                  ? Colors.orange 
+                          color: score >= 80
+                              ? Colors.green
+                              : score >= 50
+                                  ? Colors.orange
                                   : Colors.red,
                         ),
                       ),
-                      if (questionsAnswered > 0)
+                      if (session.questionsAnswered > 0)
                         Text(
-                          '$correctAnswers/$questionsAnswered',
+                          '${session.correctAnswers}/${session.questionsAnswered}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ],
@@ -520,7 +520,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               const SizedBox(height: 12),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: ResponsiveUtils.cardPadding(context),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -592,29 +592,38 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: Text(l10n.editSubject),
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to edit screen
-              },
+            Semantics(
+              label: l10n.editSubject,
+              child: ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(l10n.editSubject),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to edit screen
+                },
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: Text(l10n.settings),
-              onTap: () {
-                Navigator.pop(context);
-                // Add settings
-              },
+            Semantics(
+              label: l10n.settings,
+              child: ListTile(
+                leading: const Icon(Icons.settings),
+                title: Text(l10n.settings),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Add settings
+                },
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: Text(l10n.deleteSubject, style: const TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDelete();
-              },
+            Semantics(
+              label: l10n.deleteSubject,
+              child: ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: Text(l10n.deleteSubject, style: const TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete();
+                },
+              ),
             ),
           ],
         ),

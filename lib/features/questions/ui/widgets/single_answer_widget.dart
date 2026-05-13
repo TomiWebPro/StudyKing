@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Single Answer Widget (Multiple Choice)
@@ -27,19 +28,20 @@ class SingleAnswerWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...options.map((option) {
-          
+
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: ResponsiveUtils
+                .verticalSpacing(context) * 0.75),
             child: Semantics(
               selected: selectedAnswer == option,
               button: true,
-              label: option,
-              hint: l10n.selectAsAnswer,
+              label: _optionSemanticsLabel(option, l10n),
+              hint: isSubmitted ? null : l10n.selectAsAnswer,
               child: InkWell(
                 onTap: !isSubmitted ? () => onAnswerSelected(option) : null,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: ResponsiveUtils.cardPadding(context),
                   decoration: BoxDecoration(
                     color: _getOptionColor(context, option),
                     borderRadius: BorderRadius.circular(8),
@@ -79,56 +81,71 @@ class SingleAnswerWidget extends StatelessWidget {
 
         // Feedback
         if (isFeedbackVisible && correctAnswer != null)
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeIn,
-            switchOutCurve: Curves.easeOut,
-            transitionBuilder: (child, animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: Container(
-              key: ValueKey('feedback_${selectedAnswer}_$correctAnswer'),
-              margin: const EdgeInsets.only(top: 16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: selectedAnswer == correctAnswer
-                    ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15)
-                    : Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      selectedAnswer == correctAnswer
-                        ? Icons.check_circle
-                        : Icons.error_outline,
-                      color: selectedAnswer == correctAnswer
-                        ? Theme.of(context).colorScheme.tertiary
-                        : Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      selectedAnswer == correctAnswer
-                        ? l10n.correctFeedback
-                        : l10n.incorrectFeedback,
-                      style: TextStyle(
+          Semantics(
+            liveRegion: true,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeIn,
+              switchOutCurve: Curves.easeOut,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: Container(
+                key: ValueKey('feedback_${selectedAnswer}_$correctAnswer'),
+                margin: EdgeInsets.only(top: ResponsiveUtils.verticalSpacing(context) * 1.5),
+                  padding: ResponsiveUtils.cardPadding(context),
+                  decoration: BoxDecoration(
+                    color: selectedAnswer == correctAnswer
+                      ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15)
+                      : Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        selectedAnswer == correctAnswer
+                          ? Icons.check_circle
+                          : Icons.error_outline,
                         color: selectedAnswer == correctAnswer
                           ? Theme.of(context).colorScheme.tertiary
                           : Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      selectedAnswer == correctAnswer ? l10n.selectedRightOption : l10n.tryAgain,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        selectedAnswer == correctAnswer
+                          ? l10n.correctFeedback
+                          : l10n.incorrectFeedback,
+                        style: TextStyle(
+                          color: selectedAnswer == correctAnswer
+                            ? Theme.of(context).colorScheme.tertiary
+                            : Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        selectedAnswer == correctAnswer ? l10n.selectedRightOption : l10n.tryAgain,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+            ),
           ),
       ],
     );
+  }
+
+  String _optionSemanticsLabel(String option, AppLocalizations l10n) {
+    if (!isSubmitted || correctAnswer == null) return option;
+    final buf = StringBuffer(option);
+    if (option == correctAnswer) {
+      buf.write(', ${l10n.correctFeedback}');
+    }
+    if (option == selectedAnswer && option != correctAnswer) {
+      buf.write(', ${l10n.incorrectFeedback}');
+    }
+    return buf.toString();
   }
 
   Color _getOptionColor(BuildContext context, String option) {

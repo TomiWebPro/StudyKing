@@ -109,6 +109,8 @@ class SettingsRepository {
       studyRemindersEnabled: box.get('studyRemindersEnabled', defaultValue: true),
       requestTimeoutSeconds: box.get('requestTimeoutSeconds', defaultValue: 120),
       sessionDurationMinutes: box.get('sessionDurationMinutes', defaultValue: 30),
+      highContrastEnabled: box.get('highContrastEnabled', defaultValue: false),
+      largeTouchTargets: box.get('largeTouchTargets', defaultValue: false),
     );
   }
 
@@ -122,6 +124,8 @@ class SettingsRepository {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
   }) async {
     final box = _requireSettingsBox();
     final current = await getSettings();
@@ -141,6 +145,10 @@ class SettingsRepository {
           requestTimeoutSeconds ?? current.requestTimeoutSeconds,
       sessionDurationMinutes:
           sessionDurationMinutes ?? current.sessionDurationMinutes,
+      highContrastEnabled:
+          highContrastEnabled ?? current.highContrastEnabled,
+      largeTouchTargets:
+          largeTouchTargets ?? current.largeTouchTargets,
     );
 
     await box.put('apiKey', updated.apiKey);
@@ -154,6 +162,8 @@ class SettingsRepository {
     await box.put('studyRemindersEnabled', updated.studyRemindersEnabled);
     await box.put('requestTimeoutSeconds', updated.requestTimeoutSeconds);
     await box.put('sessionDurationMinutes', updated.sessionDurationMinutes);
+    await box.put('highContrastEnabled', updated.highContrastEnabled);
+    await box.put('largeTouchTargets', updated.largeTouchTargets);
   }
 
   /// Update statistics counters
@@ -172,6 +182,8 @@ class SettingsRepository {
       studyRemindersEnabled: current.studyRemindersEnabled,
       requestTimeoutSeconds: current.requestTimeoutSeconds,
       sessionDurationMinutes: current.sessionDurationMinutes,
+      highContrastEnabled: current.highContrastEnabled,
+      largeTouchTargets: current.largeTouchTargets,
     );
     final box = _requireSettingsBox();
     await box.put('totalSessionCount', sessionCount ?? current.totalSessionCount);

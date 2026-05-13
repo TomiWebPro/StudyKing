@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'gradient_container.dart';
 
 class MetricCard extends StatelessWidget {
@@ -18,7 +19,7 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const padding = EdgeInsets.all(16);
+    final padding = ResponsiveUtils.cardPadding(context);
 
     return GradientContainer(
       accent: accent,

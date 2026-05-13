@@ -2557,6 +2557,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' '**
   String get durationSeparator;
+
+  /// Section title for accessibility settings
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility'**
+  String get accessibility;
+
+  /// Title for high contrast toggle
+  ///
+  /// In en, this message translates to:
+  /// **'High Contrast Mode'**
+  String get highContrastMode;
+
+  /// Subtitle for high contrast toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Increase contrast for better visibility'**
+  String get highContrastDescription;
+
+  /// Title for large touch targets toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Large Touch Targets'**
+  String get largeTouchTargets;
+
+  /// Subtitle for large touch targets toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Increase tap target sizes'**
+  String get largeTouchTargetsDescription;
 }
 
 class _AppLocalizationsDelegate

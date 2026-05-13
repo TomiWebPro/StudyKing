@@ -5,6 +5,7 @@ import '../../../core/data/enums.dart';
 import '../../../../main.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String lessonId;
@@ -63,12 +64,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         title: Text(lesson.title),
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.listPadding(context),
         itemCount: lesson.blocks.length,
         itemBuilder: (context, i) {
           final b = lesson.blocks[i];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
+          return Semantics(
+            label: _getBlockTitle(b.type, l10n),
+            child: Card(
+            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -77,17 +80,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                   title: Text(_getBlockTitle(b.type, l10n)),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: ResponsiveUtils.cardPadding(context),
                   child: Text(b.content),
                 ),
               ],
             ),
+          ),
           );
         },
       ),
       bottomNavigationBar: BottomAppBar(
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: ResponsiveUtils.screenPadding(context),
           child: Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
         ),
       ),

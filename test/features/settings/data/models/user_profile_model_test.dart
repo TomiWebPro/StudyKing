@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 
 void main() {
@@ -12,7 +13,7 @@ void main() {
       expect(profile.avatarUrl, isNull);
       expect(profile.notificationsEnabled, isTrue);
       expect(profile.language, 'en');
-      expect(profile.accessibilitySettings, 'default');
+      expect(profile.accessibilityPrefs, isNull);
     });
 
     test('creates with all fields', () {
@@ -25,7 +26,7 @@ void main() {
         preferredStudyTime: 'Evening',
         notificationsEnabled: false,
         language: 'es',
-        accessibilitySettings: 'high-contrast',
+        accessibilityPrefs: AccessibilityPreferences(highContrast: true),
       );
 
       expect(profile.id, '2');
@@ -36,7 +37,8 @@ void main() {
       expect(profile.preferredStudyTime, 'Evening');
       expect(profile.notificationsEnabled, isFalse);
       expect(profile.language, 'es');
-      expect(profile.accessibilitySettings, 'high-contrast');
+      expect(profile.accessibilityPrefs, isNotNull);
+      expect(profile.accessibilityPrefs!.highContrast, isTrue);
     });
 
     group('toJson', () {
@@ -50,7 +52,6 @@ void main() {
           preferredStudyTime: 'Morning',
           notificationsEnabled: false,
           language: 'en',
-          accessibilitySettings: 'default',
         );
 
         final json = profile.toJson();
@@ -63,7 +64,7 @@ void main() {
         expect(json['preferredStudyTime'], 'Morning');
         expect(json['notificationsEnabled'], isFalse);
         expect(json['language'], 'en');
-        expect(json['accessibilitySettings'], 'default');
+        expect(json['accessibilityPrefs'], isNull);
       });
 
       test('serializes default values', () {
@@ -72,7 +73,7 @@ void main() {
 
         expect(json['notificationsEnabled'], isTrue);
         expect(json['language'], 'en');
-        expect(json['accessibilitySettings'], 'default');
+        expect(json['accessibilityPrefs'], isNull);
       });
     });
 
@@ -87,7 +88,7 @@ void main() {
           'preferredStudyTime': null,
           'notificationsEnabled': false,
           'language': 'es',
-          'accessibilitySettings': 'high-contrast',
+          'accessibilityPrefs': {'highContrast': true},
         };
 
         final profile = UserProfile.fromJson(json);
@@ -98,7 +99,8 @@ void main() {
         expect(profile.avatarUrl, isNull);
         expect(profile.notificationsEnabled, isFalse);
         expect(profile.language, 'es');
-        expect(profile.accessibilitySettings, 'high-contrast');
+        expect(profile.accessibilityPrefs, isNotNull);
+        expect(profile.accessibilityPrefs!.highContrast, isTrue);
       });
 
       test('deserializes with missing fields', () {
@@ -115,7 +117,7 @@ void main() {
         expect(profile.avatarUrl, isNull);
         expect(profile.notificationsEnabled, isTrue);
         expect(profile.language, 'en');
-        expect(profile.accessibilitySettings, 'default');
+        expect(profile.accessibilityPrefs, isNull);
       });
 
       test('deserializes with wrong types', () {
@@ -124,7 +126,7 @@ void main() {
           'name': 456,
           'notificationsEnabled': 'yes',
           'language': 789,
-          'accessibilitySettings': null,
+          'accessibilityPrefs': null,
         };
 
         final profile = UserProfile.fromJson(json);
@@ -133,7 +135,7 @@ void main() {
         expect(profile.name, '');
         expect(profile.notificationsEnabled, isTrue);
         expect(profile.language, 'en');
-        expect(profile.accessibilitySettings, 'default');
+        expect(profile.accessibilityPrefs, isNull);
       });
 
       test('deserializes empty json', () {
@@ -145,7 +147,7 @@ void main() {
         expect(profile.studentId, isNull);
         expect(profile.notificationsEnabled, isTrue);
         expect(profile.language, 'en');
-        expect(profile.accessibilitySettings, 'default');
+        expect(profile.accessibilityPrefs, isNull);
       });
     });
 

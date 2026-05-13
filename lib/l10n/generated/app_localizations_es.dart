@@ -1427,4 +1427,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get durationSeparator => ' ';
+
+  @override
+  String get accessibility => 'Accesibilidad';
+
+  @override
+  String get highContrastMode => 'Modo de Alto Contraste';
+
+  @override
+  String get highContrastDescription =>
+      'Aumenta el contraste para mejor visibilidad';
+
+  @override
+  String get largeTouchTargets => 'Objetivos Táctiles Grandes';
+
+  @override
+  String get largeTouchTargetsDescription =>
+      'Aumenta el tamaño de los objetivos táctiles';
 }

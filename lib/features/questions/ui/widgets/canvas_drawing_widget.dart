@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../../../../../core/utils/logger.dart';
 import 'package:flutter/rendering.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -157,7 +158,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(ResponsiveUtils.minTouchTarget * 0.3),
             child: Icon(icon, size: 20, color: Colors.grey.shade700),
           ),
         ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/data/repositories/topic_repository.dart';
 import '../../../features/subjects/data/repositories/subject_repository.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class PlannerScreen extends StatefulWidget {
   const PlannerScreen({super.key});
@@ -110,56 +111,92 @@ class _PlannerScreenState extends State<PlannerScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.studyPlanner)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+        padding: ResponsiveUtils.screenPadding(context),
+        child: FocusTraversalGroup(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(l10n.createStudyPlan, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            TextField(
-              controller: _courseController,
-              decoration: InputDecoration(
-                labelText: l10n.courseSubject,
-                hintText: l10n.courseHint,
-                border: const OutlineInputBorder(),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(1),
+              child: TextField(
+                controller: _courseController,
+                decoration: InputDecoration(
+                  labelText: l10n.courseSubject,
+                  hintText: l10n.courseHint,
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _daysController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: l10n.days,
-                      border: const OutlineInputBorder(),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final narrow = constraints.maxWidth < 400;
+                if (narrow) {
+                  return Column(
+                    children: [
+                      TextField(
+                        controller: _daysController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.days,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _hoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.hoursPerDay,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _daysController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.days,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _hoursController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: l10n.hoursPerDay,
-                      border: const OutlineInputBorder(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: _hoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.hoursPerDay,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _isGenerating ? null : _generatePlan,
-              icon: _isGenerating
-                  ? const SizedBox(
-                      width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.calendar_today),
-              label: Text(_isGenerating ? l10n.generating : l10n.generatePlan),
+            Semantics(
+              button: true,
+              label: _isGenerating ? l10n.generating : l10n.generatePlan,
+              child: ElevatedButton.icon(
+                onPressed: _isGenerating ? null : _generatePlan,
+                icon: _isGenerating
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.calendar_today),
+                label: Text(_isGenerating ? l10n.generating : l10n.generatePlan),
+              ),
             ),
             const SizedBox(height: 24),
             if (_schedule.isNotEmpty) ...[
@@ -172,15 +209,18 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final l10n = AppLocalizations.of(context)!;
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        child: Text('${index + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                  return Semantics(
+                    label: '${_schedule[index].topic}, ${l10n.sessionDurationMinutes(_schedule[index].duration)}',
+                    child: Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          child: Text('${index + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        ),
+                        title: Text(_schedule[index].topic),
+                        subtitle: Text(l10n.sessionDurationMinutes(_schedule[index].duration)),
+                        trailing: const Icon(Icons.play_arrow),
                       ),
-                      title: Text(_schedule[index].topic),
-                      subtitle: Text(l10n.sessionDurationMinutes(_schedule[index].duration)),
-                      trailing: const Icon(Icons.play_arrow),
                     ),
                   );
                 },
@@ -188,6 +228,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

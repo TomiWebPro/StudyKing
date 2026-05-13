@@ -1926,5 +1926,25 @@
   "durationSeparator": " ",
   "@durationSeparator": {
     "description": "Separator between duration parts"
+  },
+  "accessibility": "Accesibilidad",
+  "@accessibility": {
+    "description": "Section title for accessibility settings"
+  },
+  "highContrastMode": "Modo de Alto Contraste",
+  "@highContrastMode": {
+    "description": "Title for high contrast toggle"
+  },
+  "highContrastDescription": "Aumenta el contraste para mejor visibilidad",
+  "@highContrastDescription": {
+    "description": "Subtitle for high contrast toggle"
+  },
+  "largeTouchTargets": "Objetivos Táctiles Grandes",
+  "@largeTouchTargets": {
+    "description": "Title for large touch targets toggle"
+  },
+  "largeTouchTargetsDescription": "Aumenta el tamaño de los objetivos táctiles",
+  "@largeTouchTargetsDescription": {
+    "description": "Subtitle for large touch targets toggle"
   }
 }

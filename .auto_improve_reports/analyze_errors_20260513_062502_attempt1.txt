@@ -1,0 +1,30 @@
+Analyzing StudyKing...                                          
+
+  error • The named parameter 'side' isn't defined • lib/core/theme/app_theme.dart:108:9 • undefined_named_parameter
+  error • The named parameter 'side' isn't defined • lib/core/theme/app_theme.dart:143:9 • undefined_named_parameter
+warning • Unused import: 'package:studyking/core/utils/responsive.dart' • lib/core/widgets/gradient_container.dart:2:8 • unused_import
+  error • The named parameter 'constraints' isn't defined • lib/features/practice/presentation/practice_session_screen.dart:443:29 • undefined_named_parameter
+  error • The named parameter 'constraints' isn't defined • lib/features/practice/presentation/practice_session_screen.dart:598:13 • undefined_named_parameter
+  error • The named parameter 'constraints' isn't defined • lib/features/practice/presentation/practice_session_screen.dart:608:13 • undefined_named_parameter
+  error • The method '_buildPracticeTab' isn't defined for the type '_SubjectDetailScreenState' • lib/features/subjects/presentation/subject_detail_view.dart:189:17 • undefined_method
+  error • The method '_buildHistoryTab' isn't defined for the type '_SubjectDetailScreenState' • lib/features/subjects/presentation/subject_detail_view.dart:192:17 • undefined_method
+warning • The value of the local variable 'questionCount' isn't used • lib/features/subjects/presentation/subject_detail_view.dart:263:21 • unused_local_variable
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:272:40 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:274:29 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:278:25 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:281:32 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:283:31 • undefined_identifier
+  error • Undefined name 'session' • lib/features/subjects/presentation/subject_detail_view.dart:290:58 • undefined_identifier
+  error • Undefined name 'session' • lib/features/subjects/presentation/subject_detail_view.dart:290:154 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:297:30 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:300:36 • undefined_identifier
+  error • Undefined name 'score' • lib/features/subjects/presentation/subject_detail_view.dart:302:35 • undefined_identifier
+  error • Undefined name 'questionsAnswered' • lib/features/subjects/presentation/subject_detail_view.dart:307:29 • undefined_identifier
+  error • Undefined name 'correctAnswers' • lib/features/subjects/presentation/subject_detail_view.dart:309:31 • undefined_identifier
+  error • Undefined name 'questionsAnswered' • lib/features/subjects/presentation/subject_detail_view.dart:309:47 • undefined_identifier
+  error • Undefined name 'session' • lib/features/subjects/presentation/subject_detail_view.dart:314:54 • undefined_identifier
+  error • Expected to find ')' • lib/features/subjects/presentation/subject_detail_view.dart:317:16 • expected_token
+   info • Empty constructor bodies should be written using a ';' rather than '{}' • lib/main.dart:66:63 • empty_constructor_bodies
+
+
+25 issues found. (ran in 2.1s)

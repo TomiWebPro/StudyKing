@@ -1,101 +1,88 @@
-# Issue: Systemic Lack of Responsive Layout, Adaptive Design, and Accessibility Infrastructure
+# UI/UX Issue: Broken Subject Detail Screen & Systemic Design Language Violations
 
 ## Context
 
-The entire application is built with a fixed-width, phone-first assumption. Every screen uses hardcoded padding (`EdgeInsets.symmetric(horizontal: 16)` or `EdgeInsets.all(16)`), zero `LayoutBuilder`/`OrientationBuilder` usage outside one avatar picker, and no responsive framework dependency. The result is a brittle layout that breaks on tablets, landscape orientation, large-font accessibility modes, and foldable devices.
+The `SubjectDetailScreen` (`lib/features/subjects/presentation/subject_detail_view.dart`) is a critical navigation hub with 4 tabs (Lessons, Practice, History, Stats), but **two of its tab builder methods are missing** — the screen will crash at runtime when those tabs are selected. Beyond this crash, the file exemplifies systemic problems across the codebase: hardcoded colors bypassing the Material 3 theme, `as dynamic` casts that subvert type safety, nested `Card` widgets creating visual artifacts, and a fixed `SliverAppBar` height that does not respond to screen size.
 
-Simultaneously, accessibility infrastructure is essentially absent: only 3 widgets in the entire codebase carry `Semantics` wrappers, there are zero checks for system accessibility settings (`boldText`, `highContrast`, `accessibleNavigation`), touch targets routinely fall below the 48x48 dp WCAG recommendation, and there is no keyboard focus management for non-touch input. The `UserProfile.accessibilitySettings` field exists as a raw string defaulting to `'default'` but has no corresponding UI, logic, or effect anywhere in the app.
+These patterns recur in 20+ files (practice, sessions, questions, lessons, settings) and erode the design system, accessibility, and responsiveness that the `AppTheme` and `ResponsiveUtils` infrastructure was built to provide.
 
-## Affected Files (all presentation-layer files need changes; these are the primary touch-points)
+---
 
-| File | Issue |
-|------|-------|
-| `lib/main.dart` (lines 234–258) | `MaterialApp` has no `builder` for `MediaQuery` text/bold overrides; no `scrollBehavior` for keyboard nav |
-| `lib/core/theme/app_theme.dart` (line 4–122) | Text theme is a flat multiplier of a single base size; no support for `textScaleFactor` beyond the global slider; no `highContrastTheme` or `darkHighContrastTheme` |
-| `lib/features/settings/presentation/settings_screen.dart` (lines 38, 96, 144–176, 178–200) | `ListView` padding is fixed 16dp horizontal; font-size slider (line 186) shows no label/value readout; theme picker is a flat `ModalBottomSheet` with no focus management |
-| `lib/features/settings/presentation/profile_screen.dart` (lines 204–206, 276–427, 483) | Only `LayoutBuilder` in the app (avatar icons); text fields have fixed `OutlineInputBorder` with no `MediaQuery` size adaptation; `Semantics` wraps avatars but not text fields or buttons |
-| `lib/features/settings/data/models/settings_box.dart` (lines 6–107) | `fontSize` is a global scalar with no connection to OS accessibility settings; no `contrast` or `boldText` toggle fields |
-| `lib/features/settings/data/models/user_profile_model.dart` (line 20) | `accessibilitySettings` is dead code — stored but never read by any widget or service |
-| `lib/features/practice/presentation/practice_screen.dart` (lines 155, 222–268) | `GridView.count` with `crossAxisCount: 2` is fixed; on landscape or tablet the cards become comically wide or cramped; no breakpoint-based column switching |
-| `lib/features/practice/presentation/practice_session_screen.dart` | (not fully reviewed but shares the same pattern) |
-| `lib/features/questions/ui/widgets/question_card_widget.dart` (lines 92, 143–146, 156–187) | Fixed `margin: EdgeInsets.all(16)`, fixed-width buttons (`width: double.infinity`), no `MediaQuery` for large-font readability |
-| `lib/features/questions/ui/widgets/single_answer_widget.dart` | (not fully reviewed but likely shares the same fixed layout) |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 136, 147–148, 260–330) | Chat bubble `maxWidth` is `size.width * 0.75` — uses `MediaQuery` correctly but only for width, not for font scaling |
-| `lib/features/subjects/presentation/subject_list_view.dart` (lines 60–95, 98–105, 110–191) | Empty state icon is a fixed `size: 64`, subject cards have fixed padding/structure with no responsive adjustment |
-| `lib/features/subjects/presentation/subject_detail_view.dart` | (not fully reviewed but likely shares the same fixed layout) |
-| `lib/features/subjects/presentation/subject_management_screen.dart` | (not fully reviewed but likely shares the same fixed layout) |
-| `lib/features/subjects/presentation/subject_selection_screen.dart` | (not fully reviewed but likely shares the same fixed layout) |
-| `lib/features/sessions/presentation/session_tracker_screen.dart` (lines 207, 210–316) | Fixed padding `EdgeInsets.all(16)`, timer `displayLarge` text does not scale with system font size; no landscape adaptation |
-| `lib/features/sessions/presentation/session_history_screen.dart` (lines 164, 207–220, 270–340) | Summary row uses `Row` with `Expanded` (OK) but `ListView.separated` items have `EdgeInsets.symmetric(horizontal: 16, vertical: 4)` — fixed |
-| `lib/features/planner/presentation/planner_screen.dart` (lines 112, 127–150) | `Row` of two `Expanded` text fields is the only layout; no handling for narrow screens or large fonts causing overflow |
-| `lib/features/lessons/presentation/lesson_list_screen.dart` | (not reviewed but follows same pattern) |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart` | (not reviewed but follows same pattern) |
-| `lib/features/lessons/presentation/topic_list_screen.dart` | (not reviewed but follows same pattern) |
+## Affected Files
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/features/subjects/presentation/subject_detail_view.dart` | 189, 192 | `_buildPracticeTab()` and `_buildHistoryTab()` referenced but **never defined** — runtime crash |
+| Same file | 266–270 | **Nested `Card`** (Card inside Card) produces double elevation shadow and visual artifact |
+| Same file | 262–319 | **`as dynamic` casts** on Lesson objects (`(lesson as dynamic).title`, `(lesson as dynamic).questionIds`) defeat type safety |
+| Same file | 69 | Fixed `SliverAppBar(expandedHeight: 200)` does not adapt to screen height |
+| Same file | 272–285 | Hardcoded `Colors.green`, `Colors.orange`, `Colors.red` for score indicators bypass theme |
+| `lib/features/questions/ui/widgets/question_card_widget.dart` | 104, 116, 129, 285 | **`FittedBox(fit: BoxFit.scaleDown)`** on chip labels defeats system text scaling accessibility |
+| `lib/features/practice/presentation/practice_screen.dart` | 231–260 | Hardcoded `Colors.blue`, `Colors.orange`, `Colors.purple`, `Colors.red` for mode cards |
+| `lib/features/practice/presentation/practice_session_screen.dart` | 352, 372, 554–575 | Hardcoded `Colors.blue`, `Colors.green`, `Colors.grey.shade600` |
+| `lib/features/lessons/presentation/lesson_detail_screen.dart` | 28–30, 48–50 | `Timer? _timer` declared but **never initialized** — dead code, incomplete feature |
+| `lib/core/widgets/animated_bar_chart.dart` | 30 | Hardcoded `EdgeInsets.all(16)` instead of `ResponsiveUtils.cardPadding(context)` |
+| 7 feature files: `settings_screen.dart`, `api_config_screen.dart`, `profile_screen.dart`, `subject_management_screen.dart`, `topic_list_screen.dart`, `lesson_list_screen.dart`, `lesson_detail_screen.dart` | various | **`import 'package:studyking/main.dart'`** creates tight coupling and circular-dependency risk |
+
+---
 
 ## Rationale
 
-1. **WCAG 2.1 AA Failure — Resize Text (1.4.4)**: The global font-size slider (range 10–30) overrides the user's system `textScaleFactor` instead of composing with it. If a user sets their OS to 150% and the app slider to 16, the effective size is only 16 — the user's intent is discarded. Furthermore, no widget checks `MediaQuery.textScalerOf(context)` beyond 3 scattered references.
+### 1. Crashing Tabs (Critical Severity)
+`TabBarView` at line 182 lists 4 children: `_buildLessonsTab()`, `_buildPracticeTab()`, `_buildHistoryTab()`, `_buildStatsTab()`. Grepping the entire codebase confirms `_buildPracticeTab` and `_buildHistoryTab` are **referenced only at lines 189 and 192** and **defined nowhere**. Any user tapping the Practice or History tab triggers a runtime error. This is a `NoSuchMethod` crash waiting to happen.
 
-2. **WCAG 2.1 AA Failure — Target Size (2.5.8 / 2.5.5)**: A 48x48 dp minimum is advised. The app has `SizedBox(width: 20, height: 20, child: CircularProgressIndicator(...))` (profile_screen.dart line 264, settings_screen.dart line 157) and `IconButton` with `constraints: BoxConstraints()` that defaults to 48x48 only if not overridden — but several inline `GestureDetector`/`InkWell` taps lack guaranteed minimum sizes.
+### 2. Nested Card Produces Visual Artifact
+```dart
+Card(                                  // outer Card
+  child: Card(                         // inner Card — creates double shadow + border radius
+    child: ListTile(...),
+  ),
+);
+```
+Two `Card` widgets stacked produce overlapping elevation shadows, doubled border radii, and redundant internal padding. The inner card's `margin` has no effect because it sits inside the outer card's child slot.
 
-3. **No Orientation Support**: On a 10" tablet in landscape, the `GridView.count(crossAxisCount: 2)` in `practice_screen.dart` shows two ludicrously wide cards. On a foldable in half-fold portrait, some screens overflow. There is zero orientation-change handling anywhere.
+### 3. `as dynamic` Casts Defeat Type Safety
+`(lesson as dynamic).title` at line 265 and `(lesson as dynamic).questionIds?.length` at line 263 mean the compiler cannot catch type errors. If the repository returns a model without these fields (e.g., a different `Lesson` variant), the app crashes with `NoSuchMethodError` at runtime. A properly typed `Lesson` model already exists at `lib/core/data/models/lesson_model.dart`.
 
-4. **Dead Accessibility Code**: `UserProfile.accessibilitySettings` (default `'default'`) is stored in Hive but never consumed. Any future accessibility features will require schema migration and UI that doesn't exist.
+### 4. FittedBox Breaks Font Size Accessibility
+`FittedBox(fit: BoxFit.scaleDown)` in `question_card_widget.dart` forces text to shrink when constrained. This directly overrides the user's system font size setting — a WCAG 2.1 SC 1.4.4 (Resize Text) violation. Users who rely on larger text for readability will find chip labels illegibly small.
 
-5. **No High-Contrast / Dark Mode Variations**: `lightTheme` and `darkTheme` exist, but there is no `highContrast` variant for either. Users who need high contrast (e.g. low-vision) get the same low-contrast M3 `surfaceContainerHighest` backgrounds.
+### 5. 168+ Hardcoded Colors Ignore Theme
+`Colors.grey.shade600`, `Colors.blue`, `Colors.green`, etc. are used throughout practice screens, session screens, question cards, and subject detail screens. These do not respond to:
+- Dark/light theme switching
+- High-contrast mode (`contrastLevel: 1.0` in `AppTheme`)
+- User-customized seed color
 
-6. **Semantics Coverage < 5%**: Only the avatar picker (profile_screen.dart:194), chat messages (quick_guide_screen.dart:141–142), and canvas drawing (canvas_drawing_widget.dart) carry semantic labels. Every `ListTile`, `TextField`, `Switch`, `Slider`, card, and navigation destination lacks a meaningful `Semantics` wrapper. Screen reader users will hear generic "button" / "text field" announcements with no context.
+The `AppTheme` already provides `colorScheme.onSurfaceVariant`, `colorScheme.primaryContainer`, `colorScheme.tertiary`, etc. that should be used instead.
 
-7. **No Keyboard / Focus Navigation**: There are zero `FocusTraversalGroup`, `Focus`, or `Actions` widgets. Users navigating with a hardware keyboard or switch device cannot efficiently move through form fields, settings rows, or question options.
+### 6. Tight Coupling to `main.dart`
+Seven feature files import `package:studyking/main.dart` directly to access `database` and `settingsRepository`. This means:
+- Unit-testing any of these widgets requires bootstrapping the entire app
+- `main.dart` cannot be refactored without touching every feature
+- Riverpod providers exist but are bypassed in favor of global singletons
+
+---
 
 ## Acceptance Criteria
 
-### A. Responsive Layout Infrastructure
+- [ ] **CRITICAL**: Implement `_buildPracticeTab()` and `_buildHistoryTab()` in `subject_detail_view.dart`, or replace the `TabBarView` with only the two working tabs, so the screen no longer crashes on tab switch.
+- [ ] Fix the nested `Card` in `subject_detail_view.dart:266–270` — keep only one `Card` widget.
+- [ ] Replace all `as dynamic` casts in `subject_detail_view.dart:262–319` with proper typed access from the existing `Lesson` model.
+- [ ] Make `SliverAppBar.expandedHeight` in `subject_detail_view.dart:69` proportional to screen height via `MediaQuery`.
+- [ ] Remove `FittedBox(fit: BoxFit.scaleDown)` from all 4 chip labels in `question_card_widget.dart` and use `Flexible` + `TextOverflow.ellipsis` instead.
+- [ ] Replace hardcoded `Colors.green`/`Colors.orange`/`Colors.red` in `subject_detail_view.dart:272–285` with theme-derived colors (e.g., `colorScheme.primary`, `colorScheme.error`, `colorScheme.tertiary`).
+- [ ] Replace hardcoded `Colors.blue`/`Colors.orange`/`Colors.purple`/`Colors.red` in `practice_screen.dart:231–260` with a palette derived from `colorScheme`.
+- [ ] Replace `EdgeInsets.all(16)` in `animated_bar_chart.dart:30` with `ResponsiveUtils.cardPadding(context)`.
+- [ ] Replace all `import 'package:studyking/main.dart' show ...` across 7 feature files with proper Riverpod provider access or a dedicated dependency injection module.
+- [ ] Either implement the `_timer` in `lesson_detail_screen.dart` or remove the dead `Timer? _timer` field and its cancellation in `dispose()`.
 
-- [ ] **A1**: Add a responsive layout dependency (`flutter_screenutil`, `responsive_builder`, or a custom `LayoutBuilder`-based breakpoint system) to `pubspec.yaml`.
-- [ ] **A2**: Wrap `MaterialApp` (in `main.dart`) with a `MediaQuery`-based responsive builder that provides a standard `ResponsiveBreakpoint` (e.g. `xs` < 600, `sm` 600–840, `md` 840–1200, `lg` > 1200) to all descendant widgets.
-- [ ] **A3**: Replace every hardcoded `EdgeInsets.symmetric(horizontal: 16)` and `EdgeInsets.all(16)` in every presentation file with a responsive spacing value derived from the current breakpoint.
-- [ ] **A4**: `practice_screen.dart` `GridView.count` must dynamically switch `crossAxisCount` based on screen width (e.g. 2 columns on xs, 3 on sm, 4 on md+).
-- [ ] **A5**: Every `ListView.builder` padding must scale with breakpoint.
-- [ ] **A6**: Session tracker and history screens must lay out their summary stats in a `Wrap` or responsive `Grid` so they don't overflow on narrow screens.
+---
 
-### B. System Accessibility Integration
+## Impact
 
-- [ ] **B1**: In `main.dart`, wrap `body`/`builder` with a widget that reads `MediaQuery.boldTextOf(context)`, `MediaQuery.highContrastOf(context)`, and `MediaQuery.textScalerOf(context)`, composing these with the user's `fontSize` setting. The app font must always **at least** match the system `textScaleFactor`.
-- [ ] **B2**: Add `highContrastTheme` and `darkHighContrastTheme` to `AppTheme`, activated automatically when the OS requests high contrast.
-- [ ] **B3**: Replace the raw `accessibilitySettings` string in `user_profile_model.dart` with a structured `AccessibilityPreferences` Hive model containing `boldText`, `highContrast`, `reduceMotion`, `largeTouchTargets` booleans; wire it to actual UI in the profile/settings screens; remove dead string field.
+- **Users**: Tab crash blocks access to Practice and History on the Subject Detail screen. Hardcoded colors cause contrast issues in dark/high-contrast mode. Text scaling is broken on question chip labels.
+- **Developers**: Each new screen copies the hardcoded-color anti-pattern. Tight `main.dart` coupling makes testing and refactoring expensive. `as dynamic` casts hide type errors until production.
 
-### C. Touch Target Sizing (WCAG 2.5.5/2.5.8)
+## Priority
 
-- [ ] **C1**: Audit every `IconButton`, `InkWell`, `GestureDetector`, and `ListTile` in the codebase. Any tappable area under 48x48 dp must be wrapped in a `SizedBox(width: 48, height: 48, child: ...)` or have `minSize: 48` via `Material`.
-- [ ] **C2**: The 20x20 `CircularProgressIndicator` in app bars (profile_screen.dart, settings_screen.dart) must be in a 48x48 container to meet minimum touch target if it receives taps.
-
-### D. Semantics Coverage
-
-- [ ] **D1**: Give every `ListTile` (including those in settings, profile, practice mode cards, subject cards, session history) a `Semantics` wrapper with a meaningful `label` derived from its `title`/`subtitle`.
-- [ ] **D2**: Give every `Slider` (`_showFontSizeDialog`, `_showTimeoutDialog`) a `Semantics` slider label and value readout.
-- [ ] **D3**: Give every `SwitchListTile` a `Semantics` label.
-- [ ] **D4**: Add `Semantics` to the `NavigationBar` destinations in `main.dart` (currently they only have `icon` + `label` which is partially handled by Material, but verification labels should exist).
-- [ ] **D5**: Ensure the chat input field in `quick_guide_screen.dart` has a proper semantic hint that matches the localized `messageInputHint`.
-- [ ] **D6**: Add `MergeSemantics` around tightly grouped controls (e.g. avatar icon + label).
-
-### E. Keyboard & Navigation
-
-- [ ] **E1**: Add `FocusTraversalGroup` ordering to settings screen rows and profile form fields so Tab/Shift+Tab navigation follows a logical order.
-- [ ] **E2**: Ensure all dialogs (`AlertDialog`, `ModalBottomSheet`) have initial focus on the first actionable control (or a close button) and trap focus within the dialog.
-- [ ] **E3**: Add `shortcuts` and `actions` for common operations (e.g. Ctrl+Enter to send chat message, Escape to close dialogs).
-
-### F. Orientation & Foldable Support
-
-- [ ] **F1**: Every screen must be verified in landscape mode on a phone form-factor (360x780 dp) with no overflow or clipped content.
-- [ ] **F2**: Every screen must be verified in portrait mode on a tablet form-factor (820x1180 dp) with reasonable whitespace usage.
-- [ ] **F3**: Every screen must be verified in split-screen mode (approx 360x400 dp) with no overflow.
-
-### G. Verification
-
-- [ ] **G1**: Run `flutter run` on a physical Android device in landscape + portrait.
-- [ ] **G2**: Enable system font size to "Large" and verify no text is truncated or overflows.
-- [ ] **G3**: Enable TalkBack / VoiceOver and verify all interactive elements are announced with meaningful labels.
-- [ ] **G4**: Enable high-contrast mode in OS settings and verify the app switches to `highContrastTheme`.
-- [ ] **G5**: Run `flutter test` — all existing tests must pass; add new tests for `ResponsiveBreakpoint` utilities, `AccessibilityPreferences` model, and `AppTheme.highContrastTheme`.
-- [ ] **G6**: No regressions on the existing practice flow, settings changes, profile editing, chat, and session tracking.
+**Critical** — includes a runtime crash (missing methods), accessibility violations (text scaling, contrast), and maintainability debt across 20+ files.

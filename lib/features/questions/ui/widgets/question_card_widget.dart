@@ -3,9 +3,9 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'dart:convert';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
+import '../../../../core/utils/responsive.dart';
 import 'single_answer_widget.dart';
 import 'canvas_drawing_widget.dart';
-
 
 /// Question Card - Main UI component for displaying questions
 class QuestionCardWidget extends StatefulWidget {
@@ -88,104 +88,115 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Question header
-            Row(
-              children: [
-                Chip(
-                  label: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(_getTypeLabel(l10n)),
-                  ),
-                  backgroundColor: _getTypeColor(),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Chip(
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(l10n.difficultyLabel(_difficultyLabel(widget.question.difficulty, l10n))),
-                    ),
-                    backgroundColor: _getDifficultyColor(),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (widget.isSubmitted)
+    return Semantics(
+      label: '${_getTypeLabel(l10n)}: ${widget.question.text}',
+      child: Card(
+        margin: ResponsiveUtils.screenPadding(context),
+        child: Padding(
+          padding: ResponsiveUtils.cardPadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Question header
+              Row(
+                children: [
                   Chip(
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(_isCurrentAnswerCorrect() ? l10n.correctFeedback : l10n.incorrectFeedback),
+                      child: Text(_getTypeLabel(l10n)),
                     ),
-                    backgroundColor: _isCurrentAnswerCorrect()
-                        ? Colors.green
-                        : Colors.red,
+                    backgroundColor: _getTypeColor(),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Question text
-              Text(
-                widget.question.text,
-                style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Chip(
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(l10n.difficultyLabel(_difficultyLabel(widget.question.difficulty, l10n))),
+                      ),
+                      backgroundColor: _getDifficultyColor(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (widget.isSubmitted)
+                    Chip(
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(_isCurrentAnswerCorrect() ? l10n.correctFeedback : l10n.incorrectFeedback),
+                      ),
+                      backgroundColor: _isCurrentAnswerCorrect()
+                          ? Colors.green
+                          : Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                ],
               ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Question type specific content
-            _buildQuestionContent(context),
-
-            const SizedBox(height: 16),
-
-            // Submit button
-            if (!widget.isSubmitted)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _canSubmit
-                      ? () {
-                          widget.onAnswerSubmitted(_localAnswer);
-                        }
-                      : null,
-                  child: Text(l10n.submitAnswer),
+              // Question text
+                Text(
+                  widget.question.text,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-            if (!widget.isSubmitted && !_canSubmit)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  l10n.addAnswerBeforeSubmitting,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
+              const SizedBox(height: 16),
 
-            if (widget.isSubmitted && widget.onNext != null)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: widget.onNext,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: Text(l10n.nextQuestion),
+              // Question type specific content
+              _buildQuestionContent(context),
+
+              const SizedBox(height: 16),
+
+              // Submit button
+              if (!widget.isSubmitted)
+                Semantics(
+                  button: true,
+                  label: l10n.submitAnswer,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _canSubmit
+                          ? () {
+                              widget.onAnswerSubmitted(_localAnswer);
+                            }
+                          : null,
+                      child: Text(l10n.submitAnswer),
+                    ),
+                  ),
                 ),
-              ),
-          ],
+              if (!widget.isSubmitted && !_canSubmit)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    l10n.addAnswerBeforeSubmitting,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+
+              if (widget.isSubmitted && widget.onNext != null)
+                Semantics(
+                  button: true,
+                  label: l10n.nextQuestion,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onNext,
+                      icon: const Icon(Icons.arrow_forward),
+                      label: Text(l10n.nextQuestion),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -250,28 +261,32 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       children: [
         ...options.map((option) {
           final selected = _multiSelected.contains(option);
-          return CheckboxListTile(
-            value: selected,
-            onChanged: widget.isSubmitted
-                ? null
-                : (value) {
-                    setState(() {
-                      if (value ?? false) {
-                        _multiSelected.add(option);
-                      } else {
-                        _multiSelected.remove(option);
-                      }
-                      _localAnswer = _multiSelected.join('||');
-                    });
-                    widget.onAnswerChanged?.call(_localAnswer);
-                  },
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(option),
+          return Semantics(
+            label: option,
+            selected: selected,
+            child: CheckboxListTile(
+              value: selected,
+              onChanged: widget.isSubmitted
+                  ? null
+                  : (value) {
+                      setState(() {
+                        if (value ?? false) {
+                          _multiSelected.add(option);
+                        } else {
+                          _multiSelected.remove(option);
+                        }
+                        _localAnswer = _multiSelected.join('||');
+                      });
+                      widget.onAnswerChanged?.call(_localAnswer);
+                    },
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(option),
+                ),
               ),
             ),
           );
@@ -282,35 +297,43 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
 
   Widget _buildTextAnswerContent(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return TextField(
-      controller: _textController,
-      maxLines: 3,
-      decoration: InputDecoration(
-        hintText: l10n.typeYourAnswerHere,
-        border: OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.grey.shade50,
+    return Semantics(
+      textField: true,
+      hint: l10n.typeYourAnswerHere,
+      child: TextField(
+        controller: _textController,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: l10n.typeYourAnswerHere,
+          border: OutlineInputBorder(),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+        ),
+        onChanged: (value) {
+          _updateAnswer(value.trim().isEmpty ? null : value);
+        },
       ),
-      onChanged: (value) {
-        _updateAnswer(value.trim().isEmpty ? null : value);
-      },
     );
   }
 
   Widget _buildEssayContent(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return TextField(
-      controller: _essayController,
-      maxLines: 10,
-      decoration: InputDecoration(
-        hintText: l10n.writeYourEssayAnswer,
-        border: OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.grey.shade50,
+    return Semantics(
+      textField: true,
+      hint: l10n.writeYourEssayAnswer,
+      child: TextField(
+        controller: _essayController,
+        maxLines: 10,
+        decoration: InputDecoration(
+          hintText: l10n.writeYourEssayAnswer,
+          border: OutlineInputBorder(),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+        ),
+        onChanged: (value) {
+          _updateAnswer(value.trim().isEmpty ? null : value);
+        },
       ),
-      onChanged: (value) {
-        _updateAnswer(value.trim().isEmpty ? null : value);
-      },
     );
   }
 

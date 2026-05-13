@@ -4,6 +4,7 @@ import '../../../core/data/models/topic_model.dart';
 import '../../../main.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_list_screen.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class TopicListScreen extends StatefulWidget {
   const TopicListScreen({super.key});
@@ -52,12 +53,14 @@ class _TopicListScreenState extends State<TopicListScreen> {
       return Center(child: Text(l10n.noTopicsYetAddSome));
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveUtils.listPadding(context),
       itemCount: _topics.length,
       itemBuilder: (context, index) {
         final t = _topics[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
+          return Semantics(
+            label: t.title,
+            child: Card(
+            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
           child: ListTile(
             leading: const Icon(Icons.folder, color: Colors.blue),
             title: Text(t.title),
@@ -67,6 +70,7 @@ class _TopicListScreenState extends State<TopicListScreen> {
               builder: (_) => LessonListScreen(topicId: t.id, topicTitle: t.title),
             )),
           ),
+        ),
         );
       },
     );

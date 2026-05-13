@@ -3,6 +3,7 @@ import '../../../core/data/models/lesson_model.dart';
 import '../../../../main.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_detail_screen.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class LessonListScreen extends StatefulWidget {
   final String topicId;
@@ -45,12 +46,14 @@ class _LessonListScreenState extends State<LessonListScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.topicTitle)),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.listPadding(context),
         itemCount: _lessons.length,
         itemBuilder: (context, index) {
           final l = _lessons[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
+          return Semantics(
+            label: l.title,
+            child: Card(
+            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
             child: ListTile(
               leading: const Icon(Icons.book),
               title: Text(l.title),
@@ -60,6 +63,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
                 builder: (_) => LessonDetailScreen(lessonId: l.id, topicId: widget.topicId, topicTitle: widget.topicTitle),
               )),
             ),
+          ),
           );
         },
       ),

@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'accessibility_preferences.dart';
 
 part 'user_profile_model.g.dart';
 
@@ -29,7 +30,7 @@ class UserProfile extends HiveObject {
   final String language;
 
   @HiveField(8)
-  final String accessibilitySettings;
+  final AccessibilityPreferences? accessibilityPrefs;
 
   UserProfile({
     required this.id,
@@ -40,7 +41,7 @@ class UserProfile extends HiveObject {
     this.preferredStudyTime,
     this.notificationsEnabled = true,
     this.language = 'en',
-    this.accessibilitySettings = 'default',
+    this.accessibilityPrefs,
   });
 
   Map<String, dynamic> toJson() => {
@@ -52,7 +53,7 @@ class UserProfile extends HiveObject {
         'preferredStudyTime': preferredStudyTime,
         'notificationsEnabled': notificationsEnabled,
         'language': language,
-        'accessibilitySettings': accessibilitySettings,
+        'accessibilityPrefs': accessibilityPrefs?.toJson(),
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -66,9 +67,10 @@ class UserProfile extends HiveObject {
             ? json['notificationsEnabled'] as bool
             : true,
         language: json['language'] is String ? json['language'] as String : 'en',
-        accessibilitySettings: json['accessibilitySettings'] is String
-            ? json['accessibilitySettings'] as String
-            : 'default',
+        accessibilityPrefs: json['accessibilityPrefs'] is Map
+            ? AccessibilityPreferences.fromJson(
+                json['accessibilityPrefs'] as Map<String, dynamic>)
+            : null,
       );
 
   UserProfile copyWith({
@@ -80,7 +82,7 @@ class UserProfile extends HiveObject {
     String? preferredStudyTime,
     bool? notificationsEnabled,
     String? language,
-    String? accessibilitySettings,
+    AccessibilityPreferences? accessibilityPrefs,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -91,7 +93,7 @@ class UserProfile extends HiveObject {
       preferredStudyTime: preferredStudyTime ?? this.preferredStudyTime,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       language: language ?? this.language,
-      accessibilitySettings: accessibilitySettings ?? this.accessibilitySettings,
+      accessibilityPrefs: accessibilityPrefs ?? this.accessibilityPrefs,
     );
   }
 }

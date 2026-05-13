@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
@@ -196,7 +197,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: ResponsiveUtils.screenPadding(context),
           child: SingleChildScrollView(
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -204,7 +205,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
               GradientContainer(
                 accent: theme.primaryColor,
                 borderRadius: 16,
-                padding: const EdgeInsets.all(20),
+                padding: ResponsiveUtils.cardPadding(context),
                 child: Column(
                   children: [
                     Row(
@@ -232,8 +233,10 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
                       children: [
                         ElevatedButton.icon(
                           onPressed: _isTrackingSession ? null : _startSession,
@@ -243,6 +246,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                             backgroundColor: _isTrackingSession ? theme.disabledColor : Colors.green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            minimumSize: const Size(48, 48),
                           ),
                         ),
                         if (_isTrackingSession)
@@ -254,6 +258,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              minimumSize: const Size(48, 48),
                             ),
                           ),
                       ],
@@ -288,16 +293,19 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                             style: theme.textTheme.bodySmall,
                           ),
                         ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SessionHistoryScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(l10n.viewAll),
+                      Semantics(
+                        label: l10n.viewAll,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SessionHistoryScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(l10n.viewAll),
+                        ),
                       ),
                     ],
                   ),
@@ -320,7 +328,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 48, color: theme.disabledColor),
+            Icon(Icons.history, size: ResponsiveUtils.emptyStateIconSize(context) * 0.6, color: theme.disabledColor),
             const SizedBox(height: 8),
             Text(l10n.noSessionsYet, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),
@@ -340,23 +348,26 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
         final session = recentSessions[index];
         final position = _sortedSessions.indexOf(session);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Icon(Icons.play_arrow, color: theme.primaryColor),
-            title: Text(
-              l10n.sessionNumber(_sortedSessions.length - position),
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              '${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))} • ${formatDateFromContext(context, session.startTime)}',
-              style: theme.textTheme.bodySmall,
-            ),
-            trailing: Text(
-              formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs)),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.primaryColor,
+        return Semantics(
+          label: l10n.sessionNumber(_sortedSessions.length - position),
+          child: Card(
+            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
+            child: ListTile(
+              leading: Icon(Icons.play_arrow, color: theme.primaryColor),
+              title: Text(
+                l10n.sessionNumber(_sortedSessions.length - position),
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                '${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))} • ${formatDateFromContext(context, session.startTime)}',
+                style: theme.textTheme.bodySmall,
+              ),
+              trailing: Text(
+                formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs)),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.primaryColor,
+                ),
               ),
             ),
           ),
