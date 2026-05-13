@@ -125,8 +125,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '${count}m',
-      one: '1m',
+      other: '${count}min',
+      one: '1min',
     );
     return '$_temp0';
   }
@@ -192,7 +192,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weakAreas => 'Áreas Débiles';
 
   @override
-  String get focusOnMistakes => 'Enfíquese en sus errores';
+  String get focusOnMistakes => 'Concéntrate en tus errores';
 
   @override
   String get yourSubjects => 'Tus Materias';
@@ -722,7 +722,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String practiceQuestionsFrom(String subjectName) {
-    return 'Practique preguntas de $subjectName';
+    return 'Practica preguntas de $subjectName';
   }
 
   @override
@@ -1218,4 +1218,213 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get performanceMetrics => 'Métricas de Rendimiento';
+
+  @override
+  String daysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noTopicsYetAddSome => 'No hay temas todavía? ¡agrega algunos!';
+
+  @override
+  String get noLessonsUsePlanner =>
+      'No hay lecciones? ¡usa el Planificador para generar!';
+
+  @override
+  String blocksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bloques',
+      one: '1 bloque',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get blockTypeExplanation => 'Explicación';
+
+  @override
+  String get blockTypeExample => 'Ejemplo';
+
+  @override
+  String get blockTypeExercise => 'Ejercicio';
+
+  @override
+  String get blockTypeSlide => 'Diapositiva';
+
+  @override
+  String get blockTypeQuiz => 'Cuestionario';
+
+  @override
+  String get blockTypeSummary => 'Resumen';
+
+  @override
+  String practiceModeType(String mode, String type) {
+    return '$mode - $type';
+  }
+
+  @override
+  String fallbackOption(int number) {
+    return 'Opción $number';
+  }
+
+  @override
+  String get drawingSubmitted => 'Dibujo enviado';
+
+  @override
+  String unsupportedQuestionType(String type) {
+    return 'Tipo de pregunta no compatible: $type';
+  }
+
+  @override
+  String get todaysPlan => 'Plan de Hoy';
+
+  @override
+  String get noStudyPlanToday => 'No hay plan de estudio para hoy';
+
+  @override
+  String questionsCountMetric(int count) {
+    return '$count preguntas';
+  }
+
+  @override
+  String minutesCountMetric(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get atRiskTopics => 'Temas en Riesgo';
+
+  @override
+  String get noAtRiskTopics => 'Sin temas en riesgo. ¡Sigue así!';
+
+  @override
+  String accuracyLabel(String percent) {
+    return 'Precisión: $percent';
+  }
+
+  @override
+  String get readyToAdvance => 'Listo para Avanzar';
+
+  @override
+  String get keepPracticingToUnlock =>
+      '¡Sigue practicando para desbloquear temas avanzados!';
+
+  @override
+  String get masteryOverview => 'Resumen de Dominio';
+
+  @override
+  String get totalTopicsLabel => 'Total de Temas';
+
+  @override
+  String get masteredLabel => 'Dominado';
+
+  @override
+  String get weakLabel => 'Débil';
+
+  @override
+  String avgAccuracyLabel(String percent) {
+    return 'Precisión Prom.: $percent';
+  }
+
+  @override
+  String avgReadinessLabel(String percent) {
+    return 'Disposición Prom.: $percent';
+  }
+
+  @override
+  String courseSessionLabel(String course, int number) {
+    return '$course - Sesión $number';
+  }
+
+  @override
+  String get quickGuideWelcomeMessage =>
+      '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúntame lo que sea sobre tus estudios!';
+
+  @override
+  String get suggestedPromptExplain => 'Explica la fotosíntesis';
+
+  @override
+  String get suggestedPromptQuiz => 'Examíname de historia';
+
+  @override
+  String get suggestedPromptMath => 'Ayuda con problemas de mates';
+
+  @override
+  String get quickGuideHelpContent =>
+      'Guía Rápida es tu asistente de estudio con IA. Puedes:\n\n• Hacer preguntas sobre cualquier materia\n• Solicitar explicaciones de conceptos\n• Obtener ayuda con problemas de práctica\n\n¡Solo escribe tu pregunta y presiona enviar!';
+
+  @override
+  String semanticsYouSaid(String message) {
+    return 'Tú dijiste: $message';
+  }
+
+  @override
+  String semanticsQuickGuideSaid(String message) {
+    return 'Guía Rápida dijo: $message';
+  }
+
+  @override
+  String semanticsSendPrompt(String prompt) {
+    return 'Enviar sugerencia: $prompt';
+  }
+
+  @override
+  String get semanticsMessageInput => 'Campo de mensaje para Guía Rápida';
+
+  @override
+  String get fallbackExplainResponse =>
+      '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema te gustaría que explique?';
+
+  @override
+  String get fallbackQuizResponse =>
+      '¡Puedo ayudar con preguntas! Pregunta lo que quieras y haré lo mejor posible.';
+
+  @override
+  String get fallbackMathResponse =>
+      '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico te gustaría trabajar?';
+
+  @override
+  String get fallbackGeneralResponse =>
+      '¡Esa es una pregunta interesante! Déjame ayudarte a entenderla mejor.';
+
+  @override
+  String get aboutApplicationName => 'StudyKing';
+
+  @override
+  String get aboutVersion => 'v0.1.0';
+
+  @override
+  String get aboutLegalese => '© 2026 StudyKing.';
+
+  @override
+  String get unknownModelId => 'unknown-model';
+
+  @override
+  String get unknownProviderName => 'Desconocido';
+
+  @override
+  String get examDateOptionalLabel => 'Fecha de Examen (Opcional):';
+
+  @override
+  String get lessonFallbackTitle => 'Lección';
+
+  @override
+  String errorWithMessage(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get questionTypeDefault => 'Pregunta';
+
+  @override
+  String get durationSeparator => ' ';
 }

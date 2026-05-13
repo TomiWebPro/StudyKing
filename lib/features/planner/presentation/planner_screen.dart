@@ -80,9 +80,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
     setState(() {
       _schedule = List.generate(daysValue, (dayIndex) {
+        final l10n = AppLocalizations.of(context)!;
         final topicLabel = curriculumTopics.isNotEmpty
             ? curriculumTopics[dayIndex % curriculumTopics.length]
-            : '$course - Session ${(dayIndex * sessionDuration) + 1}';
+            : l10n.courseSessionLabel(course, (dayIndex * sessionDuration) + 1);
         return _ScheduleItem(
           day: dayIndex + 1,
           session: 1,

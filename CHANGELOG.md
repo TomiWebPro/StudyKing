@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-05-13: Implemented i18n sweep — replaced hardcoded English strings in `quick_guide_screen.dart` (welcome message, suggested prompts, semantics labels, fallback responses) and `practice_session_screen.dart` (timer format) with `AppLocalizations` calls; added locale-aware duration separator in `time_utils.dart`; fixed `formatDate` calls without l10n in `session_tracker_screen`, `subject_detail_view`, `session_history_screen`; fixed Spanish `focusOnMistakes` register (formal → informal); added `durationSeparator` key to ARB files; updated l10n tests to match corrected English/Spanish expectations
 - 2026-05-13: Migrated theme system from Material 2 to Material 3 — set `useMaterial3: true`, migrated `CardTheme`, `ElevatedButtonTheme`, and `AppBarTheme` to M3 tokens, and added `NavigationBarThemeData` for consistent M3 `NavigationBar` styling
 - 2026-05-13: Added `ThemeMode.system` option to the theme picker bottom sheet, allowing users to follow device-level dark/light preference
 - 2026-05-13: Removed `FittedBox` with `BoxFit.scaleDown` from Quick Guide chat bubbles — long messages now wrap naturally and respect the user's accessibility font size

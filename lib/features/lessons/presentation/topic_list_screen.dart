@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
 import '../../../main.dart' show database;
+import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_list_screen.dart';
 
 class TopicListScreen extends StatefulWidget {
@@ -45,9 +46,10 @@ class _TopicListScreenState extends State<TopicListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_topics.isEmpty) {
-      return const Center(child: Text('No topics yet - add some!'));
+      return Center(child: Text(l10n.noTopicsYetAddSome));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),

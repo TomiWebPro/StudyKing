@@ -197,7 +197,7 @@ class _SubjectManagementScreenState
 
             Row(
               children: [
-                Text('${l10n.examDateOptional}: '),
+                Text(l10n.examDateOptionalLabel),
                 TextButton.icon(
                   onPressed: _selectExamDate,
                   icon: Icon(

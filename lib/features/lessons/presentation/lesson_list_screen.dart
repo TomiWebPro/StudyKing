@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../../main.dart' show database;
+import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_detail_screen.dart';
 
 class LessonListScreen extends StatefulWidget {
@@ -36,9 +37,10 @@ class _LessonListScreenState extends State<LessonListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_lessons.isEmpty) {
-      return const Center(child: Text('No lessons - use Planner to generate!'));
+      return Center(child: Text(l10n.noLessonsUsePlanner));
     }
     return Scaffold(
       appBar: AppBar(title: Text(widget.topicTitle)),
@@ -52,7 +54,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
             child: ListTile(
               leading: const Icon(Icons.book),
               title: Text(l.title),
-              subtitle: Text('${l.blocks.length} blocks'),
+              subtitle: Text(l10n.blocksCount(l.blocks.length)),
               trailing: const Icon(Icons.play_arrow),
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => LessonDetailScreen(lessonId: l.id, topicId: widget.topicId, topicTitle: widget.topicTitle),

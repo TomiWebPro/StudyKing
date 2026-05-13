@@ -785,7 +785,7 @@ void main() {
         expect(l10n.topicFocus, 'Enfoque por Tema');
         expect(l10n.practiceSpecificTopics, 'Practica temas específicos');
         expect(l10n.weakAreas, 'Áreas Débiles');
-        expect(l10n.focusOnMistakes, 'Enfíquese en sus errores');
+        expect(l10n.focusOnMistakes, 'Concéntrate en tus errores');
         expect(l10n.yourSubjects, 'Tus Materias');
         expect(l10n.readyForPractice, 'Listo para practicar');
         expect(l10n.practiceAvailable, 'Práctica disponible');
@@ -1180,10 +1180,10 @@ void main() {
       });
 
       group('durationMinutes', () {
-        test('one', () => expect(l10n.durationMinutes(1), '1m'));
+        test('one', () => expect(l10n.durationMinutes(1), '1min'));
         test('other', () {
-          expect(l10n.durationMinutes(2), '2m');
-          expect(l10n.durationMinutes(30), '30m');
+          expect(l10n.durationMinutes(2), '2min');
+          expect(l10n.durationMinutes(30), '30min');
         });
       });
 
@@ -1239,7 +1239,7 @@ void main() {
       });
 
       test('practiceQuestionsFrom', () {
-        expect(l10n.practiceQuestionsFrom('Matemáticas'), 'Practique preguntas de Matemáticas');
+        expect(l10n.practiceQuestionsFrom('Matemáticas'), 'Practica preguntas de Matemáticas');
       });
 
       test('sessionNumber', () {

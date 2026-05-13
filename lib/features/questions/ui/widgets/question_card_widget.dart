@@ -222,9 +222,10 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildMCQContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final options = widget.question.options.isNotEmpty
         ? widget.question.options
-        : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+        : [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
 
     return SingleAnswerWidget(
       options: options,
@@ -239,9 +240,10 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildMultiChoiceContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final options = widget.question.options.isNotEmpty
         ? widget.question.options
-        : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+        : [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +370,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       case QuestionType.stepByStep:
         return l10n.stepByStep;
       default:
-        return 'Question';
+        return l10n.questionTypeDefault;
     }
   }
 

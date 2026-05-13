@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/enums.dart';
 import '../../../../main.dart' show database;
+import '../../../l10n/generated/app_localizations.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String lessonId;
@@ -48,6 +49,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_lesson == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -70,7 +72,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
               children: [
                 ListTile(
                   leading: Icon(_getBlockIcon(b.type)),
-                  title: Text(_getBlockTitle(b.type)),
+                  title: Text(_getBlockTitle(b.type, l10n)),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -107,20 +109,20 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     }
   }
 
-  String _getBlockTitle(LessonBlockType type) {
+  String _getBlockTitle(LessonBlockType type, AppLocalizations l10n) {
     switch (type) {
       case LessonBlockType.text:
-        return 'Explanation';
+        return l10n.blockTypeExplanation;
       case LessonBlockType.example:
-        return 'Example';
+        return l10n.blockTypeExample;
       case LessonBlockType.exercise:
-        return 'Exercise';
+        return l10n.blockTypeExercise;
       case LessonBlockType.slide:
-        return 'Slide';
+        return l10n.blockTypeSlide;
       case LessonBlockType.quiz:
-        return 'Quiz';
+        return l10n.blockTypeQuiz;
       case LessonBlockType.summary:
-        return 'Summary';
+        return l10n.blockTypeSummary;
     }
   }
 }

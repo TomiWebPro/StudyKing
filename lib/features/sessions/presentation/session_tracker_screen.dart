@@ -170,16 +170,6 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
     await _loadSessions();
   }
 
-  String _formatElapsed(int seconds) {
-    final hours = seconds ~/ 3600;
-    final mins = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    if (hours > 0) {
-      return '${hours}h ${mins}m ${secs}s';
-    }
-    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -233,7 +223,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isTrackingSession ? _formatElapsed(_elapsedSeconds) : l10n.tapStartToBegin,
+                      _isTrackingSession ? formatDurationFromContext(context, Duration(seconds: _elapsedSeconds)) : l10n.tapStartToBegin,
                       style: theme.textTheme.displayLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
@@ -357,7 +347,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              '${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))} • ${formatDate(session.startTime)}',
+              '${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))} • ${formatDateFromContext(context, session.startTime)}',
               style: theme.textTheme.bodySmall,
             ),
             trailing: Text(

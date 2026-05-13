@@ -18,19 +18,24 @@ String _getDurationSeconds(int count, AppLocalizations l10n) {
   return l10n.durationSeconds(count);
 }
 
+String _getDurationSeparator(AppLocalizations? l10n) {
+  return l10n?.durationSeparator ?? ' ';
+}
+
 String formatDuration(Duration duration, {bool showDays = false, AppLocalizations? l10n}) {
   if (duration.isNegative) return formatDuration(-duration, showDays: showDays, l10n: l10n);
+  final sep = _getDurationSeparator(l10n);
   if (showDays) {
     final days = duration.inDays;
     final hours = duration.inHours.remainder(24);
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
     if (days > 0) {
-      return '${_durationPart(days, l10n, _getDurationDays, 'd')} ${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
+      return '${_durationPart(days, l10n, _getDurationDays, 'd')}$sep${_durationPart(hours, l10n, _getDurationHours, 'h')}$sep${_durationPart(minutes, l10n, _getDurationMinutes, 'm')}$sep${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else if (hours > 0) {
-      return '${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
+      return '${_durationPart(hours, l10n, _getDurationHours, 'h')}$sep${_durationPart(minutes, l10n, _getDurationMinutes, 'm')}$sep${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else if (minutes > 0) {
-      return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
+      return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')}$sep${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
     } else {
       return _durationPart(seconds, l10n, _getDurationSeconds, 's');
     }
@@ -39,9 +44,9 @@ String formatDuration(Duration duration, {bool showDays = false, AppLocalization
   final minutes = duration.inMinutes.remainder(60);
   final seconds = duration.inSeconds.remainder(60);
   if (hours > 0) {
-    return '${_durationPart(hours, l10n, _getDurationHours, 'h')} ${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
+    return '${_durationPart(hours, l10n, _getDurationHours, 'h')}$sep${_durationPart(minutes, l10n, _getDurationMinutes, 'm')}$sep${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
   } else if (minutes > 0) {
-    return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')} ${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
+    return '${_durationPart(minutes, l10n, _getDurationMinutes, 'm')}$sep${_durationPart(seconds, l10n, _getDurationSeconds, 's')}';
   } else {
     return _durationPart(seconds, l10n, _getDurationSeconds, 's');
   }

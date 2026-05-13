@@ -1204,4 +1204,212 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get performanceMetrics => 'Performance Metrics';
+
+  @override
+  String daysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noTopicsYetAddSome => 'No topics yet - add some!';
+
+  @override
+  String get noLessonsUsePlanner => 'No lessons - use Planner to generate!';
+
+  @override
+  String blocksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count blocks',
+      one: '1 block',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get blockTypeExplanation => 'Explanation';
+
+  @override
+  String get blockTypeExample => 'Example';
+
+  @override
+  String get blockTypeExercise => 'Exercise';
+
+  @override
+  String get blockTypeSlide => 'Slide';
+
+  @override
+  String get blockTypeQuiz => 'Quiz';
+
+  @override
+  String get blockTypeSummary => 'Summary';
+
+  @override
+  String practiceModeType(String mode, String type) {
+    return '$mode - $type';
+  }
+
+  @override
+  String fallbackOption(int number) {
+    return 'Option $number';
+  }
+
+  @override
+  String get drawingSubmitted => 'Drawing submitted';
+
+  @override
+  String unsupportedQuestionType(String type) {
+    return 'Unsupported question type: $type';
+  }
+
+  @override
+  String get todaysPlan => 'Today\'s Plan';
+
+  @override
+  String get noStudyPlanToday => 'No study plan for today';
+
+  @override
+  String questionsCountMetric(int count) {
+    return '$count questions';
+  }
+
+  @override
+  String minutesCountMetric(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get atRiskTopics => 'At Risk Topics';
+
+  @override
+  String get noAtRiskTopics => 'No at-risk topics. Keep up the good work!';
+
+  @override
+  String accuracyLabel(String percent) {
+    return 'Accuracy: $percent';
+  }
+
+  @override
+  String get readyToAdvance => 'Ready to Advance';
+
+  @override
+  String get keepPracticingToUnlock =>
+      'Keep practicing to unlock advanced topics!';
+
+  @override
+  String get masteryOverview => 'Mastery Overview';
+
+  @override
+  String get totalTopicsLabel => 'Total Topics';
+
+  @override
+  String get masteredLabel => 'Mastered';
+
+  @override
+  String get weakLabel => 'Weak';
+
+  @override
+  String avgAccuracyLabel(String percent) {
+    return 'Avg Accuracy: $percent';
+  }
+
+  @override
+  String avgReadinessLabel(String percent) {
+    return 'Avg Readiness: $percent';
+  }
+
+  @override
+  String courseSessionLabel(String course, int number) {
+    return '$course - Session $number';
+  }
+
+  @override
+  String get quickGuideWelcomeMessage =>
+      'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything about your studies!';
+
+  @override
+  String get suggestedPromptExplain => 'Explain photosynthesis';
+
+  @override
+  String get suggestedPromptQuiz => 'Quiz me on history';
+
+  @override
+  String get suggestedPromptMath => 'Help with math problems';
+
+  @override
+  String get quickGuideHelpContent =>
+      'Quick Guide is your AI study assistant. You can:\n\n• Ask questions about any subject\n• Request explanations for concepts\n• Get help with practice problems\n\nJust type your question and tap send!';
+
+  @override
+  String semanticsYouSaid(String message) {
+    return 'You said: $message';
+  }
+
+  @override
+  String semanticsQuickGuideSaid(String message) {
+    return 'Quick Guide said: $message';
+  }
+
+  @override
+  String semanticsSendPrompt(String prompt) {
+    return 'Send prompt: $prompt';
+  }
+
+  @override
+  String get semanticsMessageInput => 'Message input for Quick Guide';
+
+  @override
+  String get fallbackExplainResponse =>
+      'Sure! I can help explain concepts. What topic would you like me to explain?';
+
+  @override
+  String get fallbackQuizResponse =>
+      'I can help with questions! Ask away and I\'ll do my best.';
+
+  @override
+  String get fallbackMathResponse =>
+      'I\'d be happy to help with math! What specific problem or topic would you like to work on?';
+
+  @override
+  String get fallbackGeneralResponse =>
+      'That\'s an interesting question! Let me help you understand it better.';
+
+  @override
+  String get aboutApplicationName => 'StudyKing';
+
+  @override
+  String get aboutVersion => 'v0.1.0';
+
+  @override
+  String get aboutLegalese => '© 2026 StudyKing.';
+
+  @override
+  String get unknownModelId => 'unknown-model';
+
+  @override
+  String get unknownProviderName => 'Unknown';
+
+  @override
+  String get examDateOptionalLabel => 'Exam Date (Optional):';
+
+  @override
+  String get lessonFallbackTitle => 'Lesson';
+
+  @override
+  String errorWithMessage(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get questionTypeDefault => 'Question';
+
+  @override
+  String get durationSeparator => ' ';
 }

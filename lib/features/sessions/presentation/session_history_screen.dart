@@ -309,7 +309,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 children: [
                   const SizedBox(height: 4),
                   Text(
-                    '${formatDate(session.startTime)} • '
+                    '${formatDateFromContext(context, session.startTime)} • '
                     '${session.questionsAnswered > 0 ? l10n.questionsCountLabel(session.questionsAnswered) : l10n.noQuestions}',
                     style: theme.textTheme.bodySmall,
                   ),

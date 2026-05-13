@@ -12,6 +12,7 @@ import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/ui/widgets/math_expression_widget.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/features/practice/services/answer_validation_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -84,9 +85,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       if (!mounted) return;
       setState(() {
         final elapsed = DateTime.now().difference(_sessionStartTime);
-        final minutes = elapsed.inMinutes;
-        final seconds = elapsed.inSeconds % 60;
-        _elapsedTimeFormatted = '$minutes min $seconds sec';
+        _elapsedTimeFormatted = formatDurationFromContext(context, elapsed);
       });
     });
   }
@@ -331,8 +330,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isSpacedRepetition 
-            ? '${AppLocalizations.of(context)!.spacedRepetitionMode} - ${question.type.name}'
-            : '${AppLocalizations.of(context)!.practice} - ${question.type.name}'),
+            ? AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.spacedRepetitionMode, question.type.name)
+            : AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.practice, question.type.name)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(value: progress),
@@ -461,9 +460,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
         final correctAnswer = question.markscheme?.correctAnswer ?? '';
+        final l10n = AppLocalizations.of(context)!;
+        final fallbackOptions = [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
         final options = question.type == QuestionType.singleChoice 
-            ? question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options
-            : question.options.isEmpty ? ['Option A', 'Option B', 'Option C', 'Option D'] : question.options;
+            ? question.options.isEmpty ? fallbackOptions : question.options
+            : question.options.isEmpty ? fallbackOptions : question.options;
         
         return SingleAnswerWidget(
           options: options,
@@ -483,7 +484,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       case QuestionType.canvas:
         return CanvasDrawingWidget(
           instruction: question.text,
-          onDrawingComplete: (data) => _onAnswerSelected('Drawing submitted'),
+          onDrawingComplete: (data) => _onAnswerSelected(AppLocalizations.of(context)!.drawingSubmitted),
           initialDrawing: null,
         );
 
@@ -529,7 +530,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Widget _buildFallbackWidget(Question question) {
-    return Text('Unsupported question type: ${question.type.name}');
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.unsupportedQuestionType(question.type.name));
   }
 
   Widget _buildFeedback(BuildContext context, Question question) {

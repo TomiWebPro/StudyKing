@@ -137,7 +137,7 @@
       }
     }
   },
-  "durationMinutes": "{count, plural, =1{1m} other{{count}m}}",
+  "durationMinutes": "{count, plural, =1{1min} other{{count}min}}",
   "@durationMinutes": {
     "description": "Duration in minutes abbreviated",
     "placeholders": {
@@ -220,7 +220,7 @@
   "@weakAreas": {
     "description": "Weak areas mode title"
   },
-  "focusOnMistakes": "Enfíquese en sus errores",
+  "focusOnMistakes": "Concéntrate en tus errores",
   "@focusOnMistakes": {
     "description": "Subtitle for weak areas mode"
   },
@@ -932,7 +932,7 @@
       }
     }
   },
-  "practiceQuestionsFrom": "Practique preguntas de {subjectName}",
+  "practiceQuestionsFrom": "Practica preguntas de {subjectName}",
   "@practiceQuestionsFrom": {
     "description": "Subtitle for practice tab showing subject name",
     "placeholders": {
@@ -1633,5 +1633,298 @@
   "performanceMetrics": "Métricas de Rendimiento",
   "@performanceMetrics": {
     "description": "Section header for performance metrics"
+  },
+  "daysCount": "{count, plural, =1{1 día} other{{count} días}}",
+  "@daysCount": {
+    "description": "Number of days (e.g. for streak count)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTopicsYetAddSome": "No hay temas todavía? ¡agrega algunos!",
+  "@noTopicsYetAddSome": {
+    "description": "Empty state message for topic list"
+  },
+  "noLessonsUsePlanner": "No hay lecciones? ¡usa el Planificador para generar!",
+  "@noLessonsUsePlanner": {
+    "description": "Empty state message for lesson list"
+  },
+  "blocksCount": "{count, plural, =1{1 bloque} other{{count} bloques}}",
+  "@blocksCount": {
+    "description": "Number of lesson blocks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockTypeExplanation": "Explicación",
+  "@blockTypeExplanation": {
+    "description": "Label for explanation block type"
+  },
+  "blockTypeExample": "Ejemplo",
+  "@blockTypeExample": {
+    "description": "Label for example block type"
+  },
+  "blockTypeExercise": "Ejercicio",
+  "@blockTypeExercise": {
+    "description": "Label for exercise block type"
+  },
+  "blockTypeSlide": "Diapositiva",
+  "@blockTypeSlide": {
+    "description": "Label for slide block type"
+  },
+  "blockTypeQuiz": "Cuestionario",
+  "@blockTypeQuiz": {
+    "description": "Label for quiz block type"
+  },
+  "blockTypeSummary": "Resumen",
+  "@blockTypeSummary": {
+    "description": "Label for summary block type"
+  },
+  "practiceModeType": "{mode} - {type}",
+  "@practiceModeType": {
+    "description": "App bar title with practice mode and question type",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "fallbackOption": "Opción {number}",
+  "@fallbackOption": {
+    "description": "Fallback option label for multiple choice questions",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "drawingSubmitted": "Dibujo enviado",
+  "@drawingSubmitted": {
+    "description": "Message when drawing is submitted as answer"
+  },
+  "unsupportedQuestionType": "Tipo de pregunta no compatible: {type}",
+  "@unsupportedQuestionType": {
+    "description": "Error message for unsupported question type",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "todaysPlan": "Plan de Hoy",
+  "@todaysPlan": {
+    "description": "Section title for today's study plan"
+  },
+  "noStudyPlanToday": "No hay plan de estudio para hoy",
+  "@noStudyPlanToday": {
+    "description": "Empty state message when no plan exists for today"
+  },
+  "questionsCountMetric": "{count} preguntas",
+  "@questionsCountMetric": {
+    "description": "Metric label for question count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "minutesCountMetric": "{count} min",
+  "@minutesCountMetric": {
+    "description": "Metric label for minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "atRiskTopics": "Temas en Riesgo",
+  "@atRiskTopics": {
+    "description": "Section title for at-risk topics"
+  },
+  "noAtRiskTopics": "Sin temas en riesgo. ¡Sigue así!",
+  "@noAtRiskTopics": {
+    "description": "Empty state message when no at-risk topics"
+  },
+  "accuracyLabel": "Precisión: {percent}",
+  "@accuracyLabel": {
+    "description": "Accuracy percentage label",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "readyToAdvance": "Listo para Avanzar",
+  "@readyToAdvance": {
+    "description": "Section title for ready-to-advance topics"
+  },
+  "keepPracticingToUnlock": "¡Sigue practicando para desbloquear temas avanzados!",
+  "@keepPracticingToUnlock": {
+    "description": "Empty state message for ready-to-advance section"
+  },
+  "masteryOverview": "Resumen de Dominio",
+  "@masteryOverview": {
+    "description": "Section title for mastery overview"
+  },
+  "totalTopicsLabel": "Total de Temas",
+  "@totalTopicsLabel": {
+    "description": "Label for total topics count"
+  },
+  "masteredLabel": "Dominado",
+  "@masteredLabel": {
+    "description": "Label for mastered topic count"
+  },
+  "weakLabel": "Débil",
+  "@weakLabel": {
+    "description": "Label for weak topic count"
+  },
+  "avgAccuracyLabel": "Precisión Prom.: {percent}",
+  "@avgAccuracyLabel": {
+    "description": "Average accuracy percentage",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "avgReadinessLabel": "Disposición Prom.: {percent}",
+  "@avgReadinessLabel": {
+    "description": "Average readiness percentage",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "courseSessionLabel": "{course} - Sesión {number}",
+  "@courseSessionLabel": {
+    "description": "Label for a course session in planner",
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "quickGuideWelcomeMessage": "¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúntame lo que sea sobre tus estudios!",
+  "@quickGuideWelcomeMessage": {
+    "description": "Welcome message shown in Quick Guide chat"
+  },
+  "suggestedPromptExplain": "Explica la fotosíntesis",
+  "@suggestedPromptExplain": {
+    "description": "Suggested prompt for explain concept"
+  },
+  "suggestedPromptQuiz": "Examíname de historia",
+  "@suggestedPromptQuiz": {
+    "description": "Suggested prompt for quiz"
+  },
+  "suggestedPromptMath": "Ayuda con problemas de mates",
+  "@suggestedPromptMath": {
+    "description": "Suggested prompt for math help"
+  },
+  "quickGuideHelpContent": "Guía Rápida es tu asistente de estudio con IA. Puedes:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escribe tu pregunta y presiona enviar!",
+  "@quickGuideHelpContent": {
+    "description": "Help dialog content for Quick Guide"
+  },
+  "semanticsYouSaid": "Tú dijiste: {message}",
+  "@semanticsYouSaid": {
+    "description": "Semantic label for user chat message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsQuickGuideSaid": "Guía Rápida dijo: {message}",
+  "@semanticsQuickGuideSaid": {
+    "description": "Semantic label for AI chat message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsSendPrompt": "Enviar sugerencia: {prompt}",
+  "@semanticsSendPrompt": {
+    "description": "Semantic label for sending a suggested prompt",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsMessageInput": "Campo de mensaje para Guía Rápida",
+  "@semanticsMessageInput": {
+    "description": "Semantic label for message input field"
+  },
+  "fallbackExplainResponse": "¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema te gustaría que explique?",
+  "@fallbackExplainResponse": {
+    "description": "Fallback AI response when user asks for explanation"
+  },
+  "fallbackQuizResponse": "¡Puedo ayudar con preguntas! Pregunta lo que quieras y haré lo mejor posible.",
+  "@fallbackQuizResponse": {
+    "description": "Fallback AI response when user asks for quiz"
+  },
+  "fallbackMathResponse": "¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico te gustaría trabajar?",
+  "@fallbackMathResponse": {
+    "description": "Fallback AI response when user asks for math help"
+  },
+  "fallbackGeneralResponse": "¡Esa es una pregunta interesante! Déjame ayudarte a entenderla mejor.",
+  "@fallbackGeneralResponse": {
+    "description": "Fallback AI response for general questions"
+  },
+  "aboutApplicationName": "StudyKing",
+  "@aboutApplicationName": {
+    "description": "Application name for About dialog"
+  },
+  "aboutVersion": "v0.1.0",
+  "@aboutVersion": {
+    "description": "Application version for About dialog"
+  },
+  "aboutLegalese": "\u00a9 2026 StudyKing.",
+  "@aboutLegalese": {
+    "description": "Copyright notice for About dialog"
+  },
+  "unknownModelId": "unknown-model",
+  "@unknownModelId": {
+    "description": "Fallback model ID when unknown"
+  },
+  "unknownProviderName": "Desconocido",
+  "@unknownProviderName": {
+    "description": "Fallback provider name when unknown"
+  },
+  "examDateOptionalLabel": "Fecha de Examen (Opcional):",
+  "@examDateOptionalLabel": {
+    "description": "Label for exam date field with colon included for locale-aware punctuation"
+  },
+  "lessonFallbackTitle": "Lección",
+  "@lessonFallbackTitle": {
+    "description": "Fallback title for a lesson when name is missing"
+  },
+  "errorWithMessage": "Error: {error}",
+  "@errorWithMessage": {
+    "description": "Error message with error details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionTypeDefault": "Pregunta",
+  "@questionTypeDefault": {
+    "description": "Default label for unknown question type"
+  },
+  "durationSeparator": " ",
+  "@durationSeparator": {
+    "description": "Separator between duration parts"
   }
 }

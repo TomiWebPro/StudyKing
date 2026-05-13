@@ -2239,6 +2239,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Performance Metrics'**
   String get performanceMetrics;
+
+  /// Number of days (e.g. for streak count)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String daysCount(int count);
+
+  /// Empty state message for topic list
+  ///
+  /// In en, this message translates to:
+  /// **'No topics yet - add some!'**
+  String get noTopicsYetAddSome;
+
+  /// Empty state message for lesson list
+  ///
+  /// In en, this message translates to:
+  /// **'No lessons - use Planner to generate!'**
+  String get noLessonsUsePlanner;
+
+  /// Number of lesson blocks
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 block} other{{count} blocks}}'**
+  String blocksCount(int count);
+
+  /// Label for explanation block type
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get blockTypeExplanation;
+
+  /// Label for example block type
+  ///
+  /// In en, this message translates to:
+  /// **'Example'**
+  String get blockTypeExample;
+
+  /// Label for exercise block type
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get blockTypeExercise;
+
+  /// Label for slide block type
+  ///
+  /// In en, this message translates to:
+  /// **'Slide'**
+  String get blockTypeSlide;
+
+  /// Label for quiz block type
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz'**
+  String get blockTypeQuiz;
+
+  /// Label for summary block type
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get blockTypeSummary;
+
+  /// App bar title with practice mode and question type
+  ///
+  /// In en, this message translates to:
+  /// **'{mode} - {type}'**
+  String practiceModeType(String mode, String type);
+
+  /// Fallback option label for multiple choice questions
+  ///
+  /// In en, this message translates to:
+  /// **'Option {number}'**
+  String fallbackOption(int number);
+
+  /// Message when drawing is submitted as answer
+  ///
+  /// In en, this message translates to:
+  /// **'Drawing submitted'**
+  String get drawingSubmitted;
+
+  /// Error message for unsupported question type
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported question type: {type}'**
+  String unsupportedQuestionType(String type);
+
+  /// Section title for today's study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Plan'**
+  String get todaysPlan;
+
+  /// Empty state message when no plan exists for today
+  ///
+  /// In en, this message translates to:
+  /// **'No study plan for today'**
+  String get noStudyPlanToday;
+
+  /// Metric label for question count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} questions'**
+  String questionsCountMetric(int count);
+
+  /// Metric label for minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String minutesCountMetric(int count);
+
+  /// Section title for at-risk topics
+  ///
+  /// In en, this message translates to:
+  /// **'At Risk Topics'**
+  String get atRiskTopics;
+
+  /// Empty state message when no at-risk topics
+  ///
+  /// In en, this message translates to:
+  /// **'No at-risk topics. Keep up the good work!'**
+  String get noAtRiskTopics;
+
+  /// Accuracy percentage label
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy: {percent}'**
+  String accuracyLabel(String percent);
+
+  /// Section title for ready-to-advance topics
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to Advance'**
+  String get readyToAdvance;
+
+  /// Empty state message for ready-to-advance section
+  ///
+  /// In en, this message translates to:
+  /// **'Keep practicing to unlock advanced topics!'**
+  String get keepPracticingToUnlock;
+
+  /// Section title for mastery overview
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Overview'**
+  String get masteryOverview;
+
+  /// Label for total topics count
+  ///
+  /// In en, this message translates to:
+  /// **'Total Topics'**
+  String get totalTopicsLabel;
+
+  /// Label for mastered topic count
+  ///
+  /// In en, this message translates to:
+  /// **'Mastered'**
+  String get masteredLabel;
+
+  /// Label for weak topic count
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get weakLabel;
+
+  /// Average accuracy percentage
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Accuracy: {percent}'**
+  String avgAccuracyLabel(String percent);
+
+  /// Average readiness percentage
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Readiness: {percent}'**
+  String avgReadinessLabel(String percent);
+
+  /// Label for a course session in planner
+  ///
+  /// In en, this message translates to:
+  /// **'{course} - Session {number}'**
+  String courseSessionLabel(String course, int number);
+
+  /// Welcome message shown in Quick Guide chat
+  ///
+  /// In en, this message translates to:
+  /// **'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything about your studies!'**
+  String get quickGuideWelcomeMessage;
+
+  /// Suggested prompt for explain concept
+  ///
+  /// In en, this message translates to:
+  /// **'Explain photosynthesis'**
+  String get suggestedPromptExplain;
+
+  /// Suggested prompt for quiz
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz me on history'**
+  String get suggestedPromptQuiz;
+
+  /// Suggested prompt for math help
+  ///
+  /// In en, this message translates to:
+  /// **'Help with math problems'**
+  String get suggestedPromptMath;
+
+  /// Help dialog content for Quick Guide
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Guide is your AI study assistant. You can:\n\n• Ask questions about any subject\n• Request explanations for concepts\n• Get help with practice problems\n\nJust type your question and tap send!'**
+  String get quickGuideHelpContent;
+
+  /// Semantic label for user chat message
+  ///
+  /// In en, this message translates to:
+  /// **'You said: {message}'**
+  String semanticsYouSaid(String message);
+
+  /// Semantic label for AI chat message
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Guide said: {message}'**
+  String semanticsQuickGuideSaid(String message);
+
+  /// Semantic label for sending a suggested prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Send prompt: {prompt}'**
+  String semanticsSendPrompt(String prompt);
+
+  /// Semantic label for message input field
+  ///
+  /// In en, this message translates to:
+  /// **'Message input for Quick Guide'**
+  String get semanticsMessageInput;
+
+  /// Fallback AI response when user asks for explanation
+  ///
+  /// In en, this message translates to:
+  /// **'Sure! I can help explain concepts. What topic would you like me to explain?'**
+  String get fallbackExplainResponse;
+
+  /// Fallback AI response when user asks for quiz
+  ///
+  /// In en, this message translates to:
+  /// **'I can help with questions! Ask away and I\'ll do my best.'**
+  String get fallbackQuizResponse;
+
+  /// Fallback AI response when user asks for math help
+  ///
+  /// In en, this message translates to:
+  /// **'I\'d be happy to help with math! What specific problem or topic would you like to work on?'**
+  String get fallbackMathResponse;
+
+  /// Fallback AI response for general questions
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s an interesting question! Let me help you understand it better.'**
+  String get fallbackGeneralResponse;
+
+  /// Application name for About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing'**
+  String get aboutApplicationName;
+
+  /// Application version for About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'v0.1.0'**
+  String get aboutVersion;
+
+  /// Copyright notice for About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'© 2026 StudyKing.'**
+  String get aboutLegalese;
+
+  /// Fallback model ID when unknown
+  ///
+  /// In en, this message translates to:
+  /// **'unknown-model'**
+  String get unknownModelId;
+
+  /// Fallback provider name when unknown
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknownProviderName;
+
+  /// Label for exam date field with colon included for locale-aware punctuation
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Date (Optional):'**
+  String get examDateOptionalLabel;
+
+  /// Fallback title for a lesson when name is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson'**
+  String get lessonFallbackTitle;
+
+  /// Error message with error details
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorWithMessage(String error);
+
+  /// Default label for unknown question type
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get questionTypeDefault;
+
+  /// Separator between duration parts
+  ///
+  /// In en, this message translates to:
+  /// **' '**
+  String get durationSeparator;
 }
 
 class _AppLocalizationsDelegate

@@ -3,6 +3,7 @@ import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/data/models/personal_learning_plan_model.dart';
 import '../../../core/data/models/mastery_state_model.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class LearningPlanDashboard extends StatefulWidget {
   final String studentId;
@@ -78,20 +79,21 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTodayPlanSection(),
+            _buildTodayPlanSection(context),
             const SizedBox(height: 24),
-            _buildAtRiskTopicsSection(),
+            _buildAtRiskTopicsSection(context),
             const SizedBox(height: 24),
-            _buildReadyToAdvanceSection(),
+            _buildReadyToAdvanceSection(context),
             const SizedBox(height: 24),
-            _buildMasteryOverview(),
+            _buildMasteryOverview(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTodayPlanSection() {
+  Widget _buildTodayPlanSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final todayPlan = _plan?.dailyPlans.isNotEmpty == true ? _plan!.dailyPlans.first : null;
 
     return Card(
@@ -105,7 +107,7 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
                 const Icon(Icons.today, size: 24),
                 const SizedBox(width: 8),
                 Text(
-                  "Today's Plan",
+                  l10n.todaysPlan,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -122,17 +124,17 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
                 ),
               Row(
                 children: [
-                  _buildMetricChip(Icons.help_outline, '${todayPlan.targetQuestions} questions'),
+                  _buildMetricChip(Icons.help_outline, l10n.questionsCountMetric(todayPlan.targetQuestions)),
                   const SizedBox(width: 8),
-                  _buildMetricChip(Icons.timer, '${todayPlan.targetMinutes} min'),
+                  _buildMetricChip(Icons.timer, l10n.minutesCountMetric(todayPlan.targetMinutes)),
                 ],
               ),
               const SizedBox(height: 12),
               ...todayPlan.priorityTopics.map((topic) => _buildTopicTile(topic)),
             ] else ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No study plan for today'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l10n.noStudyPlanToday),
               ),
             ],
           ],
@@ -225,7 +227,8 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
     return Colors.green;
   }
 
-  Widget _buildAtRiskTopicsSection() {
+  Widget _buildAtRiskTopicsSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -237,7 +240,7 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
                 const Icon(Icons.warning_amber, color: Colors.red, size: 24),
                 const SizedBox(width: 8),
                 Text(
-                  'At Risk Topics',
+                  l10n.atRiskTopics,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Spacer(),
@@ -250,16 +253,16 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
             ),
             const Divider(),
             if (_weakTopics.isEmpty && _atRiskTopicIds.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No at-risk topics. Keep up the good work!'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l10n.noAtRiskTopics),
               )
             else
               ..._weakTopics.take(5).map((state) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: _buildMasteryIcon(state.masteryLevel),
                 title: Text(state.topicId),
-                subtitle: Text('Accuracy: ${(state.accuracy * 100).toStringAsFixed(0)}%'),
+                subtitle: Text(l10n.accuracyLabel('${(state.accuracy * 100).toStringAsFixed(0)}%')),
                 trailing: _buildUrgencyIndicator(state.reviewUrgency),
               )),
           ],
@@ -301,7 +304,8 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
     );
   }
 
-  Widget _buildReadyToAdvanceSection() {
+  Widget _buildReadyToAdvanceSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -313,7 +317,7 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
                 const Icon(Icons.rocket_launch, color: Colors.green, size: 24),
                 const SizedBox(width: 8),
                 Text(
-                  'Ready to Advance',
+                  l10n.readyToAdvance,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Spacer(),
@@ -326,9 +330,9 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
             ),
             const Divider(),
             if (_readyToAdvanceTopicIds.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Keep practicing to unlock advanced topics!'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l10n.keepPracticingToUnlock),
               )
             else
               Wrap(
@@ -346,7 +350,8 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
     );
   }
 
-  Widget _buildMasteryOverview() {
+  Widget _buildMasteryOverview(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final totalTopics = _snapshot?['totalTopics'] ?? 0;
     final masteredTopics = _snapshot?['masteredTopics'] ?? 0;
     final weakTopics = _snapshot?['weakTopics'] ?? 0;
@@ -364,7 +369,7 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
                 const Icon(Icons.analytics, size: 24),
                 const SizedBox(width: 8),
                 Text(
-                  'Mastery Overview',
+                  l10n.masteryOverview,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -372,9 +377,9 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
             const Divider(),
             Row(
               children: [
-                Expanded(child: _buildOverviewStat('Total Topics', totalTopics.toString())),
-                Expanded(child: _buildOverviewStat('Mastered', masteredTopics.toString())),
-                Expanded(child: _buildOverviewStat('Weak', weakTopics.toString())),
+                Expanded(child: _buildOverviewStat(l10n.totalTopicsLabel, totalTopics.toString())),
+                Expanded(child: _buildOverviewStat(l10n.masteredLabel, masteredTopics.toString())),
+                Expanded(child: _buildOverviewStat(l10n.weakLabel, weakTopics.toString())),
               ],
             ),
             const SizedBox(height: 16),
@@ -387,8 +392,8 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Avg Accuracy: ${(avgAccuracy * 100).toStringAsFixed(0)}%'),
-                Text('Avg Readiness: ${(avgReadiness * 100).toStringAsFixed(0)}%'),
+                Text(l10n.avgAccuracyLabel('${(avgAccuracy * 100).toStringAsFixed(0)}%')),
+                Text(l10n.avgReadinessLabel('${(avgReadiness * 100).toStringAsFixed(0)}%')),
               ],
             ),
           ],

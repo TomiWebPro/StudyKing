@@ -245,7 +245,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return;
       }
 
-      final models = _parseModels(response.body);
+      final models = _parseModels(response.body, l10n);
       final filtered = models.take(100).toList();
       showModalBottomSheet(
         context: context,
@@ -292,17 +292,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  List<_AiModel> _parseModels(String responseBody) {
+  List<_AiModel> _parseModels(String responseBody, AppLocalizations l10n) {
     final decoded = json.decode(responseBody);
     final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
     if (data is! List) return [];
     return data.whereType<Map>().map((raw) {
       final map = raw.cast<dynamic, dynamic>();
-      final id = map['id'] is String ? map['id'] as String : 'unknown-model';
+      final id = map['id'] is String ? map['id'] as String : l10n.unknownModelId;
       final name = map['name'] is String
           ? map['name'] as String
           : id.split('/').last.replaceAll('-', ' ');
-      String provider = 'Unknown';
+      String provider = l10n.unknownProviderName;
       final providers = map['providers'];
       if (providers is Map && providers.isNotEmpty) {
         final first = providers.values.first;
@@ -422,12 +422,13 @@ class _AiModel {
 }
 
 void _showAboutDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   showDialog(
     context: context,
-    builder: (_) => const AboutDialog(
-      applicationName: 'StudyKing',
-      applicationVersion: 'v0.1.0',
-      applicationLegalese: '© 2026 StudyKing.',
+    builder: (_) => AboutDialog(
+      applicationName: l10n.aboutApplicationName,
+      applicationVersion: l10n.aboutVersion,
+      applicationLegalese: l10n.aboutLegalese,
     ),
   );
 }

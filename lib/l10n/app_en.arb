@@ -1641,5 +1641,298 @@
   "performanceMetrics": "Performance Metrics",
   "@performanceMetrics": {
     "description": "Section header for performance metrics"
+  },
+  "daysCount": "{count, plural, =1{1 day} other{{count} days}}",
+  "@daysCount": {
+    "description": "Number of days (e.g. for streak count)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTopicsYetAddSome": "No topics yet - add some!",
+  "@noTopicsYetAddSome": {
+    "description": "Empty state message for topic list"
+  },
+  "noLessonsUsePlanner": "No lessons - use Planner to generate!",
+  "@noLessonsUsePlanner": {
+    "description": "Empty state message for lesson list"
+  },
+  "blocksCount": "{count, plural, =1{1 block} other{{count} blocks}}",
+  "@blocksCount": {
+    "description": "Number of lesson blocks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockTypeExplanation": "Explanation",
+  "@blockTypeExplanation": {
+    "description": "Label for explanation block type"
+  },
+  "blockTypeExample": "Example",
+  "@blockTypeExample": {
+    "description": "Label for example block type"
+  },
+  "blockTypeExercise": "Exercise",
+  "@blockTypeExercise": {
+    "description": "Label for exercise block type"
+  },
+  "blockTypeSlide": "Slide",
+  "@blockTypeSlide": {
+    "description": "Label for slide block type"
+  },
+  "blockTypeQuiz": "Quiz",
+  "@blockTypeQuiz": {
+    "description": "Label for quiz block type"
+  },
+  "blockTypeSummary": "Summary",
+  "@blockTypeSummary": {
+    "description": "Label for summary block type"
+  },
+  "practiceModeType": "{mode} - {type}",
+  "@practiceModeType": {
+    "description": "App bar title with practice mode and question type",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "fallbackOption": "Option {number}",
+  "@fallbackOption": {
+    "description": "Fallback option label for multiple choice questions",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "drawingSubmitted": "Drawing submitted",
+  "@drawingSubmitted": {
+    "description": "Message when drawing is submitted as answer"
+  },
+  "unsupportedQuestionType": "Unsupported question type: {type}",
+  "@unsupportedQuestionType": {
+    "description": "Error message for unsupported question type",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "todaysPlan": "Today's Plan",
+  "@todaysPlan": {
+    "description": "Section title for today's study plan"
+  },
+  "noStudyPlanToday": "No study plan for today",
+  "@noStudyPlanToday": {
+    "description": "Empty state message when no plan exists for today"
+  },
+  "questionsCountMetric": "{count} questions",
+  "@questionsCountMetric": {
+    "description": "Metric label for question count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "minutesCountMetric": "{count} min",
+  "@minutesCountMetric": {
+    "description": "Metric label for minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "atRiskTopics": "At Risk Topics",
+  "@atRiskTopics": {
+    "description": "Section title for at-risk topics"
+  },
+  "noAtRiskTopics": "No at-risk topics. Keep up the good work!",
+  "@noAtRiskTopics": {
+    "description": "Empty state message when no at-risk topics"
+  },
+  "accuracyLabel": "Accuracy: {percent}",
+  "@accuracyLabel": {
+    "description": "Accuracy percentage label",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "readyToAdvance": "Ready to Advance",
+  "@readyToAdvance": {
+    "description": "Section title for ready-to-advance topics"
+  },
+  "keepPracticingToUnlock": "Keep practicing to unlock advanced topics!",
+  "@keepPracticingToUnlock": {
+    "description": "Empty state message for ready-to-advance section"
+  },
+  "masteryOverview": "Mastery Overview",
+  "@masteryOverview": {
+    "description": "Section title for mastery overview"
+  },
+  "totalTopicsLabel": "Total Topics",
+  "@totalTopicsLabel": {
+    "description": "Label for total topics count"
+  },
+  "masteredLabel": "Mastered",
+  "@masteredLabel": {
+    "description": "Label for mastered topic count"
+  },
+  "weakLabel": "Weak",
+  "@weakLabel": {
+    "description": "Label for weak topic count"
+  },
+  "avgAccuracyLabel": "Avg Accuracy: {percent}",
+  "@avgAccuracyLabel": {
+    "description": "Average accuracy percentage",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "avgReadinessLabel": "Avg Readiness: {percent}",
+  "@avgReadinessLabel": {
+    "description": "Average readiness percentage",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "courseSessionLabel": "{course} - Session {number}",
+  "@courseSessionLabel": {
+    "description": "Label for a course session in planner",
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "quickGuideWelcomeMessage": "Hello! I'm StudyKing's Quick Guide. Ask me anything about your studies!",
+  "@quickGuideWelcomeMessage": {
+    "description": "Welcome message shown in Quick Guide chat"
+  },
+  "suggestedPromptExplain": "Explain photosynthesis",
+  "@suggestedPromptExplain": {
+    "description": "Suggested prompt for explain concept"
+  },
+  "suggestedPromptQuiz": "Quiz me on history",
+  "@suggestedPromptQuiz": {
+    "description": "Suggested prompt for quiz"
+  },
+  "suggestedPromptMath": "Help with math problems",
+  "@suggestedPromptMath": {
+    "description": "Suggested prompt for math help"
+  },
+  "quickGuideHelpContent": "Quick Guide is your AI study assistant. You can:\n\n\u2022 Ask questions about any subject\n\u2022 Request explanations for concepts\n\u2022 Get help with practice problems\n\nJust type your question and tap send!",
+  "@quickGuideHelpContent": {
+    "description": "Help dialog content for Quick Guide"
+  },
+  "semanticsYouSaid": "You said: {message}",
+  "@semanticsYouSaid": {
+    "description": "Semantic label for user chat message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsQuickGuideSaid": "Quick Guide said: {message}",
+  "@semanticsQuickGuideSaid": {
+    "description": "Semantic label for AI chat message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsSendPrompt": "Send prompt: {prompt}",
+  "@semanticsSendPrompt": {
+    "description": "Semantic label for sending a suggested prompt",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "semanticsMessageInput": "Message input for Quick Guide",
+  "@semanticsMessageInput": {
+    "description": "Semantic label for message input field"
+  },
+  "fallbackExplainResponse": "Sure! I can help explain concepts. What topic would you like me to explain?",
+  "@fallbackExplainResponse": {
+    "description": "Fallback AI response when user asks for explanation"
+  },
+  "fallbackQuizResponse": "I can help with questions! Ask away and I'll do my best.",
+  "@fallbackQuizResponse": {
+    "description": "Fallback AI response when user asks for quiz"
+  },
+  "fallbackMathResponse": "I'd be happy to help with math! What specific problem or topic would you like to work on?",
+  "@fallbackMathResponse": {
+    "description": "Fallback AI response when user asks for math help"
+  },
+  "fallbackGeneralResponse": "That's an interesting question! Let me help you understand it better.",
+  "@fallbackGeneralResponse": {
+    "description": "Fallback AI response for general questions"
+  },
+  "aboutApplicationName": "StudyKing",
+  "@aboutApplicationName": {
+    "description": "Application name for About dialog"
+  },
+  "aboutVersion": "v0.1.0",
+  "@aboutVersion": {
+    "description": "Application version for About dialog"
+  },
+  "aboutLegalese": "\u00a9 2026 StudyKing.",
+  "@aboutLegalese": {
+    "description": "Copyright notice for About dialog"
+  },
+  "unknownModelId": "unknown-model",
+  "@unknownModelId": {
+    "description": "Fallback model ID when unknown"
+  },
+  "unknownProviderName": "Unknown",
+  "@unknownProviderName": {
+    "description": "Fallback provider name when unknown"
+  },
+  "examDateOptionalLabel": "Exam Date (Optional):",
+  "@examDateOptionalLabel": {
+    "description": "Label for exam date field with colon included for locale-aware punctuation"
+  },
+  "lessonFallbackTitle": "Lesson",
+  "@lessonFallbackTitle": {
+    "description": "Fallback title for a lesson when name is missing"
+  },
+  "errorWithMessage": "Error: {error}",
+  "@errorWithMessage": {
+    "description": "Error message with error details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionTypeDefault": "Question",
+  "@questionTypeDefault": {
+    "description": "Default label for unknown question type"
+  },
+  "durationSeparator": " ",
+  "@durationSeparator": {
+    "description": "Separator between duration parts"
   }
 }

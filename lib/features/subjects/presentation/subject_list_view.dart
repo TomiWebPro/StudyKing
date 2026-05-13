@@ -36,7 +36,7 @@ class SubjectListView extends ConsumerWidget {
       body: subjectsAsync.when(
         data: (repository) => _buildSubjectList(context, ref, repository),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => Center(child: Text(l10n.errorWithMessage(error.toString()))),
       ),
     );
   }
@@ -52,7 +52,7 @@ class SubjectListView extends ConsumerWidget {
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(child: Text(l10n.errorWithMessage('${snapshot.error}')));
         }
 
         final subjects = snapshot.data ?? [];

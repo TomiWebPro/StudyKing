@@ -118,7 +118,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
             Expanded(
               child: MetricCard(
                 label: l10n.currentStreakLabel,
-                value: '$currentStreak days',
+                value: l10n.daysCount(currentStreak),
                 icon: Icons.emoji_events,
                 accent: scheme.tertiary,
               ),
@@ -127,9 +127,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
             Expanded(
               child: MetricCard(
                 label: l10n.totalTime,
-                value: _totalStudyTime > Duration.zero
-                    ? formatDurationFromContext(context, _totalStudyTime)
-                    : '0s',
+                value: formatDurationFromContext(context, _totalStudyTime),
                 icon: Icons.access_time,
                 accent: scheme.error,
               ),

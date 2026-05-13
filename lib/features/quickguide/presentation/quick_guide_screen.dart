@@ -16,20 +16,28 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      isUser: false,
-      text: 'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything about your studies!',
-    ),
-  ];
   bool _isTyping = false;
   bool _hasInteracted = false;
+  List<_ChatMessage> _messages = [];
+  List<String> _suggestedPrompts = [];
+  bool _localized = false;
 
-  static const List<String> _suggestedPrompts = [
-    'Explain photosynthesis',
-    'Quiz me on history',
-    'Help with math problems',
-  ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_localized) {
+      final l10n = AppLocalizations.of(context)!;
+      _messages = [
+        _ChatMessage(isUser: false, text: l10n.quickGuideWelcomeMessage),
+      ];
+      _suggestedPrompts = [
+        l10n.suggestedPromptExplain,
+        l10n.suggestedPromptQuiz,
+        l10n.suggestedPromptMath,
+      ];
+      _localized = true;
+    }
+  }
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
@@ -72,14 +80,15 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
   }
 
   String _fallbackResponse(String text) {
+    final l10n = AppLocalizations.of(context)!;
     if (text.toLowerCase().contains('explain')) {
-      return 'Sure! I can help explain concepts. What topic would you like me to explain?';
+      return l10n.fallbackExplainResponse;
     } else if (text.toLowerCase().contains('question') || text.toLowerCase().contains('quiz')) {
-      return 'I can help with questions! Ask away and I\'ll do my best.';
+      return l10n.fallbackQuizResponse;
     } else if (text.toLowerCase().contains('math') || text.toLowerCase().contains('calculate')) {
-      return 'I\'d be happy to help with math! What specific problem or topic would you like to work on?';
+      return l10n.fallbackMathResponse;
     } else {
-      return 'That\'s an interesting question! Let me help you understand it better.';
+      return l10n.fallbackGeneralResponse;
     }
   }
 
@@ -138,8 +147,9 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
+                  final l10n = AppLocalizations.of(context)!;
                   return Semantics(
-                    label: message.isUser ? 'You said: ${message.text}' : 'Quick Guide said: ${message.text}',
+                    label: message.isUser ? l10n.semanticsYouSaid(message.text) : l10n.semanticsQuickGuideSaid(message.text),
                     child: Align(
                       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -234,7 +244,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
             runSpacing: 8,
             children: _suggestedPrompts.map((prompt) {
               return Semantics(
-                label: 'Send prompt: $prompt',
+                label: l10n.semanticsSendPrompt(prompt),
                 button: true,
                   child: ActionChip(
                     label: Text(
@@ -272,7 +282,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
         children: [
           Expanded(
             child: Semantics(
-              label: 'Message input for Quick Guide',
+              label: l10n.semanticsMessageInput,
               hint: l10n.messageInputHint,
               child: TextField(
                 controller: _textController,
@@ -337,13 +347,7 @@ class _QuickGuideScreenState extends State<QuickGuideScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.quickGuideHelpTitle),
-        content: const Text(
-          'Quick Guide is your AI study assistant. You can:\n\n'
-          '• Ask questions about any subject\n'
-          '• Request explanations for concepts\n'
-          '• Get help with practice problems\n\n'
-          'Just type your question and tap send!',
-        ),
+        content: Text(l10n.quickGuideHelpContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

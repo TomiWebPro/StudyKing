@@ -210,7 +210,7 @@ class AppConfig {
   }
 
   Map<String, Object?> redactedRuntimeSnapshot() {
-    return _redactSensitiveValues(runtimeSnapshot());
+    return redactSensitiveValues(runtimeSnapshot());
   }
 
   static final RegExp _sensitiveSnapshotKeyPattern = RegExp(
@@ -218,7 +218,8 @@ class AppConfig {
     caseSensitive: false,
   );
 
-  static Map<String, Object?> _redactSensitiveValues(Map<String, Object?> data) {
+  @visibleForTesting
+  static Map<String, Object?> redactSensitiveValues(Map<String, Object?> data) {
     final redacted = <String, Object?>{};
     for (final entry in data.entries) {
       if (_sensitiveSnapshotKeyPattern.hasMatch(entry.key)) {

@@ -261,7 +261,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     backgroundColor: ColorUtils.stringToColor(widget.subjectColor).withValues(alpha: 0.2),
                     child: Icon(Icons.book, color: ColorUtils.stringToColor(widget.subjectColor)),
                   ),
-                  title: Text((lesson as dynamic).title ?? 'Lesson'),
+                  title: Text((lesson as dynamic).title ?? l10n.lessonFallbackTitle),
                   subtitle: Text(l10n.questionsCount(questionCount)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
@@ -270,7 +270,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       MaterialPageRoute(
                         builder: (context) => LessonListScreen(
                           topicId: (lesson as dynamic).topicId ?? '',
-                          topicTitle: (lesson as dynamic).title ?? 'Lesson',
+                          topicTitle: (lesson as dynamic).title ?? l10n.lessonFallbackTitle,
                         ),
                       ),
                     );
@@ -406,7 +406,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   ),
                   title: Text(l10n.sessionNumber(index + 1)),
                   subtitle: Text(
-                    '${formatDate((session as dynamic).startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
+                    '${formatDateFromContext(context, (session as dynamic).startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0).toInt()))}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -661,7 +661,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow(l10n.date, formatDate((session as dynamic).startTime)),
+            _detailRow(l10n.date, formatDateFromContext(context, (session as dynamic).startTime)),
             _detailRow(l10n.duration, formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
             _detailRow(l10n.questions, questions.toString()),
             if (correct > 0)
