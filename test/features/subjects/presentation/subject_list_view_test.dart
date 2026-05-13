@@ -63,9 +63,9 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('mySubjects'), findsOneWidget);
-      expect(find.text('noSubjectsYet'), findsOneWidget);
-      expect(find.text('addFirstSubject'), findsOneWidget);
+      expect(find.text('My Subjects'), findsOneWidget);
+      expect(find.text('No subjects yet'), findsOneWidget);
+      expect(find.text('Add your first subject to begin studying'), findsOneWidget);
     });
 
     testWidgets('shows add button in appbar', (tester) async {
@@ -122,7 +122,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('addSubject'), findsOneWidget);
+      expect(find.text('Add Subject'), findsOneWidget);
     });
 
     testWidgets('shows timer icon in subject cards', (tester) async {

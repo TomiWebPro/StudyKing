@@ -59,10 +59,10 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('addNewSubject'), findsOneWidget);
+      expect(find.text('Add New Subject'), findsOneWidget);
       expect(find.byType(TextFormField), findsAtLeastNWidgets(5));
-      expect(find.text('createSubject'), findsOneWidget);
-      expect(find.text('themeColor'), findsOneWidget);
+      expect(find.text('Create Subject'), findsOneWidget);
+      expect(find.text('Theme Color'), findsOneWidget);
     });
 
     testWidgets('displays create subject button', (tester) async {
@@ -72,7 +72,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('createSubject'), findsOneWidget);
+      expect(find.text('Create Subject'), findsOneWidget);
     });
 
     testWidgets('shows color picker circles', (tester) async {
@@ -92,7 +92,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('selectDate'), findsOneWidget);
+      expect(find.text('Select date'), findsOneWidget);
     });
 
     testWidgets('shows error when name is empty on create', (tester) async {
@@ -102,10 +102,11 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('createSubject'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('pleaseEnterSubjectName'), findsOneWidget);
+      expect(find.text('Please enter a subject name'), findsOneWidget);
     });
   });
 }

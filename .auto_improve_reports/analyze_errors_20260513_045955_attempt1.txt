@@ -1,0 +1,6 @@
+Analyzing StudyKing...                                          
+
+warning • Unused import: 'package:flutter_localizations/flutter_localizations.dart' • test/l10n/app_localizations_coverage_test.dart:2:8 • unused_import
+
+
+1 issue found. (ran in 5.2s)

@@ -54,7 +54,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('subjectColor'), findsOneWidget);
+      expect(find.text('Subject Color'), findsOneWidget);
     });
 
     testWidgets('shows color label text for each chip', (tester) async {
@@ -105,7 +105,7 @@ void main() {
       formKey.currentState!.validate();
       await tester.pumpAndSettle();
 
-      expect(find.text('pleaseEnterSubjectName'), findsOneWidget);
+      expect(find.text('Please enter a subject name'), findsOneWidget);
     });
 
     testWidgets('passes validation when name is provided', (tester) async {

@@ -1,4 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/src/binary/binary_reader_impl.dart';
+import 'package:hive/src/binary/binary_writer_impl.dart';
+import 'package:hive/src/registry/type_registry_impl.dart';
+import 'package:studyking/core/data/adapters/markscheme_adapter.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 
 void main() {
@@ -76,6 +80,55 @@ void main() {
       final markscheme = Markscheme.fromJson(json);
 
       expect(markscheme.acceptableAnswers, isEmpty);
+    });
+
+    test('fromJson handles null acceptableAnswers', () {
+      final json = {
+        'correctAnswer': 'Madrid',
+        'acceptableAnswers': null,
+      };
+
+      final markscheme = Markscheme.fromJson(json);
+
+      expect(markscheme.acceptableAnswers, isEmpty);
+    });
+
+    test('toJson/fromJson round-trip preserves data', () {
+      final original = Markscheme(
+        questionId: 'q1',
+        correctAnswer: 'Berlin',
+        acceptableAnswers: ['berlin', 'germany capital'],
+        explanation: 'Capital of Germany',
+        markschemePoints: 2.0,
+        steps: [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'Name', points: 1.0),
+          MarkSchemeStep(stepNumber: '2', requiredAnswer: 'Explain', points: 1.0),
+        ],
+      );
+
+      final json = original.toJson();
+      final restored = Markscheme.fromJson(json);
+
+      expect(restored.questionId, original.questionId);
+      expect(restored.correctAnswer, original.correctAnswer);
+      expect(restored.acceptableAnswers, original.acceptableAnswers);
+      expect(restored.explanation, original.explanation);
+      expect(restored.markschemePoints, original.markschemePoints);
+      expect(restored.steps.length, original.steps.length);
+      expect(restored.steps[0].stepNumber, original.steps[0].stepNumber);
+      expect(restored.steps[0].requiredAnswer, original.steps[0].requiredAnswer);
+      expect(restored.steps[0].points, original.steps[0].points);
+    });
+
+    test('toJson/fromJson round-trip preserves minimal markscheme', () {
+      final original = Markscheme(correctAnswer: '42');
+      final json = original.toJson();
+      final restored = Markscheme.fromJson(json);
+
+      expect(restored.correctAnswer, '42');
+      expect(restored.acceptableAnswers, []);
+      expect(restored.steps, []);
+      expect(restored.questionId, '');
     });
 
     test('fromJson handles null steps', () {
@@ -177,6 +230,54 @@ void main() {
       expect(copy.correctAnswer, original.correctAnswer);
       expect(copy.acceptableAnswers, original.acceptableAnswers);
       expect(copy.explanation, original.explanation);
+    });
+  });
+
+  group('Markscheme Hive adapter', () {
+    test('write/read round-trip with all fields', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(MarkschemeAdapter())
+        ..registerAdapter(MarkSchemeStepAdapter());
+      final adapter = MarkschemeAdapter();
+      final markscheme = Markscheme(
+        questionId: 'q1',
+        correctAnswer: 'Paris',
+        acceptableAnswers: ['paris', 'french capital'],
+        explanation: 'Capital of France',
+        markschemePoints: 2.0,
+        steps: [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'Name city', points: 1.0),
+        ],
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, markscheme);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final result = adapter.read(reader);
+
+      expect(result.questionId, 'q1');
+      expect(result.correctAnswer, 'Paris');
+      expect(result.acceptableAnswers, ['paris', 'french capital']);
+      expect(result.explanation, 'Capital of France');
+      expect(result.markschemePoints, 2.0);
+      expect(result.steps.length, 1);
+    });
+
+    test('write/read round-trip with minimal fields', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(MarkschemeAdapter())
+        ..registerAdapter(MarkSchemeStepAdapter());
+      final adapter = MarkschemeAdapter();
+      final markscheme = Markscheme(correctAnswer: 'Tokyo');
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, markscheme);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final result = adapter.read(reader);
+
+      expect(result.correctAnswer, 'Tokyo');
+      expect(result.acceptableAnswers, []);
+      expect(result.steps, []);
     });
   });
 }

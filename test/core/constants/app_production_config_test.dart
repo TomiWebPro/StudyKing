@@ -20,8 +20,6 @@ void main() {
     });
 
     test('enforceStartupGuards throws because encryption key is missing', () {
-      // In non-release mode with production env, enforceStartupGuards
-      // calls encryptionKeyOrThrow which throws because key is empty
       expect(
         () => SecurityConfig.enforceStartupGuards(),
         throwsA(isA<StateError>()),

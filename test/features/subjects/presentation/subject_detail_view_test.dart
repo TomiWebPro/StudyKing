@@ -27,6 +27,7 @@ void main() {
   group('SubjectDetailScreen', () {
     testWidgets('renders subject name in sliver header', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       expect(find.byType(CustomScrollView), findsOneWidget);
       expect(find.byType(SliverAppBar), findsOneWidget);
@@ -34,6 +35,7 @@ void main() {
 
     testWidgets('renders tab bar with 4 tabs', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       expect(find.byType(TabBar), findsOneWidget);
       expect(find.byType(Tab), findsNWidgets(4));
@@ -41,6 +43,7 @@ void main() {
 
     testWidgets('renders edit and more option icons', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       expect(find.byIcon(Icons.edit), findsOneWidget);
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
@@ -48,6 +51,7 @@ void main() {
 
     testWidgets('more options shows bottom sheet', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pump();
@@ -60,6 +64,7 @@ void main() {
 
     testWidgets('delete shows confirmation dialog', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pump();
@@ -76,6 +81,7 @@ void main() {
 
     testWidgets('tab labels are present on TabBar', (tester) async {
       await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
       expect(find.text('Lessons'), findsOneWidget);
       expect(find.text('Practice'), findsOneWidget);

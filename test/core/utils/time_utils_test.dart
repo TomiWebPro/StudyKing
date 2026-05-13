@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
@@ -97,6 +98,10 @@ void main() {
   });
 
   group('formatDate', () {
+    setUpAll(() async {
+      await initializeDateFormatting('en');
+    });
+
     test('returns unknown for null date', () {
       expect(formatDate(null), 'Unknown');
     });
@@ -132,6 +137,34 @@ void main() {
       final l10n = AppLocalizationsEn();
       expect(formatDate(null, l10n: l10n), l10n.unknown);
     });
+
+    test('returns formatted date for future date (tomorrow)', () {
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      expect(formatDate(tomorrow), isNot('Today'));
+      expect(formatDate(tomorrow), isNot('Yesterday'));
+      expect(formatDate(tomorrow), isNot('Unknown'));
+    });
+
+    test('returns formatted date for future date (next week)', () {
+      final nextWeek = DateTime.now().add(const Duration(days: 7));
+      expect(formatDate(nextWeek), isNot('Today'));
+      expect(formatDate(nextWeek), isNot('Yesterday'));
+    });
+
+    test('returns formatted date for future date (next year)', () {
+      final nextYear = DateTime.now().add(const Duration(days: 365));
+      final formatted = formatDate(nextYear);
+      expect(formatted, contains('${nextYear.year}'));
+    });
+
+    test('returns formatted date for future date with l10n', () {
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final l10n = AppLocalizationsEn();
+      final formatted = formatDate(tomorrow, l10n: l10n);
+      expect(formatted, isNot(l10n.today));
+      expect(formatted, isNot(l10n.yesterday));
+      expect(formatted, isNot(l10n.unknown));
+    });
   });
 
   group('DateTimeX.isSameDay', () {
@@ -162,6 +195,24 @@ void main() {
     test('returns true for same date different times', () {
       final date1 = DateTime(2026, 3, 10, 0, 0, 0);
       final date2 = DateTime(2026, 3, 10, 23, 59, 59);
+      expect(date1.isSameDay(date2), isTrue);
+    });
+
+    test('returns true for UTC and local same day', () {
+      final utc = DateTime.utc(2026, 6, 15, 12, 0, 0);
+      final local = DateTime(2026, 6, 15, 8, 0, 0);
+      expect(utc.isSameDay(local), isTrue);
+    });
+
+    test('returns false for UTC midnight crossing next day local', () {
+      final utcLate = DateTime.utc(2026, 1, 15, 23, 30, 0);
+      final local = DateTime(2026, 1, 16, 2, 0, 0);
+      expect(utcLate.isSameDay(local), isFalse);
+    });
+
+    test('returns true for same UTC date regardless of time', () {
+      final date1 = DateTime.utc(2026, 12, 25, 0, 0, 0);
+      final date2 = DateTime.utc(2026, 12, 25, 23, 59, 59);
       expect(date1.isSameDay(date2), isTrue);
     });
   });

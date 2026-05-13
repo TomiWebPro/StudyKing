@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 void main() {
   group('ColorUtils', () {
@@ -33,6 +34,36 @@ void main() {
 
       test('returns default color for empty string', () {
         final color = ColorUtils.stringToColor('');
+        expect(color, ColorUtils.defaultColor);
+      });
+
+      test('parses 3-char hex shorthand', () {
+        final color = ColorUtils.stringToColor('#FFF');
+        expect(color.toARGB32(), 0xFF000FFF);
+      });
+
+      test('parses hex with alpha channel', () {
+        final color = ColorUtils.stringToColor('#FF2196F3');
+        expect(color.toARGB32(), equals(0xFE2196F3));
+      });
+
+      test('parses boundary value black', () {
+        final color = ColorUtils.stringToColor('#000000');
+        expect(color.toARGB32(), 0xFF000000);
+      });
+
+      test('parses boundary value white', () {
+        final color = ColorUtils.stringToColor('#FFFFFF');
+        expect(color.toARGB32(), 0xFFFFFFFF);
+      });
+
+      test('returns default for very long string', () {
+        final color = ColorUtils.stringToColor('#1234567890ABCDEF');
+        expect(color, ColorUtils.defaultColor);
+      });
+
+      test('returns default for null-like empty after hash', () {
+        final color = ColorUtils.stringToColor('#');
         expect(color, ColorUtils.defaultColor);
       });
     });
@@ -76,6 +107,22 @@ void main() {
 
       test('returns hex string for unknown color', () {
         expect(ColorUtils.getColorLabel('#FFFFFF'), '#FFFFFF');
+      });
+
+      test('returns localized label when l10n provided', () {
+        final l10n = AppLocalizationsEn();
+        expect(ColorUtils.getColorLabel('#2196F3', l10n: l10n), l10n.colorBlue);
+        expect(ColorUtils.getColorLabel('#4CAF50', l10n: l10n), l10n.colorGreen);
+        expect(ColorUtils.getColorLabel('#FF9800', l10n: l10n), l10n.colorOrange);
+      });
+
+      test('returns hex string for unknown color with l10n', () {
+        final l10n = AppLocalizationsEn();
+        expect(ColorUtils.getColorLabel('#AABBCC', l10n: l10n), '#AABBCC');
+      });
+
+      test('returns default label for null l10n', () {
+        expect(ColorUtils.getColorLabel('#2196F3', l10n: null), 'Blue');
       });
     });
   });

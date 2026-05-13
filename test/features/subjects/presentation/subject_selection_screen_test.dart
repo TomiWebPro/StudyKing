@@ -60,8 +60,8 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('addSubject'), findsOneWidget);
-      expect(find.text('save'), findsOneWidget);
+      expect(find.text('Add Subject'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
 
@@ -72,7 +72,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('subjectColor'), findsOneWidget);
+      expect(find.text('Subject Color'), findsOneWidget);
     });
 
     testWidgets('save button saves subject and pops', (tester) async {
@@ -86,7 +86,7 @@ void main() {
       await tester.enterText(nameField, 'Mathematics');
       await tester.pump();
 
-      await tester.tap(find.text('save'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       final subjects = await repo.getAll();

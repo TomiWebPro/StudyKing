@@ -14,7 +14,7 @@ sealed class Result<T> {
   factory Result.success(T data) = SuccessResult<T>;
   factory Result.failure(String error) = FailureResult<T>;
 
-  bool get isSuccess => error == null && data != null;
+  bool get isSuccess => error == null;
   bool get isFailure => error != null;
 }
 

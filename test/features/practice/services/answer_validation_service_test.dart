@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
 
 Question _question({
@@ -86,6 +87,24 @@ void main() {
       expect(result2.isCorrect, isTrue);
     });
 
+    test('cache miss on first call', () {
+      final question = _question(
+        id: 'q-first',
+        type: QuestionType.typedAnswer,
+        correctAnswer: 'first',
+      );
+      final result = service.validateAnswerForQuestion(question, 'first');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('cache hit on repeated call with same markscheme', () {
+      final q1 = _question(id: 'q-hit', type: QuestionType.typedAnswer, correctAnswer: 'A');
+      final q2 = _question(id: 'q-hit', type: QuestionType.typedAnswer, correctAnswer: 'A');
+
+      expect(service.validateAnswerForQuestion(q1, 'A').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(q2, 'A').isCorrect, isTrue);
+    });
+
     test('invalidates cache when markscheme changes', () {
       final question1 = _question(
         id: 'q-change',
@@ -103,6 +122,20 @@ void main() {
 
       final result2 = service.validateAnswerForQuestion(question2, 'new');
       expect(result2.isCorrect, isTrue);
+    });
+
+    test('invalidates cache when acceptableAnswers change', () {
+      final q1 = _question(
+        id: 'q-accept-change', type: QuestionType.typedAnswer,
+        correctAnswer: 'Paris', acceptableAnswers: ['paris'],
+      );
+      final q2 = _question(
+        id: 'q-accept-change', type: QuestionType.typedAnswer,
+        correctAnswer: 'Paris', acceptableAnswers: ['PARIS', 'City of Light'],
+      );
+
+      expect(service.validateAnswerForQuestion(q1, 'paris').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(q2, 'PARIS').isCorrect, isTrue);
     });
 
     test('validates single choice answer', () {
@@ -169,6 +202,83 @@ void main() {
       );
 
       final result = service.validateAnswerForQuestion(question, 'x=2');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithMarkscheme returns correct for exact match', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Berlin');
+      final result = service.validateWithMarkscheme('Berlin', QuestionType.typedAnswer, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithMarkscheme returns incorrect for null markscheme', () {
+      final result = service.validateWithMarkscheme('answer', QuestionType.typedAnswer, null);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateWithMarkscheme returns correct for acceptable answer', () {
+      final markscheme = Markscheme(
+        questionId: 'q1', correctAnswer: 'Berlin',
+        acceptableAnswers: ['berlin', 'germany capital'],
+      );
+      final result = service.validateWithMarkscheme('berlin', QuestionType.typedAnswer, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithEvaluation exact match returns correct', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: '42',
+      );
+      final result = service.validateWithEvaluation(evaluation, '42');
+      expect(result.isCorrect, isTrue);
+      expect(result.score, 1.0);
+    });
+
+    test('validateWithEvaluation mismatch returns incorrect', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+        explanation: 'Capital of France',
+      );
+      final result = service.validateWithEvaluation(evaluation, 'London');
+      expect(result.isCorrect, isFalse);
+      expect(result.feedback, contains('Incorrect'));
+    });
+
+    test('validateWithEvaluation fuzzy match exact answer returns correct', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'photosynthesis',
+        evaluationType: EvaluationType.fuzzyMatch,
+      );
+      final result = service.validateWithEvaluation(evaluation, 'photosynthesis');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithEvaluation step based match', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'steps',
+        evaluationType: EvaluationType.stepBased,
+        steps: [
+          EvaluationStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+          EvaluationStep(stepNumber: '2', requiredAnswer: 'step2', points: 1.0),
+        ],
+      );
+      final result = service.validateWithEvaluation(evaluation, 'my answer has step1 and step2');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithEvaluation with acceptable answer match', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+        acceptableAnswers: ['paris', 'PARIS'],
+        evaluationType: EvaluationType.acceptableMatch,
+      );
+      final result = service.validateWithEvaluation(evaluation, 'PARIS');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateAnswer returns correct result via validate method', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'correct');
+      final result = service.validateAnswer('correct', QuestionType.typedAnswer, 'q1', markscheme);
       expect(result.isCorrect, isTrue);
     });
   });

@@ -16,10 +16,10 @@ class LLMAIEngineProvider extends ChangeNotifier {
   /// Default key for local storage
   static const String apikeyKey = 'llm_apikey';
 
-  LLMAIEngineProvider({Dio? dio})
-      : client = OpenRouterClient(
-        dio: dio ?? Dio(),
-      );
+  LLMAIEngineProvider({Dio? dio, OpenRouterClient? client})
+      : client = client ?? OpenRouterClient(
+          dio: dio ?? Dio(),
+        );
 
   /// Selected model getter
   LLMModelConfig? get selectedModel => _selectedModel;

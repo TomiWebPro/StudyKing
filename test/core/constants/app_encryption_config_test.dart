@@ -12,9 +12,6 @@ void main() {
     });
 
     test('enforceStartupGuards passes with production env and valid key', () {
-      // Only meaningful when run with both
-      //   --dart-define=APP_ENV=production
-      //   --dart-define=STUDYKING_ENCRYPTION_KEY=MyKeyWithNumbers123456789012345678
       expect(() => SecurityConfig.enforceStartupGuards(), returnsNormally);
     });
   });

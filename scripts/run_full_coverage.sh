@@ -8,7 +8,7 @@ COVERAGE_DIR="$PROJECT_DIR/coverage"
 cd "$PROJECT_DIR"
 
 echo "=== Step 1: Run base constants tests (no special defines) ==="
-flutter test --coverage test/core.constants.*.test.dart
+flutter test --coverage test/core/constants/*_test.dart
 cp coverage/lcov.info coverage/lcov_base.info
 
 echo ""

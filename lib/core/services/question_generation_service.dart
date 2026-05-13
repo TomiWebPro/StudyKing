@@ -51,6 +51,9 @@ class QuestionGenerationService {
         }
       }
 
+      if (questions.isEmpty && count > 0) {
+        return GenerationResult.failure('Failed to generate any questions');
+      }
       return GenerationResult.success(questions);
     } catch (e) {
       debugPrint('Error generating questions: $e');
