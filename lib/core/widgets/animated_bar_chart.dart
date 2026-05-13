@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class AnimatedBarChart extends StatelessWidget {
   final Map<String, int> data;
@@ -7,6 +8,8 @@ class AnimatedBarChart extends StatelessWidget {
   final double maxBarHeight;
   final double barWidth;
   final double borderRadius;
+  final String? yAxisLabel;
+  final bool showValueTooltips;
 
   const AnimatedBarChart({
     super.key,
@@ -16,6 +19,8 @@ class AnimatedBarChart extends StatelessWidget {
     this.maxBarHeight = 120,
     this.barWidth = 32,
     this.borderRadius = 6,
+    this.yAxisLabel,
+    this.showValueTooltips = true,
   });
 
   @override
@@ -27,61 +32,91 @@ class AnimatedBarChart extends StatelessWidget {
     final maxCount = rawMax > 0 ? rawMax : 1;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveUtils.cardPadding(context),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         border: Border.all(color: theme.dividerColor),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: data.keys.map((day) {
-          final count = data[day] ?? 0;
-          final height = minBarHeight +
-              (count / maxCount * (maxBarHeight - minBarHeight));
-
-          return Column(
-            key: ValueKey('bar_$day'),
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: height),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Container(
-                    width: barWidth,
-                    height: value,
-                    decoration: BoxDecoration(
-                      color: count > 0
-                          ? accentColor.withValues(
-                              alpha: 0.7 + (count / maxCount * 0.3))
-                          : theme.disabledColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(borderRadius),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                day,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (yAxisLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                yAxisLabel!,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   color: theme.textTheme.bodySmall?.color ?? Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: count > 0 ? accentColor : (theme.textTheme.bodySmall?.color ?? Colors.grey),
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: data.keys.map((day) {
+              final count = data[day] ?? 0;
+              final height = minBarHeight +
+                  (count / maxCount * (maxBarHeight - minBarHeight));
+
+              return Expanded(
+                child: Column(
+                  key: ValueKey('bar_$day'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showValueTooltips && count > 0)
+                      Tooltip(
+                        message: '$count',
+                        child: Text(
+                          '$count',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: count > 0
+                                ? accentColor
+                                : (theme.textTheme.bodySmall?.color ?? Colors.grey),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: height),
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Container(
+                          width: barWidth,
+                          height: value,
+                          decoration: BoxDecoration(
+                            color: count > 0
+                                ? accentColor.withValues(
+                                    alpha: 0.7 + (count / maxCount * 0.3))
+                                : theme.disabledColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(borderRadius),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      day,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.textTheme.bodySmall?.color ?? Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          );
-        }).toList(),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

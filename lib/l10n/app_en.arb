@@ -1237,10 +1237,6 @@
     "description": "Graph question type label"
   },
 
-  "quickGuide": "Quick Guide",
-  "@quickGuide": {
-    "description": "Title for quick guide screen"
-  },
   "quickGuideHelp": "Quick Guide help",
   "@quickGuideHelp": {
     "description": "Semantic label for help button"

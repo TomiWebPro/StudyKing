@@ -1,3 +1,4 @@
+import '../errors/result.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
 import '../data/repositories/mastery_graph_repository.dart';
@@ -19,7 +20,7 @@ class MasteryIntegrationService {
         _repository = repository ?? MasteryGraphRepository(),
         _adaptiveEngine = adaptiveEngine ?? AdaptivePracticeEngine();
 
-  Future<Result<void>> initialize() async {
+  Future<void> initialize() async {
     return _masteryService.init();
   }
 

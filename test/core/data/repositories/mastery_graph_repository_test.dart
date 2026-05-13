@@ -192,9 +192,8 @@ void main() {
     });
 
     group('init', () {
-      test('returns success', () async {
-        final result = await repository.init();
-        expect(result.isSuccess, isTrue);
+      test('completes successfully', () async {
+        await repository.init();
       });
     });
 

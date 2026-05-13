@@ -296,17 +296,21 @@ class MathExpressionWidget extends StatelessWidget {
             !_isOperator(expr[i])) {
           i++;
         }
-        final word = expr.substring(start, i);
-        if (RegExp(r'^\d+\.?\d*$').hasMatch(word)) {
-          spans.add(TextSpan(
-            text: word,
-            style: TextStyle(color: Colors.deepOrange.shade700),
-          ));
+        if (i == start) {
+          i++;
         } else {
-          spans.add(TextSpan(
-            text: word,
-            style: const TextStyle(fontStyle: FontStyle.italic),
-          ));
+          final word = expr.substring(start, i);
+          if (RegExp(r'^\d+\.?\d*$').hasMatch(word)) {
+            spans.add(TextSpan(
+              text: word,
+              style: TextStyle(color: Colors.deepOrange.shade700),
+            ));
+          } else {
+            spans.add(TextSpan(
+              text: word,
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ));
+          }
         }
       }
     }

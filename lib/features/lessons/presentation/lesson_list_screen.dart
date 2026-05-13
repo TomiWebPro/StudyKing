@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/models/tutor_session_model.dart';
-import '../../../../main.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../core/services/student_id_service.dart';
 import 'lesson_detail_screen.dart';
 import '../../teaching/presentation/tutor_screen.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -54,7 +55,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
   Future<void> _loadTutorSessionStatuses() async {
     try {
       final sessions = await database.tutorSessionRepository
-          .getStudentSessions('anonymous');
+          .getStudentSessions(StudentIdService().getStudentId());
       for (final session in sessions) {
         final lessonId = session.topicId;
         if (session.status == SessionStatus.completed) {

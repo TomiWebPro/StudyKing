@@ -22,7 +22,7 @@ export 'data/repositories/answer_repository.dart';
 export 'data/repositories/source_repository.dart';
 export 'data/repositories/progress_repository.dart';
 export 'data/repositories/lesson_repository.dart';
-export 'data/repositories/session_repository.dart';
+
 
 // Extension for firstOrNull
 extension IterableExtension<T> on Iterable<T> {

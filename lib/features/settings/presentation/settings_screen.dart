@@ -7,7 +7,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/main.dart'
+import 'package:studyking/core/providers/app_providers.dart'
     show apiKeyProvider, selectedModelProvider, settingsProvider;
 
 class SettingsScreen extends ConsumerStatefulWidget {

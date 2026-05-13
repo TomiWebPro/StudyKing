@@ -84,9 +84,12 @@ def get_all_subdirs(base):
     for root, subdirs, files in os.walk(abs_base):
         for sd in subdirs:
             full = os.path.join(root, sd)
-            if os.listdir(full):
-                rel = os.path.relpath(full, PROJECT_DIR)
-                dirs.append(rel)
+            try:
+                if os.listdir(full):
+                    rel = os.path.relpath(full, PROJECT_DIR)
+                    dirs.append(rel)
+            except PermissionError:
+                log(f"Skipping inaccessible directory: {full}", "WARN")
     return dirs
 
 
@@ -98,6 +101,25 @@ def pick_random_subdir(base="lib"):
     chosen = random.choice(dirs)
     log(f"Picked random subdirectory: {chosen}")
     return chosen
+
+
+def _run_process(cmd, cwd, timeout_seconds, input_data=None):
+    """Run a command with a timeout, killing the process if it exceeds the limit."""
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE if input_data is not None else None,
+    )
+    try:
+        stdout, stderr = proc.communicate(input=input_data, timeout=timeout_seconds)
+        output = ((stdout or b"").decode() + "\n" + (stderr or b"").decode()).strip()
+        return proc.returncode, output
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        return -1, "TIMEOUT"
 
 
 def check_md_created(path, wait_max=30):
@@ -123,7 +145,7 @@ def get_oldest_open_issue_file():
             md_files.append(os.path.join(ISSUES_OPEN_DIR, name))
     if not md_files:
         return None
-    md_files.sort(key=lambda p: os.path.getctime(p))
+    md_files.sort(key=lambda p: os.path.getmtime(p))
     return md_files[0]
 
 
@@ -140,52 +162,29 @@ def run_opencode(prompt, cwd=PROJECT_DIR, timeout_seconds=600):
         "--dangerously-skip-permissions",
         prompt,
     ]
-    try:
-        start = time.time()
-        result = subprocess.run(
-            cmd,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-        )
-        elapsed = time.time() - start
-        output = (result.stdout or "") + "\n" + (result.stderr or "")
-        output = output.strip()
-        log(f"opencode exited code={result.returncode} in {elapsed:.1f}s")
-        if output:
-            lines = output.split("\n")
-            log(f"opencode output: {len(lines)} lines")
-        return result.returncode, output
-    except subprocess.TimeoutExpired:
+    start = time.time()
+    rc, output = _run_process(cmd, cwd, timeout_seconds)
+    elapsed = time.time() - start
+    log(f"opencode exited code={rc} in {elapsed:.1f}s")
+    if rc == -1 and output == "TIMEOUT":
         log(f"opencode TIMEOUT after {timeout_seconds}s", "WARN")
-        return -1, "TIMEOUT"
-    except Exception as e:
-        log(f"opencode EXCEPTION: {e}", "ERROR")
-        return -1, str(e)
+    elif rc != 0:
+        log(f"opencode FAILED (exit {rc})", "WARN")
+    return rc, output
 
 
 def run_flutter_analyze(cwd=PROJECT_DIR):
     log("   → flutter analyze")
     cmd = [FLUTTER_BIN, "analyze"]
-    try:
-        start = time.time()
-        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=120)
-        elapsed = time.time() - start
-        output = (result.stdout or "") + "\n" + (result.stderr or "")
-        output = output.strip()
-        issue_count = 0
-        for line in output.split("\n"):
-            if "error" in line or "warning" in line or "info" in line:
-                issue_count += 1
-        log(f"   ← flutter analyze exit={result.returncode} in {elapsed:.1f}s, ~{issue_count} issues")
-        return result.returncode, output
-    except subprocess.TimeoutExpired:
-        log(f"   ← flutter analyze TIMEOUT after 120s", "WARN")
-        return -1, "TIMEOUT"
-    except Exception as e:
-        log(f"   ← flutter analyze EXCEPTION: {e}", "ERROR")
-        return -1, str(e)
+    start = time.time()
+    rc, output = _run_process(cmd, cwd, 120)
+    elapsed = time.time() - start
+    issue_count = 0
+    for line in output.split("\n"):
+        if "error" in line or "warning" in line or "info" in line:
+            issue_count += 1
+    log(f"   ← flutter analyze exit={rc} in {elapsed:.1f}s, ~{issue_count} issues")
+    return rc, output
 
 
 def step2_act_on_oldest_open_master_issue():
@@ -200,10 +199,10 @@ def step2_act_on_oldest_open_master_issue():
         f"Read the issue markdown file `{issue_file}`. "
         f"Implement the issue in the StudyKing codebase thoroughly. "
         f"Hint: start with folder `{random_hint}` (or another folder if no further improvement is possible there). "
-        f"Do not move or edit issue files."
-	f"You are advised to read agent_must_read.md before you start coding and update changelog outlined by changelogs/RULES.md once you have completed your task. "
+        f"Do not move or edit issue files. "
+        f"You are advised to read agent_must_read.md before you start coding and update changelog outlined by changelogs/RULES.md once you have completed your task. "
     )
-    rc, output = run_opencode(prompt, timeout_seconds=900)
+    rc, output = run_opencode(prompt, timeout_seconds=1800)
     if rc != 0:
         log(f"Step 2 FAILED (exit code {rc})", "ERROR")
     else:
@@ -253,7 +252,7 @@ def step3_fix_flutter_analyze():
             f"Keep fixing until `flutter analyze` exits with code 0 (no issues). Do not remove any existing functionalities when doing so. "
             f"Do NOT stop until flutter analyze is completely clean."
         )
-        rc2, output2 = run_opencode(prompt, timeout_seconds=900)
+        rc2, output2 = run_opencode(prompt, timeout_seconds=1800)
 
         if rc2 == -9:
             log(f"  ✗ opencode KILLED (SIGKILL/-9) — likely OOM", "ERROR")
@@ -282,7 +281,7 @@ def step4_improve_test_coverage(random_dir):
         f"Aim for at least 80% code coverage for the `{random_dir}` directory. "
         f"Run the tests after writing them to make sure they pass."
     )
-    rc, output = run_opencode(prompt, timeout_seconds=900)
+    rc, output = run_opencode(prompt, timeout_seconds=1800)
     if rc != 0:
         log(f"Step 4 FAILED (exit code {rc})", "ERROR")
     else:
@@ -303,7 +302,7 @@ def step5_commit_to_github():
         changes = status_result.stdout.strip()
         if not changes:
             log("No changes to commit")
-            return True
+            return 0, "No changes"
 
         # Count changes by type
         lines = changes.split("\n")
@@ -319,12 +318,12 @@ def step5_commit_to_github():
     # Use opencode to commit
     prompt = (
         f"Commit all current changes in the StudyKing project to the git repository. "
-        f"First run `git status` and `git diff --staged` to understand the changes. Then read changelogs to deepen understanding."
+        f"First run `git status` and `git diff --staged` to understand the changes. Then read changelogs to deepen understanding. "
         f"Then stage all changes with `git add -A` (but NOT .git-credentials or .env files). "
         f"Create a meaningful commit message summarizing the improvements made. "
         f"Then push to the remote 'origin' on the current branch. Confirm it. "
-        f"The remote is already configured with credentials."
-	f"After pushing to main, remove all md files in changelogs folder except RULES.md "
+        f"The remote is already configured with credentials. "
+        f"After pushing to main, remove all md files in changelogs folder except RULES.md "
     )
     rc, output = run_opencode(prompt, timeout_seconds=300)
     if rc != 0:
@@ -347,42 +346,38 @@ def step6_review_changes():
     )
     open_files = sorted(
         [os.path.join(ISSUES_OPEN_DIR, f) for f in os.listdir(ISSUES_OPEN_DIR) if f.endswith(".md")],
-        key=os.path.getctime
+        key=os.path.getmtime
     )
 
     if not completed_files:
         log("Step 6: No completed issues to review", "WARN")
         return
 
-    completed_path = completed_files[0]
-    open_path = open_files[0] if open_files else None
+    completed_bodies = []
+    for f in completed_files:
+        with open(f) as fh:
+            completed_bodies.append((os.path.basename(f), fh.read()))
+        log(f"  Completed: {f}")
 
-    log(f"  Completed: {completed_path}")
-    if open_path:
-        log(f"  Open:      {open_path}")
-
-    with open(completed_path) as f:
-        completed_body = f.read()
-
-    open_body = ""
-    if open_path:
-        with open(open_path) as f:
-            open_body = f.read()
+    open_bodies = []
+    for f in open_files:
+        with open(f) as fh:
+            open_bodies.append((os.path.basename(f), fh.read()))
+        log(f"  Open:      {f}")
 
     prompt = (
         "## 任务说明\n\n"
-        "请阅读以下两个 issue 文档的内容，然后写一份总结报告。\n"
+        "请阅读以下所有 issue 文档的内容，然后写一份总结报告。\n"
         "注意：代码已成功推送至 GitHub，所有变更已完成，无需再执行 git 操作。\n\n"
         "---\n\n"
-        "### 一、已完成的 Issue（上一批次已全部完成并推送至 GitHub）\n\n"
-        "```\n" + completed_body + "\n```\n\n"
+        "### 一、已完成的 Issue（全部已完成并推送至 GitHub）\n\n"
     )
-    if open_body:
-        prompt += (
-            "---\n\n"
-            "### 二、下一个待处理的 Issue（需要在本批次或下一批次完成的工作）\n\n"
-            "```\n" + open_body + "\n```\n\n"
-        )
+    for name, body in completed_bodies:
+        prompt += f"#### {name}\n\n```\n{body}\n```\n\n"
+    if open_bodies:
+        prompt += "---\n\n### 二、待处理的 Issue（需要在本批次或下一批次完成的工作）\n\n"
+        for name, body in open_bodies:
+            prompt += f"#### {name}\n\n```\n{body}\n```\n\n"
     prompt += (
         "---\n\n"
         "请直接输出总结报告（中文），不要保存文件。\n"
@@ -479,75 +474,73 @@ def main_loop():
         log(f"CYCLE #{CYCLE_COUNT} starting at {datetime.datetime.now()}")
         log("=" * 60)
 
-        cycle_failed = False
+        for _ in range(5):
+            if CONSECUTIVE_FAILS >= MAX_FAILS:
+                log("Too many consecutive failures; backing off", "ERROR")
+                break
 
-        log("-" * 40)
-        log("Step 1/2: Working on oldest open master issue")
-        rc2, _ = step2_act_on_oldest_open_master_issue()
-        if should_retry(rc2):
-            CONSECUTIVE_FAILS += 1
-            cycle_failed = True
-            log("Step 1/2 FAILED", "ERROR")
-        else:
-            log("Step 1/2 SUCCESS")
-            CONSECUTIVE_FAILS = 0
+            log("-" * 40)
+            log("Resolving oldest open master issue")
+            rc2, _ = step2_act_on_oldest_open_master_issue()
+            if should_retry(rc2):
+                CONSECUTIVE_FAILS += 1
+                log("Step 2 FAILED", "ERROR")
+                continue
+            else:
+                log("Step 2 SUCCESS")
+                CONSECUTIVE_FAILS = 0
 
-        if not cycle_failed:
             log("-" * 40)
             try:
                 ok3 = step3_fix_flutter_analyze()
                 if not ok3:
                     CONSECUTIVE_FAILS += 1
-                    cycle_failed = True
                     log("Step 3 FAILED", "ERROR")
+                    continue
                 else:
                     log("Step 3 SUCCESS")
                     CONSECUTIVE_FAILS = 0
             except Exception as e:
                 log(f"Step 3 exception: {e}", "ERROR")
                 CONSECUTIVE_FAILS += 1
-                cycle_failed = True
+                continue
 
-        if not cycle_failed:
             log("-" * 40)
             random_test_dir = pick_random_subdir("lib")
             log(f"Step 4: Improving test coverage for {random_test_dir}")
             rc4, _ = step4_improve_test_coverage(random_test_dir)
             if should_retry(rc4):
                 CONSECUTIVE_FAILS += 1
-                cycle_failed = True
                 log("Step 4 FAILED", "ERROR")
+                continue
             else:
                 log("Step 4 SUCCESS")
                 CONSECUTIVE_FAILS = 0
 
-        if not cycle_failed:
-            log("-" * 40)
-            log("Step 5: Committing to GitHub")
-            rc5, _ = step5_commit_to_github()
-            if should_retry(rc5):
-                CONSECUTIVE_FAILS += 1
-                cycle_failed = True
-                log("Step 5 FAILED", "ERROR")
-            else:
-                log("Step 5 SUCCESS")
-                CONSECUTIVE_FAILS = 0
-                step6_review_changes()
-
-        log("-" * 40)
-        log(f"Cycle #{CYCLE_COUNT} finished. Cycle failed: {cycle_failed}")
-        log(f"Consecutive failures: {CONSECUTIVE_FAILS}/{MAX_FAILS}")
-
         if CONSECUTIVE_FAILS >= MAX_FAILS:
             log(f"!!! {MAX_FAILS} consecutive failures reached !!!")
-            log(f"Waiting {RETRY_DELAY_HOURS} hour(s) before retrying...")
-            log(f"Sleeping until {(datetime.datetime.now() + datetime.timedelta(hours=RETRY_DELAY_HOURS)).strftime('%Y-%m-%d %H:%M:%S')}")
+            log(f"Waiting {RETRY_DELAY_HOURS}h before retrying...")
             time.sleep(RETRY_DELAY_HOURS * 3600)
             CONSECUTIVE_FAILS = 0
-            log("Retry delay over. Resuming cycles.")
+            continue
+
+        log("All 5 resolution rounds done. Committing.")
+        log("-" * 40)
+        log("Step 5: Committing to GitHub")
+        rc5, _ = step5_commit_to_github()
+        if should_retry(rc5):
+            CONSECUTIVE_FAILS += 1
+            log("Step 5 FAILED", "ERROR")
         else:
-            log("Starting next cycle immediately...")
-            time.sleep(MAIN_LOOP_DELAY_SECONDS)
+            CONSECUTIVE_FAILS = 0
+            log("Step 5 SUCCESS")
+
+        threading.Thread(target=step6_review_changes, daemon=True).start()
+
+        log("-" * 40)
+        log(f"Cycle #{CYCLE_COUNT} finished successfully")
+        log("Starting next cycle immediately...")
+        time.sleep(MAIN_LOOP_DELAY_SECONDS)
 
 
 if __name__ == "__main__":

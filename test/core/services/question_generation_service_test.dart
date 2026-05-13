@@ -7,7 +7,7 @@ import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/question_generation_service.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart' as mvg;
+import 'package:studyking/core/errors/result.dart';
 
 class MockLlmService extends LlmService {
   MockLlmService()
@@ -52,7 +52,7 @@ class MockQuestionRepository implements QuestionRepository {
   }
 
   @override
-  Future<Result<void>> init() async => Result.success(null);
+  Future<void> init() async {}
 
   @override
   Future<Result<Question?>> get(String id) async => Result.success(null);
@@ -106,13 +106,13 @@ class MockMasteryGraphService extends MasteryGraphService {
   bool shouldFailGetWeakTopics = false;
 
   @override
-  Future<mvg.Result<List<MasteryState>>> getWeakTopics(
+  Future<Result<List<MasteryState>>> getWeakTopics(
     String studentId,
   ) async {
     if (shouldFailGetWeakTopics) {
-      return mvg.Result.failure('Failed to get weak topics');
+      return Result.failure('Failed to get weak topics');
     }
-    return mvg.Result.success(weakTopics ?? []);
+    return Result.success(weakTopics ?? []);
   }
 }
 

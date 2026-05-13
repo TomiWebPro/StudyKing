@@ -30,6 +30,15 @@ class _FakeSubjectRepository extends SubjectRepository {
   }
 }
 
+class _FailingSubjectRepository extends SubjectRepository {
+  _FailingSubjectRepository() : super(subjectBox: null);
+
+  @override
+  Future<void> save(Subject subject) async {
+    throw Exception('Save failed');
+  }
+}
+
 class _TestNotifier extends SubjectsRepositoryNotifier {
   final SubjectRepository repo;
   _TestNotifier(this.repo);
@@ -91,6 +100,97 @@ void main() {
 
       final subjects = await repo.getAll();
       expect(subjects, hasLength(1));
+    });
+
+    testWidgets('shows validation error when name is empty on save', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Please enter a subject name'), findsOneWidget);
+    });
+
+    testWidgets('color selector is interactive', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(InkWell), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('color selection callback works', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      final inkwells = find.byType(InkWell);
+      if (inkwells.evaluate().length > 1) {
+        await tester.tap(inkwells.at(1));
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('shows error snackbar when save fails', (tester) async {
+      final repo = _FailingSubjectRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Mathematics');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('Error saving subject:'), findsOneWidget);
+    });
+
+    testWidgets('entering all fields and saving works', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'Physics');
+      await tester.enterText(find.byType(TextFormField).at(1), 'PHY101');
+      await tester.enterText(find.byType(TextFormField).at(2), 'Dr. Smith');
+      await tester.enterText(find.byType(TextFormField).at(3), 'Mechanics');
+      await tester.enterText(find.byType(TextFormField).at(4), 'Introductory physics');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final subjects = await repo.getAll();
+      expect(subjects, hasLength(1));
+      expect(subjects.first.name, 'Physics');
+      expect(subjects.first.code, 'PHY101');
+      expect(subjects.first.teacher, 'Dr. Smith');
+      expect(subjects.first.syllabus, 'Mechanics');
+      expect(subjects.first.description, 'Introductory physics');
+    });
+
+    testWidgets('code field has character capitalization', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      final codeField = tester.widget<TextField>(find.byType(TextField).at(1));
+      expect(codeField.textCapitalization, TextCapitalization.characters);
     });
   });
 }

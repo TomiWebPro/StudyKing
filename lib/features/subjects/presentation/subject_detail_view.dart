@@ -7,8 +7,12 @@ import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
+import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
@@ -66,7 +70,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         slivers: [
           // SliverAppBar with gradient
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: MediaQuery.sizeOf(context).height * 0.25,
             floating: false,
             pinned: true,
             backgroundColor: color.withValues(alpha: 0.1),
@@ -177,23 +181,25 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           ),
 
           // Tab content
-          SliverPadding(
-            padding: ResponsiveUtils.screenPadding(context),
-            sliver: TabBarView(
-              controller: _tabController,
-              children: [
-                // Lessons Tab
-                _buildLessonsTab(),
+          SliverFillRemaining(
+            child: Padding(
+              padding: ResponsiveUtils.screenPadding(context),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Lessons Tab
+                  _buildLessonsTab(),
 
-                // Practice Tab
-                _buildPracticeTab(),
+                  // Practice Tab
+                  _buildPracticeTab(),
 
-                // History Tab
-                _buildHistoryTab(),
+                  // History Tab
+                  _buildHistoryTab(),
 
-                // Stats Tab
-                _buildStatsTab(),
-              ],
+                  // Stats Tab
+                  _buildStatsTab(),
+                ],
+              ),
             ),
           ),
         ],
@@ -388,20 +394,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: score >= 80
-                        ? Colors.green.withValues(alpha: 0.2)
-                        : score >= 50
-                            ? Colors.orange.withValues(alpha: 0.2)
-                            : Colors.red.withValues(alpha: 0.2),
+                    backgroundColor: _scoreColor(score).withValues(alpha: 0.2),
                     child: Icon(
                       score >= 80
                           ? Icons.check_circle
                           : Icons.sticky_note_2,
-                      color: score >= 80
-                          ? Colors.green
-                          : score >= 50
-                              ? Colors.orange
-                              : Colors.red,
+                      color: _scoreColor(score),
                     ),
                   ),
                   title: Text(l10n.sessionNumber(index + 1)),
@@ -416,11 +414,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                         '${score.toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: score >= 80
-                              ? Colors.green
-                              : score >= 50
-                                  ? Colors.orange
-                                  : Colors.red,
+                          color: _scoreColor(score),
                         ),
                       ),
                       if (session.questionsAnswered > 0)
@@ -445,26 +439,25 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       final l10n = AppLocalizations.of(context)!;
       final sessionRepo = StudySessionRepository();
       
-      Future<List<dynamic>> loadSessions() async {
+      Future<List<StudySession>> loadSessions() async {
         try {
           final sessions = await sessionRepo.getAll();
-          final subjectSessions = sessions.where((s) => s.subjectId == widget.subjectId).toList();
-          return subjectSessions;
+          return sessions.where((s) => s.subjectId == widget.subjectId).toList();
         } catch (e) {
           return [];
         }
       }
 
-      return FutureBuilder<List<dynamic>>(
+      return FutureBuilder<List<StudySession>>(
         future: loadSessions(),
         builder: (context, snapshot) {
           final subjectSessions = snapshot.data ?? [];
           
           final totalSessions = subjectSessions.length;
-          final totalQuestions = subjectSessions.fold<int>(0, (sum, s) => sum + (((s as dynamic).questionsAnswered ?? 0) as int).toInt());
-          final totalCorrect = subjectSessions.fold<int>(0, (sum, s) => sum + (((s as dynamic).correctAnswers ?? 0) as int).toInt());
-          final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + (((s as dynamic).timeSpentMs ?? 0) as int).toInt());
-          final avgScore = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0;
+          final totalQuestions = subjectSessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
+          final totalCorrect = subjectSessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
+          final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + s.timeSpentMs);
+          final avgScore = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0;
 
           return Column(
             children: [
@@ -485,7 +478,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       l10n.accuracy,
                       '${avgScore.toStringAsFixed(1)}%',
                       Icons.star,
-                      avgScore >= 80 ? Colors.green : avgScore >= 50 ? Colors.orange : Colors.red,
+                      _scoreColor(avgScore),
                     ),
                   ),
                 ],
@@ -498,7 +491,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       l10n.questionsLabel,
                       totalQuestions.toString(),
                       Icons.question_answer,
-                      Colors.blue,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -507,7 +500,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       l10n.time,
                       formatDurationFromContext(context, Duration(milliseconds: totalTime)),
                       Icons.access_time,
-                      Colors.purple,
+                      Theme.of(context).colorScheme.tertiary,
                     ),
                   ),
                 ],
@@ -532,7 +525,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                             '${avgScore.toStringAsFixed(1)}%',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: avgScore >= 80 ? Colors.green : avgScore >= 50 ? Colors.orange : Colors.red,
+                              color: _scoreColor(avgScore),
                             ),
                           ),
                         ],
@@ -542,7 +535,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                         value: avgScore / 100,
                         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          avgScore >= 80 ? Colors.green : avgScore >= 50 ? Colors.orange : Colors.red,
+                          _scoreColor(avgScore),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -615,6 +608,43 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               ),
             ),
             Semantics(
+              label: 'Upload Content',
+              child: ListTile(
+                leading: const Icon(Icons.cloud_upload),
+                title: const Text('Upload Content'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UploadScreen(
+                        preselectedSubjectId: widget.subjectId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Semantics(
+              label: 'Dashboard',
+              child: ListTile(
+                leading: const Icon(Icons.dashboard),
+                title: const Text('Dashboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DashboardScreen(
+                        studentId: StudentIdService().getStudentId(),
+                        masteryService: MasteryGraphService(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Semantics(
               label: l10n.deleteSubject,
               child: ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
@@ -657,9 +687,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     );
   }
 
-  void _showSessionDetails(dynamic session) {
-    final questions = ((session as dynamic).questionsAnswered ?? 0).toInt();
-    final correct = ((session as dynamic).correctAnswers ?? 0).toInt();
+  void _showSessionDetails(StudySession session) {
+    final questions = session.questionsAnswered;
+    final correct = session.correctAnswers;
     final l10n = AppLocalizations.of(context)!;
     
     showDialog(
@@ -670,8 +700,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow(l10n.date, formatDateFromContext(context, (session as dynamic).startTime)),
-            _detailRow(l10n.duration, formatDurationFromContext(context, Duration(milliseconds: ((session as dynamic).timeSpentMs ?? 0) as int))),
+            _detailRow(l10n.date, formatDateFromContext(context, session.startTime)),
+            _detailRow(l10n.duration, formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))),
             _detailRow(l10n.questions, questions.toString()),
             if (correct > 0)
               Padding(
@@ -706,6 +736,13 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         ],
       ),
     );
+  }
+
+  Color _scoreColor(double score) {
+    final cs = Theme.of(context).colorScheme;
+    if (score >= 80) return cs.primary;
+    if (score >= 50) return cs.tertiary;
+    return cs.error;
   }
 
 }

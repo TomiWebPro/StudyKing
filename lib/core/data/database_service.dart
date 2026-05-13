@@ -1,6 +1,9 @@
+import '../utils/logger.dart';
 import 'package:studyking/core/data/data.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class DatabaseService {
+  final Logger _logger = const Logger('DatabaseService');
   final TopicRepository topicRepository;
   final QuestionRepository questionRepository;
   final AttemptRepository attemptRepository;
@@ -20,4 +23,21 @@ class DatabaseService {
     required this.conversationRepository,
     required this.tutorSessionRepository,
   });
+
+  Future<void> init() async {
+    try {
+      await topicRepository.init();
+      await questionRepository.init();
+      await attemptRepository.init();
+      await lessonRepository.init();
+      await sessionRepository.init();
+      await subjectRepository.init();
+      await conversationRepository.init();
+      await tutorSessionRepository.init();
+      _logger.i('All repositories initialized successfully');
+    } catch (e) {
+      _logger.e('Error initializing database service', e);
+      rethrow;
+    }
+  }
 }

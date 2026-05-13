@@ -1,6 +1,7 @@
 import '../data/repositories/attempt_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import 'mastery_graph_service.dart';
+import 'student_id_service.dart';
 
 class StudyProgressTracker {
   final AttemptRepository _attemptRepo;
@@ -78,7 +79,8 @@ class StudyProgressTracker {
     };
   }
 
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String studentId = 'anonymous'}) async {
+  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+    studentId ??= StudentIdService().getStudentId();
     final allAttempts = await _attemptRepo.getByStudent(studentId);
 
     final trend = <Map<String, dynamic>>[];
@@ -221,7 +223,8 @@ class StudyProgressTracker {
     return badges;
   }
 
-  Future<String> getTopicMasteryLevel(String topicId, {String studentId = 'anonymous'}) async {
+  Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async {
+    studentId ??= StudentIdService().getStudentId();
     try {
       final result = await _masteryService.getTopicMastery(studentId, topicId);
       if (result.isSuccess && result.data != null) {
@@ -252,7 +255,7 @@ class StudyProgressTracker {
 
   Future<String> exportProgressCSV(String studentId) async {
     final stats = await getOverallStats(studentId);
-    final trend = await getWeeklyTrend(4);
+    final trend = await getWeeklyTrend(4, studentId: studentId);
     final badges = await getBadges(studentId);
 
     final csvLines = <String>[];

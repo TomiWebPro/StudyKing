@@ -1,110 +1,81 @@
-# Spanish Formal Register Violations in ARB Translations
+# Internationalisation Overhaul: Spanish Quality & Localisation Architecture
 
-## Summary
+## Context
 
-The project's i18n convention (documented in `docs/i18n.md`) mandates **formal *usted* register** for all Spanish translations. Multiple strings in `lib/l10n/app_es.arb` use informal *tú* register, creating an inconsistent tone-of-voice. This must be fixed before adding more languages, as it establishes the wrong pattern for future localizers.
+The app currently supports English (`app_en.arb`) and Spanish (`app_es.arb`) with ~200+ ARB keys each. However, a significant gap exists between what's in the ARB files and what's actually rendered in the UI. Many user-facing strings are hardcoded in English in widget/build methods, bypassing the `AppLocalizations` system entirely. The Spanish translation also contains inconsistencies and quality issues that would compound if this serves as the template for adding more languages.
 
-Additionally, several code-level i18n scalability issues prevent smooth addition of new locales.
+## Issues Found
 
----
+### 1. ~70+ Strings Hardcoded in English (Bypass Localisation Entirely)
 
-## Formal Register Violations in `lib/l10n/app_es.arb`
+**Files affected (most impactful):**
 
-| Key | Current (informal) | Should be (formal *usted*) |
-|---|---|---|
-| `quickGuideWelcomeMessage` | `"Pregúntame lo que sea sobre **tus** estudios"` | `"Pregúnteme lo que sea sobre **sus** estudios"` |
-| `quickGuideHelpContent` | `"**tu** asistente... **Puedes**: ... **escribe** tu pregunta y **presiona** enviar"` | `"**su** asistente... **Puede**: ... **escriba** su pregunta y **presione** enviar"` |
-| `fallbackExplainResponse` | `"¿Qué tema **te** gustaría que explique?"` | `"¿Qué tema **le** gustaría que explique?"` |
-| `fallbackQuizResponse` | `"**Pregunta** lo que **quieras** y haré lo mejor posible."` | `"**Pregunte** lo que **quiera** y haré lo mejor posible."` |
-| `fallbackMathResponse` | `"¿Qué problema o tema específico **te** gustaría trabajar?"` | `"¿Qué problema o tema específico **le** gustaría trabajar?"` |
-| `fallbackGeneralResponse` | `"**Déjame ayudarte** a entenderla mejor."` | `"**Déjeme ayudarle** a entenderla mejor."` |
-| `noAtRiskTopics` | `"Sin temas en riesgo. ¡**Sigue** así!"` | No issue — ARB already has `"Siga"` ✅ |
-| `keepPracticingToUnlock` | `"¡**Sigue** practicando..."` | No issue — ARB already has `"Siga"` ✅ |
+| File | Count | Examples |
+|------|-------|---------|
+| `lib/core/errors/handlers.dart:114-140` | 17 | All error messages: `'Unable to connect to the server...'`, `'API key is required...'`, `'Too many requests...'`, `'A database error occurred...'` |
+| `lib/features/practice/presentation/analytics_dashboard.dart` | 30+ | Section headings: `'Accuracy'`, `'Weekly Activity'`, `'Mastery Overview'`, `'Topic Performance'`, empty states: `'No topic data yet...'` |
+| `lib/features/quickguide/presentation/quick_guide_screen.dart:308-331` | 6 | Mode cards: `'AI Tutor'`, `'Mentor'`, `'Interactive conversational lessons'`, `'Personal study assistant & planner'` |
+| `lib/features/teaching/presentation/widgets/chat_bubble.dart:54` | 3 | Sender labels: `'You'`, `'Tutor'`, `'System'` |
+| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:55-92` | 3 | `'$remaining min remaining'`, `'$exerciseCount questions'`, `'$correctCount correct'` |
+| `lib/features/mentor/presentation/mentor_screen.dart:74-83` | 1 | Welcome message body (only greeting is localised) |
+| `lib/features/teaching/presentation/tutor_screen.dart:101` | 1 | Initial AI greeting prompt |
+| `lib/features/practice/presentation/practice_screen.dart:648` | 1 | Snackbar error |
 
-Note: `noTopicsYetAddSome` and `noLessonsUsePlanner` already use formal register (`"agregue"`, `"use"`) — these are correct.
+**Rationale:** None of these strings exist in `app_en.arb` or `app_es.arb`. A Spanish user sees every error message, analytics label, and mode picker card in English. This is the most impactful issue because it's a complete blind spot — the ARB files show coverage that doesn't reflect reality.
 
----
+### 2. Spanish Translation Inconsistencies
 
-## Missing Key in Spanish ARB
+| Key | English | Spanish (current) | Problem |
+|-----|---------|-------------------|---------|
+| `accuracy` (line 344) | Accuracy | `Exactitud` | Inconsistent with `accuracyLabel` |
+| `accuracyLabel` (line 1827) | Accuracy: {percent} | `Precisión: {percent}` | Same English word "Accuracy" → two different Spanish words |
+| `weakLabel` (line 1856) | Weak | `Débil` | Unnatural as a noun; `Por mejorar` or `Con dificultad` is more natural |
+| `atRiskTopics` (line 1819) | At Risk Topics | `Temas en Riesgo` | Awkward; `Temas con dificultades` or `Temas en riesgo de quedarse atrás` reads better |
+| `weakAreas` (line 219) | Weak Areas | `Áreas Débiles` | Consider `Áreas por mejorar` (positive framing, common in education) |
+| `masteredLabel` (line 1852) | Mastered | `Dominado` | Better: `Dominado` is OK but `Adquirido` or `Superado` is more common in educational contexts |
 
-The `quickGuide` key is **defined twice** in `app_en.arb` (JSON duplicate — lines 557 and 1240, last wins) but **entirely absent** from `app_es.arb`. Spanish users see the English fallback `"Quick Guide"` instead of `"Guía Rápida"` in settings.
+**Rationale:** A Spanish-speaking user will see "Exactitud" in one place and "Precisión" in another for the same English concept. If Spanish — the only non-English locale — has these issues, they will propagate when more languages are added without a style guide.
 
----
+### 3. Missing ICU Plural Forms in English ARB
 
-## Test Assertions Out of Sync with ARB (`test/l10n/app_localizations_coverage_test.dart`)
+| Key | Current | Issue |
+|-----|---------|-------|
+| `randomQuestions` | `{count} random questions` | No ICU plural: `1 random questions` is grammatically wrong. Should use ICU: `{count, plural, =1{1 random question} other{{count} random questions}}` |
+| `sessionsCount` | `{count} sessions` | No ICU plural: `1 sessions`. Should use ICU: `{count, plural, =1{1 session} other{{count} sessions}}` |
+| `questionsCountLabel` | `{count} questions` | Same issue: `1 questions` |
 
-Several Spanish expectations do not match the actual ARB content:
+**Rationale:** The English base locale itself has grammatically incorrect plurals. Since ARB tooling uses ICU MessageFormat, these should use `plural` syntax. Note that Spanish versions are OK because "1 preguntas" vs "0 preguntas" vs "2 preguntas" are all grammatically the same, but the tooling still won't handle them correctly for English.
 
-| Line in test | Test expects | ARB value | Formal mismatch? |
-|---|---|---|---|
-| L197 | `'No hay temas todavía? ¡agrega algunos!'` | `"¿No hay temas? ¡agregue algunos!"` | Tests expect informal `"agrega"`, ARB has formal `"agregue"` |
-| L198 | `'No hay lecciones? ¡usa el Planificador...'` | `"¿No hay lecciones? ¡use el Planificador..."` | Tests expect informal `"usa"`, ARB has formal `"use"` |
-| L221 | `'Sin temas en riesgo. ¡Sigue así!'` | `"Sin temas en riesgo. ¡Siga así!"` | Tests expect informal `"Sigue"`, ARB has formal `"Siga"` |
-| L223 | `'¡Sigue practicando...'` | `"¡Siga practicando..."` | Tests expect informal `"Sigue"`, ARB has formal `"Siga"` |
-| L328 | `'Tú dijiste: Hola'` | `"Usted dijo: Hola"` | Tests expect informal `"Tú dijiste"`, ARB has formal `"Usted dijo"` |
+### 4. No Extensible Language Architecture
 
-**These tests currently FAIL** (or were written before the formal register clean-up).
-
----
-
-## Code-Level Locale Scalability Issues
-
-### 1. Locale auto-detection is hardcoded per-language (`lib/main.dart:58-65`)
-
-```dart
-if (deviceLocale.languageCode == 'es') return const Locale('es');
-// ...
-return const Locale('en');
-```
-
-Adding a third language requires another `if` branch. Should use a map or iterate `AppLocalizations.supportedLocales`.
-
-### 2. Language dropdown subtitle is a hardcoded ternary (`lib/features/settings/presentation/profile_screen.dart:407`)
-
-```dart
-subtitle: Text(_language == 'en' ? l10n.english : l10n.spanish),
-```
-
-This fails silently when a third language is added — it would show `l10n.spanish` for any non-`'en'` locale. Should look up the language name via the locale value.
-
-### 3. `drawingWithStrokes` uses manual plural string parameter
-
-The key `drawingWithStrokes` passes a separate `plural` string parameter (`""` or `"s"`) rather than using ICU plural rules (`{count, plural, ...}`). This makes translation harder (e.g., Spanish has different plural rules than simply appending "s").
-
----
+**Issues:**
+- Only 2 locales (`en`, `es`) are in `supportedLocales`. Adding a third (e.g. `fr`, `de`) requires manual ARB creation without any guide or checklist.
+- No `l10n.yaml` or `AGENTS.md` documenting how to add a new locale, run code generation, or test it.
+- No CI check that all `app_en.arb` keys exist in other locale ARB files.
+- The coverage test (`test/l10n/app_localizations_coverage_test.dart`) only tests keys that already exist — it cannot detect missing keys from hardcoded strings.
 
 ## Affected Files
 
-| File | Issue |
-|---|---|
-| `lib/l10n/app_es.arb` | 6 strings violate formal register; missing `quickGuide` key |
-| `lib/l10n/app_en.arb` | `quickGuide` key duplicated (lines 557, 1240) |
-| `test/l10n/app_localizations_coverage_test.dart` | 5 ES assertions mismatch ARB values; tests expect informal register |
-| `lib/main.dart:58-65` | Locale auto-detection doesn't scale — per-language `if` chain |
-| `lib/features/settings/presentation/profile_screen.dart:407` | Language subtitle hardcoded ternary — breaks with 3+ languages |
-| `docs/i18n.md` | Guide exists but no mention of formal-register validation step in PR review |
-| `lib/l10n/generated/app_localizations_es.dart` | Generated file — must be regenerated after ARB fixes |
-
----
-
-## Rationale
-
-1. **User trust**: Mixing `tú` and `usted` within the same screen (or worse, same sentence) is jarring for native Spanish speakers and projects an unprofessional image.
-2. **Documented convention**: The `docs/i18n.md` explicitly mandates formal register; violations are a failure to follow documented policy.
-3. **Test correctness**: The coverage test must match the ARB content or it cannot validate completeness. Currently the tests assert wrong values.
-4. **Extensibility**: Each code-level hardcoded locale branch means every new language addition touches non-i18n code. This should be data-driven.
-
----
+- `lib/l10n/app_en.arb` — English source of truth
+- `lib/l10n/app_es.arb` — Spanish translation (inconsistencies to fix)
+- `lib/core/errors/handlers.dart` — 17 hardcoded error messages
+- `lib/features/practice/presentation/analytics_dashboard.dart` — Entirely unlocalised dashboard
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` — Mode picker cards
+- `lib/features/teaching/presentation/widgets/chat_bubble.dart` — Sender role labels
+- `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` — Progress stat labels
+- `lib/features/mentor/presentation/mentor_screen.dart` — Welcome message body
+- `lib/features/teaching/presentation/tutor_screen.dart` — Initial greeting
+- `lib/features/practice/presentation/practice_screen.dart` — Error snackbar
+- `test/l10n/app_localizations_coverage_test.dart` — Coverage test that needs extension
 
 ## Acceptance Criteria
 
-- [ ] All 6 strings in `app_es.arb` listed above are corrected to formal *usted* register
-- [ ] The `quickGuide` key is added to `app_es.arb` with value `"Guía Rápida"`
-- [ ] The duplicate `quickGuide` key in `app_en.arb` is deduplicated (remove one, keep the other)
-- [ ] All Spanish test assertions in `app_localizations_coverage_test.dart` match the corrected ARB values
-- [ ] `app_localizations_test.dart` Spanish assertions are reviewed and updated if necessary
-- [ ] Locale auto-detection in `lib/main.dart` is refactored to iterate `AppLocalizations.supportedLocales` instead of per-language `if` chain
-- [ ] Language subtitle in `lib/features/settings/presentation/profile_screen.dart` replaces hardcoded ternary with a proper locale-to-label lookup (e.g., a map)
-- [ ] `bash scripts/gen_l10n.sh` runs cleanly after all changes
-- [ ] All existing tests pass (`flutter test`)
-- [ ] `docs/i18n.md` is updated to include a PR-review checklist item verifying formal register compliance
+1. **All error messages in `handlers.dart`** are extracted to ARB keys in both `app_en.arb` and `app_es.arb` with proper ICU placeholders. Hardcoded strings replaced with `AppLocalizations.of(context)!` calls.
+2. **`analytics_dashboard.dart`** — Every label, section heading, empty state, and stat string is localised via ARB keys.
+3. **Mode picker cards** in `quick_guide_screen.dart` use localised strings instead of `'AI Tutor'` / `'Mentor'`.
+4. **Sender labels** in `chat_bubble.dart` (`'You'`, `'Tutor'`, `'System'`) are localised.
+5. **Lesson progress bar** labels in `lesson_progress_bar.dart` and `tutor_screen.dart` use localised strings.
+6. **Spanish consistency** — `accuracy` and `accuracyLabel` use the same translation; `weakLabel` and `atRiskTopics` reviewed for naturalness; one style chosen per concept.
+7. **English ICU plurals** — `randomQuestions`, `sessionsCount`, `questionsCountLabel` updated to proper ICU `plural` syntax in `app_en.arb`.
+8. **Coverage test** updated to detect missing keys between English and Spanish ARB files (fails if any `app_en.arb` key lacks a `app_es.arb` counterpart, and vice versa).
+9. **`AGENTS.md` or `CONTRIBUTING.md`** contains a "Adding a new locale" checklist documenting: creating the ARB, running `flutter gen-l10n`, adding the locale to `supportedLocales`, adding it to the coverage test.

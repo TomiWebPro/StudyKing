@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
 
@@ -548,31 +549,31 @@ void main() {
     });
 
     test('Result.failure with complex data', () {
-      const result = Result<List<String>>.failure('Multiple errors: one, two, three');
+      final result = Result<List<String>>.failure('Multiple errors: one, two, three');
       expect(result.error, equals('Multiple errors: one, two, three'));
       expect(result.isSuccess, isFalse);
       expect(result.hasError, isTrue);
     });
 
     test('Result.success with empty string data', () {
-      const result = Result<String>.success('');
+      final result = Result<String>.success('');
       expect(result.data, isEmpty);
       expect(result.isSuccess, isTrue);
     });
 
     test('Result.failure with null error', () {
-      const result = Result<int>.failure(null);
+      final result = Result<int>.failure(null);
       expect(result.error, isNull);
       expect(result.isSuccess, isFalse);
     });
 
     test('hasError returns false when error is empty string', () {
-      const result = Result<int>.failure('');
+      final result = Result<int>.failure('');
       expect(result.hasError, isTrue);
     });
 
     test('hasError returns true for non-empty error', () {
-      const result = Result<int>.failure('error');
+      final result = Result<int>.failure('error');
       expect(result.hasError, isTrue);
     });
   });

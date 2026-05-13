@@ -1,9 +1,12 @@
+import '../errors/result.dart';
 import '../data/repositories/mastery_graph_repository.dart';
 import '../data/repositories/topic_repository.dart';
+import '../data/repositories/plan_repository.dart';
 import '../data/models/topic_dependency_model.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import 'mastery_graph_service.dart';
+import 'student_id_service.dart';
 
 class PlanGenerationConfig {
   final int planDurationDays;
@@ -29,22 +32,27 @@ class PersonalLearningPlanService {
   final MasteryGraphService _masteryService;
   final MasteryGraphRepository _repository;
   final TopicRepository _topicRepository;
+  final PlanRepository _planRepository;
   PlanGenerationConfig config;
 
   PersonalLearningPlanService({
     MasteryGraphService? masteryService,
     MasteryGraphRepository? repository,
     TopicRepository? topicRepository,
+    PlanRepository? planRepository,
     PlanGenerationConfig? config,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
+        _planRepository = planRepository ?? PlanRepository(),
         config = config ?? PlanGenerationConfig();
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
     try {
       await _repository.init();
-    } catch (_) {}
+    } catch (e) {
+      return Result.failure('Failed to initialize repository: $e');
+    }
 
     final masteryStatesResult = await _repository.getAllMasteryStates(studentId);
     if (masteryStatesResult.isFailure) {
@@ -128,6 +136,11 @@ class PersonalLearningPlanService {
       targetMinutesPerDay: config.targetMinutesPerDay,
       targetQuestionsPerDay: config.targetQuestionsPerDay,
     );
+
+    try {
+      await _planRepository.init();
+      await _planRepository.savePlan(plan);
+    } catch (_) {}
 
     return Result.success(plan);
   }
@@ -277,7 +290,7 @@ class PersonalLearningPlanService {
     }
   }
 
-  String _getStudentId() => 'anonymous';
+  String _getStudentId() => StudentIdService().getStudentId();
 
   String _generateFocus(List<PlannedTopic> topics) {
     if (topics.isEmpty) return 'General review';

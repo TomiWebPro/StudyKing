@@ -2,8 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
+import '../../../core/services/student_id_service.dart';
 import '../../../core/widgets/conversation_input.dart';
-import '../../../../main.dart';
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
@@ -69,8 +70,9 @@ class _TutorScreenState extends State<TutorScreen> {
   }
 
   Future<void> _startLesson() async {
+    final studentId = StudentIdService().getStudentId();
     final manager = await _tutorService.startLesson(
-      studentId: 'anonymous',
+      studentId: studentId,
       subjectId: widget.subjectId,
       topicId: widget.topicId,
       topicTitle: widget.topicTitle,

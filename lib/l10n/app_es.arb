@@ -1887,7 +1887,7 @@
       }
     }
   },
-  "quickGuideWelcomeMessage": "¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúntame lo que sea sobre tus estudios!",
+  "quickGuideWelcomeMessage": "¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúnteme lo que sea sobre sus estudios!",
   "@quickGuideWelcomeMessage": {
     "description": "Welcome message shown in Quick Guide chat"
   },
@@ -1903,7 +1903,7 @@
   "@suggestedPromptMath": {
     "description": "Suggested prompt for math help"
   },
-  "quickGuideHelpContent": "Guía Rápida es tu asistente de estudio con IA. Puedes:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escribe tu pregunta y presiona enviar!",
+  "quickGuideHelpContent": "Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!",
   "@quickGuideHelpContent": {
     "description": "Help dialog content for Quick Guide"
   },
@@ -1938,19 +1938,19 @@
   "@semanticsMessageInput": {
     "description": "Semantic label for message input field"
   },
-  "fallbackExplainResponse": "¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema te gustaría que explique?",
+  "fallbackExplainResponse": "¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema le gustaría que explique?",
   "@fallbackExplainResponse": {
     "description": "Fallback AI response when user asks for explanation"
   },
-  "fallbackQuizResponse": "¡Puedo ayudar con preguntas! Pregunta lo que quieras y haré lo mejor posible.",
+  "fallbackQuizResponse": "¡Puedo ayudar con preguntas! Pregunte lo que quiera y haré lo mejor posible.",
   "@fallbackQuizResponse": {
     "description": "Fallback AI response when user asks for quiz"
   },
-  "fallbackMathResponse": "¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico te gustaría trabajar?",
+  "fallbackMathResponse": "¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico le gustaría trabajar?",
   "@fallbackMathResponse": {
     "description": "Fallback AI response when user asks for math help"
   },
-  "fallbackGeneralResponse": "¡Esa es una pregunta interesante! Déjame ayudarte a entenderla mejor.",
+  "fallbackGeneralResponse": "¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.",
   "@fallbackGeneralResponse": {
     "description": "Fallback AI response for general questions"
   },

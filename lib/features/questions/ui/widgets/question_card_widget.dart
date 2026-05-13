@@ -101,10 +101,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
               Row(
                 children: [
                   Chip(
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(_getTypeLabel(l10n)),
-                    ),
+                    label: Text(_getTypeLabel(l10n), overflow: TextOverflow.ellipsis),
                     backgroundColor: _getTypeColor(),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -113,10 +110,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Chip(
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(l10n.difficultyLabel(_difficultyLabel(widget.question.difficulty, l10n))),
-                      ),
+                      label: Text(l10n.difficultyLabel(_difficultyLabel(widget.question.difficulty, l10n)), overflow: TextOverflow.ellipsis),
                       backgroundColor: _getDifficultyColor(),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -126,13 +120,10 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   const Spacer(),
                   if (widget.isSubmitted)
                     Chip(
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(_isCurrentAnswerCorrect() ? l10n.correctFeedback : l10n.incorrectFeedback),
-                      ),
+                      label: Text(_isCurrentAnswerCorrect() ? l10n.correctFeedback : l10n.incorrectFeedback, overflow: TextOverflow.ellipsis),
                       backgroundColor: _isCurrentAnswerCorrect()
-                          ? Colors.green
-                          : Colors.red,
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                          : Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -281,13 +272,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                     },
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
-              title: Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(option),
-                ),
-              ),
+              title: Text(option, overflow: TextOverflow.ellipsis),
             ),
           );
         }),
@@ -307,7 +292,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
           hintText: l10n.typeYourAnswerHere,
           border: OutlineInputBorder(),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         onChanged: (value) {
           _updateAnswer(value.trim().isEmpty ? null : value);
@@ -328,7 +313,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
           hintText: l10n.writeYourEssayAnswer,
           border: OutlineInputBorder(),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         onChanged: (value) {
           _updateAnswer(value.trim().isEmpty ? null : value);
@@ -398,33 +383,35 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Color _getTypeColor() {
+    final cs = Theme.of(context).colorScheme;
     switch (widget.question.type) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
-        return Colors.blue.shade100;
+        return cs.primaryContainer;
       case QuestionType.typedAnswer:
       case QuestionType.mathExpression:
-        return Colors.green.shade100;
+        return cs.secondaryContainer;
       case QuestionType.essay:
-        return Colors.orange.shade100;
+        return cs.tertiaryContainer;
       case QuestionType.canvas:
       case QuestionType.graphDrawing:
-        return Colors.purple.shade100;
+        return cs.primaryContainer;
       default:
-        return Colors.grey.shade100;
+        return cs.surfaceContainerHighest;
     }
   }
 
   Color _getDifficultyColor() {
+    final cs = Theme.of(context).colorScheme;
     switch (widget.question.difficulty) {
       case 1:
-        return Colors.green.shade100;
+        return cs.primaryContainer;
       case 2:
-        return Colors.orange.shade100;
+        return cs.tertiaryContainer;
       case 3:
-        return Colors.red.shade100;
+        return cs.errorContainer;
       default:
-        return Colors.grey.shade100;
+        return cs.surfaceContainerHighest;
     }
   }
 

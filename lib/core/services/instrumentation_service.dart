@@ -1,3 +1,4 @@
+import '../errors/result.dart';
 import '../data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
 import '../data/models/mastery_state_model.dart';
@@ -214,7 +215,7 @@ class InstrumentationService {
         _adherenceTracker = PlanAdherenceTracker(),
         _improvementTracker = MasteryImprovementTracker();
 
-  Future<Result<void>> init() async {
+  Future<void> init() async {
     return _repository.init();
   }
 

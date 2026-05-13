@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/personal_learning_plan_service.dart';
 import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -10,7 +11,7 @@ import 'package:studyking/core/data/models/topic_model.dart';
 
 class MockMasteryGraphRepository implements MasteryGraphRepository {
   @override
-  Future<Result<void>> init() async => Result.success(null);
+  Future<void> init() async {}
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
@@ -347,7 +348,7 @@ void main() {
 
 class _FailingMasteryGraphRepository implements MasteryGraphRepository {
   @override
-  Future<Result<void>> init() async => Result.failure('Init failed');
+  Future<void> init() async => throw Exception('Init failed');
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async =>

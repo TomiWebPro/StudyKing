@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
-import '../../../main.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'lesson_list_screen.dart';
 import 'package:studyking/core/utils/responsive.dart';

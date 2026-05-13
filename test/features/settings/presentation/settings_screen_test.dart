@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
-import 'package:studyking/main.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 
 class FakeSettingsRepository {
   SettingsBox _settings = SettingsBox();

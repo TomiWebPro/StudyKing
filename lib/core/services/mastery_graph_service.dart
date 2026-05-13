@@ -1,3 +1,4 @@
+import '../errors/result.dart';
 import '../data/repositories/mastery_graph_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
@@ -10,7 +11,7 @@ class MasteryGraphService {
   MasteryGraphService({MasteryGraphRepository? repository})
       : _repository = repository ?? MasteryGraphRepository();
 
-  Future<Result<void>> init() => _repository.init();
+  Future<void> init() => _repository.init();
 
   Future<Result<void>> recordAttempt({
     required String studentId,

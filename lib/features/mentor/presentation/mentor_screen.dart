@@ -5,7 +5,7 @@ import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
 import '../../../core/data/repositories/attempt_repository.dart';
 import '../../../core/widgets/conversation_input.dart';
-import '../../../../main.dart';
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/mentor_service.dart';

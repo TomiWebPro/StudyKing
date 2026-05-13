@@ -1,8 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../errors/result.dart';
 import '../../utils/logger.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
 
 /// Spaced repetition queries for studyKing
 class SpacedRepetitionQueries {
@@ -55,14 +55,13 @@ class SpacedRepetitionRepository {
   late Box<Question> _questionBox;
   late Box<StudentAttempt> _attemptBox;
 
-  Future<Result<void>> init() async {
+  Future<void> init() async {
     try {
-      _questionBox = await Hive.openBox<Question>('questions');
-      _attemptBox = await Hive.openBox<StudentAttempt>('attempts');
-      return Result.success(null);
+      _questionBox = Hive.box<Question>('questions');
+      _attemptBox = Hive.box<StudentAttempt>('attempts');
     } catch (e) {
       _logger.e('Error initializing spaced repetition repository', e);
-      return Result.failure('Failed to initialize spaced repetition repository: ${e.toString()}');
+      rethrow;
     }
   }
 

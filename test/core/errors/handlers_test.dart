@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
 
@@ -33,7 +34,7 @@ Future<BuildContext> captureContext(WidgetTester tester) async {
 void main() {
   group('Result<T>', () {
     test('Result.success stores data and sets isSuccess to true', () {
-      const result = Result<int>.success(42);
+      final result = Result<int>.success(42);
       expect(result.data, equals(42));
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
@@ -41,7 +42,7 @@ void main() {
     });
 
     test('Result.failure stores error and sets isSuccess to false', () {
-      const result = Result<int>.failure('Something went wrong');
+      final result = Result<int>.failure('Something went wrong');
       expect(result.error, equals('Something went wrong'));
       expect(result.isSuccess, isFalse);
       expect(result.data, isNull);
@@ -49,13 +50,13 @@ void main() {
     });
 
     test('Result.success with null data', () {
-      const result = Result<String?>.success(null);
+      final result = Result<String?>.success(null);
       expect(result.data, isNull);
       expect(result.isSuccess, isTrue);
     });
 
     test('Result.failure with empty error', () {
-      const result = Result<int>.failure('');
+      final result = Result<int>.failure('');
       expect(result.error, isEmpty);
       expect(result.isSuccess, isFalse);
       expect(result.hasError, isTrue);

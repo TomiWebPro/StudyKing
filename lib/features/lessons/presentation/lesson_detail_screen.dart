@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/enums.dart';
-import '../../../../main.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';

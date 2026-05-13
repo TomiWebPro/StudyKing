@@ -1,20 +1,10 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../errors/result.dart';
 import '../../utils/logger.dart';
 import '../models/mastery_state_model.dart';
 import '../models/question_mastery_state_model.dart';
 import '../models/topic_dependency_model.dart';
 import '../models/question_evaluation_model.dart';
-
-class Result<T> {
-  final T? data;
-  final String? error;
-
-  Result.success(this.data) : error = null;
-  Result.failure(this.error) : data = null;
-
-  bool get isSuccess => error == null;
-  bool get isFailure => error != null;
-}
 
 class MasteryGraphRepository {
   final Logger _logger = const Logger('MasteryGraphRepository');
@@ -35,16 +25,15 @@ class MasteryGraphRepository {
         _dependencyBox = dependencyBox,
         _evaluationBox = evaluationBox;
 
-  Future<Result<void>> init() async {
+  Future<void> init() async {
     try {
-      _masteryBox = await Hive.openBox<MasteryState>('mastery_states');
-      _questionMasteryBox = await Hive.openBox<QuestionMasteryState>('question_mastery_states');
-      _dependencyBox = await Hive.openBox<TopicDependency>('topic_dependencies');
-      _evaluationBox = await Hive.openBox<QuestionEvaluation>('question_evaluations');
-      return Result.success(null);
+      _masteryBox = Hive.box<MasteryState>('mastery_states');
+      _questionMasteryBox = Hive.box<QuestionMasteryState>('question_mastery_states');
+      _dependencyBox = Hive.box<TopicDependency>('topic_dependencies');
+      _evaluationBox = Hive.box<QuestionEvaluation>('question_evaluations');
     } catch (e) {
       _logger.e('Error initializing MasteryGraphRepository', e);
-      return Result.failure('Failed to initialize: ${e.toString()}');
+      rethrow;
     }
   }
 

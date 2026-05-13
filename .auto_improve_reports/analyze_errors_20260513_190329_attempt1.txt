@@ -1,0 +1,12 @@
+Analyzing StudyKing...                                          
+
+warning • The declaration '_kComingSoon' isn't referenced • test/features/practice/presentation/practice_screen_test.dart:28:7 • unused_element
+warning • The declaration '_kAllCaughtUp' isn't referenced • test/features/practice/presentation/practice_screen_test.dart:30:7 • unused_element
+warning • A value for optional parameter 'failInit' isn't ever given • test/features/practice/presentation/practice_screen_test.dart:96:10 • unused_element_parameter
+warning • A value for optional parameter 'failGetWeakTopics' isn't ever given • test/features/practice/presentation/practice_screen_test.dart:97:10 • unused_element_parameter
+warning • Unused import: 'package:studyking/core/data/repositories/spaced_repetition_repository.dart' • test/features/practice/presentation/practice_session_screen_test.dart:5:8 • unused_import
+warning • Unused import: 'package:studyking/l10n/generated/app_localizations.dart' • test/features/practice/presentation/practice_session_screen_test.dart:7:8 • unused_import
+warning • The declaration '_kSessionResults' isn't referenced • test/features/practice/presentation/practice_session_screen_test.dart:18:7 • unused_element
+
+
+7 issues found. (ran in 5.8s)

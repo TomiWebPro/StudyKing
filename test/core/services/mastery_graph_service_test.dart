@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
@@ -10,16 +11,9 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   final Map<String, MasteryState> _masteryStates = {};
   final Map<String, QuestionMasteryState> _questionMasteryStates = {};
   final Map<String, QuestionEvaluation> _evaluations = {};
-  bool shouldFailInit = false;
-  String? errorMessage;
 
   @override
-  Future<Result<void>> init() async {
-    if (shouldFailInit) {
-      return Result.failure(errorMessage ?? 'Init failed');
-    }
-    return Result.success(null);
-  }
+  Future<void> init() async {}
 
   void addMasteryState(MasteryState state) {
     _masteryStates['${state.studentId}_${state.topicId}'] = state;
@@ -37,7 +31,7 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
-      return Result.success(_masteryStates[key]);
+      return Result.success(_masteryStates[key]!);
     }
     final newState = MasteryState.initial(studentId: studentId, topicId: topicId);
     _masteryStates[key] = newState;
@@ -63,7 +57,7 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
     final key = '${studentId}_$questionId';
     if (_questionMasteryStates.containsKey(key)) {
-      return Result.success(_questionMasteryStates[key]);
+      return Result.success(_questionMasteryStates[key]!);
     }
     final newState = QuestionMasteryState.initial(studentId: studentId, questionId: questionId);
     _questionMasteryStates[key] = newState;
@@ -163,16 +157,7 @@ void main() {
 
     group('init', () {
       test('initializes successfully', () async {
-        final result = await service.init();
-        expect(result.isSuccess, isTrue);
-      });
-
-      test('fails when repository init fails', () async {
-        mockRepo.shouldFailInit = true;
-        mockRepo.errorMessage = 'Failed to open Hive boxes';
-        final result = await service.init();
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to open Hive boxes'));
+        await service.init();
       });
     });
 

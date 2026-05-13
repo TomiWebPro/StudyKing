@@ -9,3 +9,5 @@ export 'settings/settings.dart';
 export 'subjects/subject_feature.dart';
 export 'teaching/teaching.dart';
 export 'mentor/mentor.dart';
+export 'ingestion/ingestion.dart';
+export 'dashboard/dashboard.dart';

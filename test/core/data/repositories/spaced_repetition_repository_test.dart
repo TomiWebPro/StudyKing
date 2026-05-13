@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
@@ -8,9 +8,7 @@ class _MockSpacedRepetitionRepository extends SpacedRepetitionRepository {
   final Map<String, Question> _questionStorage = {};
 
   @override
-  Future<Result<void>> init() async {
-    return Result.success(null);
-  }
+  Future<void> init() async {}
 
   @override
   Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {

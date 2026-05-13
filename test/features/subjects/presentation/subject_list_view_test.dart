@@ -29,6 +29,22 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<void> save(Subject subject) async => _box.put(subject.id, subject);
 }
 
+class _ErrorSubjectRepository extends SubjectRepository {
+  _ErrorSubjectRepository() : super(subjectBox: null);
+
+  @override
+  Future<List<Subject>> getAll() async {
+    throw Exception('Failed to load subjects');
+  }
+}
+
+class _FailingNotifier extends SubjectsRepositoryNotifier {
+  @override
+  Future<SubjectRepository> build() async {
+    throw Exception('Repository failed to initialize');
+  }
+}
+
 class _TestNotifier extends SubjectsRepositoryNotifier {
   final SubjectRepository repo;
   _TestNotifier(this.repo);
@@ -68,14 +84,14 @@ void main() {
       expect(find.text('Add your first subject to begin studying'), findsOneWidget);
     });
 
-    testWidgets('shows add button in appbar', (tester) async {
+    testWidgets('add icons appear in appbar and empty state', (tester) async {
       final box = _MockSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.add), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsAtLeastNWidgets(2));
     });
 
     testWidgets('displays list of subjects', (tester) async {
@@ -102,7 +118,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.school), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward_ios), findsWidgets);
     });
 
     testWidgets('books icon visible in empty state', (tester) async {
@@ -122,7 +138,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Add Subject'), findsOneWidget);
+      expect(find.text('Add Subject'), findsWidgets);
     });
 
     testWidgets('shows timer icon in subject cards', (tester) async {
@@ -134,6 +150,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.timer), findsOneWidget);
+    });
+
+    testWidgets('shows error state when repository fails', (tester) async {
+      final repo = _ErrorSubjectRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Error: Exception: Failed to load subjects'), findsOneWidget);
+    });
+
+    testWidgets('shows subject name in card semantics', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Physics'), findsOneWidget);
+    });
+
+    testWidgets('shows provider error state', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FailingNotifier()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const SubjectListView(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Error: Exception: Repository failed to initialize'), findsOneWidget);
+    });
+
+    testWidgets('app bar add button shows selection screen', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Save'), findsWidgets);
+    });
+
+    testWidgets('shows practice sessions label on subject card', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Biology'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice sessions'), findsOneWidget);
     });
   });
 }

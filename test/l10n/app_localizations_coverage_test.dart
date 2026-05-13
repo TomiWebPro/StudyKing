@@ -194,8 +194,8 @@ void main() {
     });
 
     test('topic and lesson empty states', () {
-      expect(l10n.noTopicsYetAddSome, 'No hay temas todavía? ¡agrega algunos!');
-      expect(l10n.noLessonsUsePlanner, 'No hay lecciones? ¡usa el Planificador para generar!');
+      expect(l10n.noTopicsYetAddSome, '¿No hay temas? ¡agregue algunos!');
+      expect(l10n.noLessonsUsePlanner, '¿No hay lecciones? ¡use el Planificador para generar!');
     });
 
     test('block types', () {
@@ -218,9 +218,9 @@ void main() {
 
     test('at risk and ready to advance', () {
       expect(l10n.atRiskTopics, 'Temas en Riesgo');
-      expect(l10n.noAtRiskTopics, 'Sin temas en riesgo. ¡Sigue así!');
+      expect(l10n.noAtRiskTopics, 'Sin temas en riesgo. ¡Siga así!');
       expect(l10n.readyToAdvance, 'Listo para Avanzar');
-      expect(l10n.keepPracticingToUnlock, '¡Sigue practicando para desbloquear temas avanzados!');
+      expect(l10n.keepPracticingToUnlock, '¡Siga practicando para desbloquear temas avanzados!');
     });
 
     test('mastery overview section', () {
@@ -231,19 +231,19 @@ void main() {
     });
 
     test('quick guide additional messages', () {
-      expect(l10n.quickGuideWelcomeMessage, '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúntame lo que sea sobre tus estudios!');
+      expect(l10n.quickGuideWelcomeMessage, '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúnteme lo que sea sobre sus estudios!');
       expect(l10n.suggestedPromptExplain, 'Explica la fotosíntesis');
       expect(l10n.suggestedPromptQuiz, 'Examíname de historia');
       expect(l10n.suggestedPromptMath, 'Ayuda con problemas de mates');
-      expect(l10n.quickGuideHelpContent, 'Guía Rápida es tu asistente de estudio con IA. Puedes:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escribe tu pregunta y presiona enviar!');
+      expect(l10n.quickGuideHelpContent, 'Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!');
       expect(l10n.semanticsMessageInput, 'Campo de mensaje para Guía Rápida');
     });
 
     test('fallback AI responses', () {
-      expect(l10n.fallbackExplainResponse, '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema te gustaría que explique?');
-      expect(l10n.fallbackQuizResponse, '¡Puedo ayudar con preguntas! Pregunta lo que quieras y haré lo mejor posible.');
-      expect(l10n.fallbackMathResponse, '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico te gustaría trabajar?');
-      expect(l10n.fallbackGeneralResponse, '¡Esa es una pregunta interesante! Déjame ayudarte a entenderla mejor.');
+      expect(l10n.fallbackExplainResponse, '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema le gustaría que explique?');
+      expect(l10n.fallbackQuizResponse, '¡Puedo ayudar con preguntas! Pregunte lo que quiera y haré lo mejor posible.');
+      expect(l10n.fallbackMathResponse, '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico le gustaría trabajar?');
+      expect(l10n.fallbackGeneralResponse, '¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.');
     });
 
     test('about application details', () {
@@ -325,7 +325,7 @@ void main() {
     });
 
     test('semanticsYouSaid', () {
-      expect(l10n.semanticsYouSaid('Hola'), 'Tú dijiste: Hola');
+      expect(l10n.semanticsYouSaid('Hola'), 'Usted dijo: Hola');
     });
 
     test('semanticsQuickGuideSaid', () {

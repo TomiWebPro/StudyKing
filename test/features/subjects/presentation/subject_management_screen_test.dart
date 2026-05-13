@@ -102,11 +102,131 @@ void main() {
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Create Subject'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Create Subject'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Please enter a subject name'), findsOneWidget);
+    });
+
+    testWidgets('can type into name field', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      final nameField = find.byType(TextFormField).first;
+      await tester.enterText(nameField, 'Physics');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics'), findsOneWidget);
+    });
+
+    testWidgets('shows exam date label', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exam Date (Optional):'), findsOneWidget);
+    });
+
+    testWidgets('exam date button is present', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select date'), findsOneWidget);
+    });
+
+    testWidgets('exam date picker can be opened', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Select date'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Select date'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+    });
+
+    testWidgets('color picker circles are tappable', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byType(Wrap).first);
+      await tester.pumpAndSettle();
+
+      final inkwells = find.byType(InkWell);
+      if (inkwells.evaluate().isNotEmpty) {
+        await tester.tap(inkwells.first);
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('entering name and creating subject shows error', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Mathematics');
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Create Subject'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Create Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('Error creating subject:'), findsOneWidget);
+    });
+
+    testWidgets('description field accepts multi-line text', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byType(TextFormField).at(3));
+      await tester.pumpAndSettle();
+
+      final descField = find.byType(TextFormField).at(3);
+      await tester.enterText(descField, 'Line 1\nLine 2');
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('shows hint texts on form fields', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Subject Name *'), findsOneWidget);
+      expect(find.text('Subject Code (Optional)'), findsOneWidget);
+      expect(find.text('Description (Optional)'), findsOneWidget);
+      expect(find.text('Teacher (Optional)'), findsOneWidget);
+      expect(find.text('Syllabus/Scope (Optional)'), findsOneWidget);
     });
   });
 }

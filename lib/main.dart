@@ -2,198 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'core/utils/logger.dart';
-import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
-import 'features/settings/data/models/settings_box.dart';
-import 'features/settings/data/models/accessibility_preferences.dart';
-import 'features/settings/data/repositories/settings_repository.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'core/providers/app_providers.dart';
+import 'core/constants/app_constants.dart';
 import 'core/data/data.dart';
+import 'core/services/student_id_service.dart';
+import 'core/services/mastery_graph_service.dart';
+import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/api_config_screen.dart';
 import 'features/settings/presentation/profile_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_view.dart';
+import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/practice/presentation/practice_screen.dart';
+import 'features/ingestion/presentation/upload_screen.dart';
 import 'features/quickguide/quickguide.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
-
-// Global database instance
-final database = DatabaseService(
-  topicRepository: TopicRepository(),
-  questionRepository: QuestionRepository(),
-  attemptRepository: AttemptRepository(),
-  lessonRepository: LessonRepository(),
-  sessionRepository: StudySessionRepository(),
-  subjectRepository: SubjectRepository(),
-  conversationRepository: ConversationRepository(),
-  tutorSessionRepository: TutorSessionRepository(),
-);
-
-// Global settings repository (singleton for use outside widget tree)
-final settingsRepository = SettingsRepository();
-
-// Settings provider (uses the singleton)
-final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>((ref) {
-  return SettingsController(settingsRepository);
-});
-
-// Settings loading state provider to handle race condition
-final settingsLoadingProvider = StateProvider<bool>((ref) => false);
-
-// Theme mode provider
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
-
-// Font size provider  
-final fontSizeProvider = StateProvider<double>((ref) => 16.0);
-
-// API key provider
-final apiKeyProvider = StateProvider<String>((ref) => '');
-
-// API base URL provider
-final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBaseUrlString);
-
-// Selected model provider
-final selectedModelProvider = StateProvider<String>((ref) => '');
-
-// Locale provider with device locale auto-detection
-final localeProvider = StateProvider<Locale>((ref) {
-  try {
-    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
-    if (deviceLocale.languageCode == 'es') return const Locale('es');
-  } catch (_) {}
-  return const Locale('en');
-});
-
-class SettingsController extends StateNotifier<SettingsBox> {
-  final Logger _logger = const Logger('SettingsController');
-  final SettingsRepository _repository;
-  bool _hasLoadedOnce = false;
-  
-  SettingsController(this._repository) : super(SettingsBox());
-
-  Future<void> _loadSettings() async {
-    if (_hasLoadedOnce) return;
-    try {
-      _hasLoadedOnce = true;
-      final settings = await _repository.getSettings();
-      state = settings;
-    } catch (e) {
-      _logger.e('Error loading settings', e);
-    }
-  }
-
-  Future<void> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-  }) async {
-    try {
-      await _repository.updateSettings(
-        apiKey: apiKey ?? state.apiKey,
-        apiBaseUrl: apiBaseUrl ?? state.apiBaseUrl,
-        selectedModel: selectedModel ?? state.selectedModel,
-        themeMode: themeMode ?? state.themeModeEnum,
-        fontSize: fontSize ?? state.fontSize,
-        studyRemindersEnabled:
-            studyRemindersEnabled ?? state.studyRemindersEnabled,
-        requestTimeoutSeconds:
-            requestTimeoutSeconds ?? state.requestTimeoutSeconds,
-        sessionDurationMinutes:
-            sessionDurationMinutes ?? state.sessionDurationMinutes,
-        highContrastEnabled:
-            highContrastEnabled ?? state.highContrastEnabled,
-        largeTouchTargets:
-            largeTouchTargets ?? state.largeTouchTargets,
-      );
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating settings', e);
-    }
-  }
-
-  Future<void> saveApiKey(String key) async {
-    try {
-      await _repository.saveApiKey(service: 'default', key: key);
-      await _loadSettings();
-    } catch (e) {
-      _logger.e('Error saving API key', e);
-    }
-  }
-
-  Future<void> updateTheme(ThemeMode mode) async {
-    try {
-      await _repository.updateSettings(themeMode: mode);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating theme', e);
-    }
-  }
-
-  Future<void> updateFontSize(double size) async {
-    try {
-      await _repository.updateSettings(fontSize: size);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating font size', e);
-    }
-  }
-
-  Future<void> updateModel(String model) async {
-    try {
-      await _repository.updateSettings(selectedModel: model);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating model', e);
-    }
-  }
-
-  Future<void> updateStudyReminders(bool enabled) async {
-    await updateSettings(studyRemindersEnabled: enabled);
-  }
-
-  Future<void> updateRequestTimeout(int timeoutSeconds) async {
-    await updateSettings(requestTimeoutSeconds: timeoutSeconds);
-  }
-
-  Future<void> updateSessionDuration(int minutes) async {
-    await updateSettings(sessionDurationMinutes: minutes);
-  }
-
-  Future<void> updateStats({
-    int? sessionCount,
-    int? studyTimeMs,
-    int? questions,
-  }) async {
-    try {
-      await _repository.updateStats(
-        sessionCount: sessionCount,
-        studyTimeMs: studyTimeMs,
-        questions: questions,
-      );
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating stats', e);
-    }
-  }
-
-  Future<void> updateHighContrast(bool enabled) async {
-    await updateSettings(highContrastEnabled: enabled);
-  }
-
-  Future<void> updateLargeTouchTargets(bool enabled) async {
-    await updateSettings(largeTouchTargets: enabled);
-  }
-}
 
 final Logger _mainLogger = const Logger('App');
 
@@ -210,21 +38,18 @@ void main() async {
     // Register accessibility preferences adapter
     Hive.registerAdapter(AccessibilityPreferencesAdapter());
     
-    // Run database migrations and open all boxes
+      // Run database migrations and open all boxes
     await HiveInitializer.initialize();
     
-    // Initialize all repositories
-    await database.topicRepository.init();
-    await database.questionRepository.init();
-    await database.attemptRepository.init();
-    await database.lessonRepository.init();
-    await database.sessionRepository.init();
-    await database.subjectRepository.init();
-    await database.conversationRepository.init();
-    await database.tutorSessionRepository.init();
+    // Initialize all repositories through DatabaseService
+    await database.init();
     
     // Initialize settings repository
     await settingsRepository.init();
+    
+    // Initialize student ID service (generates UUID on first launch)
+    StudentIdService(); // ensure singleton is initialized
+    await StudentIdService().init();
     
     // Load initial settings to sync with providers
     try {
@@ -340,6 +165,11 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         '/settings': (context) => const SettingsScreen(),
         '/quick-guide': (context) => const QuickGuideScreen(),
         '/mentor': (context) => const MentorScreen(),
+        '/dashboard': (context) => DashboardScreen(
+          studentId: StudentIdService().getStudentId(),
+          masteryService: MasteryGraphService(),
+        ),
+        '/upload': (context) => const UploadScreen(),
       },
     );
   }
@@ -391,6 +221,19 @@ class _MainScreenState extends State<MainScreen> {
     SettingsScreen(),
   ];
 
+  void _openDashboard() {
+    final studentId = StudentIdService().getStudentId();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DashboardScreen(
+          studentId: studentId,
+          masteryService: MasteryGraphService(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -400,6 +243,11 @@ class _MainScreenState extends State<MainScreen> {
         body: IndexedStack(
           index: _selectedIndex,
           children: _screens,
+        ),
+        floatingActionButton: FloatingActionButton.small(
+          onPressed: () => _openDashboard(),
+          tooltip: 'Dashboard',
+          child: const Icon(Icons.dashboard),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,

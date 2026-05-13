@@ -1,123 +1,92 @@
-# Test Coverage & Structural Gaps: Practice Feature
+# Critical Test Coverage Gaps & Improvements for Teaching Feature
 
 ## Context
 
-The Practice feature (`lib/features/practice/`) is a core user-facing workflow spanning subject selection, spaced repetition, weak-area targeting, per-question practice sessions, and learning-plan dashboards. Despite its centrality, the test suite suffers from **fragmented placement, overlapping coverage, missing critical flows, and dead/misplaced test scaffolding**.
+The `lib/features/teaching/` module implements an AI-powered tutor with LLM streaming, adaptive conversation pacing, exercise evaluation, and lesson lifecycle management. It is one of the most complex modules in the project (5 source files, ~1000+ lines total), yet it has **zero test coverage**. Meanwhile, some other feature tests (e.g. `lesson_presentation_test.dart`, `topic_list_screen_test.dart`) test raw Flutter primitives rather than actual application widgets.
 
----
+## Affected Files
 
-## Affected Files & Issues
+1. **`lib/features/teaching/presentation/tutor_screen.dart`** — StatefulWidget with timer, LLM streaming, lesson lifecycle
+2. **`lib/features/teaching/presentation/widgets/chat_bubble.dart`** — Chat bubble with role-based styling, streaming dots
+3. **`lib/features/teaching/presentation/widgets/lesson_progress_bar.dart`** — Progress bar with color-coded time states
+4. **`lib/features/teaching/services/conversation_manager.dart`** — State machine (6 phases), adaptive pacing, exercise evaluation
+5. **`lib/features/teaching/services/tutor_service.dart`** — Orchestrates lesson start/end, persistence, mastery recording
 
-### 1. Practice Session Screen: Misplaced & Duplicated Tests
+## Rationale
 
-| File | Problem |
-|---|---|
-| `test/features/practice/practice_test.dart` | Tests practice session behavior (187 lines) |
-| `test/widgets/practice_session_screen_test.dart` | Tests the same `PracticeSessionScreen` with question-type branches, submission lifecycle, and edge cases (462 lines) |
-| `test/features/practice/presentation/practice_screen_test.dart` | Tests the parent `PracticeScreen` (201 lines) |
+### Gap 1: Zero coverage for the teaching feature
 
-**Rationale:**
-- `practice_test.dart` and `practice_session_screen_test.dart` test **the same widget** (`PracticeSessionScreen`) with nearly identical helper classes (`_FakeQuestionRepository`, `_question()`, `_sessionApp()`). This duplication wastes maintenance effort and confuses coverage analysis.
-- There is **no `practice_session_screen_test.dart`** in `test/features/practice/presentation/` — the logical home. The session screen test is orphaned under `test/widgets/`.
+Every other feature module has at least some tests. Teaching has none. This is especially problematic because:
 
-**Acceptance Criteria:**
-- [ ] Merge `test/widgets/practice_session_screen_test.dart` and `test/features/practice/practice_test.dart` into a single `test/features/practice/presentation/practice_session_screen_test.dart`.
-- [ ] Deduplicate shared helper classes (`_FakeQuestionRepository`, `_question`, `_sessionApp`) into a shared test utility.
-- [ ] Delete the old files after merge.
+- **`ConversationManager._evaluateExerciseResponse`** (`conversation_manager.dart:228-255`) uses fragile keyword-matching to determine if the student's free-text response is correct/incorrect. A response like "That doesn't sound right" would be counted as **correct** (contains "right"). A response like "No, I don't understand" containing "no" would be counted as **incorrect** even if the student's actual answer was correct. There are no tests for the keyword lists, confidence ratings, or adaptive pace adjustments.
 
----
+- **`TutorService.startLesson/endLesson`** (`tutor_service.dart:28-100`) orchestrates database persistence, lesson plan generation via LLM, and mastery graph recording. Zero tests for: correct session creation, message persistence on end-lesson, mastery recording conditions (only records if `questionsAsked > 0`), edge cases (empty messages, duplicate saves).
 
-### 2. Empty / Orphaned Service Directory
+- **`TutorScreen._initializeTutor`** (`tutor_screen.dart:52-68`) hardcodes `LlmService` with an empty `apiKey: ''` and `MasteryGraphService`. This makes the screen untestable — there is no way to inject fake dependencies. This is a design flaw that blocks widget-level testing.
 
-| Path | State |
-|---|---|
-| `lib/features/practice/services/` | **Empty directory** |
-| `test/features/practice/services/answer_validation_service_test.dart` | Exists, but tests `lib/core/services/answer_validation_service.dart`, **not** a practice-service |
+- **`LessonProgressBar`** (`lesson_progress_bar.dart`) has three visual states: normal (blue), warning (orange, <=5 min remaining), and overtime (red). None are tested.
 
-**Rationale:**
-- The test at `test/features/practice/services/answer_validation_service_test.dart` is misleadingly placed. It tests the *core* `AnswerValidationService`, yet lives under `features/practice/services`.
-- A separate `AnswerValidationService` class exists at `lib/features/questions/services/answer_validator.dart:35`, shadowing the same name from `lib/core/services/`. The feature-layer one is a thin static wrapper with zero dedicated tests for its own export API.
+- **`ChatBubble`** (`chat_bubble.dart`) has conditional rendering for streaming vs. streaming-complete states, role-based alignment, and sender label visibility. None tested.
 
-**Acceptance Criteria:**
-- [ ] Relocate `test/features/practice/services/answer_validation_service_test.dart` to `test/core/services/answer_validation_service_test.dart` (where it logically belongs — the file already exists there, so merge or remove).
-- [ ] Add dedicated tests for the feature-layer `AnswerValidationService` (`lib/features/questions/services/answer_validator.dart`) covering:
-  - `validateWithMarkschemeInstance` (instance method)
-  - `validateMCQAnswerWithMarkscheme` (static) for both single and multi choice
-  - `validateMathExpressionWithMarkscheme` with normalized expressions
-  - `validateCanvasDrawingWithMarkscheme` with real drawing data structures
+### Gap 2: Tests that test Flutter framework, not application code
 
----
+Files like `lesson_presentation_test.dart` and `topic_list_screen_test.dart` contain tests that re-implement widget trees inline with raw `CircularProgressIndicator`, `ListView`, `Card`, etc. rather than importing and testing the actual `TopicListScreen`, `LessonListScreen`, etc. widgets from `lib/features/lessons/presentation/`. For example:
 
-### 3. Missing Test Scenarios for `PracticeSessionScreen`
+- `lesson_presentation_test.dart:148-158` wraps a `CircularProgressIndicator` in a `MaterialApp` — this tests Flutter's built-in widget, not any application code.
+- `topic_list_screen_test.dart:113-122` does the same pattern.
 
-**Location:** `lib/features/practice/presentation/practice_session_screen.dart`
+These tests provide near-zero regression value and create maintenance burden.
 
-The following critical flows have **no test coverage**:
+### Gap 3: Orphaned test files outside feature structure
 
-| Scenario | Why Needed |
-|---|---|
-| Session auto-save on completion (`_sessionAutoSaved` guard, `StudySessionRepository.create` invocation) | 18% of the state machine; could silently lose data |
-| Restart session flow (`_restartSession` → timer restart, state reset) | Only exit from results screen |
-| Spaced repetition mode (`isSpacedRepetition: true` → `_updateNextReview` invoked) | Dedicated code path, no assertion it fires |
-| Navigation: Previous button shown and functional | Conditional widget in `_buildNavigationButtons` |
-| `_showNoQuestionsDialog` displayed on load failure | Error-resilience path |
-| Loading spinner shown while questions empty, then resolves | UI feedback loop |
-| Empty questions by subject (no questions for given `subjectId`) | `_showNoQuestionsDialog` vs empty array handling |
-| Question types: `graphDrawing`, `fileUpload`, `audioRecording` map to fallback | The `default` branch in `_buildQuestionWidget` |
-| Timer display updates | State-dependent `_elapsedTimeFormatted` |
+Several test files live outside the `test/features/` hierarchy:
+- `test/validation/answer_test.dart` — should be `test/features/questions/services/`
+- `test/repository/repository_test.dart` — should be `test/features/subjects/data/repositories/` or similar
+- `test/screens/practice_test.dart` — should be `test/features/practice/`
+- `test/models/llm_models_test.dart` — should be under appropriate feature
 
-**Acceptance Criteria:**
-- [ ] Add widget tests for each scenario listed above.
-- [ ] Verify timer ticks, session auto-save, spaced-repetition call, restart flow, and error dialogs.
+This makes it harder to assess feature-level coverage and maintain test placement conventions.
 
----
+### Gap 4: ConversationManager adaptive chunking bug
 
-### 4. `PracticeScreen`: Untestable Dependency & Missing Interaction Tests
+`ConversationManager._buildAdaptiveChunks` (`conversation_manager.dart:162-174`) yields progressively larger chunks of the **entire accumulated buffer** on each iteration, not just the new content. This means the consuming stream receives repeated content. This is likely a bug and has no test coverage.
 
-**Location:** `lib/features/practice/presentation/practice_screen.dart`
+## Acceptance Criteria
 
-- **`_startWeakAreasPractice`** (line 727) creates a **new** `MasteryGraphService` inline with `init()`, defeating mocking. This locks the method out of unit/widget testing unless DI is introduced.
-- No test verifies that tapping a `_PracticeModeCard` with `onTap == null` does nothing (disabled state).
-- No test for the `_showTopicSelector` flow (topic-from-questions extraction, bottom sheet, navigation).
-- No test for the `_showSpacedRepetitionSubjectSelector` "all caught up" state vs. "subjects with due counts" state.
+1. **Add unit tests for `ConversationManager`:**
+   - Test all 6 conversation phases and transitions
+   - Test `_evaluateExerciseResponse` with controlled inputs covering correct, incorrect, and ambiguous student responses
+   - Test `confidenceRating` calculation at various exercise counts and correct/incorrect ratios
+   - Test `adaptivePace` adjustments (bounds clamping at 0.5/1.5, increment/decrement by 0.15)
+   - Test `_buildAdaptiveChunks` to verify only new content is yielded (regression for the chunking bug)
+   - Test `generateLessonPlan` and `generateSummary` with mock `LlmService`
 
-**Acceptance Criteria:**
-- [ ] Inject `MasteryGraphService` as a provider parameter so `_startWeakAreasPractice` can be tested with a fake.
-- [ ] Add widget tests for disabled mode-card taps, topic-selector flow, and SR subject-selector branching.
+2. **Add widget tests for `ChatBubble`:**
+   - Test rendering for `MessageRole.student` vs `MessageRole.tutor`
+   - Test streaming state (animated dots visible when `isStreaming` and content is empty)
+   - Test sender label visibility via `showSender` parameter
+   - Test theme-aware colors applied correctly
 
----
+3. **Add widget tests for `LessonProgressBar`:**
+   - Test normal state (elapsed < planned)
+   - Test warning state (remaining <= 5 minutes) — orange bar
+   - Test overtime state (elapsed > planned) — red bar
+   - Test color-coded text for remaining time
 
-### 5. Hardcoded Localized Strings in Tests
+4. **Refactor `TutorScreen` for testability:**
+   - Inject `TutorService` (and its dependencies) via constructor or provider rather than hardcoding in `_initializeTutor`
+   - Add widget tests verifying loading state, progress bar visibility, message list population, and end-lesson dialog
 
-Across affected test files, UI string assertions use raw English literals (e.g., `'Correct!'`, `'No study plan for today'`, `'Practice Complete!'`, `'100%'`). These will break silently when locale data changes.
+5. **Add unit tests for `TutorService`:**
+   - Test `startLesson` creates session, initializes manager, generates lesson plan
+   - Test `endLesson` saves messages, saves final session, records mastery (only when questions asked)
+   - Test `getLessonHistory`, `getSessionMessages`, `getStats` delegation to repositories
+   - Test edge cases: `endLesson` with no manager, empty messages list, `questionsAsked == 0`
 
-**Affected:** All four practice test files.
+6. **Relocate orphaned tests:**
+   - Move `test/validation/answer_test.dart` → `test/features/questions/services/`
+   - Move `test/repository/repository_test.dart` → appropriate feature
+   - Move `test/screens/practice_test.dart` → `test/features/practice/`
+   - Move `test/models/llm_models_test.dart` → appropriate feature
 
-**Acceptance Criteria:**
-- [ ] Refactor assertions to reference `AppLocalizations` or test-local string constants so they survive l10n changes.
-
----
-
-### 6. `LearningPlanDashboard` — Missing Failure & Partial-Data Tests
-
-**Location:** `test/features/practice/presentation/learning_plan_dashboard_test.dart`
-
-- **No test** for when `generatePlan` returns a failure (error state rendering).
-- **No test** for partial service failures (e.g., `generatePlan` succeeds, `getWeakTopics` fails).
-- **No test** for `_loadData` `setState` being called only when widget is mounted.
-- **No test** for the urgency indicator rendering (`_buildUrgencyIndicator` color logic).
-
-**Acceptance Criteria:**
-- [ ] Add tests for failure paths and mixed success/failure scenarios.
-
----
-
-## Summary
-
-| Category | Count |
-|---|---|
-| Redundant test files to consolidate | 2 |
-| Misplaced test files to relocate | 2 |
-| High-priority missing test scenarios | 10 |
-| Structural issues (empty dirs, dead scaffolding) | 2 |
-| String-hardening needed | All 4 practice test files |
+7. **Remove or replace low-value tests in `lesson_presentation_test.dart` and `topic_list_screen_test.dart`** that test Flutter built-in widgets rather than application code — replace with actual widget-level tests that import and exercise the real screen widgets.

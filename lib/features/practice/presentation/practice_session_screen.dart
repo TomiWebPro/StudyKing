@@ -70,7 +70,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
-    _sessionRepo = StudySessionRepository();
+    _sessionRepo = ref.read(studySessionRepositoryProvider);
     _loadQuestions();
     _startTimer();
   }
@@ -349,7 +349,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                       AppLocalizations.of(context)!.time,
                       _elapsedTimeFormatted ?? '0 min 0 sec',
                       Icons.access_time,
-                      Colors.blue,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   Semantics(
@@ -369,7 +369,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                       AppLocalizations.of(context)!.correct,
                       _correctAnswers.toString(),
                       Icons.check_circle,
-                      Colors.green,
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -553,8 +553,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       padding: ResponsiveUtils.cardPadding(context),
       decoration: BoxDecoration(
         color: _isCorrect
-            ? Colors.green.withValues(alpha: 0.1)
-            : Colors.red.withValues(alpha: 0.1),
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+            : Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -564,7 +564,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             children: [
               Icon(
                 _isCorrect ? Icons.check_circle : Icons.error_outline,
-                color: _isCorrect ? Colors.green : Colors.red,
+                color: _isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
                 size: 28,
               ),
               const SizedBox(width: 12),
@@ -573,7 +573,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: _isCorrect ? Colors.green : Colors.red,
+                  color: _isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
                 ),
               ),
             ],
@@ -636,9 +636,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Color _getColorForScore(double score) {
-    if (score >= 0.8) return Colors.green;
-    if (score >= 0.5) return Colors.orange;
-    return Colors.red;
+    final cs = Theme.of(context).colorScheme;
+    if (score >= 0.8) return cs.primary;
+    if (score >= 0.5) return cs.tertiary;
+    return cs.error;
   }
 
   Widget _buildStatRow(String label, String value) {

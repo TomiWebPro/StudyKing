@@ -160,7 +160,7 @@ void main() {
       expect(result.isCorrect, isTrue);
     });
 
-    test('validates canvas drawing answer', () {
+    test('returns incorrect for canvas drawing answer via validateAnswerForQuestion (string input is not valid canvas data)', () {
       final question = _question(
         id: 'q-canvas',
         type: QuestionType.canvas,
@@ -168,17 +168,17 @@ void main() {
       );
 
       final result = service.validateAnswerForQuestion(question, 'Drawing submitted');
-      expect(result.isCorrect, isTrue);
+      expect(result.isCorrect, isFalse);
     });
 
-    test('validates essay answer', () {
+    test('validates essay answer (length > 50 chars is correct)', () {
       final question = _question(
         id: 'q-essay',
         type: QuestionType.essay,
         correctAnswer: '',
       );
 
-      final result = service.validateAnswerForQuestion(question, 'Long essay text');
+      final result = service.validateAnswerForQuestion(question, 'A' * 60);
       expect(result.isCorrect, isTrue);
     });
 

@@ -1,165 +1,45 @@
-# Codebase Architectural Decay: Inconsistent Result Types, Dead Code, Duplicate Barrels, and Repository Anti-patterns
+# Issue: Data Layer Fragmentation — Duplicate Profile Models, Inconsistent File Placement, and Missing Domain Abstractions
 
 ## Context
 
-The codebase shows signs of architectural drift where multiple contributors introduced overlapping, inconsistent, or dead patterns over time. Several issues degrade maintainability, type safety, and onboarding clarity.
+The codebase follows a feature-based architecture but lacks consistent enforcement of its conventions. An audit of `lib/features/settings/data/models/` and neighboring feature directories uncovered fragmentation across the data layer: duplicate Hive types representing the same concept (`ProfileData` vs `UserProfile`), non-uniform directory layouts across features, mutable models mixing business logic with serialization, and deep cross-feature imports from `main.dart` — all of which erode maintainability and increase the risk of data corruption bugs.
 
----
+## Affected Files
 
-## Issue 1: Three Incompatible `Result<T>` Types
+| File | Issue |
+|------|-------|
+| `lib/features/settings/data/models/settings_box.dart` (L126-195) | Defines `ProfileData` (Hive typeId: 5) — a profile model partially overlapping with `UserProfile` |
+| `lib/features/settings/data/models/user_profile_model.dart` (L1-99) | Defines `UserProfile` (Hive typeId: 10) — same domain concept as `ProfileData`, different Hive type, different fields |
+| `lib/features/subjects/models/subject_model.dart` | Placed directly in `models/` (no `data/` parent), breaking the `data/models/` convention used by every other feature |
+| `lib/core/data/models/mastery_state_model.dart` (L1-322) | 322-line model mixing Hive serialization with mutable business logic (`recordAttempt` contains inline spaced-repetition algorithm) |
+| `lib/features/settings/data/models/settings_model.dart` (L106-112) | `UsageRecord.calculateTotalCost` hardcodes LLM token pricing constants that change frequently |
+| `lib/features/settings/presentation/settings_screen.dart` (L10-11) | Imports `main.dart` for providers (`apiKeyProvider`, `selectedModelProvider`, `settingsProvider`) |
+| `lib/features/settings/presentation/api_config_screen.dart` (L5-6) | Imports `main.dart` for providers |
+| `lib/features/settings/presentation/profile_screen.dart` (L5) | Imports `main.dart` for `settingsRepository` and `localeProvider` |
+| `lib/features/settings/settings.dart` | Barrel file only exports presentation screens; models/repository are not re-exported, forcing deep relative imports |
+| `lib/features/subjects/data/repositories/subject_repository.dart` | `getStudentSubjects` ignores `studentId` param and returns `getAll()` — dead parameter |
+| `lib/features/lessons/data/models/` | Empty directory (leftover scaffolding) |
+| `lib/features/lessons/services/`, `lib/features/planner/services/`, `lib/features/sessions/services/` | Empty directories |
+| `lib/features/settings/data/repositories/settings_repository.dart` | `SettingsRepository` is a singleton DAO with no interface/abstraction; directly exposes Hive `Box` semantics |
 
-Three separate `Result<T>` classes exist with incompatible APIs:
+## Rationale
 
-| File | Definition | API |
-|---|---|---|
-| `lib/core/errors/handlers.dart:292` | `class Result<T>` | `const Result.success(this.data)` / `const Result.failure(this.error)` |
-| `lib/core/data/repositories/mastery_graph_repository.dart:8` | `class Result<T>` | `Result.success()` / `Result.failure()` named constructors |
-| `lib/core/data/repositories/question_repository.dart:8` | `sealed class Result<T>` | `SuccessResult<T>` / `FailureResult<T>` subclasses |
+1. **Duplicate profile models risk silent data loss.** `ProfileData` (typeId: 5) and `UserProfile` (typeId: 10) are persisted to separate Hive boxes. When the profile screen writes via `ProfileData` but other code reads via `UserProfile`, the two fall out of sync. The `settings_box.g.dart` generated file is never regenerated for `ProfileData` because `settings_box.dart` lacks a `part` directive. This means `ProfileData` serialization is entirely manual while `UserProfile` uses auto-generated serialization — yet both claim to represent user profile data.
 
-These are **type-incompatible** — a `Result` from one file cannot be used with code expecting another. This is a latent compilation/shared-code hazard.
+2. **Inconsistent directory structure creates cognitive overhead.** `Subject` model lives at `lib/features/subjects/models/subject_model.dart` while every other feature nests models under `data/models/`. The `subjects` feature also lacks a `presentation/` subdirectory for *all* its screen files — `subject_list_view.dart` is in `presentation/` but `subject_management_screen.dart`, `subject_selection_screen.dart`, etc. are also there; this is correct but the `data/models` directory is missing from `subjects`.
 
-### Affected
-- `lib/core/errors/handlers.dart`
-- `lib/core/data/repositories/mastery_graph_repository.dart`
-- `lib/core/data/repositories/question_repository.dart`
+3. **Mutable models violate immutability conventions.** `MasteryState` uses `late` mutable fields and mutation methods (`recordAttempt`, `_updateAccuracy`, etc.) on a `HiveObject`, making it impossible to track state changes, complicates testing, and prevents reliable change detection in Riverpod. The `recordAttempt` method is 40 lines of business logic embedded in a model class.
 
-### Rationale
-Three incompatible monads for the same abstraction will cause confusion and blocks shared error-handling infrastructure. A single `Result` type should be defined in `lib/core/errors/` and used consistently across all repositories.
+4. **`main.dart` imports from feature code create circular-dependency risk.** Three presentation files in the settings feature import `package:studyking/main.dart`. This couples feature code to the app's root composition root, making it impossible to test features in isolation and creating a build-time circular dependency hazard.
 
----
-
-## Issue 2: `core/core.dart` and `core/common.dart` Are Identical
-
-Both barrels export the **exact same 20 re-exports** and define the **same `IterableExtension`** inline extension. One is 100% redundant.
-
-### Affected
-- `lib/core/core.dart` (36 lines)
-- `lib/core/common.dart` (36 lines)
-
-### Rationale
-Duplicate barrels are a trap — developers will import one vs the other arbitrarily, and any divergence in the future will cause hidden import inconsistencies. Remove one and update imports across the codebase.
-
----
-
-## Issue 3: `DatabaseService` Is a Useless Shell
-
-`lib/core/data/database_service.dart` (19 lines) has:
-- 6 constructor parameters stored as public fields
-- **Zero methods, zero logic, zero orchestration**
-
-It does not init repositories, handle errors, or provide any lifecycle. It is a pure pass-through. `main.dart` must still call `init()` on each repository individually:
-
-```dart
-final database = DatabaseService(...);
-await database.topicRepository.init();
-await database.questionRepository.init();
-// ... 4 more manual inits
-```
-
-### Affected
-- `lib/core/data/database_service.dart`
-- `lib/main.dart` (lines 20–27, 191–199)
-
-### Rationale
-The service provides no abstraction benefit. Either give it an `init()` that cascades to all child repositories, or remove it and declare independent top-level repository variables.
-
----
-
-## Issue 4: `app_runtime_config.dart` Is a 269-Line Dumping Ground
-
-This file contains **9 unrelated classes** — several of which are completely dead code (constants defined but never used anywhere):
-
-| Class | External Usage | Verdict |
-|---|---|---|
-| `StudyConfig` | **None** — all 7 fields unused | Dead code |
-| `PdfConfig` | **None** — all 3+ fields and 3 methods unused | Dead code |
-| `ErrorKeys` | **None** — all 3 strings unused | Dead code |
-| `MediaConfig` | **None** — both members unused | Dead code |
-| `UiConfig` | Only `defaultThemeMode` used (in `runtimeSnapshot()`) | Mostly dead |
-| `CacheConfig` | Only `cacheExpiration` used (in `runtimeSnapshot()`) | Mostly dead |
-| `SecurityConfig` | Heavily used | Keep |
-| `AppConfig` | Heavily used | Keep |
-| `AppConstants` | Used in `main.dart` | Keep |
-
-### Affected
-- `lib/core/constants/app_runtime_config.dart`
-
-### Rationale
-269 lines with 4 dead classes and 2 mostly-dead classes creates unnecessary cognitive load. Split into separate files by concern and remove dead classes.
-
----
-
-## Issue 5: Cross-Layer Dependency from `core/data/data.dart` to `features/`
-
-`lib/core/data/data.dart` line 21:
-```dart
-export '../../features/subjects/data/repositories/subject_repository.dart';
-```
-
-This creates a **layering violation**: `core/` depends on `features/`, which is the wrong direction in a clean architecture.
-
-### Affected
-- `lib/core/data/data.dart:21`
-
-### Rationale
-Core should be independent of feature modules. The `SubjectRepository` export belongs in `subjects/subject_feature.dart` (which already exports it). Remove this export from `data.dart` and fix any imports that break.
-
----
-
-## Issue 6: Inconsistent Repository Initialization Patterns
-
-| Repository | init() pattern | Return type | Hive access |
-|---|---|---|---|
-| TopicRepository | `_box = Hive.box<Topic>('topics')` | `Future<void>` | Assumes box open |
-| QuestionRepository | `_box = await Hive.openBox<Question>('questions')` | `Future<Result<void>>` | Opens itself |
-| MasteryGraphRepository | `await Hive.openBox<...>(...)` | `Future<Result<void>>` | Opens itself |
-| SpacedRepetitionRepository | `await Hive.openBox<...>(...)` | `Future<Result<void>>` | Opens itself |
-| SubjectRepository | nullable `Box<Subject>?` + lazy getter | `Future<void>` | Assumes box open |
-
-Three different init patterns with two different return types. The `Result<void>` return in three repos is **never inspected** by `main.dart` (which calls init and ignores the return value).
-
-### Affected
-- `lib/core/data/repositories/topic_repository.dart`
-- `lib/core/data/repositories/question_repository.dart`
-- `lib/core/data/repositories/mastery_graph_repository.dart`
-- `lib/core/data/repositories/spaced_repetition_repository.dart`
-- `lib/core/data/repositories/subject_repository.dart` (uses nullable + getter — unique)
-- `lib/main.dart` (ignores Result returns)
-
-### Rationale
-Inconsistency forces every developer to read each file to understand its contract. Standardize on one pattern: either all use `Future<void>` and throw on error, or all use a shared `Result<T>` and gracefully handle initialization errors.
-
----
-
-## Issue 7: Dead Code — Empty Files, Duplicate Repository, Silent Catch
-
-| Item | File | Severity |
-|---|---|---|
-| Empty barrel stub | `lib/features/lessons/services/services.dart` | Low |
-| Empty barrel stub | `lib/features/planner/services/services.dart` | Low |
-| Empty barrel stub | `lib/features/sessions/services/services.dart` | Low |
-| Empty repository file | `lib/core/data/repositories/hive_repository.dart` (0 lines) | Low |
-| Silent catch (no log, no feedback) | `lib/features/practice/presentation/practice_screen.dart:631-633` | Medium |
-| Duplicate `SessionRepository` (unused) | `lib/core/data/repositories/session_repository.dart` (exists alongside `study_session_repository.dart`) | Medium |
-| `_logError` uses `bool.hasEnvironment('flutter.debug')` — **always false** | `lib/core/errors/handlers.dart:217` | High |
-
-The `_logError` bug means `AppErrorHandler` silently discards all errors in debug mode — the one environment where detailed logging is most valuable.
-
-### Affected
-Multiple files listed above.
-
-### Rationale
-Dead code increases maintenance surface. The `_logError` bug is a correctness issue that should be fixed immediately.
-
----
+5. **Hardcoded token pricing will silently produce wrong costs.** The `calculateTotalCost` function embeds per-token rates for a specific LLM provider. When prices change (which they do frequently), the displayed usage costs will be silently incorrect with no mechanism to update them without a code deploy.
 
 ## Acceptance Criteria
 
-1. **Single `Result<T>`**: Consolidate the three incompatible `Result<T>` types into one, defined in `lib/core/errors/`. Migrate all repositories to use it consistently.
-2. **Remove duplicate barrel**: Delete `lib/core/common.dart` and update all imports to use `core.dart`, or differentiate the two and document the distinction.
-3. **Fix or remove `DatabaseService`**: Either add cascade `init()`, error handling, and lifecycle, or remove it and inline repository declarations.
-4. **Clean up `app_runtime_config.dart`**: Extract `SecurityConfig`, `AppConfig`, and `AppConstants` into their own files. Remove dead classes (`StudyConfig`, `PdfConfig`, `ErrorKeys`, `MediaConfig`).
-5. **Fix layering violation**: Remove `export '../../features/subjects/...'` from `lib/core/data/data.dart`.
-6. **Standardize repository init**: All repositories under `lib/core/data/repositories/` must use the same `init()` signature and box-accessing strategy. Remove or use the `Result` return values.
-7. **Remove dead code**: Delete empty files, `hive_repository.dart`, and `session_repository.dart` (confirms unused). Add error logging to the silent `catch` block.
-8. **Fix `_logError`**: Replace `const bool.hasEnvironment('flutter.debug')` with `kDebugMode` from `package:flutter/foundation.dart`.
+- [ ] Consolidate `ProfileData` and `UserProfile` into a single model class; migrate Hive typeId; update all consumers (profile_screen, settings_repository, etc.)
+- [ ] Move `subject_model.dart` into `lib/features/subjects/data/models/subject_model.dart` and update imports/barrel file
+- [ ] Extract mutable business logic from `MasteryState` into a dedicated service class (e.g. `MasteryCalculationService`); make `MasteryState` immutable with a single `copyWith` mutation path
+- [ ] Remove `main.dart` imports from feature presentation files; inject dependencies via Riverpod providers defined in the feature's own provider files or via constructor injection
+- [ ] Extract hardcoded token pricing into a configurable provider or runtime configuration source
+- [ ] Either populate or remove the 4 empty scaffolding directories
+- [ ] Update the settings barrel file to re-export models and repository so consumers use clean imports

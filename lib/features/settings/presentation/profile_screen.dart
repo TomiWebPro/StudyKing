@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import '../../../main.dart' show settingsRepository, localeProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsRepository, localeProvider;
 import '../data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
@@ -404,7 +404,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.language),
                         title: Text(l10n.language),
-                        subtitle: Text(_language == 'en' ? l10n.english : l10n.spanish),
+                        subtitle: Text({
+                          'en': l10n.english,
+                          'es': l10n.spanish,
+                        }[_language] ?? _language),
                         trailing: DropdownButton<String>(
                           value: _language,
                           items: [

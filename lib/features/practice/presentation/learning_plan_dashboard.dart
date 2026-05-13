@@ -4,6 +4,7 @@ import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/data/models/personal_learning_plan_model.dart';
 import '../../../core/data/models/mastery_state_model.dart';
+import '../../../core/data/repositories/plan_repository.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class LearningPlanDashboard extends StatefulWidget {
@@ -37,34 +38,48 @@ class _LearningPlanDashboardState extends State<LearningPlanDashboard> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
+    // Check for cached plan first
+    try {
+      final planRepo = PlanRepository();
+      await planRepo.init();
+      final cached = await planRepo.loadPlan(widget.studentId);
+      if (cached != null) {
+        _plan = cached;
+      }
+    } catch (_) {}
+
+    // Generate fresh plan
     final planResult = await widget.planService.generatePlan(widget.studentId);
-    if (planResult.isSuccess) {
+    if (planResult.isSuccess && mounted) {
       setState(() => _plan = planResult.data);
     }
 
     final weakResult = await widget.masteryService.getWeakTopics(widget.studentId);
-    if (weakResult.isSuccess) {
+    if (weakResult.isSuccess && mounted) {
       setState(() => _weakTopics = weakResult.data!);
     }
 
     final atRiskResult = await widget.planService.getAtRiskTopicIds(widget.studentId);
-    if (atRiskResult.isSuccess) {
+    if (atRiskResult.isSuccess && mounted) {
       setState(() => _atRiskTopicIds = atRiskResult.data!);
     }
 
     final readyResult = await widget.planService.getReadyToAdvanceTopicIds(widget.studentId);
-    if (readyResult.isSuccess) {
+    if (readyResult.isSuccess && mounted) {
       setState(() => _readyToAdvanceTopicIds = readyResult.data!);
     }
 
     final snapshotResult = await widget.masteryService.getMasterySnapshot(widget.studentId);
-    if (snapshotResult.isSuccess) {
+    if (snapshotResult.isSuccess && mounted) {
       setState(() => _snapshot = snapshotResult.data);
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override

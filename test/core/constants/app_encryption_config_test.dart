@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/constants/app_runtime_config.dart';
+import 'package:studyking/core/constants/security_config.dart';
 
 void main() {
   group('SecurityConfig encryption key validation', () {

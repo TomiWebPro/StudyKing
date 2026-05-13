@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
@@ -20,6 +22,7 @@ class PracticeScreen extends ConsumerStatefulWidget {
 }
 
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
+  final Logger _logger = const Logger('PracticeScreen');
   List<Subject> _subjects = [];
   bool _isLoading = true;
   Map<String, int> _dueCounts = {};
@@ -184,7 +187,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             Text(
               l10n.addSubjectsAndQuestionsToStartPracticing,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -228,7 +231,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               icon: Icons.flash_on,
               title: l10n.quickPractice,
               subtitle: l10n.randomQuestions(10),
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
               onTap: () => _showPracticeModeDialog(),
             ),
             _PracticeModeCard(
@@ -237,7 +240,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               subtitle: _isLoadingDueCounts 
                   ? l10n.comingSoon 
                   : _getSpacedRepetitionSubtitle(l10n),
-              color: Colors.orange,
+              color: Theme.of(context).colorScheme.tertiary,
               onTap: _dueCounts.values.any((c) => c > 0) 
                   ? () => _showSpacedRepetitionSubjectSelector()
                   : null,
@@ -250,14 +253,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               icon: Icons.category,
               title: l10n.topicFocus,
               subtitle: l10n.practiceSpecificTopics,
-              color: Colors.purple,
+              color: Theme.of(context).colorScheme.secondary,
               onTap: () => _showTopicSelector(),
             ),
             _PracticeModeCard(
               icon: Icons.bar_chart,
               title: l10n.weakAreas,
               subtitle: l10n.focusOnMistakes,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
               onTap: _subjects.isNotEmpty ? () => _startWeakAreasPractice() : null,
             ),
           ],
@@ -323,7 +326,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                     Text(
                       AppLocalizations.of(context)!.readyForPractice,
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -332,7 +335,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               ),
               Icon(
                 Icons.arrow_forward_ios,
-                color: Colors.grey.shade400,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -379,7 +382,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                       Text(
                         subject.code ?? '',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -389,13 +392,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                         Icon(
                           Icons.quiz,
                           size: 14,
-                          color: Colors.grey.shade500,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           AppLocalizations.of(context)!.practiceAvailable,
                           style: TextStyle(
-                            color: Colors.grey.shade500,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -417,15 +420,16 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Color _getSubjectColor(String name) {
+    final cs = Theme.of(context).colorScheme;
     final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.pink,
-      Colors.indigo,
-      Colors.cyan,
+      cs.primary,
+      cs.secondary,
+      cs.tertiary,
+      cs.primary,
+      cs.secondary,
+      cs.tertiary,
+      cs.primary,
+      cs.secondary,
     ];
     return colors[name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
   }
@@ -639,7 +643,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         ),
       );
     } catch (e) {
-      // Handle error silently
+      _logger.e('Error starting practice session', e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to start practice session')),
+      );
     }
   }
 
@@ -669,11 +677,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.check_circle,
-                size: 64,
-                color: Colors.green.shade400,
-              ),
+                  Icon(
+                    Icons.check_circle,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
               const SizedBox(height: 16),
               Text(
                 l10n.allCaughtUp,
@@ -682,10 +690,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                l10n.noReviewsScheduled,
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
+                Text(
+                  l10n.noReviewsScheduled,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
               const SizedBox(height: 24),
             ],
           ),
@@ -740,7 +748,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   Future<void> _startWeakAreasPractice() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final masteryService = MasteryGraphService();
+      final masteryService = ref.read(masteryGraphServiceProvider);
       await masteryService.init();
 
       if (_subjects.isEmpty) return;
@@ -802,7 +810,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     AppLocalizations l10n,
   ) async {
     try {
-      final weakTopicsResult = await masteryService.getWeakTopics('anonymous');
+      final studentId = StudentIdService().getStudentId();
+      final weakTopicsResult = await masteryService.getWeakTopics(studentId);
       if (weakTopicsResult.isFailure || weakTopicsResult.data == null || weakTopicsResult.data!.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -948,14 +957,14 @@ class _PracticeModeCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: isAvailable ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
+                  color: isAvailable ? color.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       icon,
-                      color: isAvailable ? color : Colors.grey.shade400,
+                      color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       size: 32,
                     ),
                     const SizedBox(height: 8),
@@ -963,7 +972,7 @@ class _PracticeModeCard extends StatelessWidget {
                       title,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: isAvailable ? color : Colors.grey.shade400,
+                        color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -974,7 +983,7 @@ class _PracticeModeCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isAvailable ? color : Colors.grey.shade400,
+                        color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -990,7 +999,7 @@ class _PracticeModeCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: Theme.of(context).colorScheme.error,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -1057,19 +1066,19 @@ class _PracticeModeOption extends StatelessWidget {
                     if (subtitle != null)
                       Text(
                         subtitle!,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                       ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.grey.shade400,
-                size: 20,
-              ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
             ],
           ),
         ),

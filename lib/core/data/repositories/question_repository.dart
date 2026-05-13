@@ -1,42 +1,20 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../errors/result.dart';
 import '../../utils/logger.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import '../models/markscheme_model.dart';
 
-/// Generic Result class for safe error propagation
-sealed class Result<T> {
-  final T? data;
-  final String? error;
-
-  const Result({this.data, this.error});
-
-  factory Result.success(T data) = SuccessResult<T>;
-  factory Result.failure(String error) = FailureResult<T>;
-
-  bool get isSuccess => error == null;
-  bool get isFailure => error != null;
-}
-
-class SuccessResult<T> extends Result<T> {
-  SuccessResult(T data) : super(data: data);
-}
-
-class FailureResult<T> extends Result<T> {
-  FailureResult(String error) : super(error: error);
-}
-
 class QuestionRepository {
   final Logger _logger = const Logger('QuestionRepository');
   late Box<Question> _box;
 
-  Future<Result<void>> init() async {
+  Future<void> init() async {
     try {
-      _box = await Hive.openBox<Question>('questions');
-      return Result.success(null);
+      _box = Hive.box<Question>('questions');
     } catch (e) {
       _logger.e('Error initializing question repository', e);
-      return Result.failure('Failed to initialize question repository: ${e.toString()}');
+      rethrow;
     }
   }
 
@@ -78,7 +56,7 @@ class QuestionRepository {
         return Result.failure('Question box is not open');
       }
       final all = _box.values.toList();
-      return SuccessResult<List<Question>>(all.where((q) => q.topicId == topicId).toList());
+      return Result.success(all.where((q) => q.topicId == topicId).toList());
     } catch (e) {
       _logger.e('Error getting questions by topic', e);
       return Result.failure('Failed to get questions by topic: ${e.toString()}');
@@ -91,7 +69,7 @@ class QuestionRepository {
         return Result.failure('Question bank is not open');
       }
       final all = _box.values.toList();
-      return SuccessResult<List<Question>>(all.where((q) => q.subjectId == subjectId).toList());
+      return Result.success(all.where((q) => q.subjectId == subjectId).toList());
     } catch (e) {
       _logger.e('Error getting questions by subject', e);
       return Result.failure('Failed to get questions by subject: ${e.toString()}');
@@ -107,7 +85,7 @@ class QuestionRepository {
         return Result.failure('Question bank is not open');
       }
       final all = _box.values.toList();
-      return SuccessResult<List<Question>>(all.where((q) => 
+      return Result.success(all.where((q) => 
         q.subjectId == subjectId && q.topicId == topicId
       ).toList());
     } catch (e) {
@@ -122,7 +100,7 @@ class QuestionRepository {
         return Result.failure('Question bank is not open');
       }
       final all = _box.values.toList();
-      return SuccessResult<List<Question>>(all.where((q) => q.type == type).toList());
+      return Result.success(all.where((q) => q.type == type).toList());
     } catch (e) {
       _logger.e('Error getting questions by type', e);
       return Result.failure('Failed to get questions by type: ${e.toString()}');
@@ -138,7 +116,7 @@ class QuestionRepository {
         return Result.failure('Question bank is not open');
       }
       final all = _box.values.toList();
-      return SuccessResult<List<Question>>(all.where((q) => 
+      return Result.success(all.where((q) => 
         q.subjectId == subjectId && q.type == type
       ).toList());
     } catch (e) {
@@ -160,7 +138,7 @@ class QuestionRepository {
         return Result.failure('No questions with markscheme found for subject: $subjectId');
       }
       
-      return SuccessResult<List<QuestionWithMarkscheme>>(
+      return Result.success(
         filtered.map((q) => QuestionWithMarkscheme(
           question: q, 
           markscheme: q.markscheme!,

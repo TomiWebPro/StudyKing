@@ -3,6 +3,7 @@ import '../../../core/data/database_service.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
+import '../../../core/data/repositories/plan_repository.dart';
 import '../../../core/utils/logger.dart';
 
 class MentorService {
@@ -367,10 +368,36 @@ Use this context to provide personalized mentoring.
           'questions': s.questionsAnswered,
         }).toList();
 
+    // Include plan data if available
+    Map<String, dynamic>? planData;
+    try {
+      final planRepo = PlanRepository();
+      await planRepo.init();
+      final plan = await planRepo.loadPlan(_studentId);
+      if (plan != null) {
+        planData = {
+          'hasPlan': true,
+          'generatedAt': plan.generatedAt.toIso8601String(),
+          'planDurationDays': plan.planDurationDays,
+          'dailyPlans': plan.dailyPlans.take(7).map((d) => {
+            'day': d.dayNumber,
+            'date': d.date.toIso8601String(),
+            'focus': d.focus,
+            'targetQuestions': d.targetQuestions,
+            'targetMinutes': d.targetMinutes,
+            'isRestDay': d.isRestDay,
+            'topicCount': d.priorityTopics.length,
+          }).toList(),
+          'summary': plan.summary.toJson(),
+        };
+      }
+    } catch (_) {}
+
     return {
       'upcomingLessons': upcomingLessons,
       'recentSessions': recentStudySessions,
       'totalSessions': sessions.length,
+      'plan': planData,
     };
   }
 

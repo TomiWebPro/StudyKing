@@ -1,9 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../../../core/data/repositories/topic_repository.dart';
-import '../../../features/subjects/data/repositories/subject_repository.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
+import '../../../core/data/repositories/plan_repository.dart';
+import '../../../core/services/personal_learning_plan_service.dart';
+import '../../../core/services/student_id_service.dart';
+import '../../../core/services/mastery_graph_service.dart';
+import '../../../core/data/models/personal_learning_plan_model.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../teaching/presentation/tutor_screen.dart';
@@ -20,53 +21,37 @@ class _PlannerScreenState extends State<PlannerScreen> {
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
   bool _isGenerating = false;
-  List<_ScheduleItem> _schedule = [];
-  String? _selectedSubjectId;
+  PersonalLearningPlan? _plan;
+  PersonalLearningPlanService? _planService;
+  late PlanRepository _planRepo;
+  late MasteryGraphService _masteryService;
+  String? _error;
 
-  Future<List<Map<String, String>>> _fetchCurriculumTopics(
-      String courseName) async {
+  @override
+  void initState() {
+    super.initState();
+    _planRepo = PlanRepository();
+    _masteryService = MasteryGraphService();
+    _loadExistingPlan();
+  }
+
+  @override
+  void dispose() {
+    _courseController.dispose();
+    _daysController.dispose();
+    _hoursController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadExistingPlan() async {
+    final studentId = StudentIdService().getStudentId();
     try {
-      final subjectRepo = SubjectRepository();
-      final topicRepo = TopicRepository();
-      await subjectRepo.init();
-      await topicRepo.init();
-
-      final subjects = await subjectRepo.getAll();
-      final matchingSubjects = subjects.where((s) =>
-          s.name.toLowerCase().contains(courseName.toLowerCase()) ||
-          (s.code?.toLowerCase().contains(courseName.toLowerCase()) ?? false));
-
-      final results = <Map<String, String>>[];
-      for (final subject in matchingSubjects) {
-        _selectedSubjectId ??= subject.id;
-        final subjectTopics = await topicRepo.getBySubject(subject.id);
-        for (final topic in subjectTopics) {
-          results.add({
-            'id': topic.id,
-            'title': topic.title,
-            'subjectId': subject.id,
-          });
-          if (results.length >= 7) break;
-        }
-        if (results.length >= 7) break;
+      await _planRepo.init();
+      final existing = await _planRepo.loadPlan(studentId);
+      if (existing != null && mounted) {
+        setState(() => _plan = existing);
       }
-
-      if (results.isEmpty) {
-        final allTopics = await topicRepo.getAll();
-        for (final topic in allTopics) {
-          results.add({
-            'id': topic.id,
-            'title': topic.title,
-            'subjectId': '',
-          });
-          if (results.length >= 7) break;
-        }
-      }
-
-      return results;
-    } catch (_) {
-      return [];
-    }
+    } catch (_) {}
   }
 
   Future<void> _generatePlan() async {
@@ -74,11 +59,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final daysValue = int.tryParse(_daysController.text);
     final hoursValue = int.tryParse(_hoursController.text);
 
-    if (course.isEmpty ||
-        daysValue == null ||
-        hoursValue == null ||
-        daysValue <= 0 ||
-        hoursValue <= 0) {
+    if (course.isEmpty || daysValue == null || hoursValue == null || daysValue <= 0 || hoursValue <= 0) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,128 +68,54 @@ class _PlannerScreenState extends State<PlannerScreen> {
       return;
     }
 
-    setState(() => _isGenerating = true);
-
-    final curriculumTopics = await _fetchCurriculumTopics(course);
-    final llmPlan =
-        await _tryGenerateWithLlm(course, daysValue, hoursValue, curriculumTopics);
-
-    if (!mounted) return;
-
-    final totalHours = daysValue * hoursValue;
-    final sessionDuration = 45;
-    final totalSessions = (totalHours * 60 / sessionDuration).floor();
-
     setState(() {
-      if (llmPlan.isNotEmpty) {
-        _schedule = llmPlan;
-      } else {
-        _schedule = List.generate(daysValue, (dayIndex) {
-          final l10n = AppLocalizations.of(context)!;
-          final topicLabel = curriculumTopics.isNotEmpty
-              ? curriculumTopics[dayIndex % curriculumTopics.length]['title']!
-              : l10n.courseSessionLabel(course, (dayIndex * sessionDuration) + 1);
-          return _ScheduleItem(
-            day: dayIndex + 1,
-            session: 1,
-            topic: topicLabel,
-            duration: sessionDuration,
-            totalSessions: totalSessions,
-            subjectId: curriculumTopics.isNotEmpty
-                ? curriculumTopics[dayIndex % curriculumTopics.length]['subjectId'] ?? ''
-                : '',
-            topicId: curriculumTopics.isNotEmpty
-                ? curriculumTopics[dayIndex % curriculumTopics.length]['id'] ?? ''
-                : '',
-          );
-        });
-      }
-      _isGenerating = false;
+      _isGenerating = true;
+      _error = null;
     });
 
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.generatedPlanOverDays(course, daysValue, totalHours)),
-      ),
-    );
-  }
+    final studentId = StudentIdService().getStudentId();
 
-  Future<List<_ScheduleItem>> _tryGenerateWithLlm(
-    String course,
-    int days,
-    int hoursPerDay,
-    List<Map<String, String>> topics,
-  ) async {
     try {
-      final config = LlmConfiguration(
-        provider: LlmProvider.openRouter,
-        apiKey: '',
-      );
-      final llm = LlmService(config: config);
+      await _masteryService.init();
+      await _planRepo.init();
 
-      final topicNames = topics.map((t) => t['title']).join(', ');
-
-      final prompt = '''
-Create a detailed study plan for "$course" over $days days, $hoursPerDay hours per day.
-
-Available topics: $topicNames
-
-Return a JSON array where each item has:
-{
-  "day": 1,
-  "topic": "Topic name from the available list",
-  "duration_minutes": 45,
-  "focus": "Brief focus area"
-}
-
-Create exactly $days entries, cycling through available topics.
-''';
-
-      final response = await llm.chat(
-        message: prompt,
-        modelId: 'openai/gpt-4o-mini',
-        systemPrompt:
-            'You are a study planner. Return only valid JSON, no markdown.',
+      _planService = PersonalLearningPlanService(
+        masteryService: _masteryService,
+        config: PlanGenerationConfig(
+          planDurationDays: daysValue,
+          targetMinutesPerDay: (hoursValue * 60).toDouble(),
+          targetQuestionsPerDay: 15,
+        ),
       );
 
-      final jsonList = _extractJsonArray(response);
-      if (jsonList != null) {
-        return jsonList.asMap().entries.map((entry) {
-          final item = entry.value as Map<String, dynamic>;
-          final topicTitle = item['topic'] as String? ?? '';
-          final matchingTopic = topics.firstWhere(
-            (t) => t['title'] == topicTitle,
-            orElse: () => {'id': '', 'title': topicTitle, 'subjectId': ''},
-          );
-          return _ScheduleItem(
-            day: (item['day'] as int?) ?? entry.key + 1,
-            session: 1,
-            topic: matchingTopic['title'] ?? topicTitle,
-            duration: (item['duration_minutes'] as int?) ?? 45,
-            totalSessions: days,
-            subjectId: matchingTopic['subjectId'] ?? '',
-            topicId: matchingTopic['id'] ?? '',
-          );
-        }).toList();
-      }
-    } catch (_) {}
+      final result = await _planService!.generatePlan(studentId);
 
-    return [];
-  }
+      if (!mounted) return;
 
-  List<dynamic>? _extractJsonArray(String response) {
-    try {
-      final start = response.indexOf('[');
-      final end = response.lastIndexOf(']');
-      if (start != -1 && end != -1) {
-        final jsonStr = response.substring(start, end + 1);
-        final decoded = jsonDecode(jsonStr);
-        if (decoded is List) return decoded;
+      if (result.isSuccess) {
+        final plan = result.data!;
+        setState(() {
+          _plan = plan;
+          _isGenerating = false;
+        });
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.generatedPlanOverDays(course, daysValue, daysValue * hoursValue))),
+        );
+      } else {
+        setState(() {
+          _isGenerating = false;
+          _error = result.error ?? 'Failed to generate plan';
+        });
       }
-    } catch (_) {}
-    return null;
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _error = 'Error: $e';
+        });
+      }
+    }
   }
 
   void _openTutorMode(String topicId, String topicTitle, String subjectId) {
@@ -234,175 +141,241 @@ Create exactly $days entries, cycling through available topics.
         padding: ResponsiveUtils.screenPadding(context),
         child: FocusTraversalGroup(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.createStudyPlan,
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(1),
-              child: TextField(
-                controller: _courseController,
-                decoration: InputDecoration(
-                  labelText: l10n.courseSubject,
-                  hintText: l10n.courseHint,
-                  border: const OutlineInputBorder(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.createStudyPlan,
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: TextField(
+                  controller: _courseController,
+                  decoration: InputDecoration(
+                    labelText: l10n.courseSubject,
+                    hintText: l10n.courseHint,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final narrow = constraints.maxWidth < 400;
-                if (narrow) {
-                  return Column(
+              const SizedBox(height: 16),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final narrow = constraints.maxWidth < 400;
+                  if (narrow) {
+                    return Column(
+                      children: [
+                        TextField(
+                          controller: _daysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.days,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _hoursController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.hoursPerDay,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
                     children: [
-                      TextField(
-                        controller: _daysController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.days,
-                          border: const OutlineInputBorder(),
+                      Expanded(
+                        child: TextField(
+                          controller: _daysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.days,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _hoursController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.hoursPerDay,
-                          border: const OutlineInputBorder(),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _hoursController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.hoursPerDay,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
                       ),
                     ],
                   );
-                }
-                return Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _daysController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.days,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _hoursController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.hoursPerDay,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Semantics(
-              button: true,
-              label: _isGenerating ? l10n.generating : l10n.generatePlan,
-              child: ElevatedButton.icon(
-                onPressed: _isGenerating ? null : _generatePlan,
-                icon: _isGenerating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.calendar_today),
-                label: Text(
-                    _isGenerating ? l10n.generating : l10n.generatePlan),
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_schedule.isNotEmpty) ...[
-              Text(l10n.yourStudySchedule,
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _schedule.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final item = _schedule[index];
-                  return Semantics(
-                    label:
-                        '${item.topic}, ${l10n.sessionDurationMinutes(item.duration)}',
-                    child: Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer,
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                        title: Text(item.topic),
-                        subtitle:
-                            Text(l10n.sessionDurationMinutes(item.duration)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (item.topicId.isNotEmpty)
-                              Semantics(
-                                button: true,
-                                label: l10n.startAiTutoring,
-                                child: IconButton(
-                                  icon: const Icon(Icons.smart_toy_outlined),
-                                  tooltip: l10n.startAiTutoring,
-                                  onPressed: () => _openTutorMode(
-                                    item.topicId,
-                                    item.topic,
-                                    item.subjectId,
-                                  ),
-                                ),
-                              ),
-                            const Icon(Icons.play_arrow),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
                 },
               ),
+              const SizedBox(height: 16),
+              Semantics(
+                button: true,
+                label: _isGenerating ? l10n.generating : l10n.generatePlan,
+                child: ElevatedButton.icon(
+                  onPressed: _isGenerating ? null : _generatePlan,
+                  icon: _isGenerating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.calendar_today),
+                  label: Text(_isGenerating ? l10n.generating : l10n.generatePlan),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_error != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                ),
+              const SizedBox(height: 24),
+              if (_plan != null) ...[
+                _buildPlanSummary(context),
+                const SizedBox(height: 16),
+                _buildDailyPlans(context),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlanSummary(BuildContext context) {
+    final summary = _plan!.summary;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.summarize, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Plan Summary', style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const Divider(),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                _buildSummaryChip('${summary.totalQuestions}Q', 'Total'),
+                _buildSummaryChip('${summary.totalMinutes}min', 'Total Time'),
+                _buildSummaryChip('${summary.newTopics} new', 'Topics'),
+                _buildSummaryChip('${summary.reviewTopics} review', 'Review'),
+                _buildSummaryChip('${(summary.estimatedCoverage * 100).round()}%', 'Coverage'),
+              ],
+            ),
+            if (summary.focusAreas.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Focus: ${summary.focusAreas.join(", ")}', style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSummaryChip(String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
       ),
     );
   }
-}
 
-class _ScheduleItem {
-  final int day;
-  final int session;
-  final String topic;
-  final int duration;
-  final int totalSessions;
-  final String subjectId;
-  final String topicId;
+  Widget _buildDailyPlans(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.yourStudySchedule,
+            style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16),
+        ..._plan!.dailyPlans.map((day) => _buildDayCard(day)),
+      ],
+    );
+  }
 
-  _ScheduleItem({
-    required this.day,
-    required this.session,
-    required this.topic,
-    required this.duration,
-    required this.totalSessions,
-    this.subjectId = '',
-    this.topicId = '',
-  });
+  Widget _buildDayCard(DailyPlan day) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(
+                    '${day.dayNumber}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    day.focus ?? 'Study Day',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                if (day.isRestDay)
+                  Chip(
+                    label: const Text('Rest', style: TextStyle(fontSize: 10)),
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                if (!day.isRestDay)
+                  Text('${day.targetQuestions}Q \u00b7 ${day.targetMinutes}min',
+                      style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+            if (!day.isRestDay && day.priorityTopics.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...day.priorityTopics.map((topic) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: Icon(Icons.school, size: 18, color: Theme.of(context).colorScheme.primary),
+                title: Text(topic.topicTitle, style: Theme.of(context).textTheme.bodyMedium),
+                subtitle: Text('${topic.estimatedQuestions}Q \u00b7 ${topic.estimatedMinutes}min',
+                    style: Theme.of(context).textTheme.bodySmall),
+                trailing: topic.topicId.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.smart_toy_outlined, size: 20),
+                        tooltip: 'Start tutoring',
+                        onPressed: () => _openTutorMode(topic.topicId, topic.topicTitle, ''),
+                      )
+                    : null,
+              )),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

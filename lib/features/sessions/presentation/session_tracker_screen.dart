@@ -11,9 +11,9 @@ import 'package:studyking/features/sessions/presentation/session_history_screen.
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
-
-
-const String _defaultStudentId = 'anonymous';
+import '../../../../core/services/student_id_service.dart';
+import '../../../../core/services/instrumentation_service.dart';
+import '../../../../core/data/repositories/plan_repository.dart';
 
 class SessionTrackerScreen extends StatefulWidget {
   final StudySessionRepository? sessionRepository;
@@ -141,6 +141,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
 
     final questionsAnswered = stats?.questionsAnswered ?? 0;
     final correctAnswers = stats?.correctAnswers ?? 0;
+    final studentId = StudentIdService().getStudentId();
 
     final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 
@@ -152,7 +153,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
         timeSpentMs: duration,
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
-        studentId: _defaultStudentId,
+        studentId: studentId,
         subjectId: 'all',
       ));
     } catch (e) {
@@ -162,6 +163,30 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
         );
       }
     }
+
+    // Track plan adherence
+    try {
+      final planRepo = PlanRepository();
+      await planRepo.init();
+      final plan = await planRepo.loadPlan(studentId);
+      if (plan != null) {
+        final adherenceTracker = PlanAdherenceTracker();
+        final todayPlan = plan.dailyPlans.where((d) =>
+            d.date.year == DateTime.now().year &&
+            d.date.month == DateTime.now().month &&
+            d.date.day == DateTime.now().day).firstOrNull;
+        if (todayPlan != null) {
+          adherenceTracker.recordDay(
+            studentId: studentId,
+            date: DateTime.now(),
+            plannedQuestions: todayPlan.targetQuestions,
+            actualQuestions: questionsAnswered,
+            plannedMinutes: todayPlan.targetMinutes,
+            actualMinutes: duration ~/ 60000,
+          );
+        }
+      }
+    } catch (_) {}
 
     if (!mounted) return;
 

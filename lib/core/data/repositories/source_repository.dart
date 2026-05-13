@@ -19,4 +19,24 @@ class SourceRepository {
   Future<List<Source>> getAll() async {
     return _box.values.toList();
   }
+
+  Future<List<Source>> getBySubject(String subjectId) async {
+    return _box.values.where((s) => s.subjectId == subjectId).toList();
+  }
+
+  Future<List<Source>> getByTopic(String topicId) async {
+    return _box.values.where((s) => s.topicId == topicId).toList();
+  }
+
+  Future<List<Source>> getByStudent(String studentId) async {
+    return _box.values.where((s) => s.studentId == studentId).toList();
+  }
+
+  Future<void> delete(String id) async {
+    await _box.delete(id);
+  }
+
+  Future<List<Source>> getByType(String sourceType) async {
+    return _box.values.where((s) => s.type.name == sourceType).toList();
+  }
 }

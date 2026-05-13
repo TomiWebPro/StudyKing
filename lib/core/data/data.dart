@@ -21,4 +21,3 @@ export 'repositories/answer_repository.dart';
 export 'repositories/source_repository.dart';
 export 'repositories/conversation_repository.dart';
 export 'repositories/tutor_session_repository.dart';
-export '../../features/subjects/data/repositories/subject_repository.dart';

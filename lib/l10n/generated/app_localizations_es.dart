@@ -1402,7 +1402,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get quickGuideWelcomeMessage =>
-      '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúntame lo que sea sobre tus estudios!';
+      '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúnteme lo que sea sobre sus estudios!';
 
   @override
   String get suggestedPromptExplain => 'Explica la fotosíntesis';
@@ -1415,7 +1415,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get quickGuideHelpContent =>
-      'Guía Rápida es tu asistente de estudio con IA. Puedes:\n\n• Hacer preguntas sobre cualquier materia\n• Solicitar explicaciones de conceptos\n• Obtener ayuda con problemas de práctica\n\n¡Solo escribe tu pregunta y presiona enviar!';
+      'Guía Rápida es su asistente de estudio con IA. Puede:\n\n• Hacer preguntas sobre cualquier materia\n• Solicitar explicaciones de conceptos\n• Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!';
 
   @override
   String semanticsYouSaid(String message) {
@@ -1437,19 +1437,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get fallbackExplainResponse =>
-      '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema te gustaría que explique?';
+      '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema le gustaría que explique?';
 
   @override
   String get fallbackQuizResponse =>
-      '¡Puedo ayudar con preguntas! Pregunta lo que quieras y haré lo mejor posible.';
+      '¡Puedo ayudar con preguntas! Pregunte lo que quiera y haré lo mejor posible.';
 
   @override
   String get fallbackMathResponse =>
-      '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico te gustaría trabajar?';
+      '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico le gustaría trabajar?';
 
   @override
   String get fallbackGeneralResponse =>
-      '¡Esa es una pregunta interesante! Déjame ayudarte a entenderla mejor.';
+      '¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.';
 
   @override
   String get aboutApplicationName => 'StudyKing';

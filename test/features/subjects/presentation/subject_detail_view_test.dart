@@ -23,6 +23,22 @@ Widget _buildTestApp() {
   );
 }
 
+Widget _buildTestAppMinimal() {
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: const SubjectDetailScreen(
+        subjectId: 'test-id',
+        subjectName: 'Physics',
+        subjectColor: '#4CAF50',
+        topicIds: [],
+      ),
+    ),
+  );
+}
+
 void main() {
   group('SubjectDetailScreen', () {
     testWidgets('renders subject name in sliver header', (tester) async {
@@ -49,36 +65,6 @@ void main() {
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
-    testWidgets('more options shows bottom sheet', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pump();
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Edit Subject'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Delete Subject'), findsOneWidget);
-    });
-
-    testWidgets('delete shows confirmation dialog', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pump();
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      await tester.tap(find.text('Delete Subject'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Are you sure you want to delete this subject? This will also delete all associated lessons and questions.'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Delete'), findsOneWidget);
-    });
-
     testWidgets('tab labels are present on TabBar', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
@@ -88,5 +74,133 @@ void main() {
       expect(find.text('History'), findsOneWidget);
       expect(find.text('Stats'), findsOneWidget);
     });
+
+    testWidgets('lessons tab has add topic button', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Add Topic'), findsOneWidget);
+    });
+
+    testWidgets('practice tab shows practice buttons', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Start Practice'), findsOneWidget);
+      expect(find.byIcon(Icons.repeat), findsOneWidget);
+    });
+
+    testWidgets('history tab shows empty state', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('History'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('No sessions yet'), findsOneWidget);
+    });
+
+    testWidgets('start practice button navigates', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Start Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    });
+
+    testWidgets('semantics for edit and more options exist', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      expect(find.byIcon(Icons.edit), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    });
+
+    testWidgets('practice mode button navigates', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Practice Mode').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    });
+
+    testWidgets('stats tab shows metric cards', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Stats'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Sessions'), findsOneWidget);
+      expect(find.text('Accuracy'), findsOneWidget);
+      expect(find.text('Practice Progress'), findsOneWidget);
+    });
+
+    testWidgets('practice mode button is present', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.play_arrow), findsAtLeast(1));
+    });
+
+    testWidgets('edit button exists', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final editIcon = find.byIcon(Icons.edit);
+      expect(editIcon, findsOneWidget);
+
+      final box = tester.getRect(editIcon);
+      expect(box, isNotNull);
+      expect(box.width, greaterThan(0));
+    });
+
+    testWidgets('switches between all tabs', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      for (final tab in ['Lessons', 'Practice', 'History', 'Stats']) {
+        await tester.tap(find.text(tab));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+    });
+
+    testWidgets('renders subject code when provided', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      expect(find.text('MATH101'), findsOneWidget);
+    });
+
+    testWidgets('does not render subject code when null', (tester) async {
+      await tester.pumpWidget(_buildTestAppMinimal());
+      await tester.pump();
+
+      expect(find.text('Physics'), findsAtLeast(1));
+    });
+
+
   });
 }

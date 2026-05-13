@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../models/subject_model.dart';
-import 'package:studyking/main.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectManagementScreen extends ConsumerStatefulWidget {
