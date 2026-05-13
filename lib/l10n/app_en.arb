@@ -590,8 +590,8 @@
   "@small": {
     "description": "Small font size label"
   },
-  "medium": "Medium",
-  "@medium": {
+  "fontSizeMedium": "Medium",
+  "@fontSizeMedium": {
     "description": "Medium font size label"
   },
   "large": "Large",
@@ -1343,8 +1343,8 @@
   "@easy": {
     "description": "Easy difficulty level"
   },
-  "medium": "Medium",
-  "@medium": {
+  "difficultyMedium": "Medium",
+  "@difficultyMedium": {
     "description": "Medium difficulty level"
   },
   "hard": "Hard",
@@ -1658,6 +1658,74 @@
   "noLessonsUsePlanner": "No lessons - use Planner to generate!",
   "@noLessonsUsePlanner": {
     "description": "Empty state message for lesson list"
+  },
+  "mentor": "Mentor",
+  "@mentor": {
+    "description": "Bottom navigation label for AI mentor"
+  },
+  "teachingMode": "AI Tutor",
+  "@teachingMode": {
+    "description": "Label for AI tutor mode button"
+  },
+  "startAiTutoring": "Start AI Tutoring",
+  "@startAiTutoring": {
+    "description": "Button label to start AI tutoring session"
+  },
+  "endLesson": "End Lesson",
+  "@endLesson": {
+    "description": "Button to end the current lesson"
+  },
+  "typeYourMessage": "Type your message...",
+  "@typeYourMessage": {
+    "description": "Hint text for message input field"
+  },
+  "send": "Send",
+  "@send": {
+    "description": "Send button label"
+  },
+  "progressReport": "Progress Report",
+  "@progressReport": {
+    "description": "Title for progress report dialog"
+  },
+  "askMentorAnything": "Ask your mentor anything...",
+  "@askMentorAnything": {
+    "description": "Hint text for mentor chat input"
+  },
+  "mentorGreeting": "AI Mentor",
+  "@mentorGreeting": {
+    "description": "Welcome title for mentor screen"
+  },
+  "mentorSubtitle": "Your personal AI academic assistant",
+  "@mentorSubtitle": {
+    "description": "Subtitle for mentor screen"
+  },
+  "startingLesson": "Starting your lesson...",
+  "@startingLesson": {
+    "description": "Loading message while lesson initializes"
+  },
+  "lessonTimeEnded": "Lesson time has ended. Click 'End Lesson' to finish.",
+  "@lessonTimeEnded": {
+    "description": "Message shown when lesson time is up"
+  },
+  "lessonComplete": "Lesson Complete",
+  "@lessonComplete": {
+    "description": "Title for lesson completion dialog"
+  },
+  "errorOccurred": "An error occurred. Please try again.",
+  "@errorOccurred": {
+    "description": "Generic error message"
+  },
+  "inProgress": "In Progress",
+  "@inProgress": {
+    "description": "Status label for in-progress items"
+  },
+  "completed": "Completed",
+  "@completed": {
+    "description": "Status label for completed items"
+  },
+  "notStarted": "Not Started",
+  "@notStarted": {
+    "description": "Status label for not started items"
   },
   "blocksCount": "{count, plural, =1{1 block} other{{count} blocks}}",
   "@blocksCount": {

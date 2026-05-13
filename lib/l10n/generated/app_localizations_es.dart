@@ -30,7 +30,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get courseSubject => 'Curso/Materia';
 
   @override
-  String get courseHint => 'ej., Física IB';
+  String get courseHint => 'p. ej., Física IB';
 
   @override
   String get days => 'Días';
@@ -45,7 +45,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get generating => 'Generando...';
 
   @override
-  String get yourStudySchedule => 'Tu Horario de Estudio';
+  String get yourStudySchedule => 'Su Horario de Estudio';
 
   @override
   String topicLabel(int number) {
@@ -156,11 +156,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addSubjectsAndQuestionsToStartPracticing =>
-      'Agrega materias y preguntas para comenzar a practicar';
+      'Agregue materias y preguntas para comenzar a practicar';
 
   @override
   String get addSubjectsFromSubjectsTab =>
-      'Agrega materias desde la pestaña Materias';
+      'Agregue materias desde la pestaña Materias';
 
   @override
   String get addSubject => 'Agregar Materia';
@@ -186,16 +186,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicFocus => 'Enfoque por Tema';
 
   @override
-  String get practiceSpecificTopics => 'Practica temas específicos';
+  String get practiceSpecificTopics => 'Practique temas específicos';
 
   @override
   String get weakAreas => 'Áreas Débiles';
 
   @override
-  String get focusOnMistakes => 'Concéntrate en tus errores';
+  String get focusOnMistakes => 'Concéntrese en sus errores';
 
   @override
-  String get yourSubjects => 'Tus Materias';
+  String get yourSubjects => 'Sus Materias';
 
   @override
   String get readyForPractice => 'Listo para practicar';
@@ -225,18 +225,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicSelectionComingSoon => '¡Selección de temas próximamente!';
 
   @override
-  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Sigue así!';
+  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Siga así!';
 
   @override
   String get noWeakAreasQuestions =>
-      'No hay preguntas disponibles para tus áreas débiles.';
+      'No hay preguntas disponibles para sus áreas débiles.';
 
   @override
   String get noQuestionsAvailable => 'No Hay Preguntas Disponibles';
 
   @override
   String get noQuestionsForSelectedSubject =>
-      'No hay preguntas para la materia/tema seleccionado. ¡Comienza a crear preguntas!';
+      'No hay preguntas para la materia/tema seleccionado. ¡Comience a crear preguntas!';
 
   @override
   String get time => 'Tiempo';
@@ -248,11 +248,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get correct => 'Correctas';
 
   @override
-  String get yourAnswer => 'Tu Respuesta';
+  String get yourAnswer => 'Su Respuesta';
 
   @override
   String yourAnswerCharacters(int count) {
-    return 'Tu Respuesta ($count caracteres)';
+    return 'Su Respuesta ($count caracteres)';
   }
 
   @override
@@ -385,13 +385,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get learningGoal => 'Objetivo de Aprendizaje';
 
   @override
-  String get learningGoalHint => 'ej., Exámenes Finales, Certificaciones';
+  String get learningGoalHint => 'p. ej., Exámenes Finales, Certificaciones';
 
   @override
   String get preferredStudyTime => 'Horario de Estudio Preferido';
 
   @override
-  String get preferredStudyTimeHint => 'ej., Tarde (6-9 PM)';
+  String get preferredStudyTimeHint => 'p. ej., Tarde (6-9 PM)';
 
   @override
   String get accountInformation => 'Información de la Cuenta';
@@ -465,7 +465,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get small => 'Pequeño';
 
   @override
-  String get medium => 'Mediano';
+  String get fontSizeMedium => 'Mediano';
 
   @override
   String get large => 'Grande';
@@ -586,13 +586,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get subjectName => 'Nombre de la Materia';
 
   @override
-  String get subjectNameHint => 'ej., Física';
+  String get subjectNameHint => 'p. ej., Física';
 
   @override
   String get subjectCodeOptional => 'Código de Materia (Opcional)';
 
   @override
-  String get subjectCodeHint => 'ej., IB-FIS';
+  String get subjectCodeHint => 'p. ej., IB-FIS';
 
   @override
   String get themeColor => 'Color del Tema';
@@ -631,7 +631,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get teacherOptional => 'Profesor (Opcional)';
 
   @override
-  String get teacherHint => 'ej., Dr. John Smith';
+  String get teacherHint => 'p. ej., Dr. Juan García';
 
   @override
   String get syllabusScopeOptional => 'Plan de Estudios/Alcance (Opcional)';
@@ -824,7 +824,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noDataUploaded => 'No hay datos subidos';
 
   @override
-  String get uploadOrPasteData => 'Sube o pega datos para visualizar';
+  String get uploadOrPasteData => 'Sube o pegue datos para visualizar';
 
   @override
   String get selectGraphType => 'Seleccione un tipo de gráfico para visualizar';
@@ -1010,6 +1010,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get easy => 'Fácil';
+
+  @override
+  String get difficultyMedium => 'Medio';
 
   @override
   String get hard => 'Difícil';
@@ -1231,11 +1234,63 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get noTopicsYetAddSome => 'No hay temas todavía? ¡agrega algunos!';
+  String get noTopicsYetAddSome => '¿No hay temas? ¡agregue algunos!';
 
   @override
   String get noLessonsUsePlanner =>
-      'No hay lecciones? ¡usa el Planificador para generar!';
+      '¿No hay lecciones? ¡use el Planificador para generar!';
+
+  @override
+  String get mentor => 'Mentor';
+
+  @override
+  String get teachingMode => 'Tutor IA';
+
+  @override
+  String get startAiTutoring => 'Iniciar Tutoría IA';
+
+  @override
+  String get endLesson => 'Finalizar Lección';
+
+  @override
+  String get typeYourMessage => 'Escribe tu mensaje...';
+
+  @override
+  String get send => 'Enviar';
+
+  @override
+  String get progressReport => 'Informe de Progreso';
+
+  @override
+  String get askMentorAnything => 'Pregúntale a tu mentor...';
+
+  @override
+  String get mentorGreeting => 'Mentor IA';
+
+  @override
+  String get mentorSubtitle => 'Tu asistente académico personal IA';
+
+  @override
+  String get startingLesson => 'Iniciando tu lección...';
+
+  @override
+  String get lessonTimeEnded =>
+      'El tiempo de lección terminó. Haz clic en \'Finalizar Lección\' para terminar.';
+
+  @override
+  String get lessonComplete => 'Lección Completada';
+
+  @override
+  String get errorOccurred => 'Ocurrió un error. Inténtalo de nuevo.';
+
+  @override
+  String get inProgress => 'En Progreso';
+
+  @override
+  String get completed => 'Completado';
+
+  @override
+  String get notStarted => 'No Iniciado';
 
   @override
   String blocksCount(int count) {
@@ -1304,7 +1359,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get atRiskTopics => 'Temas en Riesgo';
 
   @override
-  String get noAtRiskTopics => 'Sin temas en riesgo. ¡Sigue así!';
+  String get noAtRiskTopics => 'Sin temas en riesgo. ¡Siga así!';
 
   @override
   String accuracyLabel(String percent) {
@@ -1316,7 +1371,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keepPracticingToUnlock =>
-      '¡Sigue practicando para desbloquear temas avanzados!';
+      '¡Siga practicando para desbloquear temas avanzados!';
 
   @override
   String get masteryOverview => 'Resumen de Dominio';
@@ -1364,7 +1419,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String semanticsYouSaid(String message) {
-    return 'Tú dijiste: $message';
+    return 'Usted dijo: $message';
   }
 
   @override
@@ -1436,12 +1491,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get highContrastDescription =>
-      'Aumenta el contraste para mejor visibilidad';
+      'Aumente el contraste para mejor visibilidad';
 
   @override
   String get largeTouchTargets => 'Objetivos Táctiles Grandes';
 
   @override
   String get largeTouchTargetsDescription =>
-      'Aumenta el tamaño de los objetivos táctiles';
+      'Aumente el tamaño de los objetivos táctiles';
 }

@@ -866,11 +866,11 @@ abstract class AppLocalizations {
   /// **'Small'**
   String get small;
 
-  /// Medium difficulty level
+  /// Medium font size label
   ///
   /// In en, this message translates to:
   /// **'Medium'**
-  String get medium;
+  String get fontSizeMedium;
 
   /// Large font size label
   ///
@@ -1868,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'Easy'**
   String get easy;
 
+  /// Medium difficulty level
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get difficultyMedium;
+
   /// Hard difficulty level
   ///
   /// In en, this message translates to:
@@ -2257,6 +2263,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lessons - use Planner to generate!'**
   String get noLessonsUsePlanner;
+
+  /// Bottom navigation label for AI mentor
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor'**
+  String get mentor;
+
+  /// Label for AI tutor mode button
+  ///
+  /// In en, this message translates to:
+  /// **'AI Tutor'**
+  String get teachingMode;
+
+  /// Button label to start AI tutoring session
+  ///
+  /// In en, this message translates to:
+  /// **'Start AI Tutoring'**
+  String get startAiTutoring;
+
+  /// Button to end the current lesson
+  ///
+  /// In en, this message translates to:
+  /// **'End Lesson'**
+  String get endLesson;
+
+  /// Hint text for message input field
+  ///
+  /// In en, this message translates to:
+  /// **'Type your message...'**
+  String get typeYourMessage;
+
+  /// Send button label
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// Title for progress report dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Report'**
+  String get progressReport;
+
+  /// Hint text for mentor chat input
+  ///
+  /// In en, this message translates to:
+  /// **'Ask your mentor anything...'**
+  String get askMentorAnything;
+
+  /// Welcome title for mentor screen
+  ///
+  /// In en, this message translates to:
+  /// **'AI Mentor'**
+  String get mentorGreeting;
+
+  /// Subtitle for mentor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your personal AI academic assistant'**
+  String get mentorSubtitle;
+
+  /// Loading message while lesson initializes
+  ///
+  /// In en, this message translates to:
+  /// **'Starting your lesson...'**
+  String get startingLesson;
+
+  /// Message shown when lesson time is up
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson time has ended. Click \'End Lesson\' to finish.'**
+  String get lessonTimeEnded;
+
+  /// Title for lesson completion dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Complete'**
+  String get lessonComplete;
+
+  /// Generic error message
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred. Please try again.'**
+  String get errorOccurred;
+
+  /// Status label for in-progress items
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get inProgress;
+
+  /// Status label for completed items
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completed;
+
+  /// Status label for not started items
+  ///
+  /// In en, this message translates to:
+  /// **'Not Started'**
+  String get notStarted;
 
   /// Number of lesson blocks
   ///

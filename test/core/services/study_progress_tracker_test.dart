@@ -329,8 +329,17 @@ void main() {
     });
 
     group('getTopicMasteryLevel', () {
-      test('returns default mastery level', () {
-        final level = tracker.getTopicMasteryLevel('topic1');
+      test('returns Novice for no attempts', () async {
+        final level = await tracker.getTopicMasteryLevel('topic1', studentId: 'student1');
+        expect(level, equals('Novice'));
+      });
+
+      test('returns Browsing for some attempts with low accuracy', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+        final level = await tracker.getTopicMasteryLevel('topic1', studentId: 'student1');
         expect(level, equals('Browsing'));
       });
     });
@@ -352,16 +361,26 @@ void main() {
     });
 
     group('exportQuestionsAndAttemptsCSV', () {
-      test('returns placeholder CSV', () async {
-        final csv = await tracker.exportQuestionsAndAttemptsCSV();
+      test('returns CSV with attempt data', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+        final csv = await tracker.exportQuestionsAndAttemptsCSV('student1');
         expect(csv, contains('Question ID'));
+        expect(csv, contains('q1'));
       });
     });
 
     group('exportSessionHistoryCSV', () {
-      test('returns placeholder CSV', () async {
-        final csv = await tracker.exportSessionHistoryCSV();
-        expect(csv, contains('Session ID'));
+      test('returns CSV with session data', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+        final csv = await tracker.exportSessionHistoryCSV('student1');
+        expect(csv, contains('Topic ID'));
+        expect(csv, contains('q1'));
       });
     });
   });

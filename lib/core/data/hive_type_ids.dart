@@ -27,6 +27,8 @@ const int _typeIdPlanSummary = 22;
 const int _typeIdPlanRecommendation = 23;
 const int _typeIdStudentAttempt = 24;
 const int _typeIdMarkschemeLegacy = 25;
+const int _typeIdConversationMessage = 27;
+const int _typeIdTutorSession = 28;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -56,6 +58,8 @@ const List<int> _allTypeIds = [
   _typeIdPlanRecommendation,
   _typeIdStudentAttempt,
   _typeIdMarkschemeLegacy,
+  _typeIdConversationMessage,
+  _typeIdTutorSession,
 ];
 
 bool _checkUniqueIds() {

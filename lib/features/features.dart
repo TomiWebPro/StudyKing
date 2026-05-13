@@ -7,3 +7,5 @@ export 'quickguide/quickguide.dart';
 export 'sessions/sessions.dart';
 export 'settings/settings.dart';
 export 'subjects/subject_feature.dart';
+export 'teaching/teaching.dart';
+export 'mentor/mentor.dart';

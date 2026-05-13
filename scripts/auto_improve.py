@@ -334,6 +334,81 @@ def step5_commit_to_github():
     return rc, output
 
 
+RECIPIENT_EMAIL = "370348116@qq.com"
+
+
+def step6_review_changes():
+    """Step 6: After successful push, review completed + open issues, then email."""
+    log("Step 6: Reviewing completed and open issues")
+
+    completed_files = sorted(
+        [os.path.join(ISSUES_COMPLETED_DIR, f) for f in os.listdir(ISSUES_COMPLETED_DIR) if f.endswith(".md")],
+        key=os.path.getmtime, reverse=True
+    )
+    open_files = sorted(
+        [os.path.join(ISSUES_OPEN_DIR, f) for f in os.listdir(ISSUES_OPEN_DIR) if f.endswith(".md")],
+        key=os.path.getctime
+    )
+
+    if not completed_files:
+        log("Step 6: No completed issues to review", "WARN")
+        return
+
+    completed_path = completed_files[0]
+    open_path = open_files[0] if open_files else None
+
+    log(f"  Completed: {completed_path}")
+    if open_path:
+        log(f"  Open:      {open_path}")
+
+    with open(completed_path) as f:
+        completed_body = f.read()
+
+    open_body = ""
+    if open_path:
+        with open(open_path) as f:
+            open_body = f.read()
+
+    prompt = (
+        "## 任务说明\n\n"
+        "请阅读以下两个 issue 文档的内容，然后写一份总结报告。\n"
+        "注意：代码已成功推送至 GitHub，所有变更已完成，无需再执行 git 操作。\n\n"
+        "---\n\n"
+        "### 一、已完成的 Issue（上一批次已全部完成并推送至 GitHub）\n\n"
+        "```\n" + completed_body + "\n```\n\n"
+    )
+    if open_body:
+        prompt += (
+            "---\n\n"
+            "### 二、下一个待处理的 Issue（需要在本批次或下一批次完成的工作）\n\n"
+            "```\n" + open_body + "\n```\n\n"
+        )
+    prompt += (
+        "---\n\n"
+        "请直接输出总结报告（中文），不要保存文件。\n"
+        "报告结构如下：\n\n"
+        "1. **本次已完成工作摘要** — 描述上一批次完成了哪些内容、解决了什么问题\n"
+        "2. **具体修复/改进清单** — 列出已解决的具体 issue 条目\n"
+        "3. **下一阶段改进计划** — 根据待处理 issue，说明下一步需要做什么，优先级如何\n"
+        "4. **总体评价与建议** — 对代码库当前状况的评价及改进方向建议\n\n"
+        "请全程使用中文撰写。\n"
+    )
+    rc, output = run_opencode(prompt, timeout_seconds=300)
+    if rc != 0:
+        log(f"Step 6 FAILED (exit code {rc})", "ERROR")
+        return
+
+    subject = f"StudyKing 批次更新报告 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    body = output or "（opencode 未返回内容）"
+    log("Step 6: Sending review via email...")
+    subprocess.run(
+        ["mail", "-s", subject, RECIPIENT_EMAIL],
+        input=body.encode(),
+        timeout=30,
+    )
+    log("Step 6 completed — email sent")
+
+
 def should_retry(rc):
     """Check if a return code indicates failure."""
     return rc != 0
@@ -457,6 +532,7 @@ def main_loop():
             else:
                 log("Step 5 SUCCESS")
                 CONSECUTIVE_FAILS = 0
+                step6_review_changes()
 
         log("-" * 40)
         log(f"Cycle #{CYCLE_COUNT} finished. Cycle failed: {cycle_failed}")

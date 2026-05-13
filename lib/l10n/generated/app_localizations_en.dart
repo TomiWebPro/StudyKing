@@ -463,7 +463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get small => 'Small';
 
   @override
-  String get medium => 'Medium';
+  String get fontSizeMedium => 'Medium';
 
   @override
   String get large => 'Large';
@@ -1000,6 +1000,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get easy => 'Easy';
 
   @override
+  String get difficultyMedium => 'Medium';
+
+  @override
   String get hard => 'Hard';
 
   @override
@@ -1221,6 +1224,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noLessonsUsePlanner => 'No lessons - use Planner to generate!';
+
+  @override
+  String get mentor => 'Mentor';
+
+  @override
+  String get teachingMode => 'AI Tutor';
+
+  @override
+  String get startAiTutoring => 'Start AI Tutoring';
+
+  @override
+  String get endLesson => 'End Lesson';
+
+  @override
+  String get typeYourMessage => 'Type your message...';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get progressReport => 'Progress Report';
+
+  @override
+  String get askMentorAnything => 'Ask your mentor anything...';
+
+  @override
+  String get mentorGreeting => 'AI Mentor';
+
+  @override
+  String get mentorSubtitle => 'Your personal AI academic assistant';
+
+  @override
+  String get startingLesson => 'Starting your lesson...';
+
+  @override
+  String get lessonTimeEnded =>
+      'Lesson time has ended. Click \'End Lesson\' to finish.';
+
+  @override
+  String get lessonComplete => 'Lesson Complete';
+
+  @override
+  String get errorOccurred => 'An error occurred. Please try again.';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get completed => 'Completed';
+
+  @override
+  String get notStarted => 'Not Started';
 
   @override
   String blocksCount(int count) {

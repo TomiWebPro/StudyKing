@@ -433,7 +433,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       case 1:
         return l10n.easy;
       case 2:
-        return l10n.medium;
+        return l10n.difficultyMedium;
       case 3:
         return l10n.hard;
       default:

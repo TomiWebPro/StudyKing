@@ -6,17 +6,20 @@ import '../../../../main.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import '../../teaching/presentation/tutor_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String lessonId;
   final String topicId;
   final String topicTitle;
-  
+  final String subjectId;
+
   const LessonDetailScreen({
     super.key,
     required this.lessonId,
     required this.topicId,
     required this.topicTitle,
+    this.subjectId = '',
   });
 
   @override
@@ -26,13 +29,22 @@ class LessonDetailScreen extends StatefulWidget {
 class _LessonDetailScreenState extends State<LessonDetailScreen> {
   final Logger _logger = const Logger('LessonDetailScreen');
   Lesson? _lesson;
-  final Duration _elapsed = Duration.zero;
+  Duration _elapsed = Duration.zero;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadLesson();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _elapsed = _elapsed + const Duration(seconds: 1));
+      }
+    });
   }
 
   Future<void> _loadLesson() async {
@@ -50,6 +62,21 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     super.dispose();
   }
 
+  void _openTutorMode() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TutorScreen(
+          topicId: widget.topicId,
+          topicTitle: widget.topicTitle,
+          subjectId: widget.subjectId.isNotEmpty
+              ? widget.subjectId
+              : _lesson?.subjectId ?? '',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -62,6 +89,17 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(lesson.title),
+        actions: [
+          Semantics(
+            button: true,
+            label: l10n.teachingMode,
+            child: IconButton(
+              icon: const Icon(Icons.smart_toy_outlined),
+              tooltip: l10n.teachingMode,
+              onPressed: _openTutorMode,
+            ),
+          ),
+        ],
       ),
       body: ListView.builder(
         padding: ResponsiveUtils.listPadding(context),
@@ -92,7 +130,21 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       bottomNavigationBar: BottomAppBar(
         child: Padding(
           padding: ResponsiveUtils.screenPadding(context),
-          child: Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
+          child: Row(
+            children: [
+              Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
+              const Spacer(),
+              Semantics(
+                button: true,
+                label: l10n.teachingMode,
+                child: ElevatedButton.icon(
+                  onPressed: _openTutorMode,
+                  icon: const Icon(Icons.smart_toy, size: 18),
+                  label: Text(l10n.teachingMode),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

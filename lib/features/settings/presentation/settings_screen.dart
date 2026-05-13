@@ -166,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
   String _getFontSizeLabel(double size) {
     final l10n = AppLocalizations.of(context)!;
-    return size < 14 ? l10n.small : size < 17 ? l10n.medium : size < 23 ? l10n.large : l10n.extraLarge;
+    return size < 14 ? l10n.small : size < 17 ? l10n.fontSizeMedium : size < 23 ? l10n.large : l10n.extraLarge;
   }
   String _getAiModelLabel(String model) {
     final l10n = AppLocalizations.of(context)!;

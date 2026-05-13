@@ -7,6 +7,8 @@ class DatabaseService {
   final LessonRepository lessonRepository;
   final StudySessionRepository sessionRepository;
   final SubjectRepository subjectRepository;
+  final ConversationRepository conversationRepository;
+  final TutorSessionRepository tutorSessionRepository;
 
   DatabaseService({
     required this.topicRepository,
@@ -15,5 +17,7 @@ class DatabaseService {
     required this.lessonRepository,
     required this.sessionRepository,
     required this.subjectRepository,
+    required this.conversationRepository,
+    required this.tutorSessionRepository,
   });
 }

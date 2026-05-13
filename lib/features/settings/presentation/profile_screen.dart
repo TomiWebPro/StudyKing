@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import '../../../main.dart' show settingsRepository;
+import '../../../main.dart' show settingsRepository, localeProvider;
 import '../data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
@@ -50,6 +50,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _notificationsEnabled = profileData.notificationsEnabled;
           _language = profileData.language;
         });
+        ref.read(localeProvider.notifier).state = Locale(profileData.language);
       } else if (mounted) {
         setState(() {
           _avatarIconKey = 'Icons.person';
@@ -413,6 +414,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onChanged: (value) {
                             if (value != null) {
                               setState(() => _language = value);
+                              ref.read(localeProvider.notifier).state = Locale(value);
                             }
                           },
                         ),

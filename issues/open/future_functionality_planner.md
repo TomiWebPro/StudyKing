@@ -1,173 +1,203 @@
-# Future Functionality: Conversational AI Tutor Teaching Mode & Mentor Mode
+# Three Foundational Gaps: Content Ingestion, Smart Planner, Analytics Dashboard
 
 ## Summary
 
-The current lesson system (`lib/features/lessons/`) is a read-only content viewer — it displays pre-existing lesson blocks with no AI interactivity. The Planner screen (`lib/features/planner/`) generates static, trivial schedules with hardcoded topic cycling. Neither the conversational AI tutor (Teaching Mode) nor the persistent AI mentor (Assistant/Mentor Mode) described in the vision exist.
+The Teaching Mode (AI tutor) and Mentor Mode (AI assistant) from the previous roadmap have been implemented — the scaffolding exists in `lib/features/teaching/` and `lib/features/mentor/`. However, three foundational pillars remain **non-functional or completely disconnected from the UI**: (1) Content ingestion from student-uploaded materials, (2) A smart planner that persists, tracks adherence, and adapts, and (3) An analytics dashboard to visualize the study data the system already collects.
 
-This issue tracks the implementation of both AI interaction modes, which are the core value proposition of StudyKing.
+These gaps mean the app collects rich data (attempts, mastery states, session records) but never surfaces it meaningfully. The vision document describes a system where the student uploads materials and the platform intelligently integrates them — none of this exists in a usable form.
 
 ---
 
-## Context
+## Issue 1: Content Ingestion Pipeline Is Scaffolded But Dead
 
 ### Current State
 
-- **LessonDetailScreen** (`lib/features/lessons/presentation/lesson_detail_screen.dart:93-128`): Static `ListView` of pre-saved `LessonBlock` cards. Timer counts elapsed seconds but does nothing else. No AI interaction, no adaptive pacing, no conversational interface.
-- **LessonListScreen** (`lib/features/lessons/presentation/lesson_list_screen.dart`): Simple CRUD list of lessons by topic ID.
-- **PlannerScreen** (`lib/features/planner/presentation/planner_screen.dart:57-105`): Asks user for course name, days, hours. Fetches up to 7 matching topic titles from the database, then cycles them equally across days. No LLM-based plan generation, no mastery-awareness, no persistent schedule.
-- **LlmService** (`lib/core/services/llm_service.dart`): Has mock methods with hardcoded responses for chat, question generation, lesson generation, answer validation, and study plan generation. Falls back to mocks on any error or when API key is empty. No streaming support. No conversation memory.
-- **PersonalLearningPlanService** (`lib/core/services/personal_learning_plan_service.dart`): Generates plans based solely on topic mastery data with a simple priority-ordered static algorithm. No LLM involvement, no student preference modeling, no adaptive rescheduling.
-- **StudyProgressTracker** (`lib/core/services/study_progress_tracker.dart`): Tracks attempts and produces basic stats but has **no UI dashboard** displaying trends, weak areas, or recommendations. `getTopicMasteryLevel()` returns `'Browsing'` for every topic — the real logic is never implemented.
+| Component | Exists? | State |
+|-----------|---------|-------|
+| `lib/core/services/pdf_ingestion_service.dart` (150 lines) | Yes | Has `_getMockPdfContent()` as primary path. Hardcoded API key, no UI trigger. |
+| `lib/core/data/models/source_model.dart` | Yes | `Source` Hive model with `id`, `title`, `type`, `content`. Stored separately from subjects/topics. |
+| `lib/core/data/repositories/source_repository.dart` | Yes | Basic CRUD. 22 lines. Never triggered from any screen. |
+| `lib/core/services/question_generation_service.dart` (379 lines) | Yes | Generates questions via LLM but has no UI workflow for triggering it. |
+| Upload UI (file picker, drag-drop, link entry) | **No** | Zero UI. Student has no way to ingest materials. |
 
-### Vision Gap
+The vision says:
+> *"Students should be able to upload large amounts of study materials such as textbooks, PDFs, notes, question banks, syllabi, online video link, video/audio, online website link, screenshots, etc. The system should intelligently process, organize, classify, validate, and integrate this material into the broader learning system."*
 
-The vision document (`agent_must_read.md`) describes:
+**None of this exists in a usable form.** The `PdfIngestionService` will only parse if `apiKey` is non-empty; otherwise it returns mock data silently. There is no screen, dialog, or button to upload content. The `Source` model and repository are orphaned.
 
-> *"Teaching mode should be conversational, not static. The student should be able to speak naturally with the AI tutor, ask follow-up questions, interrupt explanations, request clarification, and engage in real-time back-and-forth discussion through both text and voice."*
+### Rationale
 
-> *"The AI tutor should: dynamically generate the lesson plans and goals beforehand, teach concepts interactively, explain ideas step-by-step, adapt explanations to student understanding, provide examples, assign exercises and homework during and after class, review student answers, interpret handwritten work, provide immediate corrective feedback, guide problem solving rather than simply giving answers, provide encouragement during lesson time, respect the requested class hour, keep a record of how the class went."*
+This is the primary _input_ mechanism for the entire learning system. Without it:
+- Questions must be manually created (or never created)
+- Subjects are empty shells
+- The AI tutor has no content to teach
+- The planner has no topics to schedule
 
-> *"Assistant/Mentor Mode: scheduling lessons, rescheduling classes, planning long-term study goals, creating or modifying study roadmaps, motivation and encouragement, accountability, wellbeing support, helping decide what to study next, receiving student suggestions or feedback about lessons, adjusting study pacing, creating new courses or subject plans, modifying learning objectives."*
+### Affected Files
 
-**None of this exists in the codebase. The gap is essentially 100%.**
+| File | Issue |
+|------|-------|
+| `lib/core/services/pdf_ingestion_service.dart:19-21` | Falls back to `_getMockPdfContent()` when API key is empty — silently produces fake data with no user feedback |
+| `lib/core/services/pdf_ingestion_service.dart` | Single-purpose (PDF only). No support for web links, video, screenshots. |
+| `lib/core/data/models/source_model.dart` | `Source` has no `subjectId`, `topicId`, or `syllabusId` — cannot be linked to the learning graph |
+| `lib/core/data/repositories/source_repository.dart` | Orphan — never imported or used by any screen or service |
+| `lib/core/services/question_generation_service.dart:27-55` | Generates questions but no UI workflow exists to invoke this with student materials as context |
+
+### Acceptance Criteria
+
+- [ ] **Upload UI**: A screen or bottom sheet allows the student to select a file (PDF, image), enter a URL, or paste text. The UI is accessible from subject management and the home screen.
+- [ ] **Pipeline orchestration**: Uploaded content flows through: classification (which subject/topic) -> parsing/extraction -> question generation -> source storage with subject/topic linkage.
+- [ ] **Source model update**: `Source` gains `subjectId`, `topicId`, and `syllabusId` fields to link materials to the learning graph.
+- [ ] **Fallback removal**: Remove silent mock fallback in `PdfIngestionService`. If the API call fails, surface the error to the user with a retry option.
+- [ ] **UI feedback**: Upload progress indicator, success/error states, and a "Your Sources" list visible per subject.
 
 ---
 
-## Affected Files
+## Issue 2: Smart Planner Disconnected — Plans Are Generated but Never Persisted, Tracked, or Adapted
 
-### Core files to modify/extend:
+### Current State
 
-| File | Role | Change Required |
-|---|---|---|
-| `lib/core/services/llm_service.dart` | LLM interaction layer | Add streaming support (`Stream<String>`), conversation memory, structured output parsing, token usage tracking |
-| `lib/core/data/models/` | Data models | Add `ConversationMessage`, `LessonSession`, `TutorAction`, `MentorAction` models |
-| `lib/core/data/repositories/` | Persistence | Add `conversation_repository.dart`, `lesson_session_repository.dart` |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart` | Current lesson UI | Complete rewrite into conversational tutor interface |
-| `lib/features/lessons/presentation/lesson_list_screen.dart` | Lesson list | Add lesson status indicators (planned, in-progress, completed) |
-| `lib/features/lessons/services/services.dart` | Lesson services | Add `TutorService`, `LessonPlanGenerator` |
-| `lib/features/planner/presentation/planner_screen.dart` | Planner UI | Replace static schedule with LLM-generated adaptive plan with rescheduling |
-| `lib/core/services/personal_learning_plan_service.dart` | Plan generation | Integrate LLM for dynamic plans respecting student history, preferences |
-| `lib/core/services/study_progress_tracker.dart` | Progress tracking | Implement `getTopicMasteryLevel()` with real data, add dashboard-ready metrics |
-| `lib/providers/llm_engine_provider.dart` | Legacy provider | Migrate to Riverpod or consolidate into new tutor provider |
+Three planning-related subsystems exist but are completely disconnected:
 
-### New files needed:
+1. **PlannerScreen** (`lib/features/planner/presentation/planner_screen.dart`): Accepts course name, days, hours. Cycles through up to 7 matching topic titles equally. LLM integration attempt has hardcoded empty API key (line 147). The generated `_ScheduleItem` list is stored in-memory only — lost on navigation away.
+
+2. **PersonalLearningPlanService** (`lib/core/services/personal_learning_plan_service.dart`): Generates data-driven plans from mastery graph data with priority sorting, dependence checking, and daily breakdowns. Returns a `PersonalLearningPlan` model. **Never connected to the Planner UI.** Not saved to Hive.
+
+3. **InstrumentationService** (`lib/core/services/instrumentation_service.dart`): Contains `PlanAdherenceTracker` and `MasteryImprovementTracker` with full adherence-scoring logic. **Never invoked** from any planner or session flow — both trackers are memory-only, meaning data is lost on app restart.
+
+The vision says:
+> *"The system should: estimate realistic workload, break longterm goals into manageable schedules, generate lesson pathways, assign practice, adapt plans as progress changes, track actual adherence vs intended schedule."*
+
+Currently: schedules are mock data, plans are generated but never saved, adherence is computed but never tracked, nothing adapts.
+
+### Rationale
+
+The planner is the strategic layer of the app. Without persistence and adaptation:
+- Students generate a plan once, see it disappear on navigation
+- The mentor cannot reference "your study plan" because no plan exists in storage
+- Adherence tracking (`InstrumentationService`) computes metrics that are never used
+- The "180 days to learn IB Physics" use case from the vision is impossible
+
+### Affected Files
+
+| File | Issue |
+|------|-------|
+| `lib/features/planner/presentation/planner_screen.dart:144-174` | LLM integration calls `LlmService` with `apiKey: ''` — always fails. Fallback cycles through max 7 topics. |
+| `lib/features/planner/presentation/planner_screen.dart:390-407` | `_ScheduleItem` is a private class defined inline. Cannot be persisted or referenced elsewhere. |
+| `lib/core/services/personal_learning_plan_service.dart` | `generatePlan()` returns `Result<PersonalLearningPlan>` but result is never saved to Hive. No `savePlan()` or `loadPlan()` method exists. |
+| `lib/core/data/models/personal_learning_plan_model.dart` | Model exists with `dailyPlans`, `recommendations`, `summary` — but no Hive adapter registered for it (check `hive_type_ids.dart`). Data cannot persist. |
+| `lib/core/services/instrumentation_service.dart:83-113` | `PlanAdherenceTracker.recordDay()` is never called. `getAverageAdherence()` returns 0.0 for everyone. |
+| `lib/features/practice/presentation/learning_plan_dashboard.dart:39-67` | `_loadData()` calls `generatePlan()` on every build — no caching, no persistence. |
+
+### Acceptance Criteria
+
+- [ ] **Plan persistence**: `PersonalLearningPlan` is saved to Hive after generation (via a new `plan_repository.dart`). Loading a subject shows the previously generated plan.
+- [ ] **Planner UI rewrite**: `PlannerScreen` uses `PersonalLearningPlanService` instead of inline mock generation. The LLM fallback (empty API key) is removed; the user sees a clear "Configure AI provider" prompt instead.
+- [ ] **Adherence tracking**: `SessionTrackerScreen._endSession()` triggers `PlanAdherenceTracker.recordDay()` to log planned vs actual. The mentor can report "You completed 80% of your plan this week."
+- [ ] **Plan adaptation**: After 3 consecutive days of under-adherence (<50%), the system suggests adjusting the plan (e.g., reduce daily target, re-prioritize topics).
+- [ ] **Long-term goals**: The planner accepts natural language like "I want to finish IB Physics in 180 days" and breaks it into weekly/daily plans (delegating to LLM via `LlmService` with the real configured provider).
+- [ ] **Mentor integration**: `MentorService.getSchedule()` queries persisted plans, not inline-generated schedules.
+
+---
+
+## Issue 3: Analytics Dashboard Exists But Is Inaccessible — Study Data Collected but Never Visualized
+
+### Current State
+
+The system tracks rich data:
+- **AttemptRepository**: Per-question attempt records with correctness, timing, confidence
+- **MasteryGraphService**: Per-topic and per-question mastery states with levels (Novice → Expert)
+- **StudySessionRepository**: Session records with duration, questions answered, correct count
+- **StudyProgressTracker**: Computes overall stats, weekly trends, badges, recommendations, topic progress
+- **InstrumentationService**: Tracks plan adherence and mastery improvement over time
+- **AdaptivePracticeEngine**: Selects questions based on weakness scores
+
+An `AnalyticsDashboard` widget exists at `lib/features/practice/presentation/analytics_dashboard.dart` (632 lines) with summary rows, weekly charts, mastery progress bars, topic-level breakdowns, and badges. **It is never shown to the user** — there is no navigation entry pointing to it.
+
+The vision says:
+> *"The platform should track: study hours by subject, syllabus progress, performance history, lesson completion, practice behavior, weak/strong topic areas, adherence to planned study schedules."*
+
+All of this is computed. None of it is visible.
+
+### Additional visualization gaps
+
+1. **Weekly trend chart** (`_buildWeeklyChart` in analytics_dashboard.dart) uses `AnimatedBarChart` which itself (`lib/core/widgets/animated_bar_chart.dart`) uses hardcoded `EdgeInsets.all(16)` and no axis labels — the chart is non-functional as a data visualization.
+
+2. **Topic mastery view** displays mastery levels but uses LLM-generated topic IDs (not human-readable names) as labels. No search or filter.
+
+3. **StudyProgressTracker.getTopicMasteryLevel()** has a fallback path (lines 239-248) that derives level from attempt count and accuracy but the main mastery path (line 227) calls `_masteryService.getTopicMastery()` which itself depends on the mastery graph repository being initialized — if the student has no data, every topic shows as `'Novice'`.
+
+4. **No aggregate dashboard** combining planner data (what was planned), session data (what was done), and mastery data (what was learned) into a single view.
+
+### Rationale
+
+Without a visible analytics dashboard:
+- The student cannot see their progress, reducing motivation
+- The system cannot identify weak areas — the "weak areas practice" mode in `PracticeScreen` calls `MasteryGraphService.getWeakTopics()` but the student never sees what those are
+- Badges (gamification) are computed but invisible
+- The feedback loop (study → see progress → adjust → improve) is broken
+
+### Affected Files
+
+| File | Issue |
+|------|-------|
+| `lib/features/practice/presentation/analytics_dashboard.dart` | 632-line widget never connected to any navigation route or tab |
+| `lib/core/widgets/animated_bar_chart.dart:30` | Hardcoded padding, no axis labels, no tooltips — chart is non-informative |
+| `lib/features/practice/presentation/analytics_dashboard.dart:362-380` | Topic IDs displayed as raw strings — no lookup to human-readable names |
+| `lib/core/services/study_progress_tracker.dart:224-251` | `getTopicMasteryLevel()` has dead fallback code — real mastery path never activated for students without data |
+| `lib/features/sessions/widgets/session_analytics.dart` | Widget exists but is only shown inside `SessionTrackerScreen` — not accessible from subjects or home |
+
+### Acceptance Criteria
+
+- [ ] **Dashboard navigation**: The analytics dashboard is accessible from either a new tab in the bottom navigation, the subject detail screen's Stats tab, or the mentor screen's "Progress Report" button.
+- [ ] **Chart readability**: `AnimatedBarChart` is replaced or enhanced with proper axis labels, value tooltips, and theme-aware colors.
+- [ ] **Topic name resolution**: Topic IDs in the mastery view are resolved to human-readable titles via `TopicRepository`.
+- [ ] **Combined view**: A single dashboard screen shows: plan adherence (planned vs actual), mastery progression per topic, weekly study trends, and recent badges — all in one scrollable view.
+- [ ] **Export action**: "Export Data" button on the dashboard triggers CSV download via existing `StudyProgressTracker.exportProgressCSV()` / `exportSessionHistoryCSV()` methods.
+- [ ] **Weak area visibility**: The dashboard highlights topics with accuracy < 60% and provides a "Practice Weak Areas" button that navigates to `PracticeSessionScreen`.
+- [ ] **Student ID management**: Replace hardcoded `'anonymous'` student ID (used in 7+ files: `tutor_screen.dart:73`, `mentor_service.dart:58`, `progress_tracker.dart`, etc.) with a configurable or auto-generated student profile.
+
+---
+
+## Cross-Cutting Issue: Hardcoded `'anonymous'` Student ID
+
+Throughout the codebase, the student ID is hardcoded as `'anonymous'`:
+
+| File | Line |
+|------|------|
+| `lib/features/teaching/presentation/tutor_screen.dart` | 73 |
+| `lib/features/mentor/services/mentor_service.dart` | 58 |
+| `lib/core/services/personal_learning_plan_service.dart` | 280 |
+| `lib/core/services/study_progress_tracker.dart` | 81, 224, 253 |
+| `lib/features/sessions/presentation/session_tracker_screen.dart` | 16 |
+| `lib/features/practice/presentation/practice_screen.dart` | 805 |
+
+As long as every component uses `'anonymous'`, all progress from one device is conflated, and multi-device or multi-user scenarios are impossible. This blocks export/backup (whose data to export?), personalized mentoring, and accurate analytics.
+
+### Acceptance Criteria
+
+- [ ] Student ID is generated once at first launch (via `uuid`) and persisted in settings.
+- [ ] All hardcoded `'anonymous'` references are replaced with a provider or injected value from settings.
+- [ ] "Export my data" exports the correct student's data.
+
+---
+
+## Summary of New Files Needed
 
 | File | Purpose |
-|---|---|
-| `lib/features/teaching/` | New feature module for Teaching Mode |
-| `lib/features/mentor/` | New feature module for Mentor/Assistant Mode |
-| `lib/features/teaching/presentation/tutor_screen.dart` | Main conversational tutor interface |
-| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | Tutor/student message widgets |
-| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` | Visual lesson timeline |
-| `lib/features/teaching/services/tutor_service.dart` | Orchestrates lesson flow: plan → teach → quiz → review |
-| `lib/features/teaching/services/conversation_manager.dart` | Manages conversation state, context window, follow-ups |
-| `lib/features/mentor/presentation/mentor_screen.dart` | Mentor chat interface |
-| `lib/features/mentor/services/mentor_service.dart` | Scheduling, planning, motivation actions |
-| `lib/core/widgets/conversation_input.dart` | Reusable input bar with voice, text, canvas support |
+|------|---------|
+| `lib/features/ingestion/` | New feature module for content upload & processing |
+| `lib/features/ingestion/presentation/upload_screen.dart` | File picker, URL entry, paste UI |
+| `lib/features/ingestion/services/content_pipeline.dart` | Orchestrates: classify → parse → generate questions → store source |
+| `lib/core/data/repositories/plan_repository.dart` | Persist/load `PersonalLearningPlan` to/from Hive |
+| `lib/features/dashboard/` | New feature module for the unified analytics dashboard |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | Combined view: adherence + mastery + trends + badges |
 
----
+## Priority
 
-## Proposed Architecture
-
-### Teaching Mode Flow
-
-```
-Student opens lesson
-        │
-        ▼
-TutorService.generatePlan()
-  ├─ Queries LLM for lesson goals & structure
-  ├─ Adapts to student's prior mastery from MasteryGraphService
-  └─ Returns structured lesson plan with checkpoints
-        │
-        ▼
-Conversation begins — TutorService streams LLM responses
-  ├─ LessonBlock content delivered conversationally (not static cards)
-  ├─ Student can interrupt, ask follow-ups
-  ├─ Tutor detects confusion, adapts in real-time
-  ├─ Assigns inline exercises, evaluates answers
-  └─ Tracks elapsed time vs. planned lesson hour
-        │
-        ▼
-Lesson ends — TutorService.saveSession()
-  ├─ Saves lesson_record (what was covered, student engagement)
-  ├─ Updates mastery graph with lesson performance
-  └─ Schedules next lesson based on remaining syllabus
-```
-
-### Mentor Mode Architecture
-
-```
-MentorScreen (persistent companion)
-  │
-  ├─ Chat interface using LlmService.conversationStream()
-  ├─ Tool-calling system (execute actions like schedule/reschedule)
-  ├─ Context-aware: knows student's subjects, pending lessons, weak areas
-  ├─ Proactive nudges: "You haven't studied Physics in 3 days"
-  └─ Confirmation gate: never alters schedules without explicit approval
-```
-
----
-
-## Rationale
-
-1. **Core differentiator**: The conversational AI tutor is what makes StudyKing an "AI-native learning platform" rather than a basic flashcard/tracker app. Without it, the app is just a CRUD interface for subjects and questions.
-
-2. **Existing scaffolding can be leveraged**: `LlmService` already has method signatures for chat, lesson generation, and answer validation. `AnswerValidationService` has validation logic. `MasteryGraphService` tracks topic-level performance. The data layer is ready — only the interactive layer is missing.
-
-3. **Planner is currently misleading**: The `PlannerScreen` claims to generate study plans but only cycles hardcoded topic titles. This creates a poor first impression. A real LLM-backed planner that respects the student's actual syllabus, mastery data, and time constraints is essential.
-
-4. **Progress tracking has no value without a dashboard**: `StudyProgressTracker` computes stats that are never visualized. A dashboard showing trends, weak areas, streaks, and recommendations would provide immediate motivation.
-
----
-
-## Acceptance Criteria
-
-### Teaching Mode (Phase 1 — MVP)
-
-- [ ] **Conversational lesson delivery**: Student opens a topic and enters a real-time chat with the AI tutor. The tutor explains concepts interactively rather than displaying static blocks.
-- [ ] **Lesson plan generation**: Before teaching, the tutor generates a structured plan with goals, estimated duration, and checkpoints, tailored to the student's mastery level.
-- [ ] **In-line exercises**: Tutor can insert practice questions mid-lesson, evaluate typed answers, and provide corrective feedback without leaving the conversation.
-- [ ] **Adaptive pacing**: If the student answers correctly, tutor accelerates. If struggling, tutor offers simpler explanations or prerequisite review.
-- [ ] **Lesson recording**: After each lesson, a `LessonSession` record is saved with: topics covered, questions asked/answered, student confidence, and tutor notes.
-- [ ] **Time respect**: Tutor shows a remaining-time indicator and wraps up when the lesson hour is approaching.
-
-### Teaching Mode (Phase 2 — Enhanced)
-
-- [ ] **Streaming responses**: LLM responses stream token-by-token for low-latency feel (not waiting for full response).
-- [ ] **Voice input**: Speech-to-text for student answers (via `speech_to_text` package).
-- [ ] **Handwriting/canvas**: Student can draw on a canvas; tutor interprets via vision API or LLM.
-- [ ] **Follow-up questions**: Student can ask follow-ups mid-explanation; tutor maintains conversational context.
-- [ ] **Slide rendering**: Tutor can present structured slides with diagrams within the conversation.
-- [ ] **Confidence tracking**: After each topic segment, student rates understanding; tutor adjusts remaining lesson accordingly.
-
-### Mentor Mode (Phase 1 — MVP)
-
-- [ ] **Chat interface**: Persistent chat screen where student can ask scheduling, planning, and motivational questions.
-- [ ] **Schedule awareness**: Mentor reads upcoming lessons from `StudySessionRepository` and can report what's planned.
-- [ ] **Rescheduling with confirmation**: Mentor can propose schedule changes but requires explicit user confirmation ("I see you have a Physics lesson tomorrow. Would you like to reschedule?").
-- [ ] **Progress reporting**: Mentor can answer "How am I doing in Math?" by querying `StudyProgressTracker` / `MasteryGraphService`.
-- [ ] **Proactive reminders**: Mentor detects inactivity (no sessions in 3+ days) and sends an encouraging nudge.
-
-### Mentor Mode (Phase 2 — Enhanced)
-
-- [ ] **Long-term goal planning**: "I want to finish IB Physics in 180 days" — mentor breaks into weekly plans, adapts as progress changes.
-- [ ] **Motivation & accountability**: Mentor tracks streaks, celebrates milestones, and intervenes when patterns slip.
-- [ ] **Wellbeing awareness**: Mentor avoids over-scheduling, encourages breaks, respects the student's stated workload limits.
-- [ ] **Feedback loop**: Student can rate lessons and provide feedback; mentor adjusts future recommendations accordingly.
-
-### Analytics Dashboard (Phase 1)
-
-- [ ] **Dashboard screen** showing: total study hours (by subject), weekly trend chart, accuracy over time, weak/strong topic areas.
-- [ ] **Topic mastery visualization**: Per-topic progress bars or heatmap showing mastery levels (Novice → Expert).
-- [ ] **Session history with insights**: Trends showing study consistency, best study times, improving/declining subjects.
-- [ ] **Exportable progress**: CSV/PDF export of study history, as partially scaffolded in `StudyProgressTracker.exportProgressCSV()`.
-
----
-
-## Dependencies
-
-- Add `speech_to_text` and `text_to_speech` for voice support (Mentor/Teaching Phase 2)
-- Add `flutter_markdown` or similar for rich rendering of LLM responses (diagrams, math)
-- Add `fl_chart` or `syncfusion_flutter_charts` for the analytics dashboard
-- LlmService must support streaming before Teaching Mode Phase 2 can ship
+| Issue | Priority | Risk |
+|-------|----------|------|
+| Content ingestion | High | Current code silently produces mock data (misleading) |
+| Smart planner | High | Core workflow (plan → study → track → adapt) is broken |
+| Analytics dashboard | Medium | All tracking infrastructure exists but is invisible |
+| Hardcoded student ID | High | Blocks personalization, export, and multi-user scenarios |

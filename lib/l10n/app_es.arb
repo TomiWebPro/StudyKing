@@ -28,7 +28,7 @@
   "@courseSubject": {
     "description": "Label for course/subject text field"
   },
-  "courseHint": "ej., Física IB",
+  "courseHint": "p. ej., Física IB",
   "@courseHint": {
     "description": "Hint text for course input"
   },
@@ -48,7 +48,7 @@
   "@generating": {
     "description": "Button label when plan is being generated"
   },
-  "yourStudySchedule": "Tu Horario de Estudio",
+  "yourStudySchedule": "Su Horario de Estudio",
   "@yourStudySchedule": {
     "description": "Title for the generated study schedule"
   },
@@ -171,11 +171,11 @@
   "@noPracticeSessionsYet": {
     "description": "Empty state heading for practice screen"
   },
-  "addSubjectsAndQuestionsToStartPracticing": "Agrega materias y preguntas para comenzar a practicar",
+  "addSubjectsAndQuestionsToStartPracticing": "Agregue materias y preguntas para comenzar a practicar",
   "@addSubjectsAndQuestionsToStartPracticing": {
     "description": "Empty state body text for practice screen"
   },
-  "addSubjectsFromSubjectsTab": "Agrega materias desde la pestaña Materias",
+  "addSubjectsFromSubjectsTab": "Agregue materias desde la pestaña Materias",
   "@addSubjectsFromSubjectsTab": {
     "description": "Snackbar message directing to subjects tab"
   },
@@ -212,7 +212,7 @@
   "@topicFocus": {
     "description": "Topic focus mode title"
   },
-  "practiceSpecificTopics": "Practica temas específicos",
+  "practiceSpecificTopics": "Practique temas específicos",
   "@practiceSpecificTopics": {
     "description": "Subtitle for topic focus mode"
   },
@@ -220,11 +220,11 @@
   "@weakAreas": {
     "description": "Weak areas mode title"
   },
-  "focusOnMistakes": "Concéntrate en tus errores",
+  "focusOnMistakes": "Concéntrese en sus errores",
   "@focusOnMistakes": {
     "description": "Subtitle for weak areas mode"
   },
-  "yourSubjects": "Tus Materias",
+  "yourSubjects": "Sus Materias",
   "@yourSubjects": {
     "description": "Section heading for subjects"
   },
@@ -264,11 +264,11 @@
   "@topicSelectionComingSoon": {
     "description": "Snackbar message for unavailable topic selection"
   },
-  "noWeakAreasFound": "No se encontraron áreas débiles. ¡Sigue así!",
+  "noWeakAreasFound": "No se encontraron áreas débiles. ¡Siga así!",
   "@noWeakAreasFound": {
     "description": "Message when no weak areas are found"
   },
-  "noWeakAreasQuestions": "No hay preguntas disponibles para tus áreas débiles.",
+  "noWeakAreasQuestions": "No hay preguntas disponibles para sus áreas débiles.",
   "@noWeakAreasQuestions": {
     "description": "Message when no questions found for weak areas"
   },
@@ -276,7 +276,7 @@
   "@noQuestionsAvailable": {
     "description": "Dialog title when no questions available"
   },
-  "noQuestionsForSelectedSubject": "No hay preguntas para la materia/tema seleccionado. ¡Comienza a crear preguntas!",
+  "noQuestionsForSelectedSubject": "No hay preguntas para la materia/tema seleccionado. ¡Comience a crear preguntas!",
   "@noQuestionsForSelectedSubject": {
     "description": "Dialog content when no questions available"
   },
@@ -292,11 +292,11 @@
   "@correct": {
     "description": "Label for correct answers stat"
   },
-  "yourAnswer": "Tu Respuesta",
+  "yourAnswer": "Su Respuesta",
   "@yourAnswer": {
     "description": "Label for answer input field"
   },
-  "yourAnswerCharacters": "Tu Respuesta ({count} caracteres)",
+  "yourAnswerCharacters": "Su Respuesta ({count} caracteres)",
   "@yourAnswerCharacters": {
     "description": "Label for essay answer input with character count",
     "placeholders": {
@@ -485,7 +485,7 @@
   "@learningGoal": {
     "description": "Label for learning goal input field"
   },
-  "learningGoalHint": "ej., Exámenes Finales, Certificaciones",
+  "learningGoalHint": "p. ej., Exámenes Finales, Certificaciones",
   "@learningGoalHint": {
     "description": "Hint text for learning goal input field"
   },
@@ -493,7 +493,7 @@
   "@preferredStudyTime": {
     "description": "Label for preferred study time input field"
   },
-  "preferredStudyTimeHint": "ej., Tarde (6-9 PM)",
+  "preferredStudyTimeHint": "p. ej., Tarde (6-9 PM)",
   "@preferredStudyTimeHint": {
     "description": "Hint text for preferred study time input field"
   },
@@ -590,8 +590,8 @@
   "@small": {
     "description": "Small font size label"
   },
-  "medium": "Mediano",
-  "@medium": {
+  "fontSizeMedium": "Mediano",
+  "@fontSizeMedium": {
     "description": "Medium font size label"
   },
   "large": "Grande",
@@ -754,7 +754,7 @@
   "@subjectName": {
     "description": "Label for subject name field"
   },
-  "subjectNameHint": "ej., Física",
+  "subjectNameHint": "p. ej., Física",
   "@subjectNameHint": {
     "description": "Hint text for subject name"
   },
@@ -762,7 +762,7 @@
   "@subjectCodeOptional": {
     "description": "Label for subject code field"
   },
-  "subjectCodeHint": "ej., IB-FIS",
+  "subjectCodeHint": "p. ej., IB-FIS",
   "@subjectCodeHint": {
     "description": "Hint text for subject code"
   },
@@ -815,7 +815,7 @@
   "@teacherOptional": {
     "description": "Label for teacher name field"
   },
-  "teacherHint": "ej., Dr. John Smith",
+  "teacherHint": "p. ej., Dr. Juan García",
   "@teacherHint": {
     "description": "Hint text for teacher name"
   },
@@ -1075,7 +1075,7 @@
   "@noDataUploaded": {
     "description": "Empty state message when no data is uploaded"
   },
-  "uploadOrPasteData": "Sube o pega datos para visualizar",
+  "uploadOrPasteData": "Sube o pegue datos para visualizar",
   "@uploadOrPasteData": {
     "description": "Empty state subtitle for graph"
   },
@@ -1338,6 +1338,10 @@
   "easy": "Fácil",
   "@easy": {
     "description": "Easy difficulty level"
+  },
+  "difficultyMedium": "Medio",
+  "@difficultyMedium": {
+    "description": "Medium difficulty level"
   },
   "hard": "Difícil",
   "@hard": {
@@ -1643,13 +1647,81 @@
       }
     }
   },
-  "noTopicsYetAddSome": "No hay temas todavía? ¡agrega algunos!",
+  "noTopicsYetAddSome": "¿No hay temas? ¡agregue algunos!",
   "@noTopicsYetAddSome": {
     "description": "Empty state message for topic list"
   },
-  "noLessonsUsePlanner": "No hay lecciones? ¡usa el Planificador para generar!",
+  "noLessonsUsePlanner": "¿No hay lecciones? ¡use el Planificador para generar!",
   "@noLessonsUsePlanner": {
     "description": "Empty state message for lesson list"
+  },
+  "mentor": "Mentor",
+  "@mentor": {
+    "description": "Bottom navigation label for AI mentor"
+  },
+  "teachingMode": "Tutor IA",
+  "@teachingMode": {
+    "description": "Label for AI tutor mode button"
+  },
+  "startAiTutoring": "Iniciar Tutoría IA",
+  "@startAiTutoring": {
+    "description": "Button label to start AI tutoring session"
+  },
+  "endLesson": "Finalizar Lección",
+  "@endLesson": {
+    "description": "Button to end the current lesson"
+  },
+  "typeYourMessage": "Escribe tu mensaje...",
+  "@typeYourMessage": {
+    "description": "Hint text for message input field"
+  },
+  "send": "Enviar",
+  "@send": {
+    "description": "Send button label"
+  },
+  "progressReport": "Informe de Progreso",
+  "@progressReport": {
+    "description": "Title for progress report dialog"
+  },
+  "askMentorAnything": "Pregúntale a tu mentor...",
+  "@askMentorAnything": {
+    "description": "Hint text for mentor chat input"
+  },
+  "mentorGreeting": "Mentor IA",
+  "@mentorGreeting": {
+    "description": "Welcome title for mentor screen"
+  },
+  "mentorSubtitle": "Tu asistente académico personal IA",
+  "@mentorSubtitle": {
+    "description": "Subtitle for mentor screen"
+  },
+  "startingLesson": "Iniciando tu lección...",
+  "@startingLesson": {
+    "description": "Loading message while lesson initializes"
+  },
+  "lessonTimeEnded": "El tiempo de lección terminó. Haz clic en 'Finalizar Lección' para terminar.",
+  "@lessonTimeEnded": {
+    "description": "Message shown when lesson time is up"
+  },
+  "lessonComplete": "Lección Completada",
+  "@lessonComplete": {
+    "description": "Title for lesson completion dialog"
+  },
+  "errorOccurred": "Ocurrió un error. Inténtalo de nuevo.",
+  "@errorOccurred": {
+    "description": "Generic error message"
+  },
+  "inProgress": "En Progreso",
+  "@inProgress": {
+    "description": "Status label for in-progress items"
+  },
+  "completed": "Completado",
+  "@completed": {
+    "description": "Status label for completed items"
+  },
+  "notStarted": "No Iniciado",
+  "@notStarted": {
+    "description": "Status label for not started items"
   },
   "blocksCount": "{count, plural, =1{1 bloque} other{{count} bloques}}",
   "@blocksCount": {
@@ -1748,7 +1820,7 @@
   "@atRiskTopics": {
     "description": "Section title for at-risk topics"
   },
-  "noAtRiskTopics": "Sin temas en riesgo. ¡Sigue así!",
+  "noAtRiskTopics": "Sin temas en riesgo. ¡Siga así!",
   "@noAtRiskTopics": {
     "description": "Empty state message when no at-risk topics"
   },
@@ -1765,7 +1837,7 @@
   "@readyToAdvance": {
     "description": "Section title for ready-to-advance topics"
   },
-  "keepPracticingToUnlock": "¡Sigue practicando para desbloquear temas avanzados!",
+  "keepPracticingToUnlock": "¡Siga practicando para desbloquear temas avanzados!",
   "@keepPracticingToUnlock": {
     "description": "Empty state message for ready-to-advance section"
   },
@@ -1835,7 +1907,7 @@
   "@quickGuideHelpContent": {
     "description": "Help dialog content for Quick Guide"
   },
-  "semanticsYouSaid": "Tú dijiste: {message}",
+  "semanticsYouSaid": "Usted dijo: {message}",
   "@semanticsYouSaid": {
     "description": "Semantic label for user chat message",
     "placeholders": {
@@ -1935,7 +2007,7 @@
   "@highContrastMode": {
     "description": "Title for high contrast toggle"
   },
-  "highContrastDescription": "Aumenta el contraste para mejor visibilidad",
+  "highContrastDescription": "Aumente el contraste para mejor visibilidad",
   "@highContrastDescription": {
     "description": "Subtitle for high contrast toggle"
   },
@@ -1943,7 +2015,7 @@
   "@largeTouchTargets": {
     "description": "Title for large touch targets toggle"
   },
-  "largeTouchTargetsDescription": "Aumenta el tamaño de los objetivos táctiles",
+  "largeTouchTargetsDescription": "Aumente el tamaño de los objetivos táctiles",
   "@largeTouchTargetsDescription": {
     "description": "Subtitle for large touch targets toggle"
   }

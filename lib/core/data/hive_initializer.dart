@@ -8,12 +8,15 @@ import 'adapters/topic_dependency_adapter.dart';
 import 'adapters/question_mastery_state_adapter.dart';
 import 'adapters/personal_learning_plan_adapter.dart';
 import 'adapters/markscheme_adapter.dart';
+import 'adapters/conversation_message_adapter.dart';
 import 'models/question_evaluation_model.dart';
 import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
 import 'models/question_mastery_state_model.dart';
 import 'models/personal_learning_plan_model.dart';
 import 'models/student_attempt_model.dart';
+import 'models/conversation_message_model.dart';
+import 'models/tutor_session_model.dart';
 
 class HiveInitializer {
   static final Logger _logger = const Logger('HiveInitializer');
@@ -21,13 +24,13 @@ class HiveInitializer {
   static Future<void> initialize() async {
     await DatabaseMigration.runMigrations();
     await _registerAdapters();
-    
+
     await Hive.openBox<QuestionEvaluation>('question_evaluations');
     await Hive.openBox<MasteryState>('mastery_states');
     await Hive.openBox<QuestionMasteryState>('question_mastery_states');
     await Hive.openBox<TopicDependency>('topic_dependencies');
     await Hive.openBox<PersonalLearningPlan>('learning_plans');
-    
+
     await Hive.openBox('subjects');
     await Hive.openBox('topics');
     await Hive.openBox('questions');
@@ -38,12 +41,14 @@ class HiveInitializer {
     await Hive.openBox('lessons');
     await Hive.openBox('sessions');
     await Hive.openBox('progress');
-    
     await Hive.openBox('tasks');
-    
+
+    await Hive.openBox<ConversationMessage>('conversations');
+    await Hive.openBox<TutorSession>('tutor_sessions');
+
     _logger.i('Hive initialized successfully with migrations');
   }
-  
+
   static Future<void> _registerAdapters() async {
     if (!Hive.isAdapterRegistered(24)) {
       Hive.registerAdapter(StudentAttemptAdapter());
@@ -71,6 +76,12 @@ class HiveInitializer {
     if (!Hive.isAdapterRegistered(12)) {
       Hive.registerAdapter(MarkschemeAdapter());
       Hive.registerAdapter(MarkSchemeStepAdapter());
+    }
+    if (!Hive.isAdapterRegistered(27)) {
+      Hive.registerAdapter(ConversationMessageAdapter());
+    }
+    if (!Hive.isAdapterRegistered(28)) {
+      Hive.registerAdapter(TutorSessionAdapter());
     }
   }
 }

@@ -18,6 +18,7 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_view.dart';
 import 'features/practice/presentation/practice_screen.dart';
 import 'features/quickguide/quickguide.dart';
+import 'features/mentor/presentation/mentor_screen.dart';
 
 // Global database instance
 final database = DatabaseService(
@@ -27,6 +28,8 @@ final database = DatabaseService(
   lessonRepository: LessonRepository(),
   sessionRepository: StudySessionRepository(),
   subjectRepository: SubjectRepository(),
+  conversationRepository: ConversationRepository(),
+  tutorSessionRepository: TutorSessionRepository(),
 );
 
 // Global settings repository (singleton for use outside widget tree)
@@ -55,8 +58,14 @@ final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBa
 // Selected model provider
 final selectedModelProvider = StateProvider<String>((ref) => '');
 
-// Locale provider
-final localeProvider = StateProvider<Locale>((ref) => const Locale('en'));
+// Locale provider with device locale auto-detection
+final localeProvider = StateProvider<Locale>((ref) {
+  try {
+    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    if (deviceLocale.languageCode == 'es') return const Locale('es');
+  } catch (_) {}
+  return const Locale('en');
+});
 
 class SettingsController extends StateNotifier<SettingsBox> {
   final Logger _logger = const Logger('SettingsController');
@@ -211,6 +220,8 @@ void main() async {
     await database.lessonRepository.init();
     await database.sessionRepository.init();
     await database.subjectRepository.init();
+    await database.conversationRepository.init();
+    await database.tutorSessionRepository.init();
     
     // Initialize settings repository
     await settingsRepository.init();
@@ -232,14 +243,33 @@ class _CloseDialogIntent extends Intent {
   const _CloseDialogIntent();
 }
 
-class StudyKingApp extends ConsumerWidget {
+class StudyKingApp extends ConsumerStatefulWidget {
   const StudyKingApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudyKingApp> createState() => _StudyKingAppState();
+}
+
+class _StudyKingAppState extends ConsumerState<StudyKingApp> {
+  bool _hasLoadedProfile = false;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final isLoading = ref.watch(settingsLoadingProvider);
     final locale = ref.watch(localeProvider);
+
+    if (!_hasLoadedProfile) {
+      _hasLoadedProfile = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final profile = await settingsRepository.getProfileData();
+          if (profile != null && profile.language.isNotEmpty && mounted) {
+            ref.read(localeProvider.notifier).state = Locale(profile.language);
+          }
+        } catch (_) {}
+      });
+    }
     
     if (isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -309,6 +339,7 @@ class StudyKingApp extends ConsumerWidget {
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/quick-guide': (context) => const QuickGuideScreen(),
+        '/mentor': (context) => const MentorScreen(),
       },
     );
   }
@@ -356,11 +387,13 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = const [
     SubjectListView(),
     PracticeScreen(),
+    MentorScreen(),
     SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       explicitChildNodes: true,
       child: Scaffold(
@@ -377,27 +410,35 @@ class _MainScreenState extends State<MainScreen> {
           },
           destinations: [
             Semantics(
-              label: AppLocalizations.of(context)!.subjects,
+              label: l10n.subjects,
               child: NavigationDestination(
                 icon: Icon(Icons.school_outlined),
                 selectedIcon: Icon(Icons.school),
-                label: AppLocalizations.of(context)!.subjects,
+                label: l10n.subjects,
               ),
             ),
             Semantics(
-              label: AppLocalizations.of(context)!.practice,
+              label: l10n.practice,
               child: NavigationDestination(
                 icon: Icon(Icons.play_arrow_outlined),
                 selectedIcon: Icon(Icons.play_arrow),
-                label: AppLocalizations.of(context)!.practice,
+                label: l10n.practice,
               ),
             ),
             Semantics(
-              label: AppLocalizations.of(context)!.settings,
+              label: l10n.mentor,
+              child: NavigationDestination(
+                icon: Icon(Icons.auto_awesome_outlined),
+                selectedIcon: Icon(Icons.auto_awesome),
+                label: l10n.mentor,
+              ),
+            ),
+            Semantics(
+              label: l10n.settings,
               child: NavigationDestination(
                 icon: Icon(Icons.settings_outlined),
                 selectedIcon: Icon(Icons.settings),
-                label: AppLocalizations.of(context)!.settings,
+                label: l10n.settings,
               ),
             ),
           ],

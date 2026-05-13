@@ -4,7 +4,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/services/llm_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/question_generation_service.dart';
 import 'package:studyking/core/data/repositories/mastery_graph_repository.dart' as mvg;
@@ -27,6 +27,8 @@ class MockLlmService extends LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
   }) async {
     chatCallCount++;
     if (shouldThrow) {

@@ -267,7 +267,7 @@ void main() {
         expect(l10n.system, 'System');
         expect(l10n.fontSize, 'Font Size');
         expect(l10n.small, 'Small');
-        expect(l10n.medium, 'Medium');
+        expect(l10n.fontSizeMedium, 'Medium');
         expect(l10n.large, 'Large');
         expect(l10n.extraLarge, 'Extra Large');
         expect(l10n.aiConfiguration, 'AI Configuration');
@@ -758,12 +758,12 @@ void main() {
         expect(l10n.studyPlanner, 'Planificador de Estudio');
         expect(l10n.createStudyPlan, 'Crear Plan de Estudio');
         expect(l10n.courseSubject, 'Curso/Materia');
-        expect(l10n.courseHint, 'ej., Física IB');
+        expect(l10n.courseHint, 'p. ej., Física IB');
         expect(l10n.days, 'Días');
         expect(l10n.hoursPerDay, 'Horas/Día');
         expect(l10n.generatePlan, 'Generar Plan');
         expect(l10n.generating, 'Generando...');
-        expect(l10n.yourStudySchedule, 'Tu Horario de Estudio');
+        expect(l10n.yourStudySchedule, 'Su Horario de Estudio');
         expect(l10n.fillAllFieldsCorrectly, 'Por favor complete todos los campos correctamente');
         expect(l10n.today, 'Hoy');
         expect(l10n.yesterday, 'Ayer');
@@ -775,18 +775,18 @@ void main() {
         expect(l10n.practiceOptions, 'Opciones de Práctica');
         expect(l10n.noSubjects, 'Sin Materias');
         expect(l10n.noPracticeSessionsYet, 'Sin Sesiones de Práctica');
-        expect(l10n.addSubjectsAndQuestionsToStartPracticing, 'Agrega materias y preguntas para comenzar a practicar');
-        expect(l10n.addSubjectsFromSubjectsTab, 'Agrega materias desde la pestaña Materias');
+        expect(l10n.addSubjectsAndQuestionsToStartPracticing, 'Agregue materias y preguntas para comenzar a practicar');
+        expect(l10n.addSubjectsFromSubjectsTab, 'Agregue materias desde la pestaña Materias');
         expect(l10n.addSubject, 'Agregar Materia');
         expect(l10n.practiceModes, 'Modos de Práctica');
         expect(l10n.quickPractice, 'Práctica Rápida');
         expect(l10n.comingSoon, 'Próximamente');
         expect(l10n.spacedRepetition, 'Repetición Espaciada');
         expect(l10n.topicFocus, 'Enfoque por Tema');
-        expect(l10n.practiceSpecificTopics, 'Practica temas específicos');
+        expect(l10n.practiceSpecificTopics, 'Practique temas específicos');
         expect(l10n.weakAreas, 'Áreas Débiles');
-        expect(l10n.focusOnMistakes, 'Concéntrate en tus errores');
-        expect(l10n.yourSubjects, 'Tus Materias');
+        expect(l10n.focusOnMistakes, 'Concéntrese en sus errores');
+        expect(l10n.yourSubjects, 'Sus Materias');
         expect(l10n.readyForPractice, 'Listo para practicar');
         expect(l10n.practiceAvailable, 'Práctica disponible');
         expect(l10n.selectSubject, 'Seleccionar Materia');
@@ -797,14 +797,14 @@ void main() {
         expect(l10n.noCode, 'Sin código');
         expect(l10n.topicSelectionComingSoon, '¡Selección de temas próximamente!');
         expect(l10n.noQuestionsAvailable, 'No Hay Preguntas Disponibles');
-        expect(l10n.noQuestionsForSelectedSubject, 'No hay preguntas para la materia/tema seleccionado. ¡Comienza a crear preguntas!');
+        expect(l10n.noQuestionsForSelectedSubject, 'No hay preguntas para la materia/tema seleccionado. ¡Comience a crear preguntas!');
       });
 
       test('session results section', () {
         expect(l10n.time, 'Tiempo');
         expect(l10n.score, 'Puntuación');
         expect(l10n.correct, 'Correctas');
-        expect(l10n.yourAnswer, 'Tu Respuesta');
+        expect(l10n.yourAnswer, 'Su Respuesta');
         expect(l10n.submitAnswer, 'Enviar Respuesta');
         expect(l10n.correctFeedback, '¡Correcto!');
         expect(l10n.incorrectFeedback, 'Incorrecto');
@@ -824,8 +824,8 @@ void main() {
         expect(l10n.reviewDueQuestions, 'Repasar preguntas pendientes');
         expect(l10n.selectTopic, 'Seleccionar Tema');
         expect(l10n.noTopicsAvailable, 'No hay temas disponibles');
-        expect(l10n.noWeakAreasFound, 'No se encontraron áreas débiles. ¡Sigue así!');
-        expect(l10n.noWeakAreasQuestions, 'No hay preguntas disponibles para tus áreas débiles.');
+        expect(l10n.noWeakAreasFound, 'No se encontraron áreas débiles. ¡Siga así!');
+        expect(l10n.noWeakAreasQuestions, 'No hay preguntas disponibles para sus áreas débiles.');
         expect(l10n.questionsDueForReview, 'preguntas pendientes de repaso');
         expect(l10n.spacedRepetitionMode, 'Repetición Espaciada');
       });
@@ -854,9 +854,9 @@ void main() {
         expect(l10n.studentIdOptional, 'ID de Estudiante (Opcional)');
         expect(l10n.yourStudentIdNumber, 'Su número de ID de estudiante');
         expect(l10n.learningGoal, 'Objetivo de Aprendizaje');
-        expect(l10n.learningGoalHint, 'ej., Exámenes Finales, Certificaciones');
+        expect(l10n.learningGoalHint, 'p. ej., Exámenes Finales, Certificaciones');
         expect(l10n.preferredStudyTime, 'Horario de Estudio Preferido');
-        expect(l10n.preferredStudyTimeHint, 'ej., Tarde (6-9 PM)');
+        expect(l10n.preferredStudyTimeHint, 'p. ej., Tarde (6-9 PM)');
         expect(l10n.accountInformation, 'Información de la Cuenta');
         expect(l10n.language, 'Idioma');
         expect(l10n.english, 'Inglés');
@@ -883,7 +883,7 @@ void main() {
         expect(l10n.system, 'Sistema');
         expect(l10n.fontSize, 'Tamaño de Fuente');
         expect(l10n.small, 'Pequeño');
-        expect(l10n.medium, 'Mediano');
+        expect(l10n.fontSizeMedium, 'Mediano');
         expect(l10n.large, 'Grande');
         expect(l10n.extraLarge, 'Extra Grande');
         expect(l10n.aiConfiguration, 'Configuración de IA');
@@ -926,9 +926,9 @@ void main() {
         expect(l10n.mySubjects, 'Mis Materias');
         expect(l10n.addNewSubject, 'Agregar Nueva Materia');
         expect(l10n.subjectName, 'Nombre de la Materia');
-        expect(l10n.subjectNameHint, 'ej., Física');
+        expect(l10n.subjectNameHint, 'p. ej., Física');
         expect(l10n.subjectCodeOptional, 'Código de Materia (Opcional)');
-        expect(l10n.subjectCodeHint, 'ej., IB-FIS');
+        expect(l10n.subjectCodeHint, 'p. ej., IB-FIS');
         expect(l10n.themeColor, 'Color del Tema');
         expect(l10n.subjectColor, 'Color de la Materia');
         expect(l10n.examDateOptional, 'Fecha de Examen (Opcional)');
@@ -939,7 +939,7 @@ void main() {
         expect(l10n.descriptionOptional, 'Descripción (Opcional)');
         expect(l10n.descriptionHint, 'Breve descripción de la materia');
         expect(l10n.teacherOptional, 'Profesor (Opcional)');
-        expect(l10n.teacherHint, 'ej., Dr. John Smith');
+        expect(l10n.teacherHint, 'p. ej., Dr. Juan García');
         expect(l10n.syllabusScopeOptional, 'Plan de Estudios/Alcance (Opcional)');
         expect(l10n.syllabusHint, 'Breve resumen del plan de estudios');
         expect(l10n.teacherNameHint, 'Ingrese el nombre del profesor');
@@ -1009,7 +1009,7 @@ void main() {
         expect(l10n.validating, 'Validando...');
         expect(l10n.renderedGraph, 'Gráfico Renderizado');
         expect(l10n.noDataUploaded, 'No hay datos subidos');
-        expect(l10n.uploadOrPasteData, 'Sube o pega datos para visualizar');
+        expect(l10n.uploadOrPasteData, 'Sube o pegue datos para visualizar');
         expect(l10n.selectGraphType, 'Seleccione un tipo de gráfico para visualizar');
         expect(l10n.uploadDataFileDialog, 'Subir Archivo de Datos');
         expect(l10n.fileUploadImplemented, 'La funcionalidad de carga de archivos se implementaría aquí.');
@@ -1201,8 +1201,8 @@ void main() {
       });
 
       test('yourAnswerCharacters', () {
-        expect(l10n.yourAnswerCharacters(100), 'Tu Respuesta (100 caracteres)');
-        expect(l10n.yourAnswerCharacters(500), 'Tu Respuesta (500 caracteres)');
+        expect(l10n.yourAnswerCharacters(100), 'Su Respuesta (100 caracteres)');
+        expect(l10n.yourAnswerCharacters(500), 'Su Respuesta (500 caracteres)');
       });
 
       test('dueQuestionsCount', () {

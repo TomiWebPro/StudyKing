@@ -305,8 +305,8 @@ void main() {
       await repo.save(s2);
       final g2 = await repo.get('rt1');
       expect(g2!.name, 'Second');
-      expect(g2!.code, 'C2');
-      expect(g2!.topicIds, ['t1', 't2']);
+      expect(g2.code, 'C2');
+      expect(g2.topicIds, ['t1', 't2']);
     });
 
     test('save -> delete -> save restores with new data', () async {

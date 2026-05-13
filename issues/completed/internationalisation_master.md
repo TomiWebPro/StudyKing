@@ -1,92 +1,182 @@
-# i18n: Localise hardcoded English strings & improve Spanish translation quality
+# Internationalisation Master — Spanish Localisation Audit & i18n Infrastructure
 
-## Context
+## Summary
 
-The app uses Flutter's `gen-l10n` with ARB files (`app_en.arb`, `app_es.arb`) and supports `en` + `es` locales. Many user-facing strings remain hardcoded in English across the codebase — they never pass through `AppLocalizations.of(context)`, so they are invisible to Spanish (and future) users. Additionally, the Spanish translation has several quality gaps (identical duration abbreviations, inconsistent formality register, string concatenation patterns that break for RTL).
+The app supports English (`en`) and Spanish (`es`) via `flutter_localizations` + ARB files (410 keys each). Below are actionable findings — from broken infrastructure blocking runtime locale switching, to Spanish translation quality issues. Fixing these for Spanish establishes a clean, reproducible pattern for adding future languages.
 
-## Affected Files
+---
 
-### Sessions feature (primary)
-| File | Issue |
-|------|-------|
-| `lib/features/sessions/widgets/session_analytics.dart` | **8 hardcoded strings**: `'Sessions by Day of Week'`, `'Performance Metrics'`, `'Avg Session'`, `'Total Sessions'`, `'Current Streak'`, `'$currentStreak days'`, `'Total Time'`, `'0s'`. Entire file lacks `AppLocalizations` import. |
-| `lib/features/sessions/presentation/session_tracker_screen.dart:177` | `_formatElapsed` returns `'${hours}h ${mins}m ${secs}s'` — English h/m/s abbreviations hardcoded. Should reuse `time_utils.dart` `formatDuration` which already uses locale-aware keys. |
+## Finding 1: Language Selector Does Not Change the App Locale (BROKEN)
 
-### Across all other features
-| File | Hardcoded strings |
-|------|-------------------|
-| `lib/features/lessons/presentation/topic_list_screen.dart:50` | `'No topics yet - add some!'` |
-| `lib/features/lessons/presentation/lesson_list_screen.dart:41` | `'No lessons - use Planner to generate!'` |
-| `lib/features/lessons/presentation/lesson_list_screen.dart:55` | `'${l.blocks.length} blocks'` |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart:113-123` | `'Explanation'`, `'Example'`, `'Exercise'`, `'Slide'`, `'Quiz'`, `'Summary'` block type labels |
-| `lib/features/practice/presentation/practice_session_screen.dart:302-303` | `' - '` hardcoded separator in app bar title |
-| `lib/features/practice/presentation/practice_session_screen.dart:434` | `['Option A', 'Option B', 'Option C', 'Option D']` fallback options |
-| `lib/features/practice/presentation/practice_session_screen.dart:455` | `'Drawing submitted'` |
-| `lib/features/practice/presentation/practice_session_screen.dart:501` | `'Unsupported question type: ${question.type.name}'` |
-| `lib/features/practice/presentation/learning_plan_dashboard.dart` | **12 hardcoded strings**: `'No study plan for today'`, `'At Risk Topics'`, `'Ready to Advance'`, `'Mastery Overview'`, `'Total Topics'`, `'Mastered'`, `'Weak'`, `'Accuracy: ...'`, `'Avg Accuracy: ...'`, `'Avg Readiness: ...'`, empty states, etc. |
-| `lib/features/planner/presentation/planner_screen.dart:47` | `'$course - Topic ${...}'` |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart:327-333` | Full help dialog is hardcoded English text block |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart:221,262` | Semantics labels hardcoded |
-| `lib/features/settings/presentation/settings_screen.dart:416-418` | AboutDialog: `'StudyKing'`, `'v0.1.0'`, `'© 2026 StudyKing.'` |
-| `lib/features/settings/presentation/settings_screen.dart:289,293` | `'unknown-model'`, `'Unknown'` fallbacks |
-| `lib/features/subjects/presentation/subject_detail_view.dart:200` | `'${l10n.examDateOptional}: '` — colon+space appended with `+` |
-| `lib/features/subjects/presentation/subject_detail_view.dart:263,272` | `'Lesson'` fallback |
-| `lib/features/subjects/presentation/subject_list_view.dart:39,55` | `'Error: $error'` formatting |
-| `lib/features/questions/ui/widgets/question_card_widget.dart:227,244` | `['Option 1', 'Option 2', 'Option 3', 'Option 4']` fallback |
-| `lib/features/questions/ui/widgets/question_card_widget.dart:371` | `'Question'` default type label |
+**Severity:** Critical — functional bug
 
-### ARB / translation files
-| File | Issue |
-|------|-------|
-| `lib/l10n/app_es.arb:durationDays/Hours/Minutes/Seconds` | Identical to English: `1d`, `1h`, `1m`, `1s`. Spanish convention uses `min` for minutes. |
-| `lib/l10n/app_es.arb:practiceQuestionsFrom` | Uses formal `Practique` (usted) — informal `Practica` (tú) is more natural for the student/teen target audience. |
-| `lib/l10n/app_en.arb` | Missing ~30+ translation keys for the hardcoded strings listed above |
+**Context:** The Profile screen (`lib/features/settings/presentation/profile_screen.dart:371-382`) renders a `DropdownButton<String>` with values `'en'` / `'es'`, but `onChanged` only calls `setState(() => _language = value)` (line 379). It **never** writes to the `localeProvider` defined in `lib/main.dart:55`. The `_language` value is persisted to the profile DB (line 94), but the `MaterialApp.locale` on line 235 of `main.dart` reads from `localeProvider`, which is **never updated** after initialisation.
 
-### Other
-| File | Issue |
-|------|-------|
-| `lib/core/utils/time_utils.dart:21-47` | `formatDuration` joins locale-aware segments with hardcoded spaces (`'... ${_getDurationHours(...)} ${_getDurationMinutes(...)} ...'`). Space-separated concatenation may not suit all locales. |
+```dart
+// main.dart:55 — never written to after initialisation
+final localeProvider = StateProvider<Locale>((ref) => const Locale('en'));
+```
 
-## Rationale
+**Affected files:**
+- `lib/main.dart:55` — localeProvider defined but never mutated downstream
+- `lib/features/settings/presentation/profile_screen.dart:371-382` — dropdown updates local state only
+- `lib/features/settings/presentation/profile_screen.dart:94` — language persisted but not consumed
+- `lib/features/settings/data/models/settings_box.dart` — ProfileData contains `language` field but nothing bridges it to `localeProvider`
 
-1. **Hardcoded strings are invisible to localisation**: Any user-facing string not wrapped in `AppLocalizations.of(context)` will always display in English, regardless of locale setting. ~40+ strings across 13+ files have this problem.
+**Acceptance criteria:**
+- Changing the language dropdown in Profile must immediately update the `MaterialApp` locale
+- The chosen language must survive app restarts (loaded from profile DB → fed to `localeProvider`)
+- Both `'en'` and `'es'` must render all UI strings correctly after switching
 
-2. **Duration formatting is English-centric**: The `_formatElapsed` method and `formatDuration` use `h`, `m`, `s` abbreviations. In Spanish, minutes should use `min`, and the space-separated concatenation pattern does not allow locale-specific formatting (e.g., some languages may use no spaces or different ordering).
+---
 
-3. **String concatenation with punctuation breaks locale adaptability**: Patterns like `'${l10n.examDateOptional}: '` or `'${label} - ${value}'` embed English punctuation directly. This is fine for English and Spanish, but would silently break for RTL languages (Arabic, Hebrew) where colon/dash placement differs.
+## Finding 2: No Device Locale Auto-Detection
 
-4. **Stale ARB keys**: `app_en.arb` has `noTopicsAvailable` ("No topics available") and `noLessonsYet` ("No lessons yet"), but the UI uses different strings (`'No topics yet - add some!'`, `'No lessons - use Planner to generate!'`). These keys are unused and the UI strings are not translated.
+**Severity:** Medium — poor UX for international users
 
-5. **Spanish translation quality**: The `m` (minutes) abbreviation is ambiguous in Spanish (`m` = metros), and `1d`/`1h`/`1s` being identical to English suggests the duration strings were copied without adaptation. The imperative mood choice (`Practique` vs `Practica`) should match the app's overall register.
+**Context:** `lib/main.dart:55` hardcodes `const Locale('en')` as the default. There is no call to `WidgetsBinding.instance.platformDispatcher.locale` or any `LocaleResolutionCallback` on `MaterialApp`. A user whose device is set to `es-ES` (or any other locale) always sees English on first launch.
 
-6. **Scalability**: Every hardcoded string today means rework when adding a third locale (e.g., French, Arabic). A systematic sweep now prevents compounding tech debt.
+**Affected files:**
+- `lib/main.dart:55` — hardcoded default
 
-## Acceptance Criteria
+**Acceptance criteria:**
+- App should detect and respect the device locale on first launch
+- Only fall back to English if the device locale is unsupported
+- Must integrate with the saved profile preference (explicit user choice overrides device locale)
 
-1. **Add translation keys to ARB files**: Create new keys in `app_en.arb` and `app_es.arb` for every hardcoded user-facing string identified above. Each key must have a `@description` and correct `placeholders` where applicable.
+---
 
-2. **Wire `session_analytics.dart` to AppLocalizations**: Import and use `AppLocalizations.of(context)` to replace all 8 hardcoded strings. The `_buildSectionHeader`, `_buildMetricCard`, and `_formatDuration` calls must receive localized text.
+## Finding 3: Spanish ARB — Inconsistent Register (tú / usted Mixing)
 
-3. **Replace `_formatElapsed` with `formatDuration`**: In `session_tracker_screen.dart`, delete the `_formatElapsed` method and use the locale-aware `formatDuration` from `time_utils.dart` (or `formatDurationFromContext`).
+**Severity:** High — native speakers will perceive the app as unpolished
 
-4. **Localise duration abbreviations in Spanish ARB**: Update `durationMinutes` in `app_es.arb` to use `min` instead of `m`:
-   ```
-   "{count, plural, =1{1min} other{{count}min}}"
-   ```
+**Context:** The Spanish ARB (`lib/l10n/app_es.arb`) switches between formal *usted* and informal *tú* register within the same file, creating a jarring inconsistency.
 
-5. **Fix all hardcoded strings across remaining features**: Replace every hardcoded string in the table above with `l10n.xxx` calls using the newly created ARB keys.
+**Formal (usted) examples** — correct for educational software aimed at students:
+| Key | Spanish | Line |
+|-----|---------|------|
+| `fillAllFieldsCorrectly` | *Por favor **complete** todos los campos* | 73 |
+| `enterYourName` | ***Ingrese** su nombre* | 472 |
+| `yourStudentIdNumber` | *Su número de ID* | 480 |
+| `pleaseEnterSubjectName` | *Por favor **ingrese** un nombre* | 802 |
+| `tryAgain` | ***Intente** de nuevo* | 1354 |
+| `configureApiKeysDescription` | ***Ingrese** sus credenciales* | 1415 |
+| `reviewDueQuestions` | ***Repasar** preguntas pendientes* | 369 |
 
-6. **Remove stale ARB keys**: Replace or remove `noTopicsAvailable` and `noLessonsYet` from both ARB files if they are unused. If the UI strings differ intentionally, add new keys and remove the unused ones.
+**Informal (tú) examples** — inconsistent:
+| Key | Spanish | Line |
+|-----|---------|------|
+| `yourSubjects` | ***Tus** Materias* (informal possessive) | 227 |
+| `yourStudySchedule` | ***Tu** Horario de Estudio* (informal possessive) | 51 |
+| `yourAnswer` | ***Tu** Respuesta* (informal possessive) | 295 |
+| `addSubjectsAndQuestionsToStartPracticing` | ***Agrega** materias* (informal imperative) | 174 |
+| `addSubjectsFromSubjectsTab` | ***Agrega** materias* (informal imperative) | 178 |
+| `noTopicsYetAddSome` | *¿No hay temas todavía? ¡**agrega** algunos!* (informal imperative) | 1646 |
+| `noLessonsUsePlanner` | *¿No hay lecciones? ¡**usa** el Planificador para generar!* (informal imperative) | 1650 |
+| `keepPracticing` | *¡**Siga** practicando...!* (formal) | 952 |
+| `keepPracticingToUnlock` | *¡**Sigue** practicando...!* (informal) | 1768 |
 
-7. **Add locale-aware punctuation/separators**: Convert `+` concatenation with punctuation into parameterised strings. Examples:
-   - `'${l10n.examDateOptional}: '` → Use a key like `examDateOptionalLabel` that includes the colon in the translated string (e.g., `"Fecha de examen opcional:"`).
-   - `'${spacedRepetitionMode} - ${question.type.name}'` → Use a key with `{mode}` and `{type}` placeholders.
+**Rule:** Decide on ONE register (recommended: formal *usted* for educational software) and apply it consistently across all user-facing strings.
 
-8. **Review Spanish formality register**: Decide on a consistent register (tú vs usted) and apply it to all imperative/action-oriented translations. Change `"Practique preguntas de {subjectName}"` to `"Practica preguntas de {subjectName}"` if informal is preferred.
+**Affected file:**
+- `lib/l10n/app_es.arb` — ~15 keys need register normalisation
 
-9. **Regenerate & verify**: Run `flutter gen-l10n` and verify no compilation errors. Run `flutter test` — especially `test/l10n.app_localizations.test.dart` — to ensure all keys resolve correctly for both `en` and `es`.
+**Acceptance criteria:**
+- All possessive adjectives use *su/sus* (not *tu/tus*)
+- All imperative verbs use formal *usted* conjugation (-e/-a endings)
+- The register choice is documented so future translations follow the same rule
 
-10. **Test in Spanish**: Set device locale to `es` and manually verify:
-    - All text in `session_analytics.dart` renders in Spanish
-    - Duration displays use `h`/`min`/`s` abbreviations in Spanish vs `h`/`m`/`s` in English
-    - Block type labels, empty states, section headers, and error messages all render in Spanish
+---
+
+## Finding 4: Duplicate `"medium"` Key in English ARB
+
+**Severity:** High — structural bug in the source-of-truth template
+
+**Context:** The English ARB (`lib/l10n/app_en.arb`) defines `"medium"` **twice**:
+- Line 593: `"medium": "Medium"` — font-size label
+- Line 1346: `"medium": "Medium"` — difficulty level label
+
+JSON parsers / ARB generators handle duplicate keys inconsistently (last-wins). This means only **one** `medium` getter is generated. In English, both happen to be "Medium", so the bug is invisible. In the Spanish ARB (`lib/l10n/app_es.arb`), only the font-size translation *"Mediano"* is present (line 593), and the difficulty-level `"medium"` key is **absent**. The generated Spanish class therefore maps `l10n.medium` to *"Mediano"* in all contexts — correct for font size, but a translation error for difficulty (should be *"Medio"* or *"Media"*).
+
+**Affected files:**
+- `lib/l10n/app_en.arb:593,1346` — duplicate key
+- `lib/l10n/app_es.arb:593` — only one `"medium"` entry, serving double duty
+- `lib/l10n/generated/app_localizations.dart` — generated getter is ambiguous
+
+**Acceptance criteria:**
+- Rename font-size key to `fontSizeMedium` (or similar disambiguated key)
+- Rename difficulty key to `difficultyMedium` (or similar)
+- Update all `l10n.medium` references in Dart code to use the correct key
+- Spanish: add `"difficultyMedium": "Medio"` (or the agreed translation)
+
+---
+
+## Finding 5: English Fallback for Color Names in `color_utils.dart`
+
+**Severity:** Low-Medium — visible when context is unavailable
+
+**Context:** `lib/core/utils/color_utils.dart:56-76` has a fallback `switch` block returning hardcoded English strings (`'Blue'`, `'Green'`, `'Orange'`, etc.). This code path runs when no `BuildContext` (and therefore no `AppLocalizations`) is available. While the first branch (lines 22-53) correctly uses `l10n`, the fallback is pure English.
+
+**Affected file:**
+- `lib/core/utils/color_utils.dart:55-76`
+
+**Acceptance criteria:**
+- Consider whether this fallback can ever be reached at runtime (if not, document it)
+- If reachable, inject a locale-aware mechanism or remove the English fallback in favour of the raw hex string
+
+---
+
+## Finding 6: Examples/Hints Not Localised to Spanish Context
+
+**Severity:** Low — cosmetic but noticeable
+
+**Context:** Several hint/example strings in `lib/l10n/app_es.arb` copy English names and references without adapting them to a Spanish audience:
+
+| English (app_en.arb) | Spanish (app_es.arb) | Issue |
+|---|---|---|
+| `"e.g., IB Physics"` | `"ej., Física IB"` | Abbreviation `ej.,` should be `p. ej.,` in formal Spanish |
+| `"e.g., Dr. John Smith"` | `"ej., Dr. John Smith"` | Example uses an English name; should use a Spanish name (e.g., *Dr. Juan García*) |
+| `"e.g., Final Exams, Certifications"` | `"ej., Exámenes Finales, Certificaciones"` | Same `ej.,` abbreviation issue |
+| `"e.g., Evening (6-9 PM)"` | `"ej., Tarde (6-9 PM)"` | Same `ej.,` issue |
+
+**Affected file:**
+- `lib/l10n/app_es.arb:31-34, 488-498, 757-768, 818-828`
+
+**Acceptance criteria:**
+- All examples in the Spanish ARB should use culturally appropriate names and references
+- Abbreviations should follow Spanish typographic conventions (`p. ej.` not `ej.,`)
+
+---
+
+## Finding 7: Missing Architectural Pattern for Adding New Languages
+
+**Severity:** Medium — will cause friction when adding e.g. French, German, Portuguese
+
+**Context:** To add a new language, a developer would need to:
+1. Create a new `lib/l10n/app_XX.arb` file (easy)
+2. Add `Locale('xx')` to `supportedLocales` in `lib/main.dart:244-247` (easy)
+3. Add the locale to the generated delegate's `isSupported` check (auto-generated)
+4. Re-run `flutter gen-l10n` (documented but not scripted)
+5. Update the language dropdown in `ProfileScreen` to include the new option (manual)
+6. Ensure the device-locale-detection logic (from Finding 2) includes the new locale
+
+There is no `CONTRIBUTING.md` or `i18n.md` documenting this workflow.
+
+**Acceptance criteria:**
+- Create a brief `docs/i18n.md` (or equivalent) describing the 6-step process above
+- Add a `scripts/gen_l10n.sh` (or npm script) so new translators can regenerate without remembering the exact command
+- This document should be referenced from a PR template or contributing guidelines
+
+---
+
+## Priority Order for Fixing
+
+1. **Finding 1 + 2** (locale switching + auto-detection) — functional bug, blocks all i18n work
+2. **Finding 4** (duplicate `medium` key) — structural bug in the source ARB
+3. **Finding 3** (register inconsistency) — highest impact on Spanish UX
+4. **Finding 7** (documentation) — enables future contributors
+5. **Finding 5 + 6** (fallback strings + examples) — polish items
+
+---
+
+*Generated by Internationalisation Master — issue focuses on Spanish as the reference locale so the same patterns can be applied when adding French, German, Portuguese, etc.*

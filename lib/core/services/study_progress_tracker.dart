@@ -1,36 +1,33 @@
 import '../data/repositories/attempt_repository.dart';
+import '../data/models/mastery_state_model.dart';
+import 'mastery_graph_service.dart';
 
-/// 📊 Study Progress Analytics & Tracking System
-/// 
-/// This service provides comprehensive tracking of study sessions,
-/// progress metrics, and actionable insights for the student.
 class StudyProgressTracker {
   final AttemptRepository _attemptRepo;
+  final MasteryGraphService _masteryService;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
-  }) : _attemptRepo = attemptRepo;
+    MasteryGraphService? masteryService,
+  })  : _attemptRepo = attemptRepo,
+        _masteryService = masteryService ?? MasteryGraphService();
 
-  /// 📈 Get overall study statistics
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
     final attempts = await _attemptRepo.getByStudent(studentId);
-    
-    // Calculate metrics
+
     final totalAttempts = attempts.length;
     final correctAttempts = attempts.where((a) => a.isCorrect).length;
     final accuracy = totalAttempts > 0 ? correctAttempts / totalAttempts : 0.0;
-    
+
     final totalTimeMs = attempts.fold<int>(0, (sum, a) => sum + a.timeSpentMs);
-    final avgTimePerQuestion = totalAttempts > 0 
-        ? totalTimeMs / totalAttempts 
+    final avgTimePerQuestion = totalAttempts > 0
+        ? totalTimeMs / totalAttempts
         : 0.0;
 
-    // Weekly activity
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
     final weeklyAttempts = attempts.where((a) => a.timestamp.isAfter(weekAgo)).length;
 
-    // Daily activity
     final today = DateTime(now.year, now.month, now.day);
     final dailyAttempts = attempts.where((a) {
       final date = DateTime(a.timestamp.year, a.timestamp.month, a.timestamp.day);
@@ -41,7 +38,7 @@ class StudyProgressTracker {
       'totalAttempts': totalAttempts,
       'correctAttempts': correctAttempts,
       'accuracy': (accuracy * 100).round(),
-      'avgTimePerQuestion': (avgTimePerQuestion / 1000).round(), // seconds
+      'avgTimePerQuestion': (avgTimePerQuestion / 1000).round(),
       'totalStudyTimeHours': (totalTimeMs / 3600000).toStringAsFixed(1),
       'weeklyActivity': weeklyAttempts,
       'dailyActivity': dailyAttempts,
@@ -52,11 +49,10 @@ class StudyProgressTracker {
     };
   }
 
-  /// 📊 Get topic-wise progress
   Future<Map<String, dynamic>> getTopicProgress(String studentId, String topicId) async {
     final attempts = await _attemptRepo.getByStudent(studentId);
     final topicAttempts = attempts.where((a) => a.questionId.contains(topicId)).toList();
-    
+
     if (topicAttempts.isEmpty) {
       return {
         'topicId': topicId,
@@ -82,10 +78,9 @@ class StudyProgressTracker {
     };
   }
 
-  /// 🎯 Get weekly performance trend
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks) async {
-    final allAttempts = await _attemptRepo.getByStudent('student_1');
-    
+  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String studentId = 'anonymous'}) async {
+    final allAttempts = await _attemptRepo.getByStudent(studentId);
+
     final trend = <Map<String, dynamic>>[];
     final now = DateTime.now();
 
@@ -122,17 +117,15 @@ class StudyProgressTracker {
         ? 0.0
         : currentWeek.where((a) => a.isCorrect).length / currentWeek.length;
 
-    final previousAccuracy = previousWeek['accuracy'] as double;
+    final previousAccuracy = (previousWeek['accuracy'] as num).toDouble();
     return ((currentAccuracy - previousAccuracy / 100.0) * 100).roundToDouble();
   }
 
-  /// 💡 Get personalized recommendations
   Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
     final stats = await getOverallStats(studentId);
 
     final recommendations = <Map<String, dynamic>>[];
 
-    // Accuracy-based recommendation
     if ((stats['accuracy'] as int) < 60) {
       recommendations.add({
         'type': 'review',
@@ -149,7 +142,6 @@ class StudyProgressTracker {
       });
     }
 
-    // Study time recommendation
     final totalHours = double.parse(stats['totalStudyTimeHours'] as String);
     if (totalHours < 1) {
       recommendations.add({
@@ -160,7 +152,6 @@ class StudyProgressTracker {
       });
     }
 
-    // Weekly activity recommendation
     if ((stats['weeklyActivity'] as int) == 0) {
       recommendations.add({
         'type': 'reminder',
@@ -170,15 +161,27 @@ class StudyProgressTracker {
       });
     }
 
+    try {
+      final weakTopics =
+          await _masteryService.getWeakTopics(studentId);
+      if (weakTopics.isSuccess && weakTopics.data!.isNotEmpty) {
+        recommendations.add({
+          'type': 'weakness',
+          'priority': 'high',
+          'message':
+              'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
+          'action': 'Review weak topics with the AI tutor',
+        });
+      }
+    } catch (_) {}
+
     return recommendations;
   }
 
-  /// 🏆 Get performance badges
   Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
     final stats = await getOverallStats(studentId);
     final badges = <Map<String, dynamic>>[];
 
-    // First attempt badge
     if ((stats['totalAttempts'] as int) >= 1) {
       badges.add({
         'id': 'first_attempt',
@@ -188,7 +191,6 @@ class StudyProgressTracker {
       });
     }
 
-    // Century badge
     if ((stats['totalAttempts'] as int) >= 100) {
       badges.add({
         'id': 'century',
@@ -198,7 +200,6 @@ class StudyProgressTracker {
       });
     }
 
-    // Accuracy badge - Gold
     if ((stats['accuracy'] as int) >= 90) {
       badges.add({
         'id': 'accuracy_gold',
@@ -208,7 +209,6 @@ class StudyProgressTracker {
       });
     }
 
-    // Study streak badge
     if ((stats['dailyActivity'] as int) >= 5) {
       badges.add({
         'id': 'daily_streak',
@@ -221,14 +221,35 @@ class StudyProgressTracker {
     return badges;
   }
 
-  /// 📈 Calculate mastery level for a topic
-  String getTopicMasteryLevel(String topicId) {
-    // In production, this would use actual data
-    // For now, return a reasonable default
-    return 'Browsing'; // Novice, Browsing, Developing, Proficient, Expert
+  Future<String> getTopicMasteryLevel(String topicId, {String studentId = 'anonymous'}) async {
+    try {
+      final result = await _masteryService.getTopicMastery(studentId, topicId);
+      if (result.isSuccess && result.data != null) {
+        final state = result.data!;
+        return switch (state.masteryLevel) {
+          MasteryLevel.novice => 'Novice',
+          MasteryLevel.browsing => 'Browsing',
+          MasteryLevel.developing => 'Developing',
+          MasteryLevel.proficient => 'Proficient',
+          MasteryLevel.expert => 'Expert',
+        };
+      }
+    } catch (_) {}
+
+    try {
+      final stats = await getTopicProgress(studentId, topicId);
+      final attempts = stats['attempts'] as int? ?? 0;
+      final accuracy = (stats['accuracy'] as int? ?? 0) / 100.0;
+      if (attempts == 0) return 'Novice';
+      if (accuracy >= 0.9 && attempts >= 10) return 'Expert';
+      if (accuracy >= 0.8 && attempts >= 5) return 'Proficient';
+      if (accuracy >= 0.6 && attempts >= 3) return 'Developing';
+      if (attempts >= 1) return 'Browsing';
+    } catch (_) {}
+
+    return 'Novice';
   }
 
-  /// 📊 Export progress as CSV
   Future<String> exportProgressCSV(String studentId) async {
     final stats = await getOverallStats(studentId);
     final trend = await getWeeklyTrend(4);
@@ -236,10 +257,8 @@ class StudyProgressTracker {
 
     final csvLines = <String>[];
 
-    // Header
     csvLines.add('"Date","Metric","Value"');
 
-    // Overall stats
     csvLines.add('"$studentId","totalAttempts","${stats['totalAttempts']}")');
     csvLines.add('"$studentId","correctAttempts","${stats['correctAttempts']}")');
     csvLines.add('"$studentId","accuracy","${stats['accuracy']}%"');
@@ -248,13 +267,11 @@ class StudyProgressTracker {
     csvLines.add('"$studentId","weeklyActivity","${stats['weeklyActivity']}")');
     csvLines.add('"$studentId","dailyActivity","${stats['dailyActivity']}")');
 
-    // Weekly trend
     csvLines.add('"Weekly Trend","Week","Attempts","Accuracy"');
     for (var item in trend) {
       csvLines.add('"$studentId",${item['week']}-W${item['month']},"${item['attempts']}" ,"${item['accuracy']}%")');
     }
 
-    // Badges
     csvLines.add('"Badges","Badge Name","Date Unlocked"');
     for (var badge in badges) {
       csvLines.add('"$studentId","${badge['name']}","${badge['unlockedAt']}"');
@@ -263,25 +280,53 @@ class StudyProgressTracker {
     return csvLines.join('\n');
   }
 
-  /// 📊 Export questions and attempts as CSV
-  Future<String> exportQuestionsAndAttemptsCSV() async {
-    // This would be implemented using Hive to export all data
-    // Placeholder implementation
-    final csvLines = <String>[];
+  Future<String> exportQuestionsAndAttemptsCSV(String studentId) async {
+    final attempts = await _attemptRepo.getByStudent(studentId);
 
-    csvLines.add('"Question ID","Question Text","Answer","Mastery Level","Last Practiced","Accuracy"');
-    csvLines.add('"Example_Q1","Sample Question","Sample Answer","Expert","2026-05-10","95%")');
+    final csvLines = <String>[];
+    csvLines.add('"Question ID","Student ID","Correct","Time (s)","Timestamp"');
+
+    for (final attempt in attempts) {
+      csvLines.add('"${attempt.questionId}","$studentId","${attempt.isCorrect}","${attempt.timeSpentMs ~/ 1000}","${attempt.timestamp.toIso8601String()}"');
+    }
+
+    if (attempts.isEmpty) {
+      csvLines.add('"","$studentId","No attempts recorded","",""');
+    }
 
     return csvLines.join('\n');
   }
 
-  /// 📊 Export session history CSV
-  Future<String> exportSessionHistoryCSV() async {
-    final csvLines = <String>[];
+  Future<String> exportSessionHistoryCSV(String studentId) async {
+    final attempts = await _attemptRepo.getByStudent(studentId);
+    final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+    final masteryStates = masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
 
-    csvLines.add('"Session ID","Start Time","End Time","Duration (min)","Questions Answered","Accuracy%,Topics Practiced"');
-    csvLines.add('"Session_1","2026-05-10 10:00:00","2026-05-10 10:30:00","30","15","85%","Physics,Mathematics"');
-    csvLines.add('"Session_2","2026-05-10 14:00:00","2026-05-10 14:45:00","45","22","90%","Chemistry,Biology"');
+    final csvLines = <String>[];
+    csvLines.add('"Topic ID","Total Attempts","Correct","Accuracy","Mastery Level","Last Practiced","Review Urgency"');
+
+    for (final ms in masteryStates) {
+      final level = switch (ms.masteryLevel) {
+        MasteryLevel.novice => 'Novice',
+        MasteryLevel.browsing => 'Browsing',
+        MasteryLevel.developing => 'Developing',
+        MasteryLevel.proficient => 'Proficient',
+        MasteryLevel.expert => 'Expert',
+      };
+      final topicId = ms.topicId;
+      csvLines.add('"$topicId","${ms.totalAttempts}","${ms.correctAttempts}","${(ms.accuracy * 100).toStringAsFixed(1)}%","$level","${ms.lastAttempt.toIso8601String()}","${(ms.reviewUrgency * 100).toStringAsFixed(0)}%"');
+    }
+
+    if (masteryStates.isEmpty) {
+      csvLines.add('"No session data available for $studentId","","","","","",""');
+    }
+
+    csvLines.add('');
+    csvLines.add('"All Attempts (${attempts.length} total):","","","","","",""');
+    csvLines.add('"Question ID","Correct","Time (s)","Subject ID","Timestamp"');
+    for (final attempt in attempts) {
+      csvLines.add('"${attempt.questionId}","${attempt.isCorrect}","${attempt.timeSpentMs ~/ 1000}","${attempt.subjectId}","${attempt.timestamp.toIso8601String()}"');
+    }
 
     return csvLines.join('\n');
   }

@@ -52,6 +52,8 @@ class ColorUtils {
           return hexColor;
       }
     }
+    // Fallback English labels used when no BuildContext/AppLocalizations is available
+    // (e.g. in tests). All production callers pass l10n so this path is not user-visible.
     switch (hexColor) {
       case '#2196F3':
         return 'Blue';

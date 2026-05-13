@@ -1,14 +1,61 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../../data/enums.dart';
 import '../../data/models/lesson_block_model.dart';
 import '../../data/models/question_model.dart';
 import '../../data/models/lesson_model.dart';
 import '../../data/models/markscheme_model.dart';
+import '../../data/models/conversation_message_model.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_constants.dart';
 
 enum LlmProvider { openRouter, ollama, openAI }
+
+class ConversationMemory {
+  final List<Map<String, String>> messages;
+  final int maxTurns;
+
+  ConversationMemory({this.maxTurns = 20}) : messages = [];
+
+  void addMessage(String role, String content) {
+    messages.add({'role': role, 'content': content});
+    if (messages.length > maxTurns * 2) {
+      messages.removeRange(0, messages.length - maxTurns * 2);
+    }
+  }
+
+  void addUserMessage(String content) => addMessage('user', content);
+  void addAssistantMessage(String content) => addMessage('assistant', content);
+  void addSystemMessage(String content) => addMessage('system', content);
+
+  List<Map<String, String>> getHistory() => List.from(messages);
+
+  void clear() => messages.clear();
+
+  List<Map<String, String>> getRecent({int turns = 5}) {
+    final recent = messages.length > turns * 2
+        ? messages.sublist(messages.length - turns * 2)
+        : messages;
+    return List.from(recent);
+  }
+
+  static List<Map<String, String>> fromConversationMessages(
+    List<ConversationMessage> messages,
+  ) {
+    return messages
+        .where((m) => !m.isStreaming)
+        .map((m) => {
+              'role': m.role == MessageRole.tutor || m.role == MessageRole.mentor
+                  ? 'assistant'
+                  : m.role == MessageRole.system
+                      ? 'system'
+                      : 'user',
+              'content': m.content,
+            })
+        .toList();
+  }
+}
 
 class LlmConfiguration {
   final LlmProvider provider;
@@ -32,7 +79,7 @@ class LlmService {
   LlmService({
     required this.config,
     http.Client? httpClient,
-  })  : _httpClient = httpClient ?? http.Client();
+  }) : _httpClient = httpClient ?? http.Client();
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
 
@@ -40,6 +87,8 @@ class LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
   }) async {
     if (config.apiKey.isEmpty) {
       return _mockChatResponse(message);
@@ -50,11 +99,11 @@ class LlmService {
     try {
       switch (config.provider) {
         case LlmProvider.openRouter:
-          return await _callOpenRouter(message, modelId, effectiveSystemPrompt);
+          return await _callOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
         case LlmProvider.ollama:
-          return await _callOllama(message, modelId);
+          return await _callOllama(message, modelId, memory: memory, history: history);
         case LlmProvider.openAI:
-          return await _callOpenAI(message, modelId, effectiveSystemPrompt);
+          return await _callOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
       }
     } catch (e) {
       _logger.e('LLM Chat Error', e);
@@ -62,8 +111,71 @@ class LlmService {
     }
   }
 
-  Future<String> _callOpenRouter(String message, String modelId, String systemPrompt) async {
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async* {
+    if (config.apiKey.isEmpty) {
+      yield _mockChatResponse(message);
+      return;
+    }
+
+    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+
+    try {
+      switch (config.provider) {
+        case LlmProvider.openRouter:
+          yield* _streamOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
+          break;
+        case LlmProvider.ollama:
+          yield* _streamOllama(message, modelId, memory: memory, history: history);
+          break;
+        case LlmProvider.openAI:
+          yield* _streamOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
+          break;
+      }
+    } catch (e) {
+      _logger.e('LLM Stream Error', e);
+      yield _mockChatResponse(message);
+    }
+  }
+
+  List<Map<String, String>> _buildMessages({
+    required String message,
+    required String systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) {
+    final messages = <Map<String, String>>[];
+    messages.add({'role': 'system', 'content': systemPrompt});
+
+    if (memory != null) {
+      messages.addAll(memory.getHistory());
+    } else if (history != null) {
+      messages.addAll(history);
+    }
+
+    messages.add({'role': 'user', 'content': message});
+    return messages;
+  }
+
+  Future<String> _callOpenRouter(
+    String message,
+    String modelId,
+    String systemPrompt, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async {
     final url = _openRouterUrl;
+    final messages = _buildMessages(
+      message: message,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+    );
     final response = await _httpClient.post(
       Uri.parse('$url/chat/completions'),
       headers: {
@@ -73,10 +185,7 @@ class LlmService {
       },
       body: jsonEncode({
         'model': modelId,
-        'messages': [
-          {'role': 'system', 'content': systemPrompt},
-          {'role': 'user', 'content': message},
-        ],
+        'messages': messages,
       }),
     );
 
@@ -88,16 +197,78 @@ class LlmService {
     throw Exception('OpenRouter API Error: ${response.body}');
   }
 
-  Future<String> _callOllama(String message, String modelId) async {
+  Stream<String> _streamOpenRouter(
+    String message,
+    String modelId,
+    String systemPrompt, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async* {
+    final url = _openRouterUrl;
+    final messages = _buildMessages(
+      message: message,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+    );
+
+    final request = http.Request('POST', Uri.parse('$url/chat/completions'));
+    request.headers.addAll({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${config.apiKey}',
+      'HTTP-Referer': BuildConfig.appName,
+    });
+    request.body = jsonEncode({
+      'model': modelId,
+      'messages': messages,
+      'stream': true,
+    });
+
+    final streamedResponse = await _httpClient.send(request);
+    final lines = streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    await for (final line in lines) {
+      if (line.startsWith('data: ')) {
+        final dataStr = line.substring(6);
+        if (dataStr == '[DONE]') break;
+        try {
+          final data = jsonDecode(dataStr) as Map<String, dynamic>;
+          final choice = data['choices']?[0];
+          if (choice != null) {
+            final delta = choice['delta'] as Map<String, dynamic>?;
+            final content = delta?['content'] as String?;
+            if (content != null && content.isNotEmpty) {
+              yield content;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<String> _callOllama(
+    String message,
+    String modelId, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async {
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
+    var ollamaMessages = <Map<String, String>>[];
+    if (memory != null) {
+      ollamaMessages.addAll(memory.getHistory());
+    } else if (history != null) {
+      ollamaMessages.addAll(history);
+    }
+    ollamaMessages.add({'role': 'user', 'content': message});
+
     final response = await _httpClient.post(
       Uri.parse('$baseUrl/api/chat'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'model': modelId,
-        'messages': [
-          {'role': 'user', 'content': message},
-        ],
+        'messages': ollamaMessages,
       }),
     );
 
@@ -108,8 +279,62 @@ class LlmService {
     throw Exception('Ollama API Error: ${response.body}');
   }
 
-  Future<String> _callOpenAI(String message, String modelId, String systemPrompt) async {
+  Stream<String> _streamOllama(
+    String message,
+    String modelId, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async* {
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
+    var ollamaMessages = <Map<String, String>>[];
+    if (memory != null) {
+      ollamaMessages.addAll(memory.getHistory());
+    } else if (history != null) {
+      ollamaMessages.addAll(history);
+    }
+    ollamaMessages.add({'role': 'user', 'content': message});
+
+    final request = http.Request('POST', Uri.parse('$baseUrl/api/chat'));
+    request.headers['Content-Type'] = 'application/json';
+    request.body = jsonEncode({
+      'model': modelId,
+      'messages': ollamaMessages,
+      'stream': true,
+    });
+
+    final streamedResponse = await _httpClient.send(request);
+    final lines = streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    await for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      try {
+        final data = jsonDecode(line) as Map<String, dynamic>;
+        final done = data['done'] as bool? ?? false;
+        final content = data['message']?['content'] as String?;
+        if (content != null && content.isNotEmpty) {
+          yield content;
+        }
+        if (done) break;
+      } catch (_) {}
+    }
+  }
+
+  Future<String> _callOpenAI(
+    String message,
+    String modelId,
+    String systemPrompt, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async {
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
+    final messages = _buildMessages(
+      message: message,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+    );
     final response = await _httpClient.post(
       Uri.parse('$baseUrl/chat/completions'),
       headers: {
@@ -118,10 +343,7 @@ class LlmService {
       },
       body: jsonEncode({
         'model': modelId,
-        'messages': [
-          {'role': 'system', 'content': systemPrompt},
-          {'role': 'user', 'content': message},
-        ],
+        'messages': messages,
       }),
     );
 
@@ -131,6 +353,56 @@ class LlmService {
       return data['choices'][0]['message']['content'] as String;
     }
     throw Exception('OpenAI API Error: ${response.body}');
+  }
+
+  Stream<String> _streamOpenAI(
+    String message,
+    String modelId,
+    String systemPrompt, {
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+  }) async* {
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
+    final messages = _buildMessages(
+      message: message,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+    );
+
+    final request = http.Request('POST', Uri.parse('$baseUrl/chat/completions'));
+    request.headers.addAll({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${config.apiKey}',
+    });
+    request.body = jsonEncode({
+      'model': modelId,
+      'messages': messages,
+      'stream': true,
+    });
+
+    final streamedResponse = await _httpClient.send(request);
+    final lines = streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    await for (final line in lines) {
+      if (line.startsWith('data: ')) {
+        final dataStr = line.substring(6);
+        if (dataStr == '[DONE]') break;
+        try {
+          final data = jsonDecode(dataStr) as Map<String, dynamic>;
+          final choice = data['choices']?[0];
+          if (choice != null) {
+            final delta = choice['delta'] as Map<String, dynamic>?;
+            final content = delta?['content'] as String?;
+            if (content != null && content.isNotEmpty) {
+              yield content;
+            }
+          }
+        } catch (_) {}
+      }
+    }
   }
 
   void _trackUsage(Map<String, dynamic> responseData, String modelId) {
@@ -174,7 +446,7 @@ Difficulty level: $difficulty/5
 
 Each question should have:
 1. A clear question text
-2. Multiple choice options (A, B, C, D)  
+2. Multiple choice options (A, B, C, D)
 3. The correct answer
 4. A brief explanation
 
@@ -267,8 +539,8 @@ Respond with JSON containing lesson structure.
       return _mockValidateAnswer(subjectId);
     }
 
-    final context = topicId != null 
-        ? 'Subject: $subjectId, Topic: $topicId' 
+    final context = topicId != null
+        ? 'Subject: $subjectId, Topic: $topicId'
         : 'Subject: $subjectId';
 
     final prompt = '''
@@ -416,7 +688,7 @@ Format as JSON with subject-specific recommendations.
           markscheme: data['markscheme'],
         );
       }
-      
+
       final blocks = _parseLessonBlocks(response, subjectId);
       return Lesson(
         id: 'lesson_${subjectId}_${DateTime.now().millisecondsSinceEpoch}',
@@ -446,7 +718,7 @@ Format as JSON with subject-specific recommendations.
       return {'subjectId': subjectId, 'content': response};
     }
   }
-  
+
   List<Question> _getMockQuestions(String topicTitle, int count, int difficulty, String subjectId) {
     return List.generate(count, (i) {
       return Question(
