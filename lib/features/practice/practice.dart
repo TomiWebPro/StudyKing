@@ -1,6 +1,7 @@
 export 'providers/practice_providers.dart';
 export 'presentation/practice_screen.dart';
 export 'presentation/practice_session_screen.dart';
+export 'presentation/practice_results_screen.dart';
 export 'presentation/models/practice_models.dart';
 export 'presentation/services/practice_session_service.dart';
 export 'presentation/services/practice_data_service.dart';
@@ -10,7 +11,6 @@ export 'presentation/widgets/practice_mode_card.dart';
 export 'presentation/widgets/practice_mode_grid.dart';
 export 'presentation/widgets/practice_mode_option.dart';
 export 'presentation/widgets/practice_mode_sheet.dart';
-export 'presentation/widgets/practice_results_screen.dart';
 export 'presentation/widgets/practice_session_nav_buttons.dart';
 export 'presentation/widgets/practice_session_question_card.dart';
 export 'presentation/widgets/practice_session_stats_bar.dart';

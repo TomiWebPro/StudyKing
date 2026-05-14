@@ -71,7 +71,7 @@ void main() {
       expect(nextCalled, isTrue);
     });
 
-    testWidgets('renders inside a Column layout', (tester) async {
+    testWidgets('renders side by side on sm+ breakpoints', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         PracticeSessionNavButtons(
           onPrevious: () {},
@@ -80,7 +80,31 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byType(Column), findsOneWidget);
+      final prev = tester.getTopLeft(find.text('Previous'));
+      final next = tester.getTopLeft(find.text('Next'));
+      // Same row: Y positions are close
+      expect((prev.dy - next.dy).abs(), lessThan(10.0));
+      // Previous is to the left of Next
+      expect(prev.dx, lessThan(next.dx));
+    });
+
+    testWidgets('renders stacked on xs breakpoint', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionNavButtons(
+          onPrevious: () {},
+          onNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final prev = tester.getTopLeft(find.text('Previous'));
+      final next = tester.getTopLeft(find.text('Next'));
+      // Same column: X positions are close
+      expect((prev.dx - next.dx).abs(), lessThan(10.0));
+      // Previous is above Next
+      expect(prev.dy, lessThan(next.dy));
     });
   });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/practice/presentation/widgets/practice_results_screen.dart';
+import 'package:studyking/features/practice/presentation/practice_results_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget child) {

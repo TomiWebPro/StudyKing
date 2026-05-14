@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -27,7 +28,7 @@ void main() {
 
     testWidgets('renders with empty stats', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const SummaryRow(overallStats: {}),
+        const SummaryRow(overallStats: OverallStats()),
       ));
       await tester.pumpAndSettle();
 
@@ -36,7 +37,7 @@ void main() {
 
     testWidgets('displays accuracy percentage', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: {'accuracy': 85}),
+        SummaryRow(overallStats: OverallStats(accuracy: 85)),
       ));
       await tester.pumpAndSettle();
 
@@ -45,7 +46,7 @@ void main() {
 
     testWidgets('displays study time hours', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: {'totalStudyTimeHours': '12.5'}),
+        SummaryRow(overallStats: OverallStats(totalStudyTimeHours: '12.5')),
       ));
       await tester.pumpAndSettle();
 
@@ -54,7 +55,7 @@ void main() {
 
     testWidgets('displays weekly activity count', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: {'weeklyActivity': 15}),
+        SummaryRow(overallStats: OverallStats(weeklyActivity: 15)),
       ));
       await tester.pumpAndSettle();
 
@@ -63,7 +64,7 @@ void main() {
 
     testWidgets('displays topics studied count', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: {'topicsStudied': 7}),
+        SummaryRow(overallStats: OverallStats(topicsStudied: 7)),
       ));
       await tester.pumpAndSettle();
 
@@ -72,12 +73,12 @@ void main() {
 
     testWidgets('renders MetricCard widgets for each stat', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: {
-          'accuracy': 80,
-          'totalStudyTimeHours': '10',
-          'weeklyActivity': 20,
-          'topicsStudied': 5,
-        }),
+        SummaryRow(overallStats: OverallStats(
+          accuracy: 80,
+          totalStudyTimeHours: '10',
+          weeklyActivity: 20,
+          topicsStudied: 5,
+        )),
       ));
       await tester.pumpAndSettle();
 

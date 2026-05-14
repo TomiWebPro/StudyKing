@@ -3379,5 +3379,53 @@
         "type": "int"
       }
     }
+  },
+  "gettingStarted": "Getting Started",
+  "@gettingStarted": {
+    "description": "Heading for empty dashboard getting started checklist"
+  },
+  "gettingStartedDesc": "Complete these steps to get the most out of StudyKing",
+  "@gettingStartedDesc": {
+    "description": "Subtitle for empty dashboard checklist"
+  },
+  "addSubjectDesc": "Create your first subject to organize your study material",
+  "@addSubjectDesc": {
+    "description": "Description for add subject checklist item"
+  },
+  "uploadMaterial": "Upload Study Material",
+  "@uploadMaterial": {
+    "description": "Checklist item for uploading study material"
+  },
+  "uploadMaterialDesc": "Upload PDFs, notes, and question banks to get started",
+  "@uploadMaterialDesc": {
+    "description": "Description for upload material checklist item"
+  },
+  "takePracticeQuiz": "Take Your First Practice Quiz",
+  "@takePracticeQuiz": {
+    "description": "Checklist item for taking first practice quiz"
+  },
+  "takePracticeQuizDesc": "Test your knowledge with adaptive practice questions",
+  "@takePracticeQuizDesc": {
+    "description": "Description for practice quiz checklist item"
+  },
+  "scheduleAiTutor": "Schedule an AI Tutor Session",
+  "@scheduleAiTutor": {
+    "description": "Checklist item for scheduling AI tutor"
+  },
+  "scheduleAiTutorDesc": "Get personalized one-on-one tutoring with AI",
+  "@scheduleAiTutorDesc": {
+    "description": "Description for AI tutor checklist item"
+  },
+  "fileSaved": "File saved successfully",
+  "@fileSaved": {
+    "description": "Snackbar message when file is saved"
+  },
+  "fileShared": "File shared successfully",
+  "@fileShared": {
+    "description": "Snackbar message when file is shared"
+  },
+  "noBadgesYet": "No achievements yet. Keep studying!",
+  "@noBadgesYet": {
+    "description": "Empty state message when no badges earned"
   }
 }

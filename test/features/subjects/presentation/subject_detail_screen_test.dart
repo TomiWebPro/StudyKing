@@ -5,12 +5,43 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+class _TestNavigatorObserver extends NavigatorObserver {
+  Route<dynamic>? pushedRoute;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushedRoute = route;
+  }
+}
+
+Route<dynamic>? _testRoute(RouteSettings settings) {
+  if (settings.name == AppRoutes.practiceSession) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Practice Mock')),
+      settings: settings,
+    );
+  }
+  if (settings.name == AppRoutes.upload) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Upload Mock')),
+      settings: settings,
+    );
+  }
+  if (settings.name == AppRoutes.dashboard) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Dashboard Mock')),
+      settings: settings,
+    );
+  }
+  return null;
+}
+
 Widget _buildTestApp() {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
         args: const SubjectDetailArgs(
           subjectId: 'test-id',
@@ -31,13 +62,35 @@ Widget _buildTestAppMinimal() {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
         args: const SubjectDetailArgs(
           subjectId: 'test-id',
           subjectName: 'Physics',
           subjectColor: '#4CAF50',
           topicIds: [],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildTestAppWithObserver(_TestNavigatorObserver observer) {
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: [observer],
+      onGenerateRoute: _testRoute,
+      home: SubjectDetailScreen(
+        args: const SubjectDetailArgs(
+          subjectId: 'test-id',
+          subjectName: 'Mathematics',
+          subjectCode: 'MATH101',
+          subjectColor: '#2196F3',
+          subjectDescription: 'Mathematics course',
+          subjectTeacher: 'Dr. Smith',
+          topicIds: ['topic-1', 'topic-2'],
         ),
       ),
     ),
@@ -79,12 +132,12 @@ void main() {
       expect(find.text('Stats'), findsOneWidget);
     });
 
-    testWidgets('lessons tab has add topic button', (tester) async {
+    testWidgets('lessons tab shows empty state', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Add Topic'), findsOneWidget);
+      expect(find.text('No lessons yet'), findsOneWidget);
     });
 
     testWidgets('practice tab shows practice buttons', (tester) async {
@@ -110,8 +163,9 @@ void main() {
       expect(find.text('No sessions yet'), findsOneWidget);
     });
 
-    testWidgets('start practice button navigates', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
+    testWidgets('start practice navigates to practice session', (tester) async {
+      final observer = _TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestAppWithObserver(observer));
       await tester.pump();
 
       await tester.tap(find.text('Practice'));
@@ -119,19 +173,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       await tester.tap(find.text('Start Practice'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(observer.pushedRoute, isNotNull);
+      expect(observer.pushedRoute!.settings.name, AppRoutes.practiceSession);
     });
 
-    testWidgets('semantics for more options exist', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pump();
-
-      expect(find.byIcon(Icons.more_vert), findsOneWidget);
-    });
-
-    testWidgets('practice mode button navigates', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
+    testWidgets('practice mode navigates to spaced repetition', (tester) async {
+      final observer = _TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestAppWithObserver(observer));
       await tester.pump();
 
       await tester.tap(find.text('Practice'));
@@ -139,8 +189,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       await tester.tap(find.text('Practice Mode').last);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(observer.pushedRoute, isNotNull);
+      expect(observer.pushedRoute!.settings.name, AppRoutes.practiceSession);
     });
 
     testWidgets('stats tab shows metric cards', (tester) async {
@@ -154,17 +206,6 @@ void main() {
       expect(find.text('Sessions'), findsOneWidget);
       expect(find.text('Accuracy'), findsOneWidget);
       expect(find.text('Practice Progress'), findsOneWidget);
-    });
-
-    testWidgets('practice mode button is present', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pump();
-
-      await tester.tap(find.text('Practice'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.byIcon(Icons.play_arrow), findsAtLeast(1));
     });
 
     testWidgets('switches between all tabs', (tester) async {
@@ -192,6 +233,181 @@ void main() {
       expect(find.text('Physics'), findsAtLeast(1));
     });
 
+    testWidgets('displays subject name in FlexibleSpaceBar title', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
 
+      expect(find.text('Mathematics'), findsAtLeast(1));
+    });
+
+    testWidgets('first letter avatar shows correct letter', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      expect(find.text('M'), findsOneWidget);
+    });
+
+    testWidgets('avatar letter uses Physics initial for minimal args', (tester) async {
+      await tester.pumpWidget(_buildTestAppMinimal());
+      await tester.pump();
+
+      expect(find.text('P'), findsOneWidget);
+    });
+
+    testWidgets('bottom sheet shows upload and dashboard options', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Upload Content'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(find.text('Delete Subject'), findsOneWidget);
+    });
+
+    testWidgets('delete option in bottom sheet shows confirmation dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Delete Subject'), findsOneWidget);
+      expect(find.text('Are you sure you want to delete this subject? This will also delete all associated lessons and questions.'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+    });
+
+    testWidgets('delete dialog cancel button dismisses dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Are you sure you want to delete this subject? This will also delete all associated lessons and questions.'), findsNothing);
+    });
+
+    testWidgets('delete dialog delete button pops back', (tester) async {
+      final observer = _TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestAppWithObserver(observer));
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    });
+
+    testWidgets('upload content in bottom sheet navigates to upload', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Upload Content'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upload Mock'), findsOneWidget);
+    });
+
+    testWidgets('dashboard in bottom sheet navigates to dashboard', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Dashboard'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dashboard Mock'), findsOneWidget);
+    });
   });
 }

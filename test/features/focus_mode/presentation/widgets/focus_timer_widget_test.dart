@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -265,6 +266,185 @@ void main() {
 
       final sizedBoxes = find.byType(SizedBox);
       expect(sizedBoxes, findsWidgets);
+    });
+
+    testWidgets('renders AnimatedBuilder for pulse effect', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 0,
+          isActive: true,
+        ),
+      ));
+
+      expect(find.byType(AnimatedBuilder), findsWidgets);
+    });
+
+    testWidgets('renders Transform.scale from pulse animation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 0,
+          isActive: true,
+        ),
+      ));
+
+      expect(find.byType(Transform), findsWidgets);
+    });
+
+    testWidgets('didUpdateWidget starts pulse when transitioning to running', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 60,
+          isActive: true,
+          isPaused: true,
+        ),
+      ));
+
+      expect(find.text('PAUSED'), findsOneWidget);
+
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 60,
+          isActive: true,
+          isPaused: false,
+        ),
+      ));
+
+      expect(find.text('remaining'), findsOneWidget);
+    });
+
+    testWidgets('didUpdateWidget stops pulse when transitioning to paused', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 60,
+          isActive: true,
+          isPaused: false,
+        ),
+      ));
+
+      expect(find.text('Pause'), findsOneWidget);
+
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 60,
+          isActive: true,
+          isPaused: true,
+        ),
+      ));
+
+      expect(find.text('PAUSED'), findsOneWidget);
+    });
+
+    testWidgets('CircularProgressIndicator uses progress value', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 750,
+          isActive: true,
+        ),
+      ));
+
+      final progress = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.5, 0.01));
+    });
+
+    testWidgets('progress color is primary at high progress', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme(),
+        home: Scaffold(
+          body: _buildTestApp(
+            const FocusTimerWidget(
+              plannedDurationMinutes: 25,
+              elapsedSeconds: 1350,
+              isActive: true,
+            ),
+          ),
+        ),
+      ));
+
+      final progress = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(progress.value, greaterThan(0.8));
+    });
+
+    testWidgets('progress color is error at low progress', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme(),
+        home: Scaffold(
+          body: _buildTestApp(
+            const FocusTimerWidget(
+              plannedDurationMinutes: 25,
+              elapsedSeconds: 0,
+              isActive: true,
+            ),
+          ),
+        ),
+      ));
+
+      final progress = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.0, 0.01));
+    });
+
+    testWidgets('hides Mark Complete when timer is complete and not paused', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 1500,
+          isActive: true,
+          isPaused: false,
+        ),
+      ));
+
+      expect(find.text('DONE!'), findsOneWidget);
+      expect(find.text('Mark Complete'), findsNothing);
+    });
+
+    testWidgets('shows End button even when timer is complete', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 1500,
+          isActive: true,
+        ),
+      ));
+
+      expect(find.text('End'), findsOneWidget);
+    });
+
+    testWidgets('does not crash with null callbacks', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 0,
+          isActive: true,
+        ),
+      ));
+
+      await tester.tap(find.text('Pause'));
+      await tester.tap(find.text('End'));
+    });
+
+    testWidgets('renders remaining text for incomplete active timer', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 300,
+          isActive: true,
+          isPaused: false,
+        ),
+      ));
+
+      expect(find.text('remaining'), findsOneWidget);
     });
   });
 }

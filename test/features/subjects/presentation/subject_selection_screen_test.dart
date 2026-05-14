@@ -39,6 +39,34 @@ class _FailingSubjectRepository extends SubjectRepository {
   }
 }
 
+class _SlowSubjectRepository extends SubjectRepository {
+  _SlowSubjectRepository() : super(subjectBox: null);
+
+  @override
+  Future<List<Subject>> getAll() async => [];
+
+  @override
+  Future<Subject?> get(String id) async => null;
+
+  @override
+  Future<void> save(Subject subject) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+}
+
+Widget _buildTestAppForRepo(SubjectRepository repo) {
+  return ProviderScope(
+    overrides: [
+      subjectsRepositoryProvider.overrideWith(() => _TestNotifier(repo)),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const SubjectSelectionScreen(),
+    ),
+  );
+}
+
 class _TestNotifier extends SubjectsRepositoryNotifier {
   final SubjectRepository repo;
   _TestNotifier(this.repo);
@@ -191,6 +219,85 @@ void main() {
 
       final codeField = tester.widget<TextField>(find.byType(TextField).at(1));
       expect(codeField.textCapitalization, TextCapitalization.characters);
+    });
+
+    testWidgets('shows loading indicator during save', (tester) async {
+      final repo = _SlowSubjectRepository();
+
+      await tester.pumpWidget(_buildTestAppForRepo(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Mathematics');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump(const Duration(milliseconds: 20));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump();
+    });
+
+    testWidgets('optional fields are null in saved subject when left empty', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Physics');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final subjects = await repo.getAll();
+      expect(subjects, hasLength(1));
+      expect(subjects.first.name, 'Physics');
+      expect(subjects.first.code, isNull);
+      expect(subjects.first.teacher, isNull);
+      expect(subjects.first.syllabus, isNull);
+      expect(subjects.first.description, isNull);
+    });
+
+    testWidgets('code is auto-uppercased when saved', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Chemistry');
+      await tester.enterText(find.byType(TextFormField).at(1), 'chem101');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final subjects = await repo.getAll();
+      expect(subjects, hasLength(1));
+      expect(subjects.first.code, 'CHEM101');
+    });
+
+    testWidgets('app bar shows title', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add Subject'), findsOneWidget);
+    });
+
+    testWidgets('renders five text form fields', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextFormField), findsNWidgets(5));
     });
   });
 }

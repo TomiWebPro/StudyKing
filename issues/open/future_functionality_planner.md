@@ -1,185 +1,300 @@
-# Dashboard Architecture Overhaul: Riverpod State, Parallel Loading, Typed Data, and Collapsible Cards
+# Future Functionality: Architecture Gaps, Redundancies, and High-Value Roadmap Opportunities
 
 ## Context
 
-The dashboard (`lib/features/dashboard/presentation/dashboard_screen.dart`) is the application's primary hub — accessible via FAB from every bottom-nav tab — yet it is implemented with the **most fragile state management pattern in the entire codebase**. A single 206-line `ConsumerStatefulWidget` loads **9 data sources** sequentially inside a monolithic `_loadData()` method, stores everything in `Map<String, dynamic>` loose maps, manages loading via a single `_isLoading` boolean, and renders every card unconditionally (many returning `SizedBox.shrink()` when empty). This pattern was identified as a high-value target during codebase inspection because it affects every user session and blocks every downstream feature that needs dashboard integration (planner adherence, practice stats, focus mode metrics, mastery snapshots, etc.).
-
-The four other open issues cover planner intelligence, focus mode architecture, test coverage, and i18n. This issue is **orthogonal** — it addresses the structural layer on which all those features depend for visibility.
+This issue identifies five high-value future functionality problems discovered during a codebase-wide inspection. These are not surface-level bugs — each represents a missing architectural capability, a design flaw that prevents scaling, or a redundant component that undermines the product vision from `agent_must_read.md`. The affected features span the QuickGuide, Teaching, Mentor, Practice, LLM integration, and Engagement systems.
 
 ---
 
-## Issue 1: Monolithic `setState` Loader with Sequential `await` Chain
+## Issue 1: QuickGuide Is a Redundant Chat Shell — Should Be a Mode Launcher Only
 
-`_loadData()` (lines 68–113) runs 9+ data fetches in strict sequence with a single try/catch that swallows all per-source errors:
+### Summary
 
-```dart
-Future<void> _loadData() async {
-  setState(() => _isLoading = true);
-  await _instrumentation.init();       // 1
-  await _topicRepo.init();             // 2
-  await _adherenceRepo.init();         // 3
-  await _focusService.repository.init(); // 4
-  _focusTodayStats = await _focusService.getTodayStats(); // 5
-  final masteryResult = await _masteryService.getAllTopicMastery(...); // 6
-  // ... 3 more awaits sequentially
-  for (final state in _allMastery) {   // N sequential topic lookups
-    await _topicRepo.get(state.topicId);
-  }
-  setState(() => _isLoading = false);
-}
+`lib/features/quickguide/presentation/quick_guide_screen.dart` (314 lines) is a **full-featured AI chat screen** with streaming, conversation memory, message list, input bar, suggested prompts, and clear-conversation. It is structurally **identical** to `mentor_screen.dart` (329 lines) and nearly identical to `tutor_screen.dart` (348 lines) — all three manage their own `List<ConversationMessage>`, `ScrollController`, `TextEditingController`, streaming state, and message rendering.
+
+The only difference in QuickGuide is that it optionally renders a `ModeNavigationWidget` at the top, which contains buttons to navigate to the AI Tutor (`/tutor`) and Mentor (`/mentor`) routes. The chat below this navigation is a **generic AI chat** that duplicates the exact behavior of Mentor.
+
+**The QuickGuide screen should be a thin landing/launcher that explains the app's modes and routes to them — not a full chat interface.**
+
+### Evidence
+
+| Component | QuickGuide | Mentor | Tutor |
+|---|---|---|---|
+| `TextEditingController` | `_textController` | `_textController` | `_textController` |
+| `ScrollController` | `_scrollController` | `_scrollController` | `_scrollController` |
+| `FocusNode` | `_inputFocusNode` | `_inputFocusNode` | `_inputFocusNode` |
+| Message list state | `List<ConversationMessage> _messages` | `List<_ChatMessage> _messages` (wraps same model) | `manager!.messages` via `ConversationManager` |
+| Streaming pattern | `buffer.write(chunk)` + `setState` replace placeholder | `buffer.write(chunk)` + `setState` replace placeholder | `buffer.write(chunk)` + `setState` replace placeholder (through manager) |
+| Scroll to bottom | `_scrollToBottom()` (identical code) | `_scrollToBottom()` (identical code) | `_scrollToBottom()` (identical code) |
+| Clear conversation | `_clearConversation()` | N/A (no clear) | N/A (lesson ends) |
+| Suggested prompts | Yes (top 3) | No | No |
+| Mode navigation | Yes (`ModeNavigationWidget`) | No | No |
+| Voice/image input | No | No | Placeholder buttons with "Coming soon" |
+
+The QuickGuide creates its own `ConversationMemory` and streams directly through `llmService.chatStream`. The Mentor screen does the same through `MentorService.chat()`. The Tutor screen does it through `ConversationManager.sendMessage()` — which itself wraps the same `llmService.chatStream`.
+
+Three separate implementations of the same streaming chat pattern, each with its own state management.
+
+### Architectural Impact
+
+- **QuickGuide cannot route to Mentor** in a clean way — since both are full-screen chats, navigating to Mentor from QuickGuide means pushing a second chat screen on top of the first. The user ends up in a nested chat conversation.
+- **Duplicate code**: All three screens have separate implementations of streaming message rendering (`ChatBubble` reuse is the only shared component), input handling, scroll management, and error handling.
+- **Conceptual confusion**: New contributors must understand three different patterns for what is fundamentally "stream AI response into a chat bubble list."
+
+### Recommendation
+
+Strip QuickGuide down to a **mode-selection landing page** with the `ModeNavigationWidget` prominently displayed, quick-start cards for each mode (AI Tutor, Mentor, Practice, Planner), and optionally a small "try it out" single-turn input box. Remove the persistent chat history, stream management, and full `ConversationMemory`. If a lightweight chat is desired on the landing page, make it ephemeral (single Q&A, not a saved conversation) and reuse the shared chat widget pattern (see below).
+
+### Affected Files
+
+| File | Lines | Role |
+|---|---|---|
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | 18–314 (entire screen) | Remove full chat — keep launcher UI |
+| `lib/features/quickguide/presentation/widgets/mode_navigation_widget.dart` | 1–131 | Keep (mode cards) — move to shared widget library |
+| `lib/features/quickguide/presentation/widgets/message_list_widget.dart` | 1–33 | Remove (duplicate of Tutor's chat bubble list) |
+| `lib/features/quickguide/presentation/widgets/suggested_prompts_widget.dart` | 1–60 | Optionally keep for launcher |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 24–329 | Refactor to use shared chat widget |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 36–348 | Refactor ConversationManager to share chat widget |
+| `lib/core/widgets/` | — | Add shared `ConversationView` widget (reusable chat + input + scroll) |
+
+### Acceptance Criteria
+
+1. QuickGuide screen is `<150 lines` — it primarily renders mode cards and app entry points, not a full chat conversation.
+2. A shared `ConversationView` widget (or equivalent) lives in `lib/core/widgets/` and is used by both Mentor and Tutor screens, eliminating duplicated scroll/input/stream state management.
+3. Removing QuickGuide's chat does not break any test that validates QuickGuide's core behavior (mode navigation, suggested prompts).
+4. `dart analyze` passes with zero errors.
+
+---
+
+## Issue 2: LLM Service Has No Provider Abstraction — Model-Agnostic Vision Is Unreachable
+
+### Summary
+
+The `agent_must_read.md` (line 103) explicitly requires: *"The platform should support both local and remote AI providers, including systems such as OpenRouter, Ollama, and other compatible providers. It should remain model-agnostic."*
+
+Current reality: `lib/core/services/llm/llm_chat_service.dart` defines `LlmService` which directly calls **one** HTTP-based chat completions API. The `modelId` parameter is an opaque string (always `'openai/gpt-4o-mini'` hardcoded everywhere). There is no:
+- Provider registry or factory
+- Provider-specific configuration (API URL, auth method, rate limits)
+- Fallback chain (try provider A, fall back to B)
+- Local model support (Ollama runs on localhost:11434, not OpenAI-compatible by default without a different client)
+- Structured output parsing (response is raw `String`)
+- Consistent error type hierarchy (HTTP errors, auth errors, rate limits, timeout — all swallowed)
+
+The `llm_chat_service.dart` is a single file with ~300 lines. The `llm_model_service.dart` and `llm_embeddings_service.dart` are separate files that also instantiate their own HTTP clients. If a user wants to use Ollama for chat but OpenAI for embeddings, there is no shared configuration.
+
+### Hardcoded `modelId` Locations
+
+| File | Line | Value |
+|---|---|---|
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | 27 | `'openai/gpt-4o-mini'` |
+| `lib/features/teaching/services/tutor_service.dart` | 63 | `'openai/gpt-4o-mini'` |
+| `lib/features/mentor/services/mentor_service.dart` | 67 | `'openai/gpt-4o-mini'` |
+| `lib/features/lessons/providers/lesson_providers.dart` | 13 | `'openai/gpt-4o-mini'` |
+| `lib/features/ingestion/services/content_pipeline.dart` | 63 | passed as parameter, no default config |
+| `lib/core/services/question_generation_service.dart` | 68 (approx) | passed as parameter |
+| `lib/features/practice/services/question_type_localizer.dart` | varies | passed as parameter |
+
+### Impact
+
+- **Every feature** that uses the LLM must be updated when adding a new provider
+- No centralized cost tracking or token usage monitoring (the `LlmTaskManager` exists but is not connected to the actual streaming calls)
+- No rate limiting — a burst of practice session question generations could hit API limits
+- No offline fallback — if the network is down, every LLM feature silently returns an error
+- The `api_config_screen.dart` allows configuring API keys but has no effect on provider selection at the service level
+
+### Recommendation
+
+Introduce an `LlmProvider` abstraction layer:
+
+```
+LlmProvider (abstract interface)
+  ├── OpenAiProvider (handles OpenAI / OpenRouter)
+  ├── OllamaProvider (handles local Ollama, different endpoint + format)
+  └── FallbackProvider (wraps two+ providers, chains on failure)
 ```
 
-**Problems:**
-- **No parallelism**: `_instrumentation.init()`, `_focusService.getTodayStats()`, `_masteryService.getAllTopicMastery()` are all I/O-bound Hive reads that could run concurrently with `Future.wait`.
-- **Single loading gate**: The entire dashboard shows a `CircularProgressIndicator` until **all** data loads. If the adherence repository is slow (or throws), no data renders — not even mastery stats which loaded successfully three lines earlier.
-- **Per-topic N+1**: Lines 100–109 fetch topic names one-by-one in a `for` loop instead of batching via `_topicRepo.getBySubject()` or caching the full topic map upfront.
-- **Error swallowing**: Every `await` is in a single try/catch; a failure in `_focusService.getTodayStats()` (lines 75–77, caught silently) still blocks `_instrumentation.init()` from running because they're sequential.
+`LlmService` becomes a facade that delegates to a configured `LlmProvider`. Each provider handles its own:
+- Endpoint URL construction
+- Auth header format
+- Request/response schema
+- Error handling (HTTP vs timeout vs auth)
+- Streaming vs non-streaming
 
-**Fix**: Replace with per-card `FutureProvider.family` or `AsyncValue` providers so each card loads independently, shows its own loading skeleton, and retries individually.
+The `SettingsScreen` / `ApiConfigScreen` selects the active provider (with provider-specific config fields), not just a model ID string.
 
----
+### Acceptance Criteria
 
-## Issue 2: Loosely Typed `Map<String, dynamic>` Data Trivialises Type Safety
-
-Every data structure in `_DashboardScreenState` is a `Map<String, dynamic>`:
-
-```dart
-Map<String, dynamic>? _snapshot;
-Map<String, dynamic>? _overallStats;
-List<Map<String, dynamic>> _weeklyTrend = [];
-List<Map<String, dynamic>> _badges = [];
-Map<String, dynamic>? _focusTodayStats;
-```
-
-Downstream widgets are forced to access by string key:
-
-```dart
-// mastery_progress_card.dart:14-18
-final data = snapshot ?? {};
-final totalTopics = data['totalTopics'] ?? 0;
-final masteredTopics = data['masteredTopics'] ?? 0;
-final weakTopics = data['weakTopics'] ?? 0;
-final avgAccuracy = data['averageAccuracy'] ?? 0.0;
-```
-
-This pattern appears in **5 of 9 dashboard widgets** (`MasteryProgressCard`, `SummaryRow`, `WeakAreasCard`, `WeeklyChart`, `BadgesCard`). A field rename in the upstream service silently produces `null` at runtime — no compile-time error, no analyzer warning. The `??` fallback masks the bug.
-
-**Affected models that should be used instead** (most already exist in `lib/core/data/models/`):
-| Current `Map` key | Existing typed model |
-|---|---|
-| `'totalTopics'`, `'masteredTopics'`, `'weakTopics'`, `'averageAccuracy'` | `MasterySnapshot` or fields from `MasteryGraphService.getMasterySnapshot()` |
-| `'accuracy'`, `'totalStudyTimeHours'`, `'weeklyActivity'`, `'topicsStudied'` | `StudyProgressSnapshot` (or similar from `StudyProgressTracker`) |
-| `'attempts'` (weekly trend items) | Typed trend entry model |
-| Badge maps with `'name'`, `'description'` | `Badge` model |
+1. `LlmProvider` abstract class defined in `lib/core/services/llm/providers/provider_interface.dart` with at minimum `chat()`, `chatStream()`, `embed()` methods.
+2. `OpenAiProvider` implementation supporting the current OpenAI/OpenRouter API.
+3. `OllamaProvider` implementation supporting local Ollama (localhost:11434 by default, configurable).
+4. `LlmService` refactored to accept an `LlmProvider` via constructor injection (or Riverpod provider), not hardcoded HTTP calls.
+5. All places that hardcode `'openai/gpt-4o-mini'` read the model ID from a central settings provider.
+6. `LlmTaskManager` is integrated into the provider layer so every LLM call is tracked.
+7. `dart analyze` passes; existing tests continue to pass (or are updated for the new interface).
 
 ---
 
-## Issue 3: All Cards Always Mounted — No Visibility-Aware Rendering
+## Issue 3: Tutor's `ConversationManager` Phase Machine Is Heuristic — Exercises Use Keyword Matching, Not AI Evaluation
 
-The dashboard renders all 9 cards unconditionally (lines 130–200):
+### Summary
 
-```dart
-const DashboardHeader(),                    // always visible
-SummaryRow(overallStats: _overallStats),    // visible even if empty stats
-WeeklyChart(weeklyTrend: _weeklyTrend),     // visible even if empty
-PlanAdherenceCard(adherence...),            // visible even if 0%
-MasteryProgressCard(snapshot: _snapshot),   // visible even if null
-WeakAreasCard(allMastery: _allMastery),     // returns SizedBox.shrink() when empty
-TopicBreakdownCard(allMastery: _allMastery),// visible even if empty
-BadgesCard(badges: _badges),               // returns SizedBox.shrink() when empty
-ExportSection(...),                          // always visible
-```
+`lib/features/teaching/services/conversation_manager.dart` implements a phase-based state machine (`ConversationPhase`) that uses **naive keyword matching** to:
+1. Detect when the LLM has given an exercise (`_detectExerciseRequest` — lines 257–271)
+2. Evaluate whether the student's response was correct (`_evaluateExerciseResponse` — lines 228–255)
+3. Adjust adaptive pace (lines 243–252)
 
-Five of nine widgets handle empty data by returning `SizedBox.shrink()` (a zero-height widget). This means:
-- A new user with no data sees a header, an empty summary row, an empty chart, a 0% adherence card, an empty mastery card, and an export section — but **no guidance** on what to do next.
-- The scrollable list is 4–5 actual cards interspersed with invisible zero-height widgets, making keyboard/screen-reader navigation unpredictable.
-- No card supports collapsing, reordering, or dismissal.
+**The LLM generates the exercise text, but keyword matching determines whether the answer was right.** This is a fundamental architectural flaw:
 
-**Expected behavior**: Empty cards should show **suggested actions** ("Add your first subject to see stats here"), cards should be **collapsible**, and a **getting-started checklist** should replace the empty dashboard for new users.
+- **False positives**: "This is the **right** approach" contains `"right"` from `correctKeywords` → counted as correct
+- **False negatives**: "I was **wrong** but now I understand it **correctly**" contains both → evaluated as incorrect because `isCorrect && !isIncorrect` fails
+- **Silent default**: If the student responds "42", none of the ~20 keywords match → falls through to `_consecutiveIncorrect = 0` (treated as success)
+- **LLM doesn't evaluate**: The LLM generates the exercise and then a separate heuristic evaluates it. The LLM could have explained why "42" is wrong in its response, but the keyword check overrides this.
 
----
+The `agent_must_read.md` (line 42) says: *"guide problem solving rather than simply giving answers"* — keyword matching cannot distinguish between "I don't know" (help-seeking) and "I don't know" (genuine confusion). Both give an incorrect eval.
 
-## Issue 4: Hardcoded `NumericFocusOrder` Is Fragile
+### Compare With Practice Session
 
-Lines 133–199 assign hardcoded `NumericFocusOrder(1)` through `NumericFocusOrder(10)` to cards. Adding, removing, or conditionally showing a card (e.g., hiding `ExportSection` for non-premium users) requires renumbering every subsequent focus order — a manual, error-prone process with no analyzer guard. This is identical to the pattern the `code_refactor_master` issue identified as problematic in Focus Mode.
+The Practice feature (`lib/features/practice/presentation/practice_session_screen.dart`) uses `AnswerValidationService` from `lib/core/services/answer_validation_service.dart` — a proper comparison-based evaluator. The Tutor's exercise evaluation is orders of magnitude weaker despite being the same conceptual feature (ask question → evaluate answer).
 
-**Fix**: Remove explicit focus orders from the dashboard column (cards are already in DOM order); or derive orders dynamically from the visible card list.
+### Recommendation
 
----
+Replace the keyword-based `_evaluateExerciseResponse` with:
+1. **LLM-based evaluation**: Pass the student's answer + the exercise question + markscheme (if available) to the LLM with a structured prompt asking it to evaluate correctness. Parse the structured output (e.g., `{"correct": true, "confidence": 0.9, "explanation": "..."}`).
+2. **Phase transitions driven by LLM output**, not keyword matching. The `_buildTutorPrompt` already tells the LLM "Give the student a practice question" when in `exercise` phase — the LLM should also tell *us* what phase to transition to next.
+3. **Remove keyword-based correctness tracking** from `ConversationManager`. Move to a structured output protocol: every tutor response includes a metadata field indicating exercise correctness, requested transition, etc.
 
-## Issue 5: `_resolveTopicName` N+1 on Every Rebuild
+Alternatively, at minimum: use the `AnswerValidationService` that the Practice feature already uses, instead of ad-hoc keyword matching.
 
-`_loadData()` (lines 100–109) iterates `_allMastery` and fetches topic names one-by-one via `_topicRepo.get(state.topicId)`. Since the topic names are cached only in `_topicNameCache`, and the cache is populated **during the loading phase**, every pull-to-refresh re-fetches every topic name. For a student with 50+ topics, this is 50 sequential Hive reads on every dashboard load.
+### Affected Files
 
-The `TopicRepository` already has `getBySubject(subjectId)` which returns all topics for a subject in one call. Since all mastery states belong to the same student, a single `_topicRepo.getAll()` call (or getting topics by subject) would replace the N+1 loop.
+| File | Lines | Role |
+|---|---|---|
+| `lib/features/teaching/services/conversation_manager.dart` | 228–271 | `_evaluateExerciseResponse`, `_detectExerciseRequest` — replace both |
+| `lib/features/teaching/services/conversation_manager.dart` | 36–41, 191–226 | Phase tracking in constructor + `_buildTutorPrompt` — extend with structured output |
+| `lib/features/teaching/services/tutor_service.dart` | 88–98 | Mastery recording uses heuristic correctness — should use evaluated result |
+| `test/features/teaching/services/conversation_manager_test.dart` | 193–318 | Keyword-based test cases — rewrite for structured evaluation |
 
----
+### Acceptance Criteria
 
-## Affected Files
-
-| Scope | Files |
-|---|---|
-| **Dashboard Screen** | `lib/features/dashboard/presentation/dashboard_screen.dart` (lines 37–206, entire `_DashboardScreenState`) |
-| **Dashboard Providers** | `lib/features/dashboard/providers/dashboard_providers.dart` (all 36 lines — 5 providers that return singletons, no `FutureProvider`) |
-| **MasteryProgressCard** | `lib/features/dashboard/presentation/widgets/mastery_progress_card.dart` (loose map access, lines 13–19) |
-| **SummaryRow** | `lib/features/dashboard/presentation/widgets/summary_row.dart` (loose map access, lines 14–18) |
-| **WeeklyChart** | `lib/features/dashboard/presentation/widgets/weekly_chart.dart` (loose map access via `item['attempts']`, line 19) |
-| **WeakAreasCard** | `lib/features/dashboard/presentation/widgets/weak_areas_card.dart` (hardcoded 60% threshold, empty subjectId in navigation) |
-| **TopicBreakdownCard** | `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart` (sorted by accuracy only, no trend/practice history context) |
-| **PlanAdherenceCard** | `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart` (no integration with planner's adherence deviation banner) |
-| **BadgesCard** | `lib/features/dashboard/presentation/widgets/badges_card.dart` (empty state returns SizedBox.shrink, no gamification system backing it) |
-| **ExportSection** | `lib/features/dashboard/presentation/widgets/export_section.dart` (SnackBar-only feedback, no actual file save/share) |
-| **Dashboard Barrel** | `lib/features/dashboard/dashboard.dart` (exports all widgets) |
-| **Tests** | `test/features/dashboard/presentation/dashboard_screen_test.dart`, `test/features/dashboard/providers/dashboard_providers_test.dart` |
-| **Route config** | `lib/core/routes/app_router.dart` (dashboard route passes `Map<String, dynamic>` as arg — lines 151–165) |
-| **Mastery models** | `lib/core/data/models/mastery_state_model.dart`, `mastery_snapshot_model.dart` (for defining typed snapshot type) |
-| **Progress tracker** | `lib/core/services/study_progress_tracker.dart` (for returning typed objects instead of `Map<String, dynamic>`) |
+1. `_evaluateExerciseResponse` no longer uses keyword matching. Evaluation uses either (a) LLM-based structured output evaluation or (b) the canonical `AnswerValidationService`.
+2. Phase transitions (`exercise → feedback → adaptiveReview/teaching`) are driven by evaluation result, not by coincidental keyword presence in student text.
+3. No false-positive/negative evaluation for edge cases (a response containing both correct and incorrect keywords, a neutral answer, a numbers-only answer).
+4. `adaptivePace` adjustments are based on actual evaluation accuracy, not keyword heuristics.
+5. All existing tests pass; new tests cover the structured evaluation path.
 
 ---
 
-## Rationale
+## Issue 4: No Offline-First Architecture — Data Loss Risk and Poor UX Without Network
 
-### Why fix the dashboard now?
+### Summary
 
-1. **It is the app's navigation hub** — the FAB on every bottom-nav tab opens the dashboard. Every user sees it on every session.
+StudyKing stores user data locally in Hive but **all high-value features require network access**:
+- AI Tutor/Mentor streaming → requires LLM API endpoint
+- Question generation → requires LLM API
+- Content ingestion classification → requires LLM API
+- Plan generation → requires LLM API
 
-2. **The current implementation blocks parallel work** — six open/completed issues (planner intelligence, focus mode, test coverage, i18n, settings UX, code refactoring) all produce data that should surface on the dashboard, but the monolithic `setState` pattern makes it risky to add new cards.
+When the network is unavailable:
+- QuickGuide, Mentor, and Tutor screens show `_fallbackResponse()` — a generic localized string
+- Question generation silently fails
+- The app has no "offline mode" indication
+- No queue/retry mechanism for failed LLM calls
 
-3. **No card-level error recovery** — if the mastery snapshot provider throws, the entire dashboard fails to render (or, worse, silently shows 0s everywhere). Per-provider error boundaries give each card independent recovery.
+Additionally, StudyKing data is **only stored locally in Hive**. There is no:
+- Cloud backup or sync
+- Export/import of all data (the existing export only handles `StudySession`)
+- Cross-device continuity
 
-4. **The type-safety gap widens as the app grows** — `Map<String, dynamic>` patterns in 5 dashboard widgets will silently break when `StudyProgressTracker` or `MasteryGraphService` refactors its return values (both of which are likely given the planner and test issues).
+The `agent_must_read.md` (line 108) says: *"exportable progress"* — the current implementation exports only `StudySession` data (CSV/JSON/PDF). No export exists for subjects, topics, questions, mastery states, plans, roadmaps, or settings.
 
-5. **The N+1 topic-name lookup will become a performance bottleneck** as student topic counts grow. A student with 10 subjects × 20 topics each = 200 sequential Hive reads per dashboard load.
+### Affected Workflows
 
-### Existing analysis supports this refactor
+| Workflow | Offline Behavior | Impact |
+|---|---|---|
+| AI Tutor lesson | Shows error message | Lesson cannot proceed |
+| Mentor chat | Shows error message | No guidance available |
+| Practice session | Works (questions are local) | ✅ Works offline |
+| Content ingestion | Upload works; classification fails | Content stored but unclassified |
+| Plan generation | Fails silently | No plan created |
+| Question generation | Fails silently | No questions created |
+| Data export | CSV/JSON/PDF work (local files) | ✅ Works offline |
 
-The completed `test_master` issue identified that dashboard widget tests existed but were written before this architecture issue was defined. The `code_refactor_master` issue (triplicated providers) is a prerequisite — the dashboard currently creates its own `FocusSessionService` instance, which must be consolidated before dashboard providers can become canonical.
+### Recommendation
+
+1. **Connectivity-aware UI**: Show a persistent banner when offline. Disable LLM-dependent features with a clear explanation ("Connect to the internet to start a lesson").
+2. **Offline queue**: Add a `PendingLlmCall` repository (similar to `PendingActionRepository`) that queues LLM requests when offline and replays them when connectivity returns. Queue items appear in a "pending sync" section.
+3. **Full data export**: Extend `SessionExportService` (or create `DataExportService`) to export all user data: subjects, topics, questions, mastery states, study plans, roadmaps, settings, and conversation history — as a single JSON archive. Support import for restore/migration.
+4. **Graceful degradation**: Practice sessions and local question review should remain fully functional offline. The app should highlight what is available ("Practice your saved questions offline").
+5. **Sync architecture** (future): Define a sync contract (last-modified timestamps on all Hive models, conflict resolution strategy) to support future cloud backup.
+
+### Acceptance Criteria
+
+1. A `ConnectivityService` (or `ref.watch(connectivityProvider)`) exposes network state to all features.
+2. LLM-dependent features show clear "offline" state with explanation and disable interactive elements.
+3. An offline queue persists pending LLM calls in Hive (`lib/core/data/models/pending_llm_call_model.dart`), with UI visibility in the LLM Task Manager screen.
+4. `DataExportService` exports all user data as a single importable JSON archive.
+5. Existing tests pass; new tests cover connectivity-aware UI rendering.
+6. `dart analyze` passes.
 
 ---
 
-## Acceptance Criteria
+## Issue 5: Engagement Scheduler Is Defined but Never Started — Proactive Nudges Are Dead Code
 
-1. **Per-card Riverpod providers**: Replace the single `_loadData()` method with individual `FutureProvider` or `AsyncNotifierProvider` instances for each data source (mastery snapshot, overall stats, weekly trend, badges, adherence, focus stats, topic names). Each provider must have its own loading, error, and data states.
+### Summary
 
-2. **Parallel initialization**: All independent initializations (`_instrumentation.init()`, `_adherenceRepo.init()`, `_topicRepo.init()`, `_focusService.getTodayStats()`, `_masteryService.getAllTopicMastery()`) run via `Future.wait` or equivalent parallel dispatch. Topic name resolution uses `_topicRepo.getAll()` (single call) instead of N sequential `get()` calls.
+`lib/core/services/engagement_scheduler.dart` (273 lines) defines a complete daily engagement system with:
+- Overwork detection (nudge if >4 hours studied)
+- Revision nudges (nudge if topic not practiced in 3+ days)
+- Plan adjustment nudges (nudge if 3+ consecutive low-adherence days)
+- Low-mastery warnings
+- Weekly digest generation
+- Nudge history storage in Hive
 
-3. **Typed data models**: Replace `Map<String, dynamic>` with typed Dart objects in all dashboard widgets:
-   - `MasteryProgressCard` receives a typed `MasterySnapshot` (or similar) instead of `Map<String, dynamic>?`
-   - `SummaryRow` receives a typed `OverallStats` instead of `Map<String, dynamic>?`
-   - `WeeklyChart` receives `List<WeeklyTrendEntry>` instead of `List<Map<String, dynamic>>`
-   - `BadgesCard` receives `List<Badge>` instead of `List<Map<String, dynamic>>`
-   - `WeakAreasCard` receives the resolved topic name as a `Map<String, String>` via a single batch lookup, not an N+1 cache populate
+**This code is never instantiated or started anywhere in the app.** The `EngagementScheduler.init()` method, which sets up the daily timer, is never called. The `_sendNudgeNotifications()` method, which triggers local notifications, is never executed. The `EngagementNudgeRepository` stores nudges that are never created.
 
-4. **Collapsible sections**: Each card has a `Card` wrapper with a `ExpansionTile`-like header (or a simple collapse toggle). State (collapsed/expanded per card) is persisted in a `DashboardLayoutPreferences` box so the user's layout choice survives restarts.
+The `agent_must_read.md` (line 98) demands: *"The system should proactively engage students with reminders, prompts, revision nudges, lesson notifications, accountability messaging, and practice encouragement."* — but this entire subsystem is dead code.
 
-5. **Guided empty state**: When the student has **no data** across all cards (new user), the dashboard shows a **getting-started checklist**: "Add a subject", "Upload study material", "Take your first practice quiz", "Schedule a lesson with the AI tutor". This checklist replaces the empty-card grid.
+Additionally, `NotificationService` (`lib/core/services/notification_service.dart`) is defined but it is unclear if local notification permissions are ever requested or if notification channels are configured.
 
-6. **Card-level error states**: If a single provider fails (e.g., adherence repository init throws), its card shows an inline error with a retry button — **other cards continue to render normally**.
+### Why This Exists
 
-7. **Dynamic focus ordering**: Remove hardcoded `NumericFocusOrder` from the dashboard column. Cards are ordered by a `List<Type>` configuration that can be reordered by the user (future enhancement: drag-to-reorder).
+The `EngagementScheduler` requires `StudyProgressTracker`, `MasteryGraphService`, `PlanAdapter`, `FocusSessionService` — all of which have their own initialization dependencies. A circular or deferred initialization problem likely prevented it from being integrated. However, the `init()` method accepts these via constructor injection, so no circular dependency exists — it simply was never wired into the app's startup flow.
 
-8. **`ExportSection` improvement**: The "export" buttons should actually download/share a file (using `share_plus`, already a dependency per `session_export_service.dart:7`) instead of showing a SnackBar with the CSV length. A `file_saver` path or temporary file + share sheet should be used.
+### Recommendation
 
-9. **Existing dashboard widget tests continue to pass** — all changes to card constructors and data types must be backward-compatible or have corresponding test updates. The `dashboard_screen_test.dart` must be extended to cover loading states, error states, and the empty-state checklist.
+1. **Wire `EngagementScheduler` into app startup**: Initialize it in `main.dart` or in a `ProviderScope.overrides` provider that starts the daily timer after all repositories are ready.
+2. **Gate with settings**: Add a "Proactive nudges" toggle in Settings (default on) that controls whether the scheduler runs. Respect notification permission status.
+3. **Add nudge history UI**: Create a small section in the notification drawer or dashboard that shows recent nudges from `EngagementNudgeRepository`.
+4. **Test the scheduler**: Add an integration test that verifies `_sendNudgeNotifications` produces correct `EngagementNudgeModel` entries for a mock student with >4 hours of study, 3+ consecutive low-adherence days, and topics not practiced in 7+ days.
 
-10. **`dart analyze` passes with zero errors** after all changes.
+### Affected Files
+
+| File | Lines | Role |
+|---|---|---|
+| `lib/core/services/engagement_scheduler.dart` | 1–273 (entire file) | Dead code — wire into startup |
+| `lib/main.dart` | — | Add `EngagementScheduler.init()` call |
+| `lib/core/services/notification_service.dart` | — | Verify notification permissions requested at startup |
+| `lib/features/settings/presentation/settings_screen.dart` | — | Add "Proactive nudges" toggle |
+| `test/core/services/engagement_scheduler_test.dart` | (new) | Integration tests for nudge generation |
+
+### Acceptance Criteria
+
+1. `EngagementScheduler.init()` is called during app startup (after repositories are initialized).
+2. Daily nudges are actually shown (local notifications appear, nudge models are persisted).
+3. Settings screen has a toggle to enable/disable proactive nudges.
+4. Notification permissions are requested on first launch.
+5. A test verifies that a student with >4 study hours receives an overwork nudge, a student with 3+ low-adherence days receives an adherence nudge, and a student with unpracticed topics receives a revision nudge.
+
+---
+
+## Summary of Impact and Priority
+
+| Issue | Severity | Effort | Scope | Why Now |
+|---|---|---|---|---|
+| **1. QuickGuide/Mentor/Tutor chat redundancy** | Medium | Medium | 3 screens + new shared widget | Reduces 900+ lines, fixes confusing user entry flow |
+| **2. LLM provider abstraction missing** | High | Large | Core LLM layer + all callers | Blocks every future LLM-dependent feature; required by product vision |
+| **3. Heuristic keyword exercise evaluation** | High | Medium | ConversationManager + tests | Directly impacts teaching quality; students get wrong feedback |
+| **4. No offline-first / no full export** | Medium | Large | Connectivity layer + queue + export | Data portability is a stated requirement; offline UX is broken |
+| **5. Engagement scheduler is dead code** | Medium | Small | Startup wiring + settings toggle | Proactive engagement is a stated requirement; 273 lines doing nothing |
+
+These five issues are independent and can be worked in parallel. Issue 2 (LLM provider abstraction) is the highest priority because it blocks support for Ollama/local models and is a prerequisite for any future AI feature work. Issue 3 (keyword evaluation) is the most user-facing — it directly degrades the core teaching experience for every student.

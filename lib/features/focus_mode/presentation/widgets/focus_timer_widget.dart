@@ -44,7 +44,10 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
       duration: const Duration(seconds: 1),
     );
     if (widget.isActive && !widget.isPaused) {
-      _pulseController.repeat(reverse: true);
+      final reduceMotion = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion;
+      if (!reduceMotion) {
+        _pulseController.repeat(reverse: true);
+      }
     }
   }
 
@@ -53,8 +56,11 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
     super.didUpdateWidget(oldWidget);
     final wasRunning = oldWidget.isActive && !oldWidget.isPaused;
     final isRunning = widget.isActive && !widget.isPaused;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
     if (isRunning && !wasRunning) {
-      _pulseController.repeat(reverse: true);
+      if (!disableAnimations) {
+        _pulseController.repeat(reverse: true);
+      }
     } else if (!isRunning && wasRunning) {
       _pulseController.stop();
       _pulseController.reset();
@@ -65,6 +71,20 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isRunning = widget.isActive && !widget.isPaused;
+    if (isRunning) {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _pulseController.stop();
+        _pulseController.reset();
+      } else if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    }
   }
 
   String _formatTime(int seconds) {
@@ -93,17 +113,18 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
           builder: (context, constraints) {
             final maxWidth = constraints.maxWidth * 0.8;
             final size = maxWidth.clamp(200.0, 260.0);
-            return AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                final pulse = widget.isPaused
-                    ? 1.0
-                    : 1.0 + (_pulseController.value * 0.03);
-                return Transform.scale(
-                  scale: pulse,
-                  child: child,
-                );
-              },
+              return AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final disableAnimations = MediaQuery.disableAnimationsOf(context);
+                  final pulse = widget.isPaused || disableAnimations
+                      ? 1.0
+                      : 1.0 + (_pulseController.value * 0.03);
+                  return Transform.scale(
+                    scale: pulse,
+                    child: child,
+                  );
+                },
               child: SizedBox(
                 width: size,
                 height: size,

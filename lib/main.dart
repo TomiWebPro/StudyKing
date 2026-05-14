@@ -107,13 +107,10 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
       });
     }
     
-    final systemTextScaler = MediaQuery.textScalerOf(context);
     final systemBoldText = MediaQuery.boldTextOf(context);
     final systemHighContrast = MediaQuery.highContrastOf(context);
 
-    final userFontSize = settings.fontSize.clamp(14.0, 30.0);
-    final systemScaledSize = systemTextScaler.scale(16.0);
-    final effectiveFontSize = userFontSize < systemScaledSize ? systemScaledSize : userFontSize;
+    final effectiveFontSize = settings.fontSize.clamp(10.0, 30.0);
 
     final useHighContrast = systemHighContrast || settings.highContrastEnabled;
 
@@ -142,7 +139,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             boldText: systemBoldText,
-            textScaler: systemTextScaler,
+            textScaler: TextScaler.noScaling,
           ),
           child: child!,
         );

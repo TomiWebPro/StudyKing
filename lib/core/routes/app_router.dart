@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
@@ -149,11 +150,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       return _materialPageRoute(const PlannerScreen(), routeSettings);
     case AppRoutes.dashboard:
       final args = routeSettings.arguments;
-      if (args is Map<String, dynamic>) {
+      if (args is DashboardArgs) {
         return _materialPageRoute(
-          DashboardScreen(
-            studentId: args['studentId'] as String? ?? StudentIdService().getStudentId(),
-          ),
+          DashboardScreen(studentId: args.studentId),
           routeSettings,
         );
       }

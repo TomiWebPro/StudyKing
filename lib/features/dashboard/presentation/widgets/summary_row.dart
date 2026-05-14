@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SummaryRow extends StatelessWidget {
-  final Map<String, dynamic>? overallStats;
+  final OverallStats? overallStats;
 
   const SummaryRow({super.key, this.overallStats});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final stats = overallStats ?? {};
-    final accuracy = stats['accuracy'] ?? 0;
-    final totalHours = stats['totalStudyTimeHours'] ?? '0';
-    final weeklyActivity = stats['weeklyActivity'] ?? 0;
-    final topicsStudied = stats['topicsStudied'] ?? 0;
+    final stats = overallStats ?? const OverallStats();
+    final accuracy = stats.accuracy;
+    final totalHours = stats.totalStudyTimeHours;
+    final weeklyActivity = stats.weeklyActivity;
+    final topicsStudied = stats.topicsStudied;
 
     return LayoutBuilder(
       builder: (context, constraints) {

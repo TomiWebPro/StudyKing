@@ -265,5 +265,71 @@ void main() {
 
       expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
     });
+
+    testWidgets('shows date and duration in subtitle', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, timeSpentMs: 3600000),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('6/15/2024'), findsOneWidget);
+    });
+
+    testWidgets('shows correct score percentage for high score > 80', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 9, questionsAnswered: 10),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('90%'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('shows correct score percentage for medium score 50-79', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 6, questionsAnswered: 10),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('60%'), findsOneWidget);
+      expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
+    });
+
+    testWidgets('shows correct score percentage for low score < 50', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 3, questionsAnswered: 10),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('30%'), findsOneWidget);
+    });
   });
 }

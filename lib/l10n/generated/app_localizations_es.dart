@@ -2505,4 +2505,45 @@ class AppLocalizationsEs extends AppLocalizations {
   String pdfCorrectFraction(int correct, int total) {
     return 'Correctas: $correct/$total';
   }
+
+  @override
+  String get gettingStarted => 'Primeros Pasos';
+
+  @override
+  String get gettingStartedDesc =>
+      'Complete estos pasos para aprovechar al máximo StudyKing';
+
+  @override
+  String get addSubjectDesc =>
+      'Cree su primera materia para organizar su material de estudio';
+
+  @override
+  String get uploadMaterial => 'Subir Material de Estudio';
+
+  @override
+  String get uploadMaterialDesc =>
+      'Suba PDFs, notas y bancos de preguntas para comenzar';
+
+  @override
+  String get takePracticeQuiz => 'Realice su Primer Cuestionario de Práctica';
+
+  @override
+  String get takePracticeQuizDesc =>
+      'Ponga a prueba sus conocimientos con preguntas de práctica adaptativas';
+
+  @override
+  String get scheduleAiTutor => 'Programe una Sesión con el Tutor de IA';
+
+  @override
+  String get scheduleAiTutorDesc =>
+      'Reciba tutoría personalizada uno a uno con IA';
+
+  @override
+  String get fileSaved => 'Archivo guardado exitosamente';
+
+  @override
+  String get fileShared => 'Archivo compartido exitosamente';
+
+  @override
+  String get noBadgesYet => 'Aún no hay logros. ¡Sigue estudiando!';
 }

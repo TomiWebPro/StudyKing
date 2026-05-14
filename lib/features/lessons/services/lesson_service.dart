@@ -2,16 +2,12 @@ import 'dart:async';
 import '../../../core/data/database_service.dart';
 import '../../../core/data/models/tutor_session_model.dart';
 import '../../../core/data/models/topic_model.dart';
-import '../../../core/services/mastery_graph_service.dart';
-import '../../teaching/services/tutor_service.dart';
 
 class LessonService {
   final DatabaseService _database;
 
   LessonService({
     required DatabaseService database,
-    required TutorService tutorService,
-    MasteryGraphService? masteryService,
   }) : _database = database;
 
   Future<List<TutorSession>> getLessonsForStudent(String studentId) async {

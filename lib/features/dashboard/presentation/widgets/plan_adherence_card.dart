@@ -14,47 +14,42 @@ class PlanAdherenceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(Icons.event_note,
-                    color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.planAdherence,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAdherenceMetric(
-                    context,
-                    l10n.overall,
-                    '${(averageAdherence * 100).round()}%',
-                    averageAdherence,
-                  ),
-                ),
-                Expanded(
-                  child: _buildAdherenceMetric(
-                    context,
-                    l10n.thisWeek,
-                    '${(weeklyAdherence * 100).round()}%',
-                    weeklyAdherence,
-                  ),
-                ),
-              ],
+            Icon(Icons.event_note,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              l10n.planAdherence,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildAdherenceMetric(
+                context,
+                l10n.overall,
+                '${(averageAdherence * 100).round()}%',
+                averageAdherence,
+              ),
+            ),
+            Expanded(
+              child: _buildAdherenceMetric(
+                context,
+                l10n.thisWeek,
+                '${(weeklyAdherence * 100).round()}%',
+                weeklyAdherence,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

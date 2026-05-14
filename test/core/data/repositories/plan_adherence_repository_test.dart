@@ -8,7 +8,6 @@ class _MockPlanAdherenceRepository extends PlanAdherenceRepository {
   @override
   Future<void> init() async {}
 
-  @override
   bool get _isReady => true;
 
   @override

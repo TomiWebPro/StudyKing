@@ -1,5 +1,6 @@
 export 'presentation/dashboard_screen.dart';
 export 'providers/dashboard_providers.dart';
+export 'providers/dashboard_data_providers.dart';
 export 'presentation/widgets/dashboard_header.dart';
 export 'presentation/widgets/summary_row.dart';
 export 'presentation/widgets/weekly_chart.dart';
@@ -9,3 +10,6 @@ export 'presentation/widgets/weak_areas_card.dart';
 export 'presentation/widgets/topic_breakdown_card.dart';
 export 'presentation/widgets/badges_card.dart';
 export 'presentation/widgets/export_section.dart';
+export 'presentation/widgets/collapsible_card.dart';
+export 'presentation/widgets/empty_dashboard_checklist.dart';
+export 'presentation/models/dashboard_models.dart';

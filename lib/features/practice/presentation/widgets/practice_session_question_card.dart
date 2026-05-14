@@ -113,13 +113,11 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
         final correctAnswer = question.markscheme?.correctAnswer ?? '';
-        final l10n = AppLocalizations.of(context)!;
-        final fallbackOptions = [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
-        final options = question.type == QuestionType.singleChoice
-            ? question.options.isEmpty ? fallbackOptions : question.options
-            : question.options.isEmpty ? fallbackOptions : question.options;
+        if (question.options.isEmpty) {
+          return Text(AppLocalizations.of(context)!.noOptionsAvailable);
+        }
         return SingleAnswerWidget(
-          options: options,
+          options: question.options,
           correctAnswer: correctAnswer,
           selectedAnswer: currentAnswer,
           isSubmitted: isSubmitted,

@@ -153,5 +153,117 @@ void main() {
 
       expect(find.text('Recent Sessions'), findsNothing);
     });
+
+    testWidgets('renders narrow layout with MetricCards wrapping', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(300, 600)),
+          child: _buildTestApp(
+            const SessionSummaryCard(
+              todayStats: {
+                'totalSeconds': 3600,
+                'completedSessions': 2,
+                'totalSessions': 3,
+              },
+              weeklySeconds: 7200,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('1h 0m'), findsOneWidget);
+      expect(find.text('2h 0m'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+    });
+
+    testWidgets('shows session time with hours in recent list', (tester) async {
+      final now = DateTime(2026, 5, 14, 10, 30);
+      final sessions = [
+        FocusSession(
+          id: 's1',
+          startTime: now,
+          endTime: now.add(const Duration(hours: 1, minutes: 30)),
+          plannedDurationMinutes: 90,
+          actualDurationSeconds: 5400,
+          completed: true,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.text('1h 30m / 90m'), findsOneWidget);
+    });
+
+    testWidgets('shows session start time correctly', (tester) async {
+      final now = DateTime(2026, 5, 14, 8, 5);
+      final sessions = [
+        FocusSession(
+          id: 's1',
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 25)),
+          plannedDurationMinutes: 25,
+          actualDurationSeconds: 1500,
+          completed: true,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.text('08:05'), findsOneWidget);
+    });
+
+    testWidgets('shows correct icon for completed session', (tester) async {
+      final now = DateTime(2026, 5, 14, 10, 30);
+      final sessions = [
+        FocusSession(
+          id: 's1',
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 25)),
+          plannedDurationMinutes: 25,
+          actualDurationSeconds: 1500,
+          completed: true,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.byIcon(Icons.check_circle), findsAtLeast(1));
+    });
+
+    testWidgets('shows correct icon for incomplete session', (tester) async {
+      final now = DateTime(2026, 5, 14, 10, 30);
+      final sessions = [
+        FocusSession(
+          id: 's1',
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 10)),
+          plannedDurationMinutes: 25,
+          actualDurationSeconds: 600,
+          completed: false,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+    });
+
+    testWidgets('renders today stat with minutes only format', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const SessionSummaryCard(
+          todayStats: {'totalSeconds': 45},
+        ),
+      ));
+
+      expect(find.text('0m'), findsAtLeast(1));
+    });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -26,7 +27,7 @@ void main() {
 
     testWidgets('renders with empty snapshot', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const MasteryProgressCard(snapshot: {}),
+        const MasteryProgressCard(snapshot: MasterySnapshot()),
       ));
       await tester.pumpAndSettle();
 
@@ -35,13 +36,13 @@ void main() {
 
     testWidgets('displays correct topic counts', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        MasteryProgressCard(snapshot: {
-          'totalTopics': 10,
-          'masteredTopics': 4,
-          'weakTopics': 2,
-          'averageAccuracy': 0.75,
-          'avgReadiness': 0.6,
-        }),
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 4,
+          weakTopics: 2,
+          averageAccuracy: 0.75,
+          avgReadiness: 0.6,
+        )),
       ));
       await tester.pumpAndSettle();
 
@@ -54,7 +55,7 @@ void main() {
 
     testWidgets('displays mastery overview header', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const MasteryProgressCard(snapshot: {}),
+        const MasteryProgressCard(snapshot: MasterySnapshot()),
       ));
       await tester.pumpAndSettle();
 
@@ -63,10 +64,10 @@ void main() {
 
     testWidgets('shows linear progress indicator', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        MasteryProgressCard(snapshot: {
-          'totalTopics': 5,
-          'masteredTopics': 2,
-        }),
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+        )),
       ));
       await tester.pumpAndSettle();
 
@@ -75,11 +76,11 @@ void main() {
 
     testWidgets('shows 0 mastery when no topics', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        const MasteryProgressCard(snapshot: {
-          'totalTopics': 0,
-          'masteredTopics': 0,
-          'weakTopics': 0,
-        }),
+        const MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 0,
+          masteredTopics: 0,
+          weakTopics: 0,
+        )),
       ));
       await tester.pumpAndSettle();
 
@@ -91,11 +92,11 @@ void main() {
 
     testWidgets('shows 100% mastery when all topics mastered', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        MasteryProgressCard(snapshot: {
-          'totalTopics': 5,
-          'masteredTopics': 5,
-          'weakTopics': 0,
-        }),
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 5,
+          weakTopics: 0,
+        )),
       ));
       await tester.pumpAndSettle();
 

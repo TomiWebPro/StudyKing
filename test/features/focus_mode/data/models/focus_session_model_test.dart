@@ -122,6 +122,51 @@ void main() {
         expect(updated.id, baseSession.id);
         expect(updated.plannedDurationMinutes, 25);
       });
+
+      test('updates startTime', () {
+        final newTime = DateTime(2026, 6, 1);
+        final updated = baseSession.copyWith(startTime: newTime);
+        expect(updated.startTime, newTime);
+      });
+
+      test('updates topicId', () {
+        final updated = baseSession.copyWith(topicId: 'topic-algebra');
+        expect(updated.topicId, 'topic-algebra');
+      });
+
+      test('updates createdAt', () {
+        final newCreatedAt = DateTime(2025, 1, 1);
+        final updated = baseSession.copyWith(createdAt: newCreatedAt);
+        expect(updated.createdAt, newCreatedAt);
+      });
+
+      test('null for nullable fields preserves original values', () {
+        final sessionWithValues = baseSession.copyWith(
+          endTime: now,
+          subjectId: 'subj',
+          topicId: 'topic',
+        );
+        final result = sessionWithValues.copyWith(
+          endTime: null,
+          subjectId: null,
+          topicId: null,
+        );
+        expect(result.endTime, sessionWithValues.endTime);
+        expect(result.subjectId, sessionWithValues.subjectId);
+        expect(result.topicId, sessionWithValues.topicId);
+      });
+
+      test('false for completed overrides true', () {
+        final completedSession = baseSession.copyWith(completed: true);
+        final restarted = completedSession.copyWith(completed: false);
+        expect(restarted.completed, false);
+      });
+
+      test('zero for actualDurationSeconds overrides non-zero', () {
+        final session = baseSession.copyWith(actualDurationSeconds: 500);
+        final reset = session.copyWith(actualDurationSeconds: 0);
+        expect(reset.actualDurationSeconds, 0);
+      });
     });
 
     group('JSON serialization', () {

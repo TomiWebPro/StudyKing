@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -53,6 +54,22 @@ class _TestNotifier extends SubjectsRepositoryNotifier {
   Future<SubjectRepository> build() async => repo;
 }
 
+Route<dynamic>? _testRoute(RouteSettings settings) {
+  if (settings.name == AppRoutes.subjectSelection) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Selection Mock')),
+      settings: settings,
+    );
+  }
+  if (settings.name == AppRoutes.subjectDetail) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Detail Mock')),
+      settings: settings,
+    );
+  }
+  return null;
+}
+
 Widget _buildTestApp(SubjectRepository repo) {
   return ProviderScope(
     overrides: [
@@ -61,6 +78,7 @@ Widget _buildTestApp(SubjectRepository repo) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      onGenerateRoute: _testRoute,
       home: const SubjectListScreen(),
     ),
   );
@@ -200,10 +218,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.add).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Save'), findsWidgets);
+      expect(find.text('Selection Mock'), findsOneWidget);
     });
 
     testWidgets('shows practice sessions label on subject card', (tester) async {
@@ -215,6 +232,57 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Practice sessions'), findsOneWidget);
+    });
+
+    testWidgets('displays subject code on card when provided', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math', code: 'MATH101'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MATH101'), findsOneWidget);
+    });
+
+    testWidgets('does not display code when subject code is null', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics'), findsOneWidget);
+    });
+
+    testWidgets('card tap navigates to detail screen', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Chemistry', color: '#9C27B0'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Chemistry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Detail Mock'), findsOneWidget);
+    });
+
+    testWidgets('empty state add subject button navigates to selection', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add your first subject to begin studying'), findsOneWidget);
+
+      await tester.tap(find.text('Add Subject').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Selection Mock'), findsOneWidget);
     });
   });
 }

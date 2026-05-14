@@ -10,34 +10,7 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
-import 'package:studyking/features/teaching/services/tutor_service.dart';
-
-TutorService _fakeTutorService() {
-  final db = DatabaseService(
-    topicRepository: TopicRepository(),
-    questionRepository: QuestionRepository(),
-    attemptRepository: AttemptRepository(),
-    lessonRepository: LessonRepository(),
-    sessionRepository: StudySessionRepository(),
-    subjectRepository: SubjectRepository(),
-    conversationRepository: ConversationRepository(),
-    tutorSessionRepository: TutorSessionRepository(),
-  );
-  return TutorService(
-    database: db,
-    llmService: LlmService(
-      config: const LlmConfiguration(
-        provider: LlmProvider.openRouter,
-        apiKey: 'test',
-      ),
-    ),
-    masteryService: MasteryGraphService(),
-    modelId: 'test',
-  );
-}
 
 class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
@@ -117,10 +90,7 @@ void main() {
       conversationRepository: ConversationRepository(),
       tutorSessionRepository: sessionRepo,
     );
-    service = LessonService(
-      database: database,
-      tutorService: _fakeTutorService(),
-    );
+    service = LessonService(database: database);
   });
 
   group('getLessonsForStudent', () {

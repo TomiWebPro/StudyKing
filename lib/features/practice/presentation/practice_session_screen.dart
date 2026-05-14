@@ -16,7 +16,7 @@ import 'package:studyking/features/practice/presentation/models/practice_models.
 import 'package:studyking/features/practice/presentation/services/practice_session_service.dart';
 import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/practice/presentation/widgets/practice_results_screen.dart';
+import 'package:studyking/features/practice/presentation/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';

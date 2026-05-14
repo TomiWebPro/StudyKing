@@ -96,6 +96,70 @@ void main() {
       expect(find.text('Blue'), findsOneWidget);
       expect(find.text('Green'), findsOneWidget);
       expect(find.text('Orange'), findsOneWidget);
+      expect(find.text('Purple'), findsOneWidget);
+      expect(find.text('Pink'), findsOneWidget);
+      expect(find.text('Cyan'), findsOneWidget);
+      expect(find.text('Amber'), findsOneWidget);
+      expect(find.text('Deep Orange'), findsOneWidget);
+      expect(find.text('Blue Grey'), findsOneWidget);
+    });
+
+    testWidgets('selected color has bold text and colored text', (tester) async {
+      String selected = '#4CAF50';
+      await tester.pumpWidget(_buildTestApp(
+        SubjectColorSelector(
+          selectedColor: selected,
+          onColorSelected: (color) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final greenText = tester.widget<Text>(find.text('Green'));
+      expect(greenText.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('non-selected color has normal weight text', (tester) async {
+      String selected = '#2196F3';
+      await tester.pumpWidget(_buildTestApp(
+        SubjectColorSelector(
+          selectedColor: selected,
+          onColorSelected: (color) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final greenText = tester.widget<Text>(find.text('Green'));
+      expect(greenText.style?.fontWeight, FontWeight.normal);
+    });
+
+    testWidgets('selected color chip has thicker border', (tester) async {
+      String selected = '#FF9800';
+      await tester.pumpWidget(_buildTestApp(
+        SubjectColorSelector(
+          selectedColor: selected,
+          onColorSelected: (color) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final orangeText = tester.widget<Text>(find.text('Orange'));
+      expect(orangeText.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('calls onColorSelected with correct color string', (tester) async {
+      String? result;
+      await tester.pumpWidget(_buildTestApp(
+        SubjectColorSelector(
+          selectedColor: '#2196F3',
+          onColorSelected: (color) => result = color,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Green'));
+      await tester.pumpAndSettle();
+
+      expect(result, '#4CAF50');
     });
   });
 

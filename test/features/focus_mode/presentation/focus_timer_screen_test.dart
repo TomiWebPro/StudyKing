@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
@@ -8,6 +11,9 @@ import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_w
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+final _today = DateTime.now();
+final _todayStart = DateTime(_today.year, _today.month, _today.day);
 
 class FakeFocusSessionRepository extends FocusSessionRepository {
   @override
@@ -132,6 +138,85 @@ class FakeFocusSessionService extends FocusSessionService {
   Future<void> dispose() async {}
 }
 
+class _FakeCapReachedService extends FakeFocusSessionService {
+  @override
+  Future<bool> isDailyCapReached(int additionalMinutes) async => true;
+}
+
+class _FakeStartErrorService extends FakeFocusSessionService {
+  @override
+  Future<FocusSession> startSession({
+    required int plannedDurationMinutes,
+    String? subjectId,
+    String? topicId,
+  }) async {
+    throw Exception('Start failed');
+  }
+}
+
+class _FakeStatsService extends FakeFocusSessionService {
+  @override
+  Future<Map<String, dynamic>> getTodayStats() async {
+    return {
+      'totalSeconds': 3600,
+      'completedSessions': 2,
+      'totalSessions': 3,
+      'plannedMinutes': 75,
+      'hours': '1.0',
+    };
+  }
+
+  @override
+  Future<int> getWeeklyFocusSeconds() async => 7200;
+
+  @override
+  Future<List<FocusSession>> getRecentSessions({int limit = 10}) async {
+    return [
+      FocusSession(
+        id: 's1',
+        startTime: _todayStart.add(const Duration(hours: 9)),
+        endTime: _todayStart.add(const Duration(hours: 9, minutes: 25)),
+        plannedDurationMinutes: 25,
+        actualDurationSeconds: 1500,
+        completed: true,
+      ),
+      FocusSession(
+        id: 's2',
+        startTime: _todayStart.add(const Duration(hours: 11)),
+        endTime: _todayStart.add(const Duration(hours: 11, minutes: 20)),
+        plannedDurationMinutes: 30,
+        actualDurationSeconds: 1200,
+        completed: true,
+      ),
+      FocusSession(
+        id: 's3',
+        startTime: _todayStart.add(const Duration(hours: 14)),
+        endTime: _todayStart.add(const Duration(hours: 14, minutes: 5)),
+        plannedDurationMinutes: 25,
+        actualDurationSeconds: 300,
+        completed: false,
+      ),
+    ];
+  }
+}
+
+Widget _wrapApp(Widget widget, {FocusSessionService? serviceOverride}) {
+  return ProviderScope(
+    overrides: [
+      focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
+      if (serviceOverride != null)
+        focusSessionServiceProvider.overrideWithValue(serviceOverride)
+      else
+        focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: widget,
+    ),
+  );
+}
+
 Widget _buildTestApp(Widget widget) {
   return ProviderScope(
     overrides: [
@@ -147,6 +232,10 @@ Widget _buildTestApp(Widget widget) {
 }
 
 void main() {
+  setUpAll(() {
+    Hive.init(Directory.systemTemp.createTempSync('focus_screen_test_').path);
+  });
+
   group('FocusTimerScreen', () {
     testWidgets('shows loading indicator initially', (tester) async {
       await tester.pumpWidget(_buildTestApp(
@@ -347,6 +436,173 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Break Time!'), findsOneWidget);
+    });
+
+    testWidgets('break view shows icons and session info', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Mark Complete'));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.self_improvement), findsOneWidget);
+      expect(find.text('Break Time!'), findsOneWidget);
+      expect(find.text('Session completed: 25m'), findsOneWidget);
+    });
+
+    testWidgets('break timer countdown updates after each tick', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Mark Complete'));
+      await tester.pump();
+
+      final timerFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.data?.contains(':') == true && w.data!.length == 5,
+      );
+      expect(timerFinder, findsOneWidget);
+
+      final before = tester.widget<Text>(timerFinder).data!;
+      await tester.pump(const Duration(seconds: 5));
+      final after = tester.widget<Text>(timerFinder).data!;
+      expect(after, isNot(equals(before)));
+    });
+
+    testWidgets('break ends and returns to setup after timer expires', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Mark Complete'));
+      await tester.pump();
+
+      expect(find.text('Break Time!'), findsOneWidget);
+
+      for (int i = 0; i < 305; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pump();
+
+      expect(find.text('New Focus Session'), findsOneWidget);
+      expect(find.text('Break Time!'), findsNothing);
+    });
+
+    testWidgets('cancel session returns to setup view', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Pause'), findsOneWidget);
+
+      await tester.tap(find.text('End'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('New Focus Session'), findsOneWidget);
+      expect(find.byType(FocusTimerWidget), findsNothing);
+    });
+
+    testWidgets('shows daily cap dialog when cap reached', (tester) async {
+      final capService = _FakeCapReachedService();
+      await tester.pumpWidget(_wrapApp(
+        const FocusTimerScreen(),
+        serviceOverride: capService,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Daily Limit Reached'), findsOneWidget);
+      expect(find.byIcon(Icons.celebration), findsOneWidget);
+
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Daily Limit Reached'), findsNothing);
+    });
+
+    testWidgets('shows error snackbar when start fails', (tester) async {
+      final errorService = _FakeStartErrorService();
+      await tester.pumpWidget(_wrapApp(
+        const FocusTimerScreen(),
+        serviceOverride: errorService,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('New Focus Session'), findsOneWidget);
+    });
+
+    testWidgets('shows slider on tablet width', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(900, 800)),
+          child: _buildTestApp(const FocusTimerScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(Slider), findsOneWidget);
+    });
+
+    testWidgets('hides slider on mobile width', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('displays stats from service with data', (tester) async {
+      final statsService = _FakeStatsService();
+      await tester.pumpWidget(_wrapApp(
+        const FocusTimerScreen(),
+        serviceOverride: statsService,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('1h 0m'), findsOneWidget);
+      expect(find.text('2h 0m'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+      expect(find.text('Recent Sessions'), findsOneWidget);
     });
   });
 }

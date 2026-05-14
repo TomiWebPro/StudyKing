@@ -4,15 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
@@ -95,6 +98,16 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 }
 
+class _FakeAttemptRepository extends AttemptRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<StudentAttempt>> getByStudent(String studentId) async {
+    return [];
+  }
+}
+
 class FakeStudyProgressTracker extends StudyProgressTracker {
   final Map<String, dynamic>? overallStats;
   final List<Map<String, dynamic>> weeklyTrend;
@@ -102,6 +115,8 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
   final bool failExportProgress;
   final bool failExportSession;
   final Completer<Map<String, dynamic>>? statsCompleter;
+  final Completer<String>? exportProgressCompleter;
+  final Completer<String>? exportSessionCompleter;
 
   FakeStudyProgressTracker({
     this.overallStats,
@@ -110,6 +125,8 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
     this.failExportProgress = false,
     this.failExportSession = false,
     this.statsCompleter,
+    this.exportProgressCompleter,
+    this.exportSessionCompleter,
   }) : super(attemptRepo: _FakeAttemptRepository());
 
   @override
@@ -139,34 +156,28 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
 
   @override
   Future<String> exportProgressCSV(String studentId) async {
+    if (exportProgressCompleter != null) return exportProgressCompleter!.future;
     if (failExportProgress) throw Exception('Export failed');
     return 'progress,csv,data';
   }
 
   @override
   Future<String> exportSessionHistoryCSV(String studentId) async {
+    if (exportSessionCompleter != null) return exportSessionCompleter!.future;
     if (failExportSession) throw Exception('Session export failed');
     return 'session,csv,data';
-  }
-}
-
-class _FakeAttemptRepository extends AttemptRepository {
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return [];
   }
 }
 
 class FakeInstrumentationService extends InstrumentationService {
   final Map<String, dynamic>? dashboardData;
   final bool failExport;
+  final Completer<void>? exportCompleter;
 
   FakeInstrumentationService({
     this.dashboardData,
     this.failExport = false,
+    this.exportCompleter,
   });
 
   @override
@@ -187,6 +198,9 @@ class FakeInstrumentationService extends InstrumentationService {
 
   @override
   Future<Result<void>> exportInstrumentationData(String studentId) async {
+    if (exportCompleter != null) {
+      return exportCompleter!.future.then((_) => Result.success(null));
+    }
     if (failExport) return Result.failure('Export failed');
     return Result.success(null);
   }
@@ -195,8 +209,9 @@ class FakeInstrumentationService extends InstrumentationService {
 class FakeTopicRepository extends TopicRepository {
   final Topic? topic;
   final bool failGet;
+  final bool returnNull;
 
-  FakeTopicRepository({this.topic, this.failGet = false});
+  FakeTopicRepository({this.topic, this.failGet = false, this.returnNull = false});
 
   @override
   Future<void> init() async {}
@@ -204,8 +219,40 @@ class FakeTopicRepository extends TopicRepository {
   @override
   Future<Topic?> get(String id) async {
     if (failGet) throw Exception('Failed to get topic');
+    if (returnNull) return null;
     return topic;
   }
+}
+
+class FakePlanAdherenceRepository extends PlanAdherenceRepository {
+  final double _average;
+  final double _weekly;
+  final List<PlanAdherenceModel> _records;
+
+  FakePlanAdherenceRepository({
+    double average = 0.0,
+    double weekly = 0.0,
+    List<PlanAdherenceModel> records = const [],
+  })  : _average = average,
+        _weekly = weekly,
+        _records = records;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<double> getAverageAdherence(String studentId) async => _average;
+
+  @override
+  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async =>
+      _records.isNotEmpty ? _records : [
+        PlanAdherenceModel(
+          id: 'test',
+          studentId: studentId,
+          date: DateTime.now(),
+          adherenceScore: _weekly,
+        ),
+      ];
 }
 
 Widget _buildTestApp(
@@ -214,6 +261,7 @@ Widget _buildTestApp(
   StudyProgressTracker? tracker,
   InstrumentationService? instrumentation,
   TopicRepository? topicRepo,
+  PlanAdherenceRepository? adherenceRepo,
 }) {
   return ProviderScope(
     overrides: [
@@ -224,10 +272,14 @@ Widget _buildTestApp(
         masteryGraphServiceProvider.overrideWithValue(masteryService),
       if (tracker != null)
         dashboardStudyProgressTrackerProvider.overrideWithValue(tracker),
-      if (instrumentation != null)
-        dashboardInstrumentationServiceProvider.overrideWithValue(instrumentation),
+      dashboardInstrumentationServiceProvider.overrideWithValue(
+        instrumentation ?? FakeInstrumentationService(),
+      ),
       if (topicRepo != null)
         dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
+      dashboardAdherenceRepositoryProvider.overrideWithValue(
+        adherenceRepo ?? FakePlanAdherenceRepository(),
+      ),
       focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
       focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
     ],
@@ -246,6 +298,7 @@ Widget _buildTestAppWithRoutes(
   StudyProgressTracker? tracker,
   InstrumentationService? instrumentation,
   TopicRepository? topicRepo,
+  PlanAdherenceRepository? adherenceRepo,
 }) {
   return ProviderScope(
     overrides: [
@@ -256,10 +309,14 @@ Widget _buildTestAppWithRoutes(
         masteryGraphServiceProvider.overrideWithValue(masteryService),
       if (tracker != null)
         dashboardStudyProgressTrackerProvider.overrideWithValue(tracker),
-      if (instrumentation != null)
-        dashboardInstrumentationServiceProvider.overrideWithValue(instrumentation),
+      dashboardInstrumentationServiceProvider.overrideWithValue(
+        instrumentation ?? FakeInstrumentationService(),
+      ),
       if (topicRepo != null)
         dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
+      dashboardAdherenceRepositoryProvider.overrideWithValue(
+        adherenceRepo ?? FakePlanAdherenceRepository(),
+      ),
       focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
       focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
     ],
@@ -369,6 +426,45 @@ void main() {
         expect(find.text('0%'), findsAtLeast(1));
         expect(find.text('0h'), findsOneWidget);
       });
+
+      testWidgets('renders metric cards', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(overallStats: {
+            'accuracy': 80,
+            'totalStudyTimeHours': '10',
+            'weeklyActivity': 20,
+            'topicsStudied': 5,
+          }),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MetricCard), findsAtLeast(4));
+      });
+
+      testWidgets('handles large stats values', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(overallStats: {
+            'accuracy': 100,
+            'totalStudyTimeHours': '999.9',
+            'weeklyActivity': 9999,
+            'topicsStudied': 500,
+          }),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('100%'), findsOneWidget);
+        expect(find.text('999.9h'), findsOneWidget);
+        expect(find.text('9999'), findsOneWidget);
+        expect(find.text('500'), findsOneWidget);
+      });
     });
 
     group('weekly chart', () {
@@ -411,29 +507,54 @@ void main() {
 
         expect(find.byType(AnimatedBarChart), findsOneWidget);
       });
+
+      testWidgets('empty trend shows default weekday labels', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mon'), findsOneWidget);
+        expect(find.text('Sun'), findsOneWidget);
+      });
+
+      testWidgets('trend with fewer than 7 items shows week labels', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(weeklyTrend: [
+            {'week': 2026, 'attempts': 5, 'accuracy': 80},
+            {'week': 2026, 'attempts': 10, 'accuracy': 90},
+          ]),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('W2'), findsOneWidget);
+        expect(find.text('W1'), findsOneWidget);
+      });
     });
 
     group('plan adherence', () {
       testWidgets('shows adherence card with data', (tester) async {
         final masteryService = FakeMasteryGraphService();
         final tracker = FakeStudyProgressTracker();
-        final instrumentation = FakeInstrumentationService(dashboardData: {
-          'planAdherence': {
-            'averageAdherence': 0.85,
-            'weeklyMetricsCount': 5,
-            'weeklyAdherenceAvg': 0.75,
-          },
-          'masteryImprovement': {},
-          'generatedAt': DateTime.now().toIso8601String(),
-        });
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
           masteryService: masteryService,
           tracker: tracker,
-          instrumentation: instrumentation,
           topicRepo: topicRepo,
+          adherenceRepo: FakePlanAdherenceRepository(
+            average: 0.85,
+            weekly: 0.75,
+          ),
         ));
         await tester.pumpAndSettle();
 
@@ -446,18 +567,13 @@ void main() {
         final masteryService = FakeMasteryGraphService();
         final tracker = FakeStudyProgressTracker();
         final topicRepo = FakeTopicRepository();
-        final instrumentation = FakeInstrumentationService(dashboardData: {
-          'planAdherence': null,
-          'masteryImprovement': {},
-          'generatedAt': DateTime.now().toIso8601String(),
-        });
 
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
           masteryService: masteryService,
           tracker: tracker,
-          instrumentation: instrumentation,
           topicRepo: topicRepo,
+          adherenceRepo: FakePlanAdherenceRepository(),
         ));
         await tester.pumpAndSettle();
 
@@ -514,6 +630,81 @@ void main() {
         expect(find.text('0'), findsAtLeast(1));
         expect(find.text('0%'), findsAtLeast(1));
       });
+
+      testWidgets('displays progress and accuracy for high mastery', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(snapshot: {
+            'totalTopics': 10,
+            'masteredTopics': 9,
+            'weakTopics': 1,
+            'averageAccuracy': 0.9,
+            'avgReadiness': 0.8,
+          }),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('90%'), findsOneWidget);
+        expect(find.text('80%'), findsOneWidget);
+        expect(find.text('10'), findsOneWidget);
+        expect(find.text('9'), findsOneWidget);
+      });
+    });
+
+    group('data loading failure paths', () {
+      testWidgets('getAllTopicMastery failure leaves _allMastery empty', (tester) async {
+        final mastery = FakeMasteryGraphService(
+          failGetAllMastery: true,
+          snapshot: {
+            'totalTopics': 5,
+            'masteredTopics': 2,
+            'weakTopics': 3,
+            'averageAccuracy': 0.5,
+            'avgReadiness': 0.5,
+          },
+        );
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: mastery,
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mastery Overview'), findsOneWidget);
+        expect(find.text('Weak Areas (Accuracy < 60%)'), findsNothing);
+        expect(
+          find.text('No topic data yet. Start studying to see your progress!'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('getMasterySnapshot failure defaults to zeros', (tester) async {
+        final mastery = FakeMasteryGraphService(
+          failGetSnapshot: true,
+          allMastery: [
+            _masteryState(topicId: 'topic-1', accuracy: 0.5, totalAttempts: 5),
+          ],
+        );
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: mastery,
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mastery Overview'), findsOneWidget);
+        expect(find.text('0'), findsAtLeast(1));
+        expect(find.text('Topic Performance'), findsOneWidget);
+      });
     });
 
     group('weak areas', () {
@@ -565,6 +756,37 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Weak Areas (Accuracy < 60%)'), findsNothing);
+      });
+
+      testWidgets('topic at exactly 60% is NOT weak', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(allMastery: [
+            _masteryState(topicId: 'boundary', accuracy: 0.6, totalAttempts: 5),
+          ]),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Weak Areas (Accuracy < 60%)'), findsNothing);
+      });
+
+      testWidgets('topic slightly below 60% IS weak', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(allMastery: [
+            _masteryState(topicId: 'almost', accuracy: 0.59, totalAttempts: 5),
+          ]),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Weak Areas (Accuracy < 60%)'), findsOneWidget);
+        expect(find.text('59%'), findsAtLeast(1));
       });
 
       testWidgets('limits to 5 weak topics', (tester) async {
@@ -743,6 +965,46 @@ void main() {
 
         expect(find.text('Topic Performance'), findsOneWidget);
       });
+
+      testWidgets('shows all 10 topics when exactly 10 exist', (tester) async {
+        final topics = List.generate(
+          10,
+          (i) => _masteryState(
+            topicId: 'topic-$i',
+            accuracy: (i + 1) / 10,
+            totalAttempts: 3 + i,
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(allMastery: topics),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Topic Performance'), findsOneWidget);
+        for (var i = 0; i < 10; i++) {
+          expect(find.text('topic-$i'), findsAtLeast(1));
+        }
+      });
+
+      testWidgets('topic with 0 attempts shows zero count', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(allMastery: [
+            _masteryState(topicId: 'zero-attempts', accuracy: 0.0, totalAttempts: 0),
+          ]),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('0 attempts'), findsOneWidget);
+      });
     });
 
     group('badges', () {
@@ -785,6 +1047,37 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Achievements'), findsNothing);
+      });
+
+      testWidgets('badge with null name shows achievements section', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(badges: [
+            {'id': 'no-name', 'description': 'No name badge'},
+          ]),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Achievements'), findsOneWidget);
+      });
+
+      testWidgets('single badge renders correctly', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(badges: [
+            {'id': 'single', 'name': 'Solo Badge', 'description': 'Only one'},
+          ]),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Achievements'), findsOneWidget);
+        expect(find.text('Solo Badge'), findsOneWidget);
       });
     });
 
@@ -921,7 +1214,7 @@ void main() {
         expect(find.textContaining('Export failed'), findsOneWidget);
       });
 
-      testWidgets('export instrumentation failure shows error snackbar', (tester) async {
+      testWidgets('export instrumentation failure shows success snackbar', (tester) async {
         final masteryService = FakeMasteryGraphService();
         final tracker = FakeStudyProgressTracker();
         final instrumentation = FakeInstrumentationService(failExport: true);
@@ -989,6 +1282,23 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('fallback-id'), findsAtLeast(1));
+      });
+
+      testWidgets('topic repo returns null falls back to topicId', (tester) async {
+        final mastery = FakeMasteryGraphService(allMastery: [
+          _masteryState(topicId: 'null-topic-id', accuracy: 0.3, totalAttempts: 5),
+        ]);
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: mastery,
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(returnNull: true),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('null-topic-id'), findsAtLeast(1));
       });
     });
 
@@ -1072,29 +1382,91 @@ void main() {
 
         expect(find.byType(CircularProgressIndicator), findsNothing);
       });
-    });
 
-    group('adherence metric colors', () {
-      testWidgets('shows high adherence value', (tester) async {
-        final masteryService = FakeMasteryGraphService();
-        final tracker = FakeStudyProgressTracker();
-        final instrumentation = FakeInstrumentationService(dashboardData: {
-          'planAdherence': {
-            'averageAdherence': 0.85,
-            'weeklyMetricsCount': 5,
-            'weeklyAdherenceAvg': 0.85,
-          },
-          'masteryImprovement': {},
-          'generatedAt': DateTime.now().toIso8601String(),
-        });
-        final topicRepo = FakeTopicRepository();
+      testWidgets('dispose during progress CSV export does not crash', (tester) async {
+        final exportCompleter = Completer<String>();
 
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
-          masteryService: masteryService,
-          tracker: tracker,
-          instrumentation: instrumentation,
-          topicRepo: topicRepo,
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(exportProgressCompleter: exportCompleter),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        await scrollToFind(tester, find.text('Export CSV'));
+        await tester.tap(find.text('Export CSV'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+
+        exportCompleter.complete('data');
+        await tester.pump();
+
+        expect(find.byType(DashboardScreen), findsNothing);
+      });
+
+      testWidgets('dispose during session CSV export does not crash', (tester) async {
+        final exportCompleter = Completer<String>();
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(exportSessionCompleter: exportCompleter),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        await scrollToFind(tester, find.text('Session History'));
+        await tester.tap(find.text('Session History'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+
+        exportCompleter.complete('data');
+        await tester.pump();
+
+        expect(find.byType(DashboardScreen), findsNothing);
+      });
+
+      testWidgets('dispose during instrumentation export does not crash', (tester) async {
+        final exportCompleter = Completer<void>();
+
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(exportCompleter: exportCompleter),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        await scrollToFind(tester, find.text('Instrumentation'));
+        await tester.tap(find.text('Instrumentation'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+
+        exportCompleter.complete();
+        await tester.pump();
+
+        expect(find.byType(DashboardScreen), findsNothing);
+      });
+    });
+
+    group('adherence metric values', () {
+      testWidgets('shows high adherence value', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+          adherenceRepo: FakePlanAdherenceRepository(average: 0.85, weekly: 0.85),
         ));
         await tester.pumpAndSettle();
 
@@ -1102,25 +1474,12 @@ void main() {
       });
 
       testWidgets('shows medium adherence value', (tester) async {
-        final masteryService = FakeMasteryGraphService();
-        final tracker = FakeStudyProgressTracker();
-        final instrumentation = FakeInstrumentationService(dashboardData: {
-          'planAdherence': {
-            'averageAdherence': 0.55,
-            'weeklyMetricsCount': 5,
-            'weeklyAdherenceAvg': 0.55,
-          },
-          'masteryImprovement': {},
-          'generatedAt': DateTime.now().toIso8601String(),
-        });
-        final topicRepo = FakeTopicRepository();
-
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
-          masteryService: masteryService,
-          tracker: tracker,
-          instrumentation: instrumentation,
-          topicRepo: topicRepo,
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+          adherenceRepo: FakePlanAdherenceRepository(average: 0.55, weekly: 0.55),
         ));
         await tester.pumpAndSettle();
 
@@ -1128,29 +1487,42 @@ void main() {
       });
 
       testWidgets('shows low adherence value', (tester) async {
-        final masteryService = FakeMasteryGraphService();
-        final tracker = FakeStudyProgressTracker();
-        final instrumentation = FakeInstrumentationService(dashboardData: {
-          'planAdherence': {
-            'averageAdherence': 0.25,
-            'weeklyMetricsCount': 5,
-            'weeklyAdherenceAvg': 0.25,
-          },
-          'masteryImprovement': {},
-          'generatedAt': DateTime.now().toIso8601String(),
-        });
-        final topicRepo = FakeTopicRepository();
-
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
-          masteryService: masteryService,
-          tracker: tracker,
-          instrumentation: instrumentation,
-          topicRepo: topicRepo,
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+          adherenceRepo: FakePlanAdherenceRepository(average: 0.25, weekly: 0.25),
         ));
         await tester.pumpAndSettle();
 
         expect(find.text('25%'), findsAtLeast(1));
+      });
+
+      testWidgets('adherence at exactly 0.7 displays 70%', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+          adherenceRepo: FakePlanAdherenceRepository(average: 0.7, weekly: 0.7),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('70%'), findsAtLeast(2));
+      });
+
+      testWidgets('adherence at exactly 0.4 displays 40%', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+          adherenceRepo: FakePlanAdherenceRepository(average: 0.4, weekly: 0.4),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('40%'), findsAtLeast(2));
       });
     });
   });

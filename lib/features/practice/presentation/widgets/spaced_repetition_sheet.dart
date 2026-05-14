@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/bottom_sheet_constants.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -76,9 +77,7 @@ class SpacedRepetitionSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: bottomSheetShape,
       builder: (sheetContext) => SafeArea(
         child: Container(
           padding: ResponsiveUtils.screenPadding(sheetContext),
@@ -117,9 +116,7 @@ class SpacedRepetitionSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: bottomSheetShape,
       builder: (_) => SpacedRepetitionSheet(
         subjectsWithDue: subjectsWithDue,
         dueCounts: dueCounts,

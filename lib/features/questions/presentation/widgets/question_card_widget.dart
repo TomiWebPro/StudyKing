@@ -226,13 +226,15 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildMCQContent(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final options = widget.question.options.isNotEmpty
-        ? widget.question.options
-        : [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
+    if (widget.question.options.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(AppLocalizations.of(context)!.noOptionsAvailable),
+      );
+    }
 
     return SingleAnswerWidget(
-      options: options,
+      options: widget.question.options,
       correctAnswer: _getCorrectAnswer(),
       selectedAnswer: _localAnswer,
       isSubmitted: widget.isSubmitted,
@@ -245,10 +247,14 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildMultiChoiceContent(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final options = widget.question.options.isNotEmpty
-        ? widget.question.options
-        : [1, 2, 3, 4].map((i) => l10n.fallbackOption(i)).toList();
+    if (widget.question.options.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(AppLocalizations.of(context)!.noOptionsAvailable),
+      );
+    }
+
+    final options = widget.question.options;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

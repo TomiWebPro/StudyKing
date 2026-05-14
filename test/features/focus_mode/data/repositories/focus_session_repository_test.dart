@@ -206,5 +206,139 @@ void main() {
         expect(sessions, isEmpty);
       });
     });
+
+    group('corrupted data handling', () {
+      test('get returns null for corrupted session data', () async {
+        final box = Hive.box<String>('focus_sessions');
+        await box.put('corrupted', 'not valid json');
+
+        final result = await repository.get('corrupted');
+        expect(result, isNull);
+      });
+
+      test('getAll skips corrupted entries', () async {
+        final box = Hive.box<String>('focus_sessions');
+        await repository.save(createSession(id: 'valid-1'));
+        await box.put('corrupted', 'not valid json');
+        await repository.save(createSession(id: 'valid-2'));
+
+        final result = await repository.getAll();
+        expect(result.length, 2);
+        expect(result.any((s) => s.id == 'corrupted'), isFalse);
+      });
+
+      test('getAll returns empty when all entries are corrupted', () async {
+        final box = Hive.box<String>('focus_sessions');
+        await box.put('bad-1', '{invalid json');
+        await box.put('bad-2', '{{{');
+
+        final result = await repository.getAll();
+        expect(result, isEmpty);
+      });
+    });
+
+    group('getByDate edge cases', () {
+      test('includes session at start of day (midnight)', () async {
+        final midnight = DateTime(2026, 5, 14, 0, 0, 0, 0);
+        final session = createSession(
+          id: 'midnight-session',
+          startTime: midnight,
+        );
+        await repository.save(session);
+
+        final result = await repository.getByDate(
+          DateTime(2026, 5, 14),
+        );
+        expect(result.length, 1);
+        expect(result[0].id, 'midnight-session');
+      });
+
+      test('excludes session at start of next day', () async {
+        final nextMidnight = DateTime(2026, 5, 15, 0, 0, 0, 0);
+        final session = createSession(
+          id: 'next-day',
+          startTime: nextMidnight,
+        );
+        await repository.save(session);
+
+        final result = await repository.getByDate(
+          DateTime(2026, 5, 14),
+        );
+        expect(result, isEmpty);
+      });
+
+      test('includes session just before midnight of next day', () async {
+        final justBeforeMidnight = DateTime(2026, 5, 14, 23, 59, 59, 999);
+        final session = createSession(
+          id: 'end-of-day',
+          startTime: justBeforeMidnight,
+        );
+        await repository.save(session);
+
+        final result = await repository.getByDate(
+          DateTime(2026, 5, 14),
+        );
+        expect(result.length, 1);
+      });
+
+      test('returns multiple sessions for same date sorted correctly', () async {
+        final morning = createSession(
+          id: 'morning',
+          startTime: DateTime(2026, 5, 14, 8, 0),
+        );
+        final evening = createSession(
+          id: 'evening',
+          startTime: DateTime(2026, 5, 14, 20, 0),
+        );
+        final afternoon = createSession(
+          id: 'afternoon',
+          startTime: DateTime(2026, 5, 14, 14, 0),
+        );
+        await repository.save(morning);
+        await repository.save(evening);
+        await repository.save(afternoon);
+
+        final result = await repository.getByDate(
+          DateTime(2026, 5, 14),
+        );
+        expect(result.length, 3);
+        expect(result[0].id, 'evening');
+        expect(result[1].id, 'afternoon');
+        expect(result[2].id, 'morning');
+      });
+    });
+
+    group('save overwrite', () {
+      test('save overwrites existing session with same id', () async {
+        final original = createSession(
+          plannedMinutes: 25,
+          actualSeconds: 0,
+        );
+        await repository.save(original);
+
+        final overwrite = createSession(
+          plannedMinutes: 50,
+          actualSeconds: 3000,
+          completed: true,
+        );
+        await repository.save(overwrite);
+
+        final retrieved = await repository.get('s1');
+        expect(retrieved!.plannedDurationMinutes, 50);
+        expect(retrieved.actualDurationSeconds, 3000);
+        expect(retrieved.completed, true);
+      });
+    });
+
+    group('update on non-existent', () {
+      test('update creates session when id does not exist', () async {
+        final session = createSession(id: 'new-session');
+        await repository.update('new-session', session);
+
+        final retrieved = await repository.get('new-session');
+        expect(retrieved, isNotNull);
+        expect(retrieved!.plannedDurationMinutes, 25);
+      });
+    });
   });
 }

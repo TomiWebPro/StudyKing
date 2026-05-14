@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -37,9 +38,9 @@ void main() {
     testWidgets('renders with trend data', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         WeeklyChart(weeklyTrend: [
-          {'attempts': 5},
-          {'attempts': 10},
-          {'attempts': 3},
+          WeeklyTrendEntry(attempts: 5),
+          WeeklyTrendEntry(attempts: 10),
+          WeeklyTrendEntry(attempts: 3),
         ]),
       ));
       await tester.pumpAndSettle();
@@ -53,7 +54,7 @@ void main() {
     testWidgets('limits to 7 data points', (tester) async {
       final trend = List.generate(
         10,
-        (i) => {'attempts': i},
+        (i) => WeeklyTrendEntry(attempts: i),
       );
       await tester.pumpWidget(_buildTestApp(
         WeeklyChart(weeklyTrend: trend),

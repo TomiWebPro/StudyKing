@@ -10,11 +10,8 @@ import 'package:studyking/core/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
-import 'package:studyking/features/teaching/services/tutor_service.dart';
 
 DatabaseService _fakeDb() => DatabaseService(
   topicRepository: TopicRepository(),
@@ -25,18 +22,6 @@ DatabaseService _fakeDb() => DatabaseService(
   subjectRepository: SubjectRepository(),
   conversationRepository: ConversationRepository(),
   tutorSessionRepository: TutorSessionRepository(),
-);
-
-TutorService _fakeTutorService() => TutorService(
-  database: _fakeDb(),
-  llmService: LlmService(
-    config: const LlmConfiguration(
-      provider: LlmProvider.openRouter,
-      apiKey: 'test',
-    ),
-  ),
-  masteryService: MasteryGraphService(),
-  modelId: 'test',
 );
 
 class _FakeLessonService extends LessonService {
@@ -54,7 +39,7 @@ class _FakeLessonService extends LessonService {
         _completionRate = completionRate,
         _progressBySubject = progressBySubject,
         _countBySubject = countBySubject,
-        super(database: _fakeDb(), tutorService: _fakeTutorService());
+        super(database: _fakeDb());
 
   @override
   Future<List<TutorSession>> getLessonsForStudent(String studentId) async =>
@@ -274,65 +259,18 @@ void main() {
       });
     });
 
-    group('llmServiceProviderForLesson fallback pattern', () {
-      test('throws UnimplementedError when not overridden', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        expect(
-          () => container.read(llmServiceProviderForLesson),
-          throwsA(isA<UnimplementedError>()),
-        );
-      });
-
-      test('llmServiceProviderFallback throws UnimplementedError', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        expect(
-          () => container.read(llmServiceProviderFallback),
-          throwsA(isA<UnimplementedError>()),
-        );
-      });
-
-      test('masteryServiceForLessonProvider can be overridden to verify wiring', () {
-        final mock = MasteryGraphService();
+    group('lessonServiceProvider default construction', () {
+      test('builds a LessonService with database', () {
+        final database = _fakeDb();
         final container = ProviderContainer(
           overrides: [
-            masteryServiceForLessonProvider.overrideWithValue(mock),
+            lessonServiceProvider.overrideWithValue(LessonService(database: database)),
           ],
         );
         addTearDown(container.dispose);
 
-        expect(
-          container.read(masteryServiceForLessonProvider),
-          same(mock),
-        );
-      });
-    });
-
-    group('masteryServiceForLessonProvider', () {
-      test('resolves to MasteryGraphService', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final service = container.read(masteryServiceForLessonProvider);
-        expect(service, isA<MasteryGraphService>());
-      });
-
-      test('can be overridden', () {
-        final mock = MasteryGraphService();
-        final container = ProviderContainer(
-          overrides: [
-            masteryServiceForLessonProvider.overrideWithValue(mock),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        expect(
-          container.read(masteryServiceForLessonProvider),
-          same(mock),
-        );
+        final service = container.read(lessonServiceProvider);
+        expect(service, isA<LessonService>());
       });
     });
   });

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class WeeklyChart extends ConsumerWidget {
-  final List<Map<String, dynamic>> weeklyTrend;
+  final List<WeeklyTrendEntry> weeklyTrend;
 
   const WeeklyChart({super.key, required this.weeklyTrend});
 
@@ -17,7 +18,7 @@ class WeeklyChart extends ConsumerWidget {
     for (var i = 0; i < trend.length; i++) {
       final item = trend[i];
       final weekLabel = 'W${trend.length - i}';
-      chartData[weekLabel] = item['attempts'] as int? ?? 0;
+      chartData[weekLabel] = item.attempts;
     }
 
     return Column(

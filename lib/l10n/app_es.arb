@@ -3379,5 +3379,53 @@
         "type": "int"
       }
     }
+  },
+  "gettingStarted": "Primeros Pasos",
+  "@gettingStarted": {
+    "description": "Heading for empty dashboard getting started checklist"
+  },
+  "gettingStartedDesc": "Complete estos pasos para aprovechar al m\u00e1ximo StudyKing",
+  "@gettingStartedDesc": {
+    "description": "Subtitle for empty dashboard checklist"
+  },
+  "addSubjectDesc": "Cree su primera materia para organizar su material de estudio",
+  "@addSubjectDesc": {
+    "description": "Description for add subject checklist item"
+  },
+  "uploadMaterial": "Subir Material de Estudio",
+  "@uploadMaterial": {
+    "description": "Checklist item for uploading study material"
+  },
+  "uploadMaterialDesc": "Suba PDFs, notas y bancos de preguntas para comenzar",
+  "@uploadMaterialDesc": {
+    "description": "Description for upload material checklist item"
+  },
+  "takePracticeQuiz": "Realice su Primer Cuestionario de Pr\u00e1ctica",
+  "@takePracticeQuiz": {
+    "description": "Checklist item for taking first practice quiz"
+  },
+  "takePracticeQuizDesc": "Ponga a prueba sus conocimientos con preguntas de pr\u00e1ctica adaptativas",
+  "@takePracticeQuizDesc": {
+    "description": "Description for practice quiz checklist item"
+  },
+  "scheduleAiTutor": "Programe una Sesi\u00f3n con el Tutor de IA",
+  "@scheduleAiTutor": {
+    "description": "Checklist item for scheduling AI tutor"
+  },
+  "scheduleAiTutorDesc": "Reciba tutor\u00eda personalizada uno a uno con IA",
+  "@scheduleAiTutorDesc": {
+    "description": "Description for AI tutor checklist item"
+  },
+  "fileSaved": "Archivo guardado exitosamente",
+  "@fileSaved": {
+    "description": "Snackbar message when file is saved"
+  },
+  "fileShared": "Archivo compartido exitosamente",
+  "@fileShared": {
+    "description": "Snackbar message when file is shared"
+  },
+  "noBadgesYet": "A\u00fan no hay logros. \u00a1Sigue estudiando!",
+  "@noBadgesYet": {
+    "description": "Empty state message when no badges earned"
   }
 }

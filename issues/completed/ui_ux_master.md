@@ -1,46 +1,66 @@
-# Settings Screen: Non-Functional Notification Toggles & Duplicate Controls Erode User Trust
+# UI/UX Issue: Font Size & Animation Accessibility — Double-Scaling in main.dart
 
 ## Context
 
-The Settings screen (`lib/features/settings/presentation/settings_screen.dart`) has two independent sections — **"Notification Preferences"** (~line 99) and **"Study Preferences"** (~line 161) — that both manage notification-related settings. The notification preferences section contains **four `SwitchListTile` widgets whose `onChanged` callbacks are empty no-ops** (`onChanged: (value) {}`), meaning users can toggle them but nothing ever happens. Additionally, both sections expose a `SwitchListTile` that reads `settings.studyRemindersEnabled` with identical subtitle text (`enableNotificationAlerts`), creating a confusing dual-control pattern where flipping one switch does not visually reflect on the other.
+`main.dart` applies text sizing in two independent layers: (1) a `fontSize` parameter passed into `AppTheme.createTextTheme()`, and (2) the system `textScaler` re-applied via a `MediaQuery` override in the `MaterialApp.builder`. These layers compound instead of coördinating, producing text that is significantly larger than the user intended when the system accessibility font scale is active. This is a **pervasive accessibility defect** affecting every screen in the application.
+
+### Code Path (main.dart:110–149)
+
+```dart
+final systemTextScaler = MediaQuery.textScalerOf(context);          // e.g. 1.25
+final userFontSize = settings.fontSize.clamp(14.0, 30.0);           // e.g. 18
+final systemScaledSize = systemTextScaler.scale(16.0);              // = 20
+final effectiveFontSize = userFontSize < systemScaledSize           // = max(18, 20)
+    ? systemScaledSize                                              // = 20
+    : userFontSize;                                                 // chosen
+
+// Layer 1: theme receives 20 as body base size
+theme: AppTheme.lightTheme(fontSize: effectiveFontSize),
+
+// Layer 2: system textScaler (1.25) is re-applied on top
+builder: (context, child) {
+  return MediaQuery(
+    data: MediaQuery.of(context).copyWith(
+      textScaler: systemTextScaler,    // double-scales the themed 20px → 25px
+    ),
+    child: child!,
+  );
+},
+```
+
+| User font | System scale | Intended | Actual rendered | Error |
+|-----------|-------------|----------|----------------|-------|
+| 14        | 1.0         | 14       | 14             | none  |
+| 18        | 1.25        | 18       | 25             | +39%  |
+| 14        | 1.25        | 14       | 25             | +79%  |
+| 22        | 1.5         | 22       | 36             | +64%  |
+
+The `effectiveFontSize` formula also replaces the user's chosen size with the system-scaled value **whenever the system scale exceeds the user preference**, which defeats the purpose of providing a separate in-app slider. A user who explicitly picks `14` should see `14`-based theming, not `20`.
 
 ## Affected Files
 
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/settings/presentation/settings_screen.dart` | 127–157 | Four notification toggles have empty `onChanged` handlers — no state is persisted, no behavior changes |
-| `lib/features/settings/presentation/settings_screen.dart` | 99–109, 161–171 | Duplicate "Study Reminders" / "Enable Notifications" section — both control the same `settings.studyRemindersEnabled` field but render as independent widgets |
-| `lib/features/settings/presentation/settings_screen.dart` | 111–130 | When notifications are enabled, subtitle text on daily reminders (`enableNotificationAlerts`) is identical to the parent's subtitle |
-| `lib/features/settings/presentation/settings_screen.dart` | 107, 167 | Same subtitle string `l10n.enableNotificationAlerts` used for two different switches in two sections — semantically incorrect |
+| File | Role |
+|---|---|
+| `lib/main.dart` (lines 110–149) | `effectiveFontSize` calculation + `MediaQuery` rebuild |
+| `lib/core/theme/app_theme.dart` (lines 4–21) | `createTextTheme(fontSize)` — all text styles derive from this param |
+| `lib/features/settings/presentation/settings_screen.dart` (lines 284–320) | Font-size slider allows 10–30 (`_showFontSizeDialog`) |
+| `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart` (lines 42–48, 96–106) | Pulse animation ignores `reduceMotion` setting (accessibility) |
+| `lib/features/practice/presentation/widgets/practice_session_nav_buttons.dart` (lines 17–44) | Previous/Next stacked vertically instead of side-by-side on wider screens |
 
-## Screenshots / Navigation Path
+## Rationale
 
-1. Open app → navigate to **Settings** (gear icon).
-2. Scroll to **"Notification Preferences"** section.
-3. Toggle **"Revision Reminders"**, **"Lesson Notifications"**, **"Overwork Alerts"**, **"Plan Adjustment Notifications"** — each moves visually but reverts on rebuild / does nothing.
-4. Scroll to **"Study Preferences"** section — a second "Study Reminders" switch controls the same underlying boolean but is visually disconnected.
+1. **Accessibility regression** — Users who rely on system font scaling (1.15×–1.5×) because of low vision will see text 39–79 % larger than they configured. This can cause layout overflow, clipped text, and a broken experience across *every* screen.
 
-## Root Cause Analysis
+2. **Defeats user preference** — The `effectiveFontSize = max(user, systemScaled)` logic silently discards the user's in-app choice whenever the OS accessibility scale is active. The settings slider becomes misleading.
 
-- **Dead callbacks**: `SwitchListTile` widgets at lines 128, 136, 144, 153 were scaffolded with empty lambda `onChanged: (value) {}` and never wired to a provider action or state field.
-- **Redundant section**: "Study Preferences" was added after "Notification Preferences" without consolidating the overlapping "Study Reminders" toggle. Both read/write `settings.studyRemindersEnabled` but do not synchronise their visual state reactively.
-- **Duplicate subtitle l10n key**: `l10n.enableNotificationAlerts` is reused as the subtitle for both the master "Enable Notifications" switch and the child "Daily Reminders" switch, despite describing different scopes.
+3. **Compounding with `reduceMotion` gap** — The `FocusTimerWidget` pulse animation (circular progress ring pulsates via `_pulseController`) never checks `settings.reduceMotion` or `MediaQuery.reduceMotionOf(context)`. A user who disables animations for vestibular reasons still sees intrusive pulsation.
 
-## Why This Is a High-Value Issue
-
-- **Erodes user trust**: A settings toggle that silently does nothing is worse than a missing feature — users learn that the UI lies to them.
-- **Blocks downstream features**: Without working notification preferences, features like revision reminders, overwork alerts, and plan adjustments cannot be rolled out without a settings prerequisite.
-- **Accessibility failure**: Screen reader users who navigate by toggles will activate switches that have no effect, receiving no feedback or error.
-- **Maintenance debt**: Any future developer adding a new notification type must reverse-engineer whether to use the "Notification Preferences" section, the "Study Preferences" section, or both.
+4. **Layout inefficiency in practice navigation** — `PracticeSessionNavButtons` renders Previous and Next as two full-width buttons stacked vertically inside a `Column`. On phones ≥360 dp this wastes vertical space; on tablets it looks broken. A `Row` with `Expanded` children would be more natural and consistent with platform conventions.
 
 ## Acceptance Criteria
 
-1. Every `SwitchListTile` in the "Notification Preferences" section must persist its value to a dedicated field in `SettingsBox` (e.g., `revisionRemindersEnabled`, `lessonNotificationsEnabled`, `overworkAlertsEnabled`, `planAdjustmentNotificationsEnabled`) and reflect the persisted state on rebuild.
-2. The "Study Reminders" switch in **"Study Preferences"** must be either:
-   - Removed (with the master switch in "Notification Preferences" promoted to cover both sections), **or**
-   - Linked to the same provider so that toggling one immediately updates the other and the UI stays in sync.
-3. All subtitle strings must be reviewed so that parent and child switches do not share the same `l10n` key when their meaning differs.
-4. A quick integration test must verify that:
-   - Toggling each notification preference persists across a widget rebuild.
-   - The duplicated study-reminders switch (if kept) reflects the same state as its counterpart.
-5. No existing functional switch (theme, high contrast, large touch targets, reduce motion, focus-mode settings) should be broken by these changes.
+- [ ] `effectiveFontSize` in `main.dart` uses the **user's chosen `fontSize` directly** for the `TextTheme`, and the `MediaQuery.builder` **disables** system text scaling (`TextScaler.noScaling`) so the theme is the sole authority for type size.
+- [ ] OR — if system scaling must be preserved — the `fontSize` passed to `AppTheme` is reset to the base (16) and the user's preference is applied *only* through `textScaler`. Verify that the rendered size matches `settings.fontSize` regardless of the OS accessibility scale.
+- [ ] `FocusTimerWidget` pulse animation is gated by `MediaQuery.reduceMotionOf(context)` — when `true` the pulse scale factor stays at `1.0` permanently.
+- [ ] `PracticeSessionNavButtons` uses a `Row` with evenly weighted children on breakpoints ≥`sm` and falls back to a stacked column on `xs`.
+- [ ] Verify with `flutter run` on a device with system font scale set to 1.25 and in-app font size set to 14: text in the dashboard, practice session, and settings should render at the same physical size as when system scale is 1.0.

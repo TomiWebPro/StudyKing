@@ -4291,6 +4291,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Correct: {correct}/{total}'**
   String pdfCorrectFraction(int correct, int total);
+
+  /// Heading for empty dashboard getting started checklist
+  ///
+  /// In en, this message translates to:
+  /// **'Getting Started'**
+  String get gettingStarted;
+
+  /// Subtitle for empty dashboard checklist
+  ///
+  /// In en, this message translates to:
+  /// **'Complete these steps to get the most out of StudyKing'**
+  String get gettingStartedDesc;
+
+  /// Description for add subject checklist item
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first subject to organize your study material'**
+  String get addSubjectDesc;
+
+  /// Checklist item for uploading study material
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Study Material'**
+  String get uploadMaterial;
+
+  /// Description for upload material checklist item
+  ///
+  /// In en, this message translates to:
+  /// **'Upload PDFs, notes, and question banks to get started'**
+  String get uploadMaterialDesc;
+
+  /// Checklist item for taking first practice quiz
+  ///
+  /// In en, this message translates to:
+  /// **'Take Your First Practice Quiz'**
+  String get takePracticeQuiz;
+
+  /// Description for practice quiz checklist item
+  ///
+  /// In en, this message translates to:
+  /// **'Test your knowledge with adaptive practice questions'**
+  String get takePracticeQuizDesc;
+
+  /// Checklist item for scheduling AI tutor
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule an AI Tutor Session'**
+  String get scheduleAiTutor;
+
+  /// Description for AI tutor checklist item
+  ///
+  /// In en, this message translates to:
+  /// **'Get personalized one-on-one tutoring with AI'**
+  String get scheduleAiTutorDesc;
+
+  /// Snackbar message when file is saved
+  ///
+  /// In en, this message translates to:
+  /// **'File saved successfully'**
+  String get fileSaved;
+
+  /// Snackbar message when file is shared
+  ///
+  /// In en, this message translates to:
+  /// **'File shared successfully'**
+  String get fileShared;
+
+  /// Empty state message when no badges earned
+  ///
+  /// In en, this message translates to:
+  /// **'No achievements yet. Keep studying!'**
+  String get noBadgesYet;
 }
 
 class _AppLocalizationsDelegate

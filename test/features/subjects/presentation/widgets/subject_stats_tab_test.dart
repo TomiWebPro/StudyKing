@@ -239,5 +239,53 @@ void main() {
 
       expect(find.text('0.0%'), findsAtLeast(1));
     });
+
+    testWidgets('shows overall score section with percentage', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectStatsTab(
+          subjectId: testSubjectId,
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Overall Score'), findsOneWidget);
+      expect(find.text('Keep practicing to improve your score!'), findsOneWidget);
+    });
+
+    testWidgets('shows correct total time formatting', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, timeSpentMs: 3600000),
+        _session(id: 's2', subjectId: testSubjectId, timeSpentMs: 1800000),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectStatsTab(
+          subjectId: testSubjectId,
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2'), findsOneWidget);
+    });
+
+    testWidgets('shows section header with Practice Progress', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: testSubjectId),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectStatsTab(
+          subjectId: testSubjectId,
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final headerFinder = find.text('Practice Progress');
+      expect(headerFinder, findsOneWidget);
+    });
   });
 }

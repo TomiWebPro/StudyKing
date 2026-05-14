@@ -1,29 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/badges_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
-import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/core/services/instrumentation_service.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/badges_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
+class DashboardScreen extends ConsumerWidget {
   final String studentId;
 
   const DashboardScreen({
@@ -32,175 +27,162 @@ class DashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allMasteryAsync = ref.watch(dashboardAllMasteryProvider(studentId));
+    final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
+    final overallStatsAsync = ref.watch(dashboardOverallStatsProvider(studentId));
+    final weeklyTrendAsync = ref.watch(dashboardWeeklyTrendProvider(studentId));
+    final focusStatsAsync = ref.watch(dashboardFocusStatsProvider(studentId));
+    final adherenceAsync = ref.watch(dashboardAdherenceDataProvider(studentId));
+    final topicNamesAsync = ref.watch(dashboardTopicNamesProvider(studentId));
+    final badgesAsync = ref.watch(dashboardBadgesProvider(studentId));
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  late final MasteryGraphService _masteryService;
-  late final StudyProgressTracker _tracker;
-  late final InstrumentationService _instrumentation;
-  late final TopicRepository _topicRepo;
-  late final FocusSessionService _focusService;
-  late final PlanAdherenceRepository _adherenceRepo;
+    final allMasteryData = allMasteryAsync.valueOrNull ?? [];
+    final snapshotData = snapshotAsync.valueOrNull;
+    final overallStatsData = overallStatsAsync.valueOrNull;
+    final weeklyTrendData = weeklyTrendAsync.valueOrNull ?? [];
+    final focusStatsData = focusStatsAsync.valueOrNull;
+    final adherenceData = adherenceAsync.valueOrNull ?? const AdherenceData();
+    final topicNamesData = topicNamesAsync.valueOrNull ?? {};
+    final badgesData = badgesAsync.valueOrNull ?? [];
 
-  List<MasteryState> _allMastery = [];
-  Map<String, dynamic>? _snapshot;
-  Map<String, dynamic>? _overallStats;
-  List<Map<String, dynamic>> _weeklyTrend = [];
-  List<Map<String, dynamic>> _badges = [];
-  Map<String, dynamic>? _focusTodayStats;
-  double _averageAdherence = 0.0;
-  double _weeklyAdherence = 0.0;
-  bool _isLoading = true;
-  final Map<String, String> _topicNameCache = {};
+    final allEmpty = allMasteryData.isEmpty &&
+        (snapshotData == null || snapshotData.isEmpty) &&
+        (overallStatsData == null || overallStatsData.isEmpty) &&
+        weeklyTrendData.isEmpty &&
+        (focusStatsData == null || focusStatsData.isEmpty) &&
+        adherenceData.isEmpty &&
+        topicNamesData.isEmpty &&
+        badgesData.isEmpty;
 
-  @override
-  void initState() {
-    super.initState();
-    _masteryService = ref.read(masteryGraphServiceProvider);
-    _tracker = ref.read(dashboardStudyProgressTrackerProvider);
-    _instrumentation = ref.read(dashboardInstrumentationServiceProvider);
-    _topicRepo = ref.read(dashboardTopicRepositoryProvider);
-    _focusService = ref.read(focusSessionServiceProvider);
-    _adherenceRepo = ref.read(dashboardAdherenceRepositoryProvider);
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    await _instrumentation.init();
-    await _topicRepo.init();
-    await _adherenceRepo.init();
-    try {
-      _focusTodayStats = await _focusService.getTodayStats();
-    } catch (_) {}
-
-    final masteryResult = await _masteryService.getAllTopicMastery(widget.studentId);
-    if (masteryResult.isSuccess) {
-      _allMastery = masteryResult.data!;
-    }
-
-    final snapshotResult = await _masteryService.getMasterySnapshot(widget.studentId);
-    if (snapshotResult.isSuccess) {
-      _snapshot = snapshotResult.data;
-    }
-
-    _overallStats = await _tracker.getOverallStats(widget.studentId);
-    _weeklyTrend = await _tracker.getWeeklyTrend(8, studentId: widget.studentId);
-    _badges = await _tracker.getBadges(widget.studentId);
-    _averageAdherence = await _adherenceRepo.getAverageAdherence(widget.studentId);
-    final weeklyRecords = await _adherenceRepo.getWeekly(widget.studentId);
-    _weeklyAdherence = weeklyRecords.isEmpty
-        ? 0.0
-        : weeklyRecords
-                .fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
-            weeklyRecords.length;
-
-    for (final state in _allMastery) {
-      if (!_topicNameCache.containsKey(state.topicId)) {
-        try {
-          final topic = await _topicRepo.get(state.topicId);
-          _topicNameCache[state.topicId] = topic?.title ?? state.topicId;
-        } catch (_) {
-          _topicNameCache[state.topicId] = state.topicId;
-        }
-      }
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-  }
-
-  String _resolveTopicName(String topicId) {
-    return _topicNameCache[topicId] ?? topicId;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final isLoading = overallStatsAsync.isLoading ||
+        snapshotAsync.isLoading ||
+        weeklyTrendAsync.isLoading ||
+        focusStatsAsync.isLoading ||
+        adherenceAsync.isLoading ||
+        topicNamesAsync.isLoading ||
+        badgesAsync.isLoading;
 
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () async {
+        ref.invalidate(dashboardInitProvider);
+      },
       child: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
-        child: FocusTraversalGroup(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: const DashboardHeader(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DashboardHeader(),
+            const SizedBox(height: 24),
+            if (allEmpty && isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (allEmpty)
+              const EmptyDashboardChecklist()
+            else ...[
+              CollapsibleCard(
+                cardId: 'summary',
+                asyncValue: overallStatsAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardOverallStatsProvider(studentId)); },
+                title: _cardTitle(context, Icons.summarize, 'Summary'),
+                body: SummaryRow(overallStats: overallStatsData),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(2),
-                child: SummaryRow(overallStats: _overallStats),
-              ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(3),
-                child: InkWell(
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'focus',
+                asyncValue: focusStatsAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardFocusStatsProvider(studentId)); },
+                title: _cardTitle(context, Icons.timer, 'Focus Time'),
+                body: InkWell(
                   onTap: () => Navigator.pushNamed(context, AppRoutes.focusMode),
-                  child: SessionSummaryCard(
-                    todayStats: _focusTodayStats,
-                  ),
+                  child: SessionSummaryCard(todayStats: focusStatsData != null ? {
+                    'totalSeconds': focusStatsData.totalSeconds,
+                    'completedSessions': focusStatsData.completedSessions,
+                    'totalSessions': focusStatsData.totalSessions,
+                    'plannedMinutes': focusStatsData.plannedMinutes,
+                    'hours': focusStatsData.hours,
+                  } : null),
                 ),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(4),
-                child: WeeklyChart(weeklyTrend: _weeklyTrend),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'weekly_chart',
+                asyncValue: weeklyTrendAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardWeeklyTrendProvider(studentId)); },
+                title: _cardTitle(context, Icons.show_chart, 'Weekly Activity'),
+                body: WeeklyChart(weeklyTrend: weeklyTrendData),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(5),
-                child: PlanAdherenceCard(
-                  averageAdherence: _averageAdherence,
-                  weeklyAdherence: _weeklyAdherence,
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'adherence',
+                asyncValue: adherenceAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAdherenceDataProvider(studentId)); },
+                title: _cardTitle(context, Icons.event_note, 'Plan Adherence'),
+                body: PlanAdherenceCard(
+                  averageAdherence: adherenceData.averageAdherence,
+                  weeklyAdherence: adherenceData.weeklyAdherence,
                 ),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(6),
-                child: MasteryProgressCard(snapshot: _snapshot),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'mastery',
+                asyncValue: snapshotAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardMasterySnapshotProvider(studentId)); },
+                title: _cardTitle(context, Icons.analytics, 'Mastery Overview'),
+                body: MasteryProgressCard(snapshot: snapshotData),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(7),
-                child: WeakAreasCard(
-                  allMastery: _allMastery,
-                  resolveTopicName: _resolveTopicName,
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'weak_areas',
+                asyncValue: allMasteryAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                title: _cardTitle(context, Icons.warning_amber, 'Weak Areas'),
+                body: allMasteryData.isNotEmpty
+                    ? WeakAreasCard(
+                        allMastery: allMasteryData,
+                        resolveTopicName: (id) => topicNamesData[id] ?? id,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'topic_breakdown',
+                asyncValue: allMasteryAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                title: _cardTitle(context, Icons.pie_chart, 'Topic Performance'),
+                body: TopicBreakdownCard(
+                  allMastery: allMasteryData,
+                  resolveTopicName: (id) => topicNamesData[id] ?? id,
                 ),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(8),
-                child: TopicBreakdownCard(
-                  allMastery: _allMastery,
-                  resolveTopicName: _resolveTopicName,
-                ),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'badges',
+                asyncValue: badgesAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardBadgesProvider(studentId)); },
+                title: _cardTitle(context, Icons.emoji_events, 'Achievements'),
+                body: BadgesCard(badges: badgesData),
               ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(9),
-                child: BadgesCard(badges: _badges),
-              ),
-              const SizedBox(height: 24),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(10),
-                child: ExportSection(
-                  studentId: widget.studentId,
-                  tracker: _tracker,
-                  instrumentation: _instrumentation,
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ExportSection(studentId: studentId),
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _cardTitle(BuildContext context, IconData icon, String label) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
+      ],
     );
   }
 }
