@@ -7,6 +7,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_history_tab.dart';
@@ -14,10 +15,12 @@ import 'package:studyking/features/subjects/presentation/widgets/subject_stats_t
 
 class SubjectDetailScreen extends ConsumerStatefulWidget {
   final SubjectDetailArgs args;
+  final StudySessionRepository? sessionRepository;
 
   const SubjectDetailScreen({
     super.key,
     required this.args,
+    this.sessionRepository,
   });
 
   @override
@@ -162,6 +165,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   SubjectHistoryTab(
                     subjectId: widget.args.subjectId,
                     onSessionTap: (session) => _showSessionDetails(session),
+                    sessionRepository: widget.sessionRepository,
                   ),
                   SubjectStatsTab(subjectId: widget.args.subjectId),
                 ],

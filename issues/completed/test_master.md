@@ -1,126 +1,80 @@
-# Test Coverage & Structure Issues Across Features
+# Repository Test Fragmentation in core/data/repositories
 
 ## Context
 
-The project has 15 feature directories under `lib/features/`. While many source files have corresponding tests (per the convention in `AGENTS.md`), several features have **zero widget test coverage**, tests placed in structurally wrong locations, overly bloated test files that duplicate coverage, and missing unit-test coverage for critical business-logic paths (partial failure states, state machines).
+`test/core/data/repositories/` contains **23 test files** for 19 production repositories. Several repositories have their tests fragmented across multiple files with overlapping concerns, making maintenance harder and review slower.
 
-This issue consolidates four categories of findings. Each is actionable independently.
+The worst offenders:
 
----
-
-## 1. Missing Test Files (per `AGENTS.md` Convention)
-
-The project convention states: *Every source file in `lib/features/*/` must have a corresponding test file.* The following source files have no test at all:
-
-### Focus Mode
-
-| Source | Expected Test |
-|---|---|
-| `lib/features/focus_mode/providers/focus_mode_providers.dart` | `test/features/focus_mode/providers/focus_mode_providers_test.dart` |
-
-Defines two Riverpod providers (`focusSessionRepositoryProvider`, `focusSessionServiceProvider`) that are central to the focus-timer workflow. No tests verify provider resolution, override behavior, or container isolation.
-
-### Lessons
-
-| Source | Expected Test |
-|---|---|
-| `lib/features/lessons/presentation/widgets/lesson_list_item.dart` | `test/features/lessons/presentation/widgets/lesson_list_item_test.dart` |
-| `lib/features/lessons/presentation/widgets/lesson_block_card.dart` | `test/features/lessons/presentation/widgets/lesson_block_card_test.dart` |
-
-These two leaf widgets account for ~40% of the lesson feature's UI surface but are entirely untested.
-
-### Planner
-
-| Source | Expected Test |
-|---|---|
-| `lib/features/planner/presentation/widgets/roadmap_card.dart` | `test/features/planner/presentation/widgets/roadmap_card_test.dart` |
-| `lib/features/planner/presentation/widgets/daily_plan_card.dart` | `test/features/planner/presentation/widgets/daily_plan_card_test.dart` |
-| `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` | `test/features/planner/presentation/widgets/lesson_booking_sheet_test.dart` |
-| `lib/features/planner/presentation/widgets/pending_action_card.dart` | `test/features/planner/presentation/widgets/pending_action_card_test.dart` |
-| `lib/features/planner/presentation/widgets/milestone_timeline.dart` | `test/features/planner/presentation/widgets/milestone_timeline_test.dart` |
-| `lib/features/planner/presentation/widgets/plan_summary_card.dart` | `test/features/planner/presentation/widgets/plan_summary_card_test.dart` |
-
-The planner feature has **6 untested presentation widgets** -- the highest gap of any feature. Only `planner_screen_test.dart` provides integration-level coverage, meaning individual card rendering, empty states, and interaction patterns (booking a lesson, toggling milestones) have zero coverage.
-
-### Practice
-
-| Source | Expected Test |
-|---|---|
-| `lib/features/practice/presentation/widgets/practice_session_question_card.dart` | `test/features/practice/presentation/widgets/practice_session_question_card_test.dart` |
-| `lib/features/practice/presentation/services/practice_data_service.dart` | `test/features/practice/presentation/services/practice_data_service_test.dart` |
-| `lib/features/practice/presentation/services/practice_session_service.dart` | `test/features/practice/presentation/services/practice_session_service_test.dart` |
-
-`PracticeSessionQuestionCard` is the core interactive widget during a practice session (displays the question, captures answers). The two presentation-layer services (`PracticeDataService`, `PracticeSessionService`) encapsulate session orchestration logic and are pure Dart -- ideal for fast unit tests, yet untested.
-
----
-
-## 2. Structural Mismatch: Test File Not Mirroring Source Location
-
-| Test File | Imports From | Source Location | Correct Location |
+| Repository | Test Files | Total Tests | Total Lines |
 |---|---|---|---|
-| `test/features/subjects/models/subject_model_test.dart` | `lib/core/data/models/subject_model.dart` | **core** (not a feature) | `test/core/data/models/subject_model_test.dart` |
+| `subject_repository.dart` | 5 files | 163 | 1,969 |
+| `settings_repository.dart` | 2 files | 121 | ~2,200 |
+| All others | 1 file each | varies | varies |
 
-The `Subject` model lives in `lib/core/data/models/subject_model.dart` (the core layer), but its test was placed under `test/features/subjects/models/`. Per `AGENTS.md`, tests should mirror source location. Placing a core-model test under a feature directory breaks discoverability and sets a misleading precedent.
+Additionally, `repository_test.dart` is a 44-line file with trivial tests (filtering `[1,2,3,2,5,4,1]` by difficulty, checking `subjectNames.length == 4`) that do not test any repository — they test in-memory list operations.
 
----
+## Affected Files
 
-## 3. Bloated / Duplicative Tests
+### Subject Repository — 5-way fragmentation
 
-### Dashboard: `dashboard_screen_test.dart` + `dashboard_screen_coverage_test.dart`
+| File | Tests | Focus |
+|---|---|---|
+| `test/core/data/repositories/subject_repository_test.dart` | 54 | Core CRUD, `MockSubjectBox` based |
+| `test/core/data/repositories/subject_repository_comprehensive_test.dart` | 36 | Additional edge cases |
+| `test/core/data/repositories/subject_repository_extra_edge_cases_test.dart` | 33 | Yet more edge cases |
+| `test/core/data/repositories/subject_repository_error_test.dart` | 31 | Error paths |
+| `test/core/data/repositories/subject_repository_init_test.dart` | 9 | Hive `init()` |
 
-| File | Lines |
+These 5 files share the same test infrastructure, the same `Hive.init(testPath)` setup, and overlapping test scenarios (e.g., CRUD tests appear in 3 different files). There is no clear boundary between what goes in `_test.dart` vs `_comprehensive_test.dart` vs `_extra_edge_cases_test.dart`.
+
+### Settings Repository — Near-total duplication
+
+| File | Tests | Approach |
+|---|---|---|
+| `test/features/settings/data/repositories/settings_repository_test.dart` | 59 | In-memory `FakeSettingsBox` |
+| `test/features/settings/data/repositories/settings_repository_hive_test.dart` | 62 | Real Hive box + adapter |
+
+These two files share near-identical test structures and assertions. The only difference is the backing box implementation. Every change to the repository interface must be applied twice — to both files.
+
+### Trivial / Spurious — `repository_test.dart`
+
+```dart
+group('Subject Repository Operations', () {
+  test('Subject filtering logic', () {
+    final subjectNames = ['Math', 'Science', 'English', 'History'];
+    expect(subjectNames.length, equals(4));
+    expect(subjectNames.contains('Math'), isTrue);
+  });
+});
+```
+
+This tests `List.length` and `List.contains` — not the repository. Adds noise to the test suite.
+
+## Rationale
+
+| Problem | Impact |
 |---|---|
-| `dashboard_screen_test.dart` | 1132 |
-| `dashboard_screen_coverage_test.dart` | 907 |
-
-These two files share substantial overlap:
-
-| Test Scenario | In `_test` | In `_coverage` |
-|---|---|---|
-| Weak area boundary at 60% | Yes (lines 495-522) | Yes (lines 485-502) |
-| Practice All button navigation | Yes (lines 571-599) | Yes (lines 550-573) |
-| High/medium/low adherence values | Yes (lines 1052-1130) | Yes (lines 721-806) |
-| Mastery labels for all 5 levels | Yes (lines 970-997) | Yes (lines 837-886) |
-| Refresh indicator presence | Yes (lines 1000-1017) | Yes (lines 889-904) |
-
-The coverage file was clearly added later to fill gaps, but rather than merging scenarios into the existing test groups, it duplicated setup boilerplate and re-tested the same widget behavior. This doubles maintenance cost and makes it hard to tell which scenarios are actually novel.
-
-**Recommendation**: Merge the two files, eliminating duplicate test cases. Keep ~800 unique lines covering all widget behaviors in a single file.
-
-### Dashboard Providers: `dashboard_providers_test.dart`
-
-| Source lines | Test lines | Ratio |
-|---|---|---|
-| 36 | 434 | 12:1 |
-
-The test file exhaustively tests every Riverpod provider against 6 scenarios (uniqueness, different containers, simple override, combined overrides, container isolation, disposal, watch). Most of these tests exercise Riverpod's `ProviderContainer` behavior rather than any project-specific logic. The 6 providers are trivial factory functions (`Provider<TopicRepository>((ref) => TopicRepository())`).
-
-**Recommendation**: Replace the combinatorial grid with 1--2 tests per provider that verify (a) the provider resolves without throwing and (b) overrides propagate to consumers. Keep the file under 100 lines.
-
----
-
-## 4. Missing Unit-Level Coverage for Business Logic
-
-The `DashboardScreen._loadData()` method (lines 68--113 of `dashboard_screen.dart`) contains complex error-handling with distinct behaviors per service:
-
-| Operation | Error Behavior | Tested? |
-|---|---|---|
-| Focus service + `repo.init()` | Silent `catch (_) {}` -- `_focusTodayStats` stays `null` | No |
-| `getAllTopicMastery` failure | `_allMastery` stays `[]` | **Only at widget level** (coverage file lines 270-301) |
-| `getMasterySnapshot` failure | `_snapshot` stays `null` | **Only at widget level** (coverage file lines 303-327) |
-| Adherence repo failure | **Unhandled** -- will propagate and crash the widget | No |
-| Focus repo `init()` failure | Silent catch -- `_focusTodayStats` stays `null` | No |
-
-Only two of these five failure paths have widget-level coverage. None have unit-level coverage. Unit tests that inject fake services and verify the `_allMastery`/`_snapshot`/`_focusTodayStats` fields after partial failures would be faster to run and more precise than widget tests.
-
-**Recommendation**: Extract the data-loading orchestration into a testable service or use Riverpod `AsyncNotifier` with a well-defined state class, then write unit tests for each partial-failure permutation.
-
----
+| **5 files for one repo** | A developer searching for subject repo tests must open 5 files to see full coverage. CI output lists 5 separate files for one unit under test. |
+| **No organization convention** | The boundary between `_comprehensive_test`, `_extra_edge_cases_test`, and `_test` is undefined. Future contributors cannot determine where to add new tests. |
+| **Settings duplication** | The `_hive_test.dart` variant adds ~900 lines of near-identical assertions. A single parametrized test file (or a shared `group()` extracted to a helper) would eliminate the duplication while keeping both test configurations. |
+| **Trivial test file** | `repository_test.dart` has zero value. It tests standard library operations and should be removed. |
+| **Impacts relocation** | The open `code_refactor_master.md` plans to move these tests to `test/features/*/data/repositories/`. If moved as-is, the fragmentation is carried into the new structure, making the problem permanent. |
 
 ## Acceptance Criteria
 
-- [ ] **1. Missing tests**: All 12 source files listed in Section 1 have corresponding test files with at least one passing test.
-- [ ] **2. Structural fix**: `subject_model_test.dart` moved from `test/features/subjects/models/` to `test/core/data/models/` (or the old path re-exported from the new one with a deprecation note).
-- [ ] **3a. Deduplication**: `dashboard_screen_test.dart` and `dashboard_screen_coverage_test.dart` merged; no duplicate test scenarios.
-- [ ] **3b. Provider tests**: `dashboard_providers_test.dart` reduced to ≤100 lines, testing only project-specific behavior (no Riverpod framework tests).
-- [ ] **4. Unit coverage**: At least one unit test per partial-failure path in `DashboardScreen._loadData()` (focus failure, mastery failure, adherence failure, combined partial failures).
+1. `test/core/data/repositories/subject_repository_comprehensive_test.dart`, `_extra_edge_cases_test.dart`, and `_error_test.dart` are merged into `subject_repository_test.dart` using `group()` blocks to organize by concern (e.g., `group('CRUD')`, `group('Error handling')`, `group('Edge cases')`).
+
+2. `test/core/data/repositories/subject_repository_init_test.dart` is merged into `subject_repository_test.dart` as a `group('init')` block (this file uses real Hive; it can remain separate if Hive init proves too slow to run alongside 150+ mock-based tests, but this decision must be documented).
+
+3. After consolidation, there is exactly **1 test file** for `subject_repository.dart` in the test directory.
+
+4. `test/features/settings/data/repositories/settings_repository_test.dart` and `_hive_test.dart` are refactored to eliminate duplication using one of:
+   - A shared `group()` function in a helper file that both test files import.
+   - A single parametrized test file.
+
+5. `test/core/data/repositories/repository_test.dart` is deleted (its contents are not tests).
+
+6. All tests still pass after consolidation.
+
+7. (Future-proofing) Any other repository test file in `test/core/data/repositories/` that demonstrates fragmentation should follow the same consolidation pattern if/when the `code_refactor_master` relocation occurs.

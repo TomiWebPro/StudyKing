@@ -1,13 +1,13 @@
 import 'dart:async';
-import '../../../core/data/database_service.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
-import '../../../core/services/mastery_graph_service.dart';
-import '../../../core/services/study_progress_tracker.dart';
-import '../../../core/services/instrumentation_service.dart';
-import '../../../core/data/repositories/pending_action_repository.dart';
-import '../../../core/data/models/pending_action_model.dart';
-import '../../../l10n/generated/app_localizations.dart';
-import '../../planner/services/planner_service.dart';
+import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/services/instrumentation_service.dart';
+import 'package:studyking/core/data/repositories/pending_action_repository.dart';
+import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/mentor/models/progress_report.dart';
+import 'package:studyking/features/mentor/models/mentor_action.dart';
 
 class MentorService {
   final DatabaseService _database;
@@ -18,7 +18,6 @@ class MentorService {
   final String _modelId;
   final ConversationMemory _memory;
   final String _studentId;
-  final AppLocalizations _l10n;
   final PendingActionRepository _pendingActionRepo;
 
   MentorService({
@@ -29,8 +28,6 @@ class MentorService {
     InstrumentationService? instrumentation,
     required String modelId,
     required String studentId,
-    required AppLocalizations l10n,
-    PlannerService? plannerService,
     PendingActionRepository? pendingActionRepo,
   })  : _database = database,
         _llmService = llmService,
@@ -39,7 +36,6 @@ class MentorService {
         _instrumentation = instrumentation ?? InstrumentationService(),
         _modelId = modelId,
         _studentId = studentId,
-        _l10n = l10n,
         _pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         _memory = ConversationMemory(maxTurns: 50);
 
@@ -202,7 +198,7 @@ Use this context to provide personalized mentoring.
     }
   }
 
-  Future<String> getProgressReport() async {
+  Future<ProgressReport> getProgressReport() async {
     try {
       final stats = await _progressTracker.getOverallStats(_studentId);
       final recommendations =
@@ -212,70 +208,48 @@ Use this context to provide personalized mentoring.
       final sessions = await _database.tutorSessionRepository
           .getStudentSessions(_studentId);
 
-      final buffer = StringBuffer();
-      buffer.writeln(_l10n.mentorProgressReportTitle);
-      buffer.writeln(_l10n.mentorOverallAccuracy(
-        '${stats['accuracy']}',
-        '${stats['correctAttempts']}',
-        '${stats['totalAttempts']}',
-      ));
-      buffer.writeln(
-          _l10n.mentorTotalStudyTime('${stats['totalStudyTimeHours']}'));
-      buffer.writeln(
-          _l10n.mentorWeeklyActivity('${stats['weeklyActivity']}'));
-      buffer.writeln(_l10n.mentorCompletedLessons(
-          '${sessions.where((s) => s.status.toString().contains('completed')).length}'));
-      buffer.writeln(
-          _l10n.mentorTopicsStudied('${stats['topicsStudied']}'));
-
-      if (weakTopics.isSuccess && weakTopics.data!.isNotEmpty) {
-        buffer.writeln(_l10n.mentorAreasNeedingAttention);
-        for (final topic in weakTopics.data!.take(3)) {
-          buffer.writeln(_l10n.mentorTopicAccuracyEntry(
-            topic.topicId,
-            (topic.accuracy * 100).round(),
-          ));
-        }
-      }
-
-      if (badges.isNotEmpty) {
-        buffer.writeln(_l10n.mentorBadgesEarned);
-        for (final badge in badges) {
-          buffer.writeln(_l10n.mentorBadgeEntry(
-            badge['name'] as String,
-            badge['description'] as String,
-          ));
-        }
-      }
-
-      if (recommendations.isNotEmpty) {
-        buffer.writeln(_l10n.mentorRecommendations);
-        for (final rec in recommendations.take(3)) {
-          buffer.writeln(
-              _l10n.mentorRecommendationEntry(rec['message'] as String));
-        }
-      }
-
-      return buffer.toString();
-    } catch (e) {
-      return _l10n.mentorProgressReportError;
+      return ProgressReport(
+        totalAttempts: (stats['totalAttempts'] as num?)?.toInt() ?? 0,
+        correctAttempts: (stats['correctAttempts'] as num?)?.toInt() ?? 0,
+        accuracy: (stats['accuracy'] as num?)?.toDouble() ?? 0.0,
+        totalStudyTimeHours: '${stats['totalStudyTimeHours']}',
+        weeklyActivity: (stats['weeklyActivity'] as num?)?.toInt() ?? 0,
+        topicsStudied: (stats['topicsStudied'] as num?)?.toInt() ?? 0,
+        completedLessons: sessions
+            .where((s) => s.status.toString().contains('completed'))
+            .length,
+        weakTopics: weakTopics.isSuccess ? weakTopics.data! : [],
+        badges: badges,
+        recommendations: recommendations,
+      );
+    } catch (_) {
+      rethrow;
     }
   }
 
-  Future<String> suggestNextAction() async {
+  Future<MentorAction> suggestNextAction() async {
     final recommendations =
         await _progressTracker.getRecommendations(_studentId);
     final subjects = await _database.subjectRepository.getAll();
 
     if (recommendations.isNotEmpty) {
-      return recommendations.first['message'] as String;
+      return MentorAction(
+        message: recommendations.first['message'] as String,
+        type: 'recommendation',
+      );
     }
 
     if (subjects.isEmpty) {
-      return _l10n.mentorNoSubjects;
+      return const MentorAction(
+        message: "You haven't added any subjects yet. Would you like help setting up your first subject?",
+        type: 'setup',
+      );
     }
 
-    return _l10n.mentorDoingWell;
+    return const MentorAction(
+      message: "You're doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?",
+      type: 'generic',
+    );
   }
 
   Future<void> suggestReschedule(String sessionId) async {

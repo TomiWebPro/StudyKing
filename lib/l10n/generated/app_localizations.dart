@@ -4363,6 +4363,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No achievements yet. Keep studying!'**
   String get noBadgesYet;
+
+  /// Message when a multiple choice question has no options
+  ///
+  /// In en, this message translates to:
+  /// **'No options available'**
+  String get noOptionsAvailable;
 }
 
 class _AppLocalizationsDelegate

@@ -16,5 +16,8 @@ void main() {
     test('exports TopicBreakdownCard', () => expect(TopicBreakdownCard, isNotNull));
     test('exports WeakAreasCard', () => expect(WeakAreasCard, isNotNull));
     test('exports WeeklyChart', () => expect(WeeklyChart, isNotNull));
+    test('exports CollapsibleCard', () => expect(CollapsibleCard, isNotNull));
+    test('exports EmptyDashboardChecklist', () => expect(EmptyDashboardChecklist, isNotNull));
+    test('exports ChecklistItem', () => expect(ChecklistItem, isNotNull));
   });
 }

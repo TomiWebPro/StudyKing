@@ -1,105 +1,103 @@
-# Spanish Localisation Quality Audit
+# Internationalisation Audit: Hardcoded Strings & Spanish Register Violations
 
 ## Summary
 
-Audit of `lib/l10n/app_es.arb` and hardcoded strings in `lib/main.dart` and `lib/core/widgets/` reveals four distinct classes of i18n defects that degrade the Spanish user experience and block clean addition of future locales.
+The app has two high-impact i18n defects: (1) user-facing strings hardcoded in English in source code, bypassing the `AppLocalizations` l10n system entirely, and (2) a Spanish formal register violation (`tú`/`usted` mismatch) in `app_es.arb`. Both issues block adding new languages and degrade the UX for Spanish-speaking users.
 
 ---
 
-## Issue 1: Hardcoded strings in `lib/main.dart` bypassing `AppLocalizations`
+## Issue 1: Hardcoded English Strings in Source Code
 
-Two strings in `MainScreen.build()` render in English regardless of the selected locale.
+The following files contain user-visible strings that are **not routed through `AppLocalizations.of(context)`**. These strings will always appear in English regardless of the user's selected locale.
 
-| Location | Current value | Problem |
-|---|---|---|
-| `lib/main.dart:242` | `tooltip: 'Dashboard'` | `l10n.dashboard` (→ `"Panel"`) exists in both ARB files but is not used. The FAB tooltip remains `'Dashboard'` in Spanish mode. |
-| `lib/main.dart:272` | `label: 'Focus'` | No ARB key for a simple `"focus"` nav label exists. The bottom navigation tab shows `'Focus'` even when the locale is `es`. Nearby tabs (`subjects`, `practice`, `mentor`, `settings`) all use `l10n.*` correctly. |
+### Affected Files
 
-**Rationale:** These are regressions from the i18n pattern used everywhere else in the codebase (`final l10n = AppLocalizations.of(context)!`). They cause a disjointed experience where 80% of the UI is in Spanish but key navigation elements remain English.
-
-**Action required:**
-1. Replace `tooltip: 'Dashboard'` with `tooltip: l10n.dashboard`.
-2. Add a new key `"focus"` to both ARB files (English: `"Focus"`, Spanish: `"Concentración"` or `"Enfoque"`), regenerate, and use it at line 272.
-
----
-
-## Issue 2: Inconsistent Spanish formality register (tú / usted)
-
-Most of `app_es.arb` uses formal *usted* imperative and possessive forms, which is the safe default for an educational/professional app. Two strings break this convention by using informal *tú* forms.
-
-| Key | Current Spanish | Register | Expected (formal) |
-|---|---|---|---|
-| `focusForMinutes` (`lib/l10n/app_es.arb:3114`) | `"Enfócate por {minutes} minutos"` | Informal tú | `"Enfóquese por {minutes} minutos"` |
-| `dailyLimitReachedBody` (`lib/l10n/app_es.arb:3101`) | `"Has alcanzado tu límite diario…"` | Informal tú | `"Ha alcanzado su límite diario…"` |
-
-**Rationale:** A mixed register is jarring to native speakers. The app should be consistent — either all *usted* (recommended for this domain) or all *tú*. Currently ~696 keys use formal register while 2 keys use informal.
-
-**Action required:** Change the two keys above to use formal *usted* imperative/possessive forms.
-
----
-
-## Issue 3: Spanish `@@description` strings in `app_es.arb` (breaking ARB convention)
-
-The `@@description` field in ARB files is metadata for translators and MUST match the template locale (English). Thirteen keys have descriptions written in Spanish instead of English.
-
-| `app_es.arb` lines | Keys affected |
+| File | Hardcoded Strings |
 |---|---|
-| 3011–3091 | `markschemeUnavailable`, `answerTooShort`, `goodResponseLength`, `answerTooShortForCredit`, `noDrawingDetected`, `invalidDrawingData`, `allStepsIdentified`, `specialHandlingRequired`, `someAnswersIncorrect`, `correctAnswerIs`, `allStepsFormat`, `partialStepsFormat`, `noStepsFormat`, `allRequiredStepsMissing` |
+| `lib/features/settings/presentation/settings_screen.dart:158` | `'Focus Mode'` (section title) |
+| `lib/features/settings/presentation/settings_screen.dart:159` | `'Focus Timer'` + `'Start a focused study session'` (list tile) |
+| `lib/features/settings/presentation/settings_screen.dart:161` | `'Daily Study Cap'` (list tile) |
+| `lib/features/settings/presentation/settings_screen.dart:399-406` | `'$cap min/day'`, `'No limit'` (`_getDailyCapLabel()`) |
+| `lib/features/settings/presentation/settings_screen.dart:419` | `'No limit'` + `'$m minutes'` (dialog options) |
+| `lib/features/planner/providers/planner_providers.dart:157` | `'Plan generated successfully'` (success message) |
+| `lib/features/planner/providers/planner_providers.dart:162` | `'Failed to generate plan'` (error message) |
+| `lib/features/questions/presentation/widgets/math_expression_widget.dart:384` | `'Expression: '` (label prefix) |
+| `lib/features/sessions/services/session_export_service.dart:23-24` | CSV headers: `'Session ID,Student ID,...'` |
+| `lib/features/mentor/services/mentor_service.dart:161-202` | LLM context prompt strings: `'No plan adherence data available.'`, `'Subjects: '`, `'No badges yet'`, etc. |
+| `lib/features/teaching/services/conversation_manager.dart:192-225` | AI tutor system prompt: `'The student is doing well. Accelerate pace.'`, `'Start the lesson warmly.'`, etc. |
 
-Example:
+### Rationale
+
+Every hardcoded string is a **blocker** for any new locale. A Spanish speaker navigating the Settings screen sees "Focus Mode" and "No limit" while the rest of the app is in Spanish. Adding French or German would require source-code changes instead of just new ARB files. The AI system prompts (`conversation_manager.dart`, `mentor_service.dart`) instruct the LLM to respond in English because the prompts themselves are English, defeating the `quickGuideSystemPrompt` key that tells the AI to respond in Spanish.
+
+### Required ARB Keys (to be added to both `app_en.arb` and `app_es.arb`)
+
+- `focusModeSection` — "Focus Mode"
+- `focusTimer` — "Focus Timer"
+- `startFocusedSession` — "Start a focused study session"
+- `dailyStudyCap` — "Daily Study Cap"
+- `noLimit` — "No limit"
+- `minutesPerDay` — "{minutes} min/day"
+- `planGeneratedSuccessfully` — "Plan generated successfully"
+- `failedToGeneratePlan` — "Failed to generate plan"
+- `expressionLabel` — "Expression: "
+- `planAdherenceUnavailable` — "No plan adherence data available." (same for other mentor context strings)
+
+---
+
+## Issue 2: Spanish Formal Register Violation — Mixed `tú`/`usted`
+
+The project convention (`docs/i18n.md`) mandates formal **usted** register for all Spanish translations. One key violates this:
+
+### Affected Key
+
+**`uploadOrPasteData`** in `lib/l10n/app_es.arb:1078`
+
 ```json
-// app_es.arb (WRONG — description in Spanish)
-"markschemeUnavailable": "No hay esquema de calificación disponible",
-"@markschemeUnavailable": {
-  "description": "Mensaje cuando no hay un esquema de calificación para una pregunta"
-}
-
-// app_en.arb (correct — description in English, the template language)
-"markschemeUnavailable": "No markscheme available",
-"@markschemeUnavailable": {
-  "description": "Message when no markscheme exists for a question"
-}
+"uploadOrPasteData": "Sube o pegue datos para visualizar"
 ```
 
-**Rationale:** These descriptions are shown to translators when adding a new locale (e.g. `app_fr.arb`). Spanish descriptions are meaningless to a French translator who doesn't speak Spanish. They must be in English, which is the agreed template language.
+- `Sube` — **informal *tú* imperative** (wrong)
+- `pegue` — **formal *usted* imperative** (correct)
 
-**Action required:** Copy the English `@@description` values from `app_en.arb` for each key into `app_es.arb`, overwriting the Spanish text.
+This mixes registers in a single sentence.
 
----
+### Other Keys to Verify for Ensuring Consistency
 
-## Issue 4: Untranslated English loanword in Spanish ARB
-
-| Key | `app_es.arb` value | Expected translation |
+| Key (app_es.arb) | Current Value | Check Against |
 |---|---|---|
-| `roadmaps` (`lib/l10n/app_es.arb:2852`) | `"Roadmaps"` | `"Hojas de ruta"` or `"Rutas de aprendizaje"` |
+| `addSubjectsAndQuestionsToStartPracticing` | `"Agregue materias..."` — formal `Agregue` ✅ | — |
+| `practiceSpecificTopics` | `"Practique temas..."` — formal `Practique` ✅ | — |
+| `focusOnMistakes` | `"Concéntrese en sus errores"` — formal `Concéntrese` ✅ | — |
+| `uploadOrPasteData` | `"Sube o pegue..."` — **informal `Sube`** ❌ | Must be `"Suba o pegue..."` |
 
-**Rationale:** Every other string in `app_es.arb` is a proper Spanish translation. Leaving an English word is a gap that stands out.
+### Required Fix
 
-**Action required:** Translate to an appropriate Spanish equivalent.
+Change `app_es.arb:1078` from:
+```json
+"Sube o pegue datos para visualizar"
+```
+to:
+```json
+"Suba o pegue datos para visualizar"
+```
+
+Also regenerate Dart code with `bash scripts/gen_l10n.sh`.
 
 ---
 
-## Extensibility note
+## Acceptance Criteria
 
-The underlying ARB + `flutter gen-l10n` infrastructure is sound and well-tested. Once the above defects are fixed, adding a third locale (e.g. French `app_fr.arb`) requires only:
-1. Copying `app_en.arb` → `app_fr.arb`
-2. Translating all values (descriptions stay in English)
-3. Adding `Locale('fr')` to `supportedLocales` in `lib/main.dart:130`
-4. Adding the locale code to `l10n.yaml`
-
-No structural changes are needed — the i18n architecture already supports an arbitrary number of locales.
+- [ ] All strings listed in Issue 1 are extracted to ARB keys in both `app_en.arb` and `app_es.arb`.
+- [ ] Each affected source file uses `AppLocalizations.of(context)!.<key>` instead of the hardcoded literal.
+- [ ] `uploadOrPasteData` in `app_es.arb` is changed to use formal imperative (`Suba`).
+- [ ] `bash scripts/gen_l10n.sh` is run and `app_localizations_es.dart` is regenerated with the fix.
+- [ ] The `test/l10n/app_localizations_test.dart` test for `uploadOrPasteData` (es) is updated to match `"Suba o pegue datos para visualizar"`.
+- [ ] AI tutor/mentor system prompts (`conversation_manager.dart`, `mentor_service.dart`) are either localized or include a language instruction in the matching locale's prompt key (e.g., `quickGuideSystemPrompt`).
+- [ ] Lint: `grep -rn "'[A-Z][a-z]" lib/features/ lib/core/ | grep -v '.arb' | grep -v 'import'` returns no user-facing hardcoded strings.
 
 ---
 
-## Acceptance criteria
+## Additional Context
 
-- [ ] `lib/main.dart:242` uses `l10n.dashboard` instead of `'Dashboard'`
-- [ ] `lib/main.dart:272` uses a new `l10n.focus` key instead of `'Focus'`
-- [ ] ARB keys `"focus"` added to `app_en.arb` and `app_es.arb`, code regenerated
-- [ ] `focusForMinutes` uses formal imperative `"Enfóquese"` consistently
-- [ ] `dailyLimitReachedBody` uses formal `"Ha alcanzado su"` consistently
-- [ ] All `@@description` fields in `app_es.arb` are in English (copy from `app_en.arb`)
-- [ ] `roadmaps` translated to Spanish (`"Hojas de ruta"` / `"Rutas de aprendizaje"`)
-- [ ] `flutter gen-l10n` succeeds with zero warnings
-- [ ] Coverage test `test/l10n/app_localizations_coverage_test.dart` still passes
-- [ ] Visual inspection: switch app to Spanish, confirm FAB tooltip, nav label, focus timer, and daily limit dialog show correct Spanish text
+The `docs/i18n.md` already provides detailed guidelines for adding new languages (steps 1–7) and a PR review checklist for Spanish translations. Hardcoded strings are not covered by the coverage test (`test/l10n/app_localizations_coverage_test.dart`), which only checks ARB key parity, not whether the keys are actually used. A future improvement could add a lint rule banning bare string literals in widget trees.

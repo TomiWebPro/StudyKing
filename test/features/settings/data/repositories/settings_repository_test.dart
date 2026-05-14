@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'settings_repository_test_helper.dart';
 
 abstract class MockSettingsRepository {
   Future<void> init();
@@ -43,15 +45,13 @@ class InMemorySettingsRepository implements MockSettingsRepository {
 
   void _ensureInitialized() {
     if (!_initialized) {
-      throw StateError('Repository not initialized');
+      throw StateError('SettingsRepository not initialized');
     }
   }
 
   @override
   Future<void> init() async {
     _initialized = true;
-    _settings.clear();
-    _profile.clear();
   }
 
   @override
@@ -207,7 +207,17 @@ class InMemorySettingsRepository implements MockSettingsRepository {
 }
 
 void main() {
-  group('MockSettingsRepository', () {
+  sharedUninitializedTests();
+
+  group('SettingsRepository singleton', () {
+    test('factory returns same instance', () {
+      final a = SettingsRepository();
+      final b = SettingsRepository();
+      expect(identical(a, b), isTrue);
+    });
+  });
+
+  group('InMemorySettingsRepository', () {
     late InMemorySettingsRepository repository;
 
     setUp(() async {
@@ -215,436 +225,62 @@ void main() {
       await repository.init();
     });
 
-    group('init', () {
-      test('initializes without error', () async {
-        expect(() => repository.init(), returnsNormally);
-      });
-    });
+    sharedSettingsRepositoryTests(
+      createInitialized: () => repository,
+      createUninitialized: () => InMemorySettingsRepository(),
+      label: 'InMemorySettingsRepository',
+    );
 
-    group('saveApiKey', () {
-      test('saves API key with default service', () async {
-        await repository.saveApiKey(service: 'default', key: 'sk-test-key');
-        final retrieved = await repository.getApiKey(service: 'default');
-        expect(retrieved, equals('sk-test-key'));
-      });
-
-      test('saves API key with custom service name', () async {
-        await repository.saveApiKey(service: 'openai', key: 'sk-openai-key');
-        final retrieved = await repository.getApiKey(service: 'openai');
-        expect(retrieved, equals('sk-openai-key'));
+    group('getProfileData edge cases', () {
+      test('returns default profile when no profiles saved', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('default_profile'));
+        expect(result.name, equals(''));
       });
 
-      test('overwrites existing API key', () async {
-        await repository.saveApiKey(service: 'default', key: 'sk-first');
-        await repository.saveApiKey(service: 'default', key: 'sk-second');
-        final retrieved = await repository.getApiKey(service: 'default');
-        expect(retrieved, equals('sk-second'));
+      test('returns null when only non-profile keys exist', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._profile['some_key'] = 'some_value';
+        final result = await repo.getProfileData();
+        expect(result, isNull);
       });
 
-      test('service key overwrites default key when both exist', () async {
-        await repository.saveApiKey(service: 'default', key: 'sk-default');
-        await repository.saveApiKey(service: 'ollama', key: 'sk-ollama');
-        expect(await repository.getApiKey(service: 'default'), equals('sk-ollama'));
-        expect(await repository.getApiKey(service: 'ollama'), equals('sk-ollama'));
+      test('finds profile by scanning when current_profile is not set', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        final profile = UserProfile(id: 'scanned', name: 'Found by scan');
+        repo._profile['scanned'] = profile;
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('scanned'));
+        expect(result.name, equals('Found by scan'));
       });
-    });
 
-    group('getApiKey', () {
-      test('returns null for non-existent service', () async {
-        final result = await repository.getApiKey(service: 'nonexistent');
+      test('handles profile with non-String current_profile key', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._profile['current_profile'] = 123;
+        final profile = UserProfile(id: 'fallback', name: 'Fallback');
+        repo._profile['fallback'] = profile;
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('fallback'));
+      });
+
+      test('returns null when box has keys but no UserProfile values', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._profile['key1'] = 'string1';
+        repo._profile['key2'] = 42;
+        repo._profile['key3'] = true;
+        final result = await repo.getProfileData();
         expect(result, isNull);
       });
     });
 
-    group('getSettings', () {
-      test('returns default settings when box is empty', () async {
-        final settings = await repository.getSettings();
-        expect(settings.apiKey, equals(''));
-        expect(settings.apiBaseUrl, equals('https://openrouter.ai/api/v1'));
-        expect(settings.selectedModel, equals(''));
-        expect(settings.themeMode, equals(0));
-        expect(settings.fontSize, equals(16.0));
-        expect(settings.totalSessionCount, equals(0));
-        expect(settings.totalStudyTimeMs, equals(0));
-        expect(settings.totalQuestions, equals(0));
-        expect(settings.studyRemindersEnabled, isTrue);
-        expect(settings.requestTimeoutSeconds, equals(120));
-        expect(settings.sessionDurationMinutes, equals(30));
-      });
-
-      test('returns persisted settings after update', () async {
-        await repository.updateSettings(
-          apiKey: 'sk-persisted-key',
-          apiBaseUrl: 'https://custom.api.com',
-          themeMode: ThemeMode.dark,
-          fontSize: 20.0,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.apiKey, equals('sk-persisted-key'));
-        expect(settings.apiBaseUrl, equals('https://custom.api.com'));
-        expect(settings.themeMode, equals(ThemeMode.dark.index));
-        expect(settings.fontSize, equals(20.0));
-      });
-
-      test('returns default accessibility and notification values', () async {
-        final settings = await repository.getSettings();
-        expect(settings.highContrastEnabled, isFalse);
-        expect(settings.largeTouchTargets, isFalse);
-        expect(settings.reduceMotion, isFalse);
-        expect(settings.revisionRemindersEnabled, isTrue);
-        expect(settings.lessonNotificationsEnabled, isTrue);
-        expect(settings.overworkAlertsEnabled, isTrue);
-        expect(settings.planAdjustmentNotificationsEnabled, isTrue);
-      });
-
-      test('returns persisted accessibility and notification values', () async {
-        await repository.updateSettings(
-          highContrastEnabled: true,
-          largeTouchTargets: true,
-          reduceMotion: true,
-          revisionRemindersEnabled: false,
-          lessonNotificationsEnabled: false,
-          overworkAlertsEnabled: false,
-          planAdjustmentNotificationsEnabled: false,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.highContrastEnabled, isTrue);
-        expect(settings.largeTouchTargets, isTrue);
-        expect(settings.reduceMotion, isTrue);
-        expect(settings.revisionRemindersEnabled, isFalse);
-        expect(settings.lessonNotificationsEnabled, isFalse);
-        expect(settings.overworkAlertsEnabled, isFalse);
-        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
-      });
-    });
-
-    group('updateSettings', () {
-      test('updates only specified fields, preserves others', () async {
-        await repository.updateSettings(
-          themeMode: ThemeMode.dark,
-          fontSize: 20.0,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.themeMode, equals(ThemeMode.dark.index));
-        expect(settings.fontSize, equals(20.0));
-        expect(settings.apiKey, equals(''));
-        expect(settings.selectedModel, equals(''));
-      });
-
-      test('updates theme mode correctly', () async {
-        await repository.updateSettings(themeMode: ThemeMode.light);
-        expect((await repository.getSettings()).themeMode, equals(ThemeMode.light.index));
-
-        await repository.updateSettings(themeMode: ThemeMode.dark);
-        expect((await repository.getSettings()).themeMode, equals(ThemeMode.dark.index));
-
-        await repository.updateSettings(themeMode: ThemeMode.system);
-        expect((await repository.getSettings()).themeMode, equals(ThemeMode.system.index));
-      });
-
-      test('updates font size with bounds', () async {
-        await repository.updateSettings(fontSize: 10.0);
-        expect((await repository.getSettings()).fontSize, equals(10.0));
-
-        await repository.updateSettings(fontSize: 30.0);
-        expect((await repository.getSettings()).fontSize, equals(30.0));
-      });
-
-      test('updates request timeout within valid range', () async {
-        await repository.updateSettings(requestTimeoutSeconds: 30);
-        expect((await repository.getSettings()).requestTimeoutSeconds, equals(30));
-
-        await repository.updateSettings(requestTimeoutSeconds: 300);
-        expect((await repository.getSettings()).requestTimeoutSeconds, equals(300));
-      });
-
-      test('updates session duration', () async {
-        await repository.updateSettings(sessionDurationMinutes: 15);
-        expect((await repository.getSettings()).sessionDurationMinutes, equals(15));
-
-        await repository.updateSettings(sessionDurationMinutes: 90);
-        expect((await repository.getSettings()).sessionDurationMinutes, equals(90));
-      });
-
-      test('updates study reminders enabled flag', () async {
-        await repository.updateSettings(studyRemindersEnabled: false);
-        expect((await repository.getSettings()).studyRemindersEnabled, isFalse);
-
-        await repository.updateSettings(studyRemindersEnabled: true);
-        expect((await repository.getSettings()).studyRemindersEnabled, isTrue);
-      });
-
-      test('updates all settings at once', () async {
-        await repository.updateSettings(
-          apiKey: 'sk-all-at-once',
-          apiBaseUrl: 'https://all.at.once.com',
-          selectedModel: 'test-model',
-          themeMode: ThemeMode.dark,
-          fontSize: 18.0,
-          studyRemindersEnabled: false,
-          requestTimeoutSeconds: 60,
-          sessionDurationMinutes: 45,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.apiKey, equals('sk-all-at-once'));
-        expect(settings.apiBaseUrl, equals('https://all.at.once.com'));
-        expect(settings.selectedModel, equals('test-model'));
-        expect(settings.themeMode, equals(ThemeMode.dark.index));
-        expect(settings.fontSize, equals(18.0));
-        expect(settings.studyRemindersEnabled, isFalse);
-        expect(settings.requestTimeoutSeconds, equals(60));
-        expect(settings.sessionDurationMinutes, equals(45));
-      });
-
-      test('preserves statistics when updating other settings', () async {
-        await repository.clearSettings();
-        await repository.updateStats(
-          sessionCount: 5,
-          studyTimeMs: 3600000,
-          questions: 100,
-        );
-        await repository.updateSettings(fontSize: 20.0);
-        final settings = await repository.getSettings();
-        expect(settings.totalSessionCount, equals(5));
-        expect(settings.totalStudyTimeMs, equals(3600000));
-        expect(settings.totalQuestions, equals(100));
-      });
-
-      test('updates highContrastEnabled', () async {
-        await repository.updateSettings(highContrastEnabled: true);
-        expect((await repository.getSettings()).highContrastEnabled, isTrue);
-        await repository.updateSettings(highContrastEnabled: false);
-        expect((await repository.getSettings()).highContrastEnabled, isFalse);
-      });
-
-      test('updates largeTouchTargets', () async {
-        await repository.updateSettings(largeTouchTargets: true);
-        expect((await repository.getSettings()).largeTouchTargets, isTrue);
-        await repository.updateSettings(largeTouchTargets: false);
-        expect((await repository.getSettings()).largeTouchTargets, isFalse);
-      });
-
-      test('updates reduceMotion', () async {
-        await repository.updateSettings(reduceMotion: true);
-        expect((await repository.getSettings()).reduceMotion, isTrue);
-        await repository.updateSettings(reduceMotion: false);
-        expect((await repository.getSettings()).reduceMotion, isFalse);
-      });
-
-      test('updates revisionRemindersEnabled', () async {
-        await repository.updateSettings(revisionRemindersEnabled: false);
-        expect((await repository.getSettings()).revisionRemindersEnabled, isFalse);
-        await repository.updateSettings(revisionRemindersEnabled: true);
-        expect((await repository.getSettings()).revisionRemindersEnabled, isTrue);
-      });
-
-      test('updates lessonNotificationsEnabled', () async {
-        await repository.updateSettings(lessonNotificationsEnabled: false);
-        expect((await repository.getSettings()).lessonNotificationsEnabled, isFalse);
-        await repository.updateSettings(lessonNotificationsEnabled: true);
-        expect((await repository.getSettings()).lessonNotificationsEnabled, isTrue);
-      });
-
-      test('updates overworkAlertsEnabled', () async {
-        await repository.updateSettings(overworkAlertsEnabled: false);
-        expect((await repository.getSettings()).overworkAlertsEnabled, isFalse);
-        await repository.updateSettings(overworkAlertsEnabled: true);
-        expect((await repository.getSettings()).overworkAlertsEnabled, isTrue);
-      });
-
-      test('updates planAdjustmentNotificationsEnabled', () async {
-        await repository.updateSettings(planAdjustmentNotificationsEnabled: false);
-        expect((await repository.getSettings()).planAdjustmentNotificationsEnabled, isFalse);
-        await repository.updateSettings(planAdjustmentNotificationsEnabled: true);
-        expect((await repository.getSettings()).planAdjustmentNotificationsEnabled, isTrue);
-      });
-
-      test('updates all accessibility and notification fields at once', () async {
-        await repository.updateSettings(
-          highContrastEnabled: true,
-          largeTouchTargets: true,
-          reduceMotion: true,
-          revisionRemindersEnabled: false,
-          lessonNotificationsEnabled: false,
-          overworkAlertsEnabled: false,
-          planAdjustmentNotificationsEnabled: false,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.highContrastEnabled, isTrue);
-        expect(settings.largeTouchTargets, isTrue);
-        expect(settings.reduceMotion, isTrue);
-        expect(settings.revisionRemindersEnabled, isFalse);
-        expect(settings.lessonNotificationsEnabled, isFalse);
-        expect(settings.overworkAlertsEnabled, isFalse);
-        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
-      });
-    });
-
-    group('updateStats', () {
-      test('updates session count', () async {
-        await repository.updateStats(sessionCount: 10);
-        expect((await repository.getSettings()).totalSessionCount, equals(10));
-      });
-
-      test('updates study time', () async {
-        await repository.updateStats(studyTimeMs: 7200000);
-        expect((await repository.getSettings()).totalStudyTimeMs, equals(7200000));
-      });
-
-      test('updates questions count', () async {
-        await repository.updateStats(questions: 50);
-        expect((await repository.getSettings()).totalQuestions, equals(50));
-      });
-
-      test('updates multiple stats at once', () async {
-        await repository.updateStats(
-          sessionCount: 20,
-          studyTimeMs: 10800000,
-          questions: 200,
-        );
-        final settings = await repository.getSettings();
-        expect(settings.totalSessionCount, equals(20));
-        expect(settings.totalStudyTimeMs, equals(10800000));
-        expect(settings.totalQuestions, equals(200));
-      });
-    });
-
-    group('saveProfileData', () {
-      test('saves profile data successfully', () async {
-        final profile = UserProfile(
-          id: 'test-profile',
-          name: 'Test User',
-          studentId: '12345',
-          learningGoal: 'Learn Flutter',
-          preferredStudyTime: 'Morning',
-        );
-        await repository.saveProfileData(profile);
-
-        final retrieved = await repository.getProfileData();
-        expect(retrieved, isNotNull);
-        expect(retrieved!.id, equals('test-profile'));
-        expect(retrieved.name, equals('Test User'));
-        expect(retrieved.studentId, equals('12345'));
-        expect(retrieved.learningGoal, equals('Learn Flutter'));
-        expect(retrieved.preferredStudyTime, equals('Morning'));
-      });
-
-      test('saves multiple profiles and tracks current', () async {
-        final profile1 = UserProfile(id: 'profile-1', name: 'User 1');
-        final profile2 = UserProfile(id: 'profile-2', name: 'User 2');
-
-        await repository.saveProfileData(profile1);
-        await repository.saveProfileData(profile2);
-
-        final current = await repository.getProfileData();
-        expect(current!.id, equals('profile-2'));
-        expect(current.name, equals('User 2'));
-      });
-
-      test('updates existing profile', () async {
-        final original = UserProfile(
-          id: 'update-test',
-          name: 'Original Name',
-          studentId: '111',
-        );
-        await repository.saveProfileData(original);
-
-        final updated = UserProfile(
-          id: 'update-test',
-          name: 'Updated Name',
-          studentId: '222',
-        );
-        await repository.saveProfileData(updated);
-
-        final retrieved = await repository.getProfileData();
-        expect(retrieved!.name, equals('Updated Name'));
-        expect(retrieved.studentId, equals('222'));
-      });
-
-      test('preserves profile avatar icon', () async {
-        final profile = UserProfile(
-          id: 'avatar-test',
-          name: 'Avatar User',
-          avatarIcon: 'Icons.school',
-        );
-        await repository.saveProfileData(profile);
-
-        final retrieved = await repository.getProfileData();
-        expect(retrieved!.avatarIcon, equals('Icons.school'));
-      });
-
-      test('preserves notifications and language settings', () async {
-        final profile = UserProfile(
-          id: 'settings-test',
-          name: 'Settings User',
-          notificationsEnabled: false,
-          language: 'es',
-        );
-        await repository.saveProfileData(profile);
-
-        final retrieved = await repository.getProfileData();
-        expect(retrieved!.notificationsEnabled, isFalse);
-        expect(retrieved.language, equals('es'));
-      });
-    });
-
-    group('clearSettings', () {
-      test('clears all settings', () async {
-        await repository.updateSettings(
-          apiKey: 'sk-to-be-cleared',
-          themeMode: ThemeMode.dark,
-        );
-        await repository.clearSettings();
-
-        final settings = await repository.getSettings();
-        expect(settings.apiKey, equals(''));
-        expect(settings.themeMode, equals(0));
-      });
-
-      test('resets statistics to zero', () async {
-        await repository.updateStats(
-          sessionCount: 100,
-          studyTimeMs: 9999999,
-          questions: 500,
-        );
-        await repository.clearSettings();
-
-        final settings = await repository.getSettings();
-        expect(settings.totalSessionCount, equals(0));
-        expect(settings.totalStudyTimeMs, equals(0));
-        expect(settings.totalQuestions, equals(0));
-      });
-    });
-
-    group('clearProfile', () {
-      test('clears profile data and returns default', () async {
-        final profile = UserProfile(id: 'clear-test', name: 'Clear Test');
-        await repository.saveProfileData(profile);
-        await repository.clearProfile();
-
-        final retrieved = await repository.getProfileData();
-        expect(retrieved, isNotNull);
-        expect(retrieved!.id, equals('default_profile'));
-        expect(retrieved.name, equals(''));
-      });
-    });
-
-    group('themeModeEnum getter', () {
-      test('returns correct ThemeMode from index', () async {
-        await repository.updateSettings(themeMode: ThemeMode.light);
-        expect((await repository.getSettings()).themeModeEnum, equals(ThemeMode.light));
-
-        await repository.updateSettings(themeMode: ThemeMode.dark);
-        expect((await repository.getSettings()).themeModeEnum, equals(ThemeMode.dark));
-
-        await repository.updateSettings(themeMode: ThemeMode.system);
-        expect((await repository.getSettings()).themeModeEnum, equals(ThemeMode.system));
-      });
-
-      test('defaults to system for index 0', () async {
-        final settings = await repository.getSettings();
-        expect(settings.themeModeEnum, equals(ThemeMode.system));
-      });
-    });
   });
 }

@@ -28,17 +28,17 @@ class ExportSection extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             TextButton.icon(
-              onPressed: () => _exportProgressCSV(context),
+              onPressed: () => _exportProgressCSV(context, tracker),
               icon: const Icon(Icons.download),
               label: Text(l10n.exportCsv),
             ),
             TextButton.icon(
-              onPressed: () => _exportSessionHistoryCSV(context),
+              onPressed: () => _exportSessionHistoryCSV(context, tracker),
               icon: const Icon(Icons.history),
               label: Text(l10n.sessionHistory),
             ),
             TextButton.icon(
-              onPressed: () => _exportInstrumentation(context),
+              onPressed: () => _exportInstrumentation(context, instrumentation),
               icon: const Icon(Icons.analytics),
               label: Text(l10n.instrumentation),
             ),
@@ -48,7 +48,7 @@ class ExportSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _exportProgressCSV(BuildContext context) async {
+  Future<void> _exportProgressCSV(BuildContext context, StudyProgressTracker tracker) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final csv = await tracker.exportProgressCSV(studentId);
@@ -68,7 +68,7 @@ class ExportSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportSessionHistoryCSV(BuildContext context) async {
+  Future<void> _exportSessionHistoryCSV(BuildContext context, StudyProgressTracker tracker) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final csv = await tracker.exportSessionHistoryCSV(studentId);
@@ -88,7 +88,7 @@ class ExportSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportInstrumentation(BuildContext context) async {
+  Future<void> _exportInstrumentation(BuildContext context, InstrumentationService instrumentation) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final result = await instrumentation.getInstrumentationDashboard(studentId);

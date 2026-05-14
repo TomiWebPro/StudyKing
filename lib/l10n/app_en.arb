@@ -3427,5 +3427,9 @@
   "noBadgesYet": "No achievements yet. Keep studying!",
   "@noBadgesYet": {
     "description": "Empty state message when no badges earned"
+  },
+  "noOptionsAvailable": "No options available",
+  "@noOptionsAvailable": {
+    "description": "Message when a multiple choice question has no options"
   }
 }

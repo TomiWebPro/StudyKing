@@ -1,18 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/mastery_graph_service.dart';
-import '../../../core/services/study_progress_tracker.dart';
-import '../../../core/services/student_id_service.dart';
-import '../../../core/data/repositories/attempt_repository.dart';
-import '../../../core/widgets/conversation_input.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
-import '../../../l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import '../services/mentor_service.dart';
-import '../../teaching/presentation/widgets/chat_bubble.dart';
-import '../../../core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
+import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/core/widgets/conversation_input.dart';
 
 class MentorScreen extends ConsumerStatefulWidget {
   const MentorScreen({super.key});
@@ -51,22 +50,16 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   void _initializeMentor() {
     final llmService = ref.read(llmServiceProvider);
-    final masteryService = MasteryGraphService();
-    final progressTracker = StudyProgressTracker(
-      attemptRepo: AttemptRepository(),
-      masteryService: masteryService,
-    );
-
+    final masteryService = ref.read(masteryGraphServiceProvider);
+    final progressTracker = ref.read(mentorProgressTrackerProvider);
     final studentId = StudentIdService().getStudentId();
-    final l10n = AppLocalizations.of(context)!;
     _mentorService = MentorService(
       database: database,
       llmService: llmService,
       masteryService: masteryService,
       progressTracker: progressTracker,
-      modelId: 'openai/gpt-4o-mini',
+      modelId: ref.read(mentorModelIdProvider),
       studentId: studentId,
-      l10n: l10n,
     );
 
     if (mounted) {
@@ -287,7 +280,47 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     if (!_isInitialized) return;
 
     try {
+      final l10n = AppLocalizations.of(context)!;
       final report = await _mentorService.getProgressReport();
+      final buffer = StringBuffer();
+
+      buffer.writeln(l10n.mentorProgressReportTitle);
+      buffer.writeln(l10n.mentorOverallAccuracy(
+        '${report.accuracy}',
+        '${report.correctAttempts}',
+        '${report.totalAttempts}',
+      ));
+      buffer.writeln(l10n.mentorTotalStudyTime(report.totalStudyTimeHours));
+      buffer.writeln(l10n.mentorWeeklyActivity('${report.weeklyActivity}'));
+      buffer.writeln(l10n.mentorCompletedLessons('${report.completedLessons}'));
+      buffer.writeln(l10n.mentorTopicsStudied('${report.topicsStudied}'));
+
+      if (report.weakTopics.isNotEmpty) {
+        buffer.writeln(l10n.mentorAreasNeedingAttention);
+        for (final topic in report.weakTopics.take(3)) {
+          buffer.writeln(l10n.mentorTopicAccuracyEntry(
+            topic.topicId,
+            (topic.accuracy * 100).round(),
+          ));
+        }
+      }
+
+      if (report.badges.isNotEmpty) {
+        buffer.writeln(l10n.mentorBadgesEarned);
+        for (final badge in report.badges) {
+          buffer.writeln(l10n.mentorBadgeEntry(
+            badge['name'] as String,
+            badge['description'] as String,
+          ));
+        }
+      }
+
+      if (report.recommendations.isNotEmpty) {
+        buffer.writeln(l10n.mentorRecommendations);
+        for (final rec in report.recommendations.take(3)) {
+          buffer.writeln(l10n.mentorRecommendationEntry(rec['message'] as String));
+        }
+      }
 
       if (!mounted) return;
       showDialog(
@@ -302,7 +335,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             ],
           ),
           content: SingleChildScrollView(
-            child: Text(report),
+            child: Text(buffer.toString()),
           ),
           actions: [
             TextButton(
@@ -314,8 +347,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        SnackBar(content: Text(l10n.mentorProgressReportError)),
       );
     }
   }

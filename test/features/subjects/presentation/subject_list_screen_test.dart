@@ -284,5 +284,20 @@ void main() {
 
       expect(find.text('Selection Mock'), findsOneWidget);
     });
+
+    testWidgets('app bar add button navigates to selection when subjects exist', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Mathematics', color: '#2196F3'));
+      box.addSubject(_subject(id: '2', name: 'Physics', color: '#4CAF50'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Selection Mock'), findsOneWidget);
+    });
   });
 }

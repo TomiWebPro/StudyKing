@@ -15,7 +15,6 @@ import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdow
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 
 class DashboardScreen extends ConsumerWidget {

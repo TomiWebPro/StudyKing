@@ -19,7 +19,6 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'package:studyking/core/data/repositories/subject_repository.dart';
 
 class FakeTutorSessionRepository extends TutorSessionRepository {
@@ -175,7 +174,6 @@ MentorService createMentorService({
     progressTracker: tracker,
     modelId: modelId,
     studentId: studentId,
-    l10n: AppLocalizationsEn(),
   );
 }
 
@@ -284,7 +282,7 @@ void main() {
     });
 
     group('getProgressReport', () {
-      test('returns formatted progress report with stats', () async {
+      test('returns structured progress report with stats', () async {
         final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
         tracker.setStats({
           'totalAttempts': 20,
@@ -299,9 +297,12 @@ void main() {
         final service = createMentorService(progressTracker: tracker);
 
         final report = await service.getProgressReport();
-        expect(report, contains('Study Progress Report'));
-        expect(report, contains('75%'));
-        expect(report, contains('3.0 hours'));
+        expect(report.accuracy, equals(75.0));
+        expect(report.totalAttempts, equals(20));
+        expect(report.correctAttempts, equals(15));
+        expect(report.totalStudyTimeHours, equals('3.0'));
+        expect(report.weeklyActivity, equals(8));
+        expect(report.topicsStudied, equals(5));
       });
 
       test('includes weak topics in report', () async {
@@ -333,17 +334,16 @@ void main() {
             createMentorService(masteryService: mastery, progressTracker: tracker);
 
         final report = await service.getProgressReport();
-        expect(report, contains('Areas needing attention'));
-        expect(report, contains('topic_weak'));
+        expect(report.weakTopics.length, equals(1));
+        expect(report.weakTopics.first.topicId, equals('topic_weak'));
       });
 
-      test('returns error message on failure', () async {
+      test('throws on failure', () async {
         final errorTracker = FakeProgressTracker(attemptRepo: AttemptRepository());
         errorTracker.setStats({'throw': true});
         final service = createMentorService(progressTracker: errorTracker);
 
-        final report = await service.getProgressReport();
-        expect(report, contains('Unable to generate progress report'));
+        expect(() => service.getProgressReport(), throwsA(isA<Exception>()));
       });
     });
 
@@ -362,13 +362,13 @@ void main() {
         final service = createMentorService(progressTracker: tracker);
 
         final action = await service.suggestNextAction();
-        expect(action, equals('Focus on reviewing fundamentals'));
+        expect(action.message, equals('Focus on reviewing fundamentals'));
       });
 
       test('returns subject setup message when no subjects', () async {
         final service = createMentorService();
         final action = await service.suggestNextAction();
-        expect(action, contains("haven't added any subjects"));
+        expect(action.message, contains("haven't added any subjects"));
       });
 
       test('returns generic message when recommendations and subjects exist',
@@ -391,7 +391,7 @@ void main() {
         final service = createMentorService(database: db);
 
         final action = await service.suggestNextAction();
-        expect(action, contains("You're doing well"));
+        expect(action.message, contains("You're doing well"));
       });
     });
 

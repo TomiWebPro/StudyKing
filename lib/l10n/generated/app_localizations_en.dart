@@ -2517,4 +2517,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noBadgesYet => 'No achievements yet. Keep studying!';
+
+  @override
+  String get noOptionsAvailable => 'No options available';
 }

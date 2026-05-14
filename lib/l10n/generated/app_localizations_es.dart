@@ -2546,4 +2546,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noBadgesYet => 'Aún no hay logros. ¡Sigue estudiando!';
+
+  @override
+  String get noOptionsAvailable => 'No hay opciones disponibles';
 }

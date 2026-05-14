@@ -3427,5 +3427,9 @@
   "noBadgesYet": "A\u00fan no hay logros. \u00a1Sigue estudiando!",
   "@noBadgesYet": {
     "description": "Empty state message when no badges earned"
+  },
+  "noOptionsAvailable": "No hay opciones disponibles",
+  "@noOptionsAvailable": {
+    "description": "Message when a multiple choice question has no options"
   }
 }

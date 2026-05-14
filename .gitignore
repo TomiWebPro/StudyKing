@@ -59,6 +59,9 @@ coverage/
 *.db
 *.db-journal
 
+# Auto-improve reports
+.auto_improve_reports/
+
 # Cache
 .caches/
 .cache/

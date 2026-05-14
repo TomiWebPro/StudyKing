@@ -1,9 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class _FakeStudySessionRepository extends StudySessionRepository {
+  final List<StudySession> _sessions;
+
+  _FakeStudySessionRepository(this._sessions) : super();
+
+  @override
+  Future<List<StudySession>> getAll() async => _sessions;
+}
+
+StudySession _session({
+  required String id,
+  required String subjectId,
+  int questionsAnswered = 10,
+  int correctAnswers = 8,
+  int timeSpentMs = 3600000,
+}) {
+  return StudySession(
+    id: id,
+    studentId: 'student-1',
+    subjectId: subjectId,
+    startTime: DateTime(2024, 6, 15, 10, 30),
+    questionsAnswered: questionsAnswered,
+    correctAnswers: correctAnswers,
+    timeSpentMs: timeSpentMs,
+  );
+}
 
 class _TestNavigatorObserver extends NavigatorObserver {
   Route<dynamic>? pushedRoute;
@@ -83,6 +112,28 @@ Widget _buildTestAppWithObserver(_TestNavigatorObserver observer) {
       navigatorObservers: [observer],
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
+        args: const SubjectDetailArgs(
+          subjectId: 'test-id',
+          subjectName: 'Mathematics',
+          subjectCode: 'MATH101',
+          subjectColor: '#2196F3',
+          subjectDescription: 'Mathematics course',
+          subjectTeacher: 'Dr. Smith',
+          topicIds: ['topic-1', 'topic-2'],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildTestAppWithSessionRepo(StudySessionRepository sessionRepo) {
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      onGenerateRoute: _testRoute,
+      home: SubjectDetailScreen(
+        sessionRepository: sessionRepo,
         args: const SubjectDetailArgs(
           subjectId: 'test-id',
           subjectName: 'Mathematics',
@@ -408,6 +459,45 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Dashboard Mock'), findsOneWidget);
+    });
+
+    testWidgets('session details dialog shows session info with correct answers', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: 'test-id', correctAnswers: 8, questionsAnswered: 10, timeSpentMs: 3600000),
+      ]);
+      await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));
+      await tester.pump();
+
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session 1'), findsOneWidget);
+
+      await tester.tap(find.text('Session 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Details'), findsOneWidget);
+    });
+
+    testWidgets('session details dialog close button dismisses dialog', (tester) async {
+      final repo = _FakeStudySessionRepository([
+        _session(id: 's1', subjectId: 'test-id'),
+      ]);
+      await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));
+      await tester.pump();
+
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Session 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Close'), findsOneWidget);
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Details'), findsNothing);
     });
   });
 }
