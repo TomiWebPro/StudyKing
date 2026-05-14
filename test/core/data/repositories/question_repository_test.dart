@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 class _MockQuestionRepository extends QuestionRepository {
@@ -65,6 +66,32 @@ class _MockQuestionRepository extends QuestionRepository {
     _storage.remove(id);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<List<QuestionWithMarkscheme>>> getQuestionsWithMarkschemes(String subjectId) async {
+    final questions = _storage.values.toList();
+    final filtered = questions.where((q) => q.markscheme != null).toList();
+    if (filtered.isEmpty) {
+      return Result.failure('No questions with markscheme found for subject: $subjectId');
+    }
+    return Result.success(
+      filtered.map((q) => QuestionWithMarkscheme(
+        question: q,
+        markscheme: q.markscheme!,
+      )).toList(),
+    );
+  }
+
+  @override
+  Future<Result<void>> updateMarkscheme(String questionId, Markscheme markscheme) async {
+    final question = _storage[questionId];
+    if (question == null) {
+      return Result.failure('Question not found: $questionId');
+    }
+    final updated = question.copyWith(markscheme: markscheme);
+    _storage[questionId] = updated;
+    return Result.success(null);
+  }
 }
 
 Question createTestQuestion({
@@ -74,6 +101,7 @@ Question createTestQuestion({
   int difficulty = 1,
   String subjectId = 'subject-1',
   String topicId = 'topic-1',
+  Markscheme? markscheme,
 }) {
   return Question(
     id: id,
@@ -82,6 +110,7 @@ Question createTestQuestion({
     difficulty: difficulty,
     subjectId: subjectId,
     topicId: topicId,
+    markscheme: markscheme,
     createdAt: DateTime(2026, 5, 12),
     updatedAt: DateTime(2026, 5, 12),
   );
@@ -130,6 +159,12 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 2);
       });
+
+      test('returns empty when no questions', () async {
+        final result = await repository.getAll();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getByTopic', () {
@@ -141,6 +176,12 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 2);
       });
+
+      test('returns empty for non-existent topic', () async {
+        final result = await repository.getByTopic('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getBySubject', () {
@@ -151,6 +192,12 @@ void main() {
         final result = await repository.getBySubject('s1');
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 2);
+      });
+
+      test('returns empty for non-existent subject', () async {
+        final result = await repository.getBySubject('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -164,6 +211,12 @@ void main() {
         expect(result.data?.length, 1);
         expect(result.data?.first.id, 'q1');
       });
+
+      test('returns empty when no match', () async {
+        final result = await repository.getBySubjectAndTopic('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getByType', () {
@@ -174,6 +227,12 @@ void main() {
         final result = await repository.getByType(QuestionType.singleChoice);
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 2);
+      });
+
+      test('returns empty for type with no questions', () async {
+        final result = await repository.getByType(QuestionType.essay);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -186,6 +245,53 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 1);
       });
+
+      test('returns empty when no match', () async {
+        final result = await repository.getBySubjectAndType('s1', QuestionType.essay);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+    });
+
+    group('updateMarkscheme', () {
+      test('updates markscheme for existing question', () async {
+        final question = createTestQuestion(id: 'q1');
+        await repository.create(question);
+        final markscheme = Markscheme(correctAnswer: 'Paris');
+        final result = await repository.updateMarkscheme('q1', markscheme);
+        expect(result.isSuccess, isTrue);
+        final updated = await repository.get('q1');
+        expect(updated.data?.markscheme?.correctAnswer, 'Paris');
+      });
+
+      test('returns failure for non-existent question', () async {
+        final markscheme = Markscheme(correctAnswer: 'Paris');
+        final result = await repository.updateMarkscheme('none', markscheme);
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('getQuestionsWithMarkschemes', () {
+      test('returns questions with markscheme for subject', () async {
+        final ms = Markscheme(correctAnswer: 'Paris');
+        await repository.create(createTestQuestion(id: 'q1', subjectId: 's1', markscheme: ms));
+        await repository.create(createTestQuestion(id: 'q2', subjectId: 's1', markscheme: ms));
+        await repository.create(createTestQuestion(id: 'q3', subjectId: 's1'));
+        final result = await repository.getQuestionsWithMarkschemes('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data?.length, 2);
+      });
+
+      test('returns failure when no questions with markscheme', () async {
+        await repository.create(createTestQuestion(id: 'q1', subjectId: 's1'));
+        final result = await repository.getQuestionsWithMarkschemes('s1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('returns failure when no questions for subject', () async {
+        final result = await repository.getQuestionsWithMarkschemes('empty');
+        expect(result.isFailure, isTrue);
+      });
     });
 
     group('delete', () {
@@ -195,6 +301,11 @@ void main() {
         expect(result.isSuccess, isTrue);
         final stored = await repository.get('q1');
         expect(stored.data, isNull);
+      });
+
+      test('returns success even for non-existent question', () async {
+        final result = await repository.delete('none');
+        expect(result.isSuccess, isTrue);
       });
     });
   });

@@ -58,6 +58,14 @@ void main() {
         expect(progress?.correctAnswers, 1);
       });
 
+      test('records incorrect attempt', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 5000);
+        final progress = await repository.get('t1');
+        expect(progress?.questionsAnswered, 1);
+        expect(progress?.correctAnswers, 0);
+        expect(progress?.accuracy, 0.0);
+      });
+
       test('updates existing progress', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
         await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 3000);

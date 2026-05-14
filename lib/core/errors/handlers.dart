@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_en.dart';
@@ -133,7 +132,7 @@ class AppErrorHandler {
       case DatabaseException _:
         return l10n.errorDatabase;
       case ValidationException _:
-        return exception.message;
+        return l10n.validationFailed(exception.message);
       case PdfParseException _:
         return l10n.errorPdfParse;
       case ContentGenerationException _:
@@ -221,75 +220,71 @@ class AppErrorHandler {
   }
   
   static void _logError(Object error, String context) {
-    if (kDebugMode) {
-      _logger.e('[$context] Error: $error');
-    }
+    _logger.e('[$context] Error: $error');
   }
   
   
-  static AppException _convertToAppException(Object error) {
-    // Already an AppException
+  static AppException _convertToAppException(Object error, [AppLocalizations? l10n]) {
+    l10n ??= _defaultL10n;
     if (error is AppException) {
       return error;
     }
     
-    // Handle specific error types by string matching
     final errorStr = error.toString();
     
     if (errorStr.contains('ConnectionFailedError') || 
         errorStr.contains('SocketException') ||
         errorStr.contains('Network')) {
       return NetworkException(
-        message: 'Network request failed',
+        message: l10n.errorNetworkConnection,
         originalError: error,
       );
     }
     
     if (errorStr.contains('401') || errorStr.contains('unauthorized') || errorStr.contains('invalid')) {
       return InvalidApiKeyException(
-        message: 'Invalid API key or credentials',
+        message: l10n.errorInvalidApiKey,
         originalError: error,
       );
     }
     
     if (errorStr.contains('403') || errorStr.contains('forbidden')) {
       return ApiRateLimitException(
-        message: 'Too many requests or access denied',
+        message: l10n.errorApiRateLimit,
         originalError: error,
       );
     }
     
     if (errorStr.contains('404') || errorStr.contains('not found')) {
       return ApiNotFoundException(
-        message: 'Resource not found',
+        message: l10n.errorApiNotFound,
         originalError: error,
       );
     }
     
     if (errorStr.contains('500') || errorStr.contains('502') || errorStr.contains('503')) {
       return ApiInternalServerError(
-        message: 'Server error occurred',
+        message: l10n.errorApiInternalServer,
         originalError: error,
       );
     }
     
     if (error is FormatException) {
       return ValidationException(
-        message: 'Invalid data format',
+        message: error.message,
         originalError: error,
       );
     }
     
     if (error is StateError || error is AssertionError) {
       return DatabaseException(
-        message: 'Application state error',
+        message: l10n.errorDatabase,
         originalError: error,
       );
     }
     
-    // Default to generic exception
     return NetworkException(
-      message: 'An unexpected error occurred',
+      message: l10n.errorUnexpected,
       originalError: error,
     );
   }

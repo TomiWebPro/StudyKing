@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
+import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
+import 'package:studyking/features/subjects/presentation/widgets/subject_history_tab.dart';
+import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 
-/// Subject Detail Screen - Shows all content for a subject
 class SubjectDetailScreen extends ConsumerStatefulWidget {
   final String subjectId;
   final String subjectName;
@@ -65,7 +64,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // SliverAppBar with gradient
           SliverAppBar(
             expandedHeight: MediaQuery.sizeOf(context).height * 0.25,
             floating: false,
@@ -140,9 +138,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   child: IconButton(
                                     icon: const Icon(Icons.edit),
                                     color: Colors.white,
-                                    onPressed: () {
-                                      // Navigate to edit screen
-                                    },
+                                    onPressed: () {},
                                   ),
                                 ),
                                 Semantics(
@@ -150,7 +146,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   child: IconButton(
                                     icon: const Icon(Icons.more_vert),
                                     color: Colors.white,
-                                    onPressed: _showMoreOptions,
+                                    onPressed: () => _showMoreOptions(),
                                   ),
                                 ),
                               ],
@@ -176,148 +172,24 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               ],
             ),
           ),
-
-          // Tab content
           SliverFillRemaining(
             child: Padding(
               padding: ResponsiveUtils.screenPadding(context),
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Lessons Tab
-                  _buildLessonsTab(),
-
-                  // Practice Tab
-                  _buildPracticeTab(),
-
-                  // History Tab
-                  _buildHistoryTab(),
-
-                  // Stats Tab
-                  _buildStatsTab(),
+                  SubjectLessonsTab(subjectId: widget.subjectId),
+                  SubjectPracticeTab(
+                    onStartPractice: () => _startPractice(isSpacedRepetition: false),
+                    onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
+                  ),
+                  SubjectHistoryTab(
+                    subjectId: widget.subjectId,
+                    onSessionTap: (session) => _showSessionDetails(session),
+                  ),
+                  SubjectStatsTab(subjectId: widget.subjectId),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLessonsTab() {
-    return Consumer(builder: (context, ref, child) {
-      final l10n = AppLocalizations.of(context)!;
-      final lessonRepo = LessonRepository();
-      
-      Future<List<Lesson>> loadLessons() async {
-        try {
-          final lessons = await lessonRepo.getAll();
-          return lessons.where((l) => l.subjectId == widget.subjectId).toList();
-        } catch (e) {
-          return [];
-        }
-      }
-
-      return FutureBuilder<List<Lesson>>(
-        future: loadLessons(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final subjectLessons = snapshot.data ?? [];
-          
-          if (subjectLessons.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.book_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.noLessonsYet,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.startLearningByCreatingTopics,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addTopic),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: subjectLessons.length,
-            itemBuilder: (context, index) {
-              final lesson = subjectLessons[index];
-              return Card(
-                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.book, color: Theme.of(context).primaryColor),
-                  ),
-                  title: Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    l10n.blocksCount(lesson.blocks.length),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
-                ),
-              );
-            },
-          );
-        },
-      );
-    });
-  }
-
-  Widget _buildPracticeTab() {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: ResponsiveUtils.screenPadding(context),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.play_arrow, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
-          const SizedBox(height: 24),
-          Text(
-            l10n.practiceMode,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.practiceModes,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 32),
-          Semantics(
-            label: l10n.startPractice,
-            child: FilledButton.icon(
-              onPressed: () => _startPractice(isSpacedRepetition: false),
-              icon: const Icon(Icons.play_arrow),
-              label: Text(l10n.startPractice),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Semantics(
-            label: l10n.practiceMode,
-            child: OutlinedButton.icon(
-              onPressed: () => _startPractice(isSpacedRepetition: true),
-              icon: const Icon(Icons.repeat),
-              label: Text(l10n.practiceMode),
             ),
           ),
         ],
@@ -336,243 +208,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     );
   }
 
-  Widget _buildHistoryTab() {
-    return Consumer(builder: (context, ref, child) {
-      final l10n = AppLocalizations.of(context)!;
-      final sessionRepo = StudySessionRepository();
-      
-      Future<List<StudySession>> loadSessions() async {
-        try {
-          final sessions = await sessionRepo.getAll();
-          return sessions.where((s) => s.subjectId == widget.subjectId).toList();
-        } catch (e) {
-          return [];
-        }
-      }
-
-      return FutureBuilder<List<StudySession>>(
-        future: loadSessions(),
-        builder: (context, snapshot) {
-          final subjectSessions = snapshot.data ?? [];
-          
-          if (subjectSessions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.noSessionsYet,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.startStudyingToTrack,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: subjectSessions.length,
-            itemBuilder: (context, index) {
-              final session = subjectSessions[index];
-              final score = session.questionsAnswered > 0
-                  ? (session.correctAnswers / session.questionsAnswered) * 100
-                  : 0.0;
-
-              return Card(
-                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _scoreColor(score).withValues(alpha: 0.2),
-                    child: Icon(
-                      score >= 80
-                          ? Icons.check_circle
-                          : Icons.sticky_note_2,
-                      color: _scoreColor(score),
-                    ),
-                  ),
-                  title: Text(l10n.sessionNumber(index + 1)),
-                  subtitle: Text(
-                    '${formatDateFromContext(context, session.startTime)} • ${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))}',
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${score.toStringAsFixed(0)}%',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _scoreColor(score),
-                        ),
-                      ),
-                      if (session.questionsAnswered > 0)
-                        Text(
-                          '${session.correctAnswers}/${session.questionsAnswered}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
-                  onTap: () => _showSessionDetails(session),
-                ),
-              );
-            },
-          );
-        },
-      );
-    });
-  }
-
-  Widget _buildStatsTab() {
-    return Consumer(builder: (context, ref, child) {
-      final l10n = AppLocalizations.of(context)!;
-      final sessionRepo = StudySessionRepository();
-      
-      Future<List<StudySession>> loadSessions() async {
-        try {
-          final sessions = await sessionRepo.getAll();
-          return sessions.where((s) => s.subjectId == widget.subjectId).toList();
-        } catch (e) {
-          return [];
-        }
-      }
-
-      return FutureBuilder<List<StudySession>>(
-        future: loadSessions(),
-        builder: (context, snapshot) {
-          final subjectSessions = snapshot.data ?? [];
-          
-          final totalSessions = subjectSessions.length;
-          final totalQuestions = subjectSessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
-          final totalCorrect = subjectSessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
-          final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + s.timeSpentMs);
-          final avgScore = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0;
-
-          return Column(
-            children: [
-              // Stats Grid
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.sessionsLabel,
-                      totalSessions.toString(),
-                      Icons.how_to_vote,
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.accuracy,
-                      '${avgScore.toStringAsFixed(1)}%',
-                      Icons.star,
-                      _scoreColor(avgScore),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.questionsLabel,
-                      totalQuestions.toString(),
-                      Icons.question_answer,
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.time,
-                      formatDurationFromContext(context, Duration(milliseconds: totalTime)),
-                      Icons.access_time,
-                      Theme.of(context).colorScheme.tertiary,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Practice Progress
-              _buildSectionHeader(l10n.practiceProgress),
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: ResponsiveUtils.cardPadding(context),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(l10n.overallScore),
-                          Text(
-                            '${avgScore.toStringAsFixed(1)}%',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: _scoreColor(avgScore),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: avgScore / 100,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          _scoreColor(avgScore),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.keepPracticing,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    });
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return MetricCard(
-      label: label,
-      value: value,
-      icon: icon,
-      accent: color,
-    );
-  }
-
   void _showMoreOptions() {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
@@ -588,7 +223,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 title: Text(l10n.editSubject),
                 onTap: () {
                   Navigator.pop(context);
-                  // Navigate to edit screen
                 },
               ),
             ),
@@ -599,15 +233,14 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 title: Text(l10n.settings),
                 onTap: () {
                   Navigator.pop(context);
-                  // Add settings
                 },
               ),
             ),
             Semantics(
-              label: 'Upload Content',
+              label: l10n.uploadContent,
               child: ListTile(
                 leading: const Icon(Icons.cloud_upload),
-                title: const Text('Upload Content'),
+                title: Text(l10n.uploadContent),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(
@@ -619,10 +252,10 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               ),
             ),
             Semantics(
-              label: 'Dashboard',
+              label: l10n.dashboard,
               child: ListTile(
                 leading: const Icon(Icons.dashboard),
-                title: const Text('Dashboard'),
+                title: Text(l10n.dashboard),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(
@@ -666,7 +299,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           ),
           ElevatedButton(
             onPressed: () {
-              // Delete subject logic
               Navigator.pop(context);
               if (mounted) Navigator.pop(context);
             },
@@ -682,7 +314,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     final questions = session.questionsAnswered;
     final correct = session.correctAnswers;
     final l10n = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -728,12 +360,4 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       ),
     );
   }
-
-  Color _scoreColor(double score) {
-    final cs = Theme.of(context).colorScheme;
-    if (score >= 80) return cs.primary;
-    if (score >= 50) return cs.tertiary;
-    return cs.error;
-  }
-
 }

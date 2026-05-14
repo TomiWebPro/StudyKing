@@ -896,6 +896,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get graphTypeDetectionError => 'Graph type detection failed';
 
   @override
+  String get imageCaptured =>
+      'Image captured. You can add notes in the content field above.';
+
+  @override
+  String cameraError(String error) {
+    return 'Camera error: $error';
+  }
+
+  @override
   String get lessonScheduler => 'Lesson Scheduler';
 
   @override
@@ -1209,6 +1218,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionHistory => 'Session History';
+
+  @override
+  String get dashboard => 'Dashboard';
 
   @override
   String get studyDashboard => 'Study Dashboard';
@@ -2195,4 +2207,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progressBySubject => 'Progress by Subject';
+
+  @override
+  String weekNumber(int number) {
+    return 'Week $number';
+  }
+
+  @override
+  String milestoneForWeek(int number) {
+    return 'Milestone for week $number';
+  }
+
+  @override
+  String get markschemeUnavailable => 'No markscheme available';
+
+  @override
+  String get answerTooShort =>
+      'Answer is too short. Please provide more details.';
+
+  @override
+  String get goodResponseLength => 'Good response length.';
+
+  @override
+  String get answerTooShortForCredit => 'Answer too short for full credit.';
+
+  @override
+  String get noDrawingDetected => 'No drawing detected. Please draw something.';
+
+  @override
+  String get invalidDrawingData => 'Invalid drawing data. Please redraw.';
+
+  @override
+  String get allStepsIdentified => 'All required steps identified.';
+
+  @override
+  String get specialHandlingRequired =>
+      'This question type requires special handling.';
+
+  @override
+  String get someAnswersIncorrect => 'Some answers are incorrect';
+
+  @override
+  String correctAnswerIs(String answer) {
+    return 'The correct answer is: $answer';
+  }
+
+  @override
+  String allStepsFormat(int count) {
+    return 'All $count steps identified correctly!';
+  }
+
+  @override
+  String partialStepsFormat(int matched, int total, String missing) {
+    return 'Identified $matched of $total steps. Missing: $missing';
+  }
+
+  @override
+  String noStepsFormat(String steps) {
+    return 'No required steps found in your answer. Key steps to include: $steps';
+  }
+
+  @override
+  String get allRequiredStepsMissing => 'Some required steps missing';
 }

@@ -30,21 +30,6 @@ class _FakeStudySessionRepository extends StudySessionRepository {
     _sessions.add(session);
   }
 }
-
-Widget _buildTestAppWithRoutes(_FakeStudySessionRepository repository, {String? historyRoute}) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: SessionTrackerScreen(sessionRepository: repository),
-    routes: {
-      '/session-history': (_) => Scaffold(
-        body: Center(child: Text(historyRoute ?? 'Session History')),
-      ),
-    },
-  );
-}
-
 Widget _buildTestApp(_FakeStudySessionRepository repository) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,

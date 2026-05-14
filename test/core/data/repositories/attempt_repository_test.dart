@@ -96,6 +96,10 @@ void main() {
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', timestamp: now));
         expect((await repository.getAll()).length, 2);
       });
+
+      test('returns empty when no attempts', () async {
+        expect(await repository.getAll(), isEmpty);
+      });
     });
 
     group('getByStudent', () {
@@ -104,6 +108,10 @@ void main() {
         await repository.create(StudentAttempt(id: 'a2', studentId: 's2', questionId: 'q2', subjectId: 'sub1', timestamp: now));
         final result = await repository.getByStudent('s1');
         expect(result.length, 1);
+      });
+
+      test('returns empty for student with no attempts', () async {
+        expect(await repository.getByStudent('none'), isEmpty);
       });
     });
 
@@ -114,6 +122,10 @@ void main() {
         final result = await repository.getByStudentAndSubject('s1', 'sub1');
         expect(result.length, 1);
       });
+
+      test('returns empty when no match', () async {
+        expect(await repository.getByStudentAndSubject('s1', 'sub1'), isEmpty);
+      });
     });
 
     group('getByQuestion', () {
@@ -122,6 +134,10 @@ void main() {
         await repository.create(StudentAttempt(id: 'a2', studentId: 's2', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         expect((await repository.getByQuestion('q1')).length, 2);
       });
+
+      test('returns empty for question with no attempts', () async {
+        expect(await repository.getByQuestion('none'), isEmpty);
+      });
     });
 
     group('getBySubject', () {
@@ -129,6 +145,10 @@ void main() {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub2', timestamp: now));
         expect((await repository.getBySubject('sub1')).length, 1);
+      });
+
+      test('returns empty for subject with no attempts', () async {
+        expect(await repository.getBySubject('none'), isEmpty);
       });
     });
 

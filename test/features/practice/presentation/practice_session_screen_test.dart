@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/features/practice/presentation/models/practice_models.dart';
 import 'shared_test_helpers.dart';
 
 const _kCorrectFeedback = 'Correct!';

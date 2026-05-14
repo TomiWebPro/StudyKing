@@ -50,7 +50,7 @@ class ContentPipeline {
       return Result.success(source);
     } catch (e) {
       _logger.e('Failed to save source', e);
-      return Result.failure('Failed to save source: $e');
+      return Result.failure(e.toString());
     }
   }
 

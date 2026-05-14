@@ -1052,7 +1052,7 @@ abstract class AppLocalizations {
   /// **'Unable to load models. Please try again.'**
   String get unableToLoadModelsTryAgain;
 
-  /// Generic retry button label
+  /// Retry button label
   ///
   /// In en, this message translates to:
   /// **'Retry'**
@@ -1646,6 +1646,18 @@ abstract class AppLocalizations {
   /// **'Graph type detection failed'**
   String get graphTypeDetectionError;
 
+  /// Snackbar message when image is captured from camera
+  ///
+  /// In en, this message translates to:
+  /// **'Image captured. You can add notes in the content field above.'**
+  String get imageCaptured;
+
+  /// Error message when camera capture fails
+  ///
+  /// In en, this message translates to:
+  /// **'Camera error: {error}'**
+  String cameraError(String error);
+
   /// Title for lesson scheduling page
   ///
   /// In en, this message translates to:
@@ -2209,6 +2221,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session History'**
   String get sessionHistory;
+
+  /// Navigation label for dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboard;
 
   /// Dashboard screen title
   ///
@@ -3799,6 +3817,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Progress by Subject'**
   String get progressBySubject;
+
+  /// Label for a numbered week in a roadmap
+  ///
+  /// In en, this message translates to:
+  /// **'Week {number}'**
+  String weekNumber(int number);
+
+  /// Description for a milestone in a roadmap
+  ///
+  /// In en, this message translates to:
+  /// **'Milestone for week {number}'**
+  String milestoneForWeek(int number);
+
+  /// Message when no markscheme exists for a question
+  ///
+  /// In en, this message translates to:
+  /// **'No markscheme available'**
+  String get markschemeUnavailable;
+
+  /// Feedback when the answer is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Answer is too short. Please provide more details.'**
+  String get answerTooShort;
+
+  /// Feedback when answer length is adequate
+  ///
+  /// In en, this message translates to:
+  /// **'Good response length.'**
+  String get goodResponseLength;
+
+  /// Feedback when answer is too short for full credit
+  ///
+  /// In en, this message translates to:
+  /// **'Answer too short for full credit.'**
+  String get answerTooShortForCredit;
+
+  /// Feedback when no drawing content is detected
+  ///
+  /// In en, this message translates to:
+  /// **'No drawing detected. Please draw something.'**
+  String get noDrawingDetected;
+
+  /// Feedback when drawing data is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid drawing data. Please redraw.'**
+  String get invalidDrawingData;
+
+  /// Feedback when all steps are identified correctly
+  ///
+  /// In en, this message translates to:
+  /// **'All required steps identified.'**
+  String get allStepsIdentified;
+
+  /// Message for question types that need special handling
+  ///
+  /// In en, this message translates to:
+  /// **'This question type requires special handling.'**
+  String get specialHandlingRequired;
+
+  /// Feedback for partially incorrect multi-choice answers
+  ///
+  /// In en, this message translates to:
+  /// **'Some answers are incorrect'**
+  String get someAnswersIncorrect;
+
+  /// Message showing the correct answer
+  ///
+  /// In en, this message translates to:
+  /// **'The correct answer is: {answer}'**
+  String correctAnswerIs(String answer);
+
+  /// Feedback when all required steps are identified
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} steps identified correctly!'**
+  String allStepsFormat(int count);
+
+  /// Feedback when some steps are missing
+  ///
+  /// In en, this message translates to:
+  /// **'Identified {matched} of {total} steps. Missing: {missing}'**
+  String partialStepsFormat(int matched, int total, String missing);
+
+  /// Feedback when no required steps are found
+  ///
+  /// In en, this message translates to:
+  /// **'No required steps found in your answer. Key steps to include: {steps}'**
+  String noStepsFormat(String steps);
+
+  /// Feedback when required steps are missing from answer
+  ///
+  /// In en, this message translates to:
+  /// **'Some required steps missing'**
+  String get allRequiredStepsMissing;
 }
 
 class _AppLocalizationsDelegate

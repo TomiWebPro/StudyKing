@@ -1,1 +1,11 @@
 export 'presentation/dashboard_screen.dart';
+export 'providers/dashboard_providers.dart';
+export 'presentation/widgets/dashboard_header.dart';
+export 'presentation/widgets/summary_row.dart';
+export 'presentation/widgets/weekly_chart.dart';
+export 'presentation/widgets/plan_adherence_card.dart';
+export 'presentation/widgets/mastery_progress_card.dart';
+export 'presentation/widgets/weak_areas_card.dart';
+export 'presentation/widgets/topic_breakdown_card.dart';
+export 'presentation/widgets/badges_card.dart';
+export 'presentation/widgets/export_section.dart';

@@ -30,13 +30,23 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _isSending = false;
   bool _isInitialized = false;
 
+  bool _didInit = false;
+
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController();
     _scrollController = ScrollController();
     _inputFocusNode = FocusNode();
-    _initializeMentor();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInit) {
+      _didInit = true;
+      _initializeMentor();
+    }
   }
 
   void _initializeMentor() {

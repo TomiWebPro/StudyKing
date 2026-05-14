@@ -1,96 +1,139 @@
-# Internationalisation: Spanish Localization Audit & Hardcoded String Remediation
+# Spanish Localisation Quality Audit — Register, Consistency, and Locale-Aware AI
 
 ## Context
 
-The app supports English (`en`) and Spanish (`es`) via `flutter_localizations` (ARB-based). Two ARB files exist at `lib/l10n/app_en.arb` and `lib/l10n/app_es.arb` with ~300 keys. The generated Dart classes live in `lib/l10n/generated/`. Despite good coverage, several issues degrade the UX for Spanish-speaking users and set a poor pattern for adding future languages.
+Spanish (`es`) is the only non-English locale. `app_es.arb` has full key parity (3125 lines). The `i18n.md` documents formal *usted* register and consistency guidelines. A line-by-line comparison of `app_en.arb` vs `app_es.arb` and inspection of the Quick Guide feature reveal several concrete violations and one cross-cutting architectural bug that affects Spanish UX.
 
-## Issues Found
+---
 
-### 1. Hardcoded English Strings Bypassing l10n (5 occurrences)
+## Issue 1 — AI system prompt is always English, ignoring locale
 
-| File | Line(s) | String | Impact |
-|------|---------|--------|--------|
-| `lib/features/subjects/presentation/subject_detail_view.dart` | 611, 614 | `'Upload Content'` (semantics + Text) | Even though `l10n.uploadContent` exists in ARB, the code uses a hardcoded literal. Spanish users see English. |
-| `lib/features/subjects/presentation/subject_detail_view.dart` | 629, 632 | `'Dashboard'` (semantics + Text) | Missing ARB key entirely. Spanish users see English. |
-| `lib/core/widgets/canvas_drawing_widget.dart` | 81, 89 | `'Clear'`, `'Save Drawing'` | Missing ARB keys. Spanish users see English. |
-| `lib/features/settings/presentation/settings_screen.dart` | 452 | `'Retry'` | `l10n.retry` exists in ARB but is not used here. |
+**Affected file:** `lib/features/quickguide/presentation/quick_guide_screen.dart:128-131`
 
-### 2. Inconsistent Register: Formal vs. Informal Address in Spanish
-
-The app uses **formal ("usted")** address in most screens (settings, subjects, practice):
-- `"complete"`, `"agregue"`, `"seleccione"`, `"su"`
-
-But the Mentor feature consistently uses **informal ("tú")** address:
-- `"tienes"`, `"tus lecciones"`, `"Te gustaría"`, `"has empezado"`, `"has añadido"`
-
-This tonal inconsistency is noticeable to native speakers. Example strings in `app_es.arb`:
-- Line 1963: `"Aún no tienes lecciones programadas. ¿Te gustaría..."` (informal)
-- Line 609: `"Por favor complete todos los campos correctamente"` (formal imperative)
-
-**Action:** Choose one register and apply it consistently across all Spanish strings. The prevailing formal register in the rest of the app suggests the Mentor strings should be converted to formal ("usted") as well.
-
-### 3. Unlocalized Enum-Derived Display Strings
-
-In `lib/features/practice/presentation/practice_session_screen.dart:330`:
 ```dart
-AppLocalizations.of(context)!.practiceModeType(
-    AppLocalizations.of(context)!.spacedRepetitionMode,
-    question.type.name,  // <-- raw English enum name
-)
+final effectiveSystem = widget.systemPrompt ??
+    'You are StudyKing Quick Guide, a helpful AI study assistant. '
+        'Provide concise, educational answers. Help with explanations, quiz questions, '
+        'and math problems. Respond conversationally.';
 ```
 
-`question.type.name` returns the Dart enum value name (e.g., `"multipleChoice"`, `"essay"`) which is displayed directly to the user in the app bar. The question type labels *are* available in l10n (`l10n.multipleChoice`, `l10n.essay`, etc.) but the code never maps to them.
+The system prompt is hardcoded in English. When the app locale is `es`, the AI receives an English prompt and has no reason to reply in Spanish. The user sees English responses despite having Spanish selected.
 
-**Fix:** Replace `question.type.name` with a mapping function that returns the localized label.
+**Rationale:** The system prompt must be built from `AppLocalizations` so the AI is instructed in the user's language. A new ARB key like `quickGuideSystemPrompt` should hold the locale-appropriate version and include instruction to answer in that language.
 
-### 4. Obsolete/Inconsistent ARB Key for Mastery Level
+**Acceptance criteria:**
+- Introduce a localised system prompt key `quickGuideSystemPrompt` in both `app_en.arb` and `app_es.arb` (e.g. English: *"You are ... Respond conversationally."*; Spanish: *"Eres la Guía Rápida de StudyKing... Responde en español de manera conversacional."*).
+- Replace the hardcoded English string at `quick_guide_screen.dart:128-131` with `l10n.quickGuideSystemPrompt`.
 
-`app_es.arb` line 1668:
+---
+
+## Issue 2 — Fallback response keyword matching is English-only
+
+**Affected file:** `lib/features/quickguide/presentation/quick_guide_screen.dart:172-183`
+
+```dart
+String _fallbackResponse(String text) {
+  final l10n = AppLocalizations.of(context)!;
+  if (text.toLowerCase().contains('explain')) {
+    return l10n.fallbackExplainResponse;
+  } else if (text.toLowerCase().contains('question') || text.toLowerCase().contains('quiz')) {
+    return l10n.fallbackQuizResponse;
+  } else if (text.toLowerCase().contains('math') || text.toLowerCase().contains('calculate')) {
+    return l10n.fallbackMathResponse;
+  } else {
+    return l10n.fallbackGeneralResponse;
+  }
+}
+```
+
+For a Spanish-speaking user, "explícame", "pregunta", "examen", "matemáticas", "calcular" will never match the English keywords, so every query falls through to `fallbackGeneralResponse`. The Spanish strings translated in `app_es.arb` (`fallbackExplainResponse`, `fallbackQuizResponse`, `fallbackMathResponse`) are **never reached** from the Spanish UI.
+
+**Rationale:** Intent routing must be locale-aware. Either check translated prefix patterns from `AppLocalizations` or, better, delegate intent classification to the LLM itself (remove keyword heuristics entirely) and only use fallbacks on error.
+
+**Acceptance criteria:**
+- Remove English-only keyword matching, OR
+- Add equivalent Spanish keywords (e.g. `'explíc'`, `'pregunt'`, `'examen'`, `'matemátic'`, `'calc'`) in parallel checks, OR
+- Replace the heuristic entirely with a simple unconditional `fallbackGeneralResponse` (since the LLM will have been instructed via the localised system prompt from Issue 1).
+
+---
+
+## Issue 3 — Register violation: "Tu" instead of "Su" in mentor progress report title
+
+**Affected file:** `lib/l10n/app_es.arb:2788`
+
 ```json
-"masteryLevelBrowsing": "Iniciado"
+"mentorProgressReportTitle": "📊 **Tu Informe de Progreso de Estudio**\n"
 ```
-The English "Browsing" represents someone exploring a topic. "Iniciado" (initiated/begun) shifts the meaning. For consistency with mastery-level progression (Novice → Browsing → Developing → Proficient → Expert), a better translation would be "Explorando".
 
-### 5. Minor Grammar / Capitalization Issues in Spanish
+The `i18n.md` explicitly mandates formal *usted* register ("su/sus", not "tu/tus"). This is the only occurrence of informal "Tu" found across the entire Spanish ARB.
 
-| ARB Key | Current | Suggested |
-|---------|---------|-----------|
-| `noLessonsUsePlanner` | `"¿No hay lecciones? ¡use el Planificador para generar!"` | `"¿No hay lecciones? ¡Use el Planificador para generar!"` — Capitalize after `¡` |
-| `noTopicsYetAddSome` | `"¿No hay temas? ¡agregue algunos!"` | `"¿No hay temas? ¡Agregue algunos!"` — Capitalize after `¡` |
-| `fillAllFieldsCorrectly` | `"Por favor complete todos los campos correctamente"` | `"Por favor, complete todos los campos correctamente"` — Missing comma after "Por favor" |
+**Rationale:** Inconsistency with documented convention. Native Spanish speakers expect formal register in an educational/academic app.
 
-### 6. Missing `Dashboard` ARB Key
+**Acceptance criteria:**
+- Change to `"📊 **Su Informe de Progreso de Estudio**\n"` in `app_es.arb`.
+- Verify no other stray informal address forms exist (search `app_es.arb` for `\btu\b`, `\btus\b`, `\bte\b` used as possessive/object pronouns).
 
-A new key `dashboard` is needed in both ARB files since the hardcoded `'Dashboard'` string in `subject_detail_view.dart:632` must be replaced.
+---
 
-## Affected Files
+## Issue 4 — Same English concept translated differently: "Mastered" → "Dominados" vs "Adquirido"
+
+**Affected file:** `lib/l10n/app_es.arb`
+
+| Key | Spanish value |
+|-----|--------------|
+| `"mastered"` (line 1665) | `"Dominados"` |
+| `"masteredLabel"` (line 2273) | `"Adquirido"` |
+
+Both translate the same English word "Mastered". The `i18n.md` guideline says *"Same English concept → same Spanish word"*.
+
+**Rationale:** Users see "Dominados" in one context and "Adquirido" in another for the same concept. This is confusing and breaks the translation glossary.
+
+**Acceptance criteria:**
+- Choose one Spanish equivalent for "Mastered" (recommendation: "Dominados" is more natural in an educational context) and apply it consistently to both keys in `app_es.arb`.
+
+---
+
+## Issue 5 — Positive framing guideline violated in `weakAreasAccuracy`
+
+**Affected file:** `lib/l10n/app_es.arb:1736`
+
+```json
+"weakAreasAccuracy": "Áreas Débiles (Precisión < 60%)"
+```
+
+The `i18n.md` guideline states: *"Positive framing. Prefer constructive language (e.g., 'Áreas por mejorar' over 'Áreas débiles')"*. All other "weak areas" keys use "Áreas por mejorar" (`weakAreas`, `weakLabel`).
+
+**Rationale:** Inconsistency with both the guideline and the rest of the codebase.
+
+**Acceptance criteria:**
+- Change to `"Áreas por mejorar (Precisión < 60%)"` in `app_es.arb`.
+
+---
+
+## Issue 6 — `i18n.md` out of date: missing AI localisation guidance
+
+**Affected file:** `docs/i18n.md`
+
+The PR review checklist does not cover:
+- AI system prompt localisation (Issue 1 above)
+- Locale-aware fallback intent routing (Issue 2 above)
+- The need for `pubspec.yaml` locale entries when adding new languages (currently only `en` and `es`)
+
+**Rationale:** Contributors adding a third language will miss these requirements.
+
+**Acceptance criteria:**
+- Add a checklist item: *"AI system prompt key exists in the new locale's ARB and instructs the model to respond in that language."*
+- Add a checklist item: *"Fallback intent routing (keyword matching) is updated to include the new locale's keywords or removed in favour of a locale-agnostic approach."*
+- Verify `pubspec.yaml` `flutter:` section documents supported locales.
+
+---
+
+## Summary of affected files
 
 | File | Issue |
 |------|-------|
-| `lib/l10n/app_en.arb` | Add `dashboard` key |
-| `lib/l10n/app_es.arb` | Fix register inconsistency, capitalization, `masteryLevelBrowsing` translation, add `dashboard` key, add `clearLabel`/`saveDrawing` missing keys |
-| `lib/features/subjects/presentation/subject_detail_view.dart` | Lines 611-614, 629-632: replace hardcoded strings with `l10n.*` |
-| `lib/core/widgets/canvas_drawing_widget.dart` | Lines 81, 89: replace `const Text('Clear')`, `const Text('Save Drawing')` with localized versions |
-| `lib/features/settings/presentation/settings_screen.dart` | Line 452: replace `const Text('Retry')` with `Text(l10n.retry)` |
-| `lib/features/practice/presentation/practice_session_screen.dart` | Line 330: map `question.type.name` via localized labels |
+| `lib/l10n/app_es.arb` | Issues 3, 4, 5 |
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | Issues 1, 2 |
+| `docs/i18n.md` | Issue 6 |
 
-## Rationale
-
-Fixing these issues before adding more languages ensures:
-- New translators have a consistent register (formal "usted") to follow
-- No hardcoded English strings pollute the UI when locale != `en`
-- Enum-based display values are properly localizable
-- The ARB/ARB-to-generated pipeline is verified as reliable
-- Future language additions (e.g., French, German, Portuguese) only require a new `.arb` file
-
-## Acceptance Criteria
-
-- [ ] All 5 hardcoded English strings replaced with `AppLocalizations.of(context)!.*` calls
-- [ ] New `dashboard` key added to `app_en.arb` and translated in `app_es.arb`
-- [ ] Register in Spanish Mentor strings converted from informal ("tú") to formal ("usted") to match the rest of the app
-- [ ] Capitalization fixed in `noLessonsUsePlanner` and `noTopicsYetAddSome` in `app_es.arb`
-- [ ] Comma added in `fillAllFieldsCorrectly` in `app_es.arb`
-- [ ] `masteryLevelBrowsing` reviewed and updated from "Iniciado" to a more accurate translation
-- [ ] `question.type.name` replaced with a localized lookup in `practice_session_screen.dart`
-- [ ] Generated Dart files regenerated (`flutter gen-l10n`) and verified no errors
-- [ ] App builds and runs without warning with both `es` and `en` locales
+No new ARB keys are strictly required except for `quickGuideSystemPrompt` (Issue 1). All other fixes are edits to existing values or documentation.

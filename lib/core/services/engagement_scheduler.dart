@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
@@ -99,9 +100,24 @@ class EngagementScheduler {
   }
 
   Future<List<EngagementNudge>> getOverworkNudge(String studentId) async {
-    final stats = await _tracker.getOverallStats(studentId);
-    final totalHoursStr = stats['totalStudyTimeHours'] as String? ?? '0';
-    final totalHours = double.tryParse(totalHoursStr) ?? 0;
+    double totalHours = 0;
+    try {
+      final stats = await _tracker.getOverallStats(studentId);
+      totalHours = double.tryParse(stats['totalStudyTimeHours'] as String? ?? '0') ?? 0;
+    } catch (_) {}
+
+    try {
+      final focusRepo = FocusSessionRepository();
+      await focusRepo.init();
+      final todaySessions = await focusRepo.getByDate(DateTime.now());
+      final focusSeconds =
+          todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
+      final focusHours = focusSeconds / 3600;
+      if (focusHours > totalHours) {
+        totalHours = focusHours;
+      }
+    } catch (_) {}
+
     if (totalHours > 4) {
       return [EngagementNudge(
         type: NudgeType.overwork,

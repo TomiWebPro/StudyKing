@@ -1,15 +1,19 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
-import '../../../core/data/models/conversation_message_model.dart';
-import '../../../core/providers/llm_providers.dart' show llmServiceProvider;
-import '../../../l10n/generated/app_localizations.dart';
-import '../../../core/utils/responsive.dart';
-import '../../../core/utils/logger.dart';
-import '../../../core/routes/app_router.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/mode_navigation_widget.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/suggested_prompts_widget.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/typing_indicator_widget.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/message_composer_widget.dart';
+import 'package:studyking/features/quickguide/presentation/widgets/help_dialog.dart';
 
 class QuickGuideScreen extends ConsumerStatefulWidget {
   final LlmService? llmService;
@@ -224,7 +228,6 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -247,7 +250,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
             child: IconButton(
               icon: const Icon(Icons.help_outline),
               tooltip: l10n.help,
-              onPressed: () => _showHelpDialog(context),
+              onPressed: () => showQuickGuideHelpDialog(context),
             ),
           ),
         ],
@@ -255,136 +258,32 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (_showSuggestions && !_hasInteracted)
-              _buildModeNavigation(context),
+            if (_showSuggestions && !_hasInteracted && widget.showModeNavigation)
+              const ModeNavigationWidget(),
             Expanded(
               child: _messages.isEmpty
                   ? _buildEmptyState(l10n)
-                  : _buildMessageList(context, l10n),
+                  : MessageListWidget(
+                      messages: _messages,
+                      scrollController: _scrollController,
+                    ),
             ),
             AnimatedOpacity(
               opacity: _showSuggestions && !_hasInteracted ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: _buildSuggestedPrompts(context),
+              child: SuggestedPromptsWidget(
+                prompts: _suggestedPrompts,
+                onSelectPrompt: _selectPrompt,
+              ),
             ),
-            _buildTypingIndicator(colorScheme, l10n),
-            _buildMessageComposer(context, l10n),
+            TypingIndicatorWidget(isStreaming: _isStreaming),
+            MessageComposerWidget(
+              controller: _textController,
+              focusNode: _inputFocusNode,
+              isStreaming: _isStreaming,
+              onSend: _sendMessage,
+            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModeNavigation(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: ResponsiveUtils.listPadding(context),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
-        ),
-      ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.chooseStudyMode,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildModeCard(
-                      context,
-                      icon: Icons.smart_toy,
-                      title: l10n.aiTutor,
-                      subtitle: l10n.interactiveConversationalLessons,
-                      color: colorScheme.primary,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.tutor,
-                          arguments: const TutorArgs(
-                            topicId: '',
-                            topicTitle: '',
-                            subjectId: '',
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildModeCard(
-                      context,
-                      icon: Icons.auto_awesome,
-                      title: l10n.mentor,
-                      subtitle: l10n.personalStudyAssistantPlanner,
-                      color: colorScheme.secondary,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/mentor');
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-    );
-  }
-
-  Widget _buildModeCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Semantics(
-      button: true,
-      label: '$title: $subtitle',
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: color.withValues(alpha: 0.3)),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Icon(icon, color: color, size: 28),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -409,266 +308,8 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
           Text(
             l10n.askAnything,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageList(BuildContext context, AppLocalizations l10n) {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: ResponsiveUtils.listPadding(context),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        final isUser = message.role == MessageRole.student;
-        return Semantics(
-          label: isUser
-              ? l10n.semanticsYouSaid(message.content)
-              : l10n.semanticsQuickGuideSaid(message.content),
-          child: Align(
-            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              margin: EdgeInsets.only(
-                  bottom: ResponsiveUtils.verticalSpacing(context)),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveUtils.horizontalSpacing(context),
-                vertical: 12,
-              ),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.content +
-                        (message.isStreaming && message.content.isNotEmpty
-                            ? '▌'
-                            : ''),
-                    style: TextStyle(
-                      color: isUser
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontSize: 15,
-                      height: 1.4,
-                    ),
-                  ),
-                  if (message.isStreaming && message.content.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: SizedBox(
-                        width: 20,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSuggestedPrompts(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: ResponsiveUtils.listPadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-                bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
-            child: Text(
-              l10n.suggestedPrompts,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _suggestedPrompts.map((prompt) {
-              return Semantics(
-                label: l10n.semanticsSendPrompt(prompt),
-                button: true,
-                child: ActionChip(
-                  label: Text(
-                    prompt,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  onPressed: () => _selectPrompt(prompt),
-                  backgroundColor: colorScheme.secondaryContainer,
-                  side: BorderSide.none,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator(ColorScheme colorScheme, AppLocalizations l10n) {
-    return Semantics(
-      liveRegion: true,
-      child: AnimatedOpacity(
-        opacity: _isStreaming ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          padding: ResponsiveUtils.listPadding(context),
-          alignment: Alignment.centerLeft,
-          child: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.quickGuideIsThinking,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageComposer(BuildContext context, AppLocalizations l10n) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, control: true):
-            _sendMessage,
-      },
-      child: FocusTraversalGroup(
-        child: Container(
-          padding: ResponsiveUtils.screenPadding(context),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            border: Border(
-              top: BorderSide(
-                color: colorScheme.outlineVariant,
-                width: 0.5,
-              ),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Semantics(
-                  label: l10n.semanticsMessageInput,
-                  hint: l10n.messageInputHint,
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _inputFocusNode,
-                    maxLines: 4,
-                    minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    decoration: InputDecoration(
-                      hintText: l10n.askAnything,
-                      hintStyle: TextStyle(
-                        color:
-                            colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.5),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide(
-                          color: colorScheme.primary,
-                          width: 1.5,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Semantics(
-                label: l10n.sendMessage,
-                button: true,
-                child: IconButton.filled(
-                  icon: _isStreaming
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.send),
-                  onPressed: _isStreaming ? null : _sendMessage,
-                  tooltip: l10n.sendMessage,
-                  style: IconButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    minimumSize: const Size(48, 48),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.quickGuideHelpTitle),
-        content: Text(l10n.quickGuideHelpContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.gotIt),
           ),
         ],
       ),

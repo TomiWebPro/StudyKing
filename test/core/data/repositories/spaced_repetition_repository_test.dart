@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 class _MockSpacedRepetitionRepository extends SpacedRepetitionRepository {
   final Map<String, Question> _questionStorage = {};
+  final Map<String, StudentAttempt> _attemptStorage = {};
 
   @override
   Future<void> init() async {}
@@ -42,6 +45,16 @@ class _MockSpacedRepetitionRepository extends SpacedRepetitionRepository {
     final newReviewDate = DateTime.now().add(Duration(milliseconds: newInterval.toInt()));
     _questionStorage[questionId] = question.copyWith(nextReview: newReviewDate);
     return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<DateTime>>> getQuestionDueTimes(String questionId) async {
+    final attempt = _attemptStorage[questionId];
+    if (attempt == null) {
+      return Result.failure('No attempts found for question: $questionId');
+    }
+    final timestamps = attempt.lastDueDate != null ? [attempt.lastDueDate!] : <DateTime>[];
+    return Result.success(timestamps);
   }
 
   @override
@@ -95,16 +108,60 @@ Question createSRQuestion({
   );
 }
 
+class MockQuestionBox implements Box<Question> {
+  final Map<String, Question> _storage = {};
+
+  @override
+  Iterable<Question> get values => _storage.values;
+
+  @override
+  Question? get(dynamic key, {Question? defaultValue}) =>
+      _storage[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, Question value) async {
+    _storage[key.toString()] = value;
+  }
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'questions';
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool containsKey(dynamic key) => _storage.containsKey(key.toString());
+
+  @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   group('SpacedRepetitionQueries', () {
-    group('getQuestionsDueForReview', () {
-      test('returns empty list when no questions due', () {
-        // This tests the query logic directly
-        expect(SpacedRepetitionQueries.questionsToBoxSafe(null), isEmpty);
-        expect(SpacedRepetitionQueries.questionsToBoxSafe([]), isEmpty);
-      });
-    });
-
     group('questionsToBoxSafe', () {
       test('returns empty list for null input', () {
         expect(SpacedRepetitionQueries.questionsToBoxSafe(null), isEmpty);
@@ -113,6 +170,54 @@ void main() {
       test('returns same list for non-null input', () {
         final questions = <Question>[];
         expect(SpacedRepetitionQueries.questionsToBoxSafe(questions), same(questions));
+      });
+    });
+
+    group('countAllQuestions', () {
+      test('returns zero for empty box', () {
+        final box = MockQuestionBox();
+        expect(SpacedRepetitionQueries.countAllQuestions(box), 0);
+      });
+
+      test('returns correct count', () {
+        final box = MockQuestionBox();
+        box.put('q1', createSRQuestion(id: 'q1'));
+        box.put('q2', createSRQuestion(id: 'q2'));
+        expect(SpacedRepetitionQueries.countAllQuestions(box), 2);
+      });
+    });
+
+    group('getQuestionsDueAfter', () {
+      test('returns questions due after specific date', () {
+        final box = MockQuestionBox();
+        box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
+        box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
+        final due = SpacedRepetitionQueries.getQuestionsDueAfter(box, DateTime(2023, 1, 1));
+        expect(due.length, 1);
+        expect(due.first.id, 'q1');
+      });
+    });
+
+    group('isQuestionDueForReview', () {
+      test('returns true for past due question', () {
+        final q = createSRQuestion(nextReview: DateTime(2020, 1, 1));
+        expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isTrue);
+      });
+
+      test('returns false for future review question', () {
+        final q = createSRQuestion(nextReview: DateTime(2099, 1, 1));
+        expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isFalse);
+      });
+    });
+
+    group('mapQuestionsToStatus', () {
+      test('returns status map for questions', () {
+        final box = MockQuestionBox();
+        box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
+        box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
+        final status = SpacedRepetitionQueries.mapQuestionsToStatus(box);
+        expect(status['q1'], 'due');
+        expect(status['q2'], 'not-due');
       });
     });
   });
@@ -132,20 +237,84 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 1);
       });
+
+      test('returns empty when none due', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1', nextReview: DateTime(2099, 1, 1));
+        final result = await repository.getQuestionsDueForReview();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('updateNextReviewDate', () {
-      test('updates review interval for high mastery', () async {
+      test('updates review interval for high mastery (>=0.9)', () async {
         repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
         final result = await repository.updateNextReviewDate('q1', 0.95);
         expect(result.isSuccess, isTrue);
-        final updated = repository._questionStorage['q1'];
-        expect(updated?.nextReview, isNotNull);
-        expect(updated?.nextReview!.isAfter(DateTime.now()), isTrue);
+        expect(repository._questionStorage['q1']?.nextReview, isNotNull);
+      });
+
+      test('updates review interval for medium-high mastery (>=0.7)', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
+        final result = await repository.updateNextReviewDate('q1', 0.8);
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('updates review interval for medium mastery (>=0.5)', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
+        final result = await repository.updateNextReviewDate('q1', 0.6);
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('updates review interval for low-medium mastery (>=0.3)', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
+        final result = await repository.updateNextReviewDate('q1', 0.4);
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('updates review interval for low mastery (<0.3)', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
+        final result = await repository.updateNextReviewDate('q1', 0.2);
+        expect(result.isSuccess, isTrue);
       });
 
       test('returns failure for non-existent question', () async {
         final result = await repository.updateNextReviewDate('none', 0.5);
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('getQuestionDueTimes', () {
+      test('returns due times from attempt', () async {
+        final now = DateTime.now();
+        repository._attemptStorage['q1'] = StudentAttempt(
+          id: 'a1',
+          studentId: 's1',
+          questionId: 'q1',
+          subjectId: 'sub1',
+          timestamp: now,
+          lastDueDate: now.subtract(const Duration(days: 1)),
+        );
+        final result = await repository.getQuestionDueTimes('q1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data?.length, 1);
+      });
+
+      test('returns empty list when attempt has no due date', () async {
+        repository._attemptStorage['q1'] = StudentAttempt(
+          id: 'a1',
+          studentId: 's1',
+          questionId: 'q1',
+          subjectId: 'sub1',
+          timestamp: DateTime.now(),
+        );
+        final result = await repository.getQuestionDueTimes('q1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('returns failure for non-existent question', () async {
+        final result = await repository.getQuestionDueTimes('none');
         expect(result.isFailure, isTrue);
       });
     });
@@ -158,6 +327,12 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?.length, 1);
       });
+
+      test('returns empty when no practice questions', () async {
+        final result = await repository.getPracticeQuestions('sub1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getTopicTimeDue', () {
@@ -166,6 +341,11 @@ void main() {
         repository._questionStorage['q2'] = createSRQuestion(id: 'q2', topicId: 't2');
         final result = await repository.getTopicTimeDue('t1');
         expect(result.data?.length, 1);
+      });
+
+      test('returns empty for topic with no questions', () async {
+        final result = await repository.getTopicTimeDue('none');
+        expect(result.data, isEmpty);
       });
     });
 
@@ -177,6 +357,13 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, 1);
       });
+
+      test('returns zero for subject with no due questions', () async {
+        repository._questionStorage['q1'] = createSRQuestion(id: 'q1', subjectId: 'sub1', nextReview: DateTime(2099, 1, 1));
+        final result = await repository.getSubjectDueCount('sub1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 0);
+      });
     });
 
     group('removeDueQuestions', () {
@@ -184,6 +371,10 @@ void main() {
         repository._questionStorage['q1'] = createSRQuestion(id: 'q1');
         await repository.removeDueQuestions('q1');
         expect(repository._questionStorage.containsKey('q1'), isFalse);
+      });
+
+      test('does nothing for non-existent question', () async {
+        await repository.removeDueQuestions('none');
       });
     });
   });

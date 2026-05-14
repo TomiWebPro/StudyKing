@@ -23,6 +23,18 @@ class MockMasteryBox implements Box<MasteryState> {
   }
 
   @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
   bool get isOpen => _isOpen;
 
   @override
@@ -61,6 +73,18 @@ class MockQuestionMasteryBox implements Box<QuestionMasteryState> {
   @override
   Future<void> put(dynamic key, QuestionMasteryState value) async {
     _storage[key.toString()] = value;
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
   }
 
   @override
@@ -105,6 +129,18 @@ class MockDependencyBox implements Box<TopicDependency> {
   }
 
   @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
   bool get isOpen => _isOpen;
 
   @override
@@ -143,6 +179,18 @@ class MockEvalBox implements Box<QuestionEvaluation> {
   @override
   Future<void> put(dynamic key, QuestionEvaluation value) async {
     _storage[key.toString()] = value;
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
   }
 
   @override
@@ -191,12 +239,6 @@ void main() {
       );
     });
 
-    group('init', () {
-      test('completes successfully', () async {
-        await repository.init();
-      });
-    });
-
     group('getMasteryState', () {
       test('creates new state when not found', () async {
         final result = await repository.getMasteryState('s1', 't1');
@@ -233,6 +275,12 @@ void main() {
         final result = await repository.getAllMasteryStates('s1');
         expect(result.data?.length, 2);
       });
+
+      test('returns empty for student with no states', () async {
+        final result = await repository.getAllMasteryStates('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getQuestionMasteryState', () {
@@ -260,6 +308,23 @@ void main() {
         expect(result.data?.length, 1);
         expect(result.data?.first.questionId, 'q2');
       });
+
+      test('accepts custom asOf date', () async {
+        final past = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime.now(), nextReview: DateTime(2020, 1, 1));
+        final recent = QuestionMasteryState(studentId: 's1', questionId: 'q2', lastAttempt: DateTime.now(), nextReview: DateTime(2025, 6, 1));
+        await repository.updateQuestionMasteryState(past);
+        await repository.updateQuestionMasteryState(recent);
+        final result = await repository.getDueQuestions('s1', asOf: DateTime(2023, 1, 1));
+        expect(result.data?.length, 1);
+        expect(result.data?.first.questionId, 'q1');
+      });
+
+      test('returns empty when no due questions', () async {
+        final future = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime.now(), nextReview: DateTime(2099, 1, 1));
+        await repository.updateQuestionMasteryState(future);
+        final result = await repository.getDueQuestions('s1');
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getAtRiskQuestions', () {
@@ -272,12 +337,45 @@ void main() {
         expect(result.data?.length, 1);
         expect(result.data?.first.questionId, 'q1');
       });
+
+      test('accepts custom threshold', () async {
+        final medium = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime.now(), masteryLevel: 0.6);
+        final high = QuestionMasteryState(studentId: 's1', questionId: 'q2', lastAttempt: DateTime.now(), masteryLevel: 0.9);
+        await repository.updateQuestionMasteryState(medium);
+        await repository.updateQuestionMasteryState(high);
+        final result = await repository.getAtRiskQuestions('s1', threshold: 0.7);
+        expect(result.data?.length, 1);
+        expect(result.data?.first.questionId, 'q1');
+      });
+
+      test('returns empty when none at risk', () async {
+        final high = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime.now(), masteryLevel: 0.9);
+        await repository.updateQuestionMasteryState(high);
+        final result = await repository.getAtRiskQuestions('s1');
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getTopicDependency', () {
       test('creates new when not found', () async {
         final result = await repository.getTopicDependency('t1');
         expect(result.data?.topicId, 't1');
+      });
+
+      test('returns existing', () async {
+          await repository.updateTopicDependency(TopicDependency(topicId: 't1', prerequisites: ['t0']));
+        final result = await repository.getTopicDependency('t1');
+        expect(result.data?.prerequisites, ['t0']);
+      });
+    });
+
+    group('updateTopicDependency', () {
+      test('updates topic dependency', () async {
+        final dep = TopicDependency(topicId: 't1', prerequisites: ['t0']);
+        final result = await repository.updateTopicDependency(dep);
+        expect(result.isSuccess, isTrue);
+        final stored = await repository.getTopicDependency('t1');
+        expect(stored.data?.prerequisites, ['t0']);
       });
     });
 
@@ -287,6 +385,11 @@ void main() {
         await repository.updateTopicDependency(TopicDependency(topicId: 't2'));
         final result = await repository.getAllDependencies();
         expect(result.data?.length, 2);
+      });
+
+      test('returns empty when none', () async {
+        final result = await repository.getAllDependencies();
+        expect(result.data, isEmpty);
       });
     });
 
@@ -304,6 +407,44 @@ void main() {
       });
     });
 
+    group('saveEvaluation', () {
+      test('saves evaluation', () async {
+        final eval = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+        final result = await repository.saveEvaluation(eval);
+        expect(result.isSuccess, isTrue);
+        final stored = await repository.getEvaluation('q1');
+        expect(stored.data?.correctAnswer, 'Paris');
+      });
+    });
+
+    group('migrateFromLegacy', () {
+      test('creates evaluation from legacy data', () async {
+        final result = await repository.migrateFromLegacy(
+          questionId: 'q1',
+          markscheme: 'Paris',
+          correctAnswer: 'London',
+          options: ['A', 'B'],
+          explanation: 'Capital of France',
+        );
+        expect(result.isSuccess, isTrue);
+        final stored = await repository.getEvaluation('q1');
+        expect(stored.data?.correctAnswer, 'Paris');
+        expect(stored.data?.acceptableAnswers, ['A', 'B']);
+        expect(stored.data?.explanation, 'Capital of France');
+      });
+
+      test('skips if evaluation already exists', () async {
+        await repository.saveEvaluation(QuestionEvaluation(questionId: 'q1', correctAnswer: 'Existing'));
+        final result = await repository.migrateFromLegacy(
+          questionId: 'q1',
+          markscheme: 'New',
+        );
+        expect(result.isSuccess, isTrue);
+        final stored = await repository.getEvaluation('q1');
+        expect(stored.data?.correctAnswer, 'Existing');
+      });
+    });
+
     group('getTopicsNeedingReview', () {
       test('returns topics with high review urgency', () async {
         final now = DateTime.now();
@@ -314,6 +455,14 @@ void main() {
         final result = await repository.getTopicsNeedingReview('s1');
         expect(result.data?.length, 1);
         expect(result.data?.first.topicId, 't1');
+      });
+
+      test('returns empty when no topics need review', () async {
+        final now = DateTime.now();
+        final low = MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, reviewUrgency: 0.3);
+        await repository.updateMasteryState(low);
+        final result = await repository.getTopicsNeedingReview('s1');
+        expect(result.data, isEmpty);
       });
     });
 
@@ -328,6 +477,14 @@ void main() {
         expect(result.data?.length, 1);
         expect(result.data?.first.topicId, 't1');
       });
+
+      test('returns empty when no weak topics', () async {
+        final now = DateTime.now();
+        final strong = MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.9);
+        await repository.updateMasteryState(strong);
+        final result = await repository.getWeakTopics('s1');
+        expect(result.data, isEmpty);
+      });
     });
 
     group('getMasterySnapshot', () {
@@ -339,6 +496,15 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data?['totalTopics'], 2);
         expect(result.data?['totalAttempts'], 15);
+      });
+
+      test('returns zeros for student with no states', () async {
+        final result = await repository.getMasterySnapshot('empty');
+        expect(result.isSuccess, isTrue);
+        expect(result.data?['totalTopics'], 0);
+        expect(result.data?['totalAttempts'], 0);
+        expect(result.data?['averageAccuracy'], 0.0);
+        expect(result.data?['avgReadiness'], 0.0);
       });
     });
   });

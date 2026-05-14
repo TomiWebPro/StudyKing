@@ -1172,6 +1172,19 @@
   "@graphTypeDetectionError": {
     "description": "Error message for graph type detection failure"
   },
+  "imageCaptured": "Image captured. You can add notes in the content field above.",
+  "@imageCaptured": {
+    "description": "Snackbar message when image is captured from camera"
+  },
+  "cameraError": "Camera error: {error}",
+  "@cameraError": {
+    "description": "Error message when camera capture fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
 
   "lessonScheduler": "Lesson Scheduler",
   "@lessonScheduler": {
@@ -1601,6 +1614,10 @@
     "description": "Title for session history screen"
   },
 
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Navigation label for dashboard"
+  },
   "studyDashboard": "Study Dashboard",
   "@studyDashboard": {
     "description": "Dashboard screen title"
@@ -2480,10 +2497,6 @@
   "@errorUnexpected": {
     "description": "Generic unexpected error message"
   },
-  "retry": "Retry",
-  "@retry": {
-    "description": "Generic retry button label"
-  },
   "retryConnection": "Retry Connection",
   "@retryConnection": {
     "description": "Button label to retry connection"
@@ -2994,5 +3007,119 @@
   "progressBySubject": "Progress by Subject",
   "@progressBySubject": {
     "description": "Section title for per-subject progress"
+  },
+  "weekNumber": "Week {number}",
+  "@weekNumber": {
+    "description": "Label for a numbered week in a roadmap",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "milestoneForWeek": "Milestone for week {number}",
+  "@milestoneForWeek": {
+    "description": "Description for a milestone in a roadmap",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+
+  "markschemeUnavailable": "No markscheme available",
+  "@markschemeUnavailable": {
+    "description": "Message when no markscheme exists for a question"
+  },
+
+  "answerTooShort": "Answer is too short. Please provide more details.",
+  "@answerTooShort": {
+    "description": "Feedback when the answer is too short"
+  },
+
+  "goodResponseLength": "Good response length.",
+  "@goodResponseLength": {
+    "description": "Feedback when answer length is adequate"
+  },
+
+  "answerTooShortForCredit": "Answer too short for full credit.",
+  "@answerTooShortForCredit": {
+    "description": "Feedback when answer is too short for full credit"
+  },
+
+  "noDrawingDetected": "No drawing detected. Please draw something.",
+  "@noDrawingDetected": {
+    "description": "Feedback when no drawing content is detected"
+  },
+
+  "invalidDrawingData": "Invalid drawing data. Please redraw.",
+  "@invalidDrawingData": {
+    "description": "Feedback when drawing data is invalid"
+  },
+
+  "allStepsIdentified": "All required steps identified.",
+  "@allStepsIdentified": {
+    "description": "Feedback when all steps are identified correctly"
+  },
+
+  "specialHandlingRequired": "This question type requires special handling.",
+  "@specialHandlingRequired": {
+    "description": "Message for question types that need special handling"
+  },
+
+  "someAnswersIncorrect": "Some answers are incorrect",
+  "@someAnswersIncorrect": {
+    "description": "Feedback for partially incorrect multi-choice answers"
+  },
+
+  "correctAnswerIs": "The correct answer is: {answer}",
+  "@correctAnswerIs": {
+    "description": "Message showing the correct answer",
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+
+  "allStepsFormat": "All {count} steps identified correctly!",
+  "@allStepsFormat": {
+    "description": "Feedback when all required steps are identified",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "partialStepsFormat": "Identified {matched} of {total} steps. Missing: {missing}",
+  "@partialStepsFormat": {
+    "description": "Feedback when some steps are missing",
+    "placeholders": {
+      "matched": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "String"
+      }
+    }
+  },
+
+  "noStepsFormat": "No required steps found in your answer. Key steps to include: {steps}",
+  "@noStepsFormat": {
+    "description": "Feedback when no required steps are found",
+    "placeholders": {
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+
+  "allRequiredStepsMissing": "Some required steps missing",
+  "@allRequiredStepsMissing": {
+    "description": "Feedback when required steps are missing from answer"
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
@@ -19,6 +18,7 @@ import 'package:studyking/features/subjects/presentation/subject_selection_scree
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -40,6 +40,7 @@ class AppRoutes {
   static const String lessonDetail = '/lesson-detail';
   static const String lessonList = '/lesson-list';
   static const String llmTasks = '/llm-tasks';
+  static const String focusMode = '/focus-mode';
 }
 
 class SubjectDetailArgs {
@@ -152,7 +153,6 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
         return _materialPageRoute(
           DashboardScreen(
             studentId: args['studentId'] as String? ?? StudentIdService().getStudentId(),
-            masteryService: args['masteryService'] as MasteryGraphService? ?? MasteryGraphService(),
           ),
           routeSettings,
         );
@@ -160,7 +160,6 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       return _materialPageRoute(
         DashboardScreen(
           studentId: StudentIdService().getStudentId(),
-          masteryService: MasteryGraphService(),
         ),
         routeSettings,
       );
@@ -241,6 +240,11 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
     case AppRoutes.llmTasks:
       return _materialPageRoute(
         LlmTaskManagerScreen(taskManager: LlmTaskManager()),
+        routeSettings,
+      );
+    case AppRoutes.focusMode:
+      return _materialPageRoute(
+        const FocusTimerScreen(),
         routeSettings,
       );
     default:

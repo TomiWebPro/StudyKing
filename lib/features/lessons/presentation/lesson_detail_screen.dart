@@ -95,60 +95,73 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       appBar: AppBar(
         title: Text(lesson.title),
         actions: [
-          Semantics(
-            button: true,
-            label: l10n.teachingMode,
-            child: IconButton(
-              icon: const Icon(Icons.smart_toy_outlined),
-              tooltip: l10n.teachingMode,
-              onPressed: _openTutorMode,
+          FocusTraversalOrder(
+            order: const NumericFocusOrder(1),
+            child: Semantics(
+              button: true,
+              label: l10n.teachingMode,
+              child: IconButton(
+                icon: const Icon(Icons.smart_toy_outlined),
+                tooltip: l10n.teachingMode,
+                onPressed: _openTutorMode,
+              ),
             ),
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: ResponsiveUtils.listPadding(context),
-        itemCount: lesson.blocks.length,
-        itemBuilder: (context, i) {
-          final b = lesson.blocks[i];
-          return Semantics(
-            label: _getBlockTitle(b.type, l10n),
-            child: Card(
-            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ListTile(
-                  leading: Icon(_getBlockIcon(b.type)),
-                  title: Text(_getBlockTitle(b.type, l10n)),
+      body: FocusTraversalGroup(
+        child: ListView.builder(
+          padding: ResponsiveUtils.listPadding(context),
+          itemCount: lesson.blocks.length,
+          itemBuilder: (context, i) {
+            final b = lesson.blocks[i];
+            return FocusTraversalOrder(
+              order: NumericFocusOrder(i.toDouble() + 1),
+              child: Semantics(
+                label: _getBlockTitle(b.type, l10n),
+                child: Card(
+                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: Icon(_getBlockIcon(b.type)),
+                      title: Text(_getBlockTitle(b.type, l10n)),
+                    ),
+                    Padding(
+                      padding: ResponsiveUtils.cardPadding(context),
+                      child: Text(b.content),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: ResponsiveUtils.cardPadding(context),
-                  child: Text(b.content),
+              ),
+              ),
+            );
+          },
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: FocusTraversalGroup(
+          child: Padding(
+            padding: ResponsiveUtils.screenPadding(context),
+            child: Row(
+              children: [
+                Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
+                const Spacer(),
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: Semantics(
+                    button: true,
+                    label: l10n.teachingMode,
+                    child: ElevatedButton.icon(
+                      onPressed: _openTutorMode,
+                      icon: const Icon(Icons.smart_toy, size: 18),
+                      label: Text(l10n.teachingMode),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          );
-        },
-      ),
-      bottomNavigationBar: BottomAppBar(
-        child: Padding(
-          padding: ResponsiveUtils.screenPadding(context),
-          child: Row(
-            children: [
-              Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
-              const Spacer(),
-              Semantics(
-                button: true,
-                label: l10n.teachingMode,
-                child: ElevatedButton.icon(
-                  onPressed: _openTutorMode,
-                  icon: const Icon(Icons.smart_toy, size: 18),
-                  label: Text(l10n.teachingMode),
-                ),
-              ),
-            ],
           ),
         ),
       ),

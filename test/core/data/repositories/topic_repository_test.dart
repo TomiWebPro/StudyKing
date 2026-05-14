@@ -43,6 +43,15 @@ class _MockTopicRepository extends TopicRepository {
   Future<void> delete(String id) async {
     _storage.remove(id);
   }
+
+  @override
+  Future<void> addParent(Topic topic, String parentId) async {
+    final parent = await get(parentId);
+    if (parent != null) {
+      final updated = topic.copyWith(parentId: parentId, subjectId: parent.subjectId);
+      await create(updated);
+    }
+  }
 }
 
 Topic createTestTopic({
@@ -116,6 +125,10 @@ void main() {
         final result = await repository.getBySubject('s1');
         expect(result.length, 2);
       });
+
+      test('returns empty for non-existent subject', () async {
+        expect(await repository.getBySubject('none'), isEmpty);
+      });
     });
 
     group('getByParent', () {
@@ -125,6 +138,10 @@ void main() {
         await repository.create(createTestTopic(id: 't3'));
         final result = await repository.getByParent('parent-1');
         expect(result.length, 2);
+      });
+
+      test('returns empty for non-existent parent', () async {
+        expect(await repository.getByParent('none'), isEmpty);
       });
     });
 
@@ -136,6 +153,29 @@ void main() {
         final result = await repository.getRootTopics();
         expect(result.length, 2);
         expect(result.every((t) => t.parentId == null), isTrue);
+      });
+
+      test('returns empty when no root topics', () async {
+        await repository.create(createTestTopic(id: 't1', parentId: 'p1'));
+        expect(await repository.getRootTopics(), isEmpty);
+      });
+    });
+
+    group('addParent', () {
+      test('sets parent on topic when parent exists', () async {
+        final parent = createTestTopic(id: 'parent-1', subjectId: 's1', title: 'Parent');
+        final child = createTestTopic(id: 'child-1', title: 'Child');
+        await repository.create(parent);
+        await repository.addParent(child, 'parent-1');
+        final stored = await repository.get('child-1');
+        expect(stored?.parentId, 'parent-1');
+        expect(stored?.subjectId, 's1');
+      });
+
+      test('does nothing when parent does not exist', () async {
+        final child = createTestTopic(id: 'child-1', title: 'Child');
+        await repository.addParent(child, 'non-existent');
+        expect(await repository.get('child-1'), isNull);
       });
     });
 

@@ -59,7 +59,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get fillAllFieldsCorrectly =>
-      'Por favor complete todos los campos correctamente';
+      'Por favor, complete todos los campos correctamente';
 
   @override
   String generatedPlanOverDays(String course, int days, int totalHours) {
@@ -906,6 +906,15 @@ class AppLocalizationsEs extends AppLocalizations {
       'La detección del tipo de gráfico falló';
 
   @override
+  String get imageCaptured =>
+      'Imagen capturada. Puede agregar notas en el campo de contenido arriba.';
+
+  @override
+  String cameraError(String error) {
+    return 'Error de cámara: $error';
+  }
+
+  @override
   String get lessonScheduler => 'Planificador de Lecciones';
 
   @override
@@ -1225,6 +1234,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionHistory => 'Historial de Sesiones';
 
   @override
+  String get dashboard => 'Panel';
+
+  @override
   String get studyDashboard => 'Panel de Estudio';
 
   @override
@@ -1277,7 +1289,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get masteryLevelNovice => 'Novato';
 
   @override
-  String get masteryLevelBrowsing => 'Iniciado';
+  String get masteryLevelBrowsing => 'Explorando';
 
   @override
   String get masteryLevelDeveloping => 'En Desarrollo';
@@ -1524,11 +1536,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get noTopicsYetAddSome => '¿No hay temas? ¡agregue algunos!';
+  String get noTopicsYetAddSome => '¿No hay temas? ¡Agregue algunos!';
 
   @override
   String get noLessonsUsePlanner =>
-      '¿No hay lecciones? ¡use el Planificador para generar!';
+      '¿No hay lecciones? ¡Use el Planificador para generar!';
 
   @override
   String get mentor => 'Mentor';
@@ -1543,7 +1555,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get endLesson => 'Finalizar Lección';
 
   @override
-  String get typeYourMessage => 'Escribe tu mensaje...';
+  String get typeYourMessage => 'Escriba su mensaje...';
 
   @override
   String get send => 'Enviar';
@@ -1552,16 +1564,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get progressReport => 'Informe de Progreso';
 
   @override
-  String get askMentorAnything => 'Pregúntale a tu mentor...';
+  String get askMentorAnything => 'Pregúntele a su mentor...';
 
   @override
   String get mentorGreeting => 'Mentor IA';
 
   @override
-  String get mentorSubtitle => 'Tu asistente académico personal IA';
+  String get mentorSubtitle => 'Su asistente académico personal IA';
 
   @override
-  String get startingLesson => 'Iniciando tu lección...';
+  String get startingLesson => 'Iniciando su lección...';
 
   @override
   String get lessonTimeEnded =>
@@ -1970,15 +1982,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorRejectionResponse =>
-      '¡No hay problema! No haré ningún cambio. Avísame si necesitas algo más.';
+      '¡No hay problema! No haré ningún cambio. Avíseme si necesita algo más.';
 
   @override
   String get mentorNoLessonsScheduled =>
-      'Aún no tienes lecciones programadas. ¿Te gustaría que te ayude a crear un plan de estudio? Puedo ayudarte a establecer sesiones de estudio regulares para tus materias.';
+      'Aún no tiene lecciones programadas. ¿Le gustaría que le ayude a crear un plan de estudio? Puedo ayudarle a establecer sesiones de estudio regulares para sus materias.';
 
   @override
   String get mentorUpcomingLessonsHeader =>
-      'Aquí están tus próximas lecciones:\n';
+      'Aquí están sus próximas lecciones:\n';
 
   @override
   String mentorLessonEntry(String topic, String date, int duration) {
@@ -1987,28 +1999,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorReschedulePrompt =>
-      '\n¿Te gustaría reprogramar alguna de estas?';
+      '\n¿Le gustaría reprogramar alguna de estas?';
 
   @override
   String mentorRecentSessionOnDate(String date) {
-    return 'Tu sesión de estudio más reciente fue el $date. ¿Te gustaría programar una nueva lección?';
+    return 'Su sesión de estudio más reciente fue el $date. ¿Le gustaría programar una nueva lección?';
   }
 
   @override
   String get mentorNotStarted =>
-      'Parece que aún no has empezado. ¿Te gustaría que te ayude a programar tu primera lección?';
+      'Parece que aún no ha empezado. ¿Le gustaría que le ayude a programar su primera lección?';
 
   @override
   String get mentorScheduleError =>
-      'Tuve problemas al consultar tu horario. Inténtalo de nuevo más tarde.';
+      'Tuve problemas al consultar su horario. Inténtelo de nuevo más tarde.';
 
   @override
   String get mentorProgressError =>
-      'Tuve problemas al generar tu informe de progreso. Inténtalo de nuevo más tarde.';
+      'Tuve problemas al generar su informe de progreso. Inténtelo de nuevo más tarde.';
 
   @override
   String get mentorNotStartedStudying =>
-      '¡Aún no has empezado a estudiar! ¿Te gustaría que te ayude a crear un plan de estudio para empezar?';
+      '¡Aún no ha empezado a estudiar! ¿Le gustaría que le ayude a crear un plan de estudio para empezar?';
 
   @override
   String get mentorToday => 'hoy';
@@ -2026,34 +2038,34 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mentorInactiveDays(int daysCount) {
-    return 'Noté que no has estudiado en $daysCount días. ¿Te gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!';
+    return 'Noté que no ha estudiado en $daysCount días. ¿Le gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!';
   }
 
   @override
   String mentorGreatJobStayingActive(String daysAgo) {
-    return '¡Buen trabajo manteniéndote activo! Tu última sesión de estudio fue $daysAgo. ¡Sigue así!';
+    return '¡Buen trabajo manteniéndose activo! Su última sesión de estudio fue $daysAgo. ¡Siga así!';
   }
 
   @override
   String get mentorWelcomeStart =>
-      '¡Bienvenido! Comencemos con tus estudios. ¿Te gustaría programar una lección?';
+      '¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?';
 
   @override
   String get mentorActivityCheckError =>
-      'Tuve problemas al verificar tu actividad. ¿Cómo puedo ayudarte hoy?';
+      'Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?';
 
   @override
   String mentorRescheduledConfirmation(String topic) {
-    return 'He notado el cambio. Tu lección \"$topic\" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?';
+    return 'He notado el cambio. Su lección \"$topic\" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?';
   }
 
   @override
   String get mentorNewSessionAdded =>
-      '¡Genial! He añadido una nueva sesión de estudio a tu horario. Puedes revisar los detalles en tu planificador.';
+      '¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.';
 
   @override
   String get mentorChangesDone =>
-      '¡Listo! Los cambios se han realizado en tu horario.';
+      '¡Listo! Los cambios se han realizado en su horario.';
 
   @override
   String get mentorProgressReportTitle =>
@@ -2111,15 +2123,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorProgressReportError =>
-      'No se pudo generar el informe de progreso. Inténtalo de nuevo más tarde.';
+      'No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.';
 
   @override
   String get mentorNoSubjects =>
-      'Aún no has añadido ninguna materia. ¿Te gustaría ayuda para configurar tu primera materia?';
+      'Aún no ha añadido ninguna materia. ¿Le gustaría ayuda para configurar su primera materia?';
 
   @override
   String get mentorDoingWell =>
-      '¡Lo estás haciendo bien! ¿Te gustaría revisar tu progreso, programar una nueva lección o practicar algunas preguntas?';
+      '¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?';
 
   @override
   String get roadmaps => 'Roadmaps';
@@ -2220,4 +2232,70 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get progressBySubject => 'Progreso por Materia';
+
+  @override
+  String weekNumber(int number) {
+    return 'Semana $number';
+  }
+
+  @override
+  String milestoneForWeek(int number) {
+    return 'Hito de la semana $number';
+  }
+
+  @override
+  String get markschemeUnavailable =>
+      'No hay esquema de calificación disponible';
+
+  @override
+  String get answerTooShort =>
+      'La respuesta es demasiado corta. Proporcione más detalles.';
+
+  @override
+  String get goodResponseLength => 'Buena longitud de respuesta.';
+
+  @override
+  String get answerTooShortForCredit =>
+      'Respuesta demasiado corta para crédito completo.';
+
+  @override
+  String get noDrawingDetected =>
+      'No se detectó dibujo. Por favor, dibuje algo.';
+
+  @override
+  String get invalidDrawingData =>
+      'Datos de dibujo inválidos. Por favor, vuelva a dibujar.';
+
+  @override
+  String get allStepsIdentified => 'Todos los pasos requeridos identificados.';
+
+  @override
+  String get specialHandlingRequired =>
+      'Este tipo de pregunta requiere manejo especial.';
+
+  @override
+  String get someAnswersIncorrect => 'Algunas respuestas son incorrectas';
+
+  @override
+  String correctAnswerIs(String answer) {
+    return 'La respuesta correcta es: $answer';
+  }
+
+  @override
+  String allStepsFormat(int count) {
+    return '¡Los $count pasos identificados correctamente!';
+  }
+
+  @override
+  String partialStepsFormat(int matched, int total, String missing) {
+    return 'Identificó $matched de $total pasos. Faltan: $missing';
+  }
+
+  @override
+  String noStepsFormat(String steps) {
+    return 'No se encontraron pasos requeridos en su respuesta. Pasos clave a incluir: $steps';
+  }
+
+  @override
+  String get allRequiredStepsMissing => 'Faltan algunos pasos requeridos';
 }

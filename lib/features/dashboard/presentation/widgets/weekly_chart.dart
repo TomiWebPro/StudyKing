@@ -1,0 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/widgets/animated_bar_chart.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class WeeklyChart extends ConsumerWidget {
+  final List<Map<String, dynamic>> weeklyTrend;
+
+  const WeeklyChart({super.key, required this.weeklyTrend});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final trend = weeklyTrend.take(7).toList();
+    final chartData = <String, int>{};
+    for (var i = 0; i < trend.length; i++) {
+      final item = trend[i];
+      final weekLabel = 'W${trend.length - i}';
+      chartData[weekLabel] = item['attempts'] as int? ?? 0;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Icon(Icons.show_chart, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                l10n.weeklyActivity,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
+        AnimatedBarChart(
+          data: chartData.isNotEmpty
+              ? chartData
+              : {'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0},
+          accentColor: Theme.of(context).colorScheme.primary,
+          reduceMotion: ref.watch(settingsProvider).reduceMotion,
+        ),
+      ],
+    );
+  }
+}

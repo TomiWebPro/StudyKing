@@ -49,6 +49,7 @@ class HiveInitializer {
     await Hive.openBox<TutorSession>('tutor_sessions');
     await Hive.openBox('plan_adherence_metrics');
     await Hive.openBox('mastery_improvement_metrics');
+    await Hive.openBox<String>('focus_sessions');
 
     _logger.i('Hive initialized successfully with migrations');
   }

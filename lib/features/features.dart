@@ -11,3 +11,4 @@ export 'teaching/teaching.dart';
 export 'mentor/mentor.dart';
 export 'ingestion/ingestion.dart';
 export 'dashboard/dashboard.dart';
+export 'llm_tasks/llm_tasks.dart';

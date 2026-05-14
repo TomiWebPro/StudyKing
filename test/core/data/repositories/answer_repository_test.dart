@@ -61,6 +61,11 @@ void main() {
         final result = await repository.getByQuestion('q1');
         expect(result.length, 2);
       });
+
+      test('returns empty list when no answers for question', () async {
+        final result = await repository.getByQuestion('none');
+        expect(result, isEmpty);
+      });
     });
   });
 }

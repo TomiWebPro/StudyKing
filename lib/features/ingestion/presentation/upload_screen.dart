@@ -65,21 +65,25 @@ class _UploadScreenState extends State<UploadScreen> {
 
   Future<void> _captureFromCamera() async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       final picker = ImagePicker();
       final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1920);
       if (!mounted) return;
       if (photo != null) {
         setState(() {
-          _contentController.text = 'Image captured: ${photo.path}';
+          _contentController.text = '${l10n.imageCaptured}: ${photo.path}';
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image captured. You can add notes in the content field above.')),
+          SnackBar(content: Text(l10n.imageCaptured)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Camera error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.cameraError(e.toString())),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -113,7 +117,7 @@ class _UploadScreenState extends State<UploadScreen> {
         );
         if (result.isFailure) {
           setState(() {
-            _error = result.error;
+            _error = AppLocalizations.of(context)!.uploadFailed(result.error ?? '');
             _isUploading = false;
           });
           return;
@@ -139,111 +143,130 @@ class _UploadScreenState extends State<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return       Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.uploadContent),
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.addStudyMaterials,
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: AppLocalizations.of(context)!.titleRequired,
-                hintText: AppLocalizations.of(context)!.titleHint,
-                border: const OutlineInputBorder(),
+        child: FocusTraversalGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppLocalizations.of(context)!.addStudyMaterials,
+                style: TextStyle(fontSize: 16),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSubjectId,
-              decoration: InputDecoration(
-                labelText: AppLocalizations.of(context)!.subjectOptional,
-                border: const OutlineInputBorder(),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.titleRequired,
+                    hintText: AppLocalizations.of(context)!.titleHint,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
               ),
-              items: [
-                DropdownMenuItem(value: '', child: Text(AppLocalizations.of(context)!.none)),
-                ..._subjects.map((s) => DropdownMenuItem(
-                      value: s.id,
-                      child: Text(s.name),
-                    )),
-              ],
-              onChanged: (val) {
-                setState(() {
-                  _selectedSubjectId = val;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            Row(
-              children: [
-                ChoiceChip(
-                  label: Text(AppLocalizations.of(context)!.pasteText),
-                  selected: !_useUrlInput,
-                  onSelected: (_) => setState(() => _useUrlInput = false),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedSubjectId,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.subjectOptional,
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: '', child: Text(AppLocalizations.of(context)!.none)),
+                    ..._subjects.map((s) => DropdownMenuItem(
+                          value: s.id,
+                          child: Text(s.name),
+                        )),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedSubjectId = val;
+                    });
+                  },
                 ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: Text(AppLocalizations.of(context)!.urlLink),
-                  selected: _useUrlInput,
-                  onSelected: (_) => setState(() => _useUrlInput = true),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: Text(AppLocalizations.of(context)!.camera),
-                  selected: false,
-                  onSelected: (_) => _captureFromCamera(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            if (_useUrlInput)
-              TextField(
-                controller: _urlController,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.urlRequired,
-                  hintText: AppLocalizations.of(context)!.urlHint,
-                  border: const OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.url,
-              )
-            else
-              TextField(
-                controller: _contentController,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.contentRequired,
-                  hintText: AppLocalizations.of(context)!.contentHint,
-                  border: const OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 8,
               ),
+              const SizedBox(height: 16),
+
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(3),
+                child: Semantics(
+                  label: _useUrlInput ? AppLocalizations.of(context)!.urlLink : AppLocalizations.of(context)!.pasteText,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text(AppLocalizations.of(context)!.pasteText),
+                        selected: !_useUrlInput,
+                        onSelected: (_) => setState(() => _useUrlInput = false),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Text(AppLocalizations.of(context)!.urlLink),
+                        selected: _useUrlInput,
+                        onSelected: (_) => setState(() => _useUrlInput = true),
+                      ),
+                      const SizedBox(width: 8),
+                      Semantics(
+                        button: true,
+                        label: AppLocalizations.of(context)!.camera,
+                        child: ActionChip(
+                          avatar: const Icon(Icons.camera_alt, size: 18),
+                          label: Text(AppLocalizations.of(context)!.camera),
+                          onPressed: _captureFromCamera,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(4),
+              child: _useUrlInput
+                  ? TextField(
+                      controller: _urlController,
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.urlRequired,
+                        hintText: AppLocalizations.of(context)!.urlHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.url,
+                    )
+                  : TextField(
+                      controller: _contentController,
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.contentRequired,
+                        hintText: AppLocalizations.of(context)!.contentHint,
+                        border: const OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                      maxLines: 8,
+                    ),
+            ),
             const SizedBox(height: 24),
 
             if (_error != null)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red),
+                    Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                      child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                     ),
                   ],
                 ),
@@ -252,15 +275,15 @@ class _UploadScreenState extends State<UploadScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
+                    Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_success!, style: const TextStyle(color: Colors.green)),
+                      child: Text(_success!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                     ),
                   ],
                 ),
@@ -268,24 +291,28 @@ class _UploadScreenState extends State<UploadScreen> {
             if (_error != null || _success != null)
               const SizedBox(height: 16),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isUploading ? null : _submitContent,
-                icon: _isUploading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cloud_upload),
-                label: Text(_isUploading ? AppLocalizations.of(context)!.uploading : AppLocalizations.of(context)!.uploadContent),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(5),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isUploading ? null : _submitContent,
+                  icon: _isUploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_upload),
+                  label: Text(_isUploading ? AppLocalizations.of(context)!.uploading : AppLocalizations.of(context)!.uploadContent),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
               ),
             ),
           ],
+          ),
         ),
       ),
     );

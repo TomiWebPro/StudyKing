@@ -1,0 +1,5 @@
+Completed `test_master.md` Issue — Critical Coverage Gaps
+
+- Added `_openTutorMode` navigation test to `planner_screen_test.dart` (study plan tab) — verifies tapping the tutoring icon on daily plan cards pushes the `/tutor` route; added `_TestNavigatorObserver` helper, `DailyPlan`/`PlannedTopic` objects with non-empty `topicId`, and `onGenerateRoute` support to `_buildTestApp`
+- Expanded `mentor_screen_test.dart` from 95→298 lines — added 8 new widget tests: empty state content before initialization, sending message creates user/mentor chat bubbles, "You" sender label, streamed response rendering, sending indicator show/hide, error state when LLM stream fails (shows `errorWithResponse`), message list with `ListView` + scroll controller for multi-message, and chat input initial state verification
+- Created `AGENTS.md` with test placement conventions (source-to-test file mapping table), unit-vs-widget separation rule, and test patterns (hand-written fakes, Riverpod `ProviderScope.overrides`, `fixedStudentId` over `StudentIdService`, `NavigatorObserver` for navigation)

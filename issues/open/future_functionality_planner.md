@@ -1,141 +1,245 @@
-# Future Functionality Planner: High-Value Gaps & Roadmap Opportunities
+# Future Architecture: Planner Feature is a Facade with Critical Missing Layers
 
-## 1. AI Content Validation Pipeline — Fact-Check & Quality Gate
+## Context
 
-**Context:** The vision mandates: *"AI-generated content should not be blindly trusted; correctness, consistency, and usefulness should be continuously validated and improved."* Currently `QuestionGenerationService` (`lib/core/services/question_generation_service.dart:1-379`) generates questions via LLM, parses the JSON, and saves them directly — no factual validation, no cross-referencing against existing content, no deduplication, no human-in-the-loop workflow. This means a single hallucinated question enters the question bank silently and gets served to students during practice and exams.
+The `lib/features/planner/` directory presents itself as a properly structured feature (with `presentation/`, `providers/`, `services/`, and `widgets/` subdirectories) but is actually a facade:
 
-**Affected files:**
-- `lib/core/services/question_generation_service.dart` (generates questions without validation)
-- `lib/core/services/answer_validation_service.dart` (validates student answers, not generated content)
-- `lib/core/data/models/question_model.dart` (needs `validationStatus`, `validatedAt`, `validatedBy` fields, or equivalent quality tracking)
-- `lib/features/ingestion/services/content_pipeline.dart` (same trust issue — ingested content, mark schemes, topics all pass without validation)
-- New file: `lib/core/services/content_validator_service.dart` (validation orchestration)
-- New file: `lib/core/services/content_validators/question_validator.dart` (per-question fact-check)
-- New file: `lib/features/quality/presentation/` (review queue UI)
+- `providers/` — **empty** (0 files)
+- `services/` — **empty** (0 files)
+- `widgets/` — **empty** (0 files)
+- `presentation/` — contains a single **845-line** `PlannerScreen` StatefulWidget that handles all logic inline
 
-**Rationale:** Without a validation gate, the system compounds errors. A wrong question generates wrong mark schemes, wrong mastery data, and wrong adaptive recommendations. This undermines the entire loop of practice → evaluation → mastery tracking. Adding validation retroactively after the question bank grows large is exponentially harder.
+The screen directly instantiates `PlanRepository`, `MasteryGraphService`, `RoadmapRepository`, etc. in `initState` rather than receiving them through dependency injection or providers. It also contains hardcoded roadmap milestone generation logic (line 232–243 of `planner_screen.dart`) that creates milestones by simply dividing days by 7 with generic "Week N" labels — no AI, no topic awareness, no student history.
 
-**Acceptance criteria:**
-- `ContentValidatorService` intercepts every Question/Markscheme/Source before persistence
-- Validator categories: (a) Structural validity — JSON parseable, required fields non-null, enum values in range; (b) Semantic validity — LLM double-check: "Is this question answerable from the given markscheme? Is the correct answer actually correct?"; (c) Deduplication — Levenshtein or embedding-similarity check against existing questions in the same topic, flag near-duplicates; (d) Cross-reference — source text exists, topic exists, subject exists
-- Question saved with status `unvalidated` initially; validated async; status transitions to `validated` or `flagged`
-- A review screen (`QualityDashboardScreen`) lists flagged/unvalidated content with accept/reject/edit actions
-- Student-facing practice session skips `flagged` questions or marks them as "unverified"
-- Metrics: validation pass rate tracked over time per model per topic
+Simultaneously, the **Mentor** feature (`lib/features/mentor/`) independently handles scheduling/rescheduling via fragile keyword-matching (`_isScheduleRequest` at `mentor_service.dart:124`), duplicating planning concern in another feature. The **Lessons** feature (`lib/features/lessons/`) is also a shell — its `providers/`, `services/`, and `widgets/` directories are **all empty** too.
+
+This creates three interrelated problems:
+1. Planner is a monolith with no service/state layer — business logic is untestable and unreusable
+2. Mentor re-implements planning via substring matching (English/Spanish) instead of delegating to the planner
+3. Lessons have no programmatic structure — no lesson generation, no lesson CRUD beyond basic screens
 
 ---
 
-## 2. Formal Spaced Repetition Engine (SM-2 / FSRS)
+## Detailed Findings
 
-**Context:** The vision says *"the system should continuously test understanding, focus on weak areas, revisit old content intelligently, and optimize for retention and mastery."* The current `MasteryCalculationService` (`lib/core/services/mastery_calculation_service.dart:1-165`) tracks attempts with a custom ELO-like heuristic (accuracy × streak × confidence), but it does NOT implement any formal spaced repetition algorithm (SM-2, FSRS-4, or similar). There is no optimal interval scheduling, no forgetting-curve modeling, no daily review queue. The `EngagementScheduler` (`lib/core/services/engagement_scheduler.dart:115-132`) simply checks "days since last practice ≥ 3" as a flat threshold.
+### 1. Empty Provider/Service/Widget Directories in `planner`
+
+**Affected directories (all empty):**
+- `lib/features/planner/providers/`
+- `lib/features/planner/services/`
+- `lib/features/planner/widgets/`
+
+**Evidence:** The barrel file `lib/features/planner/planner.dart` exports only `presentation/planner_screen.dart`, but the `planner.dart` feature-file and directory structure imply a full feature module exists. The three empty subdirectories are dead scaffolding.
+
+### 2. PlannerScreen is a 845-Line Monolith Mixing All Concerns
 
 **Affected files:**
-- `lib/core/services/mastery_calculation_service.dart` (replace heuristic with SM-2/FSRS)
-- `lib/core/data/models/mastery_state_model.dart` (add `easinessFactor`, `interval`, `repetitions`, `nextReviewDate` or FSRS-equivalent parameters)
-- `lib/core/services/adaptive_practice_engine.dart` (exists, needs to consume scheduled review queue)
-- `lib/features/practice/presentation/practice_screen.dart` (add "Due for Review" section that shows cards due today)
-- `lib/core/services/engagement_scheduler.dart` (replace flat threshold with algorithm-driven nudge timing)
-- `lib/core/repositories/spaced_repetition_repository.dart` (new file — persist scheduling state)
+- `lib/features/planner/presentation/planner_screen.dart` (845 lines)
 
-**Rationale:** Students forget exponentially. Without a formal spacing algorithm, review becomes random or cramming-based. SM-2/FSRS are battle-tested (Anki, SuperMemo). Integrating a formal algorithm converts "revisit old content" from a vague aspiration into a data-driven engine that minimizes retention loss while minimizing total review time — directly fulfilling the vision's optimization requirement.
+**Evidence:** This single StatefulWidget:
+- Creates repositories directly in `initState` (lines 56–60, 64): `PlanRepository()`, `MasteryGraphService()`, `RoadmapRepository()`
+- Directly instantiates services (line 59): `MasteryGraphService(repository: widget.masteryGraphRepository)`
+- Handles its own async lifecycle with no state management abstraction
+- Contains inline roadmap creation with hardcoded milestone generation (lines 232–243):
+  ```dart
+  final numMilestones = (days / 7).ceil().clamp(1, 52);
+  final milestones = <MilestoneModel>[];
+  for (var i = 0; i < numMilestones; i++) {
+    final milestoneDeadline = now.add(Duration(
+      days: ((i + 1) * days / numMilestones).round(),
+    ));
+    milestones.add(MilestoneModel(
+      id: const Uuid().v4(),
+      title: l10n.weekNumber(i + 1),
+      description: l10n.milestoneForWeek(i + 1),
+      deadline: milestoneDeadline,
+      order: i + 1,
+    ));
+  }
+  ```
+- Build methods inline all widget rendering — no extracted widget classes, no widget tests possible
+- The screen mixes form input, roadmap CRUD, plan generation, daily plan rendering, timeline rendering, and milestone display
 
-**Acceptance criteria:**
-- Implement SM-2 algorithm (or FSRS-4 for state-of-the-art) in `MasteryCalculationService`
-- Each topic question card gets: `easinessFactor`, `interval` (days), `repetitions` (consecutive correct), `nextReviewDate`
-- After each practice session, recalculate intervals; sort practice queue by `nextReviewDate` ascending
-- Dashboard shows "X cards due for review today" with count
-- Practice screen has a "Spaced Review" mode distinct from "Free Practice" that serves only due cards
-- Spaced review data is persisted in Hive with migration path from legacy mastery states
-- Optional: FSRS-4 parameter optimization (user-level or global `w` matrix)
+### 3. MentorService Duplicates Planning via Keyword Matching
+
+**Affected file:** `lib/features/mentor/services/mentor_service.dart`
+
+**Evidence:**
+- `_isScheduleRequest()` (lines 124–137) uses substring matching on English and Spanish phrases
+- `_handleScheduleRequest()` (lines 165–206) queries tutor sessions and returns formatted text — no actual schedule modification
+- `_isConfirmation()` (lines 98–110) and `_isRejection()` (lines 112–122) duplicate confirmation patterns
+- `_pendingAction` state machine (lines 23–24, 52–62, 256–272) is fragile — only handles `reschedule` and `schedule` action types, with no rollback or audit trail
+- The system prompt (lines 274–303) instructs the assistant to "NEVER alter schedules without asking for confirmation first" but the confirmation mechanism is a fragile in-memory flag that is lost if the widget rebuilds
+
+### 4. Lessons Feature is an Empty Shell
+
+**Affected directories (all empty):**
+- `lib/features/lessons/providers/`
+- `lib/features/lessons/services/`
+- `lib/features/lessons/widgets/`
+
+**Evidence:** The barrel file `lessons.dart` only exports three screen files: `topic_list_screen.dart`, `lesson_list_screen.dart`, and `lesson_detail_screen.dart`. There are no lesson services, no lesson generation logic, no lesson plan management, and no lesson progress tracking. The `TutorService` in the teaching feature generates lesson plans, but the lessons feature has no way to store, organize, or manage them as first-class entities.
+
+### 5. Badge/Gamification System is Ephemeral (Query-Time Computation)
+
+**Affected file:** `lib/core/services/study_progress_tracker.dart` (lines 183–224)
+
+**Evidence:** `getBadges()` recomputes badges on every invocation:
+```dart
+Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
+  final stats = await getOverallStats(studentId);
+  final badges = <Map<String, dynamic>>[];
+  if ((stats['totalAttempts'] as int) >= 1) {
+    badges.add({...});
+  }
+  // ... all badges recomputed from current stats
+  return badges;
+}
+```
+- Badges are NOT persisted — a stat drop means badges disappear
+- No unlock timestamps are preserved (the method sets them to `DateTime.now()`)
+- No badge notification, no unlock animation, no badge detail screen
+- No badge history or collection view
+
+### 6. Engagement Scheduler Operates on Hardcoded Student ID
+
+**Affected file:** `lib/core/services/engagement_scheduler.dart`
+
+**Evidence:**
+- Line 47: `final studentId = 'default';` — hardcoded, multi-student impossible
+- Line 38: Daily check timer is fixed to 9:00 AM — no configurable window
+- `_sendNudgeNotifications()` (lines 51–99) catches and swallows all exceptions individually with empty catch blocks — failures are invisible
+- No in-app nudge UI — all nudges go through `NotificationService` which may not be available on all platforms
+- No engagement history tracking — no record of what nudges were sent, when, or whether the student acted on them
+
+### 7. Adaptive Practice Engine Exists but is Disconnected
+
+**Affected file:** `lib/core/services/adaptive_practice_engine.dart` (171 lines)
+
+**Evidence:** The engine has methods for question selection based on weakness scores, topic progress, and spaced repetition intervals. However:
+- It is not imported or used by the planner feature
+- It is not integrated with `PersonalLearningPlanService`
+- It is not referenced by the mentor feature
+- Its `_questionStates` map is in-memory only — lost on app restart
+- Neither `PracticeSessionService` nor `PersonalLearningPlanService` delegate to this engine
+
+### 8. No Cross-Feature Plan Adherence Tracking
+
+**Affected files (multiple):**
+
+**Evidence:**
+- `PersonalLearningPlanService.generatePlan()` generates plans but has no mechanism to track actual vs. planned adherence
+- `DashboardScreen` shows a `PlanAdherenceCard` but relies on `InstrumentationService` which has its own separate adherence tracking
+- `EngagementScheduler._countConsecutiveLowAdherence()` tries to compute adherence from `InstrumentationService.getAdherenceHistory()` but the data source is disconnected from the planner
+- There is no single "plan adherence" concept — three different abstractions exist: `PlanAdherenceMetric` (instrumentation), `plannedVsActual` (roadmap), and the engagement scheduler's ad-hoc check
 
 ---
 
-## 3. Multi-Provider LLM Failover & Health-Check Routing
+## Rationale
 
-**Context:** The `LlmService` (`lib/core/services/llm/llm_chat_service.dart:74-119`) supports `LlmProvider.openRouter`, `ollama`, and `openAI`, but the app picks ONE provider via configuration and stays with it. If OpenRouter has an outage, returns 429s, or the Ollama instance goes down, the entire app's AI features (tutoring, question generation, mentor chat, ingestion classification) become non-functional. There is no: health checking, automatic fallback, load-aware routing, or circuit-breaker pattern.
+The planner is the central orchestration point for the entire StudyKing vision described in `agent_must_read.md`. The vision calls for:
+- "break longterm goals into manageable schedules" — currently handled by hardcoded milestone generation
+- "adapt plans as progress changes" — no adaptation mechanism exists
+- "track actual adherence vs intended schedule" — three disconnected systems attempt this
+- "intelligent and long-term" planning — the current planner uses simple priority sorting
 
-**Affected files:**
-- `lib/core/services/llm/llm_chat_service.dart` (add failover routing logic)
-- `lib/core/constants/app_api_config.dart` (add fallback provider configs)
-- `lib/features/settings/presentation/api_config_screen.dart` (let users configure provider priority order)
-- `lib/core/services/llm/llm_model_service.dart` (provider metadata for routing decisions)
-- New file: `lib/core/services/llm/llm_router.dart` (failover logic, circuit breaker)
-- `lib/core/data/models/llm_models.dart` or new: provider health model
+The mentor's keyword-based scheduling creates a parallel, lower-quality planning system that is fragile (depends on exact substring matches) and in-memory only. These two systems must converge into a single planning architecture.
 
-**Rationale:** A single-provider architecture is a single point of failure for a production AI-native app. Students mid-lesson lose their tutor when the API is unreachable. Teachers lose confidence. The vision demands reliability. A circuit-breaker with automatic fallback to a secondary provider (e.g., OpenRouter → Ollama local → OpenAI) ensures continuity.
-
-**Acceptance criteria:**
-- `LlmRouter` accepts a list of provider configs ordered by priority
-- Before routing, `LlmRouter` runs lightweight health checks (`HEAD /v1/models` or equivalent) with configurable timeout (5s)
-- If primary provider fails health check or returns HTTP 4xx/5xx, automatic fallback to next provider in priority list
-- Circuit-breaker: after 3 consecutive failures within 5 minutes, provider is marked `degraded` and skipped for a cooldown period (configurable, default 60s)
-- Token/cost tracking continues to work across failover switches
-- Settings UI lets users configure priority order, health-check interval, circuit-breaker thresholds
-- Toast notification or status indicator warns user when failover occurs ("Using fallback provider: Ollama local")
+The lessons feature is a structural gap — without lesson services, there is no programmatic way to create, organize, or track lessons as part of a study plan.
 
 ---
 
-## 4. Handwriting Recognition & Vision-Based Answer Interpretation
+## Acceptance Criteria
 
-**Context:** The vision explicitly lists: *"handwritten/drawn responses on canvas"* and *"vision-based interpretation of student work"* as required interaction modes. A canvas drawing widget exists (`lib/features/questions/ui/widgets/canvas_drawing_widget.dart`) which lets students draw/write their answers, but the drawn content is only saved as a PNG image — it is NEVER interpreted. There is no handwriting recognition (OCR/HTR), no mathematical expression recognition, no diagram grading. The drawn answer cannot be automatically evaluated against the markscheme.
+### Phase 1: Planner Feature Architecture (foundational)
 
-**Affected files:**
-- `lib/features/questions/ui/widgets/canvas_drawing_widget.dart` (add "submit for recognition" action)
-- New file: `lib/core/services/vision/handwriting_recognition_service.dart`
-- New file: `lib/core/services/vision/math_expression_recognizer.dart`
-- `lib/core/services/answer_validation_service.dart` (handle recognized text from canvas as answer input)
-- `lib/features/practice/presentation/practice_session_screen.dart` (canvas → recognition → validation flow)
-- `pubspec.yaml` (may need `google_mlkit_digital_ink_recognition` or on-device `flutter_ocr`; or use LLM vision API)
-- `lib/core/services/llm/llm_chat_service.dart` (vision-capable model call for image-to-text)
+- [ ] Extract `PlannerService` from `PlannerScreen` — move plan generation, roadmap CRUD, and recommendation logic into `lib/features/planner/services/planner_service.dart`
+- [ ] Create `PlannerState` with Riverpod `Notifier` in `lib/features/planner/providers/planner_providers.dart` covering: current plan, roadmaps list, generation status, error state
+- [ ] Extract reusable widgets from `PlannerScreen`:
+  - `PlanSummaryCard` (lines 713–748)
+  - `DailyPlanCard` (lines 779–844)
+  - `RoadmapCard` (lines 497–586)
+  - `MilestoneTimeline` (lines 588–711)
+  - Place them in `lib/features/planner/widgets/`
+- [ ] Remove empty `providers/`, `services/`, `widgets/` directory placeholders once populated (or add `.gitkeep` if intentional)
+- [ ] Rewire `initState` repository instantiation to use Riverpod providers for testability
+- [ ] Add `mounted` guards to all async callbacks in `PlannerScreen`
 
-**Rationale:** This is a core differentiator. No other study app lets a student draw a free-body diagram, write a chemical equation by hand, or sketch a graph, then have it automatically recognized and evaluated against the expected answer. Without this, canvas drawing is a gimmick — a dead-end input that can never be graded. The vision explicitly calls this out as "vision-based interpretation of student work."
+### Phase 2: Mentor Scheduling Delegation
 
-**Acceptance criteria:**
-- Canvas "Submit" button triggers: (a) capture PNG from canvas, (b) send to recognition pipeline
-- Recognition pipeline has two strategies: (1) On-device OCR via ML Kit or `flutter_ocr` for handwriting; (2) LLM vision API (gpt-4o, claude-3-vision, gemini-vision) as fallback/upgrade for complex content (diagrams, math)
-- Recognized text is surfaced to the user for confirmation/correction before submission
-- Recognized answer flows into `AnswerValidationService` matching against the question's markscheme
-- Math mode: recognizes LaTeX from handwritten math (e.g., "x^2 + 2x + 1 = 0")
-- Diagram mode: for physics/biology, checks key labeled elements against expected diagram criteria
-- Performance: on-device inference where possible to avoid latency; vision API only for complex cases
-- Settings: toggle between "on-device only" and "use cloud vision"
+- [ ] Remove `_isScheduleRequest()`, `_handleScheduleRequest()`, `_isConfirmation()`, `_isRejection()`, and `_executePendingAction()` from `MentorService`
+- [ ] Replace with delegation to `PlannerService` — mentor detects scheduling intent via LLM (not keyword matching), then delegates to planner
+- [ ] Remove `_pendingAction` / `_pendingConfirmation` in-memory state machine — replace with planned actions persisted to a new `PendingActionRepository`
+- [ ] Add structured action type union (`ScheduleAction`, `RescheduleAction`, `PlanAdjustmentAction`) instead of `Map<String, dynamic>`
+
+### Phase 3: Lessons Feature Service Layer
+
+- [ ] Create `LessonService` in `lib/features/lessons/services/lesson_service.dart`:
+  - CRUD for lessons (create from tutor session, organize by topic/subject)
+  - Lesson generation pipeline (delegate to `TutorService.generateLessonPlan`)
+  - Lesson progress tracking
+- [ ] Create `LessonProvider` (Riverpod) in `lib/features/lessons/providers/`
+- [ ] Extract lesson list item widget and lesson detail sections into `lib/features/lessons/widgets/`
+- [ ] Remove empty directory placeholders when populated
+
+### Phase 4: Persistent Gamification System
+
+- [ ] Create `Badge` model and `BadgeRepository` in `core/data/` with persistent storage (Hive)
+- [ ] Create `BadgeService` with badge unlock logic that fires once and persists
+- [ ] Add badge unlock notification via `NotificationService`
+- [ ] Create a badge collection/achievement screen
+- [ ] Remove ephemeral badge computation from `StudyProgressTracker.getBadges()` — migrate to `BadgeService`
+
+### Phase 5: Multi-Student Engagement Scheduler
+
+- [ ] Remove hardcoded `studentId = 'default'` — iterate over all known student IDs or make student ID configurable
+- [ ] Replace fixed 9:00 AM timer with configurable check window (e.g., config in settings)
+- [ ] Add `EngagementNudgeRepository` to persist sent nudges and student responses
+- [ ] Build in-app nudge banner/inbox UI (not just platform notifications)
+- [ ] Add `_countConsecutiveLowAdherence` integration with actual planner data instead of `InstrumentationService`
+
+### Phase 6: Adaptive Practice ↔ Planner Integration
+
+- [ ] Integrate `AdaptivePracticeEngine` into `PersonalLearningPlanService.generatePlan()` to influence daily topic selection
+- [ ] Connect `PracticeSessionService` to `AdaptivePracticeEngine` for within-session question ordering
+- [ ] Persist `_questionStates` from `AdaptivePracticeEngine` to `SpacedRepetitionRepository` instead of in-memory map
+
+### Phase 7: Unified Plan Adherence
+
+- [ ] Define a single `PlanAdherence` model and repository
+- [ ] Remove ad-hoc adherence tracking from `EngagementScheduler._countConsecutiveLowAdherence()` and `InstrumentationService`
+- [ ] Have `PersonalLearningPlanService` record actual progress vs. planned
+- [ ] Have `DashboardScreen` read from this single source
 
 ---
 
-## 5. Study Timer / Focus Mode with Overwork Prevention
+## Files That Must Be Modified or Created
 
-**Context:** The vision repeatedly references time awareness: *"respect the requested class hour," "prevent student from overworking and stress," "estimate realistic workload," "track actual adherence vs intended schedule."* There is zero time-management infrastructure in the app — no Pomodoro timer, no focus session tracker, no break reminder, no daily/weekly study time cap enforcement. The `EngagementScheduler` (`lib/core/services/engagement_scheduler.dart:101-113`) has an `overwork` nudge that fires only once after 4+ hours of study, but it cannot actively enforce limits because it doesn't know when the student started studying.
-
-**Affected files:**
-- New file: `lib/features/focus_mode/presentation/focus_timer_screen.dart`
-- New file: `lib/features/focus_mode/presentation/widgets/` (timer widget, session summary card)
-- New file: `lib/features/focus_mode/services/focus_session_service.dart`
-- New file: `lib/features/focus_mode/data/models/focus_session_model.dart`
-- `lib/core/services/engagement_scheduler.dart` (consume focus session data for overwork detection)
-- `lib/core/routes/app_router.dart` (route to focus mode)
-- `lib/features/dashboard/presentation/dashboard_screen.dart` (show today's focus time)
-- `lib/core/providers/app_providers.dart` (register focus session provider)
-
-**Rationale:** Time management is fundamental to the "long-term study companion" vision. A student saying "I want to study 30 minutes of IB Physics" needs a timer that enforces exactly that — and stops them from over-studying. The Pomodoro technique (25 min focus + 5 min break) is the gold standard for student productivity. Integration with the planner and engagement scheduler creates a virtuous loop: plan → focus → track → adjust.
-
-**Acceptance criteria:**
-- Focus timer: student sets duration (linked to planned class hour), starts a countdown, focus session begins
-- Break enforcement: after focus block, a break timer counts down (5 min default, configurable); during break, the student cannot start another focus block
-- Daily cap: student sets max study hours/day; once reached, the app blocks starting new focus sessions and shows a non-dismissible "You've reached your daily limit — well done!" message (configurable in settings)
-- Session data persisted: `FocusSession` model with `startTime`, `endTime`, `plannedDuration`, `actualDuration`, `subjectId`, `topicId`, `completed`
-- Dashboard shows today's total focus time vs. planned time vs. daily cap
-- `EngagementScheduler` uses focus session data for accurate overwork detection (not just attempt-based estimate)
-- Planner integration: if a lesson is planned for a given time slot, one-tap "Start focus for this lesson" button
-- Responsive design: works on mobile (portrait timer) and desktop (side panel timer)
-
----
-
-## Prioritization Guidance
-
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| **P0** | AI Content Validation Pipeline | Medium (3-4 weeks) | Critical — prevents systemic data quality rot |
-| **P0** | Multi-Provider LLM Failover | Medium (2-3 weeks) | Critical — production reliability for all AI features |
-| **P1** | Formal Spaced Repetition Engine | Medium (3-4 weeks) | High — core pedagogical differentiator |
-| **P2** | Vision-Based Handwriting Recognition | Large (5-8 weeks) | Medium — differentiating but technically complex |
-| **P2** | Study Timer / Focus Mode | Small (1-2 weeks) | High — immediately useful, solves overwork problem |
+| Action | File |
+|--------|------|
+| Refactor | `lib/features/planner/presentation/planner_screen.dart` |
+| Create | `lib/features/planner/services/planner_service.dart` |
+| Create | `lib/features/planner/providers/planner_providers.dart` |
+| Create | `lib/features/planner/widgets/plan_summary_card.dart` |
+| Create | `lib/features/planner/widgets/daily_plan_card.dart` |
+| Create | `lib/features/planner/widgets/roadmap_card.dart` |
+| Create | `lib/features/planner/widgets/milestone_timeline.dart` |
+| Refactor | `lib/features/mentor/services/mentor_service.dart` |
+| Create | `lib/core/data/models/pending_action_model.dart` |
+| Create | `lib/core/data/repositories/pending_action_repository.dart` |
+| Create | `lib/features/lessons/services/lesson_service.dart` |
+| Create | `lib/features/lessons/providers/lesson_providers.dart` |
+| Create | `lib/core/data/models/badge_model.dart` |
+| Create | `lib/core/data/repositories/badge_repository.dart` |
+| Create | `lib/core/services/badge_service.dart` |
+| Refactor | `lib/core/services/study_progress_tracker.dart` (getBadges) |
+| Refactor | `lib/core/services/engagement_scheduler.dart` |
+| Create | `lib/core/data/models/engagement_nudge_model.dart` |
+| Create | `lib/core/data/repositories/engagement_nudge_repository.dart` |
+| Refactor | `lib/core/services/adaptive_practice_engine.dart` (persistence) |
+| Create | `lib/core/data/models/plan_adherence_model.dart` |
+| Create | `lib/core/data/repositories/plan_adherence_repository.dart` |
+| Refactor | `lib/core/services/personal_learning_plan_service.dart` (adherence tracking) |
+| Remove/refactor | `lib/features/dashboard/services/` (if empty, populate or remove) |
+| Update | `lib/features/planner/planner.dart` (barrel exports) |
+| Update | `lib/features/lessons/lessons.dart` (barrel exports) |

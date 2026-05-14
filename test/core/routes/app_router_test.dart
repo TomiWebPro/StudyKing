@@ -18,7 +18,10 @@ void main() {
     test('sessionHistory', () => expect(AppRoutes.sessionHistory, '/session-history'));
     test('tutor', () => expect(AppRoutes.tutor, '/tutor'));
     test('planner', () => expect(AppRoutes.planner, '/planner'));
+    test('lessonDetail', () => expect(AppRoutes.lessonDetail, '/lesson-detail'));
+    test('lessonList', () => expect(AppRoutes.lessonList, '/lesson-list'));
     test('llmTasks', () => expect(AppRoutes.llmTasks, '/llm-tasks'));
+    test('focusMode', () => expect(AppRoutes.focusMode, '/focus-mode'));
   });
 
   group('SubjectDetailArgs', () {
@@ -172,6 +175,73 @@ void main() {
         subjectId: 's1',
       );
       expect(args.durationMinutes, 45);
+    });
+  });
+
+  group('LessonDetailArgs', () {
+    test('creates with required fields only', () {
+      final args = const LessonDetailArgs(
+        lessonId: 'l1',
+        topicId: 't1',
+        topicTitle: 'Algebra',
+      );
+      expect(args.lessonId, 'l1');
+      expect(args.topicId, 't1');
+      expect(args.topicTitle, 'Algebra');
+      expect(args.subjectId, isNull);
+    });
+
+    test('creates with all fields', () {
+      final args = const LessonDetailArgs(
+        lessonId: 'l1',
+        topicId: 't1',
+        topicTitle: 'Algebra',
+        subjectId: 's1',
+      );
+      expect(args.lessonId, 'l1');
+      expect(args.topicId, 't1');
+      expect(args.topicTitle, 'Algebra');
+      expect(args.subjectId, 's1');
+    });
+
+    test('subjectId defaults to null', () {
+      final args = const LessonDetailArgs(
+        lessonId: 'l1',
+        topicId: 't1',
+        topicTitle: 'Algebra',
+      );
+      expect(args.subjectId, isNull);
+    });
+  });
+
+  group('LessonListArgs', () {
+    test('creates with required fields only', () {
+      final args = const LessonListArgs(
+        topicId: 't1',
+        topicTitle: 'Algebra',
+      );
+      expect(args.topicId, 't1');
+      expect(args.topicTitle, 'Algebra');
+      expect(args.subjectId, '');
+    });
+
+    test('creates with all fields', () {
+      final args = const LessonListArgs(
+        topicId: 't1',
+        topicTitle: 'Algebra',
+        subjectId: 's1',
+      );
+      expect(args.topicId, 't1');
+      expect(args.topicTitle, 'Algebra');
+      expect(args.subjectId, 's1');
+    });
+
+    test('subjectId defaults to empty string', () {
+      final args = const LessonListArgs(
+        topicId: 't1',
+        topicTitle: 'Algebra',
+      );
+      expect(args.subjectId, '');
     });
   });
 
@@ -520,6 +590,161 @@ void main() {
     });
   });
 
+  group('lessonList', () {
+    test('returns route with LessonListArgs (required only)', () {
+      final route = onGenerateRoute(RouteSettings(
+        name: AppRoutes.lessonList,
+        arguments: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.lessonList);
+    });
+
+    test('returns route with LessonListArgs (all fields)', () {
+      final route = onGenerateRoute(RouteSettings(
+        name: AppRoutes.lessonList,
+        arguments: const LessonListArgs(
+          topicId: 't1',
+          topicTitle: 'Algebra',
+          subjectId: 's1',
+        ),
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.lessonList);
+    });
+
+    test('returns null without args', () {
+      expect(
+        onGenerateRoute(const RouteSettings(name: AppRoutes.lessonList)),
+        isNull,
+      );
+    });
+
+    test('returns null with null args', () {
+      expect(
+        onGenerateRoute(const RouteSettings(
+          name: AppRoutes.lessonList,
+          arguments: null,
+        )),
+        isNull,
+      );
+    });
+
+    test('returns null with string args', () {
+      expect(
+        onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonList,
+          arguments: 'wrong type',
+        )),
+        isNull,
+      );
+    });
+
+    test('returns null with Map args instead of LessonListArgs', () {
+      expect(
+        onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonList,
+          arguments: <String, dynamic>{'topicId': 't1'},
+        )),
+        isNull,
+      );
+    });
+  });
+
+  group('lessonDetail', () {
+    test('returns route with LessonDetailArgs (required only)', () {
+      final route = onGenerateRoute(RouteSettings(
+        name: AppRoutes.lessonDetail,
+        arguments: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.lessonDetail);
+    });
+
+    test('returns route with LessonDetailArgs (all fields)', () {
+      final route = onGenerateRoute(RouteSettings(
+        name: AppRoutes.lessonDetail,
+        arguments: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+          subjectId: 's1',
+        ),
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.lessonDetail);
+    });
+
+    test('returns null without args', () {
+      expect(
+        onGenerateRoute(const RouteSettings(name: AppRoutes.lessonDetail)),
+        isNull,
+      );
+    });
+
+    test('returns null with null args', () {
+      expect(
+        onGenerateRoute(const RouteSettings(
+          name: AppRoutes.lessonDetail,
+          arguments: null,
+        )),
+        isNull,
+      );
+    });
+
+    test('returns null with string args', () {
+      expect(
+        onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonDetail,
+          arguments: 'wrong type',
+        )),
+        isNull,
+      );
+    });
+
+    test('returns null with Map args instead of LessonDetailArgs', () {
+      expect(
+        onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonDetail,
+          arguments: <String, dynamic>{'lessonId': 'l1'},
+        )),
+        isNull,
+      );
+    });
+  });
+
+  group('focusMode', () {
+    test('returns route without args', () {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.focusMode,
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.focusMode);
+    });
+
+    test('returns route with args (ignored)', () {
+      final route = onGenerateRoute(RouteSettings(
+        name: AppRoutes.focusMode,
+        arguments: 'anything',
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.focusMode);
+    });
+
+    test('returns route with null args', () {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.focusMode,
+        arguments: null,
+      ));
+      expect(route, isNotNull);
+      expect(route!.settings.name, AppRoutes.focusMode);
+    });
+  });
+
   group('_materialPageRoute (tested indirectly via onGenerateRoute)', () {
     test('creates route with 200ms transition duration', () {
       final route = onGenerateRoute(const RouteSettings(
@@ -588,5 +813,8 @@ final List<String> appRoutesAll = [
   AppRoutes.sessionHistory,
   AppRoutes.tutor,
   AppRoutes.planner,
+  AppRoutes.lessonDetail,
+  AppRoutes.lessonList,
   AppRoutes.llmTasks,
+  AppRoutes.focusMode,
 ];

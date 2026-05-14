@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -8,11 +9,15 @@ import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 MasteryState _masteryState({
@@ -182,26 +187,68 @@ class FakeTopicRepository extends TopicRepository {
   }
 }
 
-Widget _buildTestApp(Widget screen) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: Scaffold(body: screen),
+Widget _buildTestApp(
+  Widget screen, {
+  MasteryGraphService? masteryService,
+  StudyProgressTracker? tracker,
+  InstrumentationService? instrumentation,
+  TopicRepository? topicRepo,
+}) {
+  return ProviderScope(
+    overrides: [
+      settingsProvider.overrideWith(
+        (ref) => SettingsController(SettingsRepository()),
+      ),
+      if (masteryService != null)
+        masteryGraphServiceProvider.overrideWithValue(masteryService),
+      if (tracker != null)
+        dashboardStudyProgressTrackerProvider.overrideWithValue(tracker),
+      if (instrumentation != null)
+        dashboardInstrumentationServiceProvider.overrideWithValue(instrumentation),
+      if (topicRepo != null)
+        dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(body: screen),
+    ),
   );
 }
 
-Widget _buildTestAppWithRoutes(Widget screen) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: Scaffold(body: screen),
-    routes: {
-      '/practice-session': (_) => const Scaffold(
-        body: Text('Practice Session'),
+Widget _buildTestAppWithRoutes(
+  Widget screen, {
+  MasteryGraphService? masteryService,
+  StudyProgressTracker? tracker,
+  InstrumentationService? instrumentation,
+  TopicRepository? topicRepo,
+}) {
+  return ProviderScope(
+    overrides: [
+      settingsProvider.overrideWith(
+        (ref) => SettingsController(SettingsRepository()),
       ),
-    },
+      if (masteryService != null)
+        masteryGraphServiceProvider.overrideWithValue(masteryService),
+      if (tracker != null)
+        dashboardStudyProgressTrackerProvider.overrideWithValue(tracker),
+      if (instrumentation != null)
+        dashboardInstrumentationServiceProvider.overrideWithValue(instrumentation),
+      if (topicRepo != null)
+        dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(body: screen),
+      routes: {
+        '/practice-session': (_) => const Scaffold(
+          body: Text('Practice Session'),
+        ),
+      },
+    ),
   );
 }
 
@@ -221,13 +268,11 @@ void main() {
         final instrumentation = FakeInstrumentationService();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: defaultTopicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: defaultTopicRepo,
         ));
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -242,13 +287,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -269,13 +312,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -292,13 +333,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -319,13 +358,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -339,13 +376,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -369,13 +404,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -395,13 +428,11 @@ void main() {
         });
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -424,13 +455,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -448,13 +477,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -482,13 +509,11 @@ void main() {
         ));
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -506,13 +531,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -533,13 +556,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -562,13 +583,11 @@ void main() {
         ));
 
         await tester.pumpWidget(_buildTestAppWithRoutes(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -594,13 +613,11 @@ void main() {
         ));
 
         await tester.pumpWidget(_buildTestAppWithRoutes(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -620,13 +637,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -664,13 +679,11 @@ void main() {
         ));
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -695,13 +708,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -720,13 +731,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -742,13 +751,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -764,13 +771,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -788,13 +793,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -812,13 +815,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -836,13 +837,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -860,13 +859,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -884,13 +881,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -908,13 +903,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -942,13 +935,11 @@ void main() {
         ));
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -964,13 +955,11 @@ void main() {
         final topicRepo = FakeTopicRepository(failGet: true);
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -992,13 +981,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -1018,13 +1005,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -1041,13 +1026,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -1082,13 +1065,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -1110,13 +1091,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 
@@ -1138,13 +1117,11 @@ void main() {
         final topicRepo = FakeTopicRepository();
 
         await tester.pumpWidget(_buildTestApp(
-          DashboardScreen(
-            studentId: 'student-1',
-            masteryService: masteryService,
-            tracker: tracker,
-            instrumentation: instrumentation,
-            topicRepo: topicRepo,
-          ),
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: masteryService,
+          tracker: tracker,
+          instrumentation: instrumentation,
+          topicRepo: topicRepo,
         ));
         await tester.pumpAndSettle();
 

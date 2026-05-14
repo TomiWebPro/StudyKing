@@ -70,7 +70,7 @@
       }
     }
   },
-  "fillAllFieldsCorrectly": "Por favor complete todos los campos correctamente",
+  "fillAllFieldsCorrectly": "Por favor, complete todos los campos correctamente",
   "@fillAllFieldsCorrectly": {
     "description": "Error message when form fields are invalid"
   },
@@ -1172,6 +1172,19 @@
   "@graphTypeDetectionError": {
     "description": "Error message for graph type detection failure"
   },
+  "imageCaptured": "Imagen capturada. Puede agregar notas en el campo de contenido arriba.",
+  "@imageCaptured": {
+    "description": "Snackbar message when image is captured from camera"
+  },
+  "cameraError": "Error de cámara: {error}",
+  "@cameraError": {
+    "description": "Error message when camera capture fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
 
   "lessonScheduler": "Planificador de Lecciones",
   "@lessonScheduler": {
@@ -1601,6 +1614,10 @@
     "description": "Title for session history screen"
   },
 
+  "dashboard": "Panel",
+  "@dashboard": {
+    "description": "Navigation label for dashboard"
+  },
   "studyDashboard": "Panel de Estudio",
   "@studyDashboard": {
     "description": "Dashboard screen title"
@@ -2051,11 +2068,11 @@
       }
     }
   },
-  "noTopicsYetAddSome": "¿No hay temas? ¡agregue algunos!",
+  "noTopicsYetAddSome": "¿No hay temas? ¡Agregue algunos!",
   "@noTopicsYetAddSome": {
     "description": "Empty state message for topic list"
   },
-  "noLessonsUsePlanner": "¿No hay lecciones? ¡use el Planificador para generar!",
+  "noLessonsUsePlanner": "¿No hay lecciones? ¡Use el Planificador para generar!",
   "@noLessonsUsePlanner": {
     "description": "Empty state message for lesson list"
   },
@@ -2075,7 +2092,7 @@
   "@endLesson": {
     "description": "Button to end the current lesson"
   },
-  "typeYourMessage": "Escribe tu mensaje...",
+  "typeYourMessage": "Escriba su mensaje...",
   "@typeYourMessage": {
     "description": "Hint text for message input field"
   },
@@ -2087,7 +2104,7 @@
   "@progressReport": {
     "description": "Title for progress report dialog"
   },
-  "askMentorAnything": "Pregúntale a tu mentor...",
+  "askMentorAnything": "Pregúntele a su mentor...",
   "@askMentorAnything": {
     "description": "Hint text for mentor chat input"
   },
@@ -2095,11 +2112,11 @@
   "@mentorGreeting": {
     "description": "Welcome title for mentor screen"
   },
-  "mentorSubtitle": "Tu asistente académico personal IA",
+  "mentorSubtitle": "Su asistente académico personal IA",
   "@mentorSubtitle": {
     "description": "Subtitle for mentor screen"
   },
-  "startingLesson": "Iniciando tu lección...",
+  "startingLesson": "Iniciando su lección...",
   "@startingLesson": {
     "description": "Loading message while lesson initializes"
   },
@@ -2480,10 +2497,6 @@
   "@errorUnexpected": {
     "description": "Generic unexpected error message"
   },
-  "retry": "Reintentar",
-  "@retry": {
-    "description": "Generic retry button label"
-  },
   "retryConnection": "Reintentar Conexión",
   "@retryConnection": {
     "description": "Button label to retry connection"
@@ -2525,7 +2538,7 @@
   "@masteryLevelNovice": {
     "description": "Mastery level label for novice"
   },
-  "masteryLevelBrowsing": "Iniciado",
+  "masteryLevelBrowsing": "Explorando",
   "@masteryLevelBrowsing": {
     "description": "Mastery level label for browsing"
   },
@@ -2676,15 +2689,15 @@
     "description": "Error message when AI response fails"
   },
 
-  "mentorRejectionResponse": "¡No hay problema! No haré ningún cambio. Avísame si necesitas algo más.",
+  "mentorRejectionResponse": "¡No hay problema! No haré ningún cambio. Avíseme si necesita algo más.",
   "@mentorRejectionResponse": {
     "description": "Mentor response when user rejects a pending action"
   },
-  "mentorNoLessonsScheduled": "Aún no tienes lecciones programadas. ¿Te gustaría que te ayude a crear un plan de estudio? Puedo ayudarte a establecer sesiones de estudio regulares para tus materias.",
+  "mentorNoLessonsScheduled": "Aún no tiene lecciones programadas. ¿Le gustaría que le ayude a crear un plan de estudio? Puedo ayudarle a establecer sesiones de estudio regulares para sus materias.",
   "@mentorNoLessonsScheduled": {
     "description": "Mentor message when no lessons are scheduled"
   },
-  "mentorUpcomingLessonsHeader": "Aquí están tus próximas lecciones:\n",
+  "mentorUpcomingLessonsHeader": "Aquí están sus próximas lecciones:\n",
   "@mentorUpcomingLessonsHeader": {
     "description": "Header for upcoming lessons list"
   },
@@ -2697,30 +2710,30 @@
       "duration": { "type": "int" }
     }
   },
-  "mentorReschedulePrompt": "\n¿Te gustaría reprogramar alguna de estas?",
+  "mentorReschedulePrompt": "\n¿Le gustaría reprogramar alguna de estas?",
   "@mentorReschedulePrompt": {
     "description": "Prompt asking if user wants to reschedule"
   },
-  "mentorRecentSessionOnDate": "Tu sesión de estudio más reciente fue el {date}. ¿Te gustaría programar una nueva lección?",
+  "mentorRecentSessionOnDate": "Su sesión de estudio más reciente fue el {date}. ¿Le gustaría programar una nueva lección?",
   "@mentorRecentSessionOnDate": {
     "description": "Message showing recent session date",
     "placeholders": {
       "date": { "type": "String" }
     }
   },
-  "mentorNotStarted": "Parece que aún no has empezado. ¿Te gustaría que te ayude a programar tu primera lección?",
+  "mentorNotStarted": "Parece que aún no ha empezado. ¿Le gustaría que le ayude a programar su primera lección?",
   "@mentorNotStarted": {
     "description": "Mentor message when student hasn't started studying"
   },
-  "mentorScheduleError": "Tuve problemas al consultar tu horario. Inténtalo de nuevo más tarde.",
+  "mentorScheduleError": "Tuve problemas al consultar su horario. Inténtelo de nuevo más tarde.",
   "@mentorScheduleError": {
     "description": "Error message when schedule lookup fails"
   },
-  "mentorProgressError": "Tuve problemas al generar tu informe de progreso. Inténtalo de nuevo más tarde.",
+  "mentorProgressError": "Tuve problemas al generar su informe de progreso. Inténtelo de nuevo más tarde.",
   "@mentorProgressError": {
     "description": "Error message when progress report generation fails"
   },
-  "mentorNotStartedStudying": "¡Aún no has empezado a estudiar! ¿Te gustaría que te ayude a crear un plan de estudio para empezar?",
+  "mentorNotStartedStudying": "¡Aún no ha empezado a estudiar! ¿Le gustaría que le ayude a crear un plan de estudio para empezar?",
   "@mentorNotStartedStudying": {
     "description": "Mentor message when no study sessions exist"
   },
@@ -2735,40 +2748,40 @@
       "daysCount": { "type": "int" }
     }
   },
-  "mentorInactiveDays": "Noté que no has estudiado en {daysCount} días. ¿Te gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!",
+  "mentorInactiveDays": "Noté que no ha estudiado en {daysCount} días. ¿Le gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!",
   "@mentorInactiveDays": {
     "description": "Mentor message when student has been inactive for 3+ days",
     "placeholders": {
       "daysCount": { "type": "int" }
     }
   },
-  "mentorGreatJobStayingActive": "¡Buen trabajo manteniéndote activo! Tu última sesión de estudio fue {daysAgo}. ¡Sigue así!",
+  "mentorGreatJobStayingActive": "¡Buen trabajo manteniéndose activo! Su última sesión de estudio fue {daysAgo}. ¡Siga así!",
   "@mentorGreatJobStayingActive": {
     "description": "Mentor praise when student is active",
     "placeholders": {
       "daysAgo": { "type": "String" }
     }
   },
-  "mentorWelcomeStart": "¡Bienvenido! Comencemos con tus estudios. ¿Te gustaría programar una lección?",
+  "mentorWelcomeStart": "¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?",
   "@mentorWelcomeStart": {
     "description": "Mentor welcome message for new students"
   },
-  "mentorActivityCheckError": "Tuve problemas al verificar tu actividad. ¿Cómo puedo ayudarte hoy?",
+  "mentorActivityCheckError": "Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?",
   "@mentorActivityCheckError": {
     "description": "Error message when activity check fails"
   },
-  "mentorRescheduledConfirmation": "He notado el cambio. Tu lección \"{topic}\" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?",
+  "mentorRescheduledConfirmation": "He notado el cambio. Su lección \"{topic}\" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?",
   "@mentorRescheduledConfirmation": {
     "description": "Confirmation after rescheduling a lesson",
     "placeholders": {
       "topic": { "type": "String" }
     }
   },
-  "mentorNewSessionAdded": "¡Genial! He añadido una nueva sesión de estudio a tu horario. Puedes revisar los detalles en tu planificador.",
+  "mentorNewSessionAdded": "¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.",
   "@mentorNewSessionAdded": {
     "description": "Confirmation after adding a new session"
   },
-  "mentorChangesDone": "¡Listo! Los cambios se han realizado en tu horario.",
+  "mentorChangesDone": "¡Listo! Los cambios se han realizado en su horario.",
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
   },
@@ -2848,15 +2861,15 @@
       "message": { "type": "String" }
     }
   },
-  "mentorProgressReportError": "No se pudo generar el informe de progreso. Inténtalo de nuevo más tarde.",
+  "mentorProgressReportError": "No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.",
   "@mentorProgressReportError": {
     "description": "Error when progress report generation fails"
   },
-  "mentorNoSubjects": "Aún no has añadido ninguna materia. ¿Te gustaría ayuda para configurar tu primera materia?",
+  "mentorNoSubjects": "Aún no ha añadido ninguna materia. ¿Le gustaría ayuda para configurar su primera materia?",
   "@mentorNoSubjects": {
     "description": "Mentor message when no subjects exist"
   },
-  "mentorDoingWell": "¡Lo estás haciendo bien! ¿Te gustaría revisar tu progreso, programar una nueva lección o practicar algunas preguntas?",
+  "mentorDoingWell": "¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?",
   "@mentorDoingWell": {
     "description": "Mentor suggestion when student is doing well"
   },
@@ -2994,5 +3007,119 @@
   "progressBySubject": "Progreso por Materia",
   "@progressBySubject": {
     "description": "Section title for per-subject progress"
+  },
+  "weekNumber": "Semana {number}",
+  "@weekNumber": {
+    "description": "Label for a numbered week in a roadmap",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "milestoneForWeek": "Hito de la semana {number}",
+  "@milestoneForWeek": {
+    "description": "Description for a milestone in a roadmap",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+
+  "markschemeUnavailable": "No hay esquema de calificación disponible",
+  "@markschemeUnavailable": {
+    "description": "Mensaje cuando no hay un esquema de calificación para una pregunta"
+  },
+
+  "answerTooShort": "La respuesta es demasiado corta. Proporcione más detalles.",
+  "@answerTooShort": {
+    "description": "Comentario cuando la respuesta es demasiado corta"
+  },
+
+  "goodResponseLength": "Buena longitud de respuesta.",
+  "@goodResponseLength": {
+    "description": "Comentario cuando la longitud de la respuesta es adecuada"
+  },
+
+  "answerTooShortForCredit": "Respuesta demasiado corta para crédito completo.",
+  "@answerTooShortForCredit": {
+    "description": "Comentario cuando la respuesta es demasiado corta para crédito completo"
+  },
+
+  "noDrawingDetected": "No se detectó dibujo. Por favor, dibuje algo.",
+  "@noDrawingDetected": {
+    "description": "Comentario cuando no se detecta contenido de dibujo"
+  },
+
+  "invalidDrawingData": "Datos de dibujo inválidos. Por favor, vuelva a dibujar.",
+  "@invalidDrawingData": {
+    "description": "Comentario cuando los datos del dibujo no son válidos"
+  },
+
+  "allStepsIdentified": "Todos los pasos requeridos identificados.",
+  "@allStepsIdentified": {
+    "description": "Comentario cuando todos los pasos se identifican correctamente"
+  },
+
+  "specialHandlingRequired": "Este tipo de pregunta requiere manejo especial.",
+  "@specialHandlingRequired": {
+    "description": "Mensaje para tipos de pregunta que necesitan manejo especial"
+  },
+
+  "someAnswersIncorrect": "Algunas respuestas son incorrectas",
+  "@someAnswersIncorrect": {
+    "description": "Comentario para respuestas de opción múltiple parcialmente incorrectas"
+  },
+
+  "correctAnswerIs": "La respuesta correcta es: {answer}",
+  "@correctAnswerIs": {
+    "description": "Mensaje que muestra la respuesta correcta",
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+
+  "allStepsFormat": "¡Los {count} pasos identificados correctamente!",
+  "@allStepsFormat": {
+    "description": "Comentario cuando todos los pasos requeridos están identificados",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "partialStepsFormat": "Identificó {matched} de {total} pasos. Faltan: {missing}",
+  "@partialStepsFormat": {
+    "description": "Comentario cuando faltan algunos pasos",
+    "placeholders": {
+      "matched": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "String"
+      }
+    }
+  },
+
+  "noStepsFormat": "No se encontraron pasos requeridos en su respuesta. Pasos clave a incluir: {steps}",
+  "@noStepsFormat": {
+    "description": "Comentario cuando no se encuentran pasos requeridos",
+    "placeholders": {
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+
+  "allRequiredStepsMissing": "Faltan algunos pasos requeridos",
+  "@allRequiredStepsMissing": {
+    "description": "Comentario cuando faltan pasos requeridos en la respuesta"
   }
 }

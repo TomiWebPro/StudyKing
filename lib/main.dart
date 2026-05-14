@@ -21,6 +21,7 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_view.dart';
 import 'features/practice/presentation/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
+import 'features/focus_mode/presentation/focus_timer_screen.dart';
 
 final Logger _mainLogger = const Logger('App');
 
@@ -217,6 +218,7 @@ class _MainScreenState extends State<MainScreen> {
     SubjectListView(),
     PracticeScreen(),
     MentorScreen(),
+    FocusTimerScreen(),
     SettingsScreen(),
   ];
 
@@ -261,6 +263,11 @@ class _MainScreenState extends State<MainScreen> {
               icon: Icon(Icons.auto_awesome_outlined),
               selectedIcon: Icon(Icons.auto_awesome),
               label: l10n.mentor,
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.timer_outlined),
+              selectedIcon: Icon(Icons.timer),
+              label: 'Focus',
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

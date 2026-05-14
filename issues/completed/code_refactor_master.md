@@ -1,61 +1,76 @@
-# Code Refactor: Orphaned Components & Dead Code (~1,400 lines)
+# Refactor: Mitigate God Widgets, Production-Blocking Error Logging, and Feature Structure Inconsistencies
 
 ## Context
 
-The codebase contains multiple large component files that are defined, exported in barrel files, or instantiated but **never imported or referenced anywhere** outside their own definition. This adds cognitive overhead, increases build times, and signals incomplete or abandoned features. Additionally, several screens instantiate services with **hardcoded empty configuration** while the settings system already stores the correct values — the providers exist but are never read by the consumers.
-
----
+Several screens in the codebase have grown into monolithic widgets exceeding 600–1000+ lines, violating the Single Responsibility Principle. These screens mix data loading, state management, widget building, navigation, and export logic into single files. Additionally, critical production issues (error logs guarded by `kDebugMode`) and inconsistent feature directory structures reduce maintainability and reliability.
 
 ## Affected Files
 
-### Dead/Orphaned Components
-
-| File | Lines | Status |
-|------|-------|--------|
-| `lib/features/practice/presentation/learning_plan_dashboard.dart` | 447 | `LearningPlanDashboard` widget defined but never imported. Not exported from `practice.dart` barrel. |
-| `lib/features/practice/presentation/analytics_dashboard.dart` | 627 | `AnalyticsDashboard` widget defined but never imported. Not exported from `practice.dart` barrel. |
-| `lib/features/subjects/presentation/subject_management_screen.dart` | 297 | Nearly identical to `SubjectSelectionScreen`. Never imported or routed to. |
-| `lib/features/teaching/services/conversation_manager.dart` (lines 345–357) | 13 | `AdaptiveMetrics` class defined but never instantiated or referenced. |
-| `lib/features/questions/ui/widgets/math_expression_widget.dart` (lines 386–415) | 30 | `FormulaWidget` defined alongside `MathExpressionWidget` but never exported or imported. |
-| `lib/core/constants/app_features.dart` | 20 | `FeatureFlagService` and `AppFeature` enum defined but never referenced anywhere. |
-
-### Hardcoded LLM Configuration (bypasses settings)
+### God Widgets / SRP Violations
 
 | File | Lines | Issue |
 |------|-------|-------|
-| `lib/features/mentor/presentation/mentor_screen.dart` | 41–44 | `apiKey: ''` hardcoded instead of reading `apiKeyProvider`. Also `studentId: 'anonymous'` hardcoded at line 58. |
-| `lib/features/teaching/presentation/tutor_screen.dart` | 59–62 | `apiKey: ''` hardcoded instead of reading `apiKeyProvider`. |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart` | 72–75 | `apiKey: ''` hardcoded instead of reading `apiKeyProvider`. |
-| `lib/features/practice/presentation/practice_session_screen.dart` | 260 | `studentId: 'anonymous'` hardcoded instead of using `StudentIdService`. |
+| `lib/features/practice/presentation/practice_screen.dart` | 1029 | Contains 2 private inner widget classes (`_PracticeModeCard`, `_PracticeModeOption`). Mixes data fetching, navigation, state, and UI. |
+| `lib/features/practice/presentation/practice_session_screen.dart` | 718 | Contains 2 export-only helper classes (`PracticeAnswerRecord`, `PracticeSessionResult`). Mixes timer logic, session persistence, answer validation, and UI. |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | 699 | Mixes service init, data loading (6 sources), CSV export, navigation, and 12+ `_build*` widget methods. |
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | 678 | Large single-file screen with embedded data and UI logic. |
+| `lib/features/subjects/presentation/subject_detail_view.dart` | 748 | Excessive length for a detail view. |
 
----
+### Production-Blocking Anti-Pattern
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/core/errors/handlers.dart` | 224–226 | `_logError` wraps `_logger.e(...)` in `if (kDebugMode)` — production error logs are **silently discarded**, making production debugging impossible. |
+
+### Non-Localized Hardcoded Strings
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/core/services/answer_validation_service.dart` | 57, 92, 96–97, 131, 133, 135, 186–216, 261–273 | 20+ hardcoded English strings (`'Correct!'`, `'Incorrect.'`, `'No markscheme available'`, step feedback messages) bypass the l10n system. |
+| `lib/core/errors/handlers.dart` | 242–294 | Hardcoded English error messages (`'Network request failed'`, `'Invalid API key or credentials'`, etc.) returned via `AppException.message` without localization. |
+
+### Feature Structure Inconsistency
+
+Many features lack conventional subdirectories (`providers/`, `services/`, `data/`, `models/`), leading to business logic leaking into presentation code:
+
+- `lib/features/dashboard/` — only `presentation/`, no `services/`, `providers/`, `data/`, `widgets/`
+- `lib/features/lessons/` — only `presentation/`
+- `lib/features/planner/` — only `presentation/`
+- `lib/features/quickguide/` — only `presentation/`
+- `lib/features/llm_tasks/` — only `presentation/`
 
 ## Rationale
 
-1. **Dead code misleads developers** — New contributors or AI-assisted workflows see `LearningPlanDashboard` and `AnalyticsDashboard` in the file tree and assume they are functional. Time is wasted investigating why features don't appear or why changes to these files have no effect.
+1. **God widgets** directly hinder onboarding, testing, and future changes. A single 1029-line file cannot be meaningfully unit-tested. Developers must understand the entire file to make any change, increasing merge conflicts and regressions. Each `_build*` method that accesses `setState` or `context` is tightly coupled to the parent widget, preventing reuse.
 
-2. **Hardcoded empty API key silently degrades all AI features** — The `apiKeyProvider` at `lib/core/providers/app_providers.dart:162` stores the user's configured key, but the three consumer screens (`MentorScreen`, `TutorScreen`, `QuickGuideScreen`) recreate `LlmConfiguration` with `apiKey: ''`. The `LlmService` falls back to mock data, making AI tutoring, mentoring, and quick-guide features non-functional despite a valid key being saved in settings.
+2. **Error logging behind `kDebugMode`** is a critical reliability issue. Production crashes, API failures, and data inconsistencies become invisible. This single guard makes the entire error handling layer unreliable for diagnosing production issues.
 
-3. **Hardcoded `studentId: 'anonymous'`** — Two screens hardcode `'anonymous'` as the student ID instead of using `StudentIdService().getStudentId()`. This means all student-level data (practice sessions, mentor conversations) is stored under an unidentifiable user, making per-student analytics useless.
+3. **Hardcoded strings** create an internationalization debt that grows with every new feature. Having some strings go through `AppLocalizations` and others bypass it creates an inconsistent user experience for non-English users.
 
-4. **Configuration logic is duplicated** — The same 4-line LLM initialization block (`LlmConfiguration` → `LlmService`) is replicated across 3 screens. Any change (e.g., adding a new provider option, changing the default model) must be made in 3 places.
-
----
+4. **Missing feature directory structure** means there is no natural home for repositories, providers, or widget tests. Components that logically belong to a feature (e.g., a `DashboardMetricCard` widget) instead live in `core/widgets/` or are inlined, eroding the feature-boundary design.
 
 ## Acceptance Criteria
 
-1. [ ] Remove or archive the 6 dead/orphaned components (or re-integrate if features are planned):
-   - `learning_plan_dashboard.dart` (447 lines)
-   - `analytics_dashboard.dart` (627 lines)
-   - `subject_management_screen.dart` (297 lines)
-   - `AdaptiveMetrics` class in `conversation_manager.dart` (13 lines)
-   - `FormulaWidget` in `math_expression_widget.dart` (30 lines)
-   - `FeatureFlagService` / `AppFeature` enum in `app_features.dart` (20 lines)
+### A. God Widget Decomposition
+- [ ] `lib/features/practice/presentation/practice_screen.dart` is split into at most 400 lines per file:
+  - Extract `_PracticeModeCard` to `lib/features/practice/presentation/widgets/practice_mode_card.dart`
+  - Extract `_PracticeModeOption` to `lib/features/practice/presentation/widgets/practice_mode_option.dart`
+  - Extract a presenter/service for the data-loading logic
+- [ ] `lib/features/dashboard/presentation/dashboard_screen.dart` is split:
+  - Extract sections into standalone widgets under `lib/features/dashboard/presentation/widgets/` (e.g., `mastery_progress_card.dart`, `weak_areas_card.dart`, `export_section.dart`)
+  - Move all service instantiation out of `initState` (use dependency injection already available via Riverpod)
+  - `/lib/features/dashboard/` gains the standard subdirectories (`services/`, `widgets/`, `providers/`)
+- [ ] `lib/features/practice/presentation/practice_session_screen.dart` is split:
+  - Extract `PracticeAnswerRecord` and `PracticeSessionResult` into a separate `models/` file
+  - Extract timer and session persistence logic into a dedicated service/provider
 
-2. [ ] In `mentor_screen.dart`, `tutor_screen.dart`, and `quick_guide_screen.dart`: replace the hardcoded `apiKey: ''` with `ref.read(apiKeyProvider)` (or inject via constructor / service locator).
+### B. Production Logging Fix
+- [ ] `lib/core/errors/handlers.dart:224` — remove `kDebugMode` guard from `_logError`, or demote it to a `kDebugMode` guard on verbose logging only — error-level logs (`_logger.e`) must always fire.
 
-3. [ ] In `mentor_screen.dart` (line 58) and `practice_session_screen.dart` (line 260): replace `studentId: 'anonymous'` with `StudentIdService().getStudentId()`.
+### C. Localization Compliance
+- [ ] All hardcoded English strings in `lib/core/services/answer_validation_service.dart` are replaced with `AppLocalizations.of(context)` calls or pass-through `String` parameters
+- [ ] All hardcoded error messages in `lib/core/errors/handlers.dart` are routed through the l10n system or defined as constants in a single locale-bundled file
 
-4. [ ] Extract LLM initialization into a shared factory/util function or provider to eliminate the copy-paste across 3 screens.
-
-5. [ ] Verify no regressions: run `flutter analyze` with zero new warnings, and confirm that the settings screen's API key field actually propagates to the AI screens.
+### D. Feature Structure Standardization
+- [ ] `lib/features/dashboard/` follows the established convention with `widgets/`, `services/`, `providers/` subdirectories
+- [ ] Every feature's barrel file (`feature_name.dart`) exports all public symbols from its subdirectories (not just presentation screens)

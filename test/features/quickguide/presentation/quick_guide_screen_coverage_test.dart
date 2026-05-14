@@ -105,16 +105,18 @@ void main() {
   });
 
   group('QuickGuideScreen - empty state rendering', () {
-    testWidgets('shows empty state icon and text before any messages',
-        (tester) async {
+    testWidgets('shows welcome message on initial render', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         screen: const QuickGuideScreen(showModeNavigation: false),
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
-      expect(find.text('Quick Guide'), findsOneWidget);
+      expect(
+        find.textContaining(
+            'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything'),
+        findsOneWidget,
+      );
     });
   });
 

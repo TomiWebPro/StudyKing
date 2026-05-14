@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -170,6 +171,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                   Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes), order: 2),
+            ]),
+            _section('Focus Mode', [
+              _tile('Focus Timer', 'Start a focused study session', Icons.timer_outlined,
+                  () => Navigator.pushNamed(context, '/focus-mode'), order: 1),
+              _tile('Daily Study Cap',
+                  _getDailyCapLabel(),
+                  Icons.access_time_filled,
+                  () => _showDailyCapDialog(), order: 2),
             ]),
             _section(l10n.studyAnalytics, [
               _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
@@ -402,6 +411,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  String _getDailyCapLabel() {
+    try {
+      final box = Hive.box('settings');
+      final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
+      return cap > 0 ? '$cap min/day' : 'No limit';
+    } catch (_) {
+      return 'No limit';
+    }
+  }
+
+  Future<void> _showDailyCapDialog() async {
+    try {
+      final box = Hive.box('settings');
+      final current = box.get('dailyCapMinutes', defaultValue: 0) as int;
+      final options = [0, 30, 60, 90, 120, 180, 240];
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => ListView(
+          children: options
+              .map((m) => ListTile(
+                    title: Text(m == 0 ? 'No limit' : '$m minutes'),
+                    trailing: m == current
+                        ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                        : null,
+                    onTap: () {
+                      box.put('dailyCapMinutes', m);
+                      (context as Element).markNeedsBuild();
+                      Navigator.pop(context);
+                    },
+                  ))
+              .toList(),
+        ),
+      );
+    } catch (_) {}
   }
 
   void _showSessionDurationDialog(int currentMinutes) {

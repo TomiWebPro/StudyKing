@@ -1,71 +1,127 @@
-# Issue: Hardcoded Color Values Break Dark Mode, High-Contrast Accessibility, and Thematic Consistency
+# Issue: Accessibility Preferences Unconsumed, Hardcoded UI Strings, Missing SafeArea, and Navigation/Responsive Inconsistencies
 
 ## Severity: High
 
-## Context
+## Summary
 
-The app defines a full `ThemeData` / `ColorScheme` system via `AppTheme` (light, dark, high-contrast light, high-contrast dark) in `lib/core/theme/app_theme.dart:73-189`. Utility functions like `AppTheme.progressColor()`, `AppTheme.masteryColor()`, and `AppTheme.urgencyColor()` already exist to derive semantic colors from the current `colorScheme`. **Despite this, at least 8 screens/widgets bypass the theme system entirely with hardcoded `Colors.green`, `Colors.red`, `Colors.orange`, `Colors.grey.shade*`, `Colors.blue`, and `Colors.white` values.**
+Five distinct high-value UI/UX problem categories that degrade the experience for users with accessibility needs, non-English speakers, and users with notched/physical-keyboard devices.
 
-This makes the high-contrast accessibility theme and dark mode partially non-functional on the most data-dense screens.
+---
 
-## Affected Files and Hardcoded Values
+### 1. Accessibility Preferences Declared but Never Consumed
 
-| File | Line(s) | Hardcoded Value | Should Use |
-|------|---------|----------------|------------|
-| `lib/features/dashboard/presentation/dashboard_screen.dart` | 159-161, 267, 311-312, 669-671 | `Colors.green`, `Colors.orange`, `Colors.red`, `Colors.blue`, `Colors.teal`, `Colors.purple` | `Theme.of(context).colorScheme.primary/tertiary/error`, `AppTheme.progressColor()` |
-| `lib/features/practice/presentation/analytics_dashboard.dart` | 159-190, 267 | `Colors.green`, `Colors.blue`, `Colors.teal`, `Colors.purple` (MetricCard accents) | `Theme.of(context).colorScheme` equivalents |
-| `lib/features/practice/presentation/learning_plan_dashboard.dart` | 144-148 (container decorations) | Implicit `surfaceContainerHighest` vs `cardPadding` mismatch | Consistent `ResponsiveUtils.cardPadding` / theme-derived decoration |
-| `lib/features/lessons/presentation/lesson_list_screen.dart` | 183-185, 194-196 | `Colors.green`, `Colors.orange`, `Colors.grey` | `Theme.of(context).colorScheme.primary/tertiary/error` |
-| `lib/features/questions/ui/widgets/single_answer_widget.dart` | 51 | `Colors.grey.shade300` (border) | `Theme.of(context).colorScheme.outline` |
-| `lib/features/questions/ui/widgets/canvas_drawing_widget.dart` | 71, 144, 162, 326 | `Colors.grey.shade300/200/600/700`, `Colors.blue.shade400`, `Colors.white` | `Theme.of(context).colorScheme.outline/onSurface/primaryContainer` |
-| `lib/features/sessions/presentation/session_history_screen.dart` | 248-249 | `Theme.of(context).primaryColor` (Material 3 deprecation) | `Theme.of(context).colorScheme.primary` |
-| `lib/features/practice/presentation/practice_session_screen.dart` | 626 | `Theme.of(context).primaryColor` (deprecated) | `Theme.of(context).colorScheme.primary` |
-| `lib/core/widgets/animated_bar_chart.dart` | 55 | `theme.cardColor`, `theme.dividerColor` | `theme.colorScheme.surfaceContainerHighest`, `theme.colorScheme.outlineVariant` |
+The `AccessibilityPreferences` model (`lib/features/settings/data/models/accessibility_preferences.dart:6-24`) defines four boolean flags: `boldText`, `highContrast`, `reduceMotion`, and `largeTouchTargets`. Users can toggle `highContrast`, `largeTouchTargets`, and `reduceMotion` via `lib/features/settings/presentation/settings_screen.dart:54-70`. However, `reduceMotion` and `largeTouchTargets` are **never read** by any widget in the entire app.
 
-## Rationale
+#### Impact
 
-1. **Dark mode is broken** – e.g. `canvas_drawing_widget.dart:71` uses `Colors.grey.shade300` for border. In dark mode, `grey.shade300` is lighter than the surface, producing no visible border. `Colors.white` backgrounds at `:162` on dark mode create a bright white card inside a dark theme.
-2. **High-contrast theme is ineffective** – `AppTheme.highContrastLightTheme` and `AppTheme.highContrastDarkTheme` exist and are toggled via `settings.highContrastEnabled` (`main.dart:111`), but hardcoded colors ignore any contrastLevel changes.
-3. **Thematic inconsistency** – `dashboard_screen.dart:159` uses `Colors.green` for accuracy >= 80 but `analytics_dashboard.dart:264` uses `AppTheme.progressColor()` which maps to `cs.primary`. Same metric, two different colors depending on which screen the user visits.
-4. **Missed abstraction** – `AppTheme.progressColor(value, context)` (app_theme.dart:124) already encodes the green→tertiary→error logic using colorScheme colors, but `dashboard_screen.dart:669-671` duplicates this logic with hardcoded green/orange/red.
+- **`reduceMotion`**: Users who experience vertigo/nausea from motion (vestibular disorders, WCAG 2.1 Guideline 2.3) toggle this on but the app continues animating: `AnimatedBarChart` always plays its grow-from-zero animation (`lib/core/widgets/animated_bar_chart.dart:99-118`), `AnimatedSwitcher` fades feedback in (`lib/features/questions/ui/widgets/single_answer_widget.dart:86-92`), and the typing indicator bounces dots (`lib/features/teaching/presentation/widgets/chat_bubble.dart:128-131`).
+- **`largeTouchTargets`**: Users who toggle this expect 48×48 dp minimum touch targets app-wide. Widgets like `_buildIconButton` in `CanvasDrawingWidget` (`lib/features/questions/ui/widgets/canvas_drawing_widget.dart:164`) compute padding as `ResponsiveUtils.minTouchTarget * 0.3` (14.4 dp), producing a sub-30 dp effective target. No widget checks `largeTouchTargets`.
+
+#### Affected Files
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `lib/core/widgets/animated_bar_chart.dart` | 99–118 | `TweenAnimationBuilder` always animates; no `reduceMotion` check |
+| `lib/features/questions/ui/widgets/single_answer_widget.dart` | 86–92 | `AnimatedSwitcher` always animates feedback |
+| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 128–131 | Typing indicator always loops |
+| `lib/features/questions/ui/widgets/canvas_drawing_widget.dart` | 152–170 | `_buildIconButton` touch target too small, no `largeTouchTargets` check |
+| `lib/features/settings/presentation/settings_screen.dart` | 54–70 | Switch toggles exist but writes never propagate to widgets |
+
+---
+
+### 2. Hardcoded English Strings Bypass l10n System
+
+The app has a full `AppLocalizations` system with English and Spanish localizations (`lib/l10n/generated/`). Despite this, several user-visible strings are hardcoded in English.
+
+#### Affected Strings
+
+| File | Line(s) | Hardcoded Text |
+|------|---------|----------------|
+| `lib/features/settings/presentation/settings_screen.dart` | 428 | `'Request timed out. Please try again.'` |
+| `lib/features/settings/presentation/settings_screen.dart` | 430 | `'Unable to load models. Please try again.'` |
+| `lib/features/settings/presentation/settings_screen.dart` | 452 | `'Retry'` |
+
+These appear in the `_AiModelLoadingSheet` widget when an API call fails or times out. A Spanish-speaking user configuring their AI model will see English error messages.
+
+---
+
+### 3. Bottom Sheets Missing SafeArea
+
+At least 5 modal bottom sheets wrap content in a `Container` without `SafeArea`. On devices with system navigation bars, gesture handles, or keyboard insets, content is truncated or obscured.
+
+#### Affected Files
+
+| File | Line(s) | Sheet |
+|------|---------|-------|
+| `lib/features/practice/presentation/practice_screen.dart` | 380–420 | `_showSubjectSelector` |
+| `lib/features/practice/presentation/practice_screen.dart` | 423–479 | `_showPracticeModeDialog` |
+| `lib/features/practice/presentation/practice_screen.dart` | 514–547 | `_showTopicSelector` |
+| `lib/features/practice/presentation/practice_screen.dart` | 611–686 | `_showSpacedRepetitionSubjectSelector` |
+| `lib/features/practice/presentation/practice_screen.dart` | 703–738 | `_startWeakAreasPractice` subject selector |
+
+The fix pattern for each is to change:
+
+```diff
+- showModalBottomSheet(
+-   builder: (sheetContext) => Container(
+-     padding: ...
+```
+
+to:
+
+```dart
+showModalBottomSheet(
+  builder: (sheetContext) => SafeArea(
+    child: Container(
+      padding: ...
+```
+
+---
+
+### 4. Drawing Canvas Hardcoded to 300px Height
+
+`lib/features/questions/ui/widgets/canvas_drawing_widget.dart:69` sets `height: 300` regardless of screen size.
+
+- On a phone in landscape, 300 px may force the canvas offscreen.
+- On a 12-inch tablet, 300 px wastes ~75% of vertical space.
+- `ResponsiveUtils` already provides height helpers; the canvas should use `MediaQuery.sizeOf(context).height * 0.4` or similar, constrained by a sensible min/max.
+
+---
+
+### 5. Inconsistent Navigation Pattern
+
+The codebase mixes two navigation approaches in the same files, making the routing layer unreliable and keyboard/accessibility navigation harder to audit.
+
+**Pattern A (named routes via `AppRoutes` constants):**
+- `lib/features/dashboard/presentation/dashboard_screen.dart:426-431` — `Navigator.pushNamed(context, AppRoutes.practiceSession, ...)`
+- `lib/features/planner/presentation/planner_screen.dart:139-148` — `Navigator.pushNamed(context, AppRoutes.tutor, ...)`
+
+**Pattern B (direct `MaterialPageRoute`):**
+- `lib/features/lessons/presentation/lesson_list_screen.dart:89-98` — `Navigator.push(context, MaterialPageRoute(...))`
+- `lib/features/lessons/presentation/lesson_list_screen.dart:175-182` — `Navigator.push(context, MaterialPageRoute(...))`
+- `lib/features/practice/presentation/practice_screen.dart:576-585` — `Navigator.push(context, MaterialPageRoute(...))`
+
+#### Impact
+
+- Named routes support deep linking, deferred route loading, and `onGenerateRoute` analytics hooks; direct `MaterialPageRoute` bypasses all of them.
+- A developer adding a middleware guard (e.g., "require API key before practice") must patch two parallel code paths.
+
+---
+
+### 6. Keyboard Focus Traversal Incomplete
+
+`FocusTraversalGroup` is used in several screens (`lib/features/settings/presentation/settings_screen.dart:36`, `lib/features/planner/presentation/planner_screen.dart:157`, `lib/features/practice/presentation/practice_session_screen.dart:382`) but only `PlannerScreen` sets focus order via `NumericFocusOrder` (`planner_screen.dart:164-165`).
+
+Without explicit `FocusTraversalOrder`, the default reading-order traversal may produce illogical tab sequences in complex layouts (e.g., the dashboard grid of MetricCards, bottom-sheet option lists).
+
+---
 
 ## Acceptance Criteria
 
-- [ ] All 8 files above replace hardcoded `Colors.*` values with `Theme.of(context).colorScheme.*` or existing `AppTheme.*Color()` helpers.
-- [ ] The canvas drawing widget renders visible borders and backgrounds in both light and dark mode.
-- [ ] Dark mode toggle produces no unreadable or invisible UI elements.
-- [ ] High-contrast mode (`settings.highContrastEnabled`) actually changes border widths, contrast ratios, and outline colors on all screens.
-- [ ] No regression: accuracy/progress/urgency colors remain semantically correct (red=low, green=high) but derive from the active colorScheme.
-- [ ] All `Theme.of(context).primaryColor` usages (deprecated in Material 3) are migrated to `Theme.of(context).colorScheme.primary`.
-- [ ] `session_history_screen.dart:248` - the `MetricCard` accent uses `Theme.of(context).colorScheme.primary` instead of `Theme.of(context).primaryColor`.
-- [ ] `practice_session_screen.dart:626` - `_buildMiniStat` fallback color uses `Theme.of(context).colorScheme.primary`.
-- [ ] `animated_bar_chart.dart:55` - container decoration uses `colorScheme.surfaceContainerHighest` and `colorScheme.outlineVariant`.
-
-## Example Fix Pattern
-
-```dart
-// Instead of:
-color: Colors.green,
-// Use:
-color: AppTheme.progressColor(accuracy, context),
-
-// Instead of:
-color: Colors.grey.shade300,
-child: Icon(Icons.radio_button_unchecked, color: Colors.grey),
-// Use:
-color: Theme.of(context).colorScheme.outline,
-child: Icon(Icons.radio_button_unchecked, color: Theme.of(context).colorScheme.onSurfaceVariant),
-
-// Instead of:
-backgroundColor: Colors.amber.shade50,
-// Use:
-backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-```
-
-## Test Guidance
-
-Manually verify:
-1. Toggle **Settings → Theme → Dark** – all cards, borders, text, and icons are legible.
-2. Toggle **Settings → Accessibility → High Contrast** – borders thicken to 2px, outline colors change, contrast ratios increase.
-3. Compare `DashboardScreen` vs `AnalyticsDashboard` accuracy metric colors – they should match.
-4. Canvas drawing widget border is visible in dark mode.
+- [ ] **Accessibility**: `reduceMotion` flag is checked before `TweenAnimationBuilder` / `AnimatedSwitcher` executes; animations skip to end state when true. `largeTouchTargets` flag elevates all interactive padding to 48 dp minimum.
+- [ ] **l10n**: The three hardcoded English strings in `_AiModelLoadingSheet` are migrated to `AppLocalizations` methods (add new keys if missing in `.arb`).
+- [ ] **SafeArea**: All bottom sheets in `practice_screen.dart` wrap their content in `SafeArea` + top padding preserved (non-content area).
+- [ ] **Canvas responsiveness**: `CanvasDrawingWidget` height derives from `MediaQuery.sizeOf(context)` with a clamp (e.g., 200–500 dp).
+- [ ] **Navigation consistency**: All `Navigator.push(context, MaterialPageRoute(...))` calls in lesson list/detail and practice screens are replaced with `Navigator.pushNamed(context, AppRoutes.xxx, arguments: ...)`. Register any missing routes in `AppRouter`.
+- [ ] **Keyboard navigation**: At minimum, `SettingsScreen`, `PlannerScreen`, and `PracticeSessionScreen` get explicit `FocusTraversalOrder` widgets on their interactive children.
+- [ ] **No regressions**: All existing tests pass. Manual verification of bottom-sheet rendering on a device with a gesture bar (iPhone X-style) and on a device with soft navigation keys.

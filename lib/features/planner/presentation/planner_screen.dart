@@ -19,12 +19,16 @@ class PlannerScreen extends StatefulWidget {
   final PlanRepository? planRepository;
   final MasteryGraphRepository? masteryGraphRepository;
   final TopicRepository? topicRepository;
+  final RoadmapRepository? roadmapRepository;
+  final String? fixedStudentId;
 
   const PlannerScreen({
     super.key,
     this.planRepository,
     this.masteryGraphRepository,
     this.topicRepository,
+    this.roadmapRepository,
+    this.fixedStudentId,
   });
 
   @override
@@ -57,7 +61,7 @@ class _PlannerScreenState extends State<PlannerScreen>
     _masteryService = MasteryGraphService(
       repository: widget.masteryGraphRepository,
     );
-    _roadmapRepo = RoadmapRepository();
+    _roadmapRepo = widget.roadmapRepository ?? RoadmapRepository();
     _loadExistingPlan();
     _loadRoadmaps();
   }
@@ -71,8 +75,11 @@ class _PlannerScreenState extends State<PlannerScreen>
     super.dispose();
   }
 
+  String _getStudentId() =>
+      widget.fixedStudentId ?? StudentIdService().getStudentId();
+
   Future<void> _loadExistingPlan() async {
-    final studentId = StudentIdService().getStudentId();
+    final studentId = _getStudentId();
     try {
       await _planRepo.init();
       final existing = await _planRepo.loadPlan(studentId);
@@ -83,7 +90,7 @@ class _PlannerScreenState extends State<PlannerScreen>
   }
 
   Future<void> _loadRoadmaps() async {
-    final studentId = StudentIdService().getStudentId();
+    final studentId = _getStudentId();
     setState(() => _isLoadingRoadmaps = true);
     try {
       await _roadmapRepo.init();
@@ -119,7 +126,7 @@ class _PlannerScreenState extends State<PlannerScreen>
       _error = null;
     });
 
-    final studentId = StudentIdService().getStudentId();
+    final studentId = _getStudentId();
 
     try {
       await _masteryService.init();
@@ -159,9 +166,10 @@ class _PlannerScreenState extends State<PlannerScreen>
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           _isGenerating = false;
-          _error = 'Error: $e';
+          _error = '${l10n.errorOccurred}: $e';
         });
       }
     }
@@ -215,14 +223,16 @@ class _PlannerScreenState extends State<PlannerScreen>
       ),
     );
 
-    goalController.dispose();
-    daysController.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      goalController.dispose();
+      daysController.dispose();
+    });
 
     if (result == null || result['goal']!.isEmpty) return;
 
     final goal = result['goal']!;
     final days = int.tryParse(result['days'] ?? '') ?? 30;
-    final studentId = StudentIdService().getStudentId();
+    final studentId = _getStudentId();
 
     final now = DateTime.now();
     final targetDate = now.add(Duration(days: days));
@@ -235,8 +245,8 @@ class _PlannerScreenState extends State<PlannerScreen>
       ));
       milestones.add(MilestoneModel(
         id: const Uuid().v4(),
-        title: 'Week ${i + 1}',
-        description: 'Milestone for week ${i + 1}',
+        title: l10n.weekNumber(i + 1),
+        description: l10n.milestoneForWeek(i + 1),
         deadline: milestoneDeadline,
         order: i + 1,
       ));
@@ -824,13 +834,16 @@ class _PlannerScreenState extends State<PlannerScreen>
                 title: Text(topic.topicTitle, style: Theme.of(context).textTheme.bodyMedium),
                 subtitle: Text(l10n.topicQuestionsAndMinutes(topic.estimatedQuestions, topic.estimatedMinutes),
                     style: Theme.of(context).textTheme.bodySmall),
-                trailing: topic.topicId.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.smart_toy_outlined, size: 20),
-                        tooltip: l10n.startTutoring,
-                        onPressed: () => _openTutorMode(topic.topicId, topic.topicTitle, ''),
-                      )
-                    : null,
+                  trailing: topic.topicId.isNotEmpty
+                      ? FocusTraversalOrder(
+                          order: const NumericFocusOrder(1),
+                          child: IconButton(
+                            icon: const Icon(Icons.smart_toy_outlined, size: 20),
+                            tooltip: l10n.startTutoring,
+                            onPressed: () => _openTutorMode(topic.topicId, topic.topicTitle, ''),
+                          ),
+                        )
+                      : null,
               )),
             ],
           ],

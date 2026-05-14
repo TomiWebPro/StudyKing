@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/data.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -171,6 +173,16 @@ final apiKeyProvider = StateProvider<String>((ref) => '');
 final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBaseUrlString);
 
 final selectedModelProvider = StateProvider<String>((ref) => '');
+
+final focusSessionRepositoryProvider = Provider<FocusSessionRepository>((ref) {
+  return FocusSessionRepository();
+});
+
+final focusSessionServiceProvider = Provider<FocusSessionService>((ref) {
+  return FocusSessionService(
+    repository: ref.read(focusSessionRepositoryProvider),
+  );
+});
 
 final localeProvider = StateProvider<Locale>((ref) {
   try {
