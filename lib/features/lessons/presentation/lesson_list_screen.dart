@@ -5,10 +5,9 @@ import '../../../core/data/models/tutor_session_model.dart';
 import '../../../core/data/repositories/lesson_repository.dart';
 import '../../../core/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/services/student_id_service.dart';
-import 'lesson_detail_screen.dart';
-import '../../teaching/presentation/tutor_screen.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 enum LessonStatus { notStarted, inProgress, completed }
@@ -86,14 +85,13 @@ class _LessonListScreenState extends State<LessonListScreen> {
   }
 
   void _openTutorMode() {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (_) => TutorScreen(
-          topicId: widget.topicId,
-          topicTitle: widget.topicTitle,
-          subjectId: widget.subjectId,
-        ),
+      AppRoutes.tutor,
+      arguments: TutorArgs(
+        topicId: widget.topicId,
+        topicTitle: widget.topicTitle,
+        subjectId: widget.subjectId,
       ),
     );
   }
@@ -172,15 +170,16 @@ class _LessonListScreenState extends State<LessonListScreen> {
                 ],
               ),
               trailing: const Icon(Icons.play_arrow),
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => LessonDetailScreen(
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.lessonDetail,
+                arguments: LessonDetailArgs(
                   lessonId: l.id,
                   topicId: widget.topicId,
                   topicTitle: widget.topicTitle,
                   subjectId: widget.subjectId,
-                  lessonRepository: widget.lessonRepository,
                 ),
-              )),
+              ),
             ),
           ),
           );

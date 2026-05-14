@@ -4,10 +4,10 @@ import '../../../core/data/models/lesson_model.dart';
 import '../../../core/data/enums.dart';
 import '../../../core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import '../../teaching/presentation/tutor_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String lessonId;
@@ -69,16 +69,15 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   void _openTutorMode() {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (_) => TutorScreen(
-          topicId: widget.topicId,
-          topicTitle: widget.topicTitle,
-          subjectId: widget.subjectId.isNotEmpty
-              ? widget.subjectId
-              : _lesson?.subjectId ?? '',
-        ),
+      AppRoutes.tutor,
+      arguments: TutorArgs(
+        topicId: widget.topicId,
+        topicTitle: widget.topicTitle,
+        subjectId: widget.subjectId.isNotEmpty
+            ? widget.subjectId
+            : _lesson?.subjectId ?? '',
       ),
     );
   }

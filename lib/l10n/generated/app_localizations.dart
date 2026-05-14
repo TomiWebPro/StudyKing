@@ -1052,6 +1052,12 @@ abstract class AppLocalizations {
   /// **'Unable to load models. Please try again.'**
   String get unableToLoadModelsTryAgain;
 
+  /// Generic retry button label
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
   /// Confirmation text for sign out
   ///
   /// In en, this message translates to:
@@ -1925,8 +1931,8 @@ abstract class AppLocalizations {
   /// Status text showing stroke count
   ///
   /// In en, this message translates to:
-  /// **'Drawing with {count} stroke{plural}'**
-  String drawingWithStrokes(int count, String plural);
+  /// **'{count, plural, =1{Drawing with 1 stroke} other{Drawing with {count} strokes}}'**
+  String drawingWithStrokes(int count);
 
   /// Button label to save drawing
   ///
@@ -3140,6 +3146,18 @@ abstract class AppLocalizations {
   /// **'Increase tap target sizes'**
   String get largeTouchTargetsDescription;
 
+  /// Title for reduce motion toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce Motion'**
+  String get reduceMotion;
+
+  /// Subtitle for reduce motion toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce or disable motion animations'**
+  String get reduceMotionDescription;
+
   /// Error message when network connection fails
   ///
   /// In en, this message translates to:
@@ -3212,12 +3230,6 @@ abstract class AppLocalizations {
   /// **'An unexpected error occurred. Please try again.'**
   String get errorUnexpected;
 
-  /// Generic retry button label
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get retry;
-
   /// Button label to retry connection
   ///
   /// In en, this message translates to:
@@ -3283,6 +3295,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session history exported to CSV'**
   String get sessionHistoryExportedCsv;
+
+  /// Button label to export data as PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Export PDF'**
+  String get exportPdf;
+
+  /// Snackbar message when session history PDF is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Session history exported to PDF'**
+  String get sessionHistoryExportedPdf;
 
   /// Error message when practice session fails to start
   ///
@@ -3449,7 +3473,7 @@ abstract class AppLocalizations {
   /// Formatted days ago string
   ///
   /// In en, this message translates to:
-  /// **'{daysCount} days ago'**
+  /// **'{daysCount, plural, =1{1 day ago} other{{daysCount} days ago}}'**
   String mentorDaysAgo(int daysCount);
 
   /// Mentor message when student has been inactive for 3+ days
@@ -3583,6 +3607,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?'**
   String get mentorDoingWell;
+
+  /// Section title for roadmaps
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmaps'**
+  String get roadmaps;
+
+  /// Button to create a new roadmap
+  ///
+  /// In en, this message translates to:
+  /// **'Create Roadmap'**
+  String get createRoadmap;
+
+  /// Label for roadmap goal input
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Goal'**
+  String get roadmapGoal;
+
+  /// Hint text for roadmap goal
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., I want to learn IB Physics in 180 days'**
+  String get roadmapGoalHint;
+
+  /// Button to generate a roadmap
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Roadmap'**
+  String get generateRoadmap;
+
+  /// Title for list of roadmaps
+  ///
+  /// In en, this message translates to:
+  /// **'My Roadmaps'**
+  String get myRoadmaps;
+
+  /// Section title for milestones
+  ///
+  /// In en, this message translates to:
+  /// **'Milestones'**
+  String get milestones;
+
+  /// A single milestone
+  ///
+  /// In en, this message translates to:
+  /// **'Milestone'**
+  String get milestone;
+
+  /// Target completion date label
+  ///
+  /// In en, this message translates to:
+  /// **'Target Completion'**
+  String get targetCompletion;
+
+  /// Empty state for roadmaps
+  ///
+  /// In en, this message translates to:
+  /// **'No roadmaps yet'**
+  String get noRoadmapsYet;
+
+  /// Title for roadmap detail view
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmap Overview'**
+  String get roadmapOverview;
+
+  /// Timeline view label
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get timeline;
+
+  /// Completion percentage
+  ///
+  /// In en, this message translates to:
+  /// **'{value}% Complete'**
+  String completionOfValue(double value);
+
+  /// Milestone with deadline
+  ///
+  /// In en, this message translates to:
+  /// **'{title} - Due {deadline}'**
+  String milestoneOfWithDeadline(String title, String deadline);
+
+  /// Toggle to enable notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get enableNotifications;
+
+  /// Section title for notification settings
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Preferences'**
+  String get notificationPreferences;
+
+  /// Daily reminder toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Reminders'**
+  String get dailyReminders;
+
+  /// Revision reminder toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Revision Reminders'**
+  String get revisionReminders;
+
+  /// Lesson notification toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Notifications'**
+  String get lessonNotifications;
+
+  /// Overwork alert toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Overwork Alerts'**
+  String get overworkAlerts;
+
+  /// Plan adjustment notification toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Adjustment Alerts'**
+  String get planAdjustmentNotifications;
+
+  /// Quiet hours section label
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet Hours'**
+  String get quietHours;
+
+  /// Start time for quiet hours
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet Hours Start'**
+  String get quietHoursStart;
+
+  /// End time for quiet hours
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet Hours End'**
+  String get quietHoursEnd;
+
+  /// Button to export comprehensive report
+  ///
+  /// In en, this message translates to:
+  /// **'Export Full Progress Report'**
+  String get exportComprehensiveReport;
+
+  /// Export full progress as CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Full Progress CSV'**
+  String get comprehensiveCsv;
+
+  /// Export full progress as PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Full Progress PDF'**
+  String get comprehensivePdf;
+
+  /// Export full progress as JSON
+  ///
+  /// In en, this message translates to:
+  /// **'Full Progress JSON'**
+  String get comprehensiveJson;
+
+  /// Snackbar when comprehensive report is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Comprehensive progress report exported'**
+  String get comprehensiveReportExported;
+
+  /// Label for active roadmaps count
+  ///
+  /// In en, this message translates to:
+  /// **'Active Roadmaps'**
+  String get activeRoadmaps;
+
+  /// Label for completed roadmaps
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Roadmaps'**
+  String get completedRoadmaps;
+
+  /// Section title for per-subject progress
+  ///
+  /// In en, this message translates to:
+  /// **'Progress by Subject'**
+  String get progressBySubject;
 }
 
 class _AppLocalizationsDelegate

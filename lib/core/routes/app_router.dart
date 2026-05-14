@@ -4,6 +4,8 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
+import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
+import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
@@ -35,6 +37,8 @@ class AppRoutes {
   static const String sessionHistory = '/session-history';
   static const String tutor = '/tutor';
   static const String planner = '/planner';
+  static const String lessonDetail = '/lesson-detail';
+  static const String lessonList = '/lesson-list';
   static const String llmTasks = '/llm-tasks';
 }
 
@@ -76,6 +80,32 @@ class PracticeSessionArgs {
   });
 }
 
+class LessonDetailArgs {
+  final String lessonId;
+  final String topicId;
+  final String topicTitle;
+  final String? subjectId;
+
+  const LessonDetailArgs({
+    required this.lessonId,
+    required this.topicId,
+    required this.topicTitle,
+    this.subjectId,
+  });
+}
+
+class LessonListArgs {
+  final String topicId;
+  final String topicTitle;
+  final String subjectId;
+
+  const LessonListArgs({
+    required this.topicId,
+    required this.topicTitle,
+    this.subjectId = '',
+  });
+}
+
 class TutorArgs {
   final String topicId;
   final String topicTitle;
@@ -103,7 +133,11 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
     case AppRoutes.mentor:
       return _materialPageRoute(const MentorScreen(), routeSettings);
     case AppRoutes.upload:
-      return _materialPageRoute(const UploadScreen(), routeSettings);
+      final preselectedSubjectId = routeSettings.arguments as String?;
+      return _materialPageRoute(
+        UploadScreen(preselectedSubjectId: preselectedSubjectId),
+        routeSettings,
+      );
     case AppRoutes.subjectSelection:
       return _materialPageRoute(const SubjectSelectionScreen(), routeSettings);
     case AppRoutes.sessionTracker:
@@ -158,6 +192,33 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
             topicId: args.topicId,
             questionCount: args.questionCount,
             isSpacedRepetition: args.isSpacedRepetition,
+          ),
+          routeSettings,
+        );
+      }
+      return null;
+    case AppRoutes.lessonList:
+      final args = routeSettings.arguments;
+      if (args is LessonListArgs) {
+        return _materialPageRoute(
+          LessonListScreen(
+            topicId: args.topicId,
+            topicTitle: args.topicTitle,
+            subjectId: args.subjectId,
+          ),
+          routeSettings,
+        );
+      }
+      return null;
+    case AppRoutes.lessonDetail:
+      final args = routeSettings.arguments;
+      if (args is LessonDetailArgs) {
+        return _materialPageRoute(
+          LessonDetailScreen(
+            lessonId: args.lessonId,
+            topicId: args.topicId,
+            topicTitle: args.topicTitle,
+            subjectId: args.subjectId ?? '',
           ),
           routeSettings,
         );

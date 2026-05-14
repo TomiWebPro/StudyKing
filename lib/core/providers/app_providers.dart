@@ -50,6 +50,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
     int? sessionDurationMinutes,
     bool? highContrastEnabled,
     bool? largeTouchTargets,
+    bool? reduceMotion,
   }) async {
     try {
       await _repository.updateSettings(
@@ -68,6 +69,8 @@ class SettingsController extends StateNotifier<SettingsBox> {
             highContrastEnabled ?? state.highContrastEnabled,
         largeTouchTargets:
             largeTouchTargets ?? state.largeTouchTargets,
+        reduceMotion:
+            reduceMotion ?? state.reduceMotion,
       );
       state = await _repository.getSettings();
     } catch (e) {
@@ -146,6 +149,10 @@ class SettingsController extends StateNotifier<SettingsBox> {
 
   Future<void> updateLargeTouchTargets(bool enabled) async {
     await updateSettings(largeTouchTargets: enabled);
+  }
+
+  Future<void> updateReduceMotion(bool enabled) async {
+    await updateSettings(reduceMotion: enabled);
   }
 }
 

@@ -12,12 +12,14 @@ class CanvasDrawingWidget extends StatefulWidget {
   final String? instruction;
   final ValueChanged<Uint8List> onDrawingComplete;
   final String? initialDrawing;
+  final bool largeTouchTargets;
 
   const CanvasDrawingWidget({
     super.key,
     this.instruction,
     required this.onDrawingComplete,
     this.initialDrawing,
+    this.largeTouchTargets = false,
   });
 
   @override
@@ -66,7 +68,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
               key: _paintKey,
               child: Container(
                 width: double.infinity,
-                height: 300,
+                height: (MediaQuery.sizeOf(context).height * 0.4).clamp(200.0, 500.0),
                 decoration: BoxDecoration(
                   border: Border.all(color: _isDrawing ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline, width: _isDrawing ? 2 : 1),
                   borderRadius: BorderRadius.circular(8),
@@ -109,7 +111,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              _strokes.isEmpty ? l10n.canvasIsEmpty : l10n.drawingWithStrokes(_strokes.length, _strokes.length == 1 ? '' : 's'),
+              _strokes.isEmpty ? l10n.canvasIsEmpty : l10n.drawingWithStrokes(_strokes.length),
               style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
@@ -150,6 +152,9 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   }
 
   Widget _buildIconButton({required IconData icon, required VoidCallback onTap, String? label}) {
+    final effectivePadding = widget.largeTouchTargets
+        ? (ResponsiveUtils.minTouchTarget - 20) / 2
+        : ResponsiveUtils.minTouchTarget * 0.3;
     return Semantics(
       button: true,
       label: label,
@@ -161,7 +166,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: EdgeInsets.all(ResponsiveUtils.minTouchTarget * 0.3),
+            padding: EdgeInsets.all(effectivePadding),
             child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),

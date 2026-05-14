@@ -27,13 +27,35 @@ flutter test --coverage \
 cp coverage/lcov.info coverage/lcov_combined.info
 
 echo ""
-echo "=== Step 4: Merge all coverage files ==="
+echo "=== Step 4: Run core model tests ==="
+flutter test --coverage test/core/data/models/
+cp coverage/lcov.info coverage/lcov_core_models.info
+
+echo ""
+echo "=== Step 5: Run core service tests ==="
+flutter test --coverage test/core/services/
+cp coverage/lcov.info coverage/lcov_core_services.info
+
+echo ""
+echo "=== Step 6: Run feature tests ==="
+flutter test --coverage test/features/
+cp coverage/lcov.info coverage/lcov_features.info
+
+echo ""
+echo "=== Step 7: Merge all coverage files ==="
 python3 scripts/merge_lcov.py \
   coverage/lcov.info \
   coverage/lcov_base.info \
   coverage/lcov_prod.info \
-  coverage/lcov_combined.info
+  coverage/lcov_combined.info \
+  coverage/lcov_core_models.info \
+  coverage/lcov_core_services.info \
+  coverage/lcov_features.info
 
 echo ""
-echo "=== Step 5: Coverage summary for lib/core/constants/ ==="
+echo "=== Step 8: Coverage summary ==="
 python3 scripts/coverage_summary.py coverage/lcov.info
+
+echo ""
+echo "=== Test suite complete ==="
+echo "Run 'flutter test' for quick verification without coverage."

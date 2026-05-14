@@ -130,6 +130,13 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         Locale('en'),
         Locale('es'),
       ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale == null) return supportedLocales.first;
+        for (final supported in supportedLocales) {
+          if (supported.languageCode == locale.languageCode) return supported;
+        }
+        return supportedLocales.first;
+      },
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

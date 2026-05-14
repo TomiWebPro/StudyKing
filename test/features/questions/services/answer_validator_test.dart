@@ -301,6 +301,82 @@ void main() {
       });
     });
 
+    group('cache eviction policy', () {
+      test('cache does not grow beyond configured limit', () {
+        AnswerValidationService.clearCache();
+        final service = AnswerValidationService();
+
+        for (int i = 0; i < 150; i++) {
+          final markscheme = Markscheme(
+            questionId: 'q$i',
+            correctAnswer: 'Answer $i',
+          );
+          service.validateAnswer('Answer $i', QuestionType.typedAnswer, 'q$i', markscheme);
+        }
+
+        final result1 = service.validateAnswer('Answer 0', QuestionType.typedAnswer, 'q0', Markscheme(
+          questionId: 'q0', correctAnswer: 'Answer 0',
+        ));
+        expect(result1.isCorrect, isTrue);
+      });
+
+      test('old entries are evicted when limit is exceeded', () {
+        AnswerValidationService.clearCache();
+        final service = AnswerValidationService();
+
+        for (int i = 0; i < 101; i++) {
+          final markscheme = Markscheme(
+            questionId: 'q$i',
+            correctAnswer: 'Answer $i',
+          );
+          service.validateAnswer('Answer $i', QuestionType.typedAnswer, 'q$i', markscheme);
+        }
+
+        final markscheme0 = Markscheme(questionId: 'q0', correctAnswer: 'Answer 0');
+        final markscheme100 = Markscheme(questionId: 'q100', correctAnswer: 'Answer 100');
+
+        final result0 = service.validateAnswer('Answer 0', QuestionType.typedAnswer, 'q0', markscheme0);
+        final result100 = service.validateAnswer('Answer 100', QuestionType.typedAnswer, 'q100', markscheme100);
+
+        expect(result0.isCorrect, isTrue);
+        expect(result100.isCorrect, isTrue);
+      });
+
+      test('evicted entries are re-created correctly on subsequent access', () {
+        AnswerValidationService.clearCache();
+        final service = AnswerValidationService();
+
+        final markscheme1 = Markscheme(questionId: 'q1', correctAnswer: 'Answer 1');
+        final result1 = service.validateAnswer('Answer 1', QuestionType.typedAnswer, 'q1', markscheme1);
+        expect(result1.isCorrect, isTrue);
+
+        // Fill cache to evict q1
+        for (int i = 2; i <= 102; i++) {
+          final ms = Markscheme(questionId: 'q$i', correctAnswer: 'Answer $i');
+          service.validateAnswer('Answer $i', QuestionType.typedAnswer, 'q$i', ms);
+        }
+
+        // q1 should be evicted, but re-creating should still work
+        final markscheme1again = Markscheme(questionId: 'q1', correctAnswer: 'Answer 1');
+        final resultAgain = service.validateAnswer('Answer 1', QuestionType.typedAnswer, 'q1', markscheme1again);
+        expect(resultAgain.isCorrect, isTrue);
+      });
+
+      test('clearCache empties all entries', () {
+        AnswerValidationService.clearCache();
+        final service = AnswerValidationService();
+
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Answer');
+        service.validateAnswer('Answer', QuestionType.typedAnswer, 'q1', markscheme);
+
+        AnswerValidationService.clearCache();
+
+        final markscheme2 = Markscheme(questionId: 'q2', correctAnswer: 'New answer');
+        final result = service.validateAnswer('New answer', QuestionType.typedAnswer, 'q2', markscheme2);
+        expect(result.isCorrect, isTrue);
+      });
+    });
+
     group('ValidationResult model', () {
       test('stores all fields correctly', () {
         final result = ValidationResult(

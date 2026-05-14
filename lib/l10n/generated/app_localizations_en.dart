@@ -576,6 +576,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to load models. Please try again.';
 
   @override
+  String get retry => 'Retry';
+
+  @override
   String get signOutConfirmation => 'Are you sure you want to sign out?';
 
   @override
@@ -1039,8 +1042,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get canvasIsEmpty => 'Canvas is empty';
 
   @override
-  String drawingWithStrokes(int count, String plural) {
-    return 'Drawing with $count stroke$plural';
+  String drawingWithStrokes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Drawing with $count strokes',
+      one: 'Drawing with 1 stroke',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1766,6 +1775,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get largeTouchTargetsDescription => 'Increase tap target sizes';
 
   @override
+  String get reduceMotion => 'Reduce Motion';
+
+  @override
+  String get reduceMotionDescription => 'Reduce or disable motion animations';
+
+  @override
   String get errorNetworkConnection =>
       'Unable to connect to the server. Please check your internet connection and try again.';
 
@@ -1812,9 +1827,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'An unexpected error occurred. Please try again.';
 
   @override
-  String get retry => 'Retry';
-
-  @override
   String get retryConnection => 'Retry Connection';
 
   @override
@@ -1846,6 +1858,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionHistoryExportedCsv => 'Session history exported to CSV';
+
+  @override
+  String get exportPdf => 'Export PDF';
+
+  @override
+  String get sessionHistoryExportedPdf => 'Session history exported to PDF';
 
   @override
   String get failedToStartPractice => 'Failed to start practice session';
@@ -1973,7 +1991,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mentorDaysAgo(int daysCount) {
-    return '$daysCount days ago';
+    String _temp0 = intl.Intl.pluralLogic(
+      daysCount,
+      locale: localeName,
+      other: '$daysCount days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2070,4 +2094,105 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mentorDoingWell =>
       'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?';
+
+  @override
+  String get roadmaps => 'Roadmaps';
+
+  @override
+  String get createRoadmap => 'Create Roadmap';
+
+  @override
+  String get roadmapGoal => 'Learning Goal';
+
+  @override
+  String get roadmapGoalHint => 'e.g., I want to learn IB Physics in 180 days';
+
+  @override
+  String get generateRoadmap => 'Generate Roadmap';
+
+  @override
+  String get myRoadmaps => 'My Roadmaps';
+
+  @override
+  String get milestones => 'Milestones';
+
+  @override
+  String get milestone => 'Milestone';
+
+  @override
+  String get targetCompletion => 'Target Completion';
+
+  @override
+  String get noRoadmapsYet => 'No roadmaps yet';
+
+  @override
+  String get roadmapOverview => 'Roadmap Overview';
+
+  @override
+  String get timeline => 'Timeline';
+
+  @override
+  String completionOfValue(double value) {
+    return '$value% Complete';
+  }
+
+  @override
+  String milestoneOfWithDeadline(String title, String deadline) {
+    return '$title - Due $deadline';
+  }
+
+  @override
+  String get enableNotifications => 'Enable Notifications';
+
+  @override
+  String get notificationPreferences => 'Notification Preferences';
+
+  @override
+  String get dailyReminders => 'Daily Reminders';
+
+  @override
+  String get revisionReminders => 'Revision Reminders';
+
+  @override
+  String get lessonNotifications => 'Lesson Notifications';
+
+  @override
+  String get overworkAlerts => 'Overwork Alerts';
+
+  @override
+  String get planAdjustmentNotifications => 'Plan Adjustment Alerts';
+
+  @override
+  String get quietHours => 'Quiet Hours';
+
+  @override
+  String get quietHoursStart => 'Quiet Hours Start';
+
+  @override
+  String get quietHoursEnd => 'Quiet Hours End';
+
+  @override
+  String get exportComprehensiveReport => 'Export Full Progress Report';
+
+  @override
+  String get comprehensiveCsv => 'Full Progress CSV';
+
+  @override
+  String get comprehensivePdf => 'Full Progress PDF';
+
+  @override
+  String get comprehensiveJson => 'Full Progress JSON';
+
+  @override
+  String get comprehensiveReportExported =>
+      'Comprehensive progress report exported';
+
+  @override
+  String get activeRoadmaps => 'Active Roadmaps';
+
+  @override
+  String get completedRoadmaps => 'Completed Roadmaps';
+
+  @override
+  String get progressBySubject => 'Progress by Subject';
 }

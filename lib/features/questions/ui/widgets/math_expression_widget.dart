@@ -84,9 +84,63 @@ class MathExpressionWidget extends StatelessWidget {
         final start = i;
         i++;
         final cmdStart = i;
-        while (i < expr.length && (RegExp(r'^[a-zA-Z]$').hasMatch(expr[i]) || expr[i] == '{')) { i++; }
+        while (i < expr.length && RegExp(r'^[a-zA-Z]$').hasMatch(expr[i])) { i++; }
         final command = expr.substring(cmdStart, i);
-        if (command == 'sqrt') {
+        if (command.isEmpty) {
+          if (i < expr.length) {
+            final next = expr[i];
+            if (next == '(') {
+              spans.add(TextSpan(
+                text: '(',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ));
+              i++;
+            } else if (next == ')') {
+              spans.add(TextSpan(
+                text: ')',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ));
+              i++;
+            } else if (next == '[') {
+              spans.add(TextSpan(
+                text: '[',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ));
+              i++;
+            } else if (next == ']') {
+              spans.add(TextSpan(
+                text: ']',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ));
+              i++;
+            } else if (next == '{' || next == '}') {
+              i++;
+            } else if (next == ' ') {
+              spans.add(const TextSpan(text: ' '));
+              i++;
+            } else {
+              spans.add(TextSpan(text: expr.substring(start, i)));
+            }
+          } else {
+            spans.add(TextSpan(text: expr.substring(start, i)));
+          }
+        } else if (command == 'sqrt') {
           spans.add(TextSpan(
             text: '\u221A',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -144,46 +198,6 @@ class MathExpressionWidget extends StatelessWidget {
             text: '\u2260',
             style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold),
           ));
-        } else if (command == '(') {
-          spans.add(TextSpan(
-            text: '(',
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ));
-        } else if (command == ')') {
-          spans.add(TextSpan(
-            text: ')',
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ));
-        } else if (command == '[') {
-          spans.add(TextSpan(
-            text: '[',
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ));
-        } else if (command == ']') {
-          spans.add(TextSpan(
-            text: ']',
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ));
-        } else if (command == '{' || command == '}') {
-          // skip grouping braces in output
-        } else if (command == ' ') {
-          spans.add(const TextSpan(text: ' '));
         } else {
           spans.add(TextSpan(text: expr.substring(start, i)));
         }

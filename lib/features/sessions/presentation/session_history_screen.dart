@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/services/progress_export_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
+import '../services/session_export_service.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   final StudySessionRepository? sessionRepository;
@@ -76,6 +79,105 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       _selectedSubject = null;
     });
     _filterSessions();
+  }
+
+  Future<void> _handleExport(String format) async {
+    final l10n = AppLocalizations.of(context)!;
+    final sessions = _filteredSessions;
+
+    if (sessions.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noSessionsYet)),
+        );
+      }
+      return;
+    }
+
+    setState(() {}); // trigger any needed rebuild
+
+    try {
+      switch (format) {
+        case 'csv':
+          await SessionExportService.shareCSV(
+            sessions,
+            'session_history_${DateTime.now().millisecondsSinceEpoch}',
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
+            );
+          }
+        case 'pdf':
+          await SessionExportService.sharePDF(
+            sessions,
+            'session_history_${DateTime.now().millisecondsSinceEpoch}',
+            l10n,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.sessionHistoryExportedPdf)),
+            );
+          }
+        case 'json':
+          await SessionExportService.shareJSON(
+            sessions,
+            'session_history_${DateTime.now().millisecondsSinceEpoch}',
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
+            );
+          }
+        case 'comprehensive_csv':
+          {
+            final exportService = ProgressExportService();
+            await exportService.shareComprehensiveCSV(
+              StudentIdService().getStudentId(),
+              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.comprehensiveReportExported)),
+              );
+            }
+          }
+        case 'comprehensive_pdf':
+          {
+            final exportService = ProgressExportService();
+            await exportService.shareComprehensivePDF(
+              StudentIdService().getStudentId(),
+              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
+              l10n,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.comprehensiveReportExported)),
+              );
+            }
+          }
+        case 'comprehensive_json':
+          {
+            final exportService = ProgressExportService();
+            await exportService.shareComprehensiveJSON(
+              StudentIdService().getStudentId(),
+              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.comprehensiveReportExported)),
+              );
+            }
+          }
+      }
+    } catch (e) {
+      _logger.e('Export failed', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        );
+      }
+    }
   }
 
   Future<bool> _deleteSession(StudySession session) async {
@@ -160,6 +262,62 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 tooltip: l10n.clearFilters,
               ),
             ),
+            PopupMenuButton<String>(
+            icon: const Icon(Icons.share),
+            tooltip: l10n.sessionHistoryExport,
+            onSelected: (value) => _handleExport(value),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'csv',
+                child: ListTile(
+                  leading: const Icon(Icons.table_chart),
+                  title: Text(l10n.exportCsv),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'pdf',
+                child: ListTile(
+                  leading: const Icon(Icons.picture_as_pdf),
+                  title: Text(l10n.exportPdf),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'json',
+                child: ListTile(
+                  leading: const Icon(Icons.code),
+                  title: Text('JSON'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'comprehensive_csv',
+                child: ListTile(
+                  leading: const Icon(Icons.assessment),
+                  title: Text(l10n.comprehensiveCsv),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'comprehensive_pdf',
+                child: ListTile(
+                  leading: const Icon(Icons.picture_as_pdf),
+                  title: Text(l10n.comprehensivePdf),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'comprehensive_json',
+                child: ListTile(
+                  leading: const Icon(Icons.code),
+                  title: Text(l10n.comprehensiveJson),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: _isLoading

@@ -687,8 +687,8 @@ void main() {
       });
 
       test('drawingWithStrokes', () {
-        expect(l10n.drawingWithStrokes(1, ''), 'Drawing with 1 stroke');
-        expect(l10n.drawingWithStrokes(3, 's'), 'Drawing with 3 strokes');
+        expect(l10n.drawingWithStrokes(1), 'Drawing with 1 stroke');
+        expect(l10n.drawingWithStrokes(3), 'Drawing with 3 strokes');
       });
 
       test('ofLabel', () {
@@ -1197,7 +1197,7 @@ void main() {
 
       test('randomQuestions', () {
         expect(l10n.randomQuestions(5), '5 preguntas aleatorias');
-        expect(l10n.randomQuestions(1), '1 preguntas aleatorias');
+        expect(l10n.randomQuestions(1), '1 pregunta aleatoria');
       });
 
       test('yourAnswerCharacters', () {
@@ -1222,7 +1222,7 @@ void main() {
 
       test('sessionsCount', () {
         expect(l10n.sessionsCount(5), '5 sesiones');
-        expect(l10n.sessionsCount(1), '1 sesiones');
+        expect(l10n.sessionsCount(1), '1 sesión');
       });
 
       test('errorSavingProfile', () {
@@ -1277,8 +1277,8 @@ void main() {
       });
 
       test('drawingWithStrokes', () {
-        expect(l10n.drawingWithStrokes(1, ''), 'Dibujando con 1 trazo');
-        expect(l10n.drawingWithStrokes(3, 's'), 'Dibujando con 3 trazos');
+        expect(l10n.drawingWithStrokes(1), 'Dibujando con 1 trazo');
+        expect(l10n.drawingWithStrokes(3), 'Dibujando con 3 trazos');
       });
 
       test('ofLabel', () {

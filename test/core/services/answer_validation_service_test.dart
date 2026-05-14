@@ -281,5 +281,74 @@ void main() {
       final result = service.validateAnswer('correct', QuestionType.typedAnswer, 'q1', markscheme);
       expect(result.isCorrect, isTrue);
     });
+
+    test('generates unique signature for different correct answers', () {
+      final service2 = AnswerValidationService();
+      final q1 = _question(id: 'q1', type: QuestionType.typedAnswer, correctAnswer: 'Answer A');
+      final q2 = _question(id: 'q2', type: QuestionType.typedAnswer, correctAnswer: 'Answer B');
+      final r1 = service2.validateAnswerForQuestion(q1, 'Answer A');
+      final r2 = service2.validateAnswerForQuestion(q2, 'Answer B');
+      expect(r1.isCorrect, isTrue);
+      expect(r2.isCorrect, isTrue);
+    });
+
+    test('uses default explanation when question explanation is null', () {
+      final question = _question(id: 'no-explanation', type: QuestionType.typedAnswer, correctAnswer: 'Answer');
+      final correctResult = service.validateAnswerForQuestion(question, 'answer');
+      final wrongResult = service.validateAnswerForQuestion(question, 'wrong');
+      expect(correctResult.explanation, 'Correct!');
+      expect(wrongResult.explanation, 'Incorrect');
+    });
+
+    test('handles empty options list', () {
+      final question = _question(id: 'empty-options', type: QuestionType.typedAnswer, correctAnswer: 'Correct');
+      expect(service.validateAnswerForQuestion(question, 'Correct').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(question, 'wrong').isCorrect, isFalse);
+    });
+
+    test('handles null markscheme in question', () {
+      final question = Question(
+        id: 'null-markscheme', text: 'Q', type: QuestionType.typedAnswer,
+        subjectId: 's1', topicId: 't1', markscheme: null,
+        createdAt: DateTime.now(), updatedAt: DateTime.now(),
+      );
+      final result = service.validateAnswerForQuestion(question, 'anything');
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('handles empty string markscheme', () {
+      final question = _question(id: 'empty-ms', type: QuestionType.typedAnswer, correctAnswer: '');
+      final result = service.validateAnswerForQuestion(question, 'answer');
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('handles whitespace-only answer', () {
+      final question = _question(id: 'ws', type: QuestionType.typedAnswer, correctAnswer: 'correct');
+      final result = service.validateAnswerForQuestion(question, '   ');
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('handles very long answer', () {
+      final question = _question(id: 'long', type: QuestionType.typedAnswer, correctAnswer: 'answer');
+      final result = service.validateAnswerForQuestion(question, 'a' * 1000);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('handles special characters in markscheme', () {
+      final question = _question(id: 'special', type: QuestionType.typedAnswer, correctAnswer: 'Test <>&"\'123');
+      expect(service.validateAnswerForQuestion(question, 'test <>&"\'123').isCorrect, isTrue);
+    });
+
+    test('validates multiple questions in sequence correctly', () {
+      final questions = [
+        _question(id: 'seq-1', type: QuestionType.typedAnswer, correctAnswer: 'Answer 1'),
+      ];
+      questions.add(_question(id: 'seq-2', type: QuestionType.singleChoice, correctAnswer: 'A'));
+      questions.add(_question(id: 'seq-3', type: QuestionType.multiChoice, correctAnswer: 'A,B'));
+
+      expect(service.validateAnswerForQuestion(questions[0], 'answer 1').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(questions[1], 'A').isCorrect, isTrue);
+      expect(service.validateAnswerForQuestion(questions[2], 'A,B').isCorrect, isTrue);
+    });
   });
 }

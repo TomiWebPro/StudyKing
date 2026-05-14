@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
 import '../../../core/services/instrumentation_service.dart';
@@ -12,7 +14,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/data/repositories/topic_repository.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   final String studentId;
   final MasteryGraphService masteryService;
   final StudyProgressTracker? tracker;
@@ -29,10 +31,10 @@ class DashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final StudyProgressTracker _tracker;
   late final InstrumentationService _instrumentation;
   late final TopicRepository _topicRepo;
@@ -107,27 +109,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onRefresh: _loadData,
       child: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context, AppLocalizations.of(context)!),
-            const SizedBox(height: 24),
-            _buildSummaryRow(),
-            const SizedBox(height: 24),
-            _buildWeeklyChart(context),
-            const SizedBox(height: 24),
-            _buildPlanAdherence(context),
-            const SizedBox(height: 24),
-            _buildMasteryProgress(context),
-            const SizedBox(height: 24),
-            _buildWeakAreas(context),
-            const SizedBox(height: 24),
-            _buildTopicBreakdown(context),
-            const SizedBox(height: 24),
-            _buildBadges(context),
-            const SizedBox(height: 24),
-            _buildExportSection(context),
-          ],
+        child: FocusTraversalGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: _buildHeader(context, AppLocalizations.of(context)!),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: _buildSummaryRow(),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(3),
+                child: _buildWeeklyChart(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(4),
+                child: _buildPlanAdherence(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(5),
+                child: _buildMasteryProgress(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(6),
+                child: _buildWeakAreas(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(7),
+                child: _buildTopicBreakdown(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(8),
+                child: _buildBadges(context),
+              ),
+              const SizedBox(height: 24),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(9),
+                child: _buildExportSection(context),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -236,6 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ? chartData
               : {'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0},
           accentColor: Theme.of(context).colorScheme.primary,
+          reduceMotion: ref.watch(settingsProvider).reduceMotion,
         ),
       ],
     );

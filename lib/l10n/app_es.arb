@@ -729,6 +729,10 @@
   "@unableToLoadModelsTryAgain": {
     "description": "Error message when models cannot be loaded"
   },
+  "retry": "Reintentar",
+  "@retry": {
+    "description": "Retry button label"
+  },
   "signOutConfirmation": "¿Está seguro de que desea cerrar sesión?",
   "@signOutConfirmation": {
     "description": "Confirmation text for sign out"
@@ -1375,15 +1379,12 @@
   "@canvasIsEmpty": {
     "description": "Status text when canvas is empty"
   },
-  "drawingWithStrokes": "Dibujando con {count} trazo{plural}",
+  "drawingWithStrokes": "{count, plural, =1{Dibujando con 1 trazo} other{Dibujando con {count} trazos}}",
   "@drawingWithStrokes": {
     "description": "Status text showing stroke count",
     "placeholders": {
       "count": {
         "type": "int"
-      },
-      "plural": {
-        "type": "String"
       }
     }
   },
@@ -1831,7 +1832,7 @@
   "@startTutoring": {
     "description": "Tooltip for tutoring button"
   },
-  "questionsAndMinutes": "{questions}Q \u00b7 {minutes}min",
+  "questionsAndMinutes": "{questions}P \u00b7 {minutes}min",
   "@questionsAndMinutes": {
     "description": "Label showing questions and minutes",
     "placeholders": {
@@ -1843,7 +1844,7 @@
       }
     }
   },
-  "topicQuestionsAndMinutes": "{questions}Q \u00b7 {minutes}min",
+  "topicQuestionsAndMinutes": "{questions}P \u00b7 {minutes}min",
   "@topicQuestionsAndMinutes": {
     "description": "Label showing topic questions and minutes",
     "placeholders": {
@@ -2422,6 +2423,14 @@
   "@largeTouchTargetsDescription": {
     "description": "Subtitle for large touch targets toggle"
   },
+  "reduceMotion": "Reducir movimiento",
+  "@reduceMotion": {
+    "description": "Title for reduce motion toggle"
+  },
+  "reduceMotionDescription": "Reducir o desactivar animaciones de movimiento",
+  "@reduceMotionDescription": {
+    "description": "Subtitle for reduce motion toggle"
+  },
 
   "errorNetworkConnection": "No se puede conectar al servidor. Verifique su conexión a internet e intente de nuevo.",
   "@errorNetworkConnection": {
@@ -2563,6 +2572,14 @@
   "sessionHistoryExportedCsv": "Historial de sesiones exportado a CSV",
   "@sessionHistoryExportedCsv": {
     "description": "Snackbar message when session history CSV is exported"
+  },
+  "exportPdf": "Exportar PDF",
+  "@exportPdf": {
+    "description": "Button label to export data as PDF"
+  },
+  "sessionHistoryExportedPdf": "Historial de sesiones exportado a PDF",
+  "@sessionHistoryExportedPdf": {
+    "description": "Snackbar message when session history PDF is exported"
   },
   "failedToStartPractice": "Error al iniciar la sesión de práctica",
   "@failedToStartPractice": {
@@ -2711,7 +2728,7 @@
   "@mentorToday": {
     "description": "Word for today (used in inactivity check)"
   },
-  "mentorDaysAgo": "hace {daysCount} días",
+  "mentorDaysAgo": "{daysCount, plural, =1{hace 1 día} other{hace {daysCount} días}}",
   "@mentorDaysAgo": {
     "description": "Formatted days ago string",
     "placeholders": {
@@ -2842,5 +2859,140 @@
   "mentorDoingWell": "¡Lo estás haciendo bien! ¿Te gustaría revisar tu progreso, programar una nueva lección o practicar algunas preguntas?",
   "@mentorDoingWell": {
     "description": "Mentor suggestion when student is doing well"
+  },
+  "roadmaps": "Roadmaps",
+  "@roadmaps": {
+    "description": "Section title for roadmaps"
+  },
+  "createRoadmap": "Crear Roadmap",
+  "@createRoadmap": {
+    "description": "Button to create a new roadmap"
+  },
+  "roadmapGoal": "Meta de Aprendizaje",
+  "@roadmapGoal": {
+    "description": "Label for roadmap goal input"
+  },
+  "roadmapGoalHint": "ej., Quiero aprender Física IB en 180 días",
+  "@roadmapGoalHint": {
+    "description": "Hint text for roadmap goal"
+  },
+  "generateRoadmap": "Generar Roadmap",
+  "@generateRoadmap": {
+    "description": "Button to generate a roadmap"
+  },
+  "myRoadmaps": "Mis Roadmaps",
+  "@myRoadmaps": {
+    "description": "Title for list of roadmaps"
+  },
+  "milestones": "Hitos",
+  "@milestones": {
+    "description": "Section title for milestones"
+  },
+  "milestone": "Hito",
+  "@milestone": {
+    "description": "A single milestone"
+  },
+  "targetCompletion": "Finalización Prevista",
+  "@targetCompletion": {
+    "description": "Target completion date label"
+  },
+  "noRoadmapsYet": "Aún no hay roadmaps",
+  "@noRoadmapsYet": {
+    "description": "Empty state for roadmaps"
+  },
+  "roadmapOverview": "Resumen del Roadmap",
+  "@roadmapOverview": {
+    "description": "Title for roadmap detail view"
+  },
+  "timeline": "Cronología",
+  "@timeline": {
+    "description": "Timeline view label"
+  },
+  "completionOfValue": "{value}% Completado",
+  "@completionOfValue": {
+    "description": "Completion percentage",
+    "placeholders": {
+      "value": { "type": "double" }
+    }
+  },
+  "milestoneOfWithDeadline": "{title} - Vence {deadline}",
+  "@milestoneOfWithDeadline": {
+    "description": "Milestone with deadline",
+    "placeholders": {
+      "title": { "type": "String" },
+      "deadline": { "type": "String" }
+    }
+  },
+  "enableNotifications": "Habilitar Notificaciones",
+  "@enableNotifications": {
+    "description": "Toggle to enable notifications"
+  },
+  "notificationPreferences": "Preferencias de Notificaciones",
+  "@notificationPreferences": {
+    "description": "Section title for notification settings"
+  },
+  "dailyReminders": "Recordatorios Diarios",
+  "@dailyReminders": {
+    "description": "Daily reminder toggle"
+  },
+  "revisionReminders": "Recordatorios de Revisión",
+  "@revisionReminders": {
+    "description": "Revision reminder toggle"
+  },
+  "lessonNotifications": "Notificaciones de Lecciones",
+  "@lessonNotifications": {
+    "description": "Lesson notification toggle"
+  },
+  "overworkAlerts": "Alertas de Sobrecarga",
+  "@overworkAlerts": {
+    "description": "Overwork alert toggle"
+  },
+  "planAdjustmentNotifications": "Alertas de Ajuste de Plan",
+  "@planAdjustmentNotifications": {
+    "description": "Plan adjustment notification toggle"
+  },
+  "quietHours": "Horas de Silencio",
+  "@quietHours": {
+    "description": "Quiet hours section label"
+  },
+  "quietHoursStart": "Inicio Horas de Silencio",
+  "@quietHoursStart": {
+    "description": "Start time for quiet hours"
+  },
+  "quietHoursEnd": "Fin Horas de Silencio",
+  "@quietHoursEnd": {
+    "description": "End time for quiet hours"
+  },
+  "exportComprehensiveReport": "Exportar Informe Completo",
+  "@exportComprehensiveReport": {
+    "description": "Button to export comprehensive report"
+  },
+  "comprehensiveCsv": "CSV Completo",
+  "@comprehensiveCsv": {
+    "description": "Export full progress as CSV"
+  },
+  "comprehensivePdf": "PDF Completo",
+  "@comprehensivePdf": {
+    "description": "Export full progress as PDF"
+  },
+  "comprehensiveJson": "JSON Completo",
+  "@comprehensiveJson": {
+    "description": "Export full progress as JSON"
+  },
+  "comprehensiveReportExported": "Informe completo exportado",
+  "@comprehensiveReportExported": {
+    "description": "Snackbar when comprehensive report is exported"
+  },
+  "activeRoadmaps": "Roadmaps Activos",
+  "@activeRoadmaps": {
+    "description": "Label for active roadmaps count"
+  },
+  "completedRoadmaps": "Roadmaps Completados",
+  "@completedRoadmaps": {
+    "description": "Label for completed roadmaps"
+  },
+  "progressBySubject": "Progreso por Materia",
+  "@progressBySubject": {
+    "description": "Section title for per-subject progress"
   }
 }

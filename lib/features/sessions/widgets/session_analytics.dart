@@ -10,6 +10,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
   final int currentStreak;
   final int daysToShow;
   final DateTime? asOf;
+  final bool reduceMotion;
 
   const SessionAnalyticsWidget({
     super.key,
@@ -17,6 +18,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
     required this.currentStreak,
     this.daysToShow = 7,
     this.asOf,
+    this.reduceMotion = false,
   });
 
   Duration get _totalStudyTime => sessions.fold(
@@ -29,7 +31,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final now = asOf ?? DateTime.now();
-    final dayOfWeekCounts = _getSessionCountByDayOfWeek(now);
+    final dayOfWeekCounts = _getSessionCountByDayOfWeek(now, l10n.localeName);
     final avgTimePerSession = sessions.isNotEmpty
         ? _totalStudyTime ~/ sessions.length
         : Duration.zero;
@@ -42,6 +44,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
         AnimatedBarChart(
           data: dayOfWeekCounts,
           accentColor: theme.primaryColor,
+          reduceMotion: reduceMotion,
         ),
         const SizedBox(height: 24),
         _buildSectionHeader(l10n.performanceMetrics, Icons.show_chart, theme),
@@ -51,12 +54,12 @@ class SessionAnalyticsWidget extends StatelessWidget {
     );
   }
 
-  Map<String, int> _getSessionCountByDayOfWeek(DateTime now) {
+  Map<String, int> _getSessionCountByDayOfWeek(DateTime now, String localeName) {
     final counts = <String, int>{};
 
     for (var i = 0; i < daysToShow; i++) {
       final date = now.subtract(Duration(days: i));
-      final dayName = DateFormat('E').format(date);
+      final dayName = DateFormat('E', localeName).format(date);
 
       counts[dayName] = sessions
           .where((s) => s.startTime.isSameDay(date))

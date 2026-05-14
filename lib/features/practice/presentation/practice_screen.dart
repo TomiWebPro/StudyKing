@@ -12,7 +12,6 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 
 /// Production Practice Screen - Shows practice modes and allows selecting subjects
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -382,39 +381,41 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Container(
-        padding: ResponsiveUtils.screenPadding(sheetContext),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.selectSubject,
-              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ..._subjects.map((subject) => Semantics(
-              label: '${l10n.selectSubject} ${subject.name}',
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                  child: Icon(
-                    Icons.school,
-                    color: _getSubjectColor(subject.name),
-                  ),
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          padding: ResponsiveUtils.screenPadding(sheetContext),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.selectSubject,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                title: Text(subject.name),
-                subtitle: subject.code != null ? Text(subject.code ?? '') : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  _startPractice(subject);
-                },
               ),
-            )),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+              ..._subjects.map((subject) => Semantics(
+                label: '${l10n.selectSubject} ${subject.name}',
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                    child: Icon(
+                      Icons.school,
+                      color: _getSubjectColor(subject.name),
+                    ),
+                  ),
+                  title: Text(subject.name),
+                  subtitle: subject.code != null ? Text(subject.code ?? '') : null,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startPractice(subject);
+                  },
+                ),
+              )),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -427,53 +428,55 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Container(
-        padding: ResponsiveUtils.screenPadding(sheetContext),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.practiceModeTitle,
-              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          padding: ResponsiveUtils.screenPadding(sheetContext),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.practiceModeTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (_subjects.length == 1)
-              _PracticeModeOption(
-                icon: Icons.auto_fix_high,
-                title: l10n.autoSelect,
-                subtitle: l10n.aiPicksOptimalQuestions,
-                onTap: () {
-                  Navigator.pop(context);
-                  _startPractice(_subjects.first);
-                },
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.chooseSubject,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              if (_subjects.length == 1)
+                _PracticeModeOption(
+                  icon: Icons.auto_fix_high,
+                  title: l10n.autoSelect,
+                  subtitle: l10n.aiPicksOptimalQuestions,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startPractice(_subjects.first);
+                  },
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.chooseSubject,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._subjects.map((subject) => _PracticeModeOption(
-                    icon: Icons.school,
-                    title: subject.name,
-                    subtitle: subject.code ?? l10n.noCode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _startPractice(subject);
-                    },
-                  )),
-                ],
-              ),
-            const SizedBox(height: 16),
-          ],
+                    const SizedBox(height: 12),
+                    ..._subjects.map((subject) => _PracticeModeOption(
+                      icon: Icons.school,
+                      title: subject.name,
+                      subtitle: subject.code ?? l10n.noCode,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _startPractice(subject);
+                      },
+                    )),
+                  ],
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -516,32 +519,34 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (sheetContext) => Container(
-          padding: ResponsiveUtils.screenPadding(sheetContext),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.selectTopic,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+        builder: (sheetContext) => SafeArea(
+          child: Container(
+            padding: ResponsiveUtils.screenPadding(sheetContext),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.selectTopic,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ...topics.map((topic) => Semantics(
-                label: '${l10n.selectTopic} $topic',
-                child: ListTile(
-                  leading: const Icon(Icons.topic),
-                  title: Text(topic),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _startTopicPractice(topic);
-                  },
-                ),
-              )),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+                ...topics.map((topic) => Semantics(
+                  label: '${l10n.selectTopic} $topic',
+                  child: ListTile(
+                    leading: const Icon(Icons.topic),
+                    title: Text(topic),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _startTopicPractice(topic);
+                    },
+                  ),
+                )),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       );
@@ -573,14 +578,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
       if (!mounted) return;
       
-      Navigator.push(
+      Navigator.pushNamed(
         context,
-        MaterialPageRoute(
-          builder: (context) => PracticeSessionScreen(
-            subjectId: topicQuestions.first.subjectId,
-            topicId: topicQuestions.first.topicId,
-            questionCount: topicQuestions.length,
-          ),
+        AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: topicQuestions.first.subjectId,
+          topicId: topicQuestions.first.topicId,
+          questionCount: topicQuestions.length,
         ),
       );
     } catch (e) {
@@ -613,30 +617,32 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (sheetContext) => Container(
-          padding: ResponsiveUtils.screenPadding(sheetContext),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-                  Icon(
-                    Icons.check_circle,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.allCaughtUp,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
+        builder: (sheetContext) => SafeArea(
+          child: Container(
+            padding: ResponsiveUtils.screenPadding(sheetContext),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                const SizedBox(height: 16),
                 Text(
-                  l10n.noReviewsScheduled,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  l10n.allCaughtUp,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 8),
+                  Text(
+                    l10n.noReviewsScheduled,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       );
@@ -648,39 +654,41 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Container(
-        padding: ResponsiveUtils.screenPadding(sheetContext),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.selectSubject,
-              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...subjectsWithDue.map((subject) => Semantics(
-              label: '${l10n.selectSubject} ${subject.name}',
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                  child: Icon(
-                    Icons.school,
-                    color: _getSubjectColor(subject.name),
-                  ),
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          padding: ResponsiveUtils.screenPadding(sheetContext),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.selectSubject,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                title: Text(subject.name),
-                subtitle: Text(l10n.dueQuestionsCount(_dueCounts[subject.id] ?? 0)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _startSpacedRepetitionSession(subject);
-                },
               ),
-            )),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+              ...subjectsWithDue.map((subject) => Semantics(
+                label: '${l10n.selectSubject} ${subject.name}',
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                    child: Icon(
+                      Icons.school,
+                      color: _getSubjectColor(subject.name),
+                    ),
+                  ),
+                  title: Text(subject.name),
+                  subtitle: Text(l10n.dueQuestionsCount(_dueCounts[subject.id] ?? 0)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startSpacedRepetitionSession(subject);
+                  },
+                ),
+              )),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -705,34 +713,36 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (sheetContext) => Container(
-          padding: ResponsiveUtils.screenPadding(sheetContext),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.selectSubject,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ..._subjects.map((subject) => Semantics(
-                label: '${l10n.selectSubject} ${subject.name}',
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
-                    child: Icon(Icons.school, color: _getSubjectColor(subject.name)),
+        builder: (sheetContext) => SafeArea(
+          child: Container(
+            padding: ResponsiveUtils.screenPadding(sheetContext),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.selectSubject,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  title: Text(subject.name),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _launchWeakAreasForSubject(masteryService, subject, l10n);
-                  },
                 ),
-              )),
-            ],
+                const SizedBox(height: 16),
+                ..._subjects.map((subject) => Semantics(
+                  label: '${l10n.selectSubject} ${subject.name}',
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _getSubjectColor(subject.name).withValues(alpha: 0.1),
+                      child: Icon(Icons.school, color: _getSubjectColor(subject.name)),
+                    ),
+                    title: Text(subject.name),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _launchWeakAreasForSubject(masteryService, subject, l10n);
+                    },
+                  ),
+                )),
+              ],
+            ),
           ),
         ),
       );
@@ -785,13 +795,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       }
 
       if (!mounted) return;
-      Navigator.push(
+      Navigator.pushNamed(
         context,
-        MaterialPageRoute(
-          builder: (context) => PracticeSessionScreen(
-            subjectId: subject.id,
-            questionCount: weakQuestions.length,
-          ),
+        AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: subject.id,
+          questionCount: weakQuestions.length,
         ),
       );
     } catch (e) {
@@ -814,30 +823,32 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          builder: (sheetContext) => Container(
-            padding: ResponsiveUtils.screenPadding(sheetContext),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 64,
-                  color: Theme.of(sheetContext).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context)!.allCaughtUp,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+          builder: (sheetContext) => SafeArea(
+            child: Container(
+              padding: ResponsiveUtils.screenPadding(sheetContext),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 64,
+                    color: Theme.of(sheetContext).colorScheme.primary,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.noReviewsScheduled,
-                  style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 16),
+                  Text(
+                    AppLocalizations.of(context)!.allCaughtUp,
+                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(context)!.noReviewsScheduled,
+                    style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         );
@@ -846,14 +857,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
       if (!mounted) return;
 
-      Navigator.push(
+      Navigator.pushNamed(
         context,
-        MaterialPageRoute(
-          builder: (context) => PracticeSessionScreen(
-            subjectId: subject.id,
-            questionCount: result.data!.length,
-            isSpacedRepetition: true,
-          ),
+        AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: subject.id,
+          questionCount: result.data!.length,
+          isSpacedRepetition: true,
         ),
       );
     } catch (e) {

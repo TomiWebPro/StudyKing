@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -10,22 +11,23 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/student_id_service.dart';
 import '../../../../core/services/instrumentation_service.dart';
 import '../../../../core/services/mastery_graph_service.dart';
 import '../../../../core/data/repositories/plan_repository.dart';
 
-class SessionTrackerScreen extends StatefulWidget {
+class SessionTrackerScreen extends ConsumerStatefulWidget {
   final StudySessionRepository? sessionRepository;
 
   const SessionTrackerScreen({super.key, this.sessionRepository});
 
   @override
-  State<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
+  ConsumerState<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
 }
 
-class _SessionTrackerScreenState extends State<SessionTrackerScreen> with WidgetsBindingObserver {
+class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> with WidgetsBindingObserver {
   final Logger _logger = const Logger('SessionTrackerScreen');
   late StudySessionRepository _sessionRepository;
   List<StudySession> _allSessions = [];
@@ -312,6 +314,7 @@ class _SessionTrackerScreenState extends State<SessionTrackerScreen> with Widget
               SessionAnalyticsWidget(
                 sessions: _allSessions,
                 currentStreak: _currentStreak,
+                reduceMotion: ref.watch(settingsProvider).reduceMotion,
               ),
               const SizedBox(height: 24),
 

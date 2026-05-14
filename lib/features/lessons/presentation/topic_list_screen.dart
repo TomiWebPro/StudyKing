@@ -4,7 +4,7 @@ import '../../../core/data/models/topic_model.dart';
 import '../../../core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show database;
 import '../../../l10n/generated/app_localizations.dart';
-import 'lesson_list_screen.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class TopicListScreen extends StatefulWidget {
@@ -72,9 +72,11 @@ class _TopicListScreenState extends State<TopicListScreen> {
             title: Text(t.title),
             subtitle: Text(t.description),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => LessonListScreen(topicId: t.id, topicTitle: t.title),
-            )),
+            onTap: () => Navigator.pushNamed(
+              context,
+              AppRoutes.lessonList,
+              arguments: LessonListArgs(topicId: t.id, topicTitle: t.title),
+            ),
           ),
         ),
         );

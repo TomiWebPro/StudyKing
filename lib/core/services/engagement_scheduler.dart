@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
+import '../services/notification_service.dart';
 import '../data/repositories/plan_repository.dart';
 import '../services/instrumentation_service.dart';
 
@@ -8,21 +9,26 @@ class EngagementScheduler {
   final StudyProgressTracker _tracker;
   final MasteryGraphService _masteryService;
   final PlanRepository _planRepository;
+  final NotificationService _notificationService;
 
   Timer? _dailyTimer;
   bool _isInitialized = false;
+  int _notificationIdCounter = 1000;
 
   EngagementScheduler({
     required StudyProgressTracker tracker,
     required MasteryGraphService masteryService,
     PlanRepository? planRepository,
+    NotificationService? notificationService,
   })  : _tracker = tracker,
         _masteryService = masteryService,
-        _planRepository = planRepository ?? PlanRepository();
+        _planRepository = planRepository ?? PlanRepository(),
+        _notificationService = notificationService ?? NotificationService();
 
   Future<void> init() async {
     if (_isInitialized) return;
     _isInitialized = true;
+    await _notificationService.init();
     _scheduleDailyCheck();
   }
 
@@ -37,6 +43,59 @@ class EngagementScheduler {
 
   Future<void> _runDailyChecks() async {
     _scheduleDailyCheck();
+    final studentId = 'default';
+    await _sendNudgeNotifications(studentId);
+  }
+
+  Future<void> _sendNudgeNotifications(String studentId) async {
+    try {
+      final overworkNudges = await getOverworkNudge(studentId);
+      for (final nudge in overworkNudges) {
+        await _notificationService.showOverworkWarning(
+          id: _notificationIdCounter++,
+          hoursStudied: double.tryParse(
+                  nudge.message.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+              0,
+        );
+      }
+    } catch (_) {}
+
+    try {
+      final revisionNudges = await getRevisionNudges(studentId);
+      for (final nudge in revisionNudges) {
+        if (nudge.topicId != null) {
+          final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
+          final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
+          await _notificationService.showRevisionNudge(
+            id: _notificationIdCounter++,
+            topicName: nudge.topicId!,
+            daysSinceLastPractice: days,
+          );
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final planNudges = await getPlanAdjustmentNudge(studentId);
+      for (final nudge in planNudges) {
+        final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
+        final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
+        await _notificationService.showPlanAdjustmentSuggestion(
+          id: _notificationIdCounter++,
+          consecutiveLowDays: days,
+        );
+      }
+    } catch (_) {}
+
+    try {
+      final weakResult = await _masteryService.getWeakTopics(studentId);
+      if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
+        await _notificationService.showLowMasteryWarning(
+          id: _notificationIdCounter++,
+          weakTopics: weakResult.data!.map((s) => s.topicId).toList(),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<List<EngagementNudge>> getOverworkNudge(String studentId) async {

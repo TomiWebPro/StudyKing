@@ -19,6 +19,7 @@ import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import '../../../../core/utils/logger.dart';
 
 /// Practice Session Screen - Complete practice flow with progress tracking
@@ -337,43 +338,46 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              padding: ResponsiveUtils.cardPadding(context),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Semantics(
-                    label: '${AppLocalizations.of(context)!.time}: ${_elapsedTimeFormatted ?? '0 min 0 sec'}',
-                    child: _buildMiniStat(
-                      context,
-                      AppLocalizations.of(context)!.time,
-                      _elapsedTimeFormatted ?? '0 min 0 sec',
-                      Icons.access_time,
-                      Theme.of(context).colorScheme.primary,
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(1),
+              child: Container(
+                padding: ResponsiveUtils.cardPadding(context),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                      Semantics(
+                      label: '${AppLocalizations.of(context)!.time}: ${_elapsedTimeFormatted ?? formatDurationFromContext(context, Duration.zero)}',
+                      child: _buildMiniStat(
+                        context,
+                        AppLocalizations.of(context)!.time,
+                        _elapsedTimeFormatted ?? formatDurationFromContext(context, Duration.zero),
+                        Icons.access_time,
+                        Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  Semantics(
-                    label: '${AppLocalizations.of(context)!.score}: ${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
-                    child: _buildMiniStat(
-                      context,
-                      AppLocalizations.of(context)!.score,
-                      '${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
-                      Icons.star,
-                      _getColorForScore(_correctAnswers / (_currentIndex + 1)),
+                    Semantics(
+                      label: '${AppLocalizations.of(context)!.score}: ${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
+                      child: _buildMiniStat(
+                        context,
+                        AppLocalizations.of(context)!.score,
+                        '${(_correctAnswers / (_currentIndex + 1) * 100).toStringAsFixed(0)}%',
+                        Icons.star,
+                        _getColorForScore(_correctAnswers / (_currentIndex + 1)),
+                      ),
                     ),
-                  ),
-                  Semantics(
-                    label: '${AppLocalizations.of(context)!.correct}: $_correctAnswers',
-                    child: _buildMiniStat(
-                      context,
-                      AppLocalizations.of(context)!.correct,
-                      _correctAnswers.toString(),
-                      Icons.check_circle,
-                      Theme.of(context).colorScheme.primary,
+                    Semantics(
+                      label: '${AppLocalizations.of(context)!.correct}: $_correctAnswers',
+                      child: _buildMiniStat(
+                        context,
+                        AppLocalizations.of(context)!.correct,
+                        _correctAnswers.toString(),
+                        Icons.check_circle,
+                        Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -384,67 +388,75 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                   padding: ResponsiveUtils.screenPadding(context),
                   child: ListView(
                     children: [
-                      // Question text
-                      Container(
-                        padding: ResponsiveUtils.cardPadding(context),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    question.type.name,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
+                      FocusTraversalOrder(
+                        order: const NumericFocusOrder(2),
+                        child: Container(
+                          padding: ResponsiveUtils.cardPadding(context),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      question.type.name,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              question.text,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                question.text,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
 
                       // Question Widget
-                      _buildQuestionWidget(question),
+                      FocusTraversalOrder(
+                        order: const NumericFocusOrder(3),
+                        child: _buildQuestionWidget(question),
+                      ),
                       const SizedBox(height: 24),
 
                       // Submit button
                       if (!_isSubmitted)
-                        Semantics(
-                          label: AppLocalizations.of(context)!.submitAnswer,
-                          child:                         FilledButton(
-                            onPressed: _currentAnswer != null ? _submitAnswer : null,
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
+                        FocusTraversalOrder(
+                          order: const NumericFocusOrder(4),
+                          child: Semantics(
+                            label: AppLocalizations.of(context)!.submitAnswer,
+                            child: FilledButton(
+                              onPressed: _currentAnswer != null ? _submitAnswer : null,
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size.fromHeight(48),
+                              ),
+                              child: Text(AppLocalizations.of(context)!.submitAnswer),
                             ),
-                            child: Text(AppLocalizations.of(context)!.submitAnswer),
                           ),
                         ),
 
@@ -487,6 +499,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           isSubmitted: _isSubmitted,
           isFeedbackVisible: _isFeedbackVisible,
           onAnswerSelected: _onAnswerSelected,
+          reduceMotion: ref.watch(settingsProvider).reduceMotion,
         );
 
       case QuestionType.mathExpression:
@@ -500,6 +513,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           instruction: question.text,
           onDrawingComplete: (data) => _onAnswerSelected(AppLocalizations.of(context)!.drawingSubmitted),
           initialDrawing: null,
+          largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
         );
 
       case QuestionType.typedAnswer:
@@ -594,27 +608,33 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        Semantics(
-          label: l10n.previous,
-          child: ElevatedButton.icon(
-            onPressed: _previousQuestion,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(5),
+          child: Semantics(
+            label: l10n.previous,
+            child: ElevatedButton.icon(
+              onPressed: _previousQuestion,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+              icon: const Icon(Icons.arrow_back),
+              label: Text(l10n.previous),
             ),
-            icon: const Icon(Icons.arrow_back),
-            label: Text(l10n.previous),
           ),
         ),
         const SizedBox(height: 16),
-        Semantics(
-          label: l10n.next,
-          child: ElevatedButton.icon(
-            onPressed: _nextQuestion,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(6),
+          child: Semantics(
+            label: l10n.next,
+            child: ElevatedButton.icon(
+              onPressed: _nextQuestion,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+              icon: const Icon(Icons.arrow_forward),
+              label: Text(l10n.next),
             ),
-            icon: const Icon(Icons.arrow_forward),
-            label: Text(l10n.next),
           ),
         ),
       ],

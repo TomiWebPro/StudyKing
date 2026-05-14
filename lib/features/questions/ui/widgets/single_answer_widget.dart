@@ -10,6 +10,7 @@ class SingleAnswerWidget extends StatelessWidget {
   final bool isFeedbackVisible;
   final ValueChanged<String?> onAnswerSelected;
   final bool isSubmitted;
+  final bool reduceMotion;
 
   const SingleAnswerWidget({
     super.key,
@@ -19,6 +20,7 @@ class SingleAnswerWidget extends StatelessWidget {
     this.isFeedbackVisible = false,
     required this.isSubmitted,
     required this.onAnswerSelected,
+    this.reduceMotion = false,
   });
 
   @override
@@ -83,56 +85,62 @@ class SingleAnswerWidget extends StatelessWidget {
         if (isFeedbackVisible && correctAnswer != null)
           Semantics(
             liveRegion: true,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeIn,
-              switchOutCurve: Curves.easeOut,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              child: Container(
-                key: ValueKey('feedback_${selectedAnswer}_$correctAnswer'),
-                margin: EdgeInsets.only(top: ResponsiveUtils.verticalSpacing(context) * 1.5),
-                  padding: ResponsiveUtils.cardPadding(context),
-                  decoration: BoxDecoration(
-                    color: selectedAnswer == correctAnswer
-                      ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15)
-                      : Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(8),
+            child: reduceMotion
+                ? _buildFeedbackContent(context, l10n)
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeIn,
+                    switchOutCurve: Curves.easeOut,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: _buildFeedbackContent(context, l10n),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        selectedAnswer == correctAnswer
-                          ? Icons.check_circle
-                          : Icons.error_outline,
-                        color: selectedAnswer == correctAnswer
-                          ? Theme.of(context).colorScheme.tertiary
-                          : Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        selectedAnswer == correctAnswer
-                          ? l10n.correctFeedback
-                          : l10n.incorrectFeedback,
-                        style: TextStyle(
-                          color: selectedAnswer == correctAnswer
-                            ? Theme.of(context).colorScheme.tertiary
-                            : Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        selectedAnswer == correctAnswer ? l10n.selectedRightOption : l10n.tryAgain,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-            ),
           ),
       ],
+    );
+  }
+
+  Widget _buildFeedbackContent(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      key: ValueKey('feedback_${selectedAnswer}_$correctAnswer'),
+      margin: EdgeInsets.only(top: ResponsiveUtils.verticalSpacing(context) * 1.5),
+      padding: ResponsiveUtils.cardPadding(context),
+      decoration: BoxDecoration(
+        color: selectedAnswer == correctAnswer
+          ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15)
+          : Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            selectedAnswer == correctAnswer
+              ? Icons.check_circle
+              : Icons.error_outline,
+            color: selectedAnswer == correctAnswer
+              ? Theme.of(context).colorScheme.tertiary
+              : Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            selectedAnswer == correctAnswer
+              ? l10n.correctFeedback
+              : l10n.incorrectFeedback,
+            style: TextStyle(
+              color: selectedAnswer == correctAnswer
+                ? Theme.of(context).colorScheme.tertiary
+                : Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            selectedAnswer == correctAnswer ? l10n.selectedRightOption : l10n.tryAgain,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 

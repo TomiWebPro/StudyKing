@@ -492,7 +492,7 @@ void main() {
 
     test('mentorDaysAgo', () {
       expect(l10n.mentorDaysAgo(3), 'hace 3 días');
-      expect(l10n.mentorDaysAgo(1), 'hace 1 días');
+      expect(l10n.mentorDaysAgo(1), 'hace 1 día');
     });
 
     test('mentorInactiveDays', () {

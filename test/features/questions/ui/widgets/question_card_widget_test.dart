@@ -364,6 +364,47 @@ void main() {
       });
     });
 
+    group('step by step question', () {
+      testWidgets('renders step by step label', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.stepByStep);
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.text('Step-by-Step'), findsOneWidget);
+      });
+
+      testWidgets('renders text field for step by step answer', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.stepByStep);
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Type your answer here...'), findsOneWidget);
+      });
+
+      testWidgets('renders step by step content instead of not supported message', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.stepByStep);
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.text('This question type is not yet supported in this view.'), findsNothing);
+        expect(find.byType(TextField), findsOneWidget);
+      });
+
+      testWidgets('submitting step by step answer calls onAnswerSubmitted', (tester) async {
+        String? submittedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.stepByStep);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerSubmitted: (answer) => submittedAnswer = answer,
+        ));
+
+        await tester.enterText(find.byType(TextField), 'Step 1: do this\nStep 2: do that');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Answer'));
+        await tester.pump();
+
+        expect(submittedAnswer, 'Step 1: do this\nStep 2: do that');
+      });
+    });
+
     group('question type labels', () {
       testWidgets('typed answer label', (tester) async {
         final q = _defaultQuestion().copyWith(type: QuestionType.typedAnswer);
@@ -614,7 +655,7 @@ void main() {
         expect(find.text('This question type is not yet supported in this view.'), findsOneWidget);
       });
 
-      testWidgets('kanji builder with zero difficulty color', (tester) async {
+      testWidgets('difficulty 0 uses default color', (tester) async {
         final question = _defaultQuestion().copyWith(difficulty: 0);
         await tester.pumpWidget(buildWidget(question: question));
         expect(find.byType(Card), findsOneWidget);

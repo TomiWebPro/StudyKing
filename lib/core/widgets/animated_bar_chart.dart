@@ -10,6 +10,7 @@ class AnimatedBarChart extends StatefulWidget {
   final double borderRadius;
   final String? yAxisLabel;
   final bool showValueTooltips;
+  final bool reduceMotion;
 
   const AnimatedBarChart({
     super.key,
@@ -21,6 +22,7 @@ class AnimatedBarChart extends StatefulWidget {
     this.borderRadius = 6,
     this.yAxisLabel,
     this.showValueTooltips = true,
+    this.reduceMotion = false,
   });
 
   @override
@@ -29,6 +31,41 @@ class AnimatedBarChart extends StatefulWidget {
 
 class _AnimatedBarChartState extends State<AnimatedBarChart> {
   bool _hasAnimated = false;
+
+  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme) {
+    if (widget.reduceMotion) {
+      return Container(
+        width: widget.barWidth,
+        height: height,
+        decoration: BoxDecoration(
+          color: count > 0
+              ? widget.accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+              : theme.disabledColor.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+        ),
+      );
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(
+        begin: _hasAnimated ? height : 0,
+        end: height,
+      ),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Container(
+          width: widget.barWidth,
+          height: value,
+          decoration: BoxDecoration(
+            color: count > 0
+                ? widget.accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+                : theme.disabledColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void didUpdateWidget(AnimatedBarChart oldWidget) {
@@ -96,27 +133,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                         ),
                       ),
                     const SizedBox(height: 4),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(
-                        begin: _hasAnimated ? height : 0,
-                        end: height,
-                      ),
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        return Container(
-                          width: widget.barWidth,
-                          height: value,
-                          decoration: BoxDecoration(
-                            color: count > 0
-                                ? widget.accentColor.withValues(
-                                    alpha: 0.7 + (count / maxCount * 0.3))
-                                : theme.disabledColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(widget.borderRadius),
-                          ),
-                        );
-                      },
-                    ),
+                    _buildBar(context, height, count, maxCount, theme),
                     const SizedBox(height: 6),
                     Text(
                       day,

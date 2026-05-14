@@ -9,7 +9,7 @@ import '../../../core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/logger.dart';
-import '../../teaching/presentation/tutor_screen.dart';
+import '../../../core/routes/app_router.dart';
 
 class QuickGuideScreen extends ConsumerStatefulWidget {
   final LlmService? llmService;
@@ -307,14 +307,13 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
                       subtitle: l10n.interactiveConversationalLessons,
                       color: colorScheme.primary,
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushNamed(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const TutorScreen(
-                              topicId: '',
-                              topicTitle: '',
-                              subjectId: '',
-                            ),
+                          AppRoutes.tutor,
+                          arguments: const TutorArgs(
+                            topicId: '',
+                            topicTitle: '',
+                            subjectId: '',
                           ),
                         );
                       },

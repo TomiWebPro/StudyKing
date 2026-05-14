@@ -1,81 +1,181 @@
-# Internationalisation Overhaul: Spanish Quality & Localisation Architecture
+# Spanish (es) Localization Audit & i18n Architecture Gaps
 
 ## Context
 
-The app currently supports English (`app_en.arb`) and Spanish (`app_es.arb`) with ~200+ ARB keys each. However, a significant gap exists between what's in the ARB files and what's actually rendered in the UI. Many user-facing strings are hardcoded in English in widget/build methods, bypassing the `AppLocalizations` system entirely. The Spanish translation also contains inconsistencies and quality issues that would compound if this serves as the template for adding more languages.
+The app supports `en` and `es` via Flutter ARB-based l10n (`lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`). The Spanish translation is extensive (~2846 lines) but contains several inaccuracies, hardcoded English fallbacks, and locale-blind formatting. These issues must be fixed first so that adding future languages (fr, de, pt, etc.) follows correct patterns.
 
-## Issues Found
+## Issues
 
-### 1. ~70+ Strings Hardcoded in English (Bypass Localisation Entirely)
+### 1. Wrong abbreviation in `questionsAndMinutes` / `topicQuestionsAndMinutes` (Spanish)
 
-**Files affected (most impactful):**
+**File:** `lib/l10n/app_es.arb`
 
-| File | Count | Examples |
-|------|-------|---------|
-| `lib/core/errors/handlers.dart:114-140` | 17 | All error messages: `'Unable to connect to the server...'`, `'API key is required...'`, `'Too many requests...'`, `'A database error occurred...'` |
-| `lib/features/practice/presentation/analytics_dashboard.dart` | 30+ | Section headings: `'Accuracy'`, `'Weekly Activity'`, `'Mastery Overview'`, `'Topic Performance'`, empty states: `'No topic data yet...'` |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart:308-331` | 6 | Mode cards: `'AI Tutor'`, `'Mentor'`, `'Interactive conversational lessons'`, `'Personal study assistant & planner'` |
-| `lib/features/teaching/presentation/widgets/chat_bubble.dart:54` | 3 | Sender labels: `'You'`, `'Tutor'`, `'System'` |
-| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:55-92` | 3 | `'$remaining min remaining'`, `'$exerciseCount questions'`, `'$correctCount correct'` |
-| `lib/features/mentor/presentation/mentor_screen.dart:74-83` | 1 | Welcome message body (only greeting is localised) |
-| `lib/features/teaching/presentation/tutor_screen.dart:101` | 1 | Initial AI greeting prompt |
-| `lib/features/practice/presentation/practice_screen.dart:648` | 1 | Snackbar error |
+```
+"questionsAndMinutes": "{questions}Q · {minutes}min",
+"topicQuestionsAndMinutes": "{questions}Q · {minutes}min",
+```
 
-**Rationale:** None of these strings exist in `app_en.arb` or `app_es.arb`. A Spanish user sees every error message, analytics label, and mode picker card in English. This is the most impactful issue because it's a complete blind spot — the ARB files show coverage that doesn't reflect reality.
+The abbreviation `Q` stands for English **"Questions"**. In Spanish the correct abbreviation is **`P`** (preguntas). This is inconsistent with `dailyPlanTarget` which correctly uses `P`:
 
-### 2. Spanish Translation Inconsistencies
+```
+"dailyPlanTarget": "Hoy: {questions}P, {minutes}min",
+```
 
-| Key | English | Spanish (current) | Problem |
-|-----|---------|-------------------|---------|
-| `accuracy` (line 344) | Accuracy | `Exactitud` | Inconsistent with `accuracyLabel` |
-| `accuracyLabel` (line 1827) | Accuracy: {percent} | `Precisión: {percent}` | Same English word "Accuracy" → two different Spanish words |
-| `weakLabel` (line 1856) | Weak | `Débil` | Unnatural as a noun; `Por mejorar` or `Con dificultad` is more natural |
-| `atRiskTopics` (line 1819) | At Risk Topics | `Temas en Riesgo` | Awkward; `Temas con dificultades` or `Temas en riesgo de quedarse atrás` reads better |
-| `weakAreas` (line 219) | Weak Areas | `Áreas Débiles` | Consider `Áreas por mejorar` (positive framing, common in education) |
-| `masteredLabel` (line 1852) | Mastered | `Dominado` | Better: `Dominado` is OK but `Adquirido` or `Superado` is more common in educational contexts |
+**Fix:** Both keys should use `{questions}P` in Spanish.
 
-**Rationale:** A Spanish-speaking user will see "Exactitud" in one place and "Precisión" in another for the same English concept. If Spanish — the only non-English locale — has these issues, they will propagate when more languages are added without a style guide.
+**Rationale:** This is a factual translation error visible to all Spanish users on practice/dashboard cards.
 
-### 3. Missing ICU Plural Forms in English ARB
+---
 
-| Key | Current | Issue |
-|-----|---------|-------|
-| `randomQuestions` | `{count} random questions` | No ICU plural: `1 random questions` is grammatically wrong. Should use ICU: `{count, plural, =1{1 random question} other{{count} random questions}}` |
-| `sessionsCount` | `{count} sessions` | No ICU plural: `1 sessions`. Should use ICU: `{count, plural, =1{1 session} other{{count} sessions}}` |
-| `questionsCountLabel` | `{count} questions` | Same issue: `1 questions` |
+### 2. Hardcoded English fallback `'0 min 0 sec'`
 
-**Rationale:** The English base locale itself has grammatically incorrect plurals. Since ARB tooling uses ICU MessageFormat, these should use `plural` syntax. Note that Spanish versions are OK because "1 preguntas" vs "0 preguntas" vs "2 preguntas" are all grammatically the same, but the tooling still won't handle them correctly for English.
+**File:** `lib/features/practice/presentation/practice_session_screen.dart:347,351`
 
-### 4. No Extensible Language Architecture
+```dart
+label: '${AppLocalizations.of(context)!.time}: ${_elapsedTimeFormatted ?? '0 min 0 sec'}',
+```
 
-**Issues:**
-- Only 2 locales (`en`, `es`) are in `supportedLocales`. Adding a third (e.g. `fr`, `de`) requires manual ARB creation without any guide or checklist.
-- No `l10n.yaml` or `AGENTS.md` documenting how to add a new locale, run code generation, or test it.
-- No CI check that all `app_en.arb` keys exist in other locale ARB files.
-- The coverage test (`test/l10n/app_localizations_coverage_test.dart`) only tests keys that already exist — it cannot detect missing keys from hardcoded strings.
+When `_elapsedTimeFormatted` is null (before first tick), the fallback string is hardcoded in English. This bypasses the entire l10n system.
 
-## Affected Files
+**Fix:** Use `l10n.sessionDurationMinutes(0)` or a dedicated `l10n.zeroDuration` key, or initialize `_elapsedTimeFormatted` eagerly with a localised value.
 
-- `lib/l10n/app_en.arb` — English source of truth
-- `lib/l10n/app_es.arb` — Spanish translation (inconsistencies to fix)
-- `lib/core/errors/handlers.dart` — 17 hardcoded error messages
-- `lib/features/practice/presentation/analytics_dashboard.dart` — Entirely unlocalised dashboard
-- `lib/features/quickguide/presentation/quick_guide_screen.dart` — Mode picker cards
-- `lib/features/teaching/presentation/widgets/chat_bubble.dart` — Sender role labels
-- `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` — Progress stat labels
-- `lib/features/mentor/presentation/mentor_screen.dart` — Welcome message body
-- `lib/features/teaching/presentation/tutor_screen.dart` — Initial greeting
-- `lib/features/practice/presentation/practice_screen.dart` — Error snackbar
-- `test/l10n/app_localizations_coverage_test.dart` — Coverage test that needs extension
+---
+
+### 3. Hardcoded date-time format in `_formatTime` (LLM task manager)
+
+**File:** `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:159-161`
+
+```dart
+String _formatTime(DateTime dt) {
+  return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
+}
+```
+
+This always produces 24-hour `HH:MM:SS`. Many locales prefer 12-hour or different separators. The `intl` `DateFormat` is already a dependency — use it with the locale from `AppLocalizations`.
+
+**Fix:** Replace with `DateFormat.Hms(l10n.localeName).format(dt)`.
+
+---
+
+### 4. `DateFormat('E')` without locale in analytics
+
+**File:** `lib/features/sessions/widgets/session_analytics.dart:59`
+
+```dart
+final dayName = DateFormat('E').format(date);
+```
+
+`DateFormat('E')` returns English day names (Mon, Tue, etc.) regardless of the app locale. For Spanish users these should be `Lun, Mar, Mié, ...`.
+
+**Fix:** Pass locale: `DateFormat('E', l10n.localeName).format(date)`.
+
+---
+
+### 5. `drawingWithStrokes` plural workaround is fragile
+
+**Files:** `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`
+
+```
+"drawingWithStrokes": "Drawing with {count} stroke{plural}",
+// Spanish:
+"drawingWithStrokes": "Dibujando con {count} trazo{plural}",
+```
+
+The `{plural}` placeholder is resolved by the caller as `'s'` or `''`. This works for English and accidentally for Spanish (`trazo` + `s` = `trazos`), but will **break** for any language where the plural suffix is not `'s'` (e.g., French - `trazo` is not a word, but more importantly languages with complex plural morphology).
+
+**Fix:** Replace with proper ICU plural syntax:
+
+```
+"drawingWithStrokes": "{count, plural, =1{Drawing with 1 stroke} other{Drawing with {count} strokes}}"
+```
+
+And in Spanish:
+
+```
+"drawingWithStrokes": "{count, plural, =1{Dibujando con 1 trazo} other{Dibujando con {count} trazos}}"
+```
+
+This lets Flutter's `Intl.pluralLogic` handle all plural rules correctly.
+
+---
+
+### 6. No documented locale-adding procedure
+
+**Files:** `lib/l10n/`, `lib/main.dart:129-132`
+
+Only `en` and `es` are registered:
+
+```dart
+supportedLocales: const [
+  Locale('en'),
+  Locale('es'),
+],
+```
+
+There is no `flutter gen-l10n` configuration in `pubspec.yaml`, no documented workflow for:
+- Generating ARB templates for new locales
+- Running the codegen
+- Validating coverage (though a test file exists at `test/l10n/app_localizations_coverage_test.dart`)
+
+**Fix:** Add `flutter gen-l10n` config to `pubspec.yaml` with `arb-dir`, `template-arb-file`, `output-localization-file`, etc. Document a one-command flow: `flutter gen-l10n && <validate>`.
+
+---
+
+### 7. Missing `localeResolutionCallback`
+
+**File:** `lib/main.dart:119-132`
+
+The app sets `locale:` but does not have a `localeResolutionCallback`. This means:
+- On devices set to `es-MX`, `es-AR`, etc., the app will **not** resolve to the `es` locale because exact match is required.
+- Similarly, `en-GB`, `en-AU`, etc. will not resolve to `en`.
+
+**Fix:** Add a `localeResolutionCallback` that strips the country code to match the base locale.
+
+```dart
+localeResolutionCallback: (locale, supportedLocales) {
+  if (locale == null) return supportedLocales.first;
+  for (final supported in supportedLocales) {
+    if (supported.languageCode == locale.languageCode) return supported;
+  }
+  return supportedLocales.first;
+},
+```
+
+---
+
+### 8. `durationSeparator` in ARB is a placeholder hack
+
+**Files:** `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`
+
+```
+"durationSeparator": " ",
+```
+
+A single space is the most common separator, but some locales may use different conventions (e.g., en dash, no separator). Having a key that just returns a space is brittle — the format logic in `time_utils.dart` string-joins parts instead of using a proper localized template.
+
+**Consideration:** Replace custom concatenation in `formatDuration()` with a localized template like `"{hours}h {minutes}m {seconds}s"` so the complete format per locale is defined in the ARB file, not in Dart code.
+
+---
 
 ## Acceptance Criteria
 
-1. **All error messages in `handlers.dart`** are extracted to ARB keys in both `app_en.arb` and `app_es.arb` with proper ICU placeholders. Hardcoded strings replaced with `AppLocalizations.of(context)!` calls.
-2. **`analytics_dashboard.dart`** — Every label, section heading, empty state, and stat string is localised via ARB keys.
-3. **Mode picker cards** in `quick_guide_screen.dart` use localised strings instead of `'AI Tutor'` / `'Mentor'`.
-4. **Sender labels** in `chat_bubble.dart` (`'You'`, `'Tutor'`, `'System'`) are localised.
-5. **Lesson progress bar** labels in `lesson_progress_bar.dart` and `tutor_screen.dart` use localised strings.
-6. **Spanish consistency** — `accuracy` and `accuracyLabel` use the same translation; `weakLabel` and `atRiskTopics` reviewed for naturalness; one style chosen per concept.
-7. **English ICU plurals** — `randomQuestions`, `sessionsCount`, `questionsCountLabel` updated to proper ICU `plural` syntax in `app_en.arb`.
-8. **Coverage test** updated to detect missing keys between English and Spanish ARB files (fails if any `app_en.arb` key lacks a `app_es.arb` counterpart, and vice versa).
-9. **`AGENTS.md` or `CONTRIBUTING.md`** contains a "Adding a new locale" checklist documenting: creating the ARB, running `flutter gen-l10n`, adding the locale to `supportedLocales`, adding it to the coverage test.
+- [ ] `questionsAndMinutes` and `topicQuestionsAndMinutes` use `P` (not `Q`) in `app_es.arb`
+- [ ] `_elapsedTimeFormatted` null fallback in `practice_session_screen.dart` is localised
+- [ ] `_formatTime` in `llm_task_manager_screen.dart` uses `DateFormat` with `l10n.localeName`
+- [ ] `DateFormat('E')` in `session_analytics.dart` passes locale
+- [ ] `drawingWithStrokes` uses proper ICU plural syntax in both `app_en.arb` and `app_es.arb`
+- [ ] `pubspec.yaml` has `flutter gen-l10n` configuration for repeatable codegen
+- [ ] `localeResolutionCallback` is added to `MaterialApp` for country-code fallback
+- [ ] Generated Dart files (`app_localizations_es.dart`) are regenerated after ARB edits
+
+## Affected Files
+
+| File | Issue |
+|------|-------|
+| `lib/l10n/app_es.arb` | #1, #5, #8 |
+| `lib/l10n/app_en.arb` | #5, #8 |
+| `lib/features/practice/presentation/practice_session_screen.dart` | #2 |
+| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | #3 |
+| `lib/features/sessions/widgets/session_analytics.dart` | #4 |
+| `lib/main.dart` | #6, #7 |
+| `pubspec.yaml` | #6 |

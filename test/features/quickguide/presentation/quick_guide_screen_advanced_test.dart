@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -526,7 +524,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      final messages = find.byType(Text);
       expect(
         find.textContaining(
             'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything'),

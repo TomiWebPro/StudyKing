@@ -580,6 +580,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pueden cargar los modelos. Intente de nuevo.';
 
   @override
+  String get retry => 'Reintentar';
+
+  @override
   String get signOutConfirmation => '¿Está seguro de que desea cerrar sesión?';
 
   @override
@@ -1051,8 +1054,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get canvasIsEmpty => 'El lienzo está vacío';
 
   @override
-  String drawingWithStrokes(int count, String plural) {
-    return 'Dibujando con $count trazo$plural';
+  String drawingWithStrokes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Dibujando con $count trazos',
+      one: 'Dibujando con 1 trazo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1384,12 +1393,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String questionsAndMinutes(int questions, int minutes) {
-    return '${questions}Q · ${minutes}min';
+    return '${questions}P · ${minutes}min';
   }
 
   @override
   String topicQuestionsAndMinutes(int questions, int minutes) {
-    return '${questions}Q · ${minutes}min';
+    return '${questions}P · ${minutes}min';
   }
 
   @override
@@ -1785,6 +1794,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Aumente el tamaño de los objetivos táctiles';
 
   @override
+  String get reduceMotion => 'Reducir movimiento';
+
+  @override
+  String get reduceMotionDescription =>
+      'Reducir o desactivar animaciones de movimiento';
+
+  @override
   String get errorNetworkConnection =>
       'No se puede conectar al servidor. Verifique su conexión a internet e intente de nuevo.';
 
@@ -1832,9 +1848,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Ocurrió un error inesperado. Intente de nuevo.';
 
   @override
-  String get retry => 'Reintentar';
-
-  @override
   String get retryConnection => 'Reintentar Conexión';
 
   @override
@@ -1867,6 +1880,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get sessionHistoryExportedCsv =>
       'Historial de sesiones exportado a CSV';
+
+  @override
+  String get exportPdf => 'Exportar PDF';
+
+  @override
+  String get sessionHistoryExportedPdf =>
+      'Historial de sesiones exportado a PDF';
 
   @override
   String get failedToStartPractice => 'Error al iniciar la sesión de práctica';
@@ -1995,7 +2015,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mentorDaysAgo(int daysCount) {
-    return 'hace $daysCount días';
+    String _temp0 = intl.Intl.pluralLogic(
+      daysCount,
+      locale: localeName,
+      other: 'hace $daysCount días',
+      one: 'hace 1 día',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2094,4 +2120,104 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get mentorDoingWell =>
       '¡Lo estás haciendo bien! ¿Te gustaría revisar tu progreso, programar una nueva lección o practicar algunas preguntas?';
+
+  @override
+  String get roadmaps => 'Roadmaps';
+
+  @override
+  String get createRoadmap => 'Crear Roadmap';
+
+  @override
+  String get roadmapGoal => 'Meta de Aprendizaje';
+
+  @override
+  String get roadmapGoalHint => 'ej., Quiero aprender Física IB en 180 días';
+
+  @override
+  String get generateRoadmap => 'Generar Roadmap';
+
+  @override
+  String get myRoadmaps => 'Mis Roadmaps';
+
+  @override
+  String get milestones => 'Hitos';
+
+  @override
+  String get milestone => 'Hito';
+
+  @override
+  String get targetCompletion => 'Finalización Prevista';
+
+  @override
+  String get noRoadmapsYet => 'Aún no hay roadmaps';
+
+  @override
+  String get roadmapOverview => 'Resumen del Roadmap';
+
+  @override
+  String get timeline => 'Cronología';
+
+  @override
+  String completionOfValue(double value) {
+    return '$value% Completado';
+  }
+
+  @override
+  String milestoneOfWithDeadline(String title, String deadline) {
+    return '$title - Vence $deadline';
+  }
+
+  @override
+  String get enableNotifications => 'Habilitar Notificaciones';
+
+  @override
+  String get notificationPreferences => 'Preferencias de Notificaciones';
+
+  @override
+  String get dailyReminders => 'Recordatorios Diarios';
+
+  @override
+  String get revisionReminders => 'Recordatorios de Revisión';
+
+  @override
+  String get lessonNotifications => 'Notificaciones de Lecciones';
+
+  @override
+  String get overworkAlerts => 'Alertas de Sobrecarga';
+
+  @override
+  String get planAdjustmentNotifications => 'Alertas de Ajuste de Plan';
+
+  @override
+  String get quietHours => 'Horas de Silencio';
+
+  @override
+  String get quietHoursStart => 'Inicio Horas de Silencio';
+
+  @override
+  String get quietHoursEnd => 'Fin Horas de Silencio';
+
+  @override
+  String get exportComprehensiveReport => 'Exportar Informe Completo';
+
+  @override
+  String get comprehensiveCsv => 'CSV Completo';
+
+  @override
+  String get comprehensivePdf => 'PDF Completo';
+
+  @override
+  String get comprehensiveJson => 'JSON Completo';
+
+  @override
+  String get comprehensiveReportExported => 'Informe completo exportado';
+
+  @override
+  String get activeRoadmaps => 'Roadmaps Activos';
+
+  @override
+  String get completedRoadmaps => 'Roadmaps Completados';
+
+  @override
+  String get progressBySubject => 'Progreso por Materia';
 }

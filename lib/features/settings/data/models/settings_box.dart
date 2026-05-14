@@ -45,6 +45,9 @@ class SettingsBox {
   @HiveField(12)
   late bool largeTouchTargets;
 
+  @HiveField(13)
+  late bool reduceMotion;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -59,6 +62,7 @@ class SettingsBox {
     this.sessionDurationMinutes = 30,
     this.highContrastEnabled = false,
     this.largeTouchTargets = false,
+    this.reduceMotion = false,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -85,6 +89,7 @@ class SettingsBox {
       'sessionDurationMinutes': sessionDurationMinutes,
       'highContrastEnabled': highContrastEnabled,
       'largeTouchTargets': largeTouchTargets,
+      'reduceMotion': reduceMotion,
     };
   }
 
@@ -113,6 +118,9 @@ class SettingsBox {
           : false,
       largeTouchTargets: json['largeTouchTargets'] is bool
           ? json['largeTouchTargets'] as bool
+          : false,
+      reduceMotion: json['reduceMotion'] is bool
+          ? json['reduceMotion'] as bool
           : false,
     );
   }

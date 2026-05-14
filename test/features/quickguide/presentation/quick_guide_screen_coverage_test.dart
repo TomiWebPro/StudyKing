@@ -42,15 +42,6 @@ class _FakeLlmService extends LlmService {
   }
 }
 
-class _TestNavigatorObserver extends NavigatorObserver {
-  final List<Route<dynamic>> pushedRoutes = [];
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRoutes.add(route);
-  }
-}
-
 Widget _buildTestApp({
   QuickGuideScreen? screen,
   NavigatorObserver? observer,

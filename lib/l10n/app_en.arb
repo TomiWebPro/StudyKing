@@ -729,6 +729,10 @@
   "@unableToLoadModelsTryAgain": {
     "description": "Error message when models cannot be loaded"
   },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button label"
+  },
   "signOutConfirmation": "Are you sure you want to sign out?",
   "@signOutConfirmation": {
     "description": "Confirmation text for sign out"
@@ -1375,15 +1379,12 @@
   "@canvasIsEmpty": {
     "description": "Status text when canvas is empty"
   },
-  "drawingWithStrokes": "Drawing with {count} stroke{plural}",
+  "drawingWithStrokes": "{count, plural, =1{Drawing with 1 stroke} other{Drawing with {count} strokes}}",
   "@drawingWithStrokes": {
     "description": "Status text showing stroke count",
     "placeholders": {
       "count": {
         "type": "int"
-      },
-      "plural": {
-        "type": "String"
       }
     }
   },
@@ -2422,6 +2423,14 @@
   "@largeTouchTargetsDescription": {
     "description": "Subtitle for large touch targets toggle"
   },
+  "reduceMotion": "Reduce Motion",
+  "@reduceMotion": {
+    "description": "Title for reduce motion toggle"
+  },
+  "reduceMotionDescription": "Reduce or disable motion animations",
+  "@reduceMotionDescription": {
+    "description": "Subtitle for reduce motion toggle"
+  },
 
   "errorNetworkConnection": "Unable to connect to the server. Please check your internet connection and try again.",
   "@errorNetworkConnection": {
@@ -2563,6 +2572,14 @@
   "sessionHistoryExportedCsv": "Session history exported to CSV",
   "@sessionHistoryExportedCsv": {
     "description": "Snackbar message when session history CSV is exported"
+  },
+  "exportPdf": "Export PDF",
+  "@exportPdf": {
+    "description": "Button label to export data as PDF"
+  },
+  "sessionHistoryExportedPdf": "Session history exported to PDF",
+  "@sessionHistoryExportedPdf": {
+    "description": "Snackbar message when session history PDF is exported"
   },
   "failedToStartPractice": "Failed to start practice session",
   "@failedToStartPractice": {
@@ -2711,7 +2728,7 @@
   "@mentorToday": {
     "description": "Word for today (used in inactivity check)"
   },
-  "mentorDaysAgo": "{daysCount} days ago",
+  "mentorDaysAgo": "{daysCount, plural, =1{1 day ago} other{{daysCount} days ago}}",
   "@mentorDaysAgo": {
     "description": "Formatted days ago string",
     "placeholders": {
@@ -2842,5 +2859,140 @@
   "mentorDoingWell": "You're doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?",
   "@mentorDoingWell": {
     "description": "Mentor suggestion when student is doing well"
+  },
+  "roadmaps": "Roadmaps",
+  "@roadmaps": {
+    "description": "Section title for roadmaps"
+  },
+  "createRoadmap": "Create Roadmap",
+  "@createRoadmap": {
+    "description": "Button to create a new roadmap"
+  },
+  "roadmapGoal": "Learning Goal",
+  "@roadmapGoal": {
+    "description": "Label for roadmap goal input"
+  },
+  "roadmapGoalHint": "e.g., I want to learn IB Physics in 180 days",
+  "@roadmapGoalHint": {
+    "description": "Hint text for roadmap goal"
+  },
+  "generateRoadmap": "Generate Roadmap",
+  "@generateRoadmap": {
+    "description": "Button to generate a roadmap"
+  },
+  "myRoadmaps": "My Roadmaps",
+  "@myRoadmaps": {
+    "description": "Title for list of roadmaps"
+  },
+  "milestones": "Milestones",
+  "@milestones": {
+    "description": "Section title for milestones"
+  },
+  "milestone": "Milestone",
+  "@milestone": {
+    "description": "A single milestone"
+  },
+  "targetCompletion": "Target Completion",
+  "@targetCompletion": {
+    "description": "Target completion date label"
+  },
+  "noRoadmapsYet": "No roadmaps yet",
+  "@noRoadmapsYet": {
+    "description": "Empty state for roadmaps"
+  },
+  "roadmapOverview": "Roadmap Overview",
+  "@roadmapOverview": {
+    "description": "Title for roadmap detail view"
+  },
+  "timeline": "Timeline",
+  "@timeline": {
+    "description": "Timeline view label"
+  },
+  "completionOfValue": "{value}% Complete",
+  "@completionOfValue": {
+    "description": "Completion percentage",
+    "placeholders": {
+      "value": { "type": "double" }
+    }
+  },
+  "milestoneOfWithDeadline": "{title} - Due {deadline}",
+  "@milestoneOfWithDeadline": {
+    "description": "Milestone with deadline",
+    "placeholders": {
+      "title": { "type": "String" },
+      "deadline": { "type": "String" }
+    }
+  },
+  "enableNotifications": "Enable Notifications",
+  "@enableNotifications": {
+    "description": "Toggle to enable notifications"
+  },
+  "notificationPreferences": "Notification Preferences",
+  "@notificationPreferences": {
+    "description": "Section title for notification settings"
+  },
+  "dailyReminders": "Daily Reminders",
+  "@dailyReminders": {
+    "description": "Daily reminder toggle"
+  },
+  "revisionReminders": "Revision Reminders",
+  "@revisionReminders": {
+    "description": "Revision reminder toggle"
+  },
+  "lessonNotifications": "Lesson Notifications",
+  "@lessonNotifications": {
+    "description": "Lesson notification toggle"
+  },
+  "overworkAlerts": "Overwork Alerts",
+  "@overworkAlerts": {
+    "description": "Overwork alert toggle"
+  },
+  "planAdjustmentNotifications": "Plan Adjustment Alerts",
+  "@planAdjustmentNotifications": {
+    "description": "Plan adjustment notification toggle"
+  },
+  "quietHours": "Quiet Hours",
+  "@quietHours": {
+    "description": "Quiet hours section label"
+  },
+  "quietHoursStart": "Quiet Hours Start",
+  "@quietHoursStart": {
+    "description": "Start time for quiet hours"
+  },
+  "quietHoursEnd": "Quiet Hours End",
+  "@quietHoursEnd": {
+    "description": "End time for quiet hours"
+  },
+  "exportComprehensiveReport": "Export Full Progress Report",
+  "@exportComprehensiveReport": {
+    "description": "Button to export comprehensive report"
+  },
+  "comprehensiveCsv": "Full Progress CSV",
+  "@comprehensiveCsv": {
+    "description": "Export full progress as CSV"
+  },
+  "comprehensivePdf": "Full Progress PDF",
+  "@comprehensivePdf": {
+    "description": "Export full progress as PDF"
+  },
+  "comprehensiveJson": "Full Progress JSON",
+  "@comprehensiveJson": {
+    "description": "Export full progress as JSON"
+  },
+  "comprehensiveReportExported": "Comprehensive progress report exported",
+  "@comprehensiveReportExported": {
+    "description": "Snackbar when comprehensive report is exported"
+  },
+  "activeRoadmaps": "Active Roadmaps",
+  "@activeRoadmaps": {
+    "description": "Label for active roadmaps count"
+  },
+  "completedRoadmaps": "Completed Roadmaps",
+  "@completedRoadmaps": {
+    "description": "Label for completed roadmaps"
+  },
+  "progressBySubject": "Progress by Subject",
+  "@progressBySubject": {
+    "description": "Section title for per-subject progress"
   }
 }

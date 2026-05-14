@@ -16,6 +16,8 @@ class QuestionCardWidget extends StatefulWidget {
   final ValueChanged<String?> onAnswerSubmitted;
   final ValueChanged<String?>? onAnswerChanged;
   final VoidCallback? onNext;
+  final bool reduceMotion;
+  final bool largeTouchTargets;
 
   const QuestionCardWidget({
     super.key,
@@ -26,6 +28,8 @@ class QuestionCardWidget extends StatefulWidget {
     required this.onAnswerSubmitted,
     this.onAnswerChanged,
     this.onNext,
+    this.reduceMotion = false,
+    this.largeTouchTargets = false,
   });
 
   @override
@@ -211,6 +215,9 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       case QuestionType.graphDrawing:
         return _buildCanvasContent(context);
 
+      case QuestionType.stepByStep:
+        return _buildTextAnswerContent(context);
+
       default:
         final l10n = AppLocalizations.of(context)!;
         return Row(
@@ -238,6 +245,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       onAnswerSelected: (answer) {
         _updateAnswer(answer);
       },
+      reduceMotion: widget.reduceMotion,
     );
   }
 
@@ -327,6 +335,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       onDrawingComplete: (data) {
         _updateAnswer(base64Encode(data));
       },
+      largeTouchTargets: widget.largeTouchTargets,
     );
   }
 

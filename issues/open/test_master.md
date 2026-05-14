@@ -1,110 +1,100 @@
-# Test Coverage Audit: Questions Feature — Gaps, Misplaced Tests, and Overly Basic Coverage
+# Test: Critical Coverage Gaps — Planner Roadmaps Tab Entirely Untested, SessionExportService Uncovered, and Test Structure Deficiencies
 
 ## Context
 
-The questions feature (`lib/features/questions/`) is the core instructional component of StudyKing, handling 8+ question types (singleChoice, multiChoice, typedAnswer, mathExpression, essay, canvas, graphDrawing, stepByStep). A thorough audit of its 7 test files (~2,781 lines) and surrounding test infrastructure revealed: a production rendering bug for `stepByStep` questions, a memory leak in `AnswerValidationService`'s static cache, a test file that superficially only checks widget existence (440 lines of shallow assertions), structurally misplaced core-model tests, and two entirely untested features.
+A systematic audit of the 133 test files across 161 source `.dart` files reveals coverage gaps that expose the highest-risk feature code to undetected regressions. The most critical findings are: (1) the Planner screen's **Roadmaps tab** (~400 lines of business logic, dialog flows, and conditional rendering) has zero test coverage despite being a core feature; (2) `SessionExportService` (198 lines, CSV/JSON/PDF export with file I/O and sharing) is entirely untested; (3) `MentorScreen` (314 lines, `ConsumerStatefulWidget` with streaming chat) has no presentation-layer test; and (4) the few tests that exist for the Planner screen depend on the real `StudentIdService` singleton, creating a fragile, non-deterministic test environment. Additionally, test file placement is inconsistent across features.
 
----
+## Affected Files
 
-## Issues Found
+### Critical Untested Source Files
 
-### 1. Production Bug: `stepByStep` Question Type Falls to "Not Supported" (Missing Test Scenario)
+| File | Lines | Risk | Missing Coverage |
+|------|-------|------|------------------|
+| `test/features/planner/presentation/planner_screen_test.dart` | 396 | **Roadmaps tab at 0% coverage.** The test file has 13 test cases covering only the "Study Plan" tab. The `_createRoadmap` dialog flow, `_loadRoadmaps` loading/error/empty states, `_buildRoadmapCard` rendering (status badge, progress bar, milestone timeline, target completion date), `_buildMilestoneTimeline` layout logic, `_openTutorMode` navigation, edge case milestone positioning (zero-duration plans, single milestone, many milestones), and the `_isLoadingRoadmaps` spinner state are completely untested. | ~15+ widget tests |
+| `lib/features/sessions/services/session_export_service.dart` | 198 | **Zero tests for data export — a user-facing output path.** Tests needed: `sessionsToCSV` CSV escaping (commas, quotes, newlines in fields), accuracy formatting when `questionsAnswered == 0`, `sessionsToJSON` correctness, `sessionsToPDF` empty-session and single-session edge cases, `_formatDuration` and `_formatTotalDuration` rounding, error handling in `shareCSV`/`shareJSON`/`sharePDF` when temp directory fails, and null/invalid session data. | ~10+ unit tests |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 314 | **Zero presentation-layer tests.** The `MentorService` layer has unit tests, but the `ConsumerStatefulWidget` (streaming chat, text input, scroll controller, initialization via Riverpod, `_isSending` guard, error states, empty state) is entirely uncovered. | ~10+ widget tests |
 
-**Affected file:** `lib/features/questions/ui/widgets/question_card_widget.dart:214`
+### Test Quality Deficiencies in Existing Tests
 
-The `_buildQuestionContent` switch statement handles: singleChoice, multiChoice, typedAnswer, mathExpression, essay, canvas, graphDrawing — but NOT `stepByStep`. It falls to the `default` branch rendering "This question type is not yet supported in this view." The type label IS defined (line 379: "Step-by-Step"), so users see a label suggesting the type works but get a broken UI.
+| File | Issue |
+|------|-------|
+| `test/features/planner/presentation/planner_screen_test.dart:365` | Uses `StudentIdService().getStudentId()` (a singleton that opens a Hive box). This introduces a real I/O dependency into widget tests, creates non-deterministic student IDs across runs, and can cause cascading failures if Hive initialization is not correctly set up in the test environment. The service should be injectable or stubbed. |
+| `test/features/planner/presentation/planner_screen_test.dart:82` | `_loadExistingPlan()` silently catches all exceptions (`catch (_) {}`), but there is no test verifying this silent-catch behavior or that the screen remains in an empty state when the repository throws. |
+| `test/features/planner/presentation/planner_screen_test.dart:78` | There is no test for the edge case where `_planRepo.init()` throws, even though the real `PlanRepository.init()` calls `Hive.box()` which can fail. |
+| `test/features/planner/presentation/planner_screen_test.dart:200-224` | The "generate plan with valid data" test uses the real `PlannerScreen` which calls `PersonalLearningPlanService.generatePlan()` internally — meaning this test is actually an integration test of the whole generation pipeline, not a unit test of the screen's UI. It depends on internal service behavior and could break for reasons unrelated to the screen's rendering. |
+| `test/features/planner/presentation/planner_screen_test.dart` | No tests for: negative or zero days/hours input, extremely large numbers, empty course name with valid numbers, non-numeric input in numeric fields, or the `FocusTraversalGroup` wrapping the study plan form. |
 
-**Root cause:** No test covered the `stepByStep` rendering path. The test file (`question_card_widget_test.dart`) tests the label (line 410-414) but never tests the content rendering. A simple `testWidgets('renders step-by-step content')` would have caught this before deployment.
+### Test Structure & Placement Inconsistencies
 
-**Action:** Add a switch case for `QuestionType.stepByStep` in `_buildQuestionContent` and add corresponding widget tests that verify actual content renders.
+Several patterns undermine discoverability and CI efficiency:
 
----
+- **Missing `services/` test directories**: `lib/features/sessions/services/session_export_service.dart` has no corresponding `test/features/sessions/services/` directory. Same pattern applies to `lib/features/practice/providers/practice_providers.dart` (no `test/features/practice/providers/`).
+- **Inconsistent model test locations**: Models are tested under `test/core/data/models/` for core models but under `test/features/subjects/models/` for feature models and `test/models/` for settings — there is no convention enforced.
+- **Missing data-layer tests**: The `lib/features/planner/` directory has no `data/` or `services/` subdirectories; all planner logic lives in `core/data/repositories/` and `core/services/`, making it unclear where module-level repository tests should go.
+- **Unit vs widget test blurring**: The planner test file mixes widget-rendering assertions with integration-level generation flow validation, making it harder to isolate failures and run targeted test suites.
 
-### 2. Memory Leak: `AnswerValidationService` Static Cache Has No Eviction Policy
+## Rationale
 
-**Affected file:** `lib/features/questions/services/answer_validator.dart:36-37`
+1. **Roadmaps tab is a core feature area, not a secondary detail.** It encompasses dialog-based user input, async repository operations, error handling, date-based milestone calculations, and multi-state conditional rendering (loading spinner, empty state, roadmap cards, milestone timeline). Leaving this untested means every refactor or enhancement to roadmaps risks regression with no safety net. The fact that adjacent study-plan tab has 13 tests while the roadmaps tab has zero is a disproportionate coverage gap.
 
-```dart
-static final Map<String, QuestionAnswerValidator> _cache = {};
-static final Map<String, String> _cacheSignatures = {};
-```
+2. **Session export is a data-critical output path.** CSV escaping bugs can corrupt exported data; PDF generation errors produce broken files for users; sharing failures silently fail since `shareCSV`/`shareJSON`/`sharePDF` catch no exceptions from file operations. These are I/O-heavy paths that are expensive to test manually but cheap to test programmatically.
 
-These static `Map` fields grow unboundedly for the lifetime of the application process. Every unique question ID ever encountered accumulates an entry. In a long tutoring session or repeated practice runs, this leaks memory. There is no:
-- Maximum size limit
-- LRU/aging eviction
-- `clear()` or reset mechanism
-- Any test verifying cache behavior under memory pressure or sequential question loads
+3. **Mentor screen is a complex consumer-stateful widget** with Riverpod integration, streaming responses, scroll-to-bottom behavior, and sending guards. Current `mentor_service_test.dart` tests only the service layer, missing the entire UI state machine that users interact with.
 
-**Action:** Implement a cache eviction strategy (e.g., `LinkedHashMap` with `maxSize`, or `sweep` on configurable threshold) and add tests that verify:
-- Cache does not grow beyond a configured limit
-- Old entries are evicted when limit is exceeded
-- Evicted entries are re-created correctly on subsequent access
+4. **Planner test's use of `StudentIdService` singleton** makes the test suite vulnerable to test-ordering issues (shared mutable state in a singleton) and environment dependencies (Hive box initialization). A true unit test should inject stubs for all external dependencies.
 
----
-
-### 3. Overly Basic Tests: `math_expression_widget_test.dart` (440 Lines, Nearly Zero Behavior Verification)
-
-**Affected file:** `test/features/questions/ui/widgets/math_expression_widget_test.dart`
-
-This file contains ~40 individual `testWidgets` blocks, but **every single one** only asserts that `find.byType(RichText)` finds at least one widget. None verify:
-- The actual text content of the generated `TextSpan`s
-- Font styling (italic for variables, bold for numbers, superscript for exponents)
-- Color coding (deep orange for decimals, default for operators)
-- Correct substitution of LaTeX-like command tokens (e.g., `\sqrt{x}` should produce √ symbol, `\frac{a}{b}` should produce numerator/denominator)
-- The `isSolution` prop's effect on Container decoration/color
-- The `showPrefix` prop beyond checking the first child exists
-
-This is **40 structurally identical tests** that add very little value beyond "the widget doesn't crash." A single test verifying one rendered `TextSpan`'s properties would be more valuable than all 40 combined.
-
-**Action:** Replace/reduce the shallow rich-text-existence checks with targeted tests that verify parsed output correctness (span text, style, nesting), removing the ~30 tests that provide zero behavioral coverage.
-
----
-
-### 4. Misplaced Test Files: Core Model Tests in Feature Directory
-
-**Affected files:**
-- `test/features/questions/models/markscheme_model_test.dart` — tests `lib/core/data/models/markscheme_model.dart`
-- `test/features/questions/services/answer_test.dart` — tests `lib/core/services/answer_validation_service.dart`
-
-The project follows a `test/core/` ↔ `test/features/` split. Core data models and services should have tests under `test/core/data/models/` and `test/core/services/` respectively. These two files are the only core-level tests misplaced under `test/features/questions/`. This creates inconsistency: future developers might hesitate to add core tests, and coverage reports misattribute test ownership.
-
-**Action:** Move `markscheme_model_test.dart` to `test/core/data/models/markscheme_model_test.dart` and `answer_test.dart` to `test/core/services/answer_validation_service_test.dart`. Keep a forwarding import (or just move and update CI paths).
-
----
-
-### 5. Entirely Untested Features: `ingestion` and `llm_tasks`
-
-**Affected directories:**
-- `lib/features/ingestion/` (3 source files: `ingestion.dart`, `upload_screen.dart`, `content_pipeline.dart`) — **zero test files**
-- `lib/features/llm_tasks/` (1 source file: `llm_task_manager_screen.dart`) — **zero test files**
-
-The `content_pipeline.dart` service and `upload_screen.dart` (293 lines, with image picker, form validation, state management) have no test coverage at all. Neither does `llm_task_manager_screen.dart`. This is a blind spot for two relatively complex features.
-
-**Action:** Create `test/features/ingestion/` and `test/features/llm_tasks/` directories with at minimum:
-- Unit tests for `ContentPipeline` service methods
-- Widget tests for `UploadScreen` (form validation, submission, error states)
-- Widget tests for `LlmTaskManagerScreen`
-
----
-
-### 6. Additional Minor Findings
-
-| Finding | File | Severity |
-|---------|------|----------|
-| Test named "kanji builder with zero difficulty color" at line 617 doesn't match the code — no kanji builder exists in question_card_widget | `question_card_widget_test.dart:617` | Low |
-| `DrawingPainter` tests instantiate `Stroke`/`DrawingPoint` directly but never test the `paint()` method's path/rendering logic | `canvas_drawing_widget_test.dart:268-289` | Medium |
-| No test for `_handleSave` exception path (line 222-228 in source) showing `failedToSaveDrawing` when `_generateDrawingData()` throws | `canvas_drawing_widget_test.dart` (missing) | Medium |
-| `widget_test.dart` duplicates coverage from `test/features/practice/` (both test the practice flow with identical fake providers) | `test/widget_test.dart` | Low |
-| `run_full_coverage.sh` only targets `test/core/constants/*_test.dart` — does not run feature tests or aggregate overall coverage | `scripts/run_full_coverage.sh` | Medium |
-
----
+5. **Inconsistent test file placement** forces developers to guess where to put new tests, leads to duplicated test setup code, and slows CI by mixing fast unit tests with slow widget/integration tests in the same file.
 
 ## Acceptance Criteria
 
-1. `QuestionType.stepByStep` renders content (not "not supported") in `QuestionCardWidget` and a widget test verifies this
-2. `AnswerValidationService._cache` / `_cacheSignatures` has an eviction policy with tests proving bounded growth
-3. `math_expression_widget_test.dart` has at least 3 tests verifying span text content, style, and token substitution (and the 30+ shallow RichText-existence checks are removed/reduced)
-4. `markscheme_model_test.dart` and `answer_test.dart` are relocated to `test/core/data/models/` and `test/core/services/` respectively
-5. `test/features/ingestion/` exists with at least one test file for `ContentPipeline` or `UploadScreen`
-6. No test in the suite is named in a way that contradicts the code under test (fix "kanji builder")
-7. CI/coverage scripts (`scripts/run_full_coverage.sh`) are updated to run the full test suite, not just `test/core/constants/`
+### A. Planner Screen — Roadmaps Tab Coverage
+- [ ] `test/features/planner/presentation/planner_screen_test.dart` gains tests for the roadmaps tab:
+  - [ ] `_loadRoadmaps` shows `CircularProgressIndicator` while loading
+  - [ ] `_loadRoadmaps` shows the empty-state icon and message (`noRoadmapsYet`, `roadmapGoalHint`) when no roadmaps exist
+  - [ ] `_loadRoadmaps` shows a `ListView` of `_buildRoadmapCard` widgets when roadmaps exist (verify card renders status badge, goal text, progress bar, milestone count, target completion date)
+  - [ ] `_loadRoadmaps` error path does not crash and shows the empty state
+  - [ ] Tapping "Create Roadmap" opens an `AlertDialog` with goal and days fields
+  - [ ] Cancelling the roadmap dialog does not create a roadmap
+  - [ ] Submitting empty goal cancels creation
+  - [ ] Submitting valid goal creates a roadmap and shows success snackbar
+  - [ ] Roadmap card `_buildMilestoneTimeline` renders milestones correctly (completed, past-due, future milestone colors; zero milestones shows empty; multiple milestones render within width constraints)
+  - [ ] `_openTutorMode` triggers navigation when topic ID is non-empty
+  - [ ] Plan tab's `_generatePlan` validates edge cases: zero/negative days/hours, non-numeric input, empty course
+
+### B. Planner Screen — Test Quality Improvements
+- [ ] `StudentIdService` dependency is removed from the test — inject a stub or use a configurable fake
+- [ ] `_loadExistingPlan` silent-catch behavior is explicitly tested (verify screen shows no plan when repository throws)
+- [ ] `_planRepo.init()` failure path in `initState` does not crash the screen
+
+### C. SessionExportService Tests
+- [ ] `test/features/sessions/services/session_export_test.dart` created with:
+  - [ ] `sessionsToCSV` produces correct header row
+  - [ ] `sessionsToCSV` CSV-escapes commas, quotes, and newlines in fields
+  - [ ] `sessionsToCSV` formats accuracy as `0.0` when `questionsAnswered == 0`
+  - [ ] `sessionsToCSV` rounds duration to 1 decimal place
+  - [ ] `sessionsToJSON` returns correct `List<Map<String, dynamic>>` matching `toJson()`
+  - [ ] `sessionsToJSON` handles empty list
+  - [ ] `_formatDuration` correctly formats minutes+seconds and just-seconds cases
+  - [ ] `_formatTotalDuration` handles hours+minutes, just-minutes, and zero
+  - [ ] `sessionsToPDF` produces non-empty bytes for a non-empty session list
+  - [ ] `sessionsToPDF` produces non-empty bytes for an empty session list (no crash)
+
+### D. Mentor Screen — Presentation Layer Tests
+- [ ] `test/features/mentor/presentation/mentor_screen_test.dart` created with:
+  - [ ] Screen renders initial chat input and send button
+  - [ ] Loading state during `_initializeMentor` is shown
+  - [ ] Error state renders error message
+  - [ ] Sending a message disables input and shows sending indicator
+  - [ ] Streamed responses render as chat bubbles
+  - [ ] Scroll controller auto-scrolls on new messages
+  - [ ] Empty state shows welcome/placeholder message
+
+### E. Test Structure Standardization
+- [ ] Feature-level convention established in `AGENTS.md` or `CONTRIBUTING.md`:
+  - Every `lib/features/*/services/` file → `test/features/*/services/` test
+  - Every `lib/features/*/data/repositories/` file → `test/features/*/data/repositories/` test  
+  - Every `lib/features/*/providers/` file → `test/features/*/providers/` test
+  - Unit tests and widget tests are in separate files (not mixed)
+- [ ] `test/features/sessions/services/` directory created with `session_export_test.dart`
+- [ ] `test/features/practice/providers/` directory created with `practice_providers_test.dart`
+- [ ] `test/features/mentor/presentation/` directory created with `mentor_screen_test.dart`

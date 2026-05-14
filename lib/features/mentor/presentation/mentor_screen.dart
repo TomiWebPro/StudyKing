@@ -6,7 +6,7 @@ import '../../../core/services/study_progress_tracker.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/data/repositories/attempt_repository.dart';
 import '../../../core/widgets/conversation_input.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -204,23 +204,28 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _messages.isEmpty
-                ? _buildEmptyState(l10n)
-                : _buildMessageList(),
-          ),
-          ConversationInput(
-            controller: _textController,
-            focusNode: _inputFocusNode,
-            isEnabled: _isInitialized,
-            isLoading: _isSending,
-            hintText: l10n.askMentorAnything,
-            sendTooltip: l10n.send,
-            onSend: _sendMessage,
-          ),
-        ],
+      body: FocusTraversalGroup(
+        child: Column(
+          children: [
+            Expanded(
+              child: _messages.isEmpty
+                  ? _buildEmptyState(l10n)
+                  : _buildMessageList(ref.watch(settingsProvider).reduceMotion),
+            ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(1),
+              child: ConversationInput(
+                controller: _textController,
+                focusNode: _inputFocusNode,
+                isEnabled: _isInitialized,
+                isLoading: _isSending,
+                hintText: l10n.askMentorAnything,
+                sendTooltip: l10n.send,
+                onSend: _sendMessage,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -256,14 +261,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
-  Widget _buildMessageList() {
+  Widget _buildMessageList(bool reduceMotion) {
     return ListView.builder(
       controller: _scrollController,
       padding: ResponsiveUtils.listPadding(context),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final chatMsg = _messages[index];
-        return ChatBubble(message: chatMsg.message);
+        return ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion);
       },
     );
   }

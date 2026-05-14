@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/widgets/conversation_input.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database;
+import 'package:studyking/core/providers/app_providers.dart' show database, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -279,7 +279,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             ),
           Expanded(
             child: _isInitialized && _manager != null
-                ? _buildMessageList(l10n, isEnding)
+                ? _buildMessageList(l10n, isEnding, ref.watch(settingsProvider).reduceMotion)
                 : const Center(child: CircularProgressIndicator()),
           ),
           ConversationInput(
@@ -314,7 +314,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     );
   }
 
-  Widget _buildMessageList(AppLocalizations l10n, bool isEnding) {
+  Widget _buildMessageList(AppLocalizations l10n, bool isEnding, bool reduceMotion) {
     final messages = _manager!.messages;
     if (messages.isEmpty) {
       return Center(
@@ -341,7 +341,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             ),
           );
         }
-        return ChatBubble(message: messages[index]);
+        return ChatBubble(message: messages[index], reduceMotion: reduceMotion);
       },
     );
   }

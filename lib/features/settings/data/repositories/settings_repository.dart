@@ -112,6 +112,7 @@ class SettingsRepository {
       sessionDurationMinutes: box.get('sessionDurationMinutes', defaultValue: 30),
       highContrastEnabled: box.get('highContrastEnabled', defaultValue: false),
       largeTouchTargets: box.get('largeTouchTargets', defaultValue: false),
+      reduceMotion: box.get('reduceMotion', defaultValue: false),
     );
   }
 
@@ -127,6 +128,7 @@ class SettingsRepository {
     int? sessionDurationMinutes,
     bool? highContrastEnabled,
     bool? largeTouchTargets,
+    bool? reduceMotion,
   }) async {
     final box = _requireSettingsBox();
     final current = await getSettings();
@@ -150,6 +152,8 @@ class SettingsRepository {
           highContrastEnabled ?? current.highContrastEnabled,
       largeTouchTargets:
           largeTouchTargets ?? current.largeTouchTargets,
+      reduceMotion:
+          reduceMotion ?? current.reduceMotion,
     );
 
     await box.put('apiKey', updated.apiKey);
@@ -165,6 +169,7 @@ class SettingsRepository {
     await box.put('sessionDurationMinutes', updated.sessionDurationMinutes);
     await box.put('highContrastEnabled', updated.highContrastEnabled);
     await box.put('largeTouchTargets', updated.largeTouchTargets);
+    await box.put('reduceMotion', updated.reduceMotion);
   }
 
   /// Update statistics counters
@@ -185,6 +190,7 @@ class SettingsRepository {
       sessionDurationMinutes: current.sessionDurationMinutes,
       highContrastEnabled: current.highContrastEnabled,
       largeTouchTargets: current.largeTouchTargets,
+      reduceMotion: current.reduceMotion,
     );
     final box = _requireSettingsBox();
     await box.put('totalSessionCount', sessionCount ?? current.totalSessionCount);

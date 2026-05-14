@@ -6,11 +6,13 @@ import '../../../../l10n/generated/app_localizations.dart';
 class ChatBubble extends StatelessWidget {
   final ConversationMessage message;
   final bool showSender;
+  final bool reduceMotion;
 
   const ChatBubble({
     super.key,
     required this.message,
     this.showSender = true,
+    this.reduceMotion = false,
   });
 
   @override
@@ -97,7 +99,7 @@ class ChatBubble extends StatelessWidget {
     final content = message.content;
 
     if (message.isStreaming && content.isEmpty) {
-      return const _TypingIndicator();
+      return _TypingIndicator(reduceMotion: reduceMotion);
     }
 
     return Text(
@@ -112,7 +114,9 @@ class ChatBubble extends StatelessWidget {
 }
 
 class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
+  final bool reduceMotion;
+
+  const _TypingIndicator({this.reduceMotion = false});
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
@@ -125,10 +129,12 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
+    if (!widget.reduceMotion) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1200),
+      )..repeat();
+    }
   }
 
   @override
@@ -139,6 +145,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.reduceMotion) {
+      return _buildStaticDots(context);
+    }
     return SizedBox(
       width: 40,
       child: Row(
@@ -151,6 +160,23 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     );
   }
 
+  Widget _buildStaticDots(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      child: Row(
+        children: List.generate(3, (i) => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            shape: BoxShape.circle,
+          ),
+        )),
+      ),
+    );
+  }
+
   Widget _animatedDot(BuildContext context, double delay) {
     return AnimatedBuilder(
       animation: _controller,
@@ -158,20 +184,16 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         final phase = (_controller.value - delay).clamp(0.0, 1.0);
         final value = (phase * 4.0) % 1.0;
         final opacity = 0.3 + (0.7 * _easeInOut(value));
-        final scale = 1.0;
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: opacity),
-              shape: BoxShape.circle,
-            ),
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: opacity),
+            shape: BoxShape.circle,
           ),
         );
       },

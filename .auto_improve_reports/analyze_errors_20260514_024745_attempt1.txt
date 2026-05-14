@@ -1,0 +1,14 @@
+Analyzing StudyKing...                                          
+
+warning • The value of the local variable 'sent' isn't used • test/core/widgets/conversation_input_test.dart:81:12 • unused_local_variable
+warning • The value of the local variable 'sent' isn't used • test/core/widgets/conversation_input_test.dart:114:12 • unused_local_variable
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:38:33 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:38:81 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:113:31 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:113:82 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:134:33 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core/widgets/gradient_container_test.dart:134:82 • deprecated_member_use
+   info • The local variable '_enterTextAndSubmit' starts with an underscore • test/features/ingestion/presentation/upload_screen_test.dart:89:18 • no_leading_underscores_for_local_identifiers
+
+
+9 issues found. (ran in 4.7s)

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
@@ -8,11 +7,9 @@ import 'package:studyking/core/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/widgets.dart';
-import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
-import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// Subject Detail Screen - Shows all content for a subject
@@ -329,13 +326,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   void _startPractice({required bool isSpacedRepetition}) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => PracticeSessionScreen(
-          subjectId: widget.subjectId,
-          isSpacedRepetition: isSpacedRepetition,
-        ),
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(
+        subjectId: widget.subjectId,
+        isSpacedRepetition: isSpacedRepetition,
       ),
     );
   }
@@ -614,13 +610,10 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 title: const Text('Upload Content'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(
+                  Navigator.pushNamed(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => UploadScreen(
-                        preselectedSubjectId: widget.subjectId,
-                      ),
-                    ),
+                    AppRoutes.upload,
+                    arguments: widget.subjectId,
                   );
                 },
               ),
@@ -632,14 +625,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 title: const Text('Dashboard'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(
+                  Navigator.pushNamed(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => DashboardScreen(
-                        studentId: StudentIdService().getStudentId(),
-                        masteryService: MasteryGraphService(),
-                      ),
-                    ),
+                    AppRoutes.dashboard,
+                    arguments: {
+                      'studentId': StudentIdService().getStudentId(),
+                    },
                   );
                 },
               ),

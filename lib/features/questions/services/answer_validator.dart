@@ -33,8 +33,9 @@ class QuestionAnswerValidator {
 }
 
 class AnswerValidationService {
-  static final Map<String, QuestionAnswerValidator> _cache = {};
-  static final Map<String, String> _cacheSignatures = {};
+  static const int _maxCacheSize = 100;
+  static final Map<String, QuestionAnswerValidator> _cache = <String, QuestionAnswerValidator>{};
+  static final Map<String, String> _cacheSignatures = <String, String>{};
 
   String _signatureFor(Markscheme markscheme) {
     return '${markscheme.correctAnswer}::${markscheme.acceptableAnswers.join('|')}::${markscheme.explanation}';
@@ -51,7 +52,21 @@ class AnswerValidationService {
     final validator = QuestionAnswerValidator(markscheme);
     _cache[questionId] = validator;
     _cacheSignatures[questionId] = signature;
+    _evictIfNeeded();
     return validator;
+  }
+
+  static void _evictIfNeeded() {
+    while (_cache.length > _maxCacheSize) {
+      final eldestKey = _cache.keys.first;
+      _cache.remove(eldestKey);
+      _cacheSignatures.remove(eldestKey);
+    }
+  }
+
+  static void clearCache() {
+    _cache.clear();
+    _cacheSignatures.clear();
   }
 
   ValidationResult validateAnswer(String answer, QuestionType questionType, String questionId, Markscheme markscheme) {

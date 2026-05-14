@@ -1,0 +1,9 @@
+Analyzing StudyKing...                                          
+
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • test/features/quickguide/presentation/quick_guide_screen_advanced_test.dart:3:8 • unnecessary_import
+warning • Unused import: 'package:studyking/core/data/models/conversation_message_model.dart' • test/features/quickguide/presentation/quick_guide_screen_advanced_test.dart:6:8 • unused_import
+warning • The value of the local variable 'messages' isn't used • test/features/quickguide/presentation/quick_guide_screen_advanced_test.dart:529:13 • unused_local_variable
+warning • The declaration '_TestNavigatorObserver' isn't referenced • test/features/quickguide/presentation/quick_guide_screen_coverage_test.dart:45:7 • unused_element
+
+
+4 issues found. (ran in 2.3s)
