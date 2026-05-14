@@ -189,6 +189,21 @@ class NotificationService {
     );
   }
 
+  Future<void> showBadgeUnlocked({
+    required int id,
+    required String badgeName,
+    required String badgeDescription,
+  }) async {
+    await showNotification(
+      id: id,
+      title: 'Badge Unlocked!',
+      body: 'You earned the "$badgeName" badge: $badgeDescription',
+      payload: 'badge_$badgeName',
+      channelId: 'studyking_badges',
+      channelName: 'Badge Notifications',
+    );
+  }
+
   Future<void> cancelNotification(int id) async {
     await _plugin.cancel(id);
   }

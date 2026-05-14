@@ -8,6 +8,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
@@ -19,6 +20,9 @@ class FakeQuestionRepository extends QuestionRepository {
 
   @override
   Future<void> init() async {}
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) async => result;
 }
 
 class FakeStudySessionRepository extends StudySessionRepository {
@@ -115,10 +119,12 @@ Widget sessionApp({
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => PracticeSessionScreen(
-                    subjectId: 'subject-a',
-                    topicId: topicId,
-                    questionCount: questionCount,
-                    isSpacedRepetition: isSpacedRepetition,
+                    args: PracticeSessionArgs(
+                      subjectId: 'subject-a',
+                      topicId: topicId,
+                      questionCount: questionCount,
+                      isSpacedRepetition: isSpacedRepetition,
+                    ),
                   ),
                 ),
               ),

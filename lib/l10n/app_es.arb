@@ -1733,7 +1733,7 @@
       }
     }
   },
-  "weakAreasAccuracy": "Áreas Débiles (Precisión < 60%)",
+  "weakAreasAccuracy": "Áreas por mejorar (Precisión < 60%)",
   "@weakAreasAccuracy": {
     "description": "Section title for weak areas with accuracy threshold"
   },
@@ -2270,7 +2270,7 @@
   "@totalTopicsLabel": {
     "description": "Label for total topics count"
   },
-  "masteredLabel": "Adquirido",
+  "masteredLabel": "Dominados",
   "@masteredLabel": {
     "description": "Label for mastered topic count"
   },
@@ -2374,6 +2374,10 @@
   "fallbackGeneralResponse": "¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.",
   "@fallbackGeneralResponse": {
     "description": "Fallback AI response for general questions"
+  },
+  "quickGuideSystemPrompt": "Eres la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.",
+  "@quickGuideSystemPrompt": {
+    "description": "System prompt for Quick Guide AI in the current locale"
   },
   "aboutApplicationName": "StudyKing",
   "@aboutApplicationName": {
@@ -2785,7 +2789,7 @@
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
   },
-  "mentorProgressReportTitle": "\ud83d\udcca **Tu Informe de Progreso de Estudio**\n",
+  "mentorProgressReportTitle": "\ud83d\udcca **Su Informe de Progreso de Estudio**\n",
   "@mentorProgressReportTitle": {
     "description": "Title for the progress report"
   },

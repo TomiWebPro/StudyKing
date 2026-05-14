@@ -104,6 +104,10 @@ void main() {
       expect(l10n.semanticsMessageInput, 'Message input for Quick Guide');
     });
 
+    test('quick guide system prompt', () {
+      expect(l10n.quickGuideSystemPrompt, 'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.');
+    });
+
     test('fallback AI responses', () {
       expect(l10n.fallbackExplainResponse, 'Sure! I can help explain concepts. What topic would you like me to explain?');
       expect(l10n.fallbackQuizResponse, 'I can help with questions! Ask away and I\'ll do my best.');
@@ -313,8 +317,8 @@ void main() {
     });
 
     test('topic and lesson empty states', () {
-      expect(l10n.noTopicsYetAddSome, '¿No hay temas? ¡agregue algunos!');
-      expect(l10n.noLessonsUsePlanner, '¿No hay lecciones? ¡use el Planificador para generar!');
+      expect(l10n.noTopicsYetAddSome, '¿No hay temas? ¡Agregue algunos!');
+      expect(l10n.noLessonsUsePlanner, '¿No hay lecciones? ¡Use el Planificador para generar!');
     });
 
     test('block types', () {
@@ -345,7 +349,7 @@ void main() {
     test('mastery overview section', () {
       expect(l10n.masteryOverview, 'Resumen de Dominio');
       expect(l10n.totalTopicsLabel, 'Total de Temas');
-      expect(l10n.masteredLabel, 'Adquirido');
+      expect(l10n.masteredLabel, 'Dominados');
       expect(l10n.weakLabel, 'Por mejorar');
     });
 
@@ -356,6 +360,10 @@ void main() {
       expect(l10n.suggestedPromptMath, 'Ayuda con problemas de mates');
       expect(l10n.quickGuideHelpContent, 'Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!');
       expect(l10n.semanticsMessageInput, 'Campo de mensaje para Guía Rápida');
+    });
+
+    test('quick guide system prompt', () {
+      expect(l10n.quickGuideSystemPrompt, 'Eres la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.');
     });
 
     test('fallback AI responses', () {
@@ -381,26 +389,26 @@ void main() {
     });
 
     test('mentor service localized strings', () {
-      expect(l10n.mentorRejectionResponse, '¡No hay problema! No haré ningún cambio. Avísame si necesitas algo más.');
-      expect(l10n.mentorNoLessonsScheduled, 'Aún no tienes lecciones programadas. ¿Te gustaría que te ayude a crear un plan de estudio? Puedo ayudarte a establecer sesiones de estudio regulares para tus materias.');
-      expect(l10n.mentorUpcomingLessonsHeader, 'Aquí están tus próximas lecciones:\n');
-      expect(l10n.mentorReschedulePrompt, '\n¿Te gustaría reprogramar alguna de estas?');
-      expect(l10n.mentorNotStarted, 'Parece que aún no has empezado. ¿Te gustaría que te ayude a programar tu primera lección?');
-      expect(l10n.mentorScheduleError, 'Tuve problemas al consultar tu horario. Inténtalo de nuevo más tarde.');
-      expect(l10n.mentorProgressError, 'Tuve problemas al generar tu informe de progreso. Inténtalo de nuevo más tarde.');
-      expect(l10n.mentorNotStartedStudying, '¡Aún no has empezado a estudiar! ¿Te gustaría que te ayude a crear un plan de estudio para empezar?');
+      expect(l10n.mentorRejectionResponse, '¡No hay problema! No haré ningún cambio. Avíseme si necesita algo más.');
+      expect(l10n.mentorNoLessonsScheduled, 'Aún no tiene lecciones programadas. ¿Le gustaría que le ayude a crear un plan de estudio? Puedo ayudarle a establecer sesiones de estudio regulares para sus materias.');
+      expect(l10n.mentorUpcomingLessonsHeader, 'Aquí están sus próximas lecciones:\n');
+      expect(l10n.mentorReschedulePrompt, '\n¿Le gustaría reprogramar alguna de estas?');
+      expect(l10n.mentorNotStarted, 'Parece que aún no ha empezado. ¿Le gustaría que le ayude a programar su primera lección?');
+      expect(l10n.mentorScheduleError, 'Tuve problemas al consultar su horario. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorProgressError, 'Tuve problemas al generar su informe de progreso. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorNotStartedStudying, '¡Aún no ha empezado a estudiar! ¿Le gustaría que le ayude a crear un plan de estudio para empezar?');
       expect(l10n.mentorToday, 'hoy');
-      expect(l10n.mentorWelcomeStart, '¡Bienvenido! Comencemos con tus estudios. ¿Te gustaría programar una lección?');
-      expect(l10n.mentorActivityCheckError, 'Tuve problemas al verificar tu actividad. ¿Cómo puedo ayudarte hoy?');
-      expect(l10n.mentorNewSessionAdded, '¡Genial! He añadido una nueva sesión de estudio a tu horario. Puedes revisar los detalles en tu planificador.');
-      expect(l10n.mentorChangesDone, '¡Listo! Los cambios se han realizado en tu horario.');
-      expect(l10n.mentorProgressReportTitle, '📊 **Tu Informe de Progreso de Estudio**\n');
+      expect(l10n.mentorWelcomeStart, '¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?');
+      expect(l10n.mentorActivityCheckError, 'Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?');
+      expect(l10n.mentorNewSessionAdded, '¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.');
+      expect(l10n.mentorChangesDone, '¡Listo! Los cambios se han realizado en su horario.');
+      expect(l10n.mentorProgressReportTitle, '📊 **Su Informe de Progreso de Estudio**\n');
       expect(l10n.mentorAreasNeedingAttention, '\n**Áreas que necesitan atención:**');
       expect(l10n.mentorBadgesEarned, '\n**Insignias obtenidas:**');
       expect(l10n.mentorRecommendations, '\n**Recomendaciones:**');
-      expect(l10n.mentorProgressReportError, 'No se pudo generar el informe de progreso. Inténtalo de nuevo más tarde.');
-      expect(l10n.mentorNoSubjects, 'Aún no has añadido ninguna materia. ¿Te gustaría ayuda para configurar tu primera materia?');
-      expect(l10n.mentorDoingWell, '¡Lo estás haciendo bien! ¿Te gustaría revisar tu progreso, programar una nueva lección o practicar algunas preguntas?');
+      expect(l10n.mentorProgressReportError, 'No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorNoSubjects, 'Aún no ha añadido ninguna materia. ¿Le gustaría ayuda para configurar su primera materia?');
+      expect(l10n.mentorDoingWell, '¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?');
     });
   });
 
@@ -487,7 +495,7 @@ void main() {
     });
 
     test('mentorRecentSessionOnDate', () {
-      expect(l10n.mentorRecentSessionOnDate('2026-05-10'), 'Tu sesión de estudio más reciente fue el 2026-05-10. ¿Te gustaría programar una nueva lección?');
+      expect(l10n.mentorRecentSessionOnDate('2026-05-10'), 'Su sesión de estudio más reciente fue el 2026-05-10. ¿Le gustaría programar una nueva lección?');
     });
 
     test('mentorDaysAgo', () {
@@ -496,15 +504,15 @@ void main() {
     });
 
     test('mentorInactiveDays', () {
-      expect(l10n.mentorInactiveDays(5), 'Noté que no has estudiado en 5 días. ¿Te gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!');
+      expect(l10n.mentorInactiveDays(5), 'Noté que no ha estudiado en 5 días. ¿Le gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!');
     });
 
     test('mentorGreatJobStayingActive', () {
-      expect(l10n.mentorGreatJobStayingActive('hoy'), '¡Buen trabajo manteniéndote activo! Tu última sesión de estudio fue hoy. ¡Sigue así!');
+      expect(l10n.mentorGreatJobStayingActive('hoy'), '¡Buen trabajo manteniéndose activo! Su última sesión de estudio fue hoy. ¡Siga así!');
     });
 
     test('mentorRescheduledConfirmation', () {
-      expect(l10n.mentorRescheduledConfirmation('Álgebra'), 'He notado el cambio. Tu lección "Álgebra" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?');
+      expect(l10n.mentorRescheduledConfirmation('Álgebra'), 'He notado el cambio. Su lección "Álgebra" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?');
     });
 
     test('mentorOverallAccuracy', () {

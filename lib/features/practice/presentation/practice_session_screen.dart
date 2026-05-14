@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
@@ -21,17 +22,11 @@ import 'package:studyking/features/practice/presentation/widgets/practice_sessio
 import 'package:studyking/features/practice/services/question_type_localizer.dart';
 
 class PracticeSessionScreen extends ConsumerStatefulWidget {
-  final String subjectId;
-  final String? topicId;
-  final int? questionCount;
-  final bool isSpacedRepetition;
+  final PracticeSessionArgs args;
 
   const PracticeSessionScreen({
     super.key,
-    required this.subjectId,
-    this.topicId,
-    this.questionCount = 10,
-    this.isSpacedRepetition = false,
+    required this.args,
   });
 
   @override
@@ -65,7 +60,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
       srRepo: _srRepo,
-      subjectId: widget.subjectId,
+      subjectId: widget.args.subjectId,
     );
     _loadQuestions();
     _startDisplayTimer();
@@ -92,15 +87,15 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   Future<void> _loadQuestions() async {
     try {
-      final result = await _questionRepo.getBySubject(widget.subjectId);
+      final result = await _questionRepo.getBySubject(widget.args.subjectId);
       if (result.isFailure || result.data == null) {
         if (mounted) setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
       var filteredQuestions = result.data!;
-      if (widget.topicId != null && widget.topicId!.isNotEmpty) {
-        filteredQuestions = filteredQuestions.where((q) => q.topicId == widget.topicId).toList();
+      if (widget.args.topicId != null && widget.args.topicId!.isNotEmpty) {
+        filteredQuestions = filteredQuestions.where((q) => q.topicId == widget.args.topicId).toList();
       }
       if (filteredQuestions.isEmpty) {
         if (mounted) setState(() => _questions = []);
@@ -108,7 +103,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         return;
       }
       final shuffled = List<Question>.from(filteredQuestions)..shuffle();
-      final count = (widget.questionCount ?? shuffled.length).clamp(1, shuffled.length);
+      final count = (widget.args.questionCount ?? shuffled.length).clamp(1, shuffled.length);
       if (mounted) {
         setState(() => _questions = shuffled.take(count).toList());
         _initializeSession();
@@ -170,7 +165,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       timeSpent: const Duration(seconds: 0),
       userAnswer: _currentAnswer!,
     ));
-    if (widget.isSpacedRepetition) {
+    if (widget.args.isSpacedRepetition) {
       _updateNextReview(question.id, isCorrect);
     }
     setState(() {
@@ -246,7 +241,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     if (_questions.isEmpty && !_isSessionComplete) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(widget.isSpacedRepetition
+          title: Text(widget.args.isSpacedRepetition
               ? AppLocalizations.of(context)!.spacedRepetitionMode
               : AppLocalizations.of(context)!.practice),
         ),
@@ -267,7 +262,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isSpacedRepetition
+        title: Text(widget.args.isSpacedRepetition
             ? AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.spacedRepetitionMode, question.type.localizedLabel(AppLocalizations.of(context)!))
             : AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.practice, question.type.localizedLabel(AppLocalizations.of(context)!))),
         bottom: PreferredSize(

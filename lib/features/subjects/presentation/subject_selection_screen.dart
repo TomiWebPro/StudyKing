@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -24,12 +25,12 @@ class _SubjectSelectionScreenState
   final _descriptionController = TextEditingController();
 
   bool _isLoading = false;
-  String _selectedColor = SubjectColors.defaultColor;
+  String _selectedColor = ColorUtils.defaultColorHex;
 
   @override
   void initState() {
     super.initState();
-    _selectedColor = SubjectColors.defaultColor;
+    _selectedColor = ColorUtils.defaultColorHex;
   }
 
   @override

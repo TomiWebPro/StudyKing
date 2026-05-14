@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 Subject _s({
   String id = 's1',
@@ -119,11 +119,6 @@ void main() {
     test('getByCode propagates values error', () async {
       box.failOnValues = true;
       expect(repo.getByCode('c'), throwsException);
-    });
-
-    test('getStudentSubjects propagates values error', () async {
-      box.failOnValues = true;
-      expect(repo.getStudentSubjects('s'), throwsException);
     });
 
     test('addTopicToSubject propagates get error', () async {

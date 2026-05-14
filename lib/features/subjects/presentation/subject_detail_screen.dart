@@ -13,27 +13,11 @@ import 'package:studyking/features/subjects/presentation/widgets/subject_history
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 
 class SubjectDetailScreen extends ConsumerStatefulWidget {
-  final String subjectId;
-  final String subjectName;
-  final String? subjectDescription;
-  final String? subjectSyllabus;
-  final String? subjectCode;
-  final String? subjectTeacher;
-  final String subjectColor;
-  final String? subjectExamDate;
-  final List<String> topicIds;
+  final SubjectDetailArgs args;
 
   const SubjectDetailScreen({
     super.key,
-    required this.subjectId,
-    required this.subjectName,
-    this.subjectDescription,
-    this.subjectSyllabus,
-    this.subjectCode,
-    this.subjectTeacher,
-    required this.subjectColor,
-    this.subjectExamDate,
-    required this.topicIds,
+    required this.args,
   });
 
   @override
@@ -58,7 +42,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = ColorUtils.stringToColor(widget.subjectColor);
+    final color = ColorUtils.stringToColor(widget.args.subjectColor);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -71,7 +55,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             backgroundColor: color.withValues(alpha: 0.1),
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                widget.subjectName,
+                                    widget.args.subjectName,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -103,7 +87,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   radius: 24,
                                   backgroundColor: Colors.white,
                                   child: Text(
-                                    widget.subjectName[0].toUpperCase(),
+                                    widget.args.subjectName[0].toUpperCase(),
                                     style: TextStyle(
                                       color: color,
                                       fontSize: 24,
@@ -117,28 +101,20 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        widget.subjectName,
+                widget.args.subjectName,
                                         style: theme.textTheme.titleLarge?.copyWith(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      if (widget.subjectCode != null)
+                                      if (widget.args.subjectCode != null)
                                         Text(
-                                          widget.subjectCode!,
+                                          widget.args.subjectCode!,
                                           style: theme.textTheme.bodyMedium?.copyWith(
                                             color: Colors.white.withValues(alpha: 0.8),
                                           ),
                                         ),
                                     ],
-                                  ),
-                                ),
-                                Semantics(
-                                  label: l10n.editSubject,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    color: Colors.white,
-                                    onPressed: () {},
                                   ),
                                 ),
                                 Semantics(
@@ -178,16 +154,16 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  SubjectLessonsTab(subjectId: widget.subjectId),
+                  SubjectLessonsTab(subjectId: widget.args.subjectId),
                   SubjectPracticeTab(
                     onStartPractice: () => _startPractice(isSpacedRepetition: false),
                     onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
                   ),
                   SubjectHistoryTab(
-                    subjectId: widget.subjectId,
+                    subjectId: widget.args.subjectId,
                     onSessionTap: (session) => _showSessionDetails(session),
                   ),
-                  SubjectStatsTab(subjectId: widget.subjectId),
+                  SubjectStatsTab(subjectId: widget.args.subjectId),
                 ],
               ),
             ),
@@ -198,11 +174,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   }
 
   void _startPractice({required bool isSpacedRepetition}) {
+    if (!mounted) return;
     Navigator.pushNamed(
       context,
       AppRoutes.practiceSession,
       arguments: PracticeSessionArgs(
-        subjectId: widget.subjectId,
+        subjectId: widget.args.subjectId,
         isSpacedRepetition: isSpacedRepetition,
       ),
     );
@@ -217,26 +194,6 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           mainAxisSize: MainAxisSize.min,
           children: [
             Semantics(
-              label: l10n.editSubject,
-              child: ListTile(
-                leading: const Icon(Icons.edit),
-                title: Text(l10n.editSubject),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            Semantics(
-              label: l10n.settings,
-              child: ListTile(
-                leading: const Icon(Icons.settings),
-                title: Text(l10n.settings),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            Semantics(
               label: l10n.uploadContent,
               child: ListTile(
                 leading: const Icon(Icons.cloud_upload),
@@ -246,7 +203,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Navigator.pushNamed(
                     context,
                     AppRoutes.upload,
-                    arguments: widget.subjectId,
+                    arguments: widget.args.subjectId,
                   );
                 },
               ),
@@ -299,8 +256,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           ),
           ElevatedButton(
             onPressed: () {
+              if (!mounted) return;
               Navigator.pop(context);
-              if (mounted) Navigator.pop(context);
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text(l10n.delete),

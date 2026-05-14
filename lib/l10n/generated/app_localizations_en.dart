@@ -1739,6 +1739,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'That\'s an interesting question! Let me help you understand it better.';
 
   @override
+  String get quickGuideSystemPrompt =>
+      'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.';
+
+  @override
   String get aboutApplicationName => 'StudyKing';
 
   @override

@@ -6,13 +6,13 @@ import 'package:uuid/uuid.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/data/models/conversation_message_model.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/mode_navigation_widget.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/suggested_prompts_widget.dart';
-import 'package:studyking/features/quickguide/presentation/widgets/typing_indicator_widget.dart';
-import 'package:studyking/features/quickguide/presentation/widgets/message_composer_widget.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/help_dialog.dart';
 
 class QuickGuideScreen extends ConsumerStatefulWidget {
@@ -39,7 +39,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   final FocusNode _inputFocusNode = FocusNode();
   final Uuid _uuid = const Uuid();
   final Logger _logger = const Logger('QuickGuide');
-  final ConversationMemory _memory = ConversationMemory(maxTurns: 30);
+  final ConversationMemory _memory = ConversationMemory();
 
   List<ConversationMessage> _messages = [];
   List<String> _suggestedPrompts = [];
@@ -125,10 +125,8 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         final response = _fallbackResponse(text);
         buffer.write(response);
       } else {
-        final effectiveSystem = widget.systemPrompt ??
-            'You are StudyKing Quick Guide, a helpful AI study assistant. '
-                'Provide concise, educational answers. Help with explanations, quiz questions, '
-                'and math problems. Respond conversationally.';
+        final l10n = AppLocalizations.of(context)!;
+        final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
 
         await for (final chunk in llm.chatStream(
           message: text,
@@ -171,15 +169,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
 
   String _fallbackResponse(String text) {
     final l10n = AppLocalizations.of(context)!;
-    if (text.toLowerCase().contains('explain')) {
-      return l10n.fallbackExplainResponse;
-    } else if (text.toLowerCase().contains('question') || text.toLowerCase().contains('quiz')) {
-      return l10n.fallbackQuizResponse;
-    } else if (text.toLowerCase().contains('math') || text.toLowerCase().contains('calculate')) {
-      return l10n.fallbackMathResponse;
-    } else {
-      return l10n.fallbackGeneralResponse;
-    }
+    return l10n.fallbackGeneralResponse;
   }
 
   void _scrollToBottom() {
@@ -229,6 +219,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final reduceMotion = ref.watch(settingsProvider).reduceMotion;
 
     return Scaffold(
       appBar: AppBar(
@@ -266,6 +257,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
                   : MessageListWidget(
                       messages: _messages,
                       scrollController: _scrollController,
+                      reduceMotion: reduceMotion,
                     ),
             ),
             AnimatedOpacity(
@@ -276,12 +268,16 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
                 onSelectPrompt: _selectPrompt,
               ),
             ),
-            TypingIndicatorWidget(isStreaming: _isStreaming),
-            MessageComposerWidget(
+            ConversationInput(
               controller: _textController,
               focusNode: _inputFocusNode,
-              isStreaming: _isStreaming,
+              isEnabled: true,
+              isLoading: _isStreaming,
+              hintText: l10n.askAnything,
+              sendTooltip: l10n.sendMessage,
               onSend: _sendMessage,
+              semanticsLabel: l10n.semanticsMessageInput,
+              semanticsHint: l10n.messageInputHint,
             ),
           ],
         ),

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -48,18 +50,26 @@ class _TestNavigatorObserver extends NavigatorObserver {
 Widget _buildTestApp({
   QuickGuideScreen? screen,
   NavigatorObserver? observer,
+  LlmService? llmService,
 }) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    navigatorObservers: observer != null ? [observer] : [],
-    routes: {
-      '/mentor': (_) => const Scaffold(
-            body: Center(child: Text('Mentor Screen')),
-          ),
-    },
-    home: screen ?? const QuickGuideScreen(showModeNavigation: false),
+  final overrides = <Override>[];
+  if (llmService != null) {
+    overrides.add(llmServiceProvider.overrideWith((ref) => llmService));
+  }
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      navigatorObservers: observer != null ? [observer] : [],
+      routes: {
+        '/mentor': (_) => const Scaffold(
+              body: Center(child: Text('Mentor Screen')),
+            ),
+      },
+      home: screen ?? const QuickGuideScreen(showModeNavigation: false),
+    ),
   );
 }
 
@@ -71,7 +81,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Quick Guide'), findsOneWidget);
-      expect(find.byIcon(Icons.send), findsOneWidget);
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
     });
 
     testWidgets('suggested prompt chips render with correct labels', (tester) async {
@@ -93,6 +103,7 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -145,6 +156,7 @@ void main() {
       llm.chunks.add('Response');
       await tester.pumpWidget(_buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -152,7 +164,7 @@ void main() {
       expect(find.byIcon(Icons.refresh), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'Hello');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -165,12 +177,13 @@ void main() {
       llm.chunks.add('Response text');
       await tester.pumpWidget(_buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Explain fractions');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -192,15 +205,16 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Test message');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
 
-      final sendButton = find.byIcon(Icons.send);
+      final sendButton = find.byIcon(Icons.send_rounded);
       expect(sendButton, findsNothing);
 
       await tester.pump(const Duration(milliseconds: 200));
@@ -215,12 +229,13 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Explain gravity');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -292,7 +307,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), '   ');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
 
       expect(find.text('Quick Guide'), findsOneWidget);
@@ -307,12 +322,13 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Explain fractions');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -331,12 +347,13 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Tell me something');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -353,6 +370,7 @@ void main() {
           llmService: llm,
           showModeNavigation: false,
         ),
+        llmService: llm,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

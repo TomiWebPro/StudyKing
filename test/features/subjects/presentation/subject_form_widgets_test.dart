@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -16,7 +17,7 @@ void main() {
     testWidgets('displays color chips for all available colors', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
-          selectedColor: SubjectColors.defaultColor,
+          selectedColor: ColorUtils.defaultColorHex,
           onColorSelected: (color) {},
         ),
       ));
@@ -30,7 +31,7 @@ void main() {
       String? selectedColor;
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
-          selectedColor: SubjectColors.defaultColor,
+          selectedColor: ColorUtils.defaultColorHex,
           onColorSelected: (color) => selectedColor = color,
         ),
       ));
@@ -48,7 +49,7 @@ void main() {
     testWidgets('highlights selected color with bold text', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
-          selectedColor: SubjectColors.defaultColor,
+          selectedColor: ColorUtils.defaultColorHex,
           onColorSelected: (color) {},
         ),
       ));
@@ -60,7 +61,7 @@ void main() {
     testWidgets('shows color label text for each chip', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
-          selectedColor: SubjectColors.defaultColor,
+          selectedColor: ColorUtils.defaultColorHex,
           onColorSelected: (color) {},
         ),
       ));
@@ -70,7 +71,7 @@ void main() {
     });
 
     testWidgets('selecting a color updates the visual selection', (tester) async {
-      String selected = SubjectColors.defaultColor;
+      String selected = ColorUtils.defaultColorHex;
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
           selectedColor: selected,
@@ -86,7 +87,7 @@ void main() {
     testWidgets('displays all available color labels', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SubjectColorSelector(
-          selectedColor: SubjectColors.defaultColor,
+          selectedColor: ColorUtils.defaultColorHex,
           onColorSelected: (color) {},
         ),
       ));
@@ -244,32 +245,32 @@ void main() {
     });
   });
 
-  group('SubjectColors', () {
-    test('defaultColor is a valid hex string', () {
-      expect(SubjectColors.defaultColor, startsWith('#'));
+  group('ColorUtils', () {
+    test('defaultColorHex is a valid hex string', () {
+      expect(ColorUtils.defaultColorHex, startsWith('#'));
     });
 
-    test('all contains at least one color', () {
-      expect(SubjectColors.all, isNotEmpty);
+    test('availableColors contains at least one color', () {
+      expect(ColorUtils.availableColors, isNotEmpty);
     });
 
     test('stringToColor returns a Color', () {
-      final color = SubjectColors.stringToColor('#2196F3');
+      final color = ColorUtils.stringToColor('#2196F3');
       expect(color, isA<Color>());
     });
 
     test('getColorLabel returns a string', () {
-      final label = SubjectColors.getColorLabel('#2196F3');
+      final label = ColorUtils.getColorLabel('#2196F3');
       expect(label, isA<String>());
       expect(label, isNotEmpty);
     });
 
-    test('defaultColor matches expected hex', () {
-      expect(SubjectColors.defaultColor, '#2196F3');
+    test('defaultColorHex matches expected hex', () {
+      expect(ColorUtils.defaultColorHex, '#2196F3');
     });
 
-    test('all contains all expected colors', () {
-      expect(SubjectColors.all, containsAll([
+    test('availableColors contains all expected colors', () {
+      expect(ColorUtils.availableColors, containsAll([
         '#2196F3',
         '#4CAF50',
         '#FF9800',
@@ -283,35 +284,35 @@ void main() {
     });
 
     test('stringToColor returns correct color for known hex', () {
-      final color = SubjectColors.stringToColor('#4CAF50');
+      final color = ColorUtils.stringToColor('#4CAF50');
       expect(color, isA<Color>());
       expect(color.toARGB32(), 0xFF4CAF50);
     });
 
     test('stringToColor handles invalid hex gracefully', () {
-      final color = SubjectColors.stringToColor('invalid');
+      final color = ColorUtils.stringToColor('invalid');
       expect(color, isA<Color>());
     });
 
-    test('getColorLabel returns localized label when l10n provided', () {
-      final label = SubjectColors.getColorLabel('#2196F3');
+    test('getColorLabel returns label for known color', () {
+      final label = ColorUtils.getColorLabel('#2196F3');
       expect(label, 'Blue');
     });
 
     test('getColorLabel returns hex for unknown color', () {
-      final label = SubjectColors.getColorLabel('#FFFFFF');
+      final label = ColorUtils.getColorLabel('#FFFFFF');
       expect(label, '#FFFFFF');
     });
 
     test('getColorLabel returns label for all known colors', () {
-      expect(SubjectColors.getColorLabel('#4CAF50'), 'Green');
-      expect(SubjectColors.getColorLabel('#FF9800'), 'Orange');
-      expect(SubjectColors.getColorLabel('#9C27B0'), 'Purple');
-      expect(SubjectColors.getColorLabel('#E91E63'), 'Pink');
-      expect(SubjectColors.getColorLabel('#00BCD4'), 'Cyan');
-      expect(SubjectColors.getColorLabel('#FFC107'), 'Amber');
-      expect(SubjectColors.getColorLabel('#FF5722'), 'Deep Orange');
-      expect(SubjectColors.getColorLabel('#607D8B'), 'Blue Grey');
+      expect(ColorUtils.getColorLabel('#4CAF50'), 'Green');
+      expect(ColorUtils.getColorLabel('#FF9800'), 'Orange');
+      expect(ColorUtils.getColorLabel('#9C27B0'), 'Purple');
+      expect(ColorUtils.getColorLabel('#E91E63'), 'Pink');
+      expect(ColorUtils.getColorLabel('#00BCD4'), 'Cyan');
+      expect(ColorUtils.getColorLabel('#FFC107'), 'Amber');
+      expect(ColorUtils.getColorLabel('#FF5722'), 'Deep Orange');
+      expect(ColorUtils.getColorLabel('#607D8B'), 'Blue Grey');
     });
   });
 }

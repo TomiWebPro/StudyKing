@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/conversation_message_model.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
+import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp({
   required List<ConversationMessage> messages,
   ScrollController? scrollController,
+  bool reduceMotion = false,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -19,6 +21,7 @@ Widget _buildTestApp({
         child: MessageListWidget(
           messages: messages,
           scrollController: scrollController ?? ScrollController(),
+          reduceMotion: reduceMotion,
         ),
       ),
     ),
@@ -92,86 +95,6 @@ void main() {
       expect(find.text('Second answer'), findsOneWidget);
     });
 
-    testWidgets('student messages are right-aligned', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [_studentMessage()],
-      ));
-      await tester.pump();
-
-      final align = tester.widget<Align>(find.byType(Align));
-      expect(align.alignment, Alignment.centerRight);
-    });
-
-    testWidgets('tutor messages are left-aligned', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [_tutorMessage()],
-      ));
-      await tester.pump();
-
-      final align = tester.widget<Align>(find.byType(Align));
-      expect(align.alignment, Alignment.centerLeft);
-    });
-
-    testWidgets('displays streaming cursor character when content not empty',
-        (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [
-          _tutorMessage(content: 'Partial', isStreaming: true),
-        ],
-      ));
-      await tester.pump();
-
-      expect(find.textContaining('Partial\u258C'), findsOneWidget);
-    });
-
-    testWidgets('shows loading spinner for streaming message with empty content',
-        (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [
-          _tutorMessage(content: '', isStreaming: true),
-        ],
-      ));
-      await tester.pump();
-
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
-    testWidgets('does not show spinner for streaming with content',
-        (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [
-          _tutorMessage(content: 'Has content', isStreaming: true),
-        ],
-      ));
-      await tester.pump();
-
-      final spinners = find.byType(CircularProgressIndicator);
-      expect(spinners, findsNothing);
-    });
-
-    testWidgets('uses Semantics widget for messages', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [_studentMessage(content: 'My question')],
-      ));
-      await tester.pump();
-
-      expect(find.byType(Semantics), findsAtLeastNWidgets(1));
-    });
-
-    testWidgets('message containers have max width 75% of screen', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        messages: [_studentMessage(content: 'A')],
-      ));
-      await tester.pump();
-
-      final container = tester.widget<Container>(
-        find.byType(Container).first,
-      );
-      final constraints = container.constraints;
-      expect(constraints, isNotNull);
-      expect(constraints!.maxWidth, 600.0);
-    });
-
     testWidgets('all messages are rendered in ListView', (tester) async {
       final messages = List.generate(
         10,
@@ -182,7 +105,7 @@ void main() {
       await tester.pump();
 
       for (int i = 0; i < 10; i++) {
-        expect(find.text('Message $i'), findsOneWidget);
+        expect(find.text('Message $i', skipOffstage: false), findsOneWidget);
       }
     });
 
@@ -199,15 +122,27 @@ void main() {
       expect(listView.controller, scrollController);
     });
 
-    testWidgets('student message uses primary color decoration',
-        (tester) async {
+    testWidgets('renders ChatBubble widgets for messages', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        messages: [_studentMessage()],
+        messages: [
+          _studentMessage(content: 'Hello'),
+          _tutorMessage(content: 'Hi there'),
+        ],
       ));
       await tester.pump();
 
-      final containers = find.byType(Container);
-      expect(containers, findsAtLeastNWidgets(1));
+      expect(find.byType(ChatBubble), findsNWidgets(2));
+    });
+
+    testWidgets('passes reduceMotion to ChatBubble', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        messages: [_studentMessage(content: 'Test')],
+        reduceMotion: true,
+      ));
+      await tester.pump();
+
+      final chatBubble = tester.widget<ChatBubble>(find.byType(ChatBubble));
+      expect(chatBubble.reduceMotion, isTrue);
     });
   });
 }

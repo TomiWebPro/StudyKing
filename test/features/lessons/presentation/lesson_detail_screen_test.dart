@@ -4,6 +4,7 @@ import 'package:studyking/core/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -43,9 +44,11 @@ void main() {
     testWidgets('shows loading indicator when lesson is null', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: []),
         ),
       ));
@@ -57,9 +60,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Introduction to Algebra',
@@ -77,9 +82,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -132,9 +139,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -152,9 +161,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -173,9 +184,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -194,9 +207,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -221,9 +236,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',
@@ -241,9 +258,11 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonDetailScreen(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Algebra',

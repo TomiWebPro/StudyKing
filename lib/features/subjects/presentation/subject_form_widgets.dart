@@ -2,17 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class SubjectColors {
-  static const List<String> all = ColorUtils.availableColors;
-
-  static String get defaultColor => ColorUtils.defaultColorHex;
-
-  static Color stringToColor(String hexColor) => ColorUtils.stringToColor(hexColor);
-
-  static String getColorLabel(String hexColor, {AppLocalizations? l10n}) =>
-      ColorUtils.getColorLabel(hexColor, l10n: l10n);
-}
-
 class SubjectColorSelector extends StatelessWidget {
   final String? selectedColor;
   final ValueChanged<String> onColorSelected;
@@ -37,9 +26,9 @@ class SubjectColorSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: SubjectColors.all.map((colorString) {
+          children: ColorUtils.availableColors.map((colorString) {
             final isSelected = selectedColor == colorString;
-            final color = SubjectColors.stringToColor(colorString);
+            final color = ColorUtils.stringToColor(colorString);
             return InkWell(
               onTap: () => onColorSelected(colorString),
               borderRadius: BorderRadius.circular(20),
@@ -67,7 +56,7 @@ class SubjectColorSelector extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      SubjectColors.getColorLabel(colorString, l10n: l10n),
+                      ColorUtils.getColorLabel(colorString, l10n: l10n),
                       style: TextStyle(
                         color: isSelected ? color : Colors.black87,
                         fontWeight:

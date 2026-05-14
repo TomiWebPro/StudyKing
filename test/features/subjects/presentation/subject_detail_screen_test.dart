@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/subjects/presentation/subject_detail_view.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp() {
@@ -10,14 +11,16 @@ Widget _buildTestApp() {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
-      home: const SubjectDetailScreen(
-        subjectId: 'test-id',
-        subjectName: 'Mathematics',
-        subjectCode: 'MATH101',
-        subjectColor: '#2196F3',
-        subjectDescription: 'Mathematics course',
-        subjectTeacher: 'Dr. Smith',
-        topicIds: ['topic-1', 'topic-2'],
+      home: SubjectDetailScreen(
+        args: const SubjectDetailArgs(
+          subjectId: 'test-id',
+          subjectName: 'Mathematics',
+          subjectCode: 'MATH101',
+          subjectColor: '#2196F3',
+          subjectDescription: 'Mathematics course',
+          subjectTeacher: 'Dr. Smith',
+          topicIds: ['topic-1', 'topic-2'],
+        ),
       ),
     ),
   );
@@ -29,11 +32,13 @@ Widget _buildTestAppMinimal() {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
-      home: const SubjectDetailScreen(
-        subjectId: 'test-id',
-        subjectName: 'Physics',
-        subjectColor: '#4CAF50',
-        topicIds: [],
+      home: SubjectDetailScreen(
+        args: const SubjectDetailArgs(
+          subjectId: 'test-id',
+          subjectName: 'Physics',
+          subjectColor: '#4CAF50',
+          topicIds: [],
+        ),
       ),
     ),
   );
@@ -57,11 +62,10 @@ void main() {
       expect(find.byType(Tab), findsNWidgets(4));
     });
 
-    testWidgets('renders edit and more option icons', (tester) async {
+    testWidgets('renders more option icon', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
 
-      expect(find.byIcon(Icons.edit), findsOneWidget);
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
@@ -119,11 +123,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     });
 
-    testWidgets('semantics for edit and more options exist', (tester) async {
+    testWidgets('semantics for more options exist', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
 
-      expect(find.byIcon(Icons.edit), findsOneWidget);
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
@@ -162,18 +165,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byIcon(Icons.play_arrow), findsAtLeast(1));
-    });
-
-    testWidgets('edit button exists', (tester) async {
-      await tester.pumpWidget(_buildTestApp());
-      await tester.pump();
-
-      final editIcon = find.byIcon(Icons.edit);
-      expect(editIcon, findsOneWidget);
-
-      final box = tester.getRect(editIcon);
-      expect(box, isNotNull);
-      expect(box.width, greaterThan(0));
     });
 
     testWidgets('switches between all tabs', (tester) async {

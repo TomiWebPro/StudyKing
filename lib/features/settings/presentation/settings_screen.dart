@@ -7,6 +7,7 @@ import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiKeyProvider, selectedModelProvider, settingsProvider;
@@ -40,11 +41,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             _section(l10n.userManagement, [
               _tile(l10n.currentUser, l10n.manageYourProfile, Icons.account_circle,
-                  () => Navigator.pushNamed(context, '/profile'), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.profile), order: 1),
             ]),
             _section(l10n.quickAccess, [
               _tile(l10n.quickGuide, l10n.aiPoweredStudyAssistant, Icons.auto_awesome,
-                  () => Navigator.pushNamed(context, '/quick-guide'), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.quickGuide), order: 1),
             ]),
             _section(l10n.appearance, [
               _tile(l10n.theme, _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
@@ -89,7 +90,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ]),
             _section(l10n.aiConfiguration, [
               _tile(l10n.apiKeys, apiKey.isNotEmpty ? l10n.configured : l10n.notConfigured,
-                  Icons.key, () => Navigator.pushNamed(context, '/api-config'), order: 1),
+                  Icons.key, () => Navigator.pushNamed(context, AppRoutes.apiConfig), order: 1),
               _tile(l10n.aiModel, _getAiModelLabel(settings.selectedModel), Icons.chat,
                   () => _showAiModelSelection(settings.selectedModel, apiKey), order: 2),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
@@ -174,7 +175,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ]),
             _section('Focus Mode', [
               _tile('Focus Timer', 'Start a focused study session', Icons.timer_outlined,
-                  () => Navigator.pushNamed(context, '/focus-mode'), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.focusMode), order: 1),
               _tile('Daily Study Cap',
                   _getDailyCapLabel(),
                   Icons.access_time_filled,
@@ -348,7 +349,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/api-config');
+                Navigator.pushNamed(context, AppRoutes.apiConfig);
               },
               child: Text(l10n.ok),
             ),

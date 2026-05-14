@@ -6,7 +6,7 @@ import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class MockSubjectBox implements Box<Subject> {
   final Map<String, Subject> _storage = {};
@@ -401,26 +401,6 @@ void main() {
       });
     });
 
-    group('getStudentSubjects', () {
-      test('returns all subjects', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
-        mockBox.addSubject(createTestSubject(id: '3', name: 'Biology'));
-
-        final result = await repository.getStudentSubjects('student-123');
-
-        expect(result.length, 3);
-      });
-
-      test('returns empty list when no subjects exist', () async {
-        mockBox.clearStorage();
-
-        final result = await repository.getStudentSubjects('student-123');
-
-        expect(result, isEmpty);
-      });
-    });
-
     group('init', () {
       test('initializes with provided box', () async {
         final repoWithInit = SubjectRepository(subjectBox: mockBox);
@@ -503,15 +483,6 @@ void main() {
 
         expect(
           () => uninitRepo.getByCode('IB-PHYS'),
-          throwsA(isA<StateError>()),
-        );
-      });
-
-      test('throws StateError when box is null and getStudentSubjects is called', () async {
-        final uninitRepo = SubjectRepository(subjectBox: null);
-
-        expect(
-          () => uninitRepo.getStudentSubjects('student-1'),
           throwsA(isA<StateError>()),
         );
       });
@@ -681,17 +652,6 @@ void main() {
 
         expect(result.length, 1);
         expect(result.first.name, 'Comprehensive');
-      });
-
-      test('getStudentSubjects ignores studentId parameter and returns all', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
-
-        final result1 = await repository.getStudentSubjects('student-a');
-        final result2 = await repository.getStudentSubjects('student-b');
-
-        expect(result1.length, 2);
-        expect(result2.length, 2);
       });
 
       test('multiple operations in sequence work correctly', () async {

@@ -1,28 +1,31 @@
 import '../data/models/question_model.dart';
 import '../data/models/topic_progress_model.dart';
+import '../data/repositories/spaced_repetition_repository.dart';
 
 class AdaptivePracticeEngine {
-  /// Interval multipliers for spaced repetition
   final List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
-
-  /// Track question knowledge state
+  final SpacedRepetitionRepository _spacedRepo;
   final Map<String, _QuestionState> _questionStates = {};
 
-  /// Get next question to practice based on weak areas
+  AdaptivePracticeEngine({
+    SpacedRepetitionRepository? spacedRepo,
+  }) : _spacedRepo = spacedRepo ?? SpacedRepetitionRepository();
+
+  Future<void> init() async {
+    await _spacedRepo.init();
+  }
+
   Future<List<Question>> getNextPracticeQuestions({
     required List<Question> availableQuestions,
     required Map<String, TopicProgress> topicProgress,
     int maxQuestions = 10,
   }) async {
-    // Calculate weakness scores for each topic
     final topicWeakness = <String, double>{};
-    
     topicProgress.forEach((topicId, progress) {
       final weakness = 1.0 - progress.accuracy;
       topicWeakness[topicId] = weakness;
     });
 
-    // Sort questions by topic weakness
     final sortedQuestions = availableQuestions..sort((a, b) {
       final weaknessA = topicWeakness.containsKey(a.topicId) 
           ? topicWeakness[a.topicId]! 
@@ -33,7 +36,6 @@ class AdaptivePracticeEngine {
       return weaknessB.compareTo(weaknessA);
     });
 
-    // Also consider question recency and difficulty
     final practiced = _questionStates.values
         .where((s) => s.lastPracticed.isBefore(DateTime.now().subtract(const Duration(hours: 24))))
         .map((s) => s.questionId);
@@ -41,39 +43,34 @@ class AdaptivePracticeEngine {
     final unpracticed = sortedQuestions.where((q) => !practiced.contains(q.id));
     final recentlyPracticed = sortedQuestions.where((q) => practiced.contains(q.id));
 
-    // Combine unpracticed weak questions with some recently practiced ones
     final result = <Question>[];
     result.addAll(unpracticed.take(maxQuestions ~/ 2));
-    result.addAll(recentlyPracticed.take(maxQuestions - (result.length)));
+    result.addAll(recentlyPracticed.take(maxQuestions - result.length));
 
     return result.take(maxQuestions).toList();
   }
 
-  /// Get optimal review interval for a question
   double calculateReviewInterval({
     required int correctCount,
     required int incorrectCount,
     required double averageConfidence,
   }) {
     final totalAttempts = correctCount + incorrectCount;
-    if (totalAttempts == 0) return 1.0; // Review immediately
+    if (totalAttempts == 0) return 1.0;
 
     final accuracy = correctCount / totalAttempts;
     final strength = (accuracy * 2 + averageConfidence / 5) / 3;
 
-    // Higher strength = longer interval
     final intervalIndex = (strength.clamp(0.0, 1.0) * (_intervalMultipliers.length - 1)).ceil().clamp(0, _intervalMultipliers.length - 1);
-    
     return _intervalMultipliers[intervalIndex];
   }
 
-  /// Update question state after attempt
-  void updateQuestionState({
+  Future<void> updateQuestionState({
     required String questionId,
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
-  }) {
+  }) async {
     if (!_questionStates.containsKey(questionId)) {
       _questionStates[questionId] = _QuestionState(questionId: questionId);
     }
@@ -90,7 +87,6 @@ class AdaptivePracticeEngine {
       state.lastIncorrect = DateTime.now();
     }
 
-    // Update confidence tracking
     state.confidenceHistory.add(confidence);
     if (state.confidenceHistory.length > 20) {
       state.confidenceHistory.removeAt(0);
@@ -98,36 +94,33 @@ class AdaptivePracticeEngine {
 
     state.lastPracticed = DateTime.now();
     state.timeSpentMs = timeSpentMs;
+
+    final masteryLevel = state.accuracy;
+    await _spacedRepo.updateNextReviewDate(questionId, masteryLevel);
   }
 
-  /// Get recommended difficulty for next question
   int getRecommendedDifficulty({
     required String topicId,
     required double currentAccuracy,
     required int currentStreak,
   }) {
-    // Adjust difficulty based on performance
     if (currentAccuracy < 0.6) {
-      // Struggling - reduce difficulty
       return 0;
     } else if (currentAccuracy > 0.9 && currentStreak >= 5) {
-      // Doing well - increase difficulty
       return 2;
     }
-    return 1; // Stay at current level
+    return 1;
   }
 
-  /// Generate variant of existing question for reinforcement
   List<String> generateQuestionVariants(String originalQuestionId, int count) {
     return List.generate(count, (i) => 'variant_${originalQuestionId}_$i');
   }
 
-  /// Get practice recommendations for a topic
   Map<String, dynamic> getTopicRecommendations(String topicId, TopicProgress progress) {
     final accuracy = progress.accuracy;
     final totalAttempts = progress.questionsAnswered;
 
-    Map<String, dynamic> recommendations = {};
+    final Map<String, dynamic> recommendations = {};
 
     if (accuracy < 0.6) {
       recommendations['focus'] = 'fundamentals';
@@ -143,10 +136,14 @@ class AdaptivePracticeEngine {
     recommendations['timeToReview'] = calculateReviewInterval(
       correctCount: progress.correctAnswers,
       incorrectCount: totalAttempts - progress.correctAnswers,
-      averageConfidence: 3.0, // Would need confidence history
+      averageConfidence: 3.0,
     ).toInt();
 
     return recommendations;
+  }
+
+  void clearCache() {
+    _questionStates.clear();
   }
 }
 

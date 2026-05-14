@@ -764,7 +764,7 @@ void main() {
         expect(l10n.generatePlan, 'Generar Plan');
         expect(l10n.generating, 'Generando...');
         expect(l10n.yourStudySchedule, 'Su Horario de Estudio');
-        expect(l10n.fillAllFieldsCorrectly, 'Por favor complete todos los campos correctamente');
+        expect(l10n.fillAllFieldsCorrectly, 'Por favor, complete todos los campos correctamente');
         expect(l10n.today, 'Hoy');
         expect(l10n.yesterday, 'Ayer');
         expect(l10n.unknown, 'Desconocido');

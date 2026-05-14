@@ -25,7 +25,6 @@ dependencies:
   dio: ^5.4.0
 
   # UI packages
-  google_fonts: ^6.1.0
   cupertino_icons: ^1.0.8
 
   # Storage

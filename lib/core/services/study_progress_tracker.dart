@@ -2,6 +2,7 @@ import '../data/repositories/attempt_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
+import 'badge_service.dart';
 
 class StudyProgressTracker {
   final AttemptRepository _attemptRepo;
@@ -181,46 +182,20 @@ class StudyProgressTracker {
   }
 
   Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    final stats = await getOverallStats(studentId);
-    final badges = <Map<String, dynamic>>[];
-
-    if ((stats['totalAttempts'] as int) >= 1) {
-      badges.add({
-        'id': 'first_attempt',
-        'name': 'First Step',
-        'description': 'Answered your first question!',
-        'unlockedAt': DateTime.now().toIso8601String(),
-      });
+    try {
+      final badgeService = BadgeService(
+        tracker: this,
+      );
+      final badges = await badgeService.getBadges(studentId);
+      return badges.map((b) => {
+        'id': b.id,
+        'name': b.name,
+        'description': b.description,
+        'unlockedAt': b.unlockedAt.toIso8601String(),
+      }).toList();
+    } catch (_) {
+      return [];
     }
-
-    if ((stats['totalAttempts'] as int) >= 100) {
-      badges.add({
-        'id': 'century',
-        'name': 'Century Club',
-        'description': 'Answered 100+ questions!',
-        'unlockedAt': DateTime.now().toIso8601String(),
-      });
-    }
-
-    if ((stats['accuracy'] as int) >= 90) {
-      badges.add({
-        'id': 'accuracy_gold',
-        'name': 'Accuracy Gold',
-        'description': 'Achieved 90%+ accuracy!',
-        'unlockedAt': DateTime.now().toIso8601String(),
-      });
-    }
-
-    if ((stats['dailyActivity'] as int) >= 5) {
-      badges.add({
-        'id': 'daily_streak',
-        'name': 'Daily Scholar',
-        'description': 'Studied today consistently!',
-        'unlockedAt': DateTime.now().toIso8601String(),
-      });
-    }
-
-    return badges;
   }
 
   Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async {

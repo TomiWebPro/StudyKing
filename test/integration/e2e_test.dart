@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
@@ -18,6 +19,8 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'dart:async';
@@ -169,20 +172,39 @@ void main() {
     });
   });
 
+  Widget _buildPlannerTestApp({
+    required PlanRepository planRepo,
+    required MasteryGraphRepository masteryRepo,
+    required TopicRepository topicRepo,
+  }) {
+    final svc = PlannerService(
+      planRepo: planRepo,
+      masteryService: MasteryGraphService(repository: masteryRepo),
+      topicRepository: topicRepo,
+      fixedStudentId: 'test-student',
+    );
+    return ProviderScope(
+      overrides: [
+        plannerServiceProvider.overrideWith((ref) => svc),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: const PlannerScreen(fixedStudentId: 'test-student'),
+      ),
+    );
+  }
+
   group('Integration - Planner end-to-end', () {
     testWidgets('planner: generate plan with valid data', (tester) async {
       final planRepo = _IntegrationFakePlanRepository();
       final masteryRepo = _IntegrationFakeMasteryGraphRepository();
 
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: PlannerScreen(
-          planRepository: planRepo,
-          masteryGraphRepository: masteryRepo,
-          topicRepository: _IntegrationFakeTopicRepository(),
-        ),
+      await tester.pumpWidget(_buildPlannerTestApp(
+        planRepo: planRepo,
+        masteryRepo: masteryRepo,
+        topicRepo: _IntegrationFakeTopicRepository(),
       ));
       await tester.pumpAndSettle();
 
@@ -201,15 +223,10 @@ void main() {
     testWidgets('planner: shows error when generation fails', (tester) async {
       final masteryRepo = _IntegrationFakeMasteryGraphRepository();
 
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: PlannerScreen(
-          planRepository: _IntegrationFakePlanRepository(),
-          masteryGraphRepository: masteryRepo,
-          topicRepository: _IntegrationFakeTopicRepository(),
-        ),
+      await tester.pumpWidget(_buildPlannerTestApp(
+        planRepo: _IntegrationFakePlanRepository(),
+        masteryRepo: masteryRepo,
+        topicRepo: _IntegrationFakeTopicRepository(),
       ));
       await tester.pumpAndSettle();
 
@@ -255,8 +272,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         home: LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Test Topic',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Test Topic'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Integration Lesson',

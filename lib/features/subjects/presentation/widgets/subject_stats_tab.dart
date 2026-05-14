@@ -8,13 +8,18 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectStatsTab extends StatelessWidget {
   final String subjectId;
+  final StudySessionRepository? sessionRepository;
 
-  const SubjectStatsTab({super.key, required this.subjectId});
+  const SubjectStatsTab({
+    super.key,
+    required this.subjectId,
+    this.sessionRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sessionRepo = StudySessionRepository();
+    final sessionRepo = sessionRepository ?? StudySessionRepository();
 
     Future<List<StudySession>> loadSessions() async {
       try {

@@ -3,14 +3,37 @@ import 'package:studyking/features/focus_mode/data/repositories/focus_session_re
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
-import '../data/repositories/plan_repository.dart';
-import '../services/instrumentation_service.dart';
+import '../data/repositories/plan_adherence_repository.dart';
+import '../data/repositories/engagement_nudge_repository.dart';
+import '../data/models/engagement_nudge_model.dart';
+
+class EngagementSchedulerConfig {
+  final int checkHour;
+  final int checkMinute;
+  final List<String> studentIds;
+
+  const EngagementSchedulerConfig({
+    this.checkHour = 9,
+    this.checkMinute = 0,
+    this.studentIds = const ['default'],
+  });
+
+  Duration get nextCheckDelay {
+    final now = DateTime.now();
+    final nextCheck = DateTime(now.year, now.month, now.day, checkHour, checkMinute);
+    return nextCheck.isAfter(now)
+        ? nextCheck.difference(now)
+        : nextCheck.add(const Duration(days: 1)).difference(now);
+  }
+}
 
 class EngagementScheduler {
   final StudyProgressTracker _tracker;
   final MasteryGraphService _masteryService;
-  final PlanRepository _planRepository;
   final NotificationService _notificationService;
+  final EngagementNudgeRepository _nudgeRepository;
+  final PlanAdherenceRepository _adherenceRepository;
+  final EngagementSchedulerConfig _config;
 
   Timer? _dailyTimer;
   bool _isInitialized = false;
@@ -19,39 +42,49 @@ class EngagementScheduler {
   EngagementScheduler({
     required StudyProgressTracker tracker,
     required MasteryGraphService masteryService,
-    PlanRepository? planRepository,
     NotificationService? notificationService,
-  })  : _tracker = tracker,
+    EngagementNudgeRepository? nudgeRepository,
+    PlanAdherenceRepository? adherenceRepository,
+    EngagementSchedulerConfig? config,
+  })  :         _tracker = tracker,
         _masteryService = masteryService,
-        _planRepository = planRepository ?? PlanRepository(),
-        _notificationService = notificationService ?? NotificationService();
+        _notificationService = notificationService ?? NotificationService(),
+        _nudgeRepository = nudgeRepository ?? EngagementNudgeRepository(),
+        _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
+        _config = config ?? const EngagementSchedulerConfig();
 
   Future<void> init() async {
     if (_isInitialized) return;
     _isInitialized = true;
     await _notificationService.init();
+    await _nudgeRepository.init();
+    await _adherenceRepository.init();
     _scheduleDailyCheck();
   }
 
   void _scheduleDailyCheck() {
-    final now = DateTime.now();
-    final nextCheck = DateTime(now.year, now.month, now.day, 9, 0);
-    final delay = nextCheck.isAfter(now)
-        ? nextCheck.difference(now)
-        : nextCheck.add(const Duration(days: 1)).difference(now);
-    _dailyTimer = Timer(delay, _runDailyChecks);
+    _dailyTimer = Timer(_config.nextCheckDelay, _runDailyChecks);
   }
 
   Future<void> _runDailyChecks() async {
     _scheduleDailyCheck();
-    final studentId = 'default';
-    await _sendNudgeNotifications(studentId);
+    for (final studentId in _config.studentIds) {
+      await _sendNudgeNotifications(studentId);
+    }
   }
 
   Future<void> _sendNudgeNotifications(String studentId) async {
     try {
       final overworkNudges = await getOverworkNudge(studentId);
       for (final nudge in overworkNudges) {
+        final model = EngagementNudgeModel(
+          id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+          studentId: studentId,
+          nudgeType: NudgeType.overwork.name,
+          message: nudge.message,
+          severity: nudge.severity.name,
+        );
+        await _nudgeRepository.save(model);
         await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
           hoursStudied: double.tryParse(
@@ -64,6 +97,15 @@ class EngagementScheduler {
     try {
       final revisionNudges = await getRevisionNudges(studentId);
       for (final nudge in revisionNudges) {
+        final model = EngagementNudgeModel(
+          id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+          studentId: studentId,
+          nudgeType: NudgeType.revision.name,
+          message: nudge.message,
+          severity: nudge.severity.name,
+          topicId: nudge.topicId,
+        );
+        await _nudgeRepository.save(model);
         if (nudge.topicId != null) {
           final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
           final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
@@ -79,6 +121,14 @@ class EngagementScheduler {
     try {
       final planNudges = await getPlanAdjustmentNudge(studentId);
       for (final nudge in planNudges) {
+        final model = EngagementNudgeModel(
+          id: 'plan_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+          studentId: studentId,
+          nudgeType: NudgeType.planAdjustment.name,
+          message: nudge.message,
+          severity: nudge.severity.name,
+        );
+        await _nudgeRepository.save(model);
         final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
         final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
         await _notificationService.showPlanAdjustmentSuggestion(
@@ -110,8 +160,7 @@ class EngagementScheduler {
       final focusRepo = FocusSessionRepository();
       await focusRepo.init();
       final todaySessions = await focusRepo.getByDate(DateTime.now());
-      final focusSeconds =
-          todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
+      final focusSeconds = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
       final focusHours = focusSeconds / 3600;
       if (focusHours > totalHours) {
         totalHours = focusHours;
@@ -150,39 +199,16 @@ class EngagementScheduler {
   Future<List<EngagementNudge>> getPlanAdjustmentNudge(String studentId) async {
     final nudges = <EngagementNudge>[];
     try {
-      await _planRepository.init();
-      final plan = await _planRepository.loadPlan(studentId);
-      if (plan != null) {
-        final consecutiveLow = _countConsecutiveLowAdherence(plan, studentId);
-        if (consecutiveLow >= 3) {
-          nudges.add(EngagementNudge(
-            type: NudgeType.planAdjustment,
-            message: 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
-            severity: NudgeSeverity.medium,
-          ));
-        }
+      final consecutiveLow = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      if (consecutiveLow >= 3) {
+        nudges.add(EngagementNudge(
+          type: NudgeType.planAdjustment,
+          message: 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
+          severity: NudgeSeverity.medium,
+        ));
       }
     } catch (_) {}
     return nudges;
-  }
-
-  int _countConsecutiveLowAdherence(dynamic plan, String studentId) {
-    try {
-      final instrumentation = InstrumentationService()..init();
-      final metrics = instrumentation.getAdherenceHistory(studentId);
-      final sorted = List<PlanAdherenceMetric>.from(metrics)
-        ..sort((a, b) => b.date.compareTo(a.date));
-      int count = 0;
-      for (final m in sorted) {
-        if (m.adherenceScore < 0.5) {
-          count++;
-        } else {
-          break;
-        }
-      }
-      return count;
-    } catch (_) {}
-    return 0;
   }
 
   Future<String> getWeeklyDigest(String studentId) async {
@@ -194,6 +220,10 @@ class EngagementScheduler {
     final weakResult = await _masteryService.getWeakTopics(studentId);
     final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
     return 'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, ${badges.length} badges earned.';
+  }
+
+  Future<List<EngagementNudgeModel>> getNudgeHistory(String studentId) async {
+    return _nudgeRepository.getByStudent(studentId);
   }
 
   void dispose() {

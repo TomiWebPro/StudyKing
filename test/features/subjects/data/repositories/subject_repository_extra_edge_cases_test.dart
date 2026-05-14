@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class _MockBox implements Box<Subject> {
   final Map<String, Subject> _data = {};
@@ -310,21 +310,6 @@ void main() {
     });
   });
 
-  group('getStudentSubjects scenarios', () {
-    test('returns all subjects regardless of studentId value', () async {
-      box.addSubject(_s(id: 's1', name: 'Physics'));
-      box.addSubject(_s(id: 's2', name: 'Chemistry'));
-
-      final result1 = await repo.getStudentSubjects('');
-      final result2 = await repo.getStudentSubjects('any-id');
-      final result3 = await repo.getStudentSubjects('student-123');
-
-      expect(result1.length, 2);
-      expect(result2.length, 2);
-      expect(result3.length, 2);
-    });
-  });
-
   group('save and delete data integrity', () {
     test('save with non-string ids works correctly', () async {
       final subject1 = _s(id: '123', name: 'Numeric ID');
@@ -414,8 +399,8 @@ void main() {
       expect(await repo.getByCode('ANY'), isNull);
     });
 
-    test('getStudentSubjects returns empty on empty box', () async {
-      expect(await repo.getStudentSubjects('s'), isEmpty);
+    test('getAll returns empty on empty box', () async {
+      expect(await repo.getAll(), isEmpty);
     });
   });
 

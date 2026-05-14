@@ -60,7 +60,7 @@ class ModeNavigationWidget extends StatelessWidget {
                   subtitle: l10n.personalStudyAssistantPlanner,
                   color: colorScheme.secondary,
                   onTap: () {
-                    Navigator.pushNamed(context, '/mentor');
+                    Navigator.pushNamed(context, AppRoutes.mentor);
                   },
                 ),
               ),
@@ -83,6 +83,7 @@ class ModeNavigationWidget extends StatelessWidget {
     return Semantics(
       button: true,
       label: '$title: $subtitle',
+      explicitChildNodes: true,
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -93,26 +94,32 @@ class ModeNavigationWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: ResponsiveUtils.cardPadding(context),
             child: Column(
               children: [
-                Icon(icon, color: color, size: 28),
+                ExcludeSemantics(
+                  child: Icon(icon, color: color, size: 28),
+                ),
                 const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                ExcludeSemantics(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ExcludeSemantics(
+                  child: Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

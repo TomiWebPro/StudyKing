@@ -10,6 +10,7 @@ Widget buildWidget({
   bool isSubmitted = false,
   bool isFeedbackVisible = true,
   ValueChanged<String?>? onAnswerSelected,
+  bool reduceMotion = false,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -23,6 +24,7 @@ Widget buildWidget({
         isSubmitted: isSubmitted,
         isFeedbackVisible: isFeedbackVisible,
         onAnswerSelected: onAnswerSelected ?? (_) {},
+        reduceMotion: reduceMotion,
       ),
     ),
   );
@@ -280,6 +282,229 @@ void main() {
 
         expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
         expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(3));
+      });
+
+      testWidgets('correct answer adds correct feedback to semantics label', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Correct!')), findsWidgets);
+      });
+
+      testWidgets('incorrect selected answer adds incorrect feedback to semantics', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Incorrect')), findsWidgets);
+      });
+
+      testWidgets('not submitted does not add feedback to semantics', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: false,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option B')), findsOneWidget);
+      });
+    });
+
+    group('reduceMotion', () {
+      testWidgets('uses Container instead of AnimatedSwitcher when reduceMotion is true', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          reduceMotion: true,
+        ));
+
+        expect(find.byIcon(Icons.check_circle), findsOneWidget);
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+
+      testWidgets('uses AnimatedSwitcher when reduceMotion is false', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          reduceMotion: false,
+        ));
+
+        expect(find.byIcon(Icons.check_circle), findsOneWidget);
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+
+      testWidgets('feedback hidden when isFeedbackVisible false with reduceMotion', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: false,
+          reduceMotion: true,
+        ));
+
+        expect(find.byIcon(Icons.check_circle), findsNothing);
+      });
+    });
+
+    group('option text properties', () {
+      testWidgets('option text has softWrap enabled', (tester) async {
+        await tester.pumpWidget(buildWidget(options: ['Long option text']));
+
+        final textWidget = tester.widget<Text>(find.text('Long option text'));
+        expect(textWidget.softWrap, isTrue);
+      });
+
+      testWidgets('option text has maxLines 3', (tester) async {
+        await tester.pumpWidget(buildWidget(options: ['Any option']));
+
+        final textWidget = tester.widget<Text>(find.text('Any option'));
+        expect(textWidget.maxLines, 3);
+      });
+
+      testWidgets('option text overflow is ellipsis', (tester) async {
+        await tester.pumpWidget(buildWidget(options: ['Any option']));
+
+        final textWidget = tester.widget<Text>(find.text('Any option'));
+        expect(textWidget.overflow, TextOverflow.ellipsis);
+      });
+    });
+
+    group('option highlighting after submission', () {
+      testWidgets('non-selected correct option gets tertiary container color', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option C',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+        expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(3));
+      });
+
+      testWidgets('non-selected non-correct option stays transparent after submission', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      });
+
+      testWidgets('correct answer option gets tertiary container color', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option C',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(3));
+      });
+
+      testWidgets('non-selected non-correct option has transparent background', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byType(InkWell), findsNWidgets(4));
+      });
+    });
+
+    group('semantics hint', () {
+      testWidgets('provides hint when not submitted', (tester) async {
+        await tester.pumpWidget(buildWidget(isSubmitted: false));
+
+        final semantics = find.bySemanticsLabel(RegExp('Option [A-D]'));
+        expect(semantics, findsNWidgets(4));
+      });
+
+      testWidgets('no hint when submitted', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          isSubmitted: true,
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+        ));
+
+        expect(find.byType(InkWell), findsNWidgets(4));
+      });
+    });
+
+    group('option label edge cases', () {
+      testWidgets('submitted with null correct answer renders options', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.text('Option A'), findsOneWidget);
+        expect(find.text('Option B'), findsOneWidget);
+      });
+
+      testWidgets('submitted correct answer includes correct feedback in semantics', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option A.*Correct!')), findsOneWidget);
+      });
+
+      testWidgets('submitted correct answer label for unselected option', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option A.*Correct!')), findsOneWidget);
+      });
+
+      testWidgets('submitted with null correctAnswer does not add feedback to semantics', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option A')), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('Option A.*Correct!')), findsNothing);
+      });
+    });
+
+    group('feedback content text', () {
+      testWidgets('correct answer shows Selected right option text', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+        ));
+
+        expect(find.text('Selected right option'), findsOneWidget);
+      });
+
+      testWidgets('incorrect answer shows Try again text', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+        ));
+
+        expect(find.text('Try again'), findsOneWidget);
       });
     });
   });

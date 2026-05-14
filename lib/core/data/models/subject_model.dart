@@ -15,7 +15,7 @@ class Subject extends HiveObject {
   final String? syllabus;
 
   @HiveField(4)
-  final String? code; // e.g., 'IB-PHYS'
+  final String? code;
 
   @HiveField(5)
   final String? teacher;
@@ -24,7 +24,7 @@ class Subject extends HiveObject {
   final List<String> topicIds;
 
   @HiveField(7)
-  final String color; // Hex color for UI
+  final String color;
 
   @HiveField(8)
   final DateTime createdAt;

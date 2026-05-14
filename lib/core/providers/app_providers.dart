@@ -7,7 +7,6 @@ import 'package:studyking/features/focus_mode/data/repositories/focus_session_re
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 final database = DatabaseService(

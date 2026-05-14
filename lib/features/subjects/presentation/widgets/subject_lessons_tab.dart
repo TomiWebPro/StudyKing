@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectLessonsTab extends StatelessWidget {
   final String subjectId;
+  final LessonRepository? lessonRepository;
 
-  const SubjectLessonsTab({super.key, required this.subjectId});
+  const SubjectLessonsTab({
+    super.key,
+    required this.subjectId,
+    this.lessonRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final lessonRepo = LessonRepository();
+    final lessonRepo = lessonRepository ?? LessonRepository();
 
     Future<List<Lesson>> loadLessons() async {
       try {
@@ -51,12 +57,6 @@ class SubjectLessonsTab extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.addTopic),
-                ),
               ],
             ),
           );
@@ -79,7 +79,16 @@ class SubjectLessonsTab extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.lessonDetail,
+                  arguments: LessonDetailArgs(
+                    lessonId: lesson.id,
+                    topicId: lesson.topicId,
+                    topicTitle: lesson.title,
+                    subjectId: subjectId,
+                  ),
+                ),
               ),
             );
           },

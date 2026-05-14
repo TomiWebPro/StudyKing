@@ -402,5 +402,141 @@ void main() {
         expect(result.feedback, isNull);
       });
     });
+
+    group('QuestionAnswerValidator (direct instantiation)', () {
+      test('wraps core validator and returns correct for exact match', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Paris');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('Paris', QuestionType.typedAnswer);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('returns incorrect for empty answer', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Paris');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('', QuestionType.typedAnswer);
+        expect(result.isCorrect, isFalse);
+      });
+
+      test('handles graphDrawing type via core validateStatic', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'drawing');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('drawing', QuestionType.graphDrawing);
+        expect(result.isCorrect, isFalse);
+      });
+
+      test('wraps core validator and returns incorrect for wrong answer', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Paris');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('London', QuestionType.typedAnswer);
+        expect(result.isCorrect, isFalse);
+      });
+
+      test('returns correct for acceptable answer', () {
+        final markscheme = Markscheme(
+          questionId: 'q1',
+          correctAnswer: 'Paris',
+          acceptableAnswers: ['paris', 'PARIS'],
+        );
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('paris', QuestionType.typedAnswer);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('returns correct for single choice', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Option A');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('Option A', QuestionType.singleChoice);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('returns incorrect for null markscheme', () {
+        final validator = QuestionAnswerValidator(null);
+        final result = validator.validate('answer', QuestionType.typedAnswer);
+        expect(result.isCorrect, isFalse);
+      });
+
+      test('handles math expression validation', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'x=2');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('x=2', QuestionType.mathExpression);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('handles essay validation', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('A' * 60, QuestionType.essay);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('handles step by step validation', () {
+        final markscheme = Markscheme(
+          questionId: 'q1',
+          correctAnswer: 'answer',
+          steps: [
+            MarkSchemeStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+          ],
+        );
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('This includes step1', QuestionType.stepByStep);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('returns correct for multi choice', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'A,B');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('A,B', QuestionType.multiChoice);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('returns false for unsupported types via canvas', () {
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'drawing');
+        final validator = QuestionAnswerValidator(markscheme);
+        final result = validator.validate('drawing', QuestionType.canvas);
+        expect(result.isCorrect, isFalse);
+      });
+    });
+
+    group('_signatureFor consistency', () {
+      test('produces consistent signatures for identical markschemes', () {
+        final service = AnswerValidationService();
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'test', explanation: 'exp');
+        final markscheme2 = Markscheme(questionId: 'q1', correctAnswer: 'test', explanation: 'exp');
+
+        final r1 = service.validateAnswer('test', QuestionType.typedAnswer, 'q1', markscheme);
+        final r2 = service.validateAnswer('test', QuestionType.typedAnswer, 'q1', markscheme2);
+        expect(r1.isCorrect, isTrue);
+        expect(r2.isCorrect, isTrue);
+      });
+
+      test('cache uses signature based on markscheme content not identity', () {
+        final service = AnswerValidationService();
+        final ms1 = Markscheme(questionId: 'q1', correctAnswer: 'same', explanation: 'a');
+        final ms2 = Markscheme(questionId: 'q1', correctAnswer: 'same', explanation: 'b');
+
+        expect(service.validateAnswer('same', QuestionType.typedAnswer, 'q1', ms1).isCorrect, isTrue);
+        expect(service.validateAnswer('same', QuestionType.typedAnswer, 'q1', ms2).isCorrect, isTrue);
+      });
+
+      test('signature handles empty acceptableAnswers', () {
+        final service = AnswerValidationService();
+        final ms = Markscheme(
+          questionId: 'q1',
+          correctAnswer: 'test',
+          acceptableAnswers: [],
+          explanation: 'exp',
+        );
+        final result = service.validateAnswer('test', QuestionType.typedAnswer, 'q1', ms);
+        expect(result.isCorrect, isTrue);
+      });
+
+      test('validateWithMarkschemeInstance handles graphDrawing type', () {
+        final service = AnswerValidationService();
+        final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'drawing');
+        final result = service.validateWithMarkschemeInstance('drawing', QuestionType.graphDrawing, markscheme);
+        expect(result.isCorrect, isFalse);
+      });
+    });
   });
 }

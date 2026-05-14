@@ -19,14 +19,6 @@ void main() {
       expect(SuggestedPromptsWidget, isA<Type>());
     });
 
-    test('quickguide.dart exports TypingIndicatorWidget', () {
-      expect(TypingIndicatorWidget, isA<Type>());
-    });
-
-    test('quickguide.dart exports MessageComposerWidget', () {
-      expect(MessageComposerWidget, isA<Type>());
-    });
-
     test('quickguide.dart exports showQuickGuideHelpDialog', () {
       expect(showQuickGuideHelpDialog, isA<Function>());
     });

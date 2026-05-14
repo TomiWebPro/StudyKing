@@ -13,17 +13,13 @@ import 'package:studyking/core/utils/responsive.dart';
 enum LessonStatus { notStarted, inProgress, completed }
 
 class LessonListScreen extends StatefulWidget {
-  final String topicId;
-  final String topicTitle;
-  final String subjectId;
+  final LessonListArgs args;
   final LessonRepository? lessonRepository;
   final TutorSessionRepository? tutorSessionRepository;
 
   const LessonListScreen({
     super.key,
-    required this.topicId,
-    required this.topicTitle,
-    this.subjectId = '',
+    required this.args,
     this.lessonRepository,
     this.tutorSessionRepository,
   });
@@ -54,7 +50,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
     try {
       final all = await _lessonRepo.getAll();
       setState(() {
-        _lessons = all.where((l) => l.topicId == widget.topicId).toList();
+        _lessons = all.where((l) => l.topicId == widget.args.topicId).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -89,9 +85,9 @@ class _LessonListScreenState extends State<LessonListScreen> {
       context,
       AppRoutes.tutor,
       arguments: TutorArgs(
-        topicId: widget.topicId,
-        topicTitle: widget.topicTitle,
-        subjectId: widget.subjectId,
+        topicId: widget.args.topicId,
+        topicTitle: widget.args.topicTitle,
+        subjectId: widget.args.subjectId,
       ),
     );
   }
@@ -102,7 +98,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_lessons.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.topicTitle)),
+        appBar: AppBar(title: Text(widget.args.topicTitle)),
         body: Center(
           child: FocusTraversalGroup(
             child: Column(
@@ -139,7 +135,7 @@ class _LessonListScreenState extends State<LessonListScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.topicTitle),
+        title: Text(widget.args.topicTitle),
         actions: [
           FocusTraversalOrder(
             order: const NumericFocusOrder(1),
@@ -186,9 +182,9 @@ class _LessonListScreenState extends State<LessonListScreen> {
                     AppRoutes.lessonDetail,
                     arguments: LessonDetailArgs(
                       lessonId: l.id,
-                      topicId: widget.topicId,
-                      topicTitle: widget.topicTitle,
-                      subjectId: widget.subjectId,
+                      topicId: widget.args.topicId,
+                      topicTitle: widget.args.topicTitle,
+                      subjectId: widget.args.subjectId,
                     ),
                   ),
                 ),

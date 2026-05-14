@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class MockSubjectBox implements Box<Subject> {
   final Map<String, Subject> _storage = {};
@@ -442,7 +442,7 @@ void main() {
       });
     });
 
-    group('getStudentSubjects', () {
+    group('getAll via repository', () {
       late ProviderContainer container;
       late MockSubjectBox mockBox;
 
@@ -459,14 +459,14 @@ void main() {
         container.dispose();
       });
 
-      test('returns all subjects regardless of studentId', () async {
+      test('returns all subjects', () async {
         mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
         mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
         
-        final subjects = await repo.getStudentSubjects('student-123');
+        final subjects = await repo.getAll();
 
         expect(subjects.length, 2);
       });

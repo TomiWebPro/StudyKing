@@ -3074,6 +3074,12 @@ abstract class AppLocalizations {
   /// **'That\'s an interesting question! Let me help you understand it better.'**
   String get fallbackGeneralResponse;
 
+  /// System prompt for Quick Guide AI in the current locale
+  ///
+  /// In en, this message translates to:
+  /// **'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.'**
+  String get quickGuideSystemPrompt;
+
   /// Application name for About dialog
   ///
   /// In en, this message translates to:

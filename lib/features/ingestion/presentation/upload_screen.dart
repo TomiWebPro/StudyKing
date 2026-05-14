@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/data/enums.dart';
-import '../../../core/data/repositories/source_repository.dart';
-import '../../../core/utils/responsive.dart';
-import '../../subjects/data/repositories/subject_repository.dart';
-import '../../subjects/data/models/subject_model.dart';
-import '../services/content_pipeline.dart';
-import '../../../l10n/generated/app_localizations.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/core/data/repositories/source_repository.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/features/ingestion/services/content_pipeline.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class UploadScreen extends StatefulWidget {
   final String? preselectedSubjectId;
@@ -124,6 +125,17 @@ class _UploadScreenState extends State<UploadScreen> {
         }
       } else {
         await _sourceRepo.init();
+        await _sourceRepo.create(
+          Source(
+            id: 'src_${DateTime.now().millisecondsSinceEpoch}',
+            title: title,
+            content: content,
+            type: SourceType.externalResource,
+            studentId: '',
+            subjectId: _selectedSubjectId ?? '',
+            sourceUrl: _useUrlInput ? content : '',
+          ),
+        );
       }
 
       setState(() {

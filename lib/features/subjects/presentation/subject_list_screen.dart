@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class SubjectListView extends ConsumerWidget {
-  const SubjectListView({super.key});
+class SubjectListScreen extends ConsumerWidget {
+  const SubjectListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -134,7 +134,7 @@ class SubjectListView extends ConsumerWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: SubjectColors.stringToColor(subject.color),
+                    color: ColorUtils.stringToColor(subject.color),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

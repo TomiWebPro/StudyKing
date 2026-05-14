@@ -1,127 +1,185 @@
-# Issue: Accessibility Preferences Unconsumed, Hardcoded UI Strings, Missing SafeArea, and Navigation/Responsive Inconsistencies
+# UI/UX Inconsistency: Fragmented Chat Component Language & Theme Gaps Across Features
 
-## Severity: High
+## Context
 
-## Summary
-
-Five distinct high-value UI/UX problem categories that degrade the experience for users with accessibility needs, non-English speakers, and users with notched/physical-keyboard devices.
+Three features offer conversational AI interfaces — **QuickGuide** (`lib/features/quickguide/presentation/quick_guide_screen.dart`), **Mentor** (`lib/features/mentor/presentation/mentor_screen.dart`), and **Tutor** (`lib/features/teaching/presentation/tutor_screen.dart`). Despite serving similar chat-based interactions, QuickGuide duplicates chat UI components inline instead of reusing shared widgets already used by Mentor and Tutor. This creates visual inconsistencies, a larger maintenance surface, and degrades the user experience when switching between modes. Additionally, theme and responsive utilities exist but are inconsistently applied.
 
 ---
 
-### 1. Accessibility Preferences Declared but Never Consumed
+## Issues Found
 
-The `AccessibilityPreferences` model (`lib/features/settings/data/models/accessibility_preferences.dart:6-24`) defines four boolean flags: `boldText`, `highContrast`, `reduceMotion`, and `largeTouchTargets`. Users can toggle `highContrast`, `largeTouchTargets`, and `reduceMotion` via `lib/features/settings/presentation/settings_screen.dart:54-70`. However, `reduceMotion` and `largeTouchTargets` are **never read** by any widget in the entire app.
+### 1. QuickGuide Uses Inline Chat Bubble Rendering Instead of Shared `ChatBubble` Widget
 
-#### Impact
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 420–485) — inline chat bubble
+- `lib/features/teaching/presentation/widgets/chat_bubble.dart` (lines 1–207) — shared `ChatBubble` widget
+- `lib/features/mentor/presentation/mentor_screen.dart` (line 14) — correctly imports `ChatBubble`
 
-- **`reduceMotion`**: Users who experience vertigo/nausea from motion (vestibular disorders, WCAG 2.1 Guideline 2.3) toggle this on but the app continues animating: `AnimatedBarChart` always plays its grow-from-zero animation (`lib/core/widgets/animated_bar_chart.dart:99-118`), `AnimatedSwitcher` fades feedback in (`lib/features/questions/ui/widgets/single_answer_widget.dart:86-92`), and the typing indicator bounces dots (`lib/features/teaching/presentation/widgets/chat_bubble.dart:128-131`).
-- **`largeTouchTargets`**: Users who toggle this expect 48×48 dp minimum touch targets app-wide. Widgets like `_buildIconButton` in `CanvasDrawingWidget` (`lib/features/questions/ui/widgets/canvas_drawing_widget.dart:164`) compute padding as `ResponsiveUtils.minTouchTarget * 0.3` (14.4 dp), producing a sub-30 dp effective target. No widget checks `largeTouchTargets`.
+**Evidence:** Mentor screen imports `ChatBubble` from teaching (`import '../../teaching/presentation/widgets/chat_bubble.dart';`). QuickGuide has its own standalone rendering with materially different visuals:
 
-#### Affected Files
+| Aspect | QuickGuide (inline) | ChatBubble (shared) |
+|--------|-------------------|-------------------|
+| User bubble color | `colorScheme.primary` | `colorScheme.primaryContainer` |
+| Border radius | `BorderRadius.circular(16)` symmetric | `BorderRadius.only` asymmetric (4/16) |
+| Font size | Hardcoded `fontSize: 15` | `textTheme.bodyMedium` (respects scaling) |
+| Avatar | None | `CircleAvatar` with robot/person icon |
+| Sender label | None | Shows "You" / "Tutor" / "System" |
+| Text color (user) | `onPrimary` (white on deep purple) | `onPrimaryContainer` |
+| Streaming visual | `CircularProgressIndicator` (spinner) | Animated bouncing dots (`_TypingIndicator`) |
 
-| File | Lines | Issue |
-|------|-------|-------|
-| `lib/core/widgets/animated_bar_chart.dart` | 99–118 | `TweenAnimationBuilder` always animates; no `reduceMotion` check |
-| `lib/features/questions/ui/widgets/single_answer_widget.dart` | 86–92 | `AnimatedSwitcher` always animates feedback |
-| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 128–131 | Typing indicator always loops |
-| `lib/features/questions/ui/widgets/canvas_drawing_widget.dart` | 152–170 | `_buildIconButton` touch target too small, no `largeTouchTargets` check |
-| `lib/features/settings/presentation/settings_screen.dart` | 54–70 | Switch toggles exist but writes never propagate to widgets |
+**Rationale:** A user who starts in QuickGuide then moves to Mentor or Tutor sees different bubble colors, radii, and absence/presence of avatars. This undermines the sense of a cohesive product. The `ChatBubble` widget exists specifically to solve this — QuickGuide should use it.
 
----
-
-### 2. Hardcoded English Strings Bypass l10n System
-
-The app has a full `AppLocalizations` system with English and Spanish localizations (`lib/l10n/generated/`). Despite this, several user-visible strings are hardcoded in English.
-
-#### Affected Strings
-
-| File | Line(s) | Hardcoded Text |
-|------|---------|----------------|
-| `lib/features/settings/presentation/settings_screen.dart` | 428 | `'Request timed out. Please try again.'` |
-| `lib/features/settings/presentation/settings_screen.dart` | 430 | `'Unable to load models. Please try again.'` |
-| `lib/features/settings/presentation/settings_screen.dart` | 452 | `'Retry'` |
-
-These appear in the `_AiModelLoadingSheet` widget when an API call fails or times out. A Spanish-speaking user configuring their AI model will see English error messages.
+**Acceptance Criteria:**
+- [ ] Replace inline `Container` in `_buildMessageList` (lines 434–479) with the shared `ChatBubble` widget
+- [ ] Verify QuickGuide student messages render with `primaryContainer` (not `primary`) and asymmetric border radii, matching Mentor/Tutor
+- [ ] Confirm `textTheme.bodyMedium` is used instead of hardcoded `fontSize: 15`
+- [ ] Confirm streaming indicator transitions from `CircularProgressIndicator` to animated dots
+- [ ] Ensure no visual regression: color contrast, spacing, and accessibility labels remain intact
 
 ---
 
-### 3. Bottom Sheets Missing SafeArea
+### 2. QuickGuide Duplicates Message Composer Instead of Reusing `ConversationInput`
 
-At least 5 modal bottom sheets wrap content in a `Container` without `SafeArea`. On devices with system navigation bars, gesture handles, or keyboard insets, content is truncated or obscured.
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 565–658) — inline `_buildMessageComposer`
+- `lib/core/widgets/conversation_input.dart` (lines 1–130) — shared `ConversationInput` widget
+- `lib/features/mentor/presentation/mentor_screen.dart` (line 8) — correctly imports `ConversationInput`
 
-#### Affected Files
+**Evidence:** QuickGuide's `_buildMessageComposer` (93 lines) is a near-exact copy of `ConversationInput`. It redefines the same `TextField` decoration (border radius 24, fill color, content padding), the same `IconButton.filled` send button (48x48, `CircularProgressIndicator` when loading), and the same bottom padding logic. The Mentor screen correctly uses `ConversationInput` in 1 line. QuickGuide's version adds `CallbackShortcuts` for Ctrl+Enter and `FocusTraversalGroup` — features that should be added to the shared widget instead of duplicated.
 
-| File | Line(s) | Sheet |
-|------|---------|-------|
-| `lib/features/practice/presentation/practice_screen.dart` | 380–420 | `_showSubjectSelector` |
-| `lib/features/practice/presentation/practice_screen.dart` | 423–479 | `_showPracticeModeDialog` |
-| `lib/features/practice/presentation/practice_screen.dart` | 514–547 | `_showTopicSelector` |
-| `lib/features/practice/presentation/practice_screen.dart` | 611–686 | `_showSpacedRepetitionSubjectSelector` |
-| `lib/features/practice/presentation/practice_screen.dart` | 703–738 | `_startWeakAreasPractice` subject selector |
+| Aspect | QuickGuide inline | ConversationInput |
+|--------|-----------------|-------------------|
+| Lines of code | 93 | 130 (with more features) |
+| Keyboard shortcuts | Ctrl+Enter (inline) | None |
+| `trailing` customization | Hardcoded send button | Configurable via `trailing` param |
+| `leading` customization | None | Configurable via `leading` param |
+| `Semantics` on input | Yes (`label` + `hint`) | No |
 
-The fix pattern for each is to change:
+**Rationale:** Any future enhancement to the message composer (e.g., voice input button, attachment picker, quick-reply chips) must be implemented in two places. This is a maintenance risk and a missed opportunity for a single-source-of-truth chat input.
 
-```diff
-- showModalBottomSheet(
--   builder: (sheetContext) => Container(
--     padding: ...
-```
-
-to:
-
-```dart
-showModalBottomSheet(
-  builder: (sheetContext) => SafeArea(
-    child: Container(
-      padding: ...
-```
+**Acceptance Criteria:**
+- [ ] Add `CallbackShortcuts` (Ctrl+Enter binding) and `FocusTraversalGroup` support to the shared `ConversationInput` widget
+- [ ] Replace QuickGuide's `_buildMessageComposer` with `ConversationInput`, passing `_onSend`, `_textController`, `_inputFocusNode`, `_isStreaming` as parameters
+- [ ] Verify `Semantics` labels transfer correctly to the shared widget
+- [ ] Remove the inline `_buildMessageComposer` method and all dead code
 
 ---
 
-### 4. Drawing Canvas Hardcoded to 300px Height
+### 3. `ConversationMemory` maxTurns Mismatch Between QuickGuide and LlmService Default
 
-`lib/features/questions/ui/widgets/canvas_drawing_widget.dart:69` sets `height: 300` regardless of screen size.
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (line 38): `ConversationMemory(maxTurns: 30)`
+- `lib/core/services/llm/llm_chat_service.dart` (line 19): `ConversationMemory({this.maxTurns = 20})`
 
-- On a phone in landscape, 300 px may force the canvas offscreen.
-- On a 12-inch tablet, 300 px wastes ~75% of vertical space.
-- `ResponsiveUtils` already provides height helpers; the canvas should use `MediaQuery.sizeOf(context).height * 0.4` or similar, constrained by a sensible min/max.
+**Evidence:** The shared `ConversationMemory` has a default of 20 turns. QuickGuide explicitly overrides this to 30, meaning it retains 50% more conversation history than any other consumer. There is no documented reason for this discrepancy. If the LLM service's `maxTurns` and QuickGuide's are both used (QuickGuide maintains both `_messages` and `_memory`), the effective limit is unclear and may lead to inconsistent truncation behavior.
 
----
+**Rationale:** Users may experience message loss differently depending on which list truncates first. A single canonical limit should apply across all chat features.
 
-### 5. Inconsistent Navigation Pattern
-
-The codebase mixes two navigation approaches in the same files, making the routing layer unreliable and keyboard/accessibility navigation harder to audit.
-
-**Pattern A (named routes via `AppRoutes` constants):**
-- `lib/features/dashboard/presentation/dashboard_screen.dart:426-431` — `Navigator.pushNamed(context, AppRoutes.practiceSession, ...)`
-- `lib/features/planner/presentation/planner_screen.dart:139-148` — `Navigator.pushNamed(context, AppRoutes.tutor, ...)`
-
-**Pattern B (direct `MaterialPageRoute`):**
-- `lib/features/lessons/presentation/lesson_list_screen.dart:89-98` — `Navigator.push(context, MaterialPageRoute(...))`
-- `lib/features/lessons/presentation/lesson_list_screen.dart:175-182` — `Navigator.push(context, MaterialPageRoute(...))`
-- `lib/features/practice/presentation/practice_screen.dart:576-585` — `Navigator.push(context, MaterialPageRoute(...))`
-
-#### Impact
-
-- Named routes support deep linking, deferred route loading, and `onGenerateRoute` analytics hooks; direct `MaterialPageRoute` bypasses all of them.
-- A developer adding a middleware guard (e.g., "require API key before practice") must patch two parallel code paths.
+**Acceptance Criteria:**
+- [ ] Align QuickGuide's `ConversationMemory` to the shared default of 20 turns, or document why 30 is necessary
+- [ ] Ensure consistent truncation logic between `_messages` list and `_memory` history
+- [ ] Verify no conversation history is silently dropped
 
 ---
 
-### 6. Keyboard Focus Traversal Incomplete
+### 4. Google Fonts Dependency Declared But Never Applied
 
-`FocusTraversalGroup` is used in several screens (`lib/features/settings/presentation/settings_screen.dart:36`, `lib/features/planner/presentation/planner_screen.dart:157`, `lib/features/practice/presentation/practice_session_screen.dart:382`) but only `PlannerScreen` sets focus order via `NumericFocusOrder` (`planner_screen.dart:164-165`).
+**Affected files:**
+- `pubspec.yaml`: includes `google_fonts: ^6.1.0`
+- `lib/core/theme/app_theme.dart` (lines 1–190): no `fontFamily` is ever set
 
-Without explicit `FocusTraversalOrder`, the default reading-order traversal may produce illogical tab sequences in complex layouts (e.g., the dashboard grid of MetricCards, bottom-sheet option lists).
+**Evidence:** The `TextTheme` in `AppTheme.createTextTheme()` returns vanilla `TextStyle` objects without a `fontFamily`. The `_baseTheme()` returns a `ThemeData` with no `fontFamily` override. This means Google Fonts are downloaded (adding ~2–8 MB to the bundle) but never used. All text renders in the platform default (Roboto on Android, San Francisco on iOS).
+
+**Rationale:** Including an unused dependency wastes bundle size and initial load time. Either remove `google_fonts` from `pubspec.yaml` or apply a chosen font family (e.g., Inter, Lora, or Atkinson Hyperlegible for accessibility) consistently across the theme.
+
+**Acceptance Criteria:**
+- [ ] Option A: Remove `google_fonts` dependency from `pubspec.yaml`, prune related imports
+- [ ] Option B: Select a single font family, apply it in `createTextTheme()`, verify CJK/Latin/Spanish glyph coverage, and confirm no measurable performance regression
+- [ ] Ensure the chosen option is applied consistently (AppBar, cards, buttons, input fields)
 
 ---
 
-## Acceptance Criteria
+### 5. QuickGuide Mode Nav Cards Use Hardcoded Route String Instead of Named Constant
 
-- [ ] **Accessibility**: `reduceMotion` flag is checked before `TweenAnimationBuilder` / `AnimatedSwitcher` executes; animations skip to end state when true. `largeTouchTargets` flag elevates all interactive padding to 48 dp minimum.
-- [ ] **l10n**: The three hardcoded English strings in `_AiModelLoadingSheet` are migrated to `AppLocalizations` methods (add new keys if missing in `.arb`).
-- [ ] **SafeArea**: All bottom sheets in `practice_screen.dart` wrap their content in `SafeArea` + top padding preserved (non-content area).
-- [ ] **Canvas responsiveness**: `CanvasDrawingWidget` height derives from `MediaQuery.sizeOf(context)` with a clamp (e.g., 200–500 dp).
-- [ ] **Navigation consistency**: All `Navigator.push(context, MaterialPageRoute(...))` calls in lesson list/detail and practice screens are replaced with `Navigator.pushNamed(context, AppRoutes.xxx, arguments: ...)`. Register any missing routes in `AppRouter`.
-- [ ] **Keyboard navigation**: At minimum, `SettingsScreen`, `PlannerScreen`, and `PracticeSessionScreen` get explicit `FocusTraversalOrder` widgets on their interactive children.
-- [ ] **No regressions**: All existing tests pass. Manual verification of bottom-sheet rendering on a device with a gesture bar (iPhone X-style) and on a device with soft navigation keys.
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (line 331): `Navigator.pushNamed(context, '/mentor')`
+
+**Evidence:** The AI Tutor card correctly uses `AppRoutes.tutor` (line 312), but the Mentor card uses a bare string literal `'/mentor'` (line 331). If the Mentor route path ever changes, this reference silently breaks while `AppRoutes.tutor` would be caught by the compiler.
+
+**Rationale:** Inconsistent routing patterns create fragility. All navigation should use `AppRoutes` constants.
+
+**Acceptance Criteria:**
+- [ ] Replace `'/mentor'` with `AppRoutes.mentor`
+- [ ] Search for any other hardcoded route strings across the codebase (e.g., `grep -rn "pushNamed.*'/" lib/`)
+
+---
+
+### 6. Weak Accessibility Semantics on Mode Navigation Cards
+
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 351–390)
+
+**Evidence:** The `_buildModeCard` wraps the card in `Semantics(button: true, label: "$title: $subtitle")`, but the `Card` has `child: InkWell` wrapping icon + title + subtitle `Text` widgets. These child text widgets are still exposed to the accessibility tree as individual nodes, meaning a screen reader may read both the semantic label AND the child text redundantly. The `Card` itself has no `explicitChildNodes: true`.
+
+The `ChatBubble` widget similarly uses `explicitChildNodes: true` which can interfere with fluid screen reader navigation (see teaching widget).
+
+**Rationale:** Users relying on TalkBack/VoiceOver get a noisy experience — the label is read, then each child text is read again.
+
+**Acceptance Criteria:**
+- [ ] Add `explicitChildNodes: true` to the outer `Semantics` in `_buildModeCard`
+- [ ] Wrap child Icon and Text widgets in `ExcludeSemantics` or use `Semantics(explicitChildNodes: true ...)` recursively
+- [ ] Audit `ChatBubble` (chat_bubble.dart:19) for similar redundant semantics
+
+---
+
+### 7. Responsive Layout Gaps: Hardcoded Padding Instead of `ResponsiveUtils`
+
+**Affected files (non-exhaustive):**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (line 364): `const EdgeInsets.all(12)` — `_buildModeCard` padding
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (line 440, 461): `EdgeInsets.symmetric(horizontal: ..., vertical: 12)` and `fontSize: 15` — chat bubble content sizing
+- Many other feature screens (dashboard, planner, sessions) use hardcoded `EdgeInsets.all(16)` or similar instead of `ResponsiveUtils.screenPadding(context)`
+
+**Evidence:** `ResponsiveUtils` provides `screenPadding`, `listPadding`, `cardPadding`, `horizontalSpacing`, and `verticalSpacing` — all breakpoint-aware. QuickGuide and several other screens use fixed values that do not adapt to tablet or desktop widths.
+
+**Rationale:** On tablets (md breakpoint, 840–1200px), hardcoded 12px padding creates an uncomfortably wide content column. The responsive utilities exist to solve this but are underused.
+
+**Acceptance Criteria:**
+- [ ] Replace hardcoded `EdgeInsets.all(12)` in `_buildModeCard` with `ResponsiveUtils.cardPadding(context)`
+- [ ] Replace hardcoded `fontSize: 15` in chat bubble with `Theme.of(context).textTheme.bodyMedium?.fontSize`
+- [ ] Audit all feature screens for hardcoded padding values and replace with `ResponsiveUtils` variants where appropriate
+
+---
+
+### 8. Animation and Motion Consistency: Duplicate Typing Indicator Implementations
+
+**Affected files:**
+- `lib/features/quickguide/presentation/quick_guide_screen.dart` (lines 531–562): standalone `_buildTypingIndicator` with `AnimatedOpacity` + `CircularProgressIndicator`
+- `lib/features/teaching/presentation/widgets/chat_bubble.dart` (lines 116–206): `_TypingIndicator` with animated bouncing dots + `AnimationController`
+
+**Evidence:** When the AI is generating a response, QuickGuide shows a spinner inside a text container ("Quick Guide is thinking...") while Tutor and Mentor show animated bouncing dots inside a `ChatBubble`. These are two different visual languages for the same mechanical state.
+
+Crucially, the `ChatBubble`'s `_TypingIndicator` respects `reduceMotion` setting (displaying static dots when disabled), while QuickGuide's `_buildTypingIndicator` does not check for reduced motion — it always animates.
+
+**Rationale:** Users who enable "Reduce Motion" in Settings or OS-level accessibility still see fading animations in QuickGuide. This violates WCAG 2.1 Success Criterion 2.3.3 (Animation from Interactions).
+
+**Acceptance Criteria:**
+- [ ] Remove standalone `_buildTypingIndicator` from QuickGuide
+- [ ] Ensure `ChatBubble`'s `_TypingIndicator` is used consistently across all three chat features
+- [ ] Verify `reduceMotion` is passed from each screen's state to the `ChatBubble` or typing indicator widget
+- [ ] Confirm no animation plays when `reduceMotion` is true (verify with `MediaQuery.boldTextOf(context)` or the settings provider)
+
+---
+
+### 9. Dashboard FAB Is Hidden to Keyboard Users
+
+**Affected files:**
+- `lib/main.dart` (lines 238–241): `FloatingActionButton.small` with `onPressed: _openDashboard`
+
+**Evidence:** The Dashboard is the app's analytics hub but is only accessible via a FAB on the main screen. FABs are not keyboard-focusable by default on all platforms. There is no menu entry, navigation rail button, or keyboard shortcut to open the Dashboard.
+
+**Rationale:** A keyboard-only user (or user navigating with a switch device) cannot reach the Dashboard without first tabbing through all bottom navigation destinations. This is an accessibility barrier.
+
+**Acceptance Criteria:**
+- [ ] Add "Dashboard" as a keyboard-accessible action (e.g., a fifth `NavigationDestination` or a menu item in the AppBar of the first tab)
+- [ ] Or wrap the FAB in `Focus` + `Actions` to ensure it appears in the tab order
+- [ ] Verify screen reader can discover and activate the Dashboard action

@@ -156,28 +156,4 @@ void main() {
     });
   });
 
-  group('ContentPipeline.extractQuestionsFromSource', () {
-    test('returns result from ingestion service', () async {
-      final result = await pipeline.extractQuestionsFromSource(
-        content: 'What is 2+2?',
-        modelId: 'gpt-4',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data, isEmpty);
-    });
-  });
-
-  group('ContentPipeline.generateSummary', () {
-    test('returns summary from ingestion service', () async {
-      final result = await pipeline.generateSummary(
-        content: 'Long text content',
-        topicName: 'Algebra',
-        modelId: 'gpt-4',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data, 'Summary');
-    });
-  });
 }

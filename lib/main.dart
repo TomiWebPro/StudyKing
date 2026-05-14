@@ -18,7 +18,7 @@ import 'core/routes/app_router.dart';
 import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/settings_screen.dart';
-import 'features/subjects/presentation/subject_list_view.dart';
+import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
@@ -215,7 +215,7 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    SubjectListView(),
+    SubjectListScreen(),
     PracticeScreen(),
     MentorScreen(),
     FocusTimerScreen(),
@@ -236,10 +236,12 @@ class _MainScreenState extends State<MainScreen> {
           index: _selectedIndex,
           children: _screens,
         ),
-        floatingActionButton: FloatingActionButton.small(
-          onPressed: () => _openDashboard(),
-          tooltip: 'Dashboard',
-          child: const Icon(Icons.dashboard),
+        floatingActionButton: Focus(
+          child: FloatingActionButton.small(
+            onPressed: () => _openDashboard(),
+            tooltip: 'Dashboard',
+            child: const Icon(Icons.dashboard),
+          ),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,

@@ -214,6 +214,37 @@ void main() {
 
         expect(find.byType(CanvasDrawingWidget), findsOneWidget);
       });
+
+      testWidgets('shows saved message after successful save', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Drawing saved!'), findsOneWidget);
+      });
+
+      testWidgets('save button disabled while saving', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+
+        final saveButton = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Save Drawing'),
+        );
+        expect(saveButton.onPressed, isNull);
+      });
     });
 
     group('initial drawing', () {
@@ -339,6 +370,172 @@ void main() {
           initialDrawing: null,
         ));
         expect(find.text('Draw your answer here'), findsOneWidget);
+      });
+    });
+
+    group('largeTouchTargets', () {
+      testWidgets('renders with largeTouchTargets enabled', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: CanvasDrawingWidget(
+              onDrawingComplete: (_) {},
+              largeTouchTargets: true,
+            ),
+          ),
+        ));
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+        expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      });
+
+      testWidgets('renders with largeTouchTargets disabled', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: CanvasDrawingWidget(
+              onDrawingComplete: (_) {},
+              largeTouchTargets: false,
+            ),
+          ),
+        ));
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+      });
+    });
+
+    group('stroke status text', () {
+      testWidgets('shows drawing with strokes count after drawing', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.text('Canvas is empty'), findsNothing);
+      });
+    });
+
+    group('initial drawing edge cases', () {
+      testWidgets('loads drawing with pressure data', (tester) async {
+        final initialDrawing = '[[{"x":10,"y":20,"pressure":0.8},{"x":15,"y":25}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+
+      testWidgets('handles empty stroke array within payload', (tester) async {
+        final initialDrawing = '[[], [{"x":10,"y":20}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+    });
+
+    group('GridPainter', () {
+      testWidgets('repaints on different grid color', (tester) async {
+        final p1 = GridPainter(gridColor: Colors.red);
+        final p2 = GridPainter(gridColor: Colors.blue);
+        expect(p1.shouldRepaint(p2), isTrue);
+      });
+
+      testWidgets('does not repaint on same grid color', (tester) async {
+        final p1 = GridPainter(gridColor: Colors.grey);
+        final p2 = GridPainter(gridColor: Colors.grey);
+        expect(p1.shouldRepaint(p2), isFalse);
+      });
+    });
+
+    group('_buildIconButton large touch targets', () {
+      testWidgets('icon button with largeTouchTargets true has different padding', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: CanvasDrawingWidget(
+              onDrawingComplete: (_) {},
+              largeTouchTargets: true,
+            ),
+          ),
+        ));
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+      });
+    });
+
+    group('DrawingPainter edge cases', () {
+      testWidgets('paints circle for single-point stroke', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('shouldRepaint returns true for different stroke lists', (tester) async {
+        final s1 = [Stroke(points: [DrawingPoint(point: const Offset(0, 0))])];
+        final s2 = [Stroke(points: [DrawingPoint(point: const Offset(10, 10))])];
+        final painter1 = DrawingPainter(strokes: s1);
+        final painter2 = DrawingPainter(strokes: s2);
+        expect(painter1.shouldRepaint(painter2), isTrue);
+      });
+    });
+
+    group('Stroke model equality', () {
+      test('two identical strokes have same properties', () {
+        final s1 = Stroke(points: [DrawingPoint(point: const Offset(10, 20))]);
+        final s2 = Stroke(points: [DrawingPoint(point: const Offset(10, 20))]);
+        expect(s1.points.length, s2.points.length);
+        expect(s1.color, s2.color);
+        expect(s1.strokeWidth, s2.strokeWidth);
+      });
+    });
+
+    group('DrawingPoint model edge cases', () {
+      test('creates with zero offset', () {
+        final point = DrawingPoint(point: Offset.zero, pressure: 1.0);
+        expect(point.point, Offset.zero);
+        expect(point.pressure, 1.0);
+      });
+
+      test('creates without pressure', () {
+        final point = DrawingPoint(point: const Offset(5, 10));
+        expect(point.point.dx, 5);
+        expect(point.point.dy, 10);
+        expect(point.pressure, isNull);
+      });
+    });
+
+    group('drawing interaction edge cases', () {
+      testWidgets('single tap creates a point and shows no placeholder', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+
+      testWidgets('multiple strokes update status text', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final g1 = await tester.startGesture(const Offset(50, 50));
+        await g1.moveBy(const Offset(10, 10));
+        await g1.up();
+        await tester.pump();
+
+        final g2 = await tester.startGesture(const Offset(100, 100));
+        await g2.moveBy(const Offset(20, 20));
+        await g2.up();
+        await tester.pump();
+
+        expect(find.text('Draw here...'), findsNothing);
       });
     });
   });

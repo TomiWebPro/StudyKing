@@ -12,7 +12,7 @@ import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 
 class FakeConversationRepository extends ConversationRepository {

@@ -6,6 +6,7 @@ import 'package:studyking/core/data/models/tutor_session_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -63,8 +64,7 @@ void main() {
     testWidgets('shows loading indicator initially', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(),
           tutorSessionRepository: _FakeTutorSessionRepository(),
         ),
@@ -77,8 +77,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Intro to Algebra',
@@ -109,8 +108,7 @@ void main() {
     testWidgets('shows empty state with Start AI Tutoring button when no lessons', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: []),
           tutorSessionRepository: _FakeTutorSessionRepository(),
         ),
@@ -126,8 +124,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Lesson 1',
@@ -147,8 +144,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Lesson 1',
@@ -178,8 +174,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Lesson 1',
@@ -209,8 +204,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Lesson 1',
@@ -230,8 +224,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         LessonListScreen(
-          topicId: 't1',
-          topicTitle: 'Algebra',
+          args: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
           lessonRepository: _FakeLessonRepository(lessons: [
             Lesson(
               id: 'l1', subjectId: 's1', title: 'Lesson 1',

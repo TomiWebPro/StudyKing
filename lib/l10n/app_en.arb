@@ -2375,6 +2375,10 @@
   "@fallbackGeneralResponse": {
     "description": "Fallback AI response for general questions"
   },
+  "quickGuideSystemPrompt": "You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.",
+  "@quickGuideSystemPrompt": {
+    "description": "System prompt for Quick Guide AI in the current locale"
+  },
   "aboutApplicationName": "StudyKing",
   "@aboutApplicationName": {
     "description": "Application name for About dialog"

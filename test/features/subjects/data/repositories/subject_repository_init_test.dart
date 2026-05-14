@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class TestSubjectAdapter extends TypeAdapter<Subject> {
   @override
@@ -122,14 +122,14 @@ void main() {
       expect(result.first.name, 'Physics');
     });
 
-    test('supports getStudentSubjects after init', () async {
+    test('supports getAll after init', () async {
       final repository = SubjectRepository();
       await repository.init();
 
       await repository.save(Subject(id: '1', name: 'Physics'));
       await repository.save(Subject(id: '2', name: 'Chemistry'));
 
-      final result = await repository.getStudentSubjects('student-1');
+      final result = await repository.getAll();
       expect(result.length, 2);
     });
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 

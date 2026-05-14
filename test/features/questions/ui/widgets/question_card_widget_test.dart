@@ -4,6 +4,8 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/ui/widgets/question_card_widget.dart';
+import 'package:studyking/features/questions/ui/widgets/single_answer_widget.dart';
+import 'package:studyking/features/questions/ui/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget buildWidget({
@@ -627,6 +629,19 @@ void main() {
         expect(find.text('Option 4'), findsOneWidget);
       });
 
+      testWidgets('handles no options for multi choice with fallback options', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q4', text: 'Select:', type: QuestionType.multiChoice,
+          options: [], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.text('Option 1'), findsOneWidget);
+        expect(find.text('Option 2'), findsOneWidget);
+        expect(find.text('Option 3'), findsOneWidget);
+        expect(find.text('Option 4'), findsOneWidget);
+      });
+
       testWidgets('handles multi choice with no initial answer', (tester) async {
         final question = _questionWithOptions(
           id: 'q3', text: 'Select:', type: QuestionType.multiChoice,
@@ -659,6 +674,141 @@ void main() {
         final question = _defaultQuestion().copyWith(difficulty: 0);
         await tester.pumpWidget(buildWidget(question: question));
         expect(find.byType(Card), findsOneWidget);
+      });
+
+      testWidgets('correct answer is null when no markscheme', (tester) async {
+        final question = Question(
+          id: 'q-no-ms',
+          text: 'No markscheme?',
+          type: QuestionType.typedAnswer,
+          subjectId: 'math',
+          topicId: 'algebra',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          difficulty: 1,
+          options: [],
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+        expect(find.byType(Card), findsOneWidget);
+      });
+
+      testWidgets('isCurrentAnswerCorrect returns false when answer is null', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          currentAnswer: null,
+          isSubmitted: true,
+        ));
+        expect(find.text('Incorrect'), findsOneWidget);
+      });
+
+      testWidgets('single choice shows correct after submission', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-sc', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A',
+          isSubmitted: true,
+        ));
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+
+      testWidgets('single choice shows incorrect after submission', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-sc-w', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'B',
+          isSubmitted: true,
+        ));
+        expect(find.text('Incorrect'), findsOneWidget);
+      });
+    });
+
+    group('reduceMotion', () {
+      testWidgets('renders with reduceMotion true', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.singleChoice);
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: QuestionCardWidget(
+              question: question,
+              onAnswerSubmitted: (_) {},
+              reduceMotion: true,
+            ),
+          ),
+        ));
+        expect(find.byType(QuestionCardWidget), findsOneWidget);
+      });
+    });
+
+    group('largeTouchTargets', () {
+      testWidgets('renders with largeTouchTargets true', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.canvas, options: []);
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: QuestionCardWidget(
+              question: question,
+              onAnswerSubmitted: (_) {},
+              largeTouchTargets: true,
+            ),
+          ),
+        ));
+        expect(find.byType(QuestionCardWidget), findsOneWidget);
+      });
+    });
+
+    group('multi choice fallback options', () {
+      testWidgets('multi choice with empty options renders fallback options', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-mc-fallback', text: 'Pick:', type: QuestionType.multiChoice,
+          options: [], correctAnswer: 'Option 1',
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+        expect(find.text('Option 1'), findsOneWidget);
+        expect(find.text('Option 2'), findsOneWidget);
+        expect(find.text('Option 3'), findsOneWidget);
+        expect(find.text('Option 4'), findsOneWidget);
+      });
+    });
+
+    group('didUpdateWidget sync', () {
+      testWidgets('syncs single choice selected option on answer change', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-sc-sync', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'A'));
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'B'));
+        await tester.pump();
+        expect(find.byType(SingleAnswerWidget), findsOneWidget);
+      });
+
+      testWidgets('syncs multi choice on answer change', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-mc-sync', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'A||B'));
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'A||C'));
+        await tester.pump();
+        expect(find.byType(CheckboxListTile), findsNWidgets(3));
+      });
+
+      testWidgets('currentAnswer stays null when no answer provided', (tester) async {
+        await tester.pumpWidget(buildWidget(currentAnswer: null));
+        await tester.pumpWidget(buildWidget(currentAnswer: '4'));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, '4');
       });
     });
 
@@ -698,6 +848,219 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(question: question));
         expect(find.byType(CheckboxListTile), findsNWidgets(3));
+      });
+    });
+
+    group('case sensitivity in answer correctness', () {
+      testWidgets('single choice correct answer is case insensitive', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q6', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A',
+          isSubmitted: true,
+        ));
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+
+      testWidgets('single choice wrong answer shows incorrect', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q7', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'B',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A',
+          isSubmitted: true,
+        ));
+        expect(find.text('Incorrect'), findsOneWidget);
+      });
+    });
+
+    group('essay content edge cases', () {
+      testWidgets('essay field clears when answer becomes null', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), 'essay answer');
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), '');
+        await tester.pump();
+
+        expect(changedAnswer, isNull);
+      });
+
+      testWidgets('essay field submits multiline content', (tester) async {
+        String? submittedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerSubmitted: (answer) => submittedAnswer = answer,
+        ));
+
+        await tester.enterText(find.byType(TextField), 'Line 1\nLine 2\nLine 3');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Answer'));
+        await tester.pump();
+
+        expect(submittedAnswer, 'Line 1\nLine 2\nLine 3');
+      });
+    });
+
+    group('reduceMotion for canvas', () {
+      testWidgets('renders canvas with reduceMotion true', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: QuestionCardWidget(
+              question: question,
+              onAnswerSubmitted: (_) {},
+              reduceMotion: true,
+            ),
+          ),
+        ));
+        expect(find.byType(QuestionCardWidget), findsOneWidget);
+      });
+    });
+
+    group('type color default', () {
+      testWidgets('unsupported type uses surfaceContainerHighest color', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(question: question));
+        expect(find.text('This question type is not yet supported in this view.'), findsOneWidget);
+      });
+
+      testWidgets('difficulty default color for value 0 uses surfaceContainerHighest', (tester) async {
+        final q = _defaultQuestion().copyWith(difficulty: 0);
+        await tester.pumpWidget(buildWidget(question: q));
+        expect(find.byType(Card), findsOneWidget);
+      });
+    });
+
+    group('whitespace edge cases', () {
+      testWidgets('entering whitespace-only in typed answer sets answer to null', (tester) async {
+        String? changedAnswer;
+        await tester.pumpWidget(buildWidget(
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+
+        expect(changedAnswer, isNull);
+      });
+
+      testWidgets('entering whitespace-only in essay answer sets answer to null', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+
+        expect(changedAnswer, isNull);
+      });
+
+      testWidgets('whitespace then text updates answer correctly', (tester) async {
+        String? changedAnswer;
+        await tester.pumpWidget(buildWidget(
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), 'answer');
+        await tester.pump();
+
+        expect(changedAnswer, 'answer');
+      });
+    });
+
+    group('type chip color', () {
+      testWidgets('typed answer chip has secondaryContainer background', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.secondaryContainer);
+      });
+
+      testWidgets('essay type chip has tertiaryContainer background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.tertiaryContainer);
+      });
+
+      testWidgets('canvas type chip has primaryContainer background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.primaryContainer);
+      });
+
+      testWidgets('unsupported type chip has surfaceContainerHighest background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(1));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.surfaceContainerHighest);
+      });
+    });
+
+    group('difficulty chip color', () {
+      testWidgets('difficulty 1 chip has primaryContainer background', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[1].backgroundColor, cs.primaryContainer);
+      });
+
+      testWidgets('difficulty 2 chip has tertiaryContainer background', (tester) async {
+        final q = _defaultQuestion().copyWith(difficulty: 2);
+        await tester.pumpWidget(buildWidget(question: q));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[1].backgroundColor, cs.tertiaryContainer);
+      });
+
+      testWidgets('difficulty 3 chip has errorContainer background', (tester) async {
+        final q = _defaultQuestion().copyWith(difficulty: 3);
+        await tester.pumpWidget(buildWidget(question: q));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[1].backgroundColor, cs.errorContainer);
+      });
+
+      testWidgets('difficulty 0 chip has surfaceContainerHighest background', (tester) async {
+        final q = _defaultQuestion().copyWith(difficulty: 0);
+        await tester.pumpWidget(buildWidget(question: q));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[1].backgroundColor, cs.surfaceContainerHighest);
       });
     });
   });

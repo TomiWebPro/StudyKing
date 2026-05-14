@@ -45,18 +45,26 @@ class _FakeLlmService extends LlmService {
 Widget _buildTestApp({
   QuickGuideScreen? screen,
   NavigatorObserver? observer,
+  LlmService? llmService,
 }) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    navigatorObservers: observer != null ? [observer] : [],
-    routes: {
-      '/mentor': (_) => const Scaffold(
-            body: Center(child: Text('Mentor Screen')),
-          ),
-    },
-    home: screen ?? const QuickGuideScreen(showModeNavigation: false),
+  final overrides = <Override>[];
+  if (llmService != null) {
+    overrides.add(llmServiceProvider.overrideWith((ref) => llmService));
+  }
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      navigatorObservers: observer != null ? [observer] : [],
+      routes: {
+        '/mentor': (_) => const Scaffold(
+              body: Center(child: Text('Mentor Screen')),
+            ),
+      },
+      home: screen ?? const QuickGuideScreen(showModeNavigation: false),
+    ),
   );
 }
 
@@ -94,7 +102,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Hello from provider');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -145,7 +153,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Test message');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -168,7 +176,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Say something');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -199,7 +207,7 @@ void main() {
       expect(find.text('Choose a study mode'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'What is AI?');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -221,74 +229,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'User question');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('User question'), findsOneWidget);
       expect(find.text('Tutor reply'), findsOneWidget);
-    });
-
-    testWidgets('streaming message with empty content shows loading indicator',
-        (tester) async {
-      final llm = _FakeLlmService();
-      llm.chunks.add('Delayed chunk');
-      llm.chunkDelay = Duration.zero;
-
-      await tester.pumpWidget(_buildTestApp(
-        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      await tester.enterText(find.byType(TextField), 'Test delay');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pump();
-
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
-
-      await tester.pump(const Duration(milliseconds: 50));
-    });
-  });
-
-  group('QuickGuideScreen - typing indicator', () {
-    testWidgets('typing indicator widget exists with zero opacity when not streaming',
-        (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        screen: const QuickGuideScreen(showModeNavigation: false),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final typingIndicators = find.byWidgetPredicate(
-        (w) => w is AnimatedOpacity && w.opacity == 0.0,
-      );
-      expect(typingIndicators, findsAtLeastNWidgets(1));
-    });
-
-    testWidgets('typing indicator appears during streaming and disappears after',
-        (tester) async {
-      final llm = _FakeLlmService();
-      llm.chunks.add('Final');
-      llm.chunkDelay = const Duration(milliseconds: 50);
-
-      await tester.pumpWidget(_buildTestApp(
-        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      await tester.enterText(find.byType(TextField), 'Typing test');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pump();
-
-      final visibleIndicators = find.byWidgetPredicate(
-        (w) => w is AnimatedOpacity && w.opacity == 1.0,
-      );
-      expect(visibleIndicators, findsAtLeastNWidgets(1));
-
-      await tester.pump(const Duration(milliseconds: 200));
     });
   });
 
@@ -308,7 +255,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Chunks');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -329,7 +276,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Test');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -385,7 +332,7 @@ void main() {
       expect(find.text('Choose a study mode'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'First message');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
@@ -415,7 +362,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField), 'Explain stars');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -459,8 +406,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byIcon(Icons.smart_toy), findsOneWidget);
-      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy), findsAtLeastNWidgets(1));
+      expect(find.byIcon(Icons.auto_awesome), findsAtLeastNWidgets(1));
       expect(find.text('AI Tutor'), findsOneWidget);
       expect(find.text('Mentor'), findsOneWidget);
       expect(find.text('Interactive conversational lessons'), findsOneWidget);

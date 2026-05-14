@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class SubjectRepository {
   Box<Subject>? _subjectBox;
@@ -66,9 +66,5 @@ class SubjectRepository {
   Future<Subject?> getByCode(String code) async {
     final subjects = await getAll();
     return subjects.where((s) => s.code == code).firstOrNull;
-  }
-
-  Future<List<Subject>> getStudentSubjects(String studentId) async {
-    return getAll();
   }
 }

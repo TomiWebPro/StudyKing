@@ -13,7 +13,7 @@ import 'package:studyking/features/sessions/presentation/session_tracker_screen.
 import 'package:studyking/features/settings/presentation/api_config_screen.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
-import 'package:studyking/features/subjects/presentation/subject_detail_view.dart';
+import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
@@ -167,17 +167,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       final args = routeSettings.arguments;
       if (args is SubjectDetailArgs) {
         return _materialPageRoute(
-          SubjectDetailScreen(
-            subjectId: args.subjectId,
-            subjectName: args.subjectName,
-            subjectDescription: args.subjectDescription,
-            subjectSyllabus: args.subjectSyllabus,
-            subjectCode: args.subjectCode,
-            subjectTeacher: args.subjectTeacher,
-            subjectColor: args.subjectColor,
-            subjectExamDate: args.subjectExamDate,
-            topicIds: args.topicIds,
-          ),
+          SubjectDetailScreen(args: args),
           routeSettings,
         );
       }
@@ -186,12 +176,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       final args = routeSettings.arguments;
       if (args is PracticeSessionArgs) {
         return _materialPageRoute(
-          PracticeSessionScreen(
-            subjectId: args.subjectId,
-            topicId: args.topicId,
-            questionCount: args.questionCount,
-            isSpacedRepetition: args.isSpacedRepetition,
-          ),
+          PracticeSessionScreen(args: args),
           routeSettings,
         );
       }
@@ -200,11 +185,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       final args = routeSettings.arguments;
       if (args is LessonListArgs) {
         return _materialPageRoute(
-          LessonListScreen(
-            topicId: args.topicId,
-            topicTitle: args.topicTitle,
-            subjectId: args.subjectId,
-          ),
+          LessonListScreen(args: args),
           routeSettings,
         );
       }
@@ -213,12 +194,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       final args = routeSettings.arguments;
       if (args is LessonDetailArgs) {
         return _materialPageRoute(
-          LessonDetailScreen(
-            lessonId: args.lessonId,
-            topicId: args.topicId,
-            topicTitle: args.topicTitle,
-            subjectId: args.subjectId ?? '',
-          ),
+          LessonDetailScreen(args: args),
           routeSettings,
         );
       }

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/models/subject_model.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 
 class MockComprehensiveBox implements Box<Subject> {
   final Map<String, Subject> _storage = {};
@@ -334,17 +334,6 @@ void main() {
       await repo.save(_subject(id: 's0', name: 'S0-again'));
       expect(await repo.getAll(), hasLength(9));
     });
-
-    test('getStudentSubjects returns same as getAll', () async {
-      box.addSubject(_subject(id: 'a', name: 'A'));
-      box.addSubject(_subject(id: 'b', name: 'B'));
-
-      final all = await repo.getAll();
-      final student = await repo.getStudentSubjects('student-x');
-
-      expect(student.length, all.length);
-      expect(student.map((s) => s.id), unorderedEquals(all.map((s) => s.id)));
-    });
   });
 
   group('box interaction error propagation', () {
@@ -376,11 +365,6 @@ void main() {
     test('getByCode propagates box values exception', () {
       box.failOnValues = true;
       expect(repo.getByCode('c'), throwsException);
-    });
-
-    test('getStudentSubjects propagates box values exception', () {
-      box.failOnValues = true;
-      expect(repo.getStudentSubjects('s'), throwsException);
     });
 
     test('addTopicToSubject propagates box get exception', () {

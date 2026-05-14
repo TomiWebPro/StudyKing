@@ -1,10 +1,10 @@
-import '../../../core/errors/result.dart';
-import '../../../core/data/models/source_model.dart';
-import '../../../core/data/enums.dart';
-import '../../../core/data/repositories/source_repository.dart';
-import '../../../core/services/pdf_ingestion_service.dart';
-import '../../../core/data/repositories/topic_repository.dart';
-import '../../../core/utils/logger.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/repositories/source_repository.dart';
+import 'package:studyking/core/services/pdf_ingestion_service.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class ContentPipeline {
   final PdfIngestionService _ingestionService;
@@ -61,6 +61,7 @@ class ContentPipeline {
     required String studentId,
     required List<String> possibleTopics,
     required String modelId,
+    String subjectId = '',
     String sourceUrl = '',
     String language = '',
   }) async {
@@ -80,7 +81,9 @@ class ContentPipeline {
         if (match != null) {
           topicId = match.id;
         }
-      } catch (_) {}
+      } catch (e) {
+        _logger.e('Failed to look up topic by title', e);
+      }
     }
 
     return await processUpload(
@@ -88,24 +91,11 @@ class ContentPipeline {
       content: content,
       type: type,
       studentId: studentId,
+      subjectId: subjectId,
       topicId: topicId,
       sourceUrl: sourceUrl,
       language: language,
     );
   }
 
-  Future<Result<List<Map<String, dynamic>>>> extractQuestionsFromSource({
-    required String content,
-    required String modelId,
-  }) async {
-    return await _ingestionService.extractQuestions(content, modelId);
-  }
-
-  Future<Result<String>> generateSummary({
-    required String content,
-    required String topicName,
-    required String modelId,
-  }) async {
-    return await _ingestionService.generateSummary(content, topicName, modelId);
-  }
 }

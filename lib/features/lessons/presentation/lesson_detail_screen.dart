@@ -10,18 +10,12 @@ import '../../../core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class LessonDetailScreen extends StatefulWidget {
-  final String lessonId;
-  final String topicId;
-  final String topicTitle;
-  final String subjectId;
+  final LessonDetailArgs args;
   final LessonRepository? lessonRepository;
 
   const LessonDetailScreen({
     super.key,
-    required this.lessonId,
-    required this.topicId,
-    required this.topicTitle,
-    this.subjectId = '',
+    required this.args,
     this.lessonRepository,
   });
 
@@ -55,7 +49,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   Future<void> _loadLesson() async {
     try {
-      final lesson = await _lessonRepo.get(widget.lessonId);
+      final lesson = await _lessonRepo.get(widget.args.lessonId);
       if (mounted && lesson != null) setState(() => _lesson = lesson);
     } catch (e) {
       _logger.e('Error loading lesson', e);
@@ -73,10 +67,10 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       context,
       AppRoutes.tutor,
       arguments: TutorArgs(
-        topicId: widget.topicId,
-        topicTitle: widget.topicTitle,
-        subjectId: widget.subjectId.isNotEmpty
-            ? widget.subjectId
+        topicId: widget.args.topicId,
+        topicTitle: widget.args.topicTitle,
+        subjectId: (widget.args.subjectId ?? '').isNotEmpty
+            ? (widget.args.subjectId ?? '')
             : _lesson?.subjectId ?? '',
       ),
     );

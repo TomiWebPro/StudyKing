@@ -2,11 +2,14 @@ import '../errors/result.dart';
 import '../data/repositories/mastery_graph_repository.dart';
 import '../data/repositories/topic_repository.dart';
 import '../data/repositories/plan_repository.dart';
+import '../data/repositories/plan_adherence_repository.dart';
 import '../data/models/topic_dependency_model.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/personal_learning_plan_model.dart';
+import '../data/models/plan_adherence_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
+
 
 class PlanGenerationConfig {
   final int planDurationDays;
@@ -33,6 +36,7 @@ class PersonalLearningPlanService {
   final MasteryGraphRepository _repository;
   final TopicRepository _topicRepository;
   final PlanRepository _planRepository;
+  final PlanAdherenceRepository _adherenceRepository;
   PlanGenerationConfig config;
 
   PersonalLearningPlanService({
@@ -40,16 +44,19 @@ class PersonalLearningPlanService {
     MasteryGraphRepository? repository,
     TopicRepository? topicRepository,
     PlanRepository? planRepository,
+    PlanAdherenceRepository? adherenceRepository,
     PlanGenerationConfig? config,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
         _planRepository = planRepository ?? PlanRepository(),
+        _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         config = config ?? PlanGenerationConfig();
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
     try {
       await _repository.init();
+      await _adherenceRepository.init();
     } catch (e) {
       return Result.failure('Failed to initialize repository: $e');
     }
@@ -143,6 +150,79 @@ class PersonalLearningPlanService {
     } catch (_) {}
 
     return Result.success(plan);
+  }
+
+  Future<void> recordDailyAdherence({
+    required String studentId,
+    required int actualQuestions,
+    required int actualMinutes,
+    String? planId,
+  }) async {
+    try {
+      await _adherenceRepository.init();
+      final plan = await _planRepository.loadPlan(studentId);
+      if (plan == null) return;
+
+      final today = DateTime.now();
+      final dayNumber = _getPlanDayNumber(plan, today);
+      DailyPlan? todayPlan;
+      if (dayNumber != null && dayNumber >= 1 && dayNumber <= plan.dailyPlans.length) {
+        todayPlan = plan.dailyPlans[dayNumber - 1];
+      }
+
+      final plannedQuestions = todayPlan?.targetQuestions ?? 0;
+      final plannedMinutes = todayPlan?.targetMinutes ?? 0;
+
+      final adherenceScore = _calculateAdherenceScore(
+        plannedQuestions: plannedQuestions,
+        actualQuestions: actualQuestions,
+        plannedMinutes: plannedMinutes,
+        actualMinutes: actualMinutes,
+      );
+
+      final model = PlanAdherenceModel(
+        id: 'adh_${today.millisecondsSinceEpoch}_$studentId',
+        studentId: studentId,
+        date: today,
+        plannedQuestions: plannedQuestions,
+        actualQuestions: actualQuestions,
+        plannedMinutes: plannedMinutes,
+        actualMinutes: actualMinutes,
+        adherenceScore: adherenceScore,
+        planId: planId ?? plan.studentId,
+      );
+
+      await _adherenceRepository.save(model);
+    } catch (_) {}
+  }
+
+  int? _getPlanDayNumber(PersonalLearningPlan plan, DateTime date) {
+    for (final day in plan.dailyPlans) {
+      if (day.date.year == date.year &&
+          day.date.month == date.month &&
+          day.date.day == date.day) {
+        return day.dayNumber;
+      }
+    }
+    return null;
+  }
+
+  double _calculateAdherenceScore({
+    required int plannedQuestions,
+    required int actualQuestions,
+    required int plannedMinutes,
+    required int actualMinutes,
+  }) {
+    if (plannedQuestions == 0 && plannedMinutes == 0) return 1.0;
+
+    final questionScore = plannedQuestions > 0
+        ? (actualQuestions / plannedQuestions).clamp(0.0, 1.0)
+        : 0.5;
+    final timeScore = plannedMinutes > 0
+        ? (actualMinutes / plannedMinutes).clamp(0.0, 1.5)
+        : 0.5;
+
+    return (questionScore * 0.6 + timeScore * 0.4).clamp(0.0, 1.0);
   }
 
   Future<List<DailyPlan>> _generateDailyPlans({
@@ -384,5 +464,23 @@ class PersonalLearningPlanService {
         .toList();
 
     return Result.success(readyTopics);
+  }
+
+  Future<double> getCurrentAdherence(String studentId) async {
+    try {
+      await _adherenceRepository.init();
+      return _adherenceRepository.getAverageAdherence(studentId);
+    } catch (_) {
+      return 0.0;
+    }
+  }
+
+  Future<int> getConsecutiveLowAdherenceDays(String studentId) async {
+    try {
+      await _adherenceRepository.init();
+      return _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+    } catch (_) {
+      return 0;
+    }
   }
 }

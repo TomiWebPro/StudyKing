@@ -1320,7 +1320,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get weakAreasAccuracy => 'Áreas Débiles (Precisión < 60%)';
+  String get weakAreasAccuracy => 'Áreas por mejorar (Precisión < 60%)';
 
   @override
   String get uploadContent => 'Subir Contenido';
@@ -1685,7 +1685,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get totalTopicsLabel => 'Total de Temas';
 
   @override
-  String get masteredLabel => 'Adquirido';
+  String get masteredLabel => 'Dominados';
 
   @override
   String get weakLabel => 'Por mejorar';
@@ -1755,6 +1755,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get fallbackGeneralResponse =>
       '¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.';
+
+  @override
+  String get quickGuideSystemPrompt =>
+      'Eres la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.';
 
   @override
   String get aboutApplicationName => 'StudyKing';
@@ -2069,7 +2073,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorProgressReportTitle =>
-      '📊 **Tu Informe de Progreso de Estudio**\n';
+      '📊 **Su Informe de Progreso de Estudio**\n';
 
   @override
   String mentorOverallAccuracy(String accuracy, String correct, String total) {

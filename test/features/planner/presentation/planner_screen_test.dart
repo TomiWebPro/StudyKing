@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/roadmap_model.dart';
@@ -12,6 +15,9 @@ import 'package:studyking/core/data/repositories/roadmap_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/providers/planner_providers.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakePlanRepository extends PlanRepository {
@@ -105,6 +111,7 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   final Map<String, RoadmapModel> _storage = {};
   bool failOnInit = false;
   bool failOnGet = false;
+  bool failOnSave = false;
   Completer<void>? loadCompleter;
 
   @override
@@ -115,6 +122,7 @@ class _FakeRoadmapRepository extends RoadmapRepository {
 
   @override
   Future<void> saveRoadmap(RoadmapModel roadmap) async {
+    if (failOnSave) throw Exception('Save failed');
     _storage[roadmap.id] = roadmap;
   }
 
@@ -163,18 +171,29 @@ Widget _buildTestApp({
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
 }) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-    onGenerateRoute: onGenerateRoute,
-    home: PlannerScreen(
-      planRepository: planRepository,
-      masteryGraphRepository: masteryGraphRepository,
-      topicRepository: topicRepository,
-      roadmapRepository: roadmapRepository ?? _FakeRoadmapRepository(),
-      fixedStudentId: fixedStudentId,
+  final id = fixedStudentId ?? 'test-student';
+  Hive.init(Directory.systemTemp.createTempSync('planner_test_').path);
+  final repo = masteryGraphRepository ?? _FakeMasteryGraphRepository();
+  final svc = PlannerService(
+    planRepo: planRepository ?? _FakePlanRepository(),
+    masteryService: MasteryGraphService(repository: repo),
+    repository: repo,
+    topicRepository: topicRepository ?? _FakeTopicRepository(),
+    roadmapRepo: roadmapRepository ?? _FakeRoadmapRepository(),
+    fixedStudentId: id,
+  );
+
+  return ProviderScope(
+    overrides: [
+      plannerServiceProvider.overrideWith((ref) => svc),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
+      onGenerateRoute: onGenerateRoute,
+      home: PlannerScreen(fixedStudentId: id),
     ),
   );
 }
@@ -695,6 +714,178 @@ void main() {
 
         expect(find.text('Tutor Screen'), findsOneWidget);
       });
+
+      testWidgets('responsive layout shows side-by-side fields on wide screens', (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        final textFields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+        expect(textFields.length, 3);
+        expect(textFields[1].controller, isNotNull);
+        expect(textFields[2].controller, isNotNull);
+      });
+
+      testWidgets('generate plan handles repository init failure during generation', (tester) async {
+        final planRepo = _FakePlanRepository();
+        planRepo.failOnInit = true;
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: _FakeMasteryGraphRepository(),
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.enterText(find.byType(TextField).at(2), '2');
+        await tester.pump();
+
+        await tester.tap(find.text('Generate Plan'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+      });
+
+      testWidgets('plan summary shows focus areas when present', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: ['Math', 'Physics'],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 120.0,
+          targetQuestionsPerDay: 15,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: _FakeMasteryGraphRepository(),
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Focus: Math, Physics'), findsOneWidget);
+      });
+
+      testWidgets('plan with rest day shows rest chip', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [
+            DailyPlan(
+              dayNumber: 1,
+              date: DateTime.now(),
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 0,
+              targetMinutes: 0,
+              isRestDay: true,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 1,
+          targetMinutesPerDay: 0,
+          targetQuestionsPerDay: 0,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: _FakeMasteryGraphRepository(),
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Rest'), findsOneWidget);
+      });
+
+      testWidgets('planned topic with empty topicId does not show tutor button', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [
+            DailyPlan(
+              dayNumber: 1,
+              date: DateTime.now(),
+              priorityTopics: [
+                PlannedTopic(
+                  topicId: '',
+                  topicTitle: 'Empty Topic',
+                  priority: 1.0,
+                  reason: 'Test',
+                  readinessScore: 0.5,
+                  reviewUrgency: 0.3,
+                  estimatedQuestions: 5,
+                  estimatedMinutes: 30,
+                  reasons: ['Test'],
+                ),
+              ],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 5,
+              targetMinutes: 30,
+              isRestDay: false,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 5,
+            totalMinutes: 30,
+            newTopics: 1,
+            reviewTopics: 0,
+            estimatedCoverage: 0.1,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 1,
+          targetMinutesPerDay: 30.0,
+          targetQuestionsPerDay: 5,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: _FakeMasteryGraphRepository(),
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+      });
     });
 
     group('Roadmaps tab', () {
@@ -1030,6 +1221,74 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      });
+
+      testWidgets('creating roadmap with save error shows error snackbar', (tester) async {
+        final roadmapRepo = _FakeRoadmapRepository();
+        roadmapRepo.failOnSave = true;
+
+        await tester.pumpWidget(_buildTestApp(
+          roadmapRepository: roadmapRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Roadmaps'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Create Roadmap'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'Learn Dart');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.pump();
+
+        await tester.tap(find.text('Generate Roadmap'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+      });
+
+      testWidgets('loadRoadmaps init failure does not crash', (tester) async {
+        final roadmapRepo = _FakeRoadmapRepository();
+        roadmapRepo.failOnInit = true;
+
+        await tester.pumpWidget(_buildTestApp(
+          roadmapRepository: roadmapRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Roadmaps'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('No roadmaps yet'), findsOneWidget);
+      });
+
+      testWidgets('roadmap with archived status renders correctly', (tester) async {
+        final roadmapRepo = _FakeRoadmapRepository();
+        final now = DateTime.now();
+        final roadmap = RoadmapModel(
+          id: 'rm-archived',
+          studentId: 'test-student',
+          goal: 'Archived goal',
+          createdAt: now,
+          milestones: [],
+          status: 'archived',
+        );
+        await roadmapRepo.saveRoadmap(roadmap);
+
+        await tester.pumpWidget(_buildTestApp(
+          roadmapRepository: roadmapRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Roadmaps'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Archived goal'), findsOneWidget);
+        expect(find.text('archived'), findsOneWidget);
       });
     });
   });

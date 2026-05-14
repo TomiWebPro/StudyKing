@@ -1,6 +1,5 @@
 import '../utils/logger.dart';
 import 'package:studyking/core/data/data.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class DatabaseService {
   final Logger _logger = const Logger('DatabaseService');

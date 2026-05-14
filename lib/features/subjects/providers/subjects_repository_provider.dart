@@ -1,6 +1,6 @@
 // Repository Provider for subjects
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/repositories/subject_repository.dart';
 
 final subjectsRepositoryProvider = AsyncNotifierProvider<SubjectsRepositoryNotifier, SubjectRepository>(
   () => SubjectsRepositoryNotifier(),
