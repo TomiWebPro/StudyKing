@@ -170,6 +170,70 @@ class PdfParseException implements AppException {
   });
 }
 
+// Syllabus-related exceptions
+class SyllabusException implements AppException {
+  @override
+  final String message;
+  @override
+  final String? code;
+  @override
+  final dynamic originalError;
+
+  const SyllabusException({
+    required this.message,
+    this.code = 'SYLLABUS_ERROR',
+    this.originalError,
+  });
+}
+
+// Plan generation exceptions
+class PlanGenerationException implements AppException {
+  @override
+  final String message;
+  @override
+  final String? code;
+  @override
+  final dynamic originalError;
+
+  const PlanGenerationException({
+    required this.message,
+    this.code = 'PLAN_GENERATION_ERROR',
+    this.originalError,
+  });
+}
+
+// Scheduling exceptions (lesson booking, etc.)
+class SchedulingException implements AppException {
+  @override
+  final String message;
+  @override
+  final String? code;
+  @override
+  final dynamic originalError;
+
+  const SchedulingException({
+    required this.message,
+    this.code = 'SCHEDULING_ERROR',
+    this.originalError,
+  });
+}
+
+// Adherence tracking exceptions
+class AdherenceException implements AppException {
+  @override
+  final String message;
+  @override
+  final String? code;
+  @override
+  final dynamic originalError;
+
+  const AdherenceException({
+    required this.message,
+    this.code = 'ADHERENCE_ERROR',
+    this.originalError,
+  });
+}
+
 // Content generation exceptions
 class ContentGenerationException implements AppException {
   @override

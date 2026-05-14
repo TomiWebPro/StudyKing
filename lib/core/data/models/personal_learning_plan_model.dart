@@ -41,6 +41,46 @@ class PersonalLearningPlan extends HiveObject {
     this.metadata,
   });
 
+  PersonalLearningPlan copyWith({
+    String? studentId,
+    DateTime? generatedAt,
+    List<DailyPlan>? dailyPlans,
+    PlanSummary? summary,
+    List<PlanRecommendation>? recommendations,
+    int? planDurationDays,
+    double? targetMinutesPerDay,
+    int? targetQuestionsPerDay,
+    Map<String, dynamic>? metadata,
+  }) {
+    return PersonalLearningPlan(
+      studentId: studentId ?? this.studentId,
+      generatedAt: generatedAt ?? this.generatedAt,
+      dailyPlans: dailyPlans ?? this.dailyPlans,
+      summary: summary ?? this.summary,
+      recommendations: recommendations ?? this.recommendations,
+      planDurationDays: planDurationDays ?? this.planDurationDays,
+      targetMinutesPerDay: targetMinutesPerDay ?? this.targetMinutesPerDay,
+      targetQuestionsPerDay: targetQuestionsPerDay ?? this.targetQuestionsPerDay,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
+  List<SyllabusGoal> get syllabusGoals {
+    if (metadata == null || !metadata!.containsKey('syllabus_goals')) return [];
+    return (metadata!['syllabus_goals'] as List)
+        .map((e) => SyllabusGoal.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Map<String, List<DailyPlan>> get subjectPlans {
+    if (metadata == null || !metadata!.containsKey('subject_plans')) return {};
+    final raw = metadata!['subject_plans'] as Map;
+    return raw.map((key, value) => MapEntry(
+      key as String,
+      (value as List).map((e) => DailyPlan.fromJson(Map<String, dynamic>.from(e))).toList(),
+    ));
+  }
+
   Map<String, dynamic> toJson() => {
     'studentId': studentId,
     'generatedAt': generatedAt.toIso8601String(),
@@ -63,6 +103,38 @@ class PersonalLearningPlan extends HiveObject {
     targetMinutesPerDay: (json['targetMinutesPerDay'] ?? 30.0).toDouble(),
     targetQuestionsPerDay: json['targetQuestionsPerDay'] ?? 15,
     metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata']) : null,
+  );
+}
+
+class SyllabusGoal {
+  final String subjectId;
+  final String subjectTitle;
+  final String syllabusCode;
+  final int targetDays;
+  final int targetHoursPerDay;
+
+  const SyllabusGoal({
+    required this.subjectId,
+    required this.subjectTitle,
+    this.syllabusCode = '',
+    this.targetDays = 30,
+    this.targetHoursPerDay = 1,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'subjectId': subjectId,
+    'subjectTitle': subjectTitle,
+    'syllabusCode': syllabusCode,
+    'targetDays': targetDays,
+    'targetHoursPerDay': targetHoursPerDay,
+  };
+
+  factory SyllabusGoal.fromJson(Map<String, dynamic> json) => SyllabusGoal(
+    subjectId: json['subjectId'] as String,
+    subjectTitle: json['subjectTitle'] as String? ?? '',
+    syllabusCode: json['syllabusCode'] as String? ?? '',
+    targetDays: json['targetDays'] as int? ?? 30,
+    targetHoursPerDay: json['targetHoursPerDay'] as int? ?? 1,
   );
 }
 
@@ -106,6 +178,30 @@ class DailyPlan extends HiveObject {
     this.focus,
     this.isRestDay = false,
   });
+
+  DailyPlan copyWith({
+    DateTime? date,
+    int? dayNumber,
+    List<PlannedTopic>? priorityTopics,
+    List<String>? reviewQuestionIds,
+    List<String>? stretchGoalQuestionIds,
+    int? targetQuestions,
+    int? targetMinutes,
+    String? focus,
+    bool? isRestDay,
+  }) {
+    return DailyPlan(
+      date: date ?? this.date,
+      dayNumber: dayNumber ?? this.dayNumber,
+      priorityTopics: priorityTopics ?? this.priorityTopics,
+      reviewQuestionIds: reviewQuestionIds ?? this.reviewQuestionIds,
+      stretchGoalQuestionIds: stretchGoalQuestionIds ?? this.stretchGoalQuestionIds,
+      targetQuestions: targetQuestions ?? this.targetQuestions,
+      targetMinutes: targetMinutes ?? this.targetMinutes,
+      focus: focus ?? this.focus,
+      isRestDay: isRestDay ?? this.isRestDay,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),
@@ -161,6 +257,9 @@ class PlannedTopic extends HiveObject {
   @HiveField(8)
   final List<String> reasons;
 
+  @HiveField(9)
+  final String subjectId;
+
   PlannedTopic({
     required this.topicId,
     required this.topicTitle,
@@ -171,6 +270,7 @@ class PlannedTopic extends HiveObject {
     required this.estimatedQuestions,
     required this.estimatedMinutes,
     required this.reasons,
+    this.subjectId = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -183,6 +283,7 @@ class PlannedTopic extends HiveObject {
     'estimatedQuestions': estimatedQuestions,
     'estimatedMinutes': estimatedMinutes,
     'reasons': reasons,
+    'subjectId': subjectId,
   };
 
   factory PlannedTopic.fromJson(Map<String, dynamic> json) => PlannedTopic(
@@ -195,6 +296,7 @@ class PlannedTopic extends HiveObject {
     estimatedQuestions: json['estimatedQuestions'] ?? 0,
     estimatedMinutes: json['estimatedMinutes'] ?? 0,
     reasons: List<String>.from(json['reasons'] ?? []),
+    subjectId: json['subjectId'] ?? '',
   );
 }
 

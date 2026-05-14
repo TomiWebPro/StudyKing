@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -162,14 +163,51 @@ class SessionExportService {
     return '${seconds}s';
   }
 
+  @visibleForTesting
+  static Future<File> writeCSVFile(
+    List<StudySession> sessions,
+    String filename, {
+    Directory? directory,
+  }) async {
+    final csv = sessionsToCSV(sessions);
+    final dir = directory ?? await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename.csv');
+    await file.writeAsString(csv);
+    return file;
+  }
+
+  @visibleForTesting
+  static Future<File> writeJSONFile(
+    List<StudySession> sessions,
+    String filename, {
+    Directory? directory,
+  }) async {
+    final json = jsonEncode(sessionsToJSON(sessions));
+    final dir = directory ?? await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename.json');
+    await file.writeAsString(json);
+    return file;
+  }
+
+  @visibleForTesting
+  static Future<File> writePDFFile(
+    List<StudySession> sessions,
+    String filename,
+    AppLocalizations l10n, {
+    Directory? directory,
+  }) async {
+    final pdfBytes = await sessionsToPDF(sessions, l10n);
+    final dir = directory ?? await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename.pdf');
+    await file.writeAsBytes(pdfBytes);
+    return file;
+  }
+
   static Future<void> shareCSV(
     List<StudySession> sessions,
     String filename,
   ) async {
-    final csv = sessionsToCSV(sessions);
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.csv');
-    await file.writeAsString(csv);
+    final file = await writeCSVFile(sessions, filename);
     await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
   }
 
@@ -177,10 +215,7 @@ class SessionExportService {
     List<StudySession> sessions,
     String filename,
   ) async {
-    final json = jsonEncode(sessionsToJSON(sessions));
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.json');
-    await file.writeAsString(json);
+    final file = await writeJSONFile(sessions, filename);
     await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
   }
 
@@ -189,10 +224,7 @@ class SessionExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    final pdfBytes = await sessionsToPDF(sessions, l10n);
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.pdf');
-    await file.writeAsBytes(pdfBytes);
+    final file = await writePDFFile(sessions, filename, l10n);
     await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
   }
 }

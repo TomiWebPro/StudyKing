@@ -5,13 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class FakeSettingsRepository {
+class FakeSettingsRepository implements SettingsRepository {
   SettingsBox _settings = SettingsBox();
 
+  @override
   Future<SettingsBox> getSettings() async => _settings;
 
+  @override
   Future<void> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
@@ -21,6 +25,13 @@ class FakeSettingsRepository {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
     _settings = SettingsBox(
       apiKey: apiKey ?? _settings.apiKey,
@@ -34,79 +45,41 @@ class FakeSettingsRepository {
       studyRemindersEnabled: studyRemindersEnabled ?? _settings.studyRemindersEnabled,
       requestTimeoutSeconds: requestTimeoutSeconds ?? _settings.requestTimeoutSeconds,
       sessionDurationMinutes: sessionDurationMinutes ?? _settings.sessionDurationMinutes,
+      highContrastEnabled: highContrastEnabled ?? _settings.highContrastEnabled,
+      largeTouchTargets: largeTouchTargets ?? _settings.largeTouchTargets,
+      reduceMotion: reduceMotion ?? _settings.reduceMotion,
+      revisionRemindersEnabled: revisionRemindersEnabled ?? _settings.revisionRemindersEnabled,
+      lessonNotificationsEnabled: lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
+      overworkAlertsEnabled: overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
     );
   }
 
+  @override
   Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
+  @override
   Future<void> saveApiKey({required String service, required String key}) async {}
+  @override
   Future<void> saveProfileData(UserProfile profile) async {}
+  @override
   Future<UserProfile?> getProfileData() async => null;
+  @override
+  Future<void> clearSettings() async {}
+  @override
   Future<void> clearProfile() async {}
+  @override
+  Future<String?> getApiKey({required String service}) async => null;
+  @override
   Future<void> init() async {}
 }
 
 final fakeRepo = FakeSettingsRepository();
 
-class _TestSettingsNotifier extends StateNotifier<SettingsBox> {
-  _TestSettingsNotifier(super.initial);
-
-  Future<void> updateTheme(ThemeMode mode) async {
-    await fakeRepo.updateSettings(themeMode: mode);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateFontSize(double size) async {
-    await fakeRepo.updateSettings(fontSize: size);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateModel(String model) async {
-    await fakeRepo.updateSettings(selectedModel: model);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateStudyReminders(bool enabled) async {
-    await fakeRepo.updateSettings(studyRemindersEnabled: enabled);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateRequestTimeout(int timeoutSeconds) async {
-    await fakeRepo.updateSettings(requestTimeoutSeconds: timeoutSeconds);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateSessionDuration(int minutes) async {
-    await fakeRepo.updateSettings(sessionDurationMinutes: minutes);
-    state = await fakeRepo.getSettings();
-  }
-
-  Future<void> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-  }) async {
-    await fakeRepo.updateSettings(
-      apiKey: apiKey,
-      apiBaseUrl: apiBaseUrl,
-      selectedModel: selectedModel,
-      themeMode: themeMode,
-      fontSize: fontSize,
-      studyRemindersEnabled: studyRemindersEnabled,
-      requestTimeoutSeconds: requestTimeoutSeconds,
-      sessionDurationMinutes: sessionDurationMinutes,
-    );
-    state = await fakeRepo.getSettings();
+class _TestSettingsNotifier extends SettingsController {
+  _TestSettingsNotifier(SettingsBox initial, SettingsRepository repo) : super(repo) {
+    state = initial;
   }
 }
-
-final testSettingsProvider = StateNotifierProvider<_TestSettingsNotifier, SettingsBox>((ref) {
-  return _TestSettingsNotifier(fakeRepo._settings);
-});
 
 Widget buildSettingsScreen({
   SettingsBox? initialSettings,
@@ -118,14 +91,31 @@ Widget buildSettingsScreen({
   }
   return ProviderScope(
     overrides: [
-      testSettingsProvider.overrideWith((ref) => _TestSettingsNotifier(fakeRepo._settings)),
+      settingsProvider.overrideWith((ref) => _TestSettingsNotifier(fakeRepo._settings, fakeRepo)),
       apiKeyProvider.overrideWith((ref) => apiKey),
       selectedModelProvider.overrideWith((ref) => selectedModel),
     ],
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
       home: const SettingsScreen(),
     ),
   );
+}
+
+/// Pumps the settings screen with a large viewport so all ListView children render.
+Future<void> pumpWithSettings(WidgetTester tester, {
+  SettingsBox? initialSettings,
+  String apiKey = '',
+  String selectedModel = '',
+}) async {
+  await tester.pumpWidget(buildSettingsScreen(
+    initialSettings: initialSettings,
+    apiKey: apiKey,
+    selectedModel: selectedModel,
+  ));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -141,8 +131,7 @@ void main() {
 
   group('SettingsScreen', () {
     testWidgets('renders all sections with correct titles', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('User Management'), findsOneWidget);
@@ -155,8 +144,7 @@ void main() {
     });
 
     testWidgets('shows user management tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       final currentUserTile = find.widgetWithText(ListTile, 'Current User');
       expect(currentUserTile, findsOneWidget);
@@ -219,12 +207,22 @@ void main() {
       expect(find.text('45 minutes'), findsOneWidget);
     });
 
-    testWidgets('shows study reminders switch', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(studyRemindersEnabled: true)));
-      await tester.pumpAndSettle();
+    testWidgets('shows notification toggle switches when enabled', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(studyRemindersEnabled: true));
 
-      final switchTile = find.widgetWithText(SwitchListTile, 'Study Reminders');
-      expect(switchTile, findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Enable Notifications'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Revision Reminders'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Lesson Notifications'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Overwork Alerts'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Plan Adjustment Alerts'), findsOneWidget);
+    });
+
+    testWidgets('hides notification sub-toggles when master is off', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(studyRemindersEnabled: false));
+
+      expect(find.widgetWithText(SwitchListTile, 'Enable Notifications'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Revision Reminders'), findsNothing);
+      expect(find.widgetWithText(SwitchListTile, 'Plan Adjustment Alerts'), findsNothing);
     });
 
     testWidgets('shows total study sessions tile', (tester) async {
@@ -513,15 +511,68 @@ void main() {
         await tester.pumpAndSettle();
       });
 
-      testWidgets('study reminders toggle updates state', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
-          initialSettings: SettingsBox(studyRemindersEnabled: true),
-        ));
-        await tester.pumpAndSettle();
+      testWidgets('master enable notifications toggle updates state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(studyRemindersEnabled: true));
 
-        final switchTile = find.widgetWithText(SwitchListTile, 'Study Reminders');
+        final switchTile = find.widgetWithText(SwitchListTile, 'Enable Notifications');
         final switchWidget = tester.widget<SwitchListTile>(switchTile);
         expect(switchWidget.value, isTrue);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('revision reminders toggle persists state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(
+          studyRemindersEnabled: true,
+          revisionRemindersEnabled: true,
+        ));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Revision Reminders');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('lesson notifications toggle persists state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(
+          studyRemindersEnabled: true,
+          lessonNotificationsEnabled: false,
+        ));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Lesson Notifications');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isFalse);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('overwork alerts toggle persists state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(
+          studyRemindersEnabled: true,
+          overworkAlertsEnabled: true,
+        ));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Overwork Alerts');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+
+        await tester.tap(switchTile);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('plan adjustment notifications toggle persists state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(
+          studyRemindersEnabled: true,
+          planAdjustmentNotificationsEnabled: false,
+        ));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Plan Adjustment Alerts');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isFalse);
 
         await tester.tap(switchTile);
         await tester.pumpAndSettle();

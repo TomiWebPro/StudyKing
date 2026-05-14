@@ -2307,6 +2307,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get focus => 'Focus';
+
+  @override
   String focusForMinutes(int minutes) {
     return 'Focus for $minutes minutes';
   }

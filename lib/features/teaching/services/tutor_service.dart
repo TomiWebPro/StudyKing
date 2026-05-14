@@ -4,6 +4,7 @@ import '../../../core/data/models/conversation_message_model.dart';
 import '../../../core/data/models/tutor_session_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
+import '../../sessions/services/session_plan_integration_service.dart';
 import 'conversation_manager.dart';
 
 class TutorService {
@@ -95,6 +96,14 @@ class TutorService {
         timeSpentMs: session.elapsedMinutes * 60000,
       );
     }
+
+    try {
+      final integrationService = SessionPlanIntegrationService();
+      await integrationService.recordTutorSessionCompletion(
+        elapsedMinutes: session.elapsedMinutes,
+        studentId: session.studentId,
+      );
+    } catch (_) {}
 
     _currentManager = null;
   }

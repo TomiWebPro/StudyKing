@@ -7,6 +7,8 @@ import '../providers/planner_providers.dart';
 import 'widgets/plan_summary_card.dart';
 import 'widgets/daily_plan_card.dart';
 import 'widgets/roadmap_card.dart';
+import 'widgets/pending_action_card.dart';
+import 'widgets/lesson_booking_sheet.dart';
 
 class PlannerScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;
@@ -32,6 +34,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(plannerProvider.notifier).loadInitialData();
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(plannerProvider.notifier).loadAdditionalData();
+    });
   }
 
   @override
@@ -53,6 +58,29 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         topicId: topicId,
         topicTitle: topicTitle,
         subjectId: subjectId,
+      ),
+    );
+  }
+
+  Future<void> _openLessonBooking(
+      String topicId, String topicTitle, String subjectId) async {
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => LessonBookingSheet(
+        topicId: topicId,
+        topicTitle: topicTitle,
+        subjectId: subjectId,
+        onSchedule: (scheduledTime, durationMinutes) async {
+          await ref.read(plannerProvider.notifier).scheduleLesson(
+                topicId: topicId,
+                topicTitle: topicTitle,
+                subjectId: subjectId,
+                scheduledTime: scheduledTime,
+                durationMinutes: durationMinutes,
+              );
+        },
       ),
     );
   }
@@ -86,6 +114,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     final l10n = AppLocalizations.of(context)!;
     final goalController = TextEditingController();
     final daysController = TextEditingController();
+    var selectedSubjectId = '';
 
     final result = await showDialog<Map<String, String>>(
       context: context,
@@ -112,6 +141,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 border: const OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Subject ID (optional)',
+                hintText: 'e.g. sub_physics',
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (v) => selectedSubjectId = v.trim(),
+            ),
           ],
         ),
         actions: [
@@ -123,6 +161,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             onPressed: () => Navigator.pop(ctx, {
               'goal': goalController.text.trim(),
               'days': daysController.text.trim(),
+              'subjectId': selectedSubjectId,
             }),
             child: Text(l10n.generateRoadmap),
           ),
@@ -139,12 +178,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
     final goal = result['goal']!;
     final days = int.tryParse(result['days'] ?? '') ?? 30;
+    final subjectId = result['subjectId']?.isNotEmpty == true ? result['subjectId'] : null;
 
     if (!mounted) return;
     await ref.read(plannerProvider.notifier).createRoadmap(
           goal: goal,
           days: days,
           l10n: AppLocalizations.of(context)!,
+          subjectId: subjectId,
         );
   }
 
@@ -197,6 +238,19 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (state.pendingActions.isNotEmpty) ...[
+              _buildPendingActionsSection(l10n, state),
+              const SizedBox(height: 16),
+            ],
+            if (state.adherenceDeviation != null &&
+                state.adherenceDeviation!.requiresRegeneration) ...[
+              _buildAdherenceBanner(l10n, state),
+              const SizedBox(height: 16),
+            ],
+            if (state.scheduledLessons.isNotEmpty) ...[
+              _buildScheduledLessonsSection(l10n, state),
+              const SizedBox(height: 16),
+            ],
             Text(l10n.createStudyPlan,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
@@ -312,13 +366,173 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               ),
             const SizedBox(height: 24),
             if (state.plan != null) ...[
-              PlanSummaryCard(summary: state.plan!.summary),
-              const SizedBox(height: 16),
+              if (state.plan!.syllabusGoals.isNotEmpty)
+                _buildSubjectProgressTabs(l10n, state)
+              else ...[
+                PlanSummaryCard(summary: state.plan!.summary),
+                const SizedBox(height: 16),
+              ],
               _buildDailyPlans(state, l10n),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSubjectProgressTabs(AppLocalizations l10n, PlannerState state) {
+    final goals = state.plan!.syllabusGoals;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Subject Progress',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        ...goals.map((goal) {
+          final subjectPlans = state.plan!.subjectPlans;
+          final topicCount = subjectPlans[goal.subjectId]?.length ?? 0;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                child: Text(goal.subjectTitle.isNotEmpty
+                    ? goal.subjectTitle[0]
+                    : 'S'),
+              ),
+              title: Text(goal.subjectTitle.isNotEmpty
+                  ? goal.subjectTitle
+                  : goal.subjectId),
+              subtitle: Text(
+                  '${goal.targetDays} days plan · $topicCount study days'),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${goal.targetHoursPerDay}h/day',
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
+        PlanSummaryCard(summary: state.plan!.summary),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildPendingActionsSection(
+      AppLocalizations l10n, PlannerState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.notifications_active,
+                size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Pending Actions',
+                style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...state.pendingActions.map((action) => PendingActionCard(
+              action: action,
+              onAccept: () => ref
+                  .read(plannerProvider.notifier)
+                  .acceptPendingAction(action.id),
+              onDismiss: () => ref
+                  .read(plannerProvider.notifier)
+                  .dismissPendingAction(action.id),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildAdherenceBanner(AppLocalizations l10n, PlannerState state) {
+    final deviation = state.adherenceDeviation!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: deviation.requiresEscalation
+            ? Theme.of(context).colorScheme.errorContainer
+            : Theme.of(context).colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            deviation.requiresEscalation
+                ? Icons.warning_amber_rounded
+                : Icons.info_outline,
+            color: deviation.requiresEscalation
+                ? Theme.of(context).colorScheme.error
+                : Theme.of(context).colorScheme.tertiary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  deviation.message,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (deviation.requiresRegeneration) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => ref
+                        .read(plannerProvider.notifier)
+                        .regenerateFromAdherence(),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Regenerate Plan'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduledLessonsSection(
+      AppLocalizations l10n, PlannerState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.schedule,
+                size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Scheduled Lessons',
+                style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...state.scheduledLessons.take(3).map((lesson) {
+          final time =
+              '${lesson.startTime.hour}:${lesson.startTime.minute.toString().padLeft(2, '0')}';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 4),
+            child: ListTile(
+              dense: true,
+              leading: const Icon(Icons.menu_book, size: 20),
+              title: Text(lesson.topicTitle,
+                  style: Theme.of(context).textTheme.bodyMedium),
+              subtitle: Text(lesson.topicId),
+              trailing: Text(time,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
+          );
+        }),
+        if (state.scheduledLessons.length > 3)
+          TextButton(
+            onPressed: () {},
+            child: Text('${state.scheduledLessons.length - 3} more...'),
+          ),
+      ],
     );
   }
 
@@ -333,6 +547,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           (day) => DailyPlanCard(
             day: day,
             onStartTutoring: _openTutorMode,
+            onScheduleLesson: _openLessonBooking,
           ),
         ),
       ],
@@ -389,7 +604,18 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: state.roadmaps.length,
                 itemBuilder: (context, index) {
-                  return RoadmapCard(roadmap: state.roadmaps[index]);
+                  return RoadmapCard(
+                    roadmap: state.roadmaps[index],
+                    onToggleMilestone: (roadmapId, milestoneId, isCompleted) {
+                      ref
+                          .read(plannerProvider.notifier)
+                          .toggleMilestoneCompletion(
+                            roadmapId: roadmapId,
+                            milestoneId: milestoneId,
+                            isCompleted: isCompleted,
+                          );
+                    },
+                  );
                 },
               ),
             ),

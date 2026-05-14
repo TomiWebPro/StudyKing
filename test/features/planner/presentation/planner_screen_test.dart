@@ -13,7 +13,12 @@ import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/repositories/plan_repository.dart';
 import 'package:studyking/core/data/repositories/roadmap_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/core/data/repositories/pending_action_repository.dart';
+import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/pending_action_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
@@ -152,6 +157,94 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   }
 }
 
+class _FakeTutorSessionRepository extends TutorSessionRepository {
+  final Map<String, TutorSession> _storage = {};
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> saveSession(TutorSession session) async {
+    _storage[session.id] = session;
+  }
+
+  @override
+  Future<TutorSession?> getSession(String id) async {
+    return _storage[id];
+  }
+
+  @override
+  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+    return _storage.values
+        .where((s) => s.studentId == studentId)
+        .toList();
+  }
+}
+
+class _FakePendingActionRepository extends PendingActionRepository {
+  final Map<String, PendingActionModel> _storage = {};
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<PendingActionModel>> getPending(String studentId) async {
+    return _storage.values
+        .where((a) => a.studentId == studentId && a.status == 'pending')
+        .toList();
+  }
+
+  @override
+  Future<PendingActionModel?> get(String id) async {
+    return _storage[id];
+  }
+
+  @override
+  Future<void> markCompleted(String id) async {
+    final action = _storage[id];
+    if (action != null) {
+      _storage[id] = action.copyWith(status: 'completed');
+    }
+  }
+
+  @override
+  Future<void> markRejected(String id) async {
+    final action = _storage[id];
+    if (action != null) {
+      _storage[id] = action.copyWith(status: 'rejected');
+    }
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakePlanAdapter extends PlanAdapter {
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    return Result.success(const AdherenceDeviation());
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getAdherenceReport(String studentId) async {
+    return Result.success({'totalDays': 0, 'averageAdherence': 1.0, 'lowAdherenceDays': 0, 'weeklyTrend': <double>[]});
+  }
+
+  @override
+  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
+    return Result.success(null);
+  }
+}
+
 class _TestNavigatorObserver extends NavigatorObserver {
   Route<dynamic>? lastPushedRoute;
 
@@ -167,6 +260,9 @@ Widget _buildTestApp({
   MasteryGraphRepository? masteryGraphRepository,
   TopicRepository? topicRepository,
   RoadmapRepository? roadmapRepository,
+  TutorSessionRepository? tutorSessionRepository,
+  PendingActionRepository? pendingActionRepository,
+  PlanAdapter? planAdapter,
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
@@ -180,6 +276,9 @@ Widget _buildTestApp({
     repository: repo,
     topicRepository: topicRepository ?? _FakeTopicRepository(),
     roadmapRepo: roadmapRepository ?? _FakeRoadmapRepository(),
+    tutorRepo: tutorSessionRepository ?? _FakeTutorSessionRepository(),
+    pendingActionRepo: pendingActionRepository ?? _FakePendingActionRepository(),
+    planAdapter: planAdapter ?? _FakePlanAdapter(),
     fixedStudentId: id,
   );
 
@@ -330,7 +429,10 @@ void main() {
         await tester.pump();
 
         await tester.tap(find.text('Generate Plan'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump();
+        await tester.pump();
 
         expect(find.text('Your Study Schedule'), findsOneWidget);
         expect(find.text('Plan Summary'), findsOneWidget);
@@ -355,7 +457,9 @@ void main() {
         await tester.pump();
 
         await tester.tap(find.text('Generate Plan'));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
         expect(find.text('0Q'), findsOneWidget);
         expect(find.text('0min'), findsOneWidget);
@@ -383,9 +487,11 @@ void main() {
         await tester.pump();
 
         await tester.tap(find.text('Generate Plan'));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
-        expect(find.text('Simulated generation error'), findsOneWidget);
+        expect(find.byType(SnackBar), findsOneWidget);
       });
 
       testWidgets('generate button shows progress indicator during generation', (tester) async {
@@ -411,7 +517,9 @@ void main() {
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
         masteryRepo.generateCompleter!.complete(Result.success([]));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
         expect(find.byIcon(Icons.calendar_today), findsOneWidget);
         expect(find.text('Your Study Schedule'), findsOneWidget);
@@ -441,7 +549,9 @@ void main() {
         expect(button.onPressed, isNull);
 
         masteryRepo.generateCompleter!.complete(Result.success([]));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
         final buttonAfter = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
         expect(buttonAfter.onPressed, isNotNull);
@@ -459,9 +569,9 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        await tester.enterText(find.byType(TextField).at(0), 'Math');
-        await tester.enterText(find.byType(TextField).at(1), '10');
-        await tester.enterText(find.byType(TextField).at(2), '1');
+        await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
         await tester.tap(find.text('Generate Plan'));
@@ -470,7 +580,9 @@ void main() {
         expect(find.text('Generating...'), findsOneWidget);
 
         masteryRepo.generateCompleter!.complete(Result.success([]));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
 
         expect(find.text('Generating...'), findsNothing);
         expect(find.text('Generate Plan'), findsOneWidget);

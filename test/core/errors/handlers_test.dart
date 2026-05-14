@@ -248,7 +248,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Custom validation error'), findsOneWidget);
+      expect(find.text('Validation failed: Custom validation error'), findsOneWidget);
     });
 
     testWidgets('shows PdfParseException message', (tester) async {
@@ -767,7 +767,7 @@ void main() {
         contextName: 'test',
       );
       await tester.pump();
-      expect(find.text('Invalid data format'), findsOneWidget);
+      expect(find.text('Validation failed: Invalid data format'), findsOneWidget);
     });
 
     testWidgets('converts StateError to DatabaseException', (tester) async {

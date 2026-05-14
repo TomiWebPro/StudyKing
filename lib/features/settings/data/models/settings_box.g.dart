@@ -31,13 +31,17 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       highContrastEnabled: fields[11] as bool,
       largeTouchTargets: fields[12] as bool,
       reduceMotion: fields[13] as bool,
+      revisionRemindersEnabled: fields[14] as bool,
+      lessonNotificationsEnabled: fields[15] as bool,
+      overworkAlertsEnabled: fields[16] as bool,
+      planAdjustmentNotificationsEnabled: fields[17] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -65,7 +69,15 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(12)
       ..write(obj.largeTouchTargets)
       ..writeByte(13)
-      ..write(obj.reduceMotion);
+      ..write(obj.reduceMotion)
+      ..writeByte(14)
+      ..write(obj.revisionRemindersEnabled)
+      ..writeByte(15)
+      ..write(obj.lessonNotificationsEnabled)
+      ..writeByte(16)
+      ..write(obj.overworkAlertsEnabled)
+      ..writeByte(17)
+      ..write(obj.planAdjustmentNotificationsEnabled);
   }
 
   @override

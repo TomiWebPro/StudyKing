@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import '../../../../../core/data/models/pending_action_model.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+
+class PendingActionCard extends StatelessWidget {
+  final PendingActionModel action;
+  final VoidCallback onAccept;
+  final VoidCallback onDismiss;
+
+  const PendingActionCard({
+    super.key,
+    required this.action,
+    required this.onAccept,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              _actionIcon,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _actionTitle(l10n),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (action.topicTitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      action.topicTitle,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.check_circle_outline,
+                  color: Colors.green.shade600),
+              tooltip: 'Accept',
+              onPressed: onAccept,
+            ),
+            IconButton(
+              icon: Icon(Icons.cancel_outlined,
+                  color: theme.colorScheme.error),
+              tooltip: 'Dismiss',
+              onPressed: onDismiss,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData get _actionIcon {
+    switch (action.actionType) {
+      case 'schedule':
+        return Icons.event;
+      case 'reschedule':
+        return Icons.event_busy;
+      case 'planAdjustment':
+        return Icons.tune;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  String _actionTitle(AppLocalizations l10n) {
+    switch (action.actionType) {
+      case 'schedule':
+        return 'Schedule a lesson';
+      case 'reschedule':
+        return 'Reschedule lesson';
+      case 'planAdjustment':
+        return 'Plan adjustment suggested';
+      default:
+        return 'Action needed';
+    }
+  }
+}

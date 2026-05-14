@@ -5,19 +5,10 @@ import '../models/focus_session_model.dart';
 
 class FocusSessionRepository {
   final Logger _logger = const Logger('FocusSessionRepository');
-  late Box<String> _box;
-  bool _initialized = false;
 
-  Future<void> init() async {
-    if (_initialized) return;
-    try {
-      _box = await Hive.openBox<String>('focus_sessions');
-      _initialized = true;
-    } catch (e) {
-      _logger.e('Error opening focus_sessions box', e);
-      rethrow;
-    }
-  }
+  Box<String> get _box => Hive.box<String>('focus_sessions');
+
+  Future<void> init() async {}
 
   Future<void> save(FocusSession session) async {
     await _box.put(session.id, jsonEncode(session.toJson()));

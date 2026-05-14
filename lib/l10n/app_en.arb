@@ -3132,6 +3132,10 @@
       }
     }
   },
+  "focus": "Focus",
+  "@focus": {
+    "description": "Bottom navigation label for focus tab"
+  },
   "focusForMinutes": "Focus for {minutes} minutes",
   "@focusForMinutes": {
     "description": "Button label to start a focus session with specified minutes",

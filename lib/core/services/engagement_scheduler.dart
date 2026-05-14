@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
+import '../services/plan_adapter.dart';
 import '../data/repositories/plan_adherence_repository.dart';
 import '../data/repositories/engagement_nudge_repository.dart';
 import '../data/models/engagement_nudge_model.dart';
+import '../../features/focus_mode/services/focus_session_service.dart';
 
 class EngagementSchedulerConfig {
   final int checkHour;
@@ -33,6 +34,8 @@ class EngagementScheduler {
   final NotificationService _notificationService;
   final EngagementNudgeRepository _nudgeRepository;
   final PlanAdherenceRepository _adherenceRepository;
+  final PlanAdapter? _planAdapter;
+  final FocusSessionService? _focusSessionService;
   final EngagementSchedulerConfig _config;
 
   Timer? _dailyTimer;
@@ -45,12 +48,16 @@ class EngagementScheduler {
     NotificationService? notificationService,
     EngagementNudgeRepository? nudgeRepository,
     PlanAdherenceRepository? adherenceRepository,
+    PlanAdapter? planAdapter,
+    FocusSessionService? focusSessionService,
     EngagementSchedulerConfig? config,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
         _nudgeRepository = nudgeRepository ?? EngagementNudgeRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
+        _planAdapter = planAdapter,
+        _focusSessionService = focusSessionService,
         _config = config ?? const EngagementSchedulerConfig();
 
   Future<void> init() async {
@@ -147,6 +154,24 @@ class EngagementScheduler {
         );
       }
     } catch (_) {}
+
+    if (_planAdapter != null) {
+      try {
+        final deviation = await _planAdapter.checkAdherence(studentId);
+        if (deviation.isSuccess && deviation.data!.requiresRegeneration) {
+          final model = EngagementNudgeModel(
+            id: 'adp_reg_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+            studentId: studentId,
+            nudgeType: NudgeType.autoRegeneration.name,
+            message: deviation.data!.message,
+            severity: deviation.data!.requiresEscalation
+                ? NudgeSeverity.high.name
+                : NudgeSeverity.medium.name,
+          );
+          await _nudgeRepository.save(model);
+        }
+      } catch (_) {}
+    }
   }
 
   Future<List<EngagementNudge>> getOverworkNudge(String studentId) async {
@@ -156,16 +181,15 @@ class EngagementScheduler {
       totalHours = double.tryParse(stats['totalStudyTimeHours'] as String? ?? '0') ?? 0;
     } catch (_) {}
 
-    try {
-      final focusRepo = FocusSessionRepository();
-      await focusRepo.init();
-      final todaySessions = await focusRepo.getByDate(DateTime.now());
-      final focusSeconds = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
-      final focusHours = focusSeconds / 3600;
-      if (focusHours > totalHours) {
-        totalHours = focusHours;
-      }
-    } catch (_) {}
+    if (_focusSessionService != null) {
+      try {
+        final focusSeconds = await _focusSessionService.getTodayFocusSeconds();
+        final focusHours = focusSeconds / 3600;
+        if (focusHours > totalHours) {
+          totalHours = focusHours;
+        }
+      } catch (_) {}
+    }
 
     if (totalHours > 4) {
       return [EngagementNudge(
@@ -231,7 +255,7 @@ class EngagementScheduler {
   }
 }
 
-enum NudgeType { overwork, revision, planAdjustment, lessonReminder }
+enum NudgeType { overwork, revision, planAdjustment, lessonReminder, autoRegeneration }
 enum NudgeSeverity { low, medium, high }
 
 class EngagementNudge {

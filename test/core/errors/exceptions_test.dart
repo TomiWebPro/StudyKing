@@ -238,6 +238,54 @@ void main() {
     });
   });
 
+  group('SyllabusException', () {
+    test('has correct default code', () {
+      final exception = SyllabusException(message: 'Syllabus error');
+      expect(exception.code, equals('SYLLABUS_ERROR'));
+    });
+
+    test('implements AppException', () {
+      final exception = SyllabusException(message: 'test');
+      expect(exception, isA<AppException>());
+    });
+  });
+
+  group('PlanGenerationException', () {
+    test('has correct default code', () {
+      final exception = PlanGenerationException(message: 'Plan error');
+      expect(exception.code, equals('PLAN_GENERATION_ERROR'));
+    });
+
+    test('implements AppException', () {
+      final exception = PlanGenerationException(message: 'test');
+      expect(exception, isA<AppException>());
+    });
+  });
+
+  group('SchedulingException', () {
+    test('has correct default code', () {
+      final exception = SchedulingException(message: 'Scheduling error');
+      expect(exception.code, equals('SCHEDULING_ERROR'));
+    });
+
+    test('implements AppException', () {
+      final exception = SchedulingException(message: 'test');
+      expect(exception, isA<AppException>());
+    });
+  });
+
+  group('AdherenceException', () {
+    test('has correct default code', () {
+      final exception = AdherenceException(message: 'Adherence error');
+      expect(exception.code, equals('ADHERENCE_ERROR'));
+    });
+
+    test('implements AppException', () {
+      final exception = AdherenceException(message: 'test');
+      expect(exception, isA<AppException>());
+    });
+  });
+
   group('All exception types - constructor defaults', () {
     test('all exceptions can be created with only message', () {
       expect(NetworkException(message: 'e'), isA<AppException>());
@@ -254,6 +302,10 @@ void main() {
       expect(LlmException(message: 'e'), isA<AppException>());
       expect(ApiKeyMissingException(message: 'e'), isA<AppException>());
       expect(InvalidApiKeyException(message: 'e'), isA<AppException>());
+      expect(SyllabusException(message: 'e'), isA<AppException>());
+      expect(PlanGenerationException(message: 'e'), isA<AppException>());
+      expect(SchedulingException(message: 'e'), isA<AppException>());
+      expect(AdherenceException(message: 'e'), isA<AppException>());
     });
 
     test('all exceptions have non-null message', () {
@@ -271,6 +323,10 @@ void main() {
       expect(LlmException(message: '').message, isNotNull);
       expect(ApiKeyMissingException(message: '').message, isNotNull);
       expect(InvalidApiKeyException(message: '').message, isNotNull);
+      expect(SyllabusException(message: '').message, isNotNull);
+      expect(PlanGenerationException(message: '').message, isNotNull);
+      expect(SchedulingException(message: '').message, isNotNull);
+      expect(AdherenceException(message: '').message, isNotNull);
     });
   });
 
@@ -305,6 +361,14 @@ void main() {
           equals(original));
       expect(InvalidApiKeyException(message: 'e', originalError: original).originalError,
           equals(original));
+      expect(SyllabusException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(PlanGenerationException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(SchedulingException(message: 'e', originalError: original).originalError,
+          equals(original));
+      expect(AdherenceException(message: 'e', originalError: original).originalError,
+          equals(original));
     });
 
     test('originalError is null by default for all exception types', () {
@@ -322,6 +386,10 @@ void main() {
       expect(LlmException(message: 'e').originalError, isNull);
       expect(ApiKeyMissingException(message: 'e').originalError, isNull);
       expect(InvalidApiKeyException(message: 'e').originalError, isNull);
+      expect(SyllabusException(message: 'e').originalError, isNull);
+      expect(PlanGenerationException(message: 'e').originalError, isNull);
+      expect(SchedulingException(message: 'e').originalError, isNull);
+      expect(AdherenceException(message: 'e').originalError, isNull);
     });
   });
 
@@ -341,6 +409,10 @@ void main() {
       expect(LlmException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
       expect(ApiKeyMissingException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
       expect(InvalidApiKeyException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(SyllabusException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(PlanGenerationException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(SchedulingException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
+      expect(AdherenceException(message: 'e', code: 'OVERRIDE').code, equals('OVERRIDE'));
     });
   });
 
@@ -360,6 +432,10 @@ void main() {
       expect(LlmException(message: 'e').toString(), contains('Instance of'));
       expect(ApiKeyMissingException(message: 'e').toString(), contains('Instance of'));
       expect(InvalidApiKeyException(message: 'e').toString(), contains('Instance of'));
+      expect(SyllabusException(message: 'e').toString(), contains('Instance of'));
+      expect(PlanGenerationException(message: 'e').toString(), contains('Instance of'));
+      expect(SchedulingException(message: 'e').toString(), contains('Instance of'));
+      expect(AdherenceException(message: 'e').toString(), contains('Instance of'));
     });
 
     test('AppException toString works correctly via class that extends AppException', () {

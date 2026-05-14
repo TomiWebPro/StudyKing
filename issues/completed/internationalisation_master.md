@@ -1,122 +1,105 @@
-# Spanish Localisation Quality & i18n Architecture Improvements
+# Spanish Localisation Quality Audit
 
 ## Summary
 
-The codebase has a solid foundation with `flutter_localizations` + ARB files for English and Spanish, but Spanish translation quality suffers from duplicate keys with conflicting values, and several features bypass the localisation system entirely with hardcoded English strings. These issues block reliable Spanish support and make adding future languages error-prone.
+Audit of `lib/l10n/app_es.arb` and hardcoded strings in `lib/main.dart` and `lib/core/widgets/` reveals four distinct classes of i18n defects that degrade the Spanish user experience and block clean addition of future locales.
 
 ---
 
-## Issue 1: Duplicate JSON Keys in ARB Files
+## Issue 1: Hardcoded strings in `lib/main.dart` bypassing `AppLocalizations`
 
-Both `app_en.arb` and `app_es.arb` contain duplicate top-level keys. In JSON, the last occurrence wins silently, meaning one translation is discarded without warning. This creates a maintenance trap where translators see conflicting values for the same key.
+Two strings in `MainScreen.build()` render in English regardless of the selected locale.
 
-**Affected files:**
-- `lib/l10n/app_en.arb` — duplicates with identical values (tolerable but noisy)
-- `lib/l10n/app_es.arb` — duplicates; one with a **real conflict**
-
-**Confirmed duplicates in `app_es.arb`:**
-
-| Key | First value (line) | Second value (line) | Conflict? |
-|---|---|---|---|
-| `masteryLevelDeveloping` | `"Desarrollando"` (~1693) | `"En Desarrollo"` (~2549) | **YES** |
-| `masteryLevelBrowsing` | `"Explorando"` (~1690) | `"Explorando"` (~2545) | No |
-| `masteryLevelProficient` | `"Competente"` (~1698) | `"Competente"` (~2554) | No |
-| `noTopicDataYet` | (text) (~1682) | (text) (~2538) | No |
-| `achievements` | `"Logros"` (~1642) | `"Logros"` (~2562) | No |
-| `topicPerformance` | (text) (~1638) | (text) (~2534) | No |
-| `thisWeek` | (text) (~1658) | (text) (~2574) | No |
-| `studyTime` | (text) (~1626) | (text) (~2514) | No |
-| `exportCsv` | (text) (~1646) | (text) (~2578) | No |
-| `masteryOverview` | (text) ~1634) | (text) (~2266) | No |
-
-The `masteryLevelDeveloping` conflict means the effective Spanish translation is whichever appears last — a reader would silently see a different label than the translator intended.
-
-**Rationale:** Duplicate keys make the ARB files unreliable as a source of truth. Adding a CI lint step (`json_validation` or a custom script) to reject duplicates would prevent this. Recommending using `flutter gen-l10n` with `--synthetic-package` and adding a pre-commit/CI check that `jq` can parse ARB files without duplicate-key warnings would catch these.
-
----
-
-## Issue 2: `progress_export_service.dart` Ignores `AppLocalizations` for PDF/CSV Content
-
-`lib/core/services/progress_export_service.dart` accepts `AppLocalizations l10n` as a parameter (line 95) but uses it **only for the function signature** — every user-facing string inside `exportComprehensivePDF` and `exportComprehensiveCSV` is hardcoded in English.
-
-**Hardcoded strings found (not exhaustive):**
-- Lines 43–90: CSV section headers `'=== OVERALL STATS ==='`, `'=== TOPIC MASTERY ==='`, `'=== ALL ATTEMPTS ==='`, `'=== WEEKLY TREND ==='`, `'=== BADGES ==='`
-- Lines 114, 281, 313, 328: `'StudyKing Progress Report'`
-- Lines 122–130: `'Generated: ...'`, `'Student ID: ...'`
-- Lines 135, 163, 214, 248: PDF headers `'Overall Statistics'`, `'Topic Mastery Breakdown'`, `'Badges Earned'`, `'Recent Activity Summary'`
-- Lines 139–149: Table headers `'Metric'`, `'Value'`, `'Total Attempts'`, `'Correct Answers'`, `'Accuracy'`, etc.
-- Lines 204, 238: Empty state messages `'No mastery data available yet.'`, `'No badges earned yet. Keep studying!'`
-
-**Acceptance criteria:**
-- All user-facing strings in `exportComprehensivePDF` and `exportComprehensiveCSV` must use `l10n.*` getters (the parameter already exists).
-- Missing ARB keys must be added to both `app_en.arb` and `app_es.arb`.
-- `Share.shareXFiles` calls should use localized text for the `text:` parameter.
-
----
-
-## Issue 3: Focus Mode Entirely Bypasses Localisation
-
-The entire `lib/features/focus_mode/` feature uses hardcoded English strings with no `AppLocalizations` access.
-
-**Affected files and strings:**
-
-| File | Line(s) | Hardcoded string |
+| Location | Current value | Problem |
 |---|---|---|
-| `focus_timer_screen.dart` | 134, 184, 191 | `'Focus Mode'` (appBar title ×2) |
-| `focus_timer_screen.dart` | 134 | `'Daily Limit Reached'` |
-| `focus_timer_screen.dart` | 135–137 | `'You\'ve reached your daily study limit...'` |
-| `focus_timer_screen.dart` | 142 | `'OK'` |
-| `focus_timer_screen.dart` | 162 | `'Error starting session: $e'` |
-| `focus_timer_screen.dart` | 196 | `'Refresh stats'` (tooltip) |
-| `focus_timer_widget.dart` | 127–128 | `'PAUSED'`, `'DONE!'`, `'remaining'` |
-| `focus_timer_widget.dart` | 153 | `'Resume'` |
-| `focus_timer_widget.dart` | 159 | `'Pause'` |
-| `focus_timer_widget.dart` | 165 | `'End'` |
-| `focus_timer_widget.dart` | 177 | `'Mark Complete'` |
+| `lib/main.dart:242` | `tooltip: 'Dashboard'` | `l10n.dashboard` (→ `"Panel"`) exists in both ARB files but is not used. The FAB tooltip remains `'Dashboard'` in Spanish mode. |
+| `lib/main.dart:272` | `label: 'Focus'` | No ARB key for a simple `"focus"` nav label exists. The bottom navigation tab shows `'Focus'` even when the locale is `es`. Nearby tabs (`subjects`, `practice`, `mentor`, `settings`) all use `l10n.*` correctly. |
 
-**Acceptance criteria:**
-- All focus-mode screens must access `AppLocalizations.of(context)` and use ARB keys.
-- New Spanish ARB entries must be added for each key.
-- The timer status labels (`'PAUSED'`, `'DONE!'`, `'remaining'`) need lower-cased locale-aware alternatives in Spanish (`EN PAUSA`, `¡TERMINADO!`, `restante`).
+**Rationale:** These are regressions from the i18n pattern used everywhere else in the codebase (`final l10n = AppLocalizations.of(context)!`). They cause a disjointed experience where 80% of the UI is in Spanish but key navigation elements remain English.
+
+**Action required:**
+1. Replace `tooltip: 'Dashboard'` with `tooltip: l10n.dashboard`.
+2. Add a new key `"focus"` to both ARB files (English: `"Focus"`, Spanish: `"Concentración"` or `"Enfoque"`), regenerate, and use it at line 272.
 
 ---
 
-## Issue 4: `session_history_screen.dart` — Hardcoded `'JSON'`
+## Issue 2: Inconsistent Spanish formality register (tú / usted)
 
-`lib/features/sessions/presentation/session_history_screen.dart:290` uses `Text('JSON')` instead of a localized key. ARB keys exist for CSV and PDF (`exportCsv`, `exportPdf`, `comprehensiveCsv`, `comprehensivePdf`, `comprehensiveJson`) but a plain `'JSON'` label is missing.
+Most of `app_es.arb` uses formal *usted* imperative and possessive forms, which is the safe default for an educational/professional app. Two strings break this convention by using informal *tú* forms.
 
-**Acceptance criteria:**
-- Add a `labelJson` key to both ARB files (`"JSON"` for English, `"JSON"` or `"Formato JSON"` for Spanish).
-- Replace `Text('JSON')` with the localized getter.
-
----
-
-## Issue 5: Spanish Translation Refinements
-
-Beyond the duplicate-key conflict, several Spanish translations could be improved for naturalness:
-
-| Key | Current Spanish | Suggested | Rationale |
+| Key | Current Spanish | Register | Expected (formal) |
 |---|---|---|---|
-| `masteryLevelDeveloping` | `"Desarrollando"` or `"En Desarrollo"` | `"En Desarrollo"` | "Desarrollando" (gerund) is ungrammatical as a label; "En Desarrollo" matches the English "Developing" nominal form |
-| `instrumentation` | `"Instrumentación"` | `"Instrumentación"` or translate contextually | Technically correct but the English term "Instrumentation" itself is jargon — consider a friendlier label or translatable description |
-| `planAdherence` | `"Cumplimiento del Plan"` | `"Adherencia al Plan"` | "Cumplimiento" means compliance; "Adherencia" is closer to "Adherence" in educational contexts |
-| `drawingWithStrokes` | `"Dibujando con {count} trazos"` | `"Dibujo con {count} trazos"` | Gerund again as a static label — "Dibujo" (noun) is more natural |
-| `considerUsingPieChart` | `"Considere usar un Gráfico Circular para conjuntos pequeños de datos"` | `"Considere usar un gráfico circular para conjuntos pequeños de datos"` | Lowercase "gráfico circular" (Spanish typographic convention for chart types) |
-| `considerUsingBarChart` | `"Considere usar un Gráfico de Barras para conjuntos grandes de datos"` | `"Considere usar un gráfico de barras para conjuntos grandes de datos"` | Same lowercase convention |
+| `focusForMinutes` (`lib/l10n/app_es.arb:3114`) | `"Enfócate por {minutes} minutos"` | Informal tú | `"Enfóquese por {minutes} minutos"` |
+| `dailyLimitReachedBody` (`lib/l10n/app_es.arb:3101`) | `"Has alcanzado tu límite diario…"` | Informal tú | `"Ha alcanzado su límite diario…"` |
 
-**Acceptance criteria:**
-- Resolve the `masteryLevelDeveloping` duplication conflict.
-- Apply lowercase convention to graph-type names in Spanish (matching Spanish typographic norms).
-- Review remaining Spanish strings for naturalness by a native speaker.
+**Rationale:** A mixed register is jarring to native speakers. The app should be consistent — either all *usted* (recommended for this domain) or all *tú*. Currently ~696 keys use formal register while 2 keys use informal.
+
+**Action required:** Change the two keys above to use formal *usted* imperative/possessive forms.
 
 ---
 
-## Acceptance Criteria (full list)
+## Issue 3: Spanish `@@description` strings in `app_es.arb` (breaking ARB convention)
 
-1. **Duplicate keys eliminated** — ARB files pass `jq` duplicate-key validation; a pre-commit or CI hook prevents regressions.
-2. **`progress_export_service.dart` fully localized** — PDF and CSV content uses `l10n.*` getters; all needed keys in both ARB files.
-3. **Focus mode localized** — `focus_timer_screen.dart` and `focus_timer_widget.dart` use `AppLocalizations`.
-4. **`'JSON'` label added** — ARB key `labelJson` created and used in `session_history_screen.dart`.
-5. **Spanish refinements applied** — `masteryLevelDeveloping` deduplicated, typographic casing fixed, naturalness reviewed.
-6. **All generated files regenerated** — run `flutter gen-l10n` after edits to regenerate `lib/l10n/generated/`.
-7. **Existing l10n tests pass** — `test/l10n/app_localizations_test.dart` and `test/l10n/app_localizations_coverage_test.dart` must remain green.
+The `@@description` field in ARB files is metadata for translators and MUST match the template locale (English). Thirteen keys have descriptions written in Spanish instead of English.
+
+| `app_es.arb` lines | Keys affected |
+|---|---|
+| 3011–3091 | `markschemeUnavailable`, `answerTooShort`, `goodResponseLength`, `answerTooShortForCredit`, `noDrawingDetected`, `invalidDrawingData`, `allStepsIdentified`, `specialHandlingRequired`, `someAnswersIncorrect`, `correctAnswerIs`, `allStepsFormat`, `partialStepsFormat`, `noStepsFormat`, `allRequiredStepsMissing` |
+
+Example:
+```json
+// app_es.arb (WRONG — description in Spanish)
+"markschemeUnavailable": "No hay esquema de calificación disponible",
+"@markschemeUnavailable": {
+  "description": "Mensaje cuando no hay un esquema de calificación para una pregunta"
+}
+
+// app_en.arb (correct — description in English, the template language)
+"markschemeUnavailable": "No markscheme available",
+"@markschemeUnavailable": {
+  "description": "Message when no markscheme exists for a question"
+}
+```
+
+**Rationale:** These descriptions are shown to translators when adding a new locale (e.g. `app_fr.arb`). Spanish descriptions are meaningless to a French translator who doesn't speak Spanish. They must be in English, which is the agreed template language.
+
+**Action required:** Copy the English `@@description` values from `app_en.arb` for each key into `app_es.arb`, overwriting the Spanish text.
+
+---
+
+## Issue 4: Untranslated English loanword in Spanish ARB
+
+| Key | `app_es.arb` value | Expected translation |
+|---|---|---|
+| `roadmaps` (`lib/l10n/app_es.arb:2852`) | `"Roadmaps"` | `"Hojas de ruta"` or `"Rutas de aprendizaje"` |
+
+**Rationale:** Every other string in `app_es.arb` is a proper Spanish translation. Leaving an English word is a gap that stands out.
+
+**Action required:** Translate to an appropriate Spanish equivalent.
+
+---
+
+## Extensibility note
+
+The underlying ARB + `flutter gen-l10n` infrastructure is sound and well-tested. Once the above defects are fixed, adding a third locale (e.g. French `app_fr.arb`) requires only:
+1. Copying `app_en.arb` → `app_fr.arb`
+2. Translating all values (descriptions stay in English)
+3. Adding `Locale('fr')` to `supportedLocales` in `lib/main.dart:130`
+4. Adding the locale code to `l10n.yaml`
+
+No structural changes are needed — the i18n architecture already supports an arbitrary number of locales.
+
+---
+
+## Acceptance criteria
+
+- [ ] `lib/main.dart:242` uses `l10n.dashboard` instead of `'Dashboard'`
+- [ ] `lib/main.dart:272` uses a new `l10n.focus` key instead of `'Focus'`
+- [ ] ARB keys `"focus"` added to `app_en.arb` and `app_es.arb`, code regenerated
+- [ ] `focusForMinutes` uses formal imperative `"Enfóquese"` consistently
+- [ ] `dailyLimitReachedBody` uses formal `"Ha alcanzado su"` consistently
+- [ ] All `@@description` fields in `app_es.arb` are in English (copy from `app_en.arb`)
+- [ ] `roadmaps` translated to Spanish (`"Hojas de ruta"` / `"Rutas de aprendizaje"`)
+- [ ] `flutter gen-l10n` succeeds with zero warnings
+- [ ] Coverage test `test/l10n/app_localizations_coverage_test.dart` still passes
+- [ ] Visual inspection: switch app to Spanish, confirm FAB tooltip, nav label, focus timer, and daily limit dialog show correct Spanish text

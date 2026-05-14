@@ -40,7 +40,7 @@ void main() {
       TestWidgetsFlutterBinding.ensureInitialized();
       dir = await Directory.systemTemp.createTemp('settings_hive_test_');
       Hive.init(dir.path);
-      if (!Hive.isAdapterRegistered(5)) {
+      if (!Hive.isAdapterRegistered(10)) {
         Hive.registerAdapter(UserProfileAdapter());
       }
       repo = SettingsRepository();
@@ -133,6 +133,37 @@ void main() {
         expect(settings.apiBaseUrl, equals('https://custom.api.com'));
         expect(settings.themeMode, equals(ThemeMode.dark.index));
         expect(settings.fontSize, equals(20.0));
+      });
+
+      test('returns default accessibility and notification values', () async {
+        final settings = await repo.getSettings();
+        expect(settings.highContrastEnabled, isFalse);
+        expect(settings.largeTouchTargets, isFalse);
+        expect(settings.reduceMotion, isFalse);
+        expect(settings.revisionRemindersEnabled, isTrue);
+        expect(settings.lessonNotificationsEnabled, isTrue);
+        expect(settings.overworkAlertsEnabled, isTrue);
+        expect(settings.planAdjustmentNotificationsEnabled, isTrue);
+      });
+
+      test('returns persisted accessibility and notification values', () async {
+        await repo.updateSettings(
+          highContrastEnabled: true,
+          largeTouchTargets: true,
+          reduceMotion: true,
+          revisionRemindersEnabled: false,
+          lessonNotificationsEnabled: false,
+          overworkAlertsEnabled: false,
+          planAdjustmentNotificationsEnabled: false,
+        );
+        final settings = await repo.getSettings();
+        expect(settings.highContrastEnabled, isTrue);
+        expect(settings.largeTouchTargets, isTrue);
+        expect(settings.reduceMotion, isTrue);
+        expect(settings.revisionRemindersEnabled, isFalse);
+        expect(settings.lessonNotificationsEnabled, isFalse);
+        expect(settings.overworkAlertsEnabled, isFalse);
+        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
       });
     });
 
@@ -227,6 +258,75 @@ void main() {
         expect(settings.totalStudyTimeMs, equals(3600000));
         expect(settings.totalQuestions, equals(100));
       });
+
+      test('updates highContrastEnabled', () async {
+        await repo.updateSettings(highContrastEnabled: true);
+        expect((await repo.getSettings()).highContrastEnabled, isTrue);
+        await repo.updateSettings(highContrastEnabled: false);
+        expect((await repo.getSettings()).highContrastEnabled, isFalse);
+      });
+
+      test('updates largeTouchTargets', () async {
+        await repo.updateSettings(largeTouchTargets: true);
+        expect((await repo.getSettings()).largeTouchTargets, isTrue);
+        await repo.updateSettings(largeTouchTargets: false);
+        expect((await repo.getSettings()).largeTouchTargets, isFalse);
+      });
+
+      test('updates reduceMotion', () async {
+        await repo.updateSettings(reduceMotion: true);
+        expect((await repo.getSettings()).reduceMotion, isTrue);
+        await repo.updateSettings(reduceMotion: false);
+        expect((await repo.getSettings()).reduceMotion, isFalse);
+      });
+
+      test('updates revisionRemindersEnabled', () async {
+        await repo.updateSettings(revisionRemindersEnabled: false);
+        expect((await repo.getSettings()).revisionRemindersEnabled, isFalse);
+        await repo.updateSettings(revisionRemindersEnabled: true);
+        expect((await repo.getSettings()).revisionRemindersEnabled, isTrue);
+      });
+
+      test('updates lessonNotificationsEnabled', () async {
+        await repo.updateSettings(lessonNotificationsEnabled: false);
+        expect((await repo.getSettings()).lessonNotificationsEnabled, isFalse);
+        await repo.updateSettings(lessonNotificationsEnabled: true);
+        expect((await repo.getSettings()).lessonNotificationsEnabled, isTrue);
+      });
+
+      test('updates overworkAlertsEnabled', () async {
+        await repo.updateSettings(overworkAlertsEnabled: false);
+        expect((await repo.getSettings()).overworkAlertsEnabled, isFalse);
+        await repo.updateSettings(overworkAlertsEnabled: true);
+        expect((await repo.getSettings()).overworkAlertsEnabled, isTrue);
+      });
+
+      test('updates planAdjustmentNotificationsEnabled', () async {
+        await repo.updateSettings(planAdjustmentNotificationsEnabled: false);
+        expect((await repo.getSettings()).planAdjustmentNotificationsEnabled, isFalse);
+        await repo.updateSettings(planAdjustmentNotificationsEnabled: true);
+        expect((await repo.getSettings()).planAdjustmentNotificationsEnabled, isTrue);
+      });
+
+      test('updates all accessibility and notification fields at once', () async {
+        await repo.updateSettings(
+          highContrastEnabled: true,
+          largeTouchTargets: true,
+          reduceMotion: true,
+          revisionRemindersEnabled: false,
+          lessonNotificationsEnabled: false,
+          overworkAlertsEnabled: false,
+          planAdjustmentNotificationsEnabled: false,
+        );
+        final settings = await repo.getSettings();
+        expect(settings.highContrastEnabled, isTrue);
+        expect(settings.largeTouchTargets, isTrue);
+        expect(settings.reduceMotion, isTrue);
+        expect(settings.revisionRemindersEnabled, isFalse);
+        expect(settings.lessonNotificationsEnabled, isFalse);
+        expect(settings.overworkAlertsEnabled, isFalse);
+        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
+      });
     });
 
     group('updateStats', () {
@@ -267,6 +367,22 @@ void main() {
         expect(settings.apiKey, equals('sk-stats-test'));
         expect(settings.fontSize, equals(22.0));
         expect(settings.totalSessionCount, equals(7));
+      });
+
+      test('preserves notification and accessibility fields when updating stats', () async {
+        await repo.updateSettings(
+          highContrastEnabled: true,
+          reduceMotion: true,
+          revisionRemindersEnabled: false,
+          lessonNotificationsEnabled: false,
+        );
+        await repo.updateStats(studyTimeMs: 5000000);
+        final settings = await repo.getSettings();
+        expect(settings.highContrastEnabled, isTrue);
+        expect(settings.reduceMotion, isTrue);
+        expect(settings.revisionRemindersEnabled, isFalse);
+        expect(settings.lessonNotificationsEnabled, isFalse);
+        expect(settings.totalStudyTimeMs, equals(5000000));
       });
     });
 

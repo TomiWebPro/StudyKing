@@ -1,131 +1,126 @@
-# Issue: Critical Test Coverage Gaps — Provider Tests with False Confidence, Untested Business Logic, Orphaned Tests
+# Test Coverage & Structure Issues Across Features
 
-## Summary
+## Context
 
-Significant gaps exist in the test suite: (1) two provider test files assert `isNotNull` outside a Riverpod container, providing near-zero behavioural coverage; (2) the **Planner** and **Lessons** features — which contain the most complex `StateNotifier`/`FutureProvider.family` logic and arithmetic-heavy services — have **zero tests**; (3) five `SubjectRepository` test files are structurally orphaned in `test/features/subjects/` while the source lives in `lib/core/`.
+The project has 15 feature directories under `lib/features/`. While many source files have corresponding tests (per the convention in `AGENTS.md`), several features have **zero widget test coverage**, tests placed in structurally wrong locations, overly bloated test files that duplicate coverage, and missing unit-test coverage for critical business-logic paths (partial failure states, state machines).
 
----
-
-## 1. Provider Tests with False Confidence
-
-### `test/features/dashboard/providers/dashboard_providers_test.dart` (30 lines)
-
-Every test follows the pattern:
-```dart
-test('... creates X', () {
-  expect(dashboardTopicRepositoryProvider, isNotNull);
-});
-```
-
-- Never uses `ProviderContainer` or a `ProviderScope`.
-- Merely checks that the top-level `Provider` variable reference is non-null — **always passes if the file compiles**.
-- Never verifies Riverpod dependency wiring (e.g. `dashboardStudyProgressTrackerProvider` depends on `dashboardAttemptRepositoryProvider` — never tested).
-- Never instantiates the actual objects; never tests error paths or real resolution.
-
-### `test/features/practice/providers/practice_providers_test.dart` (43 lines)
-
-Uses `ProviderContainer` (good) but only asserts `isA<Type>()` and never overrides/stubs real Hive-backed repositories. Provides no verification that dependencies are correctly wired or that any method works.
-
-**Fix**: Replace with tests that use `ProviderContainer` + hand-written fakes, verifying:
-- Each provider resolves to a non-null instance of the expected type within a container.
-- Dependency overrides are properly respected (override `dashboardAttemptRepositoryProvider` and verify `dashboardStudyProgressTrackerProvider` uses the overridden instance).
-- Error states are handled (e.g. repository constructor throws).
-
-**Affected files**:
-- `test/features/dashboard/providers/dashboard_providers_test.dart` (rewrite)
-- `test/features/practice/providers/practice_providers_test.dart` (rewrite)
+This issue consolidates four categories of findings. Each is actionable independently.
 
 ---
 
-## 2. Critical Untested Business Logic — Planner & Lessons Features
+## 1. Missing Test Files (per `AGENTS.md` Convention)
 
-### `lib/features/planner/providers/planner_providers.dart` (139 lines)
+The project convention states: *Every source file in `lib/features/*/` must have a corresponding test file.* The following source files have no test at all:
 
-Contains `PlannerState` (6 fields + `copyWith` + `clearMessages`) and `PlannerNotifier extends StateNotifier<PlannerState>` with a complex async state machine:
+### Focus Mode
 
-| Method | State transitions to test |
+| Source | Expected Test |
 |---|---|
-| `loadInitialData` | Calls `loadExistingPlan` + `loadRoadmaps` sequentially |
-| `loadExistingPlan` | Plan found → state updated; plan null → no-op; exception → silently caught |
-| `loadRoadmaps` | Loading flag set → roadmaps loaded → flag cleared; exception → flag cleared |
-| `generatePlan` | 3 paths: success, null-result error, exception error |
-| `createRoadmap` | Success → roadmaps refreshed + message set; failure → error set |
-| `clearMessages` | Both error and success cleared |
+| `lib/features/focus_mode/providers/focus_mode_providers.dart` | `test/features/focus_mode/providers/focus_mode_providers_test.dart` |
 
-**Total: 0 tests.**
+Defines two Riverpod providers (`focusSessionRepositoryProvider`, `focusSessionServiceProvider`) that are central to the focus-timer workflow. No tests verify provider resolution, override behavior, or container isolation.
 
-### `lib/features/planner/services/planner_service.dart` (122 lines)
+### Lessons
 
-Contains `PlannerService` with 5+ dependencies and arithmetic logic for plan duration/config (`hoursValue * 60`), milestone distribution (`(days / 7).ceil().clamp(1, 52)`, `(i + 1) * days / numMilestones`).
+| Source | Expected Test |
+|---|---|
+| `lib/features/lessons/presentation/widgets/lesson_list_item.dart` | `test/features/lessons/presentation/widgets/lesson_list_item_test.dart` |
+| `lib/features/lessons/presentation/widgets/lesson_block_card.dart` | `test/features/lessons/presentation/widgets/lesson_block_card_test.dart` |
 
-**Total: 0 tests.**
+These two leaf widgets account for ~40% of the lesson feature's UI surface but are entirely untested.
 
-### `lib/features/lessons/providers/lesson_providers.dart` (67 lines)
+### Planner
 
-Contains 6 `FutureProvider.family` definitions + a fallback-override pattern (`llmServiceProviderForLesson` / `llmServiceProviderFallback`). Services throw `UnimplementedError` when not overridden — the override mechanism itself is untested.
+| Source | Expected Test |
+|---|---|
+| `lib/features/planner/presentation/widgets/roadmap_card.dart` | `test/features/planner/presentation/widgets/roadmap_card_test.dart` |
+| `lib/features/planner/presentation/widgets/daily_plan_card.dart` | `test/features/planner/presentation/widgets/daily_plan_card_test.dart` |
+| `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` | `test/features/planner/presentation/widgets/lesson_booking_sheet_test.dart` |
+| `lib/features/planner/presentation/widgets/pending_action_card.dart` | `test/features/planner/presentation/widgets/pending_action_card_test.dart` |
+| `lib/features/planner/presentation/widgets/milestone_timeline.dart` | `test/features/planner/presentation/widgets/milestone_timeline_test.dart` |
+| `lib/features/planner/presentation/widgets/plan_summary_card.dart` | `test/features/planner/presentation/widgets/plan_summary_card_test.dart` |
 
-**Total: 0 tests.**
+The planner feature has **6 untested presentation widgets** -- the highest gap of any feature. Only `planner_screen_test.dart` provides integration-level coverage, meaning individual card rendering, empty states, and interaction patterns (booking a lesson, toggling milestones) have zero coverage.
 
-### `lib/features/lessons/services/lesson_service.dart` (116 lines)
+### Practice
 
-Contains arithmetic logic in `getTotalStudyMinutes`, `getCompletionRate`, `getRemainingLessonCount`, `getProgressBySubject`. Date filtering logic in `getUpcomingLessons` and `getRecentLessons`. Topic deduplication in `getTopicsWithLessons`.
+| Source | Expected Test |
+|---|---|
+| `lib/features/practice/presentation/widgets/practice_session_question_card.dart` | `test/features/practice/presentation/widgets/practice_session_question_card_test.dart` |
+| `lib/features/practice/presentation/services/practice_data_service.dart` | `test/features/practice/presentation/services/practice_data_service_test.dart` |
+| `lib/features/practice/presentation/services/practice_session_service.dart` | `test/features/practice/presentation/services/practice_session_service_test.dart` |
 
-**Total: 0 tests.**
-
-**Fix**: Create four new test files:
-- `test/features/planner/providers/planner_providers_test.dart`
-- `test/features/planner/services/planner_service_test.dart`
-- `test/features/lessons/providers/lesson_providers_test.dart`
-- `test/features/lessons/services/lesson_service_test.dart`
-
-Each should use hand-written fakes (per project convention — no mockito), `ProviderContainer`/`ProviderScope` for provider tests, and cover: data states, loading states, error states, empty/null edge cases, dependency wiring verification.
-
----
-
-## 3. Orphaned Subject Repository Test Files
-
-Five test files live under `test/features/subjects/data/repositories/`:
-
-```
-test/features/subjects/data/repositories/
-  subject_repository_test.dart
-  subject_repository_comprehensive_test.dart
-  subject_repository_error_test.dart
-  subject_repository_init_test.dart
-  subject_repository_extra_edge_cases_test.dart
-```
-
-But the source class `SubjectRepository` is defined at:
-```
-lib/core/data/repositories/subject_repository.dart
-```
-
-These tests violate the AGENTS.md convention that test location should mirror source location. They should live under `test/core/data/repositories/`.
-
-**Fix**: Move the five files to `test/core/data/repositories/` and update any import paths.
+`PracticeSessionQuestionCard` is the core interactive widget during a practice session (displays the question, captures answers). The two presentation-layer services (`PracticeDataService`, `PracticeSessionService`) encapsulate session orchestration logic and are pure Dart -- ideal for fast unit tests, yet untested.
 
 ---
 
-## 4. Missing Test Scenarios in Existing Service Tests
+## 2. Structural Mismatch: Test File Not Mirroring Source Location
 
-### `test/features/ingestion/services/content_pipeline_test.dart`
+| Test File | Imports From | Source Location | Correct Location |
+|---|---|---|---|
+| `test/features/subjects/models/subject_model_test.dart` | `lib/core/data/models/subject_model.dart` | **core** (not a feature) | `test/core/data/models/subject_model_test.dart` |
 
-- `processAndClassify()` is completely untested. This method contains topic classification logic that is distinct from `processUpload`.
+The `Subject` model lives in `lib/core/data/models/subject_model.dart` (the core layer), but its test was placed under `test/features/subjects/models/`. Per `AGENTS.md`, tests should mirror source location. Placing a core-model test under a feature directory breaks discoverability and sets a misleading precedent.
 
-### `test/features/sessions/services/session_export_test.dart`
+---
 
-- `shareCSV()`, `shareJSON()`, `sharePDF()` are untested. These involve file I/O and platform channel calls. At minimum, verify they produce the correct payload format without actually triggering the platform share.
+## 3. Bloated / Duplicative Tests
+
+### Dashboard: `dashboard_screen_test.dart` + `dashboard_screen_coverage_test.dart`
+
+| File | Lines |
+|---|---|
+| `dashboard_screen_test.dart` | 1132 |
+| `dashboard_screen_coverage_test.dart` | 907 |
+
+These two files share substantial overlap:
+
+| Test Scenario | In `_test` | In `_coverage` |
+|---|---|---|
+| Weak area boundary at 60% | Yes (lines 495-522) | Yes (lines 485-502) |
+| Practice All button navigation | Yes (lines 571-599) | Yes (lines 550-573) |
+| High/medium/low adherence values | Yes (lines 1052-1130) | Yes (lines 721-806) |
+| Mastery labels for all 5 levels | Yes (lines 970-997) | Yes (lines 837-886) |
+| Refresh indicator presence | Yes (lines 1000-1017) | Yes (lines 889-904) |
+
+The coverage file was clearly added later to fill gaps, but rather than merging scenarios into the existing test groups, it duplicated setup boilerplate and re-tested the same widget behavior. This doubles maintenance cost and makes it hard to tell which scenarios are actually novel.
+
+**Recommendation**: Merge the two files, eliminating duplicate test cases. Keep ~800 unique lines covering all widget behaviors in a single file.
+
+### Dashboard Providers: `dashboard_providers_test.dart`
+
+| Source lines | Test lines | Ratio |
+|---|---|---|
+| 36 | 434 | 12:1 |
+
+The test file exhaustively tests every Riverpod provider against 6 scenarios (uniqueness, different containers, simple override, combined overrides, container isolation, disposal, watch). Most of these tests exercise Riverpod's `ProviderContainer` behavior rather than any project-specific logic. The 6 providers are trivial factory functions (`Provider<TopicRepository>((ref) => TopicRepository())`).
+
+**Recommendation**: Replace the combinatorial grid with 1--2 tests per provider that verify (a) the provider resolves without throwing and (b) overrides propagate to consumers. Keep the file under 100 lines.
+
+---
+
+## 4. Missing Unit-Level Coverage for Business Logic
+
+The `DashboardScreen._loadData()` method (lines 68--113 of `dashboard_screen.dart`) contains complex error-handling with distinct behaviors per service:
+
+| Operation | Error Behavior | Tested? |
+|---|---|---|
+| Focus service + `repo.init()` | Silent `catch (_) {}` -- `_focusTodayStats` stays `null` | No |
+| `getAllTopicMastery` failure | `_allMastery` stays `[]` | **Only at widget level** (coverage file lines 270-301) |
+| `getMasterySnapshot` failure | `_snapshot` stays `null` | **Only at widget level** (coverage file lines 303-327) |
+| Adherence repo failure | **Unhandled** -- will propagate and crash the widget | No |
+| Focus repo `init()` failure | Silent catch -- `_focusTodayStats` stays `null` | No |
+
+Only two of these five failure paths have widget-level coverage. None have unit-level coverage. Unit tests that inject fake services and verify the `_allMastery`/`_snapshot`/`_focusTodayStats` fields after partial failures would be faster to run and more precise than widget tests.
+
+**Recommendation**: Extract the data-loading orchestration into a testable service or use Riverpod `AsyncNotifier` with a well-defined state class, then write unit tests for each partial-failure permutation.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] **A1**: `dashboard_providers_test.dart` is rewritten to use `ProviderContainer` + overrides, verifying wiring and error handling.
-- [ ] **A2**: `practice_providers_test.dart` is rewritten to use fakes + `ProviderContainer` with overrides.
-- [ ] **A3**: `test/features/planner/providers/planner_providers_test.dart` exists and covers all 6+ state transitions in `PlannerNotifier` (loading, generating, success, null-result error, exception, clearMessages, idle).
-- [ ] **A4**: `test/features/planner/services/planner_service_test.dart` exists and covers `generatePlan` (null/valid), `createRoadmap` (milestone distribution, date arithmetic), `loadExistingPlan`, `loadRoadmaps`, and studentId resolution.
-- [ ] **A5**: `test/features/lessons/providers/lesson_providers_test.dart` exists and verifies each `FutureProvider.family` resolves with data/error, plus the override fallback pattern.
-- [ ] **A6**: `test/features/lessons/services/lesson_service_test.dart` exists and covers all arithmetic methods (`getCompletionRate`, `getTotalStudyMinutes`, `getRemainingLessonCount`, `getProgressBySubject`) with edge cases (empty lessons, all completed, none completed, zero division).
-- [ ] **A7**: Five `subject_repository_*_test.dart` files moved to `test/core/data/repositories/` with corrected imports.
-- [ ] **A8**: `content_pipeline_test.dart` adds tests for `processAndClassify()`.
-- [ ] **A9**: `session_export_test.dart` adds tests for `shareCSV`/`shareJSON`/`sharePDF` payload generation.
+- [ ] **1. Missing tests**: All 12 source files listed in Section 1 have corresponding test files with at least one passing test.
+- [ ] **2. Structural fix**: `subject_model_test.dart` moved from `test/features/subjects/models/` to `test/core/data/models/` (or the old path re-exported from the new one with a deprecation note).
+- [ ] **3a. Deduplication**: `dashboard_screen_test.dart` and `dashboard_screen_coverage_test.dart` merged; no duplicate test scenarios.
+- [ ] **3b. Provider tests**: `dashboard_providers_test.dart` reduced to ≤100 lines, testing only project-specific behavior (no Riverpod framework tests).
+- [ ] **4. Unit coverage**: At least one unit test per partial-failure path in `DashboardScreen._loadData()` (focus failure, mastery failure, adherence failure, combined partial failures).

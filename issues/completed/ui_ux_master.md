@@ -1,117 +1,46 @@
-# Focus Mode systemic design language, accessibility, and layout inconsistencies
+# Settings Screen: Non-Functional Notification Toggles & Duplicate Controls Erode User Trust
 
 ## Context
 
-The Focus Mode feature (`lib/features/focus_mode/`) is one of five bottom-nav tabs and a core feature of the app (estimated study timer with break period). However, it was developed with a different set of conventions from the rest of the app, leading to a poor user experience that degrades overall app cohesion.
+The Settings screen (`lib/features/settings/presentation/settings_screen.dart`) has two independent sections — **"Notification Preferences"** (~line 99) and **"Study Preferences"** (~line 161) — that both manage notification-related settings. The notification preferences section contains **four `SwitchListTile` widgets whose `onChanged` callbacks are empty no-ops** (`onChanged: (value) {}`), meaning users can toggle them but nothing ever happens. Additionally, both sections expose a `SwitchListTile` that reads `settings.studyRemindersEnabled` with identical subtitle text (`enableNotificationAlerts`), creating a confusing dual-control pattern where flipping one switch does not visually reflect on the other.
 
-## Issues identified
+## Affected Files
 
-### 1. Hardcoded English strings — no internationalization
+| File | Lines | Issue |
+|---|---|---|
+| `lib/features/settings/presentation/settings_screen.dart` | 127–157 | Four notification toggles have empty `onChanged` handlers — no state is persisted, no behavior changes |
+| `lib/features/settings/presentation/settings_screen.dart` | 99–109, 161–171 | Duplicate "Study Reminders" / "Enable Notifications" section — both control the same `settings.studyRemindersEnabled` field but render as independent widgets |
+| `lib/features/settings/presentation/settings_screen.dart` | 111–130 | When notifications are enabled, subtitle text on daily reminders (`enableNotificationAlerts`) is identical to the parent's subtitle |
+| `lib/features/settings/presentation/settings_screen.dart` | 107, 167 | Same subtitle string `l10n.enableNotificationAlerts` used for two different switches in two sections — semantically incorrect |
 
-Every other feature uses `AppLocalizations.of(context)` for all user-facing strings. Focus Mode hardcodes English in multiple files:
+## Screenshots / Navigation Path
 
-| File | Hardcoded strings |
-|---|---|
-| `focus_timer_screen.dart` | `'Focus Mode'` (AppBar title), `'New Focus Session'`, `'Duration'`, `'Refresh stats'`, `'Error starting session: '`, `'Daily Limit Reached'`, `'Break Time!'`, `'Session completed: '`, `'Focus for '`, `' minutes'`, `'OK'` (dialog), dialog body text |
-| `focus_timer_widget.dart` | `'remaining'`, `'PAUSED'`, `'DONE!'`, `'Resume'`, `'Pause'`, `'End'`, `'Mark Complete'` |
-| `focus_session_service.dart` | Any error messages or status logs |
+1. Open app → navigate to **Settings** (gear icon).
+2. Scroll to **"Notification Preferences"** section.
+3. Toggle **"Revision Reminders"**, **"Lesson Notifications"**, **"Overwork Alerts"**, **"Plan Adjustment Notifications"** — each moves visually but reverts on rebuild / does nothing.
+4. Scroll to **"Study Preferences"** section — a second "Study Reminders" switch controls the same underlying boolean but is visually disconnected.
 
-**Severity**: High. Spanish-speaking users get a mixed English/Spanish interface.
+## Root Cause Analysis
 
-### 2. Hardcoded semantic colors ignored in high-contrast mode
+- **Dead callbacks**: `SwitchListTile` widgets at lines 128, 136, 144, 153 were scaffolded with empty lambda `onChanged: (value) {}` and never wired to a provider action or state field.
+- **Redundant section**: "Study Preferences" was added after "Notification Preferences" without consolidating the overlapping "Study Reminders" toggle. Both read/write `settings.studyRemindersEnabled` but do not synchronise their visual state reactively.
+- **Duplicate subtitle l10n key**: `l10n.enableNotificationAlerts` is reused as the subtitle for both the master "Enable Notifications" switch and the child "Daily Reminders" switch, despite describing different scopes.
 
-The rest of the app uses `Theme.of(context).colorScheme.*` for all colored elements. Focus Mode hardcodes semantic colors:
+## Why This Is a High-Value Issue
 
-- `focus_timer_widget.dart:112,123,132` — uses `Colors.green` for completion states
-- `focus_timer_widget.dart:130` — uses `Colors.orange` for paused state
-- `focus_timer_screen.dart:233,238` — uses `Colors.orange` for break view icon and title
+- **Erodes user trust**: A settings toggle that silently does nothing is worse than a missing feature — users learn that the UI lies to them.
+- **Blocks downstream features**: Without working notification preferences, features like revision reminders, overwork alerts, and plan adjustments cannot be rolled out without a settings prerequisite.
+- **Accessibility failure**: Screen reader users who navigate by toggles will activate switches that have no effect, receiving no feedback or error.
+- **Maintenance debt**: Any future developer adding a new notification type must reverse-engineer whether to use the "Notification Preferences" section, the "Study Preferences" section, or both.
 
-When a user enables **high-contrast mode** (via system settings or the accessibility preference), these hardcoded colors bypass the theme entirely, producing low-contrast or invisible elements.
+## Acceptance Criteria
 
-**Severity**: High. Breaks WCAG SC 1.4.6 (contrast enhanced) for users who need high contrast.
-
-### 3. Fixed-size timer circle does not respond to screen size
-
-```dart
-SizedBox(
-  width: 260,
-  height: 260,
-  child: CircularProgressIndicator(...)
-)
-```
-
-The `FocusTimerWidget` uses a hardcoded `260×260` box for the circular timer and `displaySmall` text (at a clamped 14–30px range). On phones `< 360px` wide (e.g., iPhone SE, small Android devices), this consumes nearly the full viewport width with no horizontal padding. On tablets, the 260px circle looks disproportionately small compared to available space.
-
-The `displaySmall` font for the countdown digits also does not scale to accommodate longer strings (e.g., `01:23:45` when sessions exceed one hour), causing potential overflow or an inconsistent sizing experience.
-
-**Severity**: Medium. Degrades experience on extreme screen sizes.
-
-### 4. Pulse animation continues running when timer is paused
-
-```dart
-// In didUpdateWidget:
-if (!widget.isActive && oldWidget.isActive) {
-  _pulseController.stop();    // stops ONLY on transition to isActive=false
-  _pulseController.reset();
-}
-```
-
-When the user pauses the session, `widget.isActive` stays `true` — only `widget.isPaused` changes. The pulse `AnimationController` never stops. This means:
-
-- The `_pulseController.repeat(reverse: true)` runs indefinitely during a paused session
-- The `AnimatedBuilder` triggers rebuilds on every frame even though nothing is animating visually (pulse = 1.0 while paused)
-- Wasted CPU/battery for no benefit
-
-**Severity**: Medium. Performance regression during paused state.
-
-### 5. No Riverpod dependency injection, inconsistent with the rest of the app
-
-Every other feature injects services/repositories via Riverpod providers. Focus Mode manually instantiates:
-
-```dart
-final FocusSessionService _service = FocusSessionService(
-  repository: FocusSessionRepository(),
-);
-```
-
-This means:
-- The `FocusSessionRepository` and `FocusSessionService` cannot be overridden for widget tests
-- The repository `init()` is called inside `_init()` in the screen, making it impossible to test the screen without real Hive I/O
-- The Dashboard feature already creates a `FocusSessionService` via a Riverpod provider (`dashboardFocusServiceProvider`) — creating a second, independent instance wastes resources and can lead to inconsistent state
-
-**Severity**: High. Blocks automated widget testing and can cause state duplication bugs.
-
-### 6. Daily-limit-reached AlertDialog uses hardcoded English and icon color
-
-In `focus_timer_screen.dart:133`, the icon is hardcoded to `Colors.green`:
-
-```dart
-icon: const Icon(Icons.celebration, size: 48, color: Colors.green),
-```
-
-This bypasses the user's theme and high-contrast settings.
-
-**Severity**: High. Compounds issues 1 and 2.
-
-## Affected files
-
-| File | Issues |
-|---|---|
-| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | 1, 2, 5, 6 |
-| `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart` | 1, 2, 3, 4 |
-| `lib/features/focus_mode/services/focus_session_service.dart` | 1 (if any user-facing strings exist) |
-| `lib/features/focus_mode/presentation/widgets/session_summary_card.dart` | 1, 2 (if any) |
-
-## Rationale
-
-Focus Mode occupies a primary navigation slot (one of 5 bottom tabs), yet it feels like a separate app bolted onto StudyKing. Users who switch between features immediately notice the inconsistency: the Practice screen uses translated strings and theme-aware colors, but the Focus timer shows hardcoded English in raw green/orange. For accessibility users who rely on high-contrast mode, the hardcoded colors can render text invisible. For Spanish-speaking users, the feature is partially broken. For developers, the lack of Riverpod injection makes widget tests impossible without real Hive IO — a significant quality gap.
-
-## Acceptance criteria
-
-1. All user-facing strings in `focus_timer_screen.dart`, `focus_timer_widget.dart`, and `session_summary_card.dart` are replaced with `AppLocalizations.of(context)!` lookups
-2. All hardcoded `Colors.green` and `Colors.orange` uses in these files are replaced with `Theme.of(context).colorScheme.*` equivalents
-3. The `FocusTimerWidget` timer circle (`SizedBox(width: 260, height: 260)`) is replaced with a responsive size derived from `MediaQuery.sizeOf` or `LayoutBuilder`, with minimum 200px and maximum 80% of available width
-4. The pulse animation stops when `isPaused` is true (not just when `isActive` becomes false)
-5. `FocusSessionService` and `FocusSessionRepository` are provided via Riverpod providers (in a new `focus_mode/providers/` directory), and `FocusTimerScreen` uses `ref.read`/`ref.watch` to obtain them
-6. The daily-limit-reached dialog uses `Theme.of(context).colorScheme.primary` for the icon color instead of `Colors.green`
-7. A widget test for `FocusTimerScreen` exists (using test overrides for the new Riverpod providers) that verifies the setup→active→break flow renders correctly
+1. Every `SwitchListTile` in the "Notification Preferences" section must persist its value to a dedicated field in `SettingsBox` (e.g., `revisionRemindersEnabled`, `lessonNotificationsEnabled`, `overworkAlertsEnabled`, `planAdjustmentNotificationsEnabled`) and reflect the persisted state on rebuild.
+2. The "Study Reminders" switch in **"Study Preferences"** must be either:
+   - Removed (with the master switch in "Notification Preferences" promoted to cover both sections), **or**
+   - Linked to the same provider so that toggling one immediately updates the other and the UI stays in sync.
+3. All subtitle strings must be reviewed so that parent and child switches do not share the same `l10n` key when their meaning differs.
+4. A quick integration test must verify that:
+   - Toggling each notification preference persists across a widget rebuild.
+   - The duplicated study-reminders switch (if kept) reflects the same state as its counterpart.
+5. No existing functional switch (theme, high contrast, large touch targets, reduce motion, focus-mode settings) should be broken by these changes.

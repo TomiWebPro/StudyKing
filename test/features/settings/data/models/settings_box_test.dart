@@ -53,6 +53,27 @@ void main() {
       expect(restored.totalSessionCount, settings.totalSessionCount);
       expect(restored.totalStudyTimeMs, settings.totalStudyTimeMs);
       expect(restored.totalQuestions, settings.totalQuestions);
+      expect(restored.revisionRemindersEnabled, settings.revisionRemindersEnabled);
+      expect(restored.lessonNotificationsEnabled, settings.lessonNotificationsEnabled);
+      expect(restored.overworkAlertsEnabled, settings.overworkAlertsEnabled);
+      expect(restored.planAdjustmentNotificationsEnabled, settings.planAdjustmentNotificationsEnabled);
+    });
+
+    test('serializes and deserializes notification preference fields', () {
+      final settings = SettingsBox(
+        revisionRemindersEnabled: false,
+        lessonNotificationsEnabled: false,
+        overworkAlertsEnabled: true,
+        planAdjustmentNotificationsEnabled: false,
+      );
+
+      final json = settings.toJson();
+      final restored = SettingsBox.fromJson(json);
+
+      expect(restored.revisionRemindersEnabled, isFalse);
+      expect(restored.lessonNotificationsEnabled, isFalse);
+      expect(restored.overworkAlertsEnabled, isTrue);
+      expect(restored.planAdjustmentNotificationsEnabled, isFalse);
     });
 
     test('fromJson applies defaults for missing/null values', () {
@@ -105,6 +126,26 @@ void main() {
     test('sets largeTouchTargets from constructor', () {
       final settings = SettingsBox(largeTouchTargets: true);
       expect(settings.largeTouchTargets, isTrue);
+    });
+
+    test('sets revisionRemindersEnabled from constructor', () {
+      final settings = SettingsBox(revisionRemindersEnabled: false);
+      expect(settings.revisionRemindersEnabled, isFalse);
+    });
+
+    test('sets lessonNotificationsEnabled from constructor', () {
+      final settings = SettingsBox(lessonNotificationsEnabled: false);
+      expect(settings.lessonNotificationsEnabled, isFalse);
+    });
+
+    test('sets overworkAlertsEnabled from constructor', () {
+      final settings = SettingsBox(overworkAlertsEnabled: false);
+      expect(settings.overworkAlertsEnabled, isFalse);
+    });
+
+    test('sets planAdjustmentNotificationsEnabled from constructor', () {
+      final settings = SettingsBox(planAdjustmentNotificationsEnabled: false);
+      expect(settings.planAdjustmentNotificationsEnabled, isFalse);
     });
   });
 

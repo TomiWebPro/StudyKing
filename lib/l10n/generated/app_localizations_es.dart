@@ -2141,7 +2141,7 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?';
 
   @override
-  String get roadmaps => 'Roadmaps';
+  String get roadmaps => 'Rutas de aprendizaje';
 
   @override
   String get createRoadmap => 'Crear Roadmap';
@@ -2325,7 +2325,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dailyLimitReachedBody =>
-      'Has alcanzado tu límite diario de estudio. ¡Bien hecho! Descansa y vuelve mañana.';
+      'Ha alcanzado su límite diario de estudio. ¡Bien hecho! Descanse y vuelva mañana.';
 
   @override
   String get breakTime => 'Descanso';
@@ -2336,8 +2336,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get focus => 'Enfoque';
+
+  @override
   String focusForMinutes(int minutes) {
-    return 'Enfócate por $minutes minutos';
+    return 'Enfóquese por $minutes minutos';
   }
 
   @override

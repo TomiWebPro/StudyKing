@@ -137,7 +137,7 @@ void main() {
         retryCallback: () {},
       );
       await tester.pump();
-      expect(find.text('Retry Connection'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('handleSyncError shows retry-specific text for ApiRateLimitException',
@@ -151,7 +151,7 @@ void main() {
         retryCallback: () {},
       );
       await tester.pump();
-      expect(find.text('Retry After Wait'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
   });
 
@@ -273,7 +273,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Invalid data format'), findsOneWidget);
+      expect(find.text('Validation failed: bad format'), findsOneWidget);
     });
   });
 }

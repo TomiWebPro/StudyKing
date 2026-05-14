@@ -5,8 +5,6 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 
 void main() {
@@ -49,14 +47,6 @@ void main() {
         expect(service, isA<InstrumentationService>());
       });
 
-      test('dashboardFocusServiceProvider creates FocusSessionService', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final service = container.read(dashboardFocusServiceProvider);
-        expect(service, isA<FocusSessionService>());
-      });
-
       test(
           'dashboardAdherenceRepositoryProvider creates PlanAdherenceRepository',
           () {
@@ -77,7 +67,7 @@ void main() {
             dashboardStudyProgressTrackerProvider,
         'dashboardInstrumentationServiceProvider':
             dashboardInstrumentationServiceProvider,
-        'dashboardFocusServiceProvider': dashboardFocusServiceProvider,
+
         'dashboardAdherenceRepositoryProvider':
             dashboardAdherenceRepositoryProvider,
       };
@@ -140,13 +130,6 @@ void main() {
         expect(usedRepo, same(overrideRepo));
       });
 
-      test('dashboardFocusServiceProvider uses FocusSessionRepository', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final service = container.read(dashboardFocusServiceProvider);
-        expect(service.repository, isA<FocusSessionRepository>());
-      });
     });
 
     group('provider override', () {
@@ -207,23 +190,6 @@ void main() {
         addTearDown(container.dispose);
 
         final service = container.read(dashboardInstrumentationServiceProvider);
-        expect(service, same(overrideService));
-      });
-
-      test('can override dashboardFocusServiceProvider', () {
-        final overrideRepo = FocusSessionRepository();
-        final overrideService =
-            FocusSessionService(repository: overrideRepo);
-
-        final container = ProviderContainer(
-          overrides: [
-            dashboardFocusServiceProvider
-                .overrideWithValue(overrideService),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final service = container.read(dashboardFocusServiceProvider);
         expect(service, same(overrideService));
       });
 
@@ -311,7 +277,7 @@ void main() {
         expect(overridden, isNot(same(normal)));
       });
 
-      test('overrides do not leak across all six providers', () {
+      test('overrides do not leak across all five providers', () {
         final overrideRepo = TopicRepository();
         final containerWithOverride = ProviderContainer(
           overrides: [
@@ -346,7 +312,6 @@ void main() {
             container.read(dashboardAttemptRepositoryProvider);
             container.read(dashboardStudyProgressTrackerProvider);
             container.read(dashboardInstrumentationServiceProvider);
-            container.read(dashboardFocusServiceProvider);
             container.read(dashboardAdherenceRepositoryProvider);
           },
           returnsNormally,
@@ -360,7 +325,6 @@ void main() {
         expect(
           () {
             container.read(dashboardAdherenceRepositoryProvider);
-            container.read(dashboardFocusServiceProvider);
             container.read(dashboardInstrumentationServiceProvider);
             container.read(dashboardStudyProgressTrackerProvider);
             container.read(dashboardAttemptRepositoryProvider);
@@ -381,7 +345,6 @@ void main() {
               container.read(dashboardAttemptRepositoryProvider);
               container.read(dashboardStudyProgressTrackerProvider);
               container.read(dashboardInstrumentationServiceProvider);
-              container.read(dashboardFocusServiceProvider);
               container.read(dashboardAdherenceRepositoryProvider);
             }
           },

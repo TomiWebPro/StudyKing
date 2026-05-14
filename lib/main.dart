@@ -239,7 +239,7 @@ class _MainScreenState extends State<MainScreen> {
         floatingActionButton: Focus(
           child: FloatingActionButton.small(
             onPressed: () => _openDashboard(),
-            tooltip: 'Dashboard',
+            tooltip: l10n.dashboard,
             child: const Icon(Icons.dashboard),
           ),
         ),
@@ -269,7 +269,7 @@ class _MainScreenState extends State<MainScreen> {
             NavigationDestination(
               icon: Icon(Icons.timer_outlined),
               selectedIcon: Icon(Icons.timer),
-              label: 'Focus',
+              label: l10n.focus,
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

@@ -15,6 +15,13 @@ abstract class MockSettingsRepository {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   });
   Future<void> updateStats({
     int? sessionCount,
@@ -62,6 +69,13 @@ class InMemorySettingsRepository implements MockSettingsRepository {
       studyRemindersEnabled: _settings['studyRemindersEnabled'] ?? true,
       requestTimeoutSeconds: _settings['requestTimeoutSeconds'] ?? 120,
       sessionDurationMinutes: _settings['sessionDurationMinutes'] ?? 30,
+      highContrastEnabled: _settings['highContrastEnabled'] ?? false,
+      largeTouchTargets: _settings['largeTouchTargets'] ?? false,
+      reduceMotion: _settings['reduceMotion'] ?? false,
+      revisionRemindersEnabled: _settings['revisionRemindersEnabled'] ?? true,
+      lessonNotificationsEnabled: _settings['lessonNotificationsEnabled'] ?? true,
+      overworkAlertsEnabled: _settings['overworkAlertsEnabled'] ?? true,
+      planAdjustmentNotificationsEnabled: _settings['planAdjustmentNotificationsEnabled'] ?? true,
     );
   }
 
@@ -75,6 +89,13 @@ class InMemorySettingsRepository implements MockSettingsRepository {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
     _ensureInitialized();
     final current = await getSettings();
@@ -90,6 +111,20 @@ class InMemorySettingsRepository implements MockSettingsRepository {
         requestTimeoutSeconds ?? current.requestTimeoutSeconds;
     _settings['sessionDurationMinutes'] =
         sessionDurationMinutes ?? current.sessionDurationMinutes;
+    _settings['highContrastEnabled'] =
+        highContrastEnabled ?? current.highContrastEnabled;
+    _settings['largeTouchTargets'] =
+        largeTouchTargets ?? current.largeTouchTargets;
+    _settings['reduceMotion'] =
+        reduceMotion ?? current.reduceMotion;
+    _settings['revisionRemindersEnabled'] =
+        revisionRemindersEnabled ?? current.revisionRemindersEnabled;
+    _settings['lessonNotificationsEnabled'] =
+        lessonNotificationsEnabled ?? current.lessonNotificationsEnabled;
+    _settings['overworkAlertsEnabled'] =
+        overworkAlertsEnabled ?? current.overworkAlertsEnabled;
+    _settings['planAdjustmentNotificationsEnabled'] =
+        planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled;
   }
 
   @override
@@ -250,6 +285,37 @@ void main() {
         expect(settings.themeMode, equals(ThemeMode.dark.index));
         expect(settings.fontSize, equals(20.0));
       });
+
+      test('returns default accessibility and notification values', () async {
+        final settings = await repository.getSettings();
+        expect(settings.highContrastEnabled, isFalse);
+        expect(settings.largeTouchTargets, isFalse);
+        expect(settings.reduceMotion, isFalse);
+        expect(settings.revisionRemindersEnabled, isTrue);
+        expect(settings.lessonNotificationsEnabled, isTrue);
+        expect(settings.overworkAlertsEnabled, isTrue);
+        expect(settings.planAdjustmentNotificationsEnabled, isTrue);
+      });
+
+      test('returns persisted accessibility and notification values', () async {
+        await repository.updateSettings(
+          highContrastEnabled: true,
+          largeTouchTargets: true,
+          reduceMotion: true,
+          revisionRemindersEnabled: false,
+          lessonNotificationsEnabled: false,
+          overworkAlertsEnabled: false,
+          planAdjustmentNotificationsEnabled: false,
+        );
+        final settings = await repository.getSettings();
+        expect(settings.highContrastEnabled, isTrue);
+        expect(settings.largeTouchTargets, isTrue);
+        expect(settings.reduceMotion, isTrue);
+        expect(settings.revisionRemindersEnabled, isFalse);
+        expect(settings.lessonNotificationsEnabled, isFalse);
+        expect(settings.overworkAlertsEnabled, isFalse);
+        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
+      });
     });
 
     group('updateSettings', () {
@@ -342,6 +408,75 @@ void main() {
         expect(settings.totalSessionCount, equals(5));
         expect(settings.totalStudyTimeMs, equals(3600000));
         expect(settings.totalQuestions, equals(100));
+      });
+
+      test('updates highContrastEnabled', () async {
+        await repository.updateSettings(highContrastEnabled: true);
+        expect((await repository.getSettings()).highContrastEnabled, isTrue);
+        await repository.updateSettings(highContrastEnabled: false);
+        expect((await repository.getSettings()).highContrastEnabled, isFalse);
+      });
+
+      test('updates largeTouchTargets', () async {
+        await repository.updateSettings(largeTouchTargets: true);
+        expect((await repository.getSettings()).largeTouchTargets, isTrue);
+        await repository.updateSettings(largeTouchTargets: false);
+        expect((await repository.getSettings()).largeTouchTargets, isFalse);
+      });
+
+      test('updates reduceMotion', () async {
+        await repository.updateSettings(reduceMotion: true);
+        expect((await repository.getSettings()).reduceMotion, isTrue);
+        await repository.updateSettings(reduceMotion: false);
+        expect((await repository.getSettings()).reduceMotion, isFalse);
+      });
+
+      test('updates revisionRemindersEnabled', () async {
+        await repository.updateSettings(revisionRemindersEnabled: false);
+        expect((await repository.getSettings()).revisionRemindersEnabled, isFalse);
+        await repository.updateSettings(revisionRemindersEnabled: true);
+        expect((await repository.getSettings()).revisionRemindersEnabled, isTrue);
+      });
+
+      test('updates lessonNotificationsEnabled', () async {
+        await repository.updateSettings(lessonNotificationsEnabled: false);
+        expect((await repository.getSettings()).lessonNotificationsEnabled, isFalse);
+        await repository.updateSettings(lessonNotificationsEnabled: true);
+        expect((await repository.getSettings()).lessonNotificationsEnabled, isTrue);
+      });
+
+      test('updates overworkAlertsEnabled', () async {
+        await repository.updateSettings(overworkAlertsEnabled: false);
+        expect((await repository.getSettings()).overworkAlertsEnabled, isFalse);
+        await repository.updateSettings(overworkAlertsEnabled: true);
+        expect((await repository.getSettings()).overworkAlertsEnabled, isTrue);
+      });
+
+      test('updates planAdjustmentNotificationsEnabled', () async {
+        await repository.updateSettings(planAdjustmentNotificationsEnabled: false);
+        expect((await repository.getSettings()).planAdjustmentNotificationsEnabled, isFalse);
+        await repository.updateSettings(planAdjustmentNotificationsEnabled: true);
+        expect((await repository.getSettings()).planAdjustmentNotificationsEnabled, isTrue);
+      });
+
+      test('updates all accessibility and notification fields at once', () async {
+        await repository.updateSettings(
+          highContrastEnabled: true,
+          largeTouchTargets: true,
+          reduceMotion: true,
+          revisionRemindersEnabled: false,
+          lessonNotificationsEnabled: false,
+          overworkAlertsEnabled: false,
+          planAdjustmentNotificationsEnabled: false,
+        );
+        final settings = await repository.getSettings();
+        expect(settings.highContrastEnabled, isTrue);
+        expect(settings.largeTouchTargets, isTrue);
+        expect(settings.reduceMotion, isTrue);
+        expect(settings.revisionRemindersEnabled, isFalse);
+        expect(settings.lessonNotificationsEnabled, isFalse);
+        expect(settings.overworkAlertsEnabled, isFalse);
+        expect(settings.planAdjustmentNotificationsEnabled, isFalse);
       });
     });
 

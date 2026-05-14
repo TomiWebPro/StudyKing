@@ -3,8 +3,10 @@ import '../data/repositories/mastery_graph_repository.dart';
 import '../data/repositories/topic_repository.dart';
 import '../data/repositories/plan_repository.dart';
 import '../data/repositories/plan_adherence_repository.dart';
+import '../data/repositories/question_repository.dart';
 import '../data/models/topic_dependency_model.dart';
 import '../data/models/mastery_state_model.dart';
+import '../data/models/topic_model.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import '../data/models/plan_adherence_model.dart';
 import 'mastery_graph_service.dart';
@@ -37,6 +39,7 @@ class PersonalLearningPlanService {
   final TopicRepository _topicRepository;
   final PlanRepository _planRepository;
   final PlanAdherenceRepository _adherenceRepository;
+  final QuestionRepository _questionRepository;
   PlanGenerationConfig config;
 
   PersonalLearningPlanService({
@@ -45,18 +48,19 @@ class PersonalLearningPlanService {
     TopicRepository? topicRepository,
     PlanRepository? planRepository,
     PlanAdherenceRepository? adherenceRepository,
+    QuestionRepository? questionRepository,
     PlanGenerationConfig? config,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
+        _questionRepository = questionRepository ?? QuestionRepository(),
         config = config ?? PlanGenerationConfig();
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
     try {
       await _repository.init();
-      await _adherenceRepository.init();
     } catch (e) {
       return Result.failure('Failed to initialize repository: $e');
     }
@@ -132,11 +136,12 @@ class PersonalLearningPlanService {
       completedTopicIds: completedTopicIds,
     );
 
-    final summary = _generateSummary(dailyPlans, recommendations);
+    final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
+    final summary = _generateSummary(linkedPlans, recommendations);
     final plan = PersonalLearningPlan(
       studentId: studentId,
       generatedAt: DateTime.now(),
-      dailyPlans: dailyPlans,
+      dailyPlans: linkedPlans,
       summary: summary,
       recommendations: recommendations,
       planDurationDays: config.planDurationDays,
@@ -150,6 +155,171 @@ class PersonalLearningPlanService {
     } catch (_) {}
 
     return Result.success(plan);
+  }
+
+  Future<Result<PersonalLearningPlan>> generatePlanFromSyllabus({
+    required String studentId,
+    required List<SyllabusGoal> syllabusGoals,
+  }) async {
+    try {
+      await _repository.init();
+    } catch (e) {
+      return Result.failure('Failed to initialize repository: $e');
+    }
+    try {
+      await _adherenceRepository.init();
+    } catch (_) {}
+
+    final masteryStatesResult = await _repository.getAllMasteryStates(studentId);
+    if (masteryStatesResult.isFailure) {
+      return Result.failure(masteryStatesResult.error);
+    }
+
+    final allDependenciesResult = await _repository.getAllDependencies();
+    if (allDependenciesResult.isFailure) {
+      return Result.failure(allDependenciesResult.error);
+    }
+
+    final topicMastery = masteryStatesResult.data!;
+    final dependencies = allDependenciesResult.data!;
+    final dependencyMap = {for (var d in dependencies) d.topicId: d};
+
+    final completedTopicIds = topicMastery
+        .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
+        .map((s) => s.topicId)
+        .toSet();
+
+    final allTopics = <String, Topic>{};
+    for (final goal in syllabusGoals) {
+      final topics = await _topicRepository.getBySubject(goal.subjectId);
+      for (final topic in topics) {
+        allTopics[topic.id] = topic;
+      }
+    }
+
+    final recommendations = <PlanRecommendation>[];
+    for (final state in topicMastery) {
+      final dependency = dependencyMap[state.topicId];
+      final isPrereq = dependency?.prerequisites.any((p) => !completedTopicIds.contains(p)) ?? false;
+      final downstreamCount = dependency?.downstreamTopics.length ?? 0;
+      final priority = dependency?.calculatePriority(
+            masteryState: state.accuracy,
+            isPrerequisite: isPrereq,
+            downstreamCount: downstreamCount,
+          ) ??
+          (1 - state.accuracy);
+
+      recommendations.add(PlanRecommendation(
+        topicId: state.topicId,
+        reason: _generateRecommendationReason(state),
+        recommendationType: _classifyRecommendation(state),
+        priority: priority,
+        explanations: [],
+        prerequisiteReason: isPrereq ? 'Required for dependent topics' : null,
+        weaknessReason: state.accuracy < 0.6 ? 'Weak performance' : null,
+        reviewReason: state.reviewUrgency > 0.7 ? 'High forgetting risk' : null,
+      ));
+    }
+
+    final syllabusTopicIds = allTopics.keys.toSet();
+    for (final topicId in syllabusTopicIds) {
+      if (!recommendations.any((r) => r.topicId == topicId)) {
+        recommendations.add(PlanRecommendation(
+          topicId: topicId,
+          reason: 'New syllabus topic',
+          recommendationType: 'syllabus',
+          priority: 1.0,
+          explanations: ['Part of syllabus goal'],
+        ));
+      }
+    }
+
+    recommendations.sort((a, b) => b.priority.compareTo(a.priority));
+
+    final dailyPlans = await _generateDailyPlans(
+      studentId: studentId,
+      recommendations: recommendations,
+      dependencyMap: dependencyMap,
+      completedTopicIds: completedTopicIds,
+    );
+
+    final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
+    final summary = _generateSummary(linkedPlans, recommendations);
+
+    final updatedMetadata = <String, dynamic>{
+      'syllabus_goals': syllabusGoals.map((g) => g.toJson()).toList(),
+    };
+
+    final plan = PersonalLearningPlan(
+      studentId: studentId,
+      generatedAt: DateTime.now(),
+      dailyPlans: linkedPlans,
+      summary: summary,
+      recommendations: recommendations,
+      planDurationDays: config.planDurationDays,
+      targetMinutesPerDay: config.targetMinutesPerDay,
+      targetQuestionsPerDay: config.targetQuestionsPerDay,
+      metadata: updatedMetadata,
+    );
+
+    try {
+      await _planRepository.init();
+      await _planRepository.savePlan(plan);
+    } catch (_) {}
+
+    return Result.success(plan);
+  }
+
+  Future<List<DailyPlan>> _linkQuestionsToDailyPlans(
+    List<DailyPlan> dailyPlans,
+  ) async {
+    try {
+      await _questionRepository.init();
+      final allQuestionsResult = await _questionRepository.getAll();
+      if (allQuestionsResult.isFailure) return dailyPlans;
+
+      final allQuestions = allQuestionsResult.data!;
+      final now = DateTime.now();
+
+      return dailyPlans.map((plan) {
+        if (plan.isRestDay) return plan;
+
+        final reviewIds = <String>[];
+        final stretchIds = <String>[];
+
+        for (final topic in plan.priorityTopics) {
+          final topicQuestions = allQuestions
+              .where((q) => q.topicId == topic.topicId)
+              .toList();
+
+          if (topic.reviewUrgency > 0.6) {
+            final dueQuestions = topicQuestions
+                .where((q) =>
+                    q.nextReview != null && q.nextReview!.isBefore(now))
+                .take(3)
+                .map((q) => q.id)
+                .toList();
+            reviewIds.addAll(dueQuestions);
+          }
+
+          if (topic.readinessScore > 0.7) {
+            final stretchFromTopic = topicQuestions
+                .where((q) => q.difficulty >= 3)
+                .take(2)
+                .map((q) => q.id)
+                .toList();
+            stretchIds.addAll(stretchFromTopic);
+          }
+        }
+
+        return plan.copyWith(
+          reviewQuestionIds: reviewIds,
+          stretchGoalQuestionIds: stretchIds,
+        );
+      }).toList();
+    } catch (_) {
+      return dailyPlans;
+    }
   }
 
   Future<void> recordDailyAdherence({
@@ -291,6 +461,7 @@ class PersonalLearningPlanService {
 
         final topicTitle = await _getTopicTitle(rec.topicId);
         final reviewUrgency = await _getReviewUrgency(rec.topicId);
+        final subjectId = await _getSubjectId(rec.topicId);
 
         priorityTopics.add(PlannedTopic(
           topicId: rec.topicId,
@@ -302,6 +473,7 @@ class PersonalLearningPlanService {
           estimatedQuestions: estimatedQuestions,
           estimatedMinutes: estimatedMinutes,
           reasons: rec.explanations,
+          subjectId: subjectId,
         ));
 
         questionsPerTopic[rec.topicId] = currentCount + estimatedQuestions;
@@ -367,6 +539,15 @@ class PersonalLearningPlanService {
       return result.isSuccess ? result.data! : 0.3;
     } catch (_) {
       return 0.3;
+    }
+  }
+
+  Future<String> _getSubjectId(String topicId) async {
+    try {
+      final topic = await _topicRepository.get(topicId);
+      return topic?.subjectId ?? '';
+    } catch (_) {
+      return '';
     }
   }
 

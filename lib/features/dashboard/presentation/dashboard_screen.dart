@@ -19,6 +19,7 @@ import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 
@@ -60,7 +61,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _tracker = ref.read(dashboardStudyProgressTrackerProvider);
     _instrumentation = ref.read(dashboardInstrumentationServiceProvider);
     _topicRepo = ref.read(dashboardTopicRepositoryProvider);
-    _focusService = ref.read(dashboardFocusServiceProvider);
+    _focusService = ref.read(focusSessionServiceProvider);
     _adherenceRepo = ref.read(dashboardAdherenceRepositoryProvider);
     _loadData();
   }
@@ -72,7 +73,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await _topicRepo.init();
     await _adherenceRepo.init();
     try {
-      await _focusService.repository.init();
       _focusTodayStats = await _focusService.getTodayStats();
     } catch (_) {}
 

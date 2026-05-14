@@ -193,6 +193,7 @@ void main() {
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.content, isA<Row>());
 
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.text('Retry'), warnIfMissed: false);
       expect(tapped, isTrue);
     });

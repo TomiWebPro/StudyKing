@@ -6,11 +6,14 @@ class DailyPlanCard extends StatelessWidget {
   final DailyPlan day;
   final void Function(String topicId, String topicTitle, String subjectId)
       onStartTutoring;
+  final void Function(String topicId, String topicTitle, String subjectId)?
+      onScheduleLesson;
 
   const DailyPlanCard({
     super.key,
     required this.day,
     required this.onStartTutoring,
+    this.onScheduleLesson,
   });
 
   @override
@@ -75,12 +78,27 @@ class DailyPlanCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     trailing: topic.topicId.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.smart_toy_outlined,
-                                size: 20),
-                            tooltip: l10n.startTutoring,
-                            onPressed: () => onStartTutoring(
-                                topic.topicId, topic.topicTitle, ''),
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (onScheduleLesson != null)
+                                IconButton(
+                                  icon: const Icon(Icons.event,
+                                      size: 20),
+                                  tooltip: 'Schedule Lesson',
+                                  onPressed: () => onScheduleLesson!(
+                                      topic.topicId,
+                                      topic.topicTitle,
+                                      topic.subjectId),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.smart_toy_outlined,
+                                    size: 20),
+                                tooltip: l10n.startTutoring,
+                                onPressed: () => onStartTutoring(
+                                    topic.topicId, topic.topicTitle, topic.subjectId),
+                              ),
+                            ],
                           )
                         : null,
                   )),

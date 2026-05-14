@@ -112,66 +112,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(2),
                   child: SwitchListTile(
-                    secondary: const Icon(Icons.notifications),
-                    title: Text(l10n.dailyReminders),
-                    subtitle: Text(l10n.enableNotificationAlerts),
-                    value: settings.studyRemindersEnabled,
+                    secondary: const Icon(Icons.repeat),
+                    title: Text(l10n.revisionReminders),
+                    value: settings.revisionRemindersEnabled,
                     onChanged: (value) =>
-                        ref.read(settingsProvider.notifier).updateStudyReminders(value),
+                        ref.read(settingsProvider.notifier).updateRevisionReminders(value),
                   ),
                 ),
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(3),
                   child: SwitchListTile(
-                    secondary: const Icon(Icons.repeat),
-                    title: Text(l10n.revisionReminders),
-                    value: settings.studyRemindersEnabled,
-                    onChanged: (value) {},
+                    secondary: const Icon(Icons.school),
+                    title: Text(l10n.lessonNotifications),
+                    value: settings.lessonNotificationsEnabled,
+                    onChanged: (value) =>
+                        ref.read(settingsProvider.notifier).updateLessonNotifications(value),
                   ),
                 ),
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(4),
                   child: SwitchListTile(
-                    secondary: const Icon(Icons.school),
-                    title: Text(l10n.lessonNotifications),
-                    value: true,
-                    onChanged: (value) {},
+                    secondary: const Icon(Icons.warning_amber),
+                    title: Text(l10n.overworkAlerts),
+                    value: settings.overworkAlertsEnabled,
+                    onChanged: (value) =>
+                        ref.read(settingsProvider.notifier).updateOverworkAlerts(value),
                   ),
                 ),
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(5),
                   child: SwitchListTile(
-                    secondary: const Icon(Icons.warning_amber),
-                    title: Text(l10n.overworkAlerts),
-                    value: true,
-                    onChanged: (value) {},
-                  ),
-                ),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(6),
-                  child: SwitchListTile(
                     secondary: const Icon(Icons.tune),
                     title: Text(l10n.planAdjustmentNotifications),
-                    value: true,
-                    onChanged: (value) {},
+                    value: settings.planAdjustmentNotificationsEnabled,
+                    onChanged: (value) =>
+                        ref.read(settingsProvider.notifier).updatePlanAdjustmentNotifications(value),
                   ),
                 ),
               ],
             ]),
             _section(l10n.studyPreferences, [
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.notifications),
-                  title: Text(l10n.studyReminders),
-                  subtitle: Text(l10n.enableNotificationAlerts),
-                  value: settings.studyRemindersEnabled,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateStudyReminders(value),
-                ),
-              ),
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
-                  Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes), order: 2),
+                  Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes), order: 1),
             ]),
             _section('Focus Mode', [
               _tile('Focus Timer', 'Start a focused study session', Icons.timer_outlined,

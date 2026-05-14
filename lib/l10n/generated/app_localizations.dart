@@ -3974,6 +3974,12 @@ abstract class AppLocalizations {
   /// **'Session completed: {minutes}m'**
   String sessionCompleted(int minutes);
 
+  /// Bottom navigation label for focus tab
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focus;
+
   /// Button label to start a focus session with specified minutes
   ///
   /// In en, this message translates to:

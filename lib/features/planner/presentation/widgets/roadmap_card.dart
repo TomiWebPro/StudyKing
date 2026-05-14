@@ -6,8 +6,14 @@ import 'milestone_timeline.dart';
 
 class RoadmapCard extends StatelessWidget {
   final RoadmapModel roadmap;
+  final void Function(String roadmapId, String milestoneId, bool isCompleted)?
+      onToggleMilestone;
 
-  const RoadmapCard({super.key, required this.roadmap});
+  const RoadmapCard({
+    super.key,
+    required this.roadmap,
+    this.onToggleMilestone,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +101,40 @@ class RoadmapCard extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 12),
+            if (onToggleMilestone != null && roadmap.milestones.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              ...roadmap.milestones.map((milestone) => CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    title: Text(milestone.title,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: milestone.isCompleted
+                              ? FontWeight.w500
+                              : FontWeight.normal,
+                          decoration: milestone.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        )),
+                    subtitle: milestone.topicsCovered.isNotEmpty
+                        ? Text(
+                            '${milestone.topicsCovered.length} topics',
+                            style: theme.textTheme.bodySmall,
+                          )
+                        : null,
+                    value: milestone.isCompleted,
+                    onChanged: milestone.isCompleted
+                        ? null
+                        : (val) => onToggleMilestone!(
+                              roadmap.id,
+                              milestone.id,
+                              val ?? false,
+                            ),
+                  )),
+            ],
+            const SizedBox(height: 8),
             MilestoneTimeline(roadmap: roadmap),
           ],
         ),

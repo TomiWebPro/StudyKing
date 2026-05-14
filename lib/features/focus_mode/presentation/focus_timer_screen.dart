@@ -4,10 +4,11 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 
 class FocusTimerScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
@@ -50,13 +51,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       duration: const Duration(seconds: 1),
     );
     _service = ref.read(focusSessionServiceProvider);
-    final repo = ref.read(focusSessionRepositoryProvider);
-    _init(repo);
+    _initService();
   }
 
-  Future<void> _init(FocusSessionRepository repo) async {
+  Future<void> _initService() async {
     try {
-      await repo.init();
       _service.addOnSessionComplete(_onSessionComplete);
       _service.addOnTick(_onTick);
       await _loadStats();
@@ -80,6 +79,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       _startBreakTimer();
     });
     _loadStats();
+    _recordAdherence(session);
+  }
+
+  Future<void> _recordAdherence(FocusSession session) async {
+    final integrationService = SessionPlanIntegrationService(
+      fixedStudentId: StudentIdService().getStudentId(),
+    );
+    await integrationService.recordFocusSessionCompletion(
+      actualDurationSeconds: session.actualDurationSeconds,
+    );
   }
 
   void _onTick(int elapsed) {

@@ -135,6 +135,14 @@ class AppErrorHandler {
         return l10n.validationFailed(exception.message);
       case PdfParseException _:
         return l10n.errorPdfParse;
+      case SyllabusException _:
+        return exception.message;
+      case PlanGenerationException _:
+        return exception.message;
+      case SchedulingException _:
+        return exception.message;
+      case AdherenceException _:
+        return exception.message;
       case ContentGenerationException _:
         return l10n.errorContentGeneration;
       case LlmException _:

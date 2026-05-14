@@ -14,6 +14,8 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/presentation/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/services/practice_session_service.dart';
+import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
@@ -204,6 +206,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         correctAnswers: _correctAnswers,
       );
     }
+    _recordAdherence();
     if (!mounted) return;
     setState(() => _isSessionComplete = true);
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -214,6 +217,19 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         ));
       }
     });
+  }
+
+  Future<void> _recordAdherence() async {
+    final elapsedMinutes = DateTime.now()
+        .difference(_sessionService.sessionStartTime)
+        .inMinutes;
+    final integrationService = SessionPlanIntegrationService(
+      fixedStudentId: StudentIdService().getStudentId(),
+    );
+    await integrationService.recordPracticeSessionCompletion(
+      actualQuestions: _questions.length,
+      elapsedMinutes: elapsedMinutes,
+    );
   }
 
   void _restartSession() {

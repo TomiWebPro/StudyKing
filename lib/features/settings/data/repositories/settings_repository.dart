@@ -113,6 +113,14 @@ class SettingsRepository {
       highContrastEnabled: box.get('highContrastEnabled', defaultValue: false),
       largeTouchTargets: box.get('largeTouchTargets', defaultValue: false),
       reduceMotion: box.get('reduceMotion', defaultValue: false),
+      revisionRemindersEnabled:
+          box.get('revisionRemindersEnabled', defaultValue: true),
+      lessonNotificationsEnabled:
+          box.get('lessonNotificationsEnabled', defaultValue: true),
+      overworkAlertsEnabled:
+          box.get('overworkAlertsEnabled', defaultValue: true),
+      planAdjustmentNotificationsEnabled:
+          box.get('planAdjustmentNotificationsEnabled', defaultValue: true),
     );
   }
 
@@ -129,6 +137,10 @@ class SettingsRepository {
     bool? highContrastEnabled,
     bool? largeTouchTargets,
     bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
     final box = _requireSettingsBox();
     final current = await getSettings();
@@ -154,6 +166,14 @@ class SettingsRepository {
           largeTouchTargets ?? current.largeTouchTargets,
       reduceMotion:
           reduceMotion ?? current.reduceMotion,
+      revisionRemindersEnabled:
+          revisionRemindersEnabled ?? current.revisionRemindersEnabled,
+      lessonNotificationsEnabled:
+          lessonNotificationsEnabled ?? current.lessonNotificationsEnabled,
+      overworkAlertsEnabled:
+          overworkAlertsEnabled ?? current.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled:
+          planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled,
     );
 
     await box.put('apiKey', updated.apiKey);
@@ -170,6 +190,10 @@ class SettingsRepository {
     await box.put('highContrastEnabled', updated.highContrastEnabled);
     await box.put('largeTouchTargets', updated.largeTouchTargets);
     await box.put('reduceMotion', updated.reduceMotion);
+    await box.put('revisionRemindersEnabled', updated.revisionRemindersEnabled);
+    await box.put('lessonNotificationsEnabled', updated.lessonNotificationsEnabled);
+    await box.put('overworkAlertsEnabled', updated.overworkAlertsEnabled);
+    await box.put('planAdjustmentNotificationsEnabled', updated.planAdjustmentNotificationsEnabled);
   }
 
   /// Update statistics counters

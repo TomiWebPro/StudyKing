@@ -2849,7 +2849,7 @@
   "@mentorDoingWell": {
     "description": "Mentor suggestion when student is doing well"
   },
-  "roadmaps": "Roadmaps",
+  "roadmaps": "Rutas de aprendizaje",
   "@roadmaps": {
     "description": "Section title for roadmaps"
   },
@@ -3010,43 +3010,43 @@
   },
   "markschemeUnavailable": "No hay esquema de calificación disponible",
   "@markschemeUnavailable": {
-    "description": "Mensaje cuando no hay un esquema de calificación para una pregunta"
+    "description": "Message when no markscheme exists for a question"
   },
   "answerTooShort": "La respuesta es demasiado corta. Proporcione más detalles.",
   "@answerTooShort": {
-    "description": "Comentario cuando la respuesta es demasiado corta"
+    "description": "Feedback when the answer is too short"
   },
   "goodResponseLength": "Buena longitud de respuesta.",
   "@goodResponseLength": {
-    "description": "Comentario cuando la longitud de la respuesta es adecuada"
+    "description": "Feedback when answer length is adequate"
   },
   "answerTooShortForCredit": "Respuesta demasiado corta para crédito completo.",
   "@answerTooShortForCredit": {
-    "description": "Comentario cuando la respuesta es demasiado corta para crédito completo"
+    "description": "Feedback when answer is too short for full credit"
   },
   "noDrawingDetected": "No se detectó dibujo. Por favor, dibuje algo.",
   "@noDrawingDetected": {
-    "description": "Comentario cuando no se detecta contenido de dibujo"
+    "description": "Feedback when no drawing content is detected"
   },
   "invalidDrawingData": "Datos de dibujo inválidos. Por favor, vuelva a dibujar.",
   "@invalidDrawingData": {
-    "description": "Comentario cuando los datos del dibujo no son válidos"
+    "description": "Feedback when drawing data is invalid"
   },
   "allStepsIdentified": "Todos los pasos requeridos identificados.",
   "@allStepsIdentified": {
-    "description": "Comentario cuando todos los pasos se identifican correctamente"
+    "description": "Feedback when all steps are identified correctly"
   },
   "specialHandlingRequired": "Este tipo de pregunta requiere manejo especial.",
   "@specialHandlingRequired": {
-    "description": "Mensaje para tipos de pregunta que necesitan manejo especial"
+    "description": "Message for question types that need special handling"
   },
   "someAnswersIncorrect": "Algunas respuestas son incorrectas",
   "@someAnswersIncorrect": {
-    "description": "Comentario para respuestas de opción múltiple parcialmente incorrectas"
+    "description": "Feedback for partially incorrect multi-choice answers"
   },
   "correctAnswerIs": "La respuesta correcta es: {answer}",
   "@correctAnswerIs": {
-    "description": "Mensaje que muestra la respuesta correcta",
+    "description": "Message showing the correct answer",
     "placeholders": {
       "answer": {
         "type": "String"
@@ -3055,7 +3055,7 @@
   },
   "allStepsFormat": "¡Los {count} pasos identificados correctamente!",
   "@allStepsFormat": {
-    "description": "Comentario cuando todos los pasos requeridos están identificados",
+    "description": "Feedback when all required steps are identified",
     "placeholders": {
       "count": {
         "type": "int"
@@ -3064,7 +3064,7 @@
   },
   "partialStepsFormat": "Identificó {matched} de {total} pasos. Faltan: {missing}",
   "@partialStepsFormat": {
-    "description": "Comentario cuando faltan algunos pasos",
+    "description": "Feedback when some steps are missing",
     "placeholders": {
       "matched": {
         "type": "int"
@@ -3079,7 +3079,7 @@
   },
   "noStepsFormat": "No se encontraron pasos requeridos en su respuesta. Pasos clave a incluir: {steps}",
   "@noStepsFormat": {
-    "description": "Comentario cuando no se encuentran pasos requeridos",
+    "description": "Feedback when no required steps are found",
     "placeholders": {
       "steps": {
         "type": "String"
@@ -3088,7 +3088,7 @@
   },
   "allRequiredStepsMissing": "Faltan algunos pasos requeridos",
   "@allRequiredStepsMissing": {
-    "description": "Comentario cuando faltan pasos requeridos en la respuesta"
+    "description": "Feedback when required steps are missing from answer"
   },
   "breakTime": "Descanso",
   "@breakTime": {
@@ -3098,7 +3098,7 @@
   "@dailyLimitReached": {
     "description": "Dialog title when daily study limit is reached"
   },
-  "dailyLimitReachedBody": "Has alcanzado tu límite diario de estudio. ¡Bien hecho! Descansa y vuelve mañana.",
+  "dailyLimitReachedBody": "Ha alcanzado su límite diario de estudio. ¡Bien hecho! Descanse y vuelva mañana.",
   "@dailyLimitReachedBody": {
     "description": "Dialog body when daily study limit is reached"
   },
@@ -3111,7 +3111,11 @@
       }
     }
   },
-  "focusForMinutes": "Enfócate por {minutes} minutos",
+  "focus": "Enfoque",
+  "@focus": {
+    "description": "Bottom navigation label for focus tab"
+  },
+  "focusForMinutes": "Enfóquese por {minutes} minutos",
   "@focusForMinutes": {
     "description": "Button label to start a focus session with specified minutes",
     "placeholders": {

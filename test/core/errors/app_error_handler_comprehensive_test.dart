@@ -118,7 +118,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Custom validation message'), findsOneWidget);
+      expect(find.text('Validation failed: Custom validation message'), findsOneWidget);
     });
 
     testWidgets('shows PdfParseException message via handleError', (tester) async {
@@ -417,7 +417,7 @@ void main() {
         contextName: 'test',
       );
       await tester.pump();
-      expect(find.text('Field X is required'), findsOneWidget);
+      expect(find.text('Validation failed: Field X is required'), findsOneWidget);
     });
   });
 

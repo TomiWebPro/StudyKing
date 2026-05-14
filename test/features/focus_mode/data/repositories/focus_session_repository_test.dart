@@ -13,6 +13,7 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     final dir = await Directory.systemTemp.createTemp('hive_test_');
     Hive.init(dir.path);
+    await Hive.openBox<String>('focus_sessions');
 
     now = DateTime(2026, 5, 14, 10, 30);
     repository = FocusSessionRepository();

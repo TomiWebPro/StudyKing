@@ -352,7 +352,7 @@ void main() {
     });
 
     group('usage history', () {
-      UsageRecord _record(String id, {int inTk = 100, int outTk = 50, double cost = 0.01}) {
+      UsageRecord record(String id, {int inTk = 100, int outTk = 50, double cost = 0.01}) {
         return UsageRecord(
           id: id, timestamp: DateTime.now(),
           provider: 'openrouter', modelId: 'm',
@@ -362,8 +362,8 @@ void main() {
 
       test('addUsageRecord inserts at beginning', () {
         final model = LLMSettingsModel();
-        final record1 = _record('first');
-        final record2 = _record('second');
+        final record1 = record('first');
+        final record2 = record('second');
 
         model.addUsageRecord(record1);
         model.addUsageRecord(record2);
@@ -378,16 +378,16 @@ void main() {
         var notifyCount = 0;
         model.addListener(() => notifyCount++);
 
-        model.addUsageRecord(_record('r1'));
+        model.addUsageRecord(record('r1'));
         expect(notifyCount, 1);
 
-        model.addUsageRecord(_record('r2'));
+        model.addUsageRecord(record('r2'));
         expect(notifyCount, 2);
       });
 
       test('usageHistory returns unmodifiable list', () {
         final model = LLMSettingsModel();
-        model.addUsageRecord(_record('test'));
+        model.addUsageRecord(record('test'));
         final history = model.usageHistory;
         expect(() => history.clear(), throwsUnsupportedError);
       });
@@ -395,7 +395,7 @@ void main() {
       test('getTotalTokens sums all records', () {
         final model = LLMSettingsModel();
         for (var i = 0; i < 5; i++) {
-          model.addUsageRecord(_record('test-$i', inTk: 100, outTk: 50));
+          model.addUsageRecord(record('test-$i', inTk: 100, outTk: 50));
         }
         expect(model.getTotalTokens(), 750);
       });
@@ -408,7 +408,7 @@ void main() {
       test('getTotalCost sums all records', () {
         final model = LLMSettingsModel();
         for (var i = 0; i < 3; i++) {
-          model.addUsageRecord(_record('test-$i', cost: 0.01));
+          model.addUsageRecord(record('test-$i', cost: 0.01));
         }
         expect(model.getTotalCost(), closeTo(0.03, 1e-10));
       });
@@ -470,7 +470,7 @@ void main() {
     });
 
     group('aggregation calculations', () {
-      UsageRecord _record(String id, {int inTk = 100, int outTk = 50, double cost = 0.01}) {
+      UsageRecord record(String id, {int inTk = 100, int outTk = 50, double cost = 0.01}) {
         return UsageRecord(
           id: id, timestamp: DateTime.now(),
           provider: 'openrouter', modelId: 'm',
@@ -480,7 +480,7 @@ void main() {
 
       test('avgCostPer1000Tokens calculates correctly', () {
         final model = LLMSettingsModel();
-        model.addUsageRecord(_record('test', inTk: 1000000, outTk: 500000, cost: 0.015));
+        model.addUsageRecord(record('test', inTk: 1000000, outTk: 500000, cost: 0.015));
         expect(model.avgCostPer1000Tokens, closeTo(0.00001, 1e-10));
       });
 
@@ -491,14 +491,14 @@ void main() {
 
       test('projectedMonthlyCost with single record', () {
         final model = LLMSettingsModel();
-        model.addUsageRecord(_record('test', cost: 0.03));
+        model.addUsageRecord(record('test', cost: 0.03));
         expect(model.projectedMonthlyCost, closeTo(0.9, 1e-10));
       });
 
       test('projectedMonthlyCost with multiple records', () {
         final model = LLMSettingsModel();
-        model.addUsageRecord(_record('r1', cost: 0.01));
-        model.addUsageRecord(_record('r2', cost: 0.03));
+        model.addUsageRecord(record('r1', cost: 0.01));
+        model.addUsageRecord(record('r2', cost: 0.03));
         expect(model.projectedMonthlyCost, closeTo(0.6, 1e-10));
       });
 
@@ -509,7 +509,7 @@ void main() {
 
       test('formatUsageSummary returns correct string', () {
         final model = LLMSettingsModel();
-        model.addUsageRecord(_record('test', inTk: 1000, outTk: 500, cost: 0.05));
+        model.addUsageRecord(record('test', inTk: 1000, outTk: 500, cost: 0.05));
 
         final summary = model.formatUsageSummary();
         expect(summary, contains('Usage'));

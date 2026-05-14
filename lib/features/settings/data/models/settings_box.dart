@@ -48,6 +48,18 @@ class SettingsBox {
   @HiveField(13)
   late bool reduceMotion;
 
+  @HiveField(14)
+  late bool revisionRemindersEnabled;
+
+  @HiveField(15)
+  late bool lessonNotificationsEnabled;
+
+  @HiveField(16)
+  late bool overworkAlertsEnabled;
+
+  @HiveField(17)
+  late bool planAdjustmentNotificationsEnabled;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -63,6 +75,10 @@ class SettingsBox {
     this.highContrastEnabled = false,
     this.largeTouchTargets = false,
     this.reduceMotion = false,
+    this.revisionRemindersEnabled = true,
+    this.lessonNotificationsEnabled = true,
+    this.overworkAlertsEnabled = true,
+    this.planAdjustmentNotificationsEnabled = true,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -90,6 +106,10 @@ class SettingsBox {
       'highContrastEnabled': highContrastEnabled,
       'largeTouchTargets': largeTouchTargets,
       'reduceMotion': reduceMotion,
+      'revisionRemindersEnabled': revisionRemindersEnabled,
+      'lessonNotificationsEnabled': lessonNotificationsEnabled,
+      'overworkAlertsEnabled': overworkAlertsEnabled,
+      'planAdjustmentNotificationsEnabled': planAdjustmentNotificationsEnabled,
     };
   }
 
@@ -122,6 +142,19 @@ class SettingsBox {
       reduceMotion: json['reduceMotion'] is bool
           ? json['reduceMotion'] as bool
           : false,
+      revisionRemindersEnabled: json['revisionRemindersEnabled'] is bool
+          ? json['revisionRemindersEnabled'] as bool
+          : true,
+      lessonNotificationsEnabled: json['lessonNotificationsEnabled'] is bool
+          ? json['lessonNotificationsEnabled'] as bool
+          : true,
+      overworkAlertsEnabled: json['overworkAlertsEnabled'] is bool
+          ? json['overworkAlertsEnabled'] as bool
+          : true,
+      planAdjustmentNotificationsEnabled:
+          json['planAdjustmentNotificationsEnabled'] is bool
+              ? json['planAdjustmentNotificationsEnabled'] as bool
+              : true,
     );
   }
 

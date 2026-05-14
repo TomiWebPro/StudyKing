@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
@@ -191,6 +194,127 @@ void main() {
         final bytes1 = await SessionExportService.sessionsToPDF([session], l10n);
         final bytes2 = await SessionExportService.sessionsToPDF([], l10n);
         expect(bytes1, isNot(equals(bytes2)));
+      });
+    });
+
+    group('writeCSVFile', () {
+      late Directory tmpDir;
+
+      setUp(() {
+        tmpDir = Directory.systemTemp.createTempSync('export_csv_');
+      });
+
+      tearDown(() {
+        tmpDir.deleteSync(recursive: true);
+      });
+
+      test('writes CSV file with correct extension', () async {
+        final session = _createSession();
+        final file = await SessionExportService.writeCSVFile(
+          [session],
+          'test-export',
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        expect(file.path, endsWith('.csv'));
+        expect(file.existsSync(), isTrue);
+      });
+
+      test('writes CSV content matching sessionsToCSV output', () async {
+        final session = _createSession();
+        final csv = SessionExportService.sessionsToCSV([session]);
+        final file = await SessionExportService.writeCSVFile(
+          [session],
+          'test',
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        final written = await file.readAsString();
+        expect(written, equals(csv));
+      });
+    });
+
+    group('writeJSONFile', () {
+      late Directory tmpDir;
+
+      setUp(() {
+        tmpDir = Directory.systemTemp.createTempSync('export_json_');
+      });
+
+      tearDown(() {
+        tmpDir.deleteSync(recursive: true);
+      });
+
+      test('writes JSON file with correct extension', () async {
+        final session = _createSession();
+        final file = await SessionExportService.writeJSONFile(
+          [session],
+          'test-export',
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        expect(file.path, endsWith('.json'));
+        expect(file.existsSync(), isTrue);
+      });
+
+      test('writes valid JSON matching sessionsToJSON output', () async {
+        final session = _createSession();
+        final expectedJson = jsonEncode(
+          SessionExportService.sessionsToJSON([session]),
+        );
+        final file = await SessionExportService.writeJSONFile(
+          [session],
+          'test',
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        final written = await file.readAsString();
+        expect(written, equals(expectedJson));
+      });
+    });
+
+    group('writePDFFile', () {
+      late Directory tmpDir;
+      final l10n = AppLocalizationsEn();
+
+      setUp(() {
+        tmpDir = Directory.systemTemp.createTempSync('export_pdf_');
+      });
+
+      tearDown(() {
+        tmpDir.deleteSync(recursive: true);
+      });
+
+      test('writes PDF file with correct extension', () async {
+        final session = _createSession();
+        final file = await SessionExportService.writePDFFile(
+          [session],
+          'test-export',
+          l10n,
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        expect(file.path, endsWith('.pdf'));
+        expect(file.existsSync(), isTrue);
+      });
+
+      test('writes non-empty PDF bytes', () async {
+        final session = _createSession();
+        final file = await SessionExportService.writePDFFile(
+          [session],
+          'test',
+          l10n,
+          directory: tmpDir,
+        );
+        addTearDown(() => file.deleteSync());
+
+        final bytes = await file.readAsBytes();
+        expect(bytes, isNotEmpty);
       });
     });
   });

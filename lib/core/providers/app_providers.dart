@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/data.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -52,6 +50,10 @@ class SettingsController extends StateNotifier<SettingsBox> {
     bool? highContrastEnabled,
     bool? largeTouchTargets,
     bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
     try {
       await _repository.updateSettings(
@@ -72,6 +74,14 @@ class SettingsController extends StateNotifier<SettingsBox> {
             largeTouchTargets ?? state.largeTouchTargets,
         reduceMotion:
             reduceMotion ?? state.reduceMotion,
+        revisionRemindersEnabled:
+            revisionRemindersEnabled ?? state.revisionRemindersEnabled,
+        lessonNotificationsEnabled:
+            lessonNotificationsEnabled ?? state.lessonNotificationsEnabled,
+        overworkAlertsEnabled:
+            overworkAlertsEnabled ?? state.overworkAlertsEnabled,
+        planAdjustmentNotificationsEnabled:
+            planAdjustmentNotificationsEnabled ?? state.planAdjustmentNotificationsEnabled,
       );
       state = await _repository.getSettings();
     } catch (e) {
@@ -155,6 +165,22 @@ class SettingsController extends StateNotifier<SettingsBox> {
   Future<void> updateReduceMotion(bool enabled) async {
     await updateSettings(reduceMotion: enabled);
   }
+
+  Future<void> updateRevisionReminders(bool enabled) async {
+    await updateSettings(revisionRemindersEnabled: enabled);
+  }
+
+  Future<void> updateLessonNotifications(bool enabled) async {
+    await updateSettings(lessonNotificationsEnabled: enabled);
+  }
+
+  Future<void> updateOverworkAlerts(bool enabled) async {
+    await updateSettings(overworkAlertsEnabled: enabled);
+  }
+
+  Future<void> updatePlanAdjustmentNotifications(bool enabled) async {
+    await updateSettings(planAdjustmentNotificationsEnabled: enabled);
+  }
 }
 
 final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>((ref) {
@@ -172,16 +198,6 @@ final apiKeyProvider = StateProvider<String>((ref) => '');
 final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBaseUrlString);
 
 final selectedModelProvider = StateProvider<String>((ref) => '');
-
-final focusSessionRepositoryProvider = Provider<FocusSessionRepository>((ref) {
-  return FocusSessionRepository();
-});
-
-final focusSessionServiceProvider = Provider<FocusSessionService>((ref) {
-  return FocusSessionService(
-    repository: ref.read(focusSessionRepositoryProvider),
-  );
-});
 
 final localeProvider = StateProvider<Locale>((ref) {
   try {
