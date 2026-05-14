@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FocusTimerScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
@@ -25,11 +27,7 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
 
 class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     with TickerProviderStateMixin {
-  final FocusSessionService _service = FocusSessionService(
-    repository: FocusSessionRepository(),
-  );
-
-  FocusSessionRepository get _repo => _service.repository;
+  late final FocusSessionService _service;
 
   bool _initialized = false;
   bool _showSetup = true;
@@ -51,12 +49,14 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    _init();
+    _service = ref.read(focusSessionServiceProvider);
+    final repo = ref.read(focusSessionRepositoryProvider);
+    _init(repo);
   }
 
-  Future<void> _init() async {
+  Future<void> _init(FocusSessionRepository repo) async {
     try {
-      await _repo.init();
+      await repo.init();
       _service.addOnSessionComplete(_onSessionComplete);
       _service.addOnTick(_onTick);
       await _loadStats();
@@ -126,20 +126,19 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       final capReached = await _service.isDailyCapReached(_selectedMinutes);
       if (capReached) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          final cs = Theme.of(context).colorScheme;
           await showDialog(
             context: context,
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
-              icon: const Icon(Icons.celebration, size: 48, color: Colors.green),
-              title: const Text('Daily Limit Reached'),
-              content: const Text(
-                'You\'ve reached your daily study limit — well done! '
-                'Take a rest and come back tomorrow.',
-              ),
+              icon: Icon(Icons.celebration, size: 48, color: cs.primary),
+              title: Text(l10n.dailyLimitReached),
+              content: Text(l10n.dailyLimitReachedBody),
               actions: [
                 FilledButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK'),
+                  child: Text(l10n.ok),
                 ),
               ],
             ),
@@ -158,8 +157,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error starting session: $e')),
+          SnackBar(content: Text(l10n.errorStartingSession(e.toString()))),
         );
       }
     }
@@ -177,23 +177,25 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final bp = ResponsiveUtils.breakpointOf(context);
 
     if (!_initialized) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Focus Mode')),
+        appBar: AppBar(title: Text(l10n.focusMode)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Focus Mode'),
+        title: Text(l10n.focusMode),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadStats,
-            tooltip: 'Refresh stats',
+            tooltip: l10n.refreshStats,
           ),
         ],
       ),
@@ -202,13 +204,13 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
         child: Column(
           children: [
             if (_inBreak && _completedSession != null)
-              _buildBreakView(theme)
+              _buildBreakView(theme, cs, l10n)
             else if (_service.hasActiveSession)
-              _buildActiveSessionView(theme)
+              _buildActiveSessionView(theme, l10n)
             else if (_showSetup)
-              _buildSetupView(theme, bp)
+              _buildSetupView(theme, l10n, bp)
             else
-              _buildSetupView(theme, bp),
+              _buildSetupView(theme, l10n, bp),
             const SizedBox(height: 24),
             SessionSummaryCard(
               todayStats: _todayStats,
@@ -221,7 +223,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     );
   }
 
-  Widget _buildBreakView(ThemeData theme) {
+  Widget _buildBreakView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
     final m = _breakRemaining ~/ 60;
     final s = _breakRemaining % 60;
     return Card(
@@ -230,13 +232,13 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Icon(Icons.self_improvement, size: 64, color: Colors.orange),
+            Icon(Icons.self_improvement, size: 64, color: cs.tertiary),
             const SizedBox(height: 16),
             Text(
-              'Break Time!',
+              l10n.breakTime,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.orange,
+                color: cs.tertiary,
               ),
             ),
             const SizedBox(height: 8),
@@ -248,9 +250,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Session completed: ${_completedSession!.actualDurationSeconds ~/ 60}m',
+              l10n.sessionCompleted(_completedSession!.actualDurationSeconds ~/ 60),
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: cs.onSurfaceVariant,
               ),
             ),
           ],
@@ -259,7 +261,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     );
   }
 
-  Widget _buildActiveSessionView(ThemeData theme) {
+  Widget _buildActiveSessionView(ThemeData theme, AppLocalizations l10n) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -288,7 +290,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     );
   }
 
-  Widget _buildSetupView(ThemeData theme, ScreenBreakpoint bp) {
+  Widget _buildSetupView(ThemeData theme, AppLocalizations l10n, ScreenBreakpoint bp) {
     final presets = [5, 15, 25, 30, 45, 60];
     return Card(
       margin: EdgeInsets.zero,
@@ -302,7 +304,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
                 Icon(Icons.timer_outlined, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'New Focus Session',
+                  l10n.newFocusSession,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -311,7 +313,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
             ),
             const SizedBox(height: 24),
             Text(
-              'Duration',
+              l10n.duration,
               style: theme.textTheme.titleSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -323,7 +325,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
               children: presets.map((m) {
                 final selected = _selectedMinutes == m;
                 return ChoiceChip(
-                  label: Text('${m}min'),
+                  label: Text(l10n.durationMinutes(m)),
                   selected: selected,
                   onSelected: (v) => setState(() => _selectedMinutes = m),
                 );
@@ -336,7 +338,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
                 min: 1,
                 max: 180,
                 divisions: 179,
-                label: '$_selectedMinutes min',
+                label: l10n.minutesValue(_selectedMinutes),
                 onChanged: (v) => setState(() => _selectedMinutes = v.round()),
               ),
             ],
@@ -348,7 +350,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
                 onPressed: _startFocus,
                 icon: const Icon(Icons.play_arrow),
                 label: Text(
-                  'Focus for $_selectedMinutes minutes',
+                  l10n.focusForMinutes(_selectedMinutes),
                   style: const TextStyle(fontSize: 16),
                 ),
               ),

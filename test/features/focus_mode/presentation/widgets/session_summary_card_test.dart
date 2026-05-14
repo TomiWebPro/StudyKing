@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: widget,
     ),
@@ -71,7 +74,6 @@ void main() {
       ));
 
       expect(find.text('0m'), findsAtLeast(1));
-      // We expect at least two 0m entries
     });
 
     testWidgets('renders default values when stats map is empty', (tester) async {
@@ -141,8 +143,6 @@ void main() {
         SessionSummaryCard(recentSessions: sessions),
       ));
 
-      // Should only show 3 session entries + 1 metric card icon = 4 total
-      // The metric card for sessions also uses check_circle (icon with size 28)
       expect(find.byIcon(Icons.check_circle), findsNWidgets(4));
     });
 

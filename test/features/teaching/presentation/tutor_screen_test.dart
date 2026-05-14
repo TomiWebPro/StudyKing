@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
@@ -94,10 +95,12 @@ class _FakeTutorService extends TutorService {
 }
 
 Widget _wrapApp(Widget child) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: child,
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    ),
   );
 }
 
@@ -185,6 +188,132 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('voice input button shows SnackBar', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.mic_none));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coming soon'), findsOneWidget);
+    });
+
+    testWidgets('image picker button shows SnackBar', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.image_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coming soon'), findsOneWidget);
+    });
+
+    testWidgets('sending a message adds user and tutor messages to chat', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Hello tutor');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hello tutor'), findsOneWidget);
+      expect(find.text('Mock tutor response for: Hello tutor'), findsOneWidget);
+    });
+
+    testWidgets('end lesson button shows summary dialog', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.stop_circle_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Lesson Complete'), findsOneWidget);
+    });
+
+    testWidgets('shows lesson time ended text when duration expires', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          durationMinutes: 45,
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(minutes: 46));
+
+      expect(
+        find.text("Lesson time has ended. Click 'End Lesson' to finish."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('voice input toggles icon after tap', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.mic_none));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+    });
+
+    testWidgets('shows stats in lesson progress bar after initialization', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          durationMinutes: 45,
+          tutorService: _FakeTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('45 min remaining'), findsOneWidget);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/src/adapters/date_time_adapter.dart';
 import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
@@ -7,6 +8,7 @@ import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 
 TypeRegistryImpl _registry() {
   return TypeRegistryImpl()
+    ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
     ..registerAdapter(PersonalLearningPlanAdapter())
     ..registerAdapter(DailyPlanAdapter())
     ..registerAdapter(PlannedTopicAdapter())

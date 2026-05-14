@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
@@ -39,14 +40,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final InstrumentationService _instrumentation;
   late final TopicRepository _topicRepo;
   late final FocusSessionService _focusService;
+  late final PlanAdherenceRepository _adherenceRepo;
 
   List<MasteryState> _allMastery = [];
   Map<String, dynamic>? _snapshot;
   Map<String, dynamic>? _overallStats;
   List<Map<String, dynamic>> _weeklyTrend = [];
   List<Map<String, dynamic>> _badges = [];
-  Map<String, dynamic>? _instrumentationData;
   Map<String, dynamic>? _focusTodayStats;
+  double _averageAdherence = 0.0;
+  double _weeklyAdherence = 0.0;
   bool _isLoading = true;
   final Map<String, String> _topicNameCache = {};
 
@@ -58,6 +61,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _instrumentation = ref.read(dashboardInstrumentationServiceProvider);
     _topicRepo = ref.read(dashboardTopicRepositoryProvider);
     _focusService = ref.read(dashboardFocusServiceProvider);
+    _adherenceRepo = ref.read(dashboardAdherenceRepositoryProvider);
     _loadData();
   }
 
@@ -66,6 +70,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     await _instrumentation.init();
     await _topicRepo.init();
+    await _adherenceRepo.init();
     try {
       await _focusService.repository.init();
       _focusTodayStats = await _focusService.getTodayStats();
@@ -84,7 +89,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _overallStats = await _tracker.getOverallStats(widget.studentId);
     _weeklyTrend = await _tracker.getWeeklyTrend(8, studentId: widget.studentId);
     _badges = await _tracker.getBadges(widget.studentId);
-    _instrumentationData = (await _instrumentation.getInstrumentationDashboard(widget.studentId)).data;
+    _averageAdherence = await _adherenceRepo.getAverageAdherence(widget.studentId);
+    final weeklyRecords = await _adherenceRepo.getWeekly(widget.studentId);
+    _weeklyAdherence = weeklyRecords.isEmpty
+        ? 0.0
+        : weeklyRecords
+                .fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
+            weeklyRecords.length;
 
     for (final state in _allMastery) {
       if (!_topicNameCache.containsKey(state.topicId)) {
@@ -146,7 +157,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 24),
               FocusTraversalOrder(
                 order: const NumericFocusOrder(5),
-                child: PlanAdherenceCard(instrumentationData: _instrumentationData),
+                child: PlanAdherenceCard(
+                  averageAdherence: _averageAdherence,
+                  weeklyAdherence: _weeklyAdherence,
+                ),
               ),
               const SizedBox(height: 24),
               FocusTraversalOrder(

@@ -161,5 +161,59 @@ void main() {
 
       expect(find.byIcon(Icons.person), findsOneWidget);
     });
+
+    testWidgets('shows static dots when reduceMotion is true and streaming', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '9',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: '',
+            timestamp: now,
+            isStreaming: true,
+          ),
+          reduceMotion: true,
+        ),
+      ));
+
+      expect(find.text('Tutor'), findsOneWidget);
+    });
+
+    testWidgets('renders text when streaming with non-empty content', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '10',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Partial response...',
+            timestamp: now,
+            isStreaming: true,
+          ),
+        ),
+      ));
+
+      expect(find.text('Partial response...'), findsOneWidget);
+    });
+
+    testWidgets('renders mentor role message', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '11',
+            sessionId: 's1',
+            role: MessageRole.mentor,
+            type: MessageType.text,
+            content: 'Mentor advice',
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text('Mentor advice'), findsOneWidget);
+    });
   });
 }

@@ -422,7 +422,6 @@
   "@colorBlueGrey": {
     "description": "Color label for blue grey"
   },
-
   "profile": "Perfil",
   "@profile": {
     "description": "Title for profile screen"
@@ -537,7 +536,6 @@
   "@save": {
     "description": "Save button label"
   },
-
   "userManagement": "Gestión de Usuarios",
   "@userManagement": {
     "description": "Section title for user management in settings"
@@ -745,7 +743,6 @@
   "@questionsLabel": {
     "description": "Label for questions count"
   },
-
   "mySubjects": "Mis Materias",
   "@mySubjects": {
     "description": "Title for subjects list screen"
@@ -998,7 +995,6 @@
   "@skip": {
     "description": "Skip button label"
   },
-
   "graphRenderer": "Renderizador de Gráficos",
   "@graphRenderer": {
     "description": "Title for graph rendering page"
@@ -1135,11 +1131,11 @@
       }
     }
   },
-  "considerUsingPieChart": "Considere usar un Gráfico Circular para conjuntos pequeños de datos",
+  "considerUsingPieChart": "Considere usar un gráfico circular para conjuntos pequeños de datos",
   "@considerUsingPieChart": {
     "description": "Recommendation when data has few points"
   },
-  "considerUsingBarChart": "Considere usar un Gráfico de Barras para conjuntos grandes de datos",
+  "considerUsingBarChart": "Considere usar un gráfico de barras para conjuntos grandes de datos",
   "@considerUsingBarChart": {
     "description": "Recommendation when data has many points"
   },
@@ -1185,7 +1181,6 @@
       }
     }
   },
-
   "lessonScheduler": "Planificador de Lecciones",
   "@lessonScheduler": {
     "description": "Title for lesson scheduling page"
@@ -1253,7 +1248,6 @@
   "@graphLabel": {
     "description": "Graph question type label"
   },
-
   "quickGuideHelp": "Ayuda de Guía Rápida",
   "@quickGuideHelp": {
     "description": "Semantic label for help button"
@@ -1290,7 +1284,6 @@
   "@gotIt": {
     "description": "Button label to dismiss help dialog"
   },
-
   "addAnswerBeforeSubmitting": "Agregue una respuesta antes de enviar.",
   "@addAnswerBeforeSubmitting": {
     "description": "Error message when answer is empty"
@@ -1392,7 +1385,7 @@
   "@canvasIsEmpty": {
     "description": "Status text when canvas is empty"
   },
-  "drawingWithStrokes": "{count, plural, =1{Dibujando con 1 trazo} other{Dibujando con {count} trazos}}",
+  "drawingWithStrokes": "{count, plural, =1{Dibujo con 1 trazo} other{Dibujo con {count} trazos}}",
   "@drawingWithStrokes": {
     "description": "Status text showing stroke count",
     "placeholders": {
@@ -1421,7 +1414,6 @@
   "@drawYourAnswer": {
     "description": "Semantic hint for drawing canvas"
   },
-
   "apiConfiguration": "Configuración de API",
   "@apiConfiguration": {
     "description": "Title for API configuration screen"
@@ -1474,7 +1466,6 @@
   "@unableToSaveApiConfig": {
     "description": "Error message when API config save fails"
   },
-
   "currentSession": "Sesión Actual",
   "@currentSession": {
     "description": "Label for active study session"
@@ -1613,7 +1604,6 @@
   "@sessionHistory": {
     "description": "Title for session history screen"
   },
-
   "dashboard": "Panel",
   "@dashboard": {
     "description": "Navigation label for dashboard"
@@ -1626,7 +1616,7 @@
   "@studyTime": {
     "description": "Label for study time metric"
   },
-  "planAdherence": "Cumplimiento del Plan",
+  "planAdherence": "Adherencia al Plan",
   "@planAdherence": {
     "description": "Section title for plan adherence"
   },
@@ -1690,7 +1680,7 @@
   "@masteryLevelBrowsing": {
     "description": "Browsing mastery level label"
   },
-  "masteryLevelDeveloping": "Desarrollando",
+  "masteryLevelDeveloping": "En Desarrollo",
   "@masteryLevelDeveloping": {
     "description": "Developing mastery level label"
   },
@@ -1737,7 +1727,6 @@
   "@weakAreasAccuracy": {
     "description": "Section title for weak areas with accuracy threshold"
   },
-
   "uploadContent": "Subir Contenido",
   "@uploadContent": {
     "description": "Title for upload screen"
@@ -1807,7 +1796,6 @@
       }
     }
   },
-
   "planSummary": "Resumen del Plan",
   "@planSummary": {
     "description": "Section title for plan summary"
@@ -1849,7 +1837,7 @@
   "@startTutoring": {
     "description": "Tooltip for tutoring button"
   },
-  "questionsAndMinutes": "{questions}P \u00b7 {minutes}min",
+  "questionsAndMinutes": "{questions}P · {minutes}min",
   "@questionsAndMinutes": {
     "description": "Label showing questions and minutes",
     "placeholders": {
@@ -1861,7 +1849,7 @@
       }
     }
   },
-  "topicQuestionsAndMinutes": "{questions}P \u00b7 {minutes}min",
+  "topicQuestionsAndMinutes": "{questions}P · {minutes}min",
   "@topicQuestionsAndMinutes": {
     "description": "Label showing topic questions and minutes",
     "placeholders": {
@@ -1877,7 +1865,6 @@
   "@failedToGeneratePlan": {
     "description": "Error message when plan generation fails"
   },
-
   "llmTaskManager": "Administrador de Tareas LLM",
   "@llmTaskManager": {
     "description": "Title for LLM task manager screen"
@@ -1938,7 +1925,6 @@
   "@cancelTask": {
     "description": "Button to cancel a task"
   },
-
   "testConnection": "Probar Conexión",
   "@testConnection": {
     "description": "Button to test API connection"
@@ -1965,7 +1951,6 @@
       }
     }
   },
-
   "sessionHistoryCsvGenerated": "CSV de historial de sesiones generado ({length} caracteres)",
   "@sessionHistoryCsvGenerated": {
     "description": "Snackbar for session history CSV export",
@@ -2020,7 +2005,6 @@
   "@camera": {
     "description": "Camera option label"
   },
-
   "errorSavingSubject": "Error al guardar la materia: {error}",
   "@errorSavingSubject": {
     "description": "Error message when saving subject fails",
@@ -2262,10 +2246,6 @@
   "@keepPracticingToUnlock": {
     "description": "Empty state message for ready-to-advance section"
   },
-  "masteryOverview": "Resumen de Dominio",
-  "@masteryOverview": {
-    "description": "Section title for mastery overview"
-  },
   "totalTopicsLabel": "Total de Temas",
   "@totalTopicsLabel": {
     "description": "Label for total topics count"
@@ -2324,7 +2304,7 @@
   "@suggestedPromptMath": {
     "description": "Suggested prompt for math help"
   },
-  "quickGuideHelpContent": "Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!",
+  "quickGuideHelpContent": "Guía Rápida es su asistente de estudio con IA. Puede:\n\n• Hacer preguntas sobre cualquier materia\n• Solicitar explicaciones de conceptos\n• Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!",
   "@quickGuideHelpContent": {
     "description": "Help dialog content for Quick Guide"
   },
@@ -2387,7 +2367,7 @@
   "@aboutVersion": {
     "description": "Application version for About dialog"
   },
-  "aboutLegalese": "\u00a9 2026 StudyKing.",
+  "aboutLegalese": "© 2026 StudyKing.",
   "@aboutLegalese": {
     "description": "Copyright notice for About dialog"
   },
@@ -2452,7 +2432,6 @@
   "@reduceMotionDescription": {
     "description": "Subtitle for reduce motion toggle"
   },
-
   "errorNetworkConnection": "No se puede conectar al servidor. Verifique su conexión a internet e intente de nuevo.",
   "@errorNetworkConnection": {
     "description": "Error message when network connection fails"
@@ -2509,11 +2488,6 @@
   "@retryAfterWait": {
     "description": "Button label to retry after rate limit wait"
   },
-
-  "studyTime": "Tiempo de Estudio",
-  "@studyTime": {
-    "description": "Label for total study time metric"
-  },
   "weeklyActivity": "Actividad Semanal",
   "@weeklyActivity": {
     "description": "Label for weekly activity metric"
@@ -2530,38 +2504,6 @@
   "@overallMastery": {
     "description": "Label for overall mastery progress section"
   },
-  "topicPerformance": "Rendimiento por Tema",
-  "@topicPerformance": {
-    "description": "Section header for topic performance breakdown"
-  },
-  "noTopicDataYet": "Aún no hay datos de temas. ¡Empiece a estudiar para ver su progreso!",
-  "@noTopicDataYet": {
-    "description": "Empty state message when no topic mastery data exists"
-  },
-  "masteryLevelNovice": "Novato",
-  "@masteryLevelNovice": {
-    "description": "Mastery level label for novice"
-  },
-  "masteryLevelBrowsing": "Explorando",
-  "@masteryLevelBrowsing": {
-    "description": "Mastery level label for browsing"
-  },
-  "masteryLevelDeveloping": "En Desarrollo",
-  "@masteryLevelDeveloping": {
-    "description": "Mastery level label for developing"
-  },
-  "masteryLevelProficient": "Competente",
-  "@masteryLevelProficient": {
-    "description": "Mastery level label for proficient"
-  },
-  "masteryLevelExpert": "Experto",
-  "@masteryLevelExpert": {
-    "description": "Mastery level label for expert"
-  },
-  "achievements": "Logros",
-  "@achievements": {
-    "description": "Section header for achievements/badges"
-  },
   "avgTime": "Tiempo Prom.",
   "@avgTime": {
     "description": "Label for average time per question"
@@ -2569,14 +2511,6 @@
   "badges": "Insignias",
   "@badges": {
     "description": "Label for badges count"
-  },
-  "thisWeek": "Esta Semana",
-  "@thisWeek": {
-    "description": "Label for current week activity stat"
-  },
-  "exportCsv": "Exportar CSV",
-  "@exportCsv": {
-    "description": "Button label to export data as CSV"
   },
   "sessionHistoryExport": "Historial de Sesiones",
   "@sessionHistoryExport": {
@@ -2598,11 +2532,14 @@
   "@sessionHistoryExportedPdf": {
     "description": "Snackbar message when session history PDF is exported"
   },
+  "labelJson": "JSON",
+  "@labelJson": {
+    "description": "Label for JSON export format"
+  },
   "failedToStartPractice": "Error al iniciar la sesión de práctica",
   "@failedToStartPractice": {
     "description": "Error message when practice session fails to start"
   },
-
   "aiTutor": "Tutor IA",
   "@aiTutor": {
     "description": "Mode card title for AI Tutor"
@@ -2615,7 +2552,6 @@
   "@personalStudyAssistantPlanner": {
     "description": "Mode card subtitle for Mentor"
   },
-
   "chooseStudyMode": "Elija un modo de estudio",
   "@chooseStudyMode": {
     "description": "Heading for mode selection cards"
@@ -2624,7 +2560,6 @@
   "@clearConversation": {
     "description": "Tooltip/label for clearing chat conversation"
   },
-
   "senderYou": "Usted",
   "@senderYou": {
     "description": "Sender label for the student in chat"
@@ -2637,7 +2572,6 @@
   "@senderSystem": {
     "description": "Sender label for system messages in chat"
   },
-
   "remainingMinLabel": "{count, plural, =1{1 min restante} other{{count} min restantes}}",
   "@remainingMinLabel": {
     "description": "Label showing remaining minutes in lesson",
@@ -2656,8 +2590,7 @@
       }
     }
   },
-
-  "mentorWelcomeBody": "Puedo ayudar con:\n\u2022 Programar y reprogramar lecciones\n\u2022 Revisar su progreso de estudio\n\u2022 Planificar objetivos de estudio a largo plazo\n\u2022 Motivación y ánimo\n\u2022 Decidir qué estudiar a continuación\n\n¿Cómo puedo ayudarle hoy?",
+  "mentorWelcomeBody": "Puedo ayudar con:\n• Programar y reprogramar lecciones\n• Revisar su progreso de estudio\n• Planificar objetivos de estudio a largo plazo\n• Motivación y ánimo\n• Decidir qué estudiar a continuación\n\n¿Cómo puedo ayudarle hoy?",
   "@mentorWelcomeBody": {
     "description": "Welcome message body in mentor screen"
   },
@@ -2692,7 +2625,6 @@
   "@errorWithResponse": {
     "description": "Error message when AI response fails"
   },
-
   "mentorRejectionResponse": "¡No hay problema! No haré ningún cambio. Avíseme si necesita algo más.",
   "@mentorRejectionResponse": {
     "description": "Mentor response when user rejects a pending action"
@@ -2705,13 +2637,19 @@
   "@mentorUpcomingLessonsHeader": {
     "description": "Header for upcoming lessons list"
   },
-  "mentorLessonEntry": "\u2022 {topic} el {date} ({duration} min)\n",
+  "mentorLessonEntry": "• {topic} el {date} ({duration} min)\n",
   "@mentorLessonEntry": {
     "description": "Single lesson entry in schedule list",
     "placeholders": {
-      "topic": { "type": "String" },
-      "date": { "type": "String" },
-      "duration": { "type": "int" }
+      "topic": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "int"
+      }
     }
   },
   "mentorReschedulePrompt": "\n¿Le gustaría reprogramar alguna de estas?",
@@ -2722,7 +2660,9 @@
   "@mentorRecentSessionOnDate": {
     "description": "Message showing recent session date",
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "mentorNotStarted": "Parece que aún no ha empezado. ¿Le gustaría que le ayude a programar su primera lección?",
@@ -2749,21 +2689,27 @@
   "@mentorDaysAgo": {
     "description": "Formatted days ago string",
     "placeholders": {
-      "daysCount": { "type": "int" }
+      "daysCount": {
+        "type": "int"
+      }
     }
   },
   "mentorInactiveDays": "Noté que no ha estudiado en {daysCount} días. ¿Le gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!",
   "@mentorInactiveDays": {
     "description": "Mentor message when student has been inactive for 3+ days",
     "placeholders": {
-      "daysCount": { "type": "int" }
+      "daysCount": {
+        "type": "int"
+      }
     }
   },
   "mentorGreatJobStayingActive": "¡Buen trabajo manteniéndose activo! Su última sesión de estudio fue {daysAgo}. ¡Siga así!",
   "@mentorGreatJobStayingActive": {
     "description": "Mentor praise when student is active",
     "placeholders": {
-      "daysAgo": { "type": "String" }
+      "daysAgo": {
+        "type": "String"
+      }
     }
   },
   "mentorWelcomeStart": "¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?",
@@ -2778,7 +2724,9 @@
   "@mentorRescheduledConfirmation": {
     "description": "Confirmation after rescheduling a lesson",
     "placeholders": {
-      "topic": { "type": "String" }
+      "topic": {
+        "type": "String"
+      }
     }
   },
   "mentorNewSessionAdded": "¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.",
@@ -2789,7 +2737,7 @@
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
   },
-  "mentorProgressReportTitle": "\ud83d\udcca **Su Informe de Progreso de Estudio**\n",
+  "mentorProgressReportTitle": "📊 **Su Informe de Progreso de Estudio**\n",
   "@mentorProgressReportTitle": {
     "description": "Title for the progress report"
   },
@@ -2797,72 +2745,96 @@
   "@mentorOverallAccuracy": {
     "description": "Overall accuracy line in progress report",
     "placeholders": {
-      "accuracy": { "type": "String" },
-      "correct": { "type": "String" },
-      "total": { "type": "String" }
+      "accuracy": {
+        "type": "String"
+      },
+      "correct": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
     }
   },
   "mentorTotalStudyTime": "**Tiempo Total de Estudio:** {hours} horas",
   "@mentorTotalStudyTime": {
     "description": "Total study time line in progress report",
     "placeholders": {
-      "hours": { "type": "String" }
+      "hours": {
+        "type": "String"
+      }
     }
   },
   "mentorWeeklyActivity": "**Actividad Semanal:** {attempts} intentos",
   "@mentorWeeklyActivity": {
     "description": "Weekly activity line in progress report",
     "placeholders": {
-      "attempts": { "type": "String" }
+      "attempts": {
+        "type": "String"
+      }
     }
   },
   "mentorCompletedLessons": "**Lecciones Completadas:** {count}",
   "@mentorCompletedLessons": {
     "description": "Completed lessons line in progress report",
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "mentorTopicsStudied": "**Temas Estudiados:** {count}",
   "@mentorTopicsStudied": {
     "description": "Topics studied line in progress report",
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
   "mentorAreasNeedingAttention": "\n**Áreas que necesitan atención:**",
   "@mentorAreasNeedingAttention": {
     "description": "Section header for weak topics"
   },
-  "mentorTopicAccuracyEntry": "\u2022 {topic} (precisión: {accuracy}%)",
+  "mentorTopicAccuracyEntry": "• {topic} (precisión: {accuracy}%)",
   "@mentorTopicAccuracyEntry": {
     "description": "Single topic accuracy entry",
     "placeholders": {
-      "topic": { "type": "String" },
-      "accuracy": { "type": "int" }
+      "topic": {
+        "type": "String"
+      },
+      "accuracy": {
+        "type": "int"
+      }
     }
   },
   "mentorBadgesEarned": "\n**Insignias obtenidas:**",
   "@mentorBadgesEarned": {
     "description": "Section header for badges"
   },
-  "mentorBadgeEntry": "\u2022 {name}: {description}",
+  "mentorBadgeEntry": "• {name}: {description}",
   "@mentorBadgeEntry": {
     "description": "Single badge entry",
     "placeholders": {
-      "name": { "type": "String" },
-      "description": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "description": {
+        "type": "String"
+      }
     }
   },
   "mentorRecommendations": "\n**Recomendaciones:**",
   "@mentorRecommendations": {
     "description": "Section header for recommendations"
   },
-  "mentorRecommendationEntry": "\u2022 {message}",
+  "mentorRecommendationEntry": "• {message}",
   "@mentorRecommendationEntry": {
     "description": "Single recommendation entry",
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "mentorProgressReportError": "No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.",
@@ -2929,15 +2901,21 @@
   "@completionOfValue": {
     "description": "Completion percentage",
     "placeholders": {
-      "value": { "type": "double" }
+      "value": {
+        "type": "double"
+      }
     }
   },
   "milestoneOfWithDeadline": "{title} - Vence {deadline}",
   "@milestoneOfWithDeadline": {
     "description": "Milestone with deadline",
     "placeholders": {
-      "title": { "type": "String" },
-      "deadline": { "type": "String" }
+      "title": {
+        "type": "String"
+      },
+      "deadline": {
+        "type": "String"
+      }
     }
   },
   "enableNotifications": "Habilitar Notificaciones",
@@ -3030,52 +3008,42 @@
       }
     }
   },
-
   "markschemeUnavailable": "No hay esquema de calificación disponible",
   "@markschemeUnavailable": {
     "description": "Mensaje cuando no hay un esquema de calificación para una pregunta"
   },
-
   "answerTooShort": "La respuesta es demasiado corta. Proporcione más detalles.",
   "@answerTooShort": {
     "description": "Comentario cuando la respuesta es demasiado corta"
   },
-
   "goodResponseLength": "Buena longitud de respuesta.",
   "@goodResponseLength": {
     "description": "Comentario cuando la longitud de la respuesta es adecuada"
   },
-
   "answerTooShortForCredit": "Respuesta demasiado corta para crédito completo.",
   "@answerTooShortForCredit": {
     "description": "Comentario cuando la respuesta es demasiado corta para crédito completo"
   },
-
   "noDrawingDetected": "No se detectó dibujo. Por favor, dibuje algo.",
   "@noDrawingDetected": {
     "description": "Comentario cuando no se detecta contenido de dibujo"
   },
-
   "invalidDrawingData": "Datos de dibujo inválidos. Por favor, vuelva a dibujar.",
   "@invalidDrawingData": {
     "description": "Comentario cuando los datos del dibujo no son válidos"
   },
-
   "allStepsIdentified": "Todos los pasos requeridos identificados.",
   "@allStepsIdentified": {
     "description": "Comentario cuando todos los pasos se identifican correctamente"
   },
-
   "specialHandlingRequired": "Este tipo de pregunta requiere manejo especial.",
   "@specialHandlingRequired": {
     "description": "Mensaje para tipos de pregunta que necesitan manejo especial"
   },
-
   "someAnswersIncorrect": "Algunas respuestas son incorrectas",
   "@someAnswersIncorrect": {
     "description": "Comentario para respuestas de opción múltiple parcialmente incorrectas"
   },
-
   "correctAnswerIs": "La respuesta correcta es: {answer}",
   "@correctAnswerIs": {
     "description": "Mensaje que muestra la respuesta correcta",
@@ -3085,7 +3053,6 @@
       }
     }
   },
-
   "allStepsFormat": "¡Los {count} pasos identificados correctamente!",
   "@allStepsFormat": {
     "description": "Comentario cuando todos los pasos requeridos están identificados",
@@ -3095,7 +3062,6 @@
       }
     }
   },
-
   "partialStepsFormat": "Identificó {matched} de {total} pasos. Faltan: {missing}",
   "@partialStepsFormat": {
     "description": "Comentario cuando faltan algunos pasos",
@@ -3111,7 +3077,6 @@
       }
     }
   },
-
   "noStepsFormat": "No se encontraron pasos requeridos en su respuesta. Pasos clave a incluir: {steps}",
   "@noStepsFormat": {
     "description": "Comentario cuando no se encuentran pasos requeridos",
@@ -3121,9 +3086,294 @@
       }
     }
   },
-
   "allRequiredStepsMissing": "Faltan algunos pasos requeridos",
   "@allRequiredStepsMissing": {
     "description": "Comentario cuando faltan pasos requeridos en la respuesta"
+  },
+  "breakTime": "Descanso",
+  "@breakTime": {
+    "description": "Title shown during break after a focus session"
+  },
+  "dailyLimitReached": "Límite Diario Alcanzado",
+  "@dailyLimitReached": {
+    "description": "Dialog title when daily study limit is reached"
+  },
+  "dailyLimitReachedBody": "Has alcanzado tu límite diario de estudio. ¡Bien hecho! Descansa y vuelve mañana.",
+  "@dailyLimitReachedBody": {
+    "description": "Dialog body when daily study limit is reached"
+  },
+  "errorStartingSession": "Error al iniciar sesión: {error}",
+  "@errorStartingSession": {
+    "description": "Error message when starting a session fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "focusForMinutes": "Enfócate por {minutes} minutos",
+  "@focusForMinutes": {
+    "description": "Button label to start a focus session with specified minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "focusMode": "Modo de Enfoque",
+  "@focusMode": {
+    "description": "AppBar title for focus mode screen"
+  },
+  "focusTime": "Tiempo de Enfoque",
+  "@focusTime": {
+    "description": "Section title for focus time statistics"
+  },
+  "markComplete": "Marcar como Completado",
+  "@markComplete": {
+    "description": "Button label to mark a session as complete"
+  },
+  "newFocusSession": "Nueva Sesión de Enfoque",
+  "@newFocusSession": {
+    "description": "Title for creating a new focus session"
+  },
+  "pause": "Pausar",
+  "@pause": {
+    "description": "Button label to pause a running timer"
+  },
+  "refreshStats": "Actualizar estadísticas",
+  "@refreshStats": {
+    "description": "Tooltip for refresh stats button"
+  },
+  "resume": "Reanudar",
+  "@resume": {
+    "description": "Button label to resume a paused timer"
+  },
+  "sessionCompleted": "Sesión completada: {minutes}m",
+  "@sessionCompleted": {
+    "description": "Label showing completed session duration in minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "timerDone": "TERMINADO",
+  "@timerDone": {
+    "description": "Label indicating timer is complete"
+  },
+  "timerPaused": "PAUSADO",
+  "@timerPaused": {
+    "description": "Label indicating timer is paused"
+  },
+  "timerRemaining": "restante",
+  "@timerRemaining": {
+    "description": "Label indicating remaining time on timer"
+  },
+  "csvOverallStats": "ESTADÍSTICAS GENERALES",
+  "@csvOverallStats": {
+    "description": "Auto-generated key for csvOverallStats"
+  },
+  "csvTopicMastery": "DOMINIO DE TEMAS",
+  "@csvTopicMastery": {
+    "description": "Auto-generated key for csvTopicMastery"
+  },
+  "csvAllAttempts": "TODOS LOS INTENTOS",
+  "@csvAllAttempts": {
+    "description": "Auto-generated key for csvAllAttempts"
+  },
+  "csvWeeklyTrend": "TENDENCIA SEMANAL",
+  "@csvWeeklyTrend": {
+    "description": "Auto-generated key for csvWeeklyTrend"
+  },
+  "csvBadges": "INSIGNIAS",
+  "@csvBadges": {
+    "description": "Auto-generated key for csvBadges"
+  },
+  "csvColTotalAttempts": "Intentos Totales",
+  "@csvColTotalAttempts": {
+    "description": "Auto-generated key for csvColTotalAttempts"
+  },
+  "csvColCorrect": "Correctas",
+  "@csvColCorrect": {
+    "description": "Auto-generated key for csvColCorrect"
+  },
+  "csvColAccuracy": "Precisión (%)",
+  "@csvColAccuracy": {
+    "description": "Auto-generated key for csvColAccuracy"
+  },
+  "csvColAvgTime": "Tiempo Prom. (s)",
+  "@csvColAvgTime": {
+    "description": "Auto-generated key for csvColAvgTime"
+  },
+  "csvColTotalHours": "Horas Totales",
+  "@csvColTotalHours": {
+    "description": "Auto-generated key for csvColTotalHours"
+  },
+  "csvColWeeklyActivity": "Actividad Semanal",
+  "@csvColWeeklyActivity": {
+    "description": "Auto-generated key for csvColWeeklyActivity"
+  },
+  "csvColDailyActivity": "Actividad Diaria",
+  "@csvColDailyActivity": {
+    "description": "Auto-generated key for csvColDailyActivity"
+  },
+  "csvColTopicsStudied": "Temas Estudiados",
+  "@csvColTopicsStudied": {
+    "description": "Auto-generated key for csvColTopicsStudied"
+  },
+  "csvColTopicId": "ID del Tema",
+  "@csvColTopicId": {
+    "description": "Auto-generated key for csvColTopicId"
+  },
+  "csvColMasteryLevel": "Nivel de Dominio",
+  "@csvColMasteryLevel": {
+    "description": "Auto-generated key for csvColMasteryLevel"
+  },
+  "csvColLastPracticed": "Última Práctica",
+  "@csvColLastPracticed": {
+    "description": "Auto-generated key for csvColLastPracticed"
+  },
+  "csvColReviewUrgency": "Urgencia de Revisión",
+  "@csvColReviewUrgency": {
+    "description": "Auto-generated key for csvColReviewUrgency"
+  },
+  "csvColQuestionId": "ID de Pregunta",
+  "@csvColQuestionId": {
+    "description": "Auto-generated key for csvColQuestionId"
+  },
+  "csvColSubjectId": "ID de Materia",
+  "@csvColSubjectId": {
+    "description": "Auto-generated key for csvColSubjectId"
+  },
+  "csvColTime": "Tiempo (s)",
+  "@csvColTime": {
+    "description": "Auto-generated key for csvColTime"
+  },
+  "csvColTimestamp": "Marca de Tiempo",
+  "@csvColTimestamp": {
+    "description": "Auto-generated key for csvColTimestamp"
+  },
+  "csvColWeek": "Semana",
+  "@csvColWeek": {
+    "description": "Auto-generated key for csvColWeek"
+  },
+  "csvColAttempts": "Intentos",
+  "@csvColAttempts": {
+    "description": "Auto-generated key for csvColAttempts"
+  },
+  "csvColImprovement": "Mejora",
+  "@csvColImprovement": {
+    "description": "Auto-generated key for csvColImprovement"
+  },
+  "csvColBadgeName": "Nombre de Insignia",
+  "@csvColBadgeName": {
+    "description": "Auto-generated key for csvColBadgeName"
+  },
+  "csvColBadgeDescription": "Descripción",
+  "@csvColBadgeDescription": {
+    "description": "Auto-generated key for csvColBadgeDescription"
+  },
+  "csvColDateUnlocked": "Fecha de Desbloqueo",
+  "@csvColDateUnlocked": {
+    "description": "Auto-generated key for csvColDateUnlocked"
+  },
+  "pdfProgressReport": "Informe de Progreso StudyKing",
+  "@pdfProgressReport": {
+    "description": "Auto-generated key for pdfProgressReport"
+  },
+  "pdfGenerated": "Generado: {date}",
+  "@pdfGenerated": {
+    "description": "Generated date label in PDF report",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfStudentId": "ID de Estudiante: {id}",
+  "@pdfStudentId": {
+    "description": "Student ID label in PDF report",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfOverallStatistics": "Estadísticas Generales",
+  "@pdfOverallStatistics": {
+    "description": "Auto-generated key for pdfOverallStatistics"
+  },
+  "pdfMetric": "Métrica",
+  "@pdfMetric": {
+    "description": "Auto-generated key for pdfMetric"
+  },
+  "pdfValue": "Valor",
+  "@pdfValue": {
+    "description": "Auto-generated key for pdfValue"
+  },
+  "pdfTopicMasteryBreakdown": "Desglose de Dominio de Temas",
+  "@pdfTopicMasteryBreakdown": {
+    "description": "Auto-generated key for pdfTopicMasteryBreakdown"
+  },
+  "pdfTableAttempts": "Intentos",
+  "@pdfTableAttempts": {
+    "description": "Auto-generated key for pdfTableAttempts"
+  },
+  "pdfTableLevel": "Nivel",
+  "@pdfTableLevel": {
+    "description": "Auto-generated key for pdfTableLevel"
+  },
+  "pdfTableTopic": "Tema",
+  "@pdfTableTopic": {
+    "description": "Auto-generated key for pdfTableTopic"
+  },
+  "pdfBadgesEarned": "Insignias Obtenidas",
+  "@pdfBadgesEarned": {
+    "description": "Auto-generated key for pdfBadgesEarned"
+  },
+  "pdfRecentActivitySummary": "Resumen de Actividad Reciente",
+  "@pdfRecentActivitySummary": {
+    "description": "Auto-generated key for pdfRecentActivitySummary"
+  },
+  "pdfNoMasteryData": "Aún no hay datos de dominio.",
+  "@pdfNoMasteryData": {
+    "description": "Auto-generated key for pdfNoMasteryData"
+  },
+  "pdfNoBadges": "Aún no hay insignias. ¡Sigue estudiando!",
+  "@pdfNoBadges": {
+    "description": "Auto-generated key for pdfNoBadges"
+  },
+  "pdfTotalAttemptsRecorded": "Intentos totales registrados: {count}",
+  "@pdfTotalAttemptsRecorded": {
+    "description": "Total attempts recorded count in PDF",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pdfDateRange": "Rango de fechas: {start} a {end}",
+  "@pdfDateRange": {
+    "description": "Date range in PDF report",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfCorrectFraction": "Correctas: {correct}/{total}",
+  "@pdfCorrectFraction": {
+    "description": "Correct answers fraction in PDF",
+    "placeholders": {
+      "correct": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   }
 }

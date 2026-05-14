@@ -23,7 +23,7 @@ class MasteryImprovementMetricAdapter extends TypeAdapter<MasteryImprovementMetr
       currentMasteryLevel: fields[7] as double,
       previousLevel: MasteryLevel.values[fields[8] as int],
       currentLevel: MasteryLevel.values[fields[9] as int],
-      metadata: fields[10] as Map<String, dynamic>?,
+      metadata: fields[10] != null ? Map<String, dynamic>.from(fields[10] as Map) : null,
     );
   }
 

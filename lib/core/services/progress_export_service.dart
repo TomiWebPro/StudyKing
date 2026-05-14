@@ -29,7 +29,7 @@ class ProgressExportService {
         _masteryService = masteryService ?? MasteryGraphService(),
         _attemptRepo = attemptRepo ?? AttemptRepository();
 
-  Future<String> exportComprehensiveCSV(String studentId) async {
+  Future<String> exportComprehensiveCSV(String studentId, AppLocalizations l10n) async {
     final overallStats = await _tracker.getOverallStats(studentId);
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
@@ -40,48 +40,50 @@ class ProgressExportService {
 
     final buffer = StringBuffer();
 
-    buffer.writeln('=== OVERALL STATS ===');
+    buffer.writeln('=== ${l10n.csvOverallStats} ===');
     buffer.writeln(
-        'Total Attempts,Correct,Accuracy (%),Avg Time (s),Total Hours,Weekly Activity,Daily Activity,Topics Studied');
+        '${l10n.csvColTotalAttempts},${l10n.csvColCorrect},${l10n.csvColAccuracy},${l10n.csvColAvgTime},${l10n.csvColTotalHours},${l10n.csvColWeeklyActivity},${l10n.csvColDailyActivity},${l10n.csvColTopicsStudied}');
     buffer.writeln(
         '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${overallStats['totalStudyTimeHours']},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
 
     buffer.writeln();
-    buffer.writeln('=== TOPIC MASTERY ===');
+    buffer.writeln('=== ${l10n.csvTopicMastery} ===');
     buffer.writeln(
-        'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency');
+        '${l10n.csvColTopicId},${l10n.csvColTotalAttempts},${l10n.csvColCorrect},${l10n.csvColAccuracy},${l10n.csvColMasteryLevel},${l10n.csvColLastPracticed},${l10n.csvColReviewUrgency}');
     for (final ms in masteryStates) {
       final level = switch (ms.masteryLevel) {
-        MasteryLevel.novice => 'Novice',
-        MasteryLevel.browsing => 'Browsing',
-        MasteryLevel.developing => 'Developing',
-        MasteryLevel.proficient => 'Proficient',
-        MasteryLevel.expert => 'Expert',
+        MasteryLevel.novice => l10n.masteryLevelNovice,
+        MasteryLevel.browsing => l10n.masteryLevelBrowsing,
+        MasteryLevel.developing => l10n.masteryLevelDeveloping,
+        MasteryLevel.proficient => l10n.masteryLevelProficient,
+        MasteryLevel.expert => l10n.masteryLevelExpert,
       };
       buffer.writeln(
           '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
     }
 
     buffer.writeln();
-    buffer.writeln('=== ALL ATTEMPTS ===');
+    buffer.writeln('=== ${l10n.csvAllAttempts} ===');
     buffer.writeln(
-        'Question ID,Subject ID,Correct,Time (s),Timestamp');
+        '${l10n.csvColQuestionId},${l10n.csvColSubjectId},${l10n.csvColCorrect},${l10n.csvColTime},${l10n.csvColTimestamp}');
     for (final a in attempts) {
       buffer.writeln(
           '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ 1000},${a.timestamp.toIso8601String()}');
     }
 
     buffer.writeln();
-    buffer.writeln('=== WEEKLY TREND ===');
-    buffer.writeln('Week,Attempts,Accuracy (%),Improvement');
+    buffer.writeln('=== ${l10n.csvWeeklyTrend} ===');
+    buffer.writeln(
+        '${l10n.csvColWeek},${l10n.csvColAttempts},${l10n.csvColAccuracy},${l10n.csvColImprovement}');
     for (final t in trend) {
       buffer.writeln(
           '${t['week']}-W${t['month']},${t['attempts']},${t['accuracy']},${t['improvement']}');
     }
 
     buffer.writeln();
-    buffer.writeln('=== BADGES ===');
-    buffer.writeln('Badge Name,Description,Date Unlocked');
+    buffer.writeln('=== ${l10n.csvBadges} ===');
+    buffer.writeln(
+        '${l10n.csvColBadgeName},${l10n.csvColBadgeDescription},${l10n.csvColDateUnlocked}');
     for (final b in badges) {
       buffer.writeln(
           '"${b['name']}","${b['description']}","${b['unlockedAt']}"');
@@ -111,7 +113,7 @@ class ProgressExportService {
           pw.Header(
             level: 0,
             child: pw.Text(
-              'StudyKing Progress Report',
+              l10n.pdfProgressReport,
               style: pw.TextStyle(
                 fontSize: 24,
                 fontWeight: pw.FontWeight.bold,
@@ -120,32 +122,32 @@ class ProgressExportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Generated: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+            l10n.pdfGenerated(DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())),
             style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Student ID: $studentId',
+            l10n.pdfStudentId(studentId),
             style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 24),
 
           pw.Header(
             level: 1,
-            child: pw.Text('Overall Statistics'),
+            child: pw.Text(l10n.pdfOverallStatistics),
           ),
           pw.SizedBox(height: 8),
           pw.TableHelper.fromTextArray(
-            headers: ['Metric', 'Value'],
+            headers: [l10n.pdfMetric, l10n.pdfValue],
             data: [
-              ['Total Attempts', '${overallStats['totalAttempts']}'],
-              ['Correct Answers', '${overallStats['correctAttempts']}'],
-              ['Accuracy', '${overallStats['accuracy']}%'],
-              ['Avg Time Per Question', '${overallStats['avgTimePerQuestion']}s'],
-              ['Total Study Time', '${overallStats['totalStudyTimeHours']} hours'],
-              ['Weekly Activity', '${overallStats['weeklyActivity']} attempts'],
-              ['Daily Activity', '${overallStats['dailyActivity']} attempts'],
-              ['Topics Studied', '${overallStats['topicsStudied']}'],
+              [l10n.csvColTotalAttempts, '${overallStats['totalAttempts']}'],
+              [l10n.correctAnswers, '${overallStats['correctAttempts']}'],
+              [l10n.accuracy, '${overallStats['accuracy']}%'],
+              [l10n.avgTime, '${overallStats['avgTimePerQuestion']}s'],
+              [l10n.totalStudyTime, '${overallStats['totalStudyTimeHours']}h'],
+              [l10n.csvColWeeklyActivity, '${overallStats['weeklyActivity']}'],
+              [l10n.csvColDailyActivity, '${overallStats['dailyActivity']}'],
+              [l10n.csvColTopicsStudied, '${overallStats['topicsStudied']}'],
             ],
             headerStyle: pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
@@ -160,26 +162,26 @@ class ProgressExportService {
 
           pw.Header(
             level: 1,
-            child: pw.Text('Topic Mastery Breakdown'),
+            child: pw.Text(l10n.pdfTopicMasteryBreakdown),
           ),
           pw.SizedBox(height: 8),
           if (masteryStates.isNotEmpty)
             pw.TableHelper.fromTextArray(
               headers: [
-                'Topic',
-                'Attempts',
-                'Correct',
-                'Accuracy',
-                'Level',
-                'Review Urgency',
+                l10n.pdfTableTopic,
+                l10n.pdfTableAttempts,
+                l10n.csvColCorrect,
+                l10n.accuracy,
+                l10n.pdfTableLevel,
+                l10n.csvColReviewUrgency,
               ],
               data: masteryStates.map((ms) {
                 final level = switch (ms.masteryLevel) {
-                  MasteryLevel.novice => 'Novice',
-                  MasteryLevel.browsing => 'Browsing',
-                  MasteryLevel.developing => 'Developing',
-                  MasteryLevel.proficient => 'Proficient',
-                  MasteryLevel.expert => 'Expert',
+                  MasteryLevel.novice => l10n.masteryLevelNovice,
+                  MasteryLevel.browsing => l10n.masteryLevelBrowsing,
+                  MasteryLevel.developing => l10n.masteryLevelDeveloping,
+                  MasteryLevel.proficient => l10n.masteryLevelProficient,
+                  MasteryLevel.expert => l10n.masteryLevelExpert,
                 };
                 return [
                   ms.topicId,
@@ -201,7 +203,7 @@ class ProgressExportService {
             ),
           if (masteryStates.isEmpty)
             pw.Text(
-              'No mastery data available yet.',
+              l10n.pdfNoMasteryData,
               style: const pw.TextStyle(
                 fontSize: 11,
                 color: PdfColors.grey500,
@@ -211,12 +213,16 @@ class ProgressExportService {
 
           pw.Header(
             level: 1,
-            child: pw.Text('Badges Earned'),
+            child: pw.Text(l10n.pdfBadgesEarned),
           ),
           pw.SizedBox(height: 8),
           if (badges.isNotEmpty)
             pw.TableHelper.fromTextArray(
-              headers: ['Badge', 'Description', 'Unlocked'],
+              headers: [
+                l10n.csvColBadgeName,
+                l10n.csvColBadgeDescription,
+                l10n.csvColDateUnlocked,
+              ],
               data: badges.map((b) {
                 return [
                   '${b['name']}',
@@ -235,7 +241,7 @@ class ProgressExportService {
             ),
           if (badges.isEmpty)
             pw.Text(
-              'No badges earned yet. Keep studying!',
+              l10n.pdfNoBadges,
               style: const pw.TextStyle(
                 fontSize: 11,
                 color: PdfColors.grey500,
@@ -245,22 +251,28 @@ class ProgressExportService {
 
           pw.Header(
             level: 1,
-            child: pw.Text('Recent Activity Summary'),
+            child: pw.Text(l10n.pdfRecentActivitySummary),
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Total attempts recorded: ${attempts.length}',
+            l10n.pdfTotalAttemptsRecorded(attempts.length),
             style: const pw.TextStyle(fontSize: 11),
           ),
           if (attempts.isNotEmpty) ...[
             pw.SizedBox(height: 4),
             pw.Text(
-              'Date range: ${attempts.last.timestamp.toLocal().toString().split(' ')[0]} to ${attempts.first.timestamp.toLocal().toString().split(' ')[0]}',
+              l10n.pdfDateRange(
+                attempts.last.timestamp.toLocal().toString().split(' ')[0],
+                attempts.first.timestamp.toLocal().toString().split(' ')[0],
+              ),
               style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              'Correct: ${attempts.where((a) => a.isCorrect).length} / ${attempts.length}',
+              l10n.pdfCorrectFraction(
+                attempts.where((a) => a.isCorrect).length,
+                attempts.length,
+              ),
               style: const pw.TextStyle(fontSize: 11),
             ),
           ],
@@ -271,18 +283,26 @@ class ProgressExportService {
     return pdf.save();
   }
 
-  Future<void> shareComprehensiveCSV(String studentId, String filename) async {
-    final csv = await exportComprehensiveCSV(studentId);
+  Future<void> shareComprehensiveCSV(
+    String studentId,
+    String filename,
+    AppLocalizations l10n,
+  ) async {
+    final csv = await exportComprehensiveCSV(studentId, l10n);
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: 'StudyKing Progress Report',
+      text: l10n.pdfProgressReport,
     );
   }
 
-  Future<void> shareComprehensiveJSON(String studentId, String filename) async {
+  Future<void> shareComprehensiveJSON(
+    String studentId,
+    String filename,
+    AppLocalizations l10n,
+  ) async {
     final overallStats = await _tracker.getOverallStats(studentId);
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
@@ -310,7 +330,7 @@ class ProgressExportService {
     await file.writeAsString(json);
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: 'StudyKing Progress Report',
+      text: l10n.pdfProgressReport,
     );
   }
 
@@ -325,7 +345,7 @@ class ProgressExportService {
     await file.writeAsBytes(pdfBytes);
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: 'StudyKing Progress Report',
+      text: l10n.pdfProgressReport,
     );
   }
 }

@@ -1,0 +1,51 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/features/practice/services/question_type_localizer.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+
+void main() {
+  group('QuestionTypeLocalized', () {
+    final AppLocalizations l10n = AppLocalizationsEn();
+
+    test('singleChoice returns Multiple Choice', () {
+      expect(QuestionType.singleChoice.localizedLabel(l10n), 'Multiple Choice');
+    });
+
+    test('multiChoice returns Multiple Select', () {
+      expect(QuestionType.multiChoice.localizedLabel(l10n), 'Multiple Select');
+    });
+
+    test('typedAnswer returns Text Answer', () {
+      expect(QuestionType.typedAnswer.localizedLabel(l10n), 'Text Answer');
+    });
+
+    test('canvas returns Diagram', () {
+      expect(QuestionType.canvas.localizedLabel(l10n), 'Diagram');
+    });
+
+    test('essay returns Essay', () {
+      expect(QuestionType.essay.localizedLabel(l10n), 'Essay');
+    });
+
+    test('stepByStep returns Step-by-Step', () {
+      expect(QuestionType.stepByStep.localizedLabel(l10n), 'Step-by-Step');
+    });
+
+    test('mathExpression returns Math', () {
+      expect(QuestionType.mathExpression.localizedLabel(l10n), 'Math');
+    });
+
+    test('graphDrawing returns Graph', () {
+      expect(QuestionType.graphDrawing.localizedLabel(l10n), 'Graph');
+    });
+
+    test('fileUpload returns default label', () {
+      expect(QuestionType.fileUpload.localizedLabel(l10n), 'Question');
+    });
+
+    test('audioRecording returns default label', () {
+      expect(QuestionType.audioRecording.localizedLabel(l10n), 'Question');
+    });
+  });
+}

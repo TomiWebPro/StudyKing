@@ -139,7 +139,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (!widget.reduceMotion) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 

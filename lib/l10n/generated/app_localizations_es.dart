@@ -876,11 +876,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get considerUsingPieChart =>
-      'Considere usar un Gráfico Circular para conjuntos pequeños de datos';
+      'Considere usar un gráfico circular para conjuntos pequeños de datos';
 
   @override
   String get considerUsingBarChart =>
-      'Considere usar un Gráfico de Barras para conjuntos grandes de datos';
+      'Considere usar un gráfico de barras para conjuntos grandes de datos';
 
   @override
   String get graphTypeMatchesData =>
@@ -1067,8 +1067,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Dibujando con $count trazos',
-      one: 'Dibujando con 1 trazo',
+      other: 'Dibujo con $count trazos',
+      one: 'Dibujo con 1 trazo',
     );
     return '$_temp0';
   }
@@ -1243,7 +1243,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get studyTime => 'Tiempo de Estudio';
 
   @override
-  String get planAdherence => 'Cumplimiento del Plan';
+  String get planAdherence => 'Adherencia al Plan';
 
   @override
   String get masteryOverview => 'Resumen de Dominio';
@@ -1905,6 +1905,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Historial de sesiones exportado a PDF';
 
   @override
+  String get labelJson => 'JSON';
+
+  @override
   String get failedToStartPractice => 'Error al iniciar la sesión de práctica';
 
   @override
@@ -2302,4 +2305,201 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get allRequiredStepsMissing => 'Faltan algunos pasos requeridos';
+
+  @override
+  String get focusMode => 'Modo de Enfoque';
+
+  @override
+  String get newFocusSession => 'Nueva Sesión de Enfoque';
+
+  @override
+  String get refreshStats => 'Actualizar estadísticas';
+
+  @override
+  String errorStartingSession(String error) {
+    return 'Error al iniciar sesión: $error';
+  }
+
+  @override
+  String get dailyLimitReached => 'Límite Diario Alcanzado';
+
+  @override
+  String get dailyLimitReachedBody =>
+      'Has alcanzado tu límite diario de estudio. ¡Bien hecho! Descansa y vuelve mañana.';
+
+  @override
+  String get breakTime => 'Descanso';
+
+  @override
+  String sessionCompleted(int minutes) {
+    return 'Sesión completada: ${minutes}m';
+  }
+
+  @override
+  String focusForMinutes(int minutes) {
+    return 'Enfócate por $minutes minutos';
+  }
+
+  @override
+  String get focusTime => 'Tiempo de Enfoque';
+
+  @override
+  String get timerRemaining => 'restante';
+
+  @override
+  String get timerPaused => 'PAUSADO';
+
+  @override
+  String get timerDone => 'TERMINADO';
+
+  @override
+  String get resume => 'Reanudar';
+
+  @override
+  String get pause => 'Pausar';
+
+  @override
+  String get markComplete => 'Marcar como Completado';
+
+  @override
+  String get csvOverallStats => 'ESTADÍSTICAS GENERALES';
+
+  @override
+  String get csvTopicMastery => 'DOMINIO DE TEMAS';
+
+  @override
+  String get csvAllAttempts => 'TODOS LOS INTENTOS';
+
+  @override
+  String get csvWeeklyTrend => 'TENDENCIA SEMANAL';
+
+  @override
+  String get csvBadges => 'INSIGNIAS';
+
+  @override
+  String get csvColTotalAttempts => 'Intentos Totales';
+
+  @override
+  String get csvColCorrect => 'Correctas';
+
+  @override
+  String get csvColAccuracy => 'Precisión (%)';
+
+  @override
+  String get csvColAvgTime => 'Tiempo Prom. (s)';
+
+  @override
+  String get csvColTotalHours => 'Horas Totales';
+
+  @override
+  String get csvColWeeklyActivity => 'Actividad Semanal';
+
+  @override
+  String get csvColDailyActivity => 'Actividad Diaria';
+
+  @override
+  String get csvColTopicsStudied => 'Temas Estudiados';
+
+  @override
+  String get csvColTopicId => 'ID del Tema';
+
+  @override
+  String get csvColMasteryLevel => 'Nivel de Dominio';
+
+  @override
+  String get csvColLastPracticed => 'Última Práctica';
+
+  @override
+  String get csvColReviewUrgency => 'Urgencia de Revisión';
+
+  @override
+  String get csvColQuestionId => 'ID de Pregunta';
+
+  @override
+  String get csvColSubjectId => 'ID de Materia';
+
+  @override
+  String get csvColTime => 'Tiempo (s)';
+
+  @override
+  String get csvColTimestamp => 'Marca de Tiempo';
+
+  @override
+  String get csvColWeek => 'Semana';
+
+  @override
+  String get csvColAttempts => 'Intentos';
+
+  @override
+  String get csvColImprovement => 'Mejora';
+
+  @override
+  String get csvColBadgeName => 'Nombre de Insignia';
+
+  @override
+  String get csvColBadgeDescription => 'Descripción';
+
+  @override
+  String get csvColDateUnlocked => 'Fecha de Desbloqueo';
+
+  @override
+  String get pdfProgressReport => 'Informe de Progreso StudyKing';
+
+  @override
+  String pdfGenerated(String date) {
+    return 'Generado: $date';
+  }
+
+  @override
+  String pdfStudentId(String id) {
+    return 'ID de Estudiante: $id';
+  }
+
+  @override
+  String get pdfOverallStatistics => 'Estadísticas Generales';
+
+  @override
+  String get pdfMetric => 'Métrica';
+
+  @override
+  String get pdfValue => 'Valor';
+
+  @override
+  String get pdfTopicMasteryBreakdown => 'Desglose de Dominio de Temas';
+
+  @override
+  String get pdfTableAttempts => 'Intentos';
+
+  @override
+  String get pdfTableLevel => 'Nivel';
+
+  @override
+  String get pdfTableTopic => 'Tema';
+
+  @override
+  String get pdfBadgesEarned => 'Insignias Obtenidas';
+
+  @override
+  String get pdfRecentActivitySummary => 'Resumen de Actividad Reciente';
+
+  @override
+  String get pdfNoMasteryData => 'Aún no hay datos de dominio.';
+
+  @override
+  String get pdfNoBadges => 'Aún no hay insignias. ¡Sigue estudiando!';
+
+  @override
+  String pdfTotalAttemptsRecorded(int count) {
+    return 'Intentos totales registrados: $count';
+  }
+
+  @override
+  String pdfDateRange(String start, String end) {
+    return 'Rango de fechas: $start a $end';
+  }
+
+  @override
+  String pdfCorrectFraction(int correct, int total) {
+    return 'Correctas: $correct/$total';
+  }
 }

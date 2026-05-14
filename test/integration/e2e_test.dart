@@ -17,6 +17,7 @@ import 'package:studyking/core/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -172,7 +173,7 @@ void main() {
     });
   });
 
-  Widget _buildPlannerTestApp({
+  Widget buildPlannerTestApp({
     required PlanRepository planRepo,
     required MasteryGraphRepository masteryRepo,
     required TopicRepository topicRepo,
@@ -201,7 +202,7 @@ void main() {
       final planRepo = _IntegrationFakePlanRepository();
       final masteryRepo = _IntegrationFakeMasteryGraphRepository();
 
-      await tester.pumpWidget(_buildPlannerTestApp(
+      await tester.pumpWidget(buildPlannerTestApp(
         planRepo: planRepo,
         masteryRepo: masteryRepo,
         topicRepo: _IntegrationFakeTopicRepository(),
@@ -223,7 +224,7 @@ void main() {
     testWidgets('planner: shows error when generation fails', (tester) async {
       final masteryRepo = _IntegrationFakeMasteryGraphRepository();
 
-      await tester.pumpWidget(_buildPlannerTestApp(
+      await tester.pumpWidget(buildPlannerTestApp(
         planRepo: _IntegrationFakePlanRepository(),
         masteryRepo: masteryRepo,
         topicRepo: _IntegrationFakeTopicRepository(),

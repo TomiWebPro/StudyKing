@@ -3332,6 +3332,12 @@ abstract class AppLocalizations {
   /// **'Session history exported to PDF'**
   String get sessionHistoryExportedPdf;
 
+  /// Label for JSON export format
+  ///
+  /// In en, this message translates to:
+  /// **'JSON'**
+  String get labelJson;
+
   /// Error message when practice session fails to start
   ///
   /// In en, this message translates to:
@@ -3919,6 +3925,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Some required steps missing'**
   String get allRequiredStepsMissing;
+
+  /// AppBar title for focus mode screen
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Mode'**
+  String get focusMode;
+
+  /// Title for creating a new focus session
+  ///
+  /// In en, this message translates to:
+  /// **'New Focus Session'**
+  String get newFocusSession;
+
+  /// Tooltip for refresh stats button
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh stats'**
+  String get refreshStats;
+
+  /// Error message when starting a session fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error starting session: {error}'**
+  String errorStartingSession(String error);
+
+  /// Dialog title when daily study limit is reached
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Limit Reached'**
+  String get dailyLimitReached;
+
+  /// Dialog body when daily study limit is reached
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve reached your daily study limit — well done! Take a rest and come back tomorrow.'**
+  String get dailyLimitReachedBody;
+
+  /// Title shown during break after a focus session
+  ///
+  /// In en, this message translates to:
+  /// **'Break Time!'**
+  String get breakTime;
+
+  /// Label showing completed session duration in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'Session completed: {minutes}m'**
+  String sessionCompleted(int minutes);
+
+  /// Button label to start a focus session with specified minutes
+  ///
+  /// In en, this message translates to:
+  /// **'Focus for {minutes} minutes'**
+  String focusForMinutes(int minutes);
+
+  /// Section title for focus time statistics
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Time'**
+  String get focusTime;
+
+  /// Label indicating remaining time on timer
+  ///
+  /// In en, this message translates to:
+  /// **'remaining'**
+  String get timerRemaining;
+
+  /// Label indicating timer is paused
+  ///
+  /// In en, this message translates to:
+  /// **'PAUSED'**
+  String get timerPaused;
+
+  /// Label indicating timer is complete
+  ///
+  /// In en, this message translates to:
+  /// **'DONE!'**
+  String get timerDone;
+
+  /// Button label to resume a paused timer
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resume;
+
+  /// Button label to pause a running timer
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pause;
+
+  /// Button label to mark a session as complete
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Complete'**
+  String get markComplete;
+
+  /// Auto-generated key for csvOverallStats
+  ///
+  /// In en, this message translates to:
+  /// **'OVERALL STATS'**
+  String get csvOverallStats;
+
+  /// Auto-generated key for csvTopicMastery
+  ///
+  /// In en, this message translates to:
+  /// **'TOPIC MASTERY'**
+  String get csvTopicMastery;
+
+  /// Auto-generated key for csvAllAttempts
+  ///
+  /// In en, this message translates to:
+  /// **'ALL ATTEMPTS'**
+  String get csvAllAttempts;
+
+  /// Auto-generated key for csvWeeklyTrend
+  ///
+  /// In en, this message translates to:
+  /// **'WEEKLY TREND'**
+  String get csvWeeklyTrend;
+
+  /// Auto-generated key for csvBadges
+  ///
+  /// In en, this message translates to:
+  /// **'BADGES'**
+  String get csvBadges;
+
+  /// Auto-generated key for csvColTotalAttempts
+  ///
+  /// In en, this message translates to:
+  /// **'Total Attempts'**
+  String get csvColTotalAttempts;
+
+  /// Auto-generated key for csvColCorrect
+  ///
+  /// In en, this message translates to:
+  /// **'Correct'**
+  String get csvColCorrect;
+
+  /// Auto-generated key for csvColAccuracy
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy (%)'**
+  String get csvColAccuracy;
+
+  /// Auto-generated key for csvColAvgTime
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Time (s)'**
+  String get csvColAvgTime;
+
+  /// Auto-generated key for csvColTotalHours
+  ///
+  /// In en, this message translates to:
+  /// **'Total Hours'**
+  String get csvColTotalHours;
+
+  /// Auto-generated key for csvColWeeklyActivity
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Activity'**
+  String get csvColWeeklyActivity;
+
+  /// Auto-generated key for csvColDailyActivity
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Activity'**
+  String get csvColDailyActivity;
+
+  /// Auto-generated key for csvColTopicsStudied
+  ///
+  /// In en, this message translates to:
+  /// **'Topics Studied'**
+  String get csvColTopicsStudied;
+
+  /// Auto-generated key for csvColTopicId
+  ///
+  /// In en, this message translates to:
+  /// **'Topic ID'**
+  String get csvColTopicId;
+
+  /// Auto-generated key for csvColMasteryLevel
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Level'**
+  String get csvColMasteryLevel;
+
+  /// Auto-generated key for csvColLastPracticed
+  ///
+  /// In en, this message translates to:
+  /// **'Last Practiced'**
+  String get csvColLastPracticed;
+
+  /// Auto-generated key for csvColReviewUrgency
+  ///
+  /// In en, this message translates to:
+  /// **'Review Urgency'**
+  String get csvColReviewUrgency;
+
+  /// Auto-generated key for csvColQuestionId
+  ///
+  /// In en, this message translates to:
+  /// **'Question ID'**
+  String get csvColQuestionId;
+
+  /// Auto-generated key for csvColSubjectId
+  ///
+  /// In en, this message translates to:
+  /// **'Subject ID'**
+  String get csvColSubjectId;
+
+  /// Auto-generated key for csvColTime
+  ///
+  /// In en, this message translates to:
+  /// **'Time (s)'**
+  String get csvColTime;
+
+  /// Auto-generated key for csvColTimestamp
+  ///
+  /// In en, this message translates to:
+  /// **'Timestamp'**
+  String get csvColTimestamp;
+
+  /// Auto-generated key for csvColWeek
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get csvColWeek;
+
+  /// Auto-generated key for csvColAttempts
+  ///
+  /// In en, this message translates to:
+  /// **'Attempts'**
+  String get csvColAttempts;
+
+  /// Auto-generated key for csvColImprovement
+  ///
+  /// In en, this message translates to:
+  /// **'Improvement'**
+  String get csvColImprovement;
+
+  /// Auto-generated key for csvColBadgeName
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Name'**
+  String get csvColBadgeName;
+
+  /// Auto-generated key for csvColBadgeDescription
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get csvColBadgeDescription;
+
+  /// Auto-generated key for csvColDateUnlocked
+  ///
+  /// In en, this message translates to:
+  /// **'Date Unlocked'**
+  String get csvColDateUnlocked;
+
+  /// Auto-generated key for pdfProgressReport
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Progress Report'**
+  String get pdfProgressReport;
+
+  /// Generated date label in PDF report
+  ///
+  /// In en, this message translates to:
+  /// **'Generated: {date}'**
+  String pdfGenerated(String date);
+
+  /// Student ID label in PDF report
+  ///
+  /// In en, this message translates to:
+  /// **'Student ID: {id}'**
+  String pdfStudentId(String id);
+
+  /// Auto-generated key for pdfOverallStatistics
+  ///
+  /// In en, this message translates to:
+  /// **'Overall Statistics'**
+  String get pdfOverallStatistics;
+
+  /// Auto-generated key for pdfMetric
+  ///
+  /// In en, this message translates to:
+  /// **'Metric'**
+  String get pdfMetric;
+
+  /// Auto-generated key for pdfValue
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get pdfValue;
+
+  /// Auto-generated key for pdfTopicMasteryBreakdown
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Mastery Breakdown'**
+  String get pdfTopicMasteryBreakdown;
+
+  /// Auto-generated key for pdfTableAttempts
+  ///
+  /// In en, this message translates to:
+  /// **'Attempts'**
+  String get pdfTableAttempts;
+
+  /// Auto-generated key for pdfTableLevel
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get pdfTableLevel;
+
+  /// Auto-generated key for pdfTableTopic
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get pdfTableTopic;
+
+  /// Auto-generated key for pdfBadgesEarned
+  ///
+  /// In en, this message translates to:
+  /// **'Badges Earned'**
+  String get pdfBadgesEarned;
+
+  /// Auto-generated key for pdfRecentActivitySummary
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Activity Summary'**
+  String get pdfRecentActivitySummary;
+
+  /// Auto-generated key for pdfNoMasteryData
+  ///
+  /// In en, this message translates to:
+  /// **'No mastery data available yet.'**
+  String get pdfNoMasteryData;
+
+  /// Auto-generated key for pdfNoBadges
+  ///
+  /// In en, this message translates to:
+  /// **'No badges earned yet. Keep studying!'**
+  String get pdfNoBadges;
+
+  /// Total attempts recorded count in PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Total attempts recorded: {count}'**
+  String pdfTotalAttemptsRecorded(int count);
+
+  /// Date range in PDF report
+  ///
+  /// In en, this message translates to:
+  /// **'Date range: {start} to {end}'**
+  String pdfDateRange(String start, String end);
+
+  /// Correct answers fraction in PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Correct: {correct}/{total}'**
+  String pdfCorrectFraction(int correct, int total);
 }
 
 class _AppLocalizationsDelegate

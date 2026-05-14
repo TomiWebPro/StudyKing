@@ -1,100 +1,183 @@
-# Test: Critical Coverage Gaps — Planner Roadmaps Tab Entirely Untested, SessionExportService Uncovered, and Test Structure Deficiencies
+# High-Value Test Coverage and Quality Gaps
 
-## Context
+## Summary
 
-A systematic audit of the 133 test files across 161 source `.dart` files reveals coverage gaps that expose the highest-risk feature code to undetected regressions. The most critical findings are: (1) the Planner screen's **Roadmaps tab** (~400 lines of business logic, dialog flows, and conditional rendering) has zero test coverage despite being a core feature; (2) `SessionExportService` (198 lines, CSV/JSON/PDF export with file I/O and sharing) is entirely untested; (3) `MentorScreen` (314 lines, `ConsumerStatefulWidget` with streaming chat) has no presentation-layer test; and (4) the few tests that exist for the Planner screen depend on the real `StudentIdService` singleton, creating a fragile, non-deterministic test environment. Additionally, test file placement is inconsistent across features.
+Systematic audit of the StudyKing test suite reveals **56 source files** (35 feature + 21 core) with zero tests, **15 structurally misplaced/duplicate test files**, and critical quality issues in several existing tests that make them effectively meaningless. The `focus_mode` feature is structurally complete but has a severely broken fake in its service test. The `practice` and `dashboard` features are the largest lacunae with 18 and 10 untested source files respectively.
 
-## Affected Files
+---
 
-### Critical Untested Source Files
+## 1. Critical: `FocusSessionService` Test Fakes Return Fabricated Data
 
-| File | Lines | Risk | Missing Coverage |
-|------|-------|------|------------------|
-| `test/features/planner/presentation/planner_screen_test.dart` | 396 | **Roadmaps tab at 0% coverage.** The test file has 13 test cases covering only the "Study Plan" tab. The `_createRoadmap` dialog flow, `_loadRoadmaps` loading/error/empty states, `_buildRoadmapCard` rendering (status badge, progress bar, milestone timeline, target completion date), `_buildMilestoneTimeline` layout logic, `_openTutorMode` navigation, edge case milestone positioning (zero-duration plans, single milestone, many milestones), and the `_isLoadingRoadmaps` spinner state are completely untested. | ~15+ widget tests |
-| `lib/features/sessions/services/session_export_service.dart` | 198 | **Zero tests for data export — a user-facing output path.** Tests needed: `sessionsToCSV` CSV escaping (commas, quotes, newlines in fields), accuracy formatting when `questionsAnswered == 0`, `sessionsToJSON` correctness, `sessionsToPDF` empty-session and single-session edge cases, `_formatDuration` and `_formatTotalDuration` rounding, error handling in `shareCSV`/`shareJSON`/`sharePDF` when temp directory fails, and null/invalid session data. | ~10+ unit tests |
-| `lib/features/mentor/presentation/mentor_screen.dart` | 314 | **Zero presentation-layer tests.** The `MentorService` layer has unit tests, but the `ConsumerStatefulWidget` (streaming chat, text input, scroll controller, initialization via Riverpod, `_isSending` guard, error states, empty state) is entirely uncovered. | ~10+ widget tests |
+**Severity: High** — Tests pass but assert nothing meaningful.
 
-### Test Quality Deficiencies in Existing Tests
+**Affected file:** `test/features/focus_mode/services/focus_session_service_test.dart`
 
-| File | Issue |
-|------|-------|
-| `test/features/planner/presentation/planner_screen_test.dart:365` | Uses `StudentIdService().getStudentId()` (a singleton that opens a Hive box). This introduces a real I/O dependency into widget tests, creates non-deterministic student IDs across runs, and can cause cascading failures if Hive initialization is not correctly set up in the test environment. The service should be injectable or stubbed. |
-| `test/features/planner/presentation/planner_screen_test.dart:82` | `_loadExistingPlan()` silently catches all exceptions (`catch (_) {}`), but there is no test verifying this silent-catch behavior or that the screen remains in an empty state when the repository throws. |
-| `test/features/planner/presentation/planner_screen_test.dart:78` | There is no test for the edge case where `_planRepo.init()` throws, even though the real `PlanRepository.init()` calls `Hive.box()` which can fail. |
-| `test/features/planner/presentation/planner_screen_test.dart:200-224` | The "generate plan with valid data" test uses the real `PlannerScreen` which calls `PersonalLearningPlanService.generatePlan()` internally — meaning this test is actually an integration test of the whole generation pipeline, not a unit test of the screen's UI. It depends on internal service behavior and could break for reasons unrelated to the screen's rendering. |
-| `test/features/planner/presentation/planner_screen_test.dart` | No tests for: negative or zero days/hours input, extremely large numbers, empty course name with valid numbers, non-numeric input in numeric fields, or the `FocusTraversalGroup` wrapping the study plan form. |
+**Problem:** `FakeFocusSessionRepository.get()`, `getAll()`, and `getByDate()` ignore stored data and return fabricated `FocusSession` objects constructed with `DateTime.now()` and hardcoded values:
 
-### Test Structure & Placement Inconsistencies
+```dart
+// Lines 24-32: get() ignores _store content
+Future<FocusSession?> get(String id) async {
+  final raw = _store[id];
+  if (raw == null) return null;
+  return FocusSession(          // <-- fabricates new session, ignores stored data
+    id: id,
+    startTime: DateTime.now(),  // <-- loses original startTime
+    plannedDurationMinutes: 25,
+  );
+}
+```
 
-Several patterns undermine discoverability and CI efficiency:
+**Consequences:**
+- `getTodayStats`, `getTodayFocusSeconds`, `getTodaySessionCount`, `getTodayCompletedSessionCount`, `getWeeklyFocusSeconds`, `getRecentSessions` — all 6 stats tests in the "stats" group only verify the *zero-data* case because the fake's `getByDate` returns sessions but the tests never assert non-zero values.
+- `isDailyCapReached` / `getRemainingDailyCapMinutes` tests cannot verify cap logic with real data.
+- The Hive `init(dir.path)` call in `setUp` is dead code since the fake never uses Hive.
+- `onTick` callback test uses `Future.delayed(1500ms)` — a flaky time-dependent pattern.
 
-- **Missing `services/` test directories**: `lib/features/sessions/services/session_export_service.dart` has no corresponding `test/features/sessions/services/` directory. Same pattern applies to `lib/features/practice/providers/practice_providers.dart` (no `test/features/practice/providers/`).
-- **Inconsistent model test locations**: Models are tested under `test/core/data/models/` for core models but under `test/features/subjects/models/` for feature models and `test/models/` for settings — there is no convention enforced.
-- **Missing data-layer tests**: The `lib/features/planner/` directory has no `data/` or `services/` subdirectories; all planner logic lives in `core/data/repositories/` and `core/services/`, making it unclear where module-level repository tests should go.
-- **Unit vs widget test blurring**: The planner test file mixes widget-rendering assertions with integration-level generation flow validation, making it harder to isolate failures and run targeted test suites.
+**Rationale:** This makes ~40% of the service test file (stats + daily cap groups) provide zero regression value. A real bug in stats aggregation would not be caught.
 
-## Rationale
+---
 
-1. **Roadmaps tab is a core feature area, not a secondary detail.** It encompasses dialog-based user input, async repository operations, error handling, date-based milestone calculations, and multi-state conditional rendering (loading spinner, empty state, roadmap cards, milestone timeline). Leaving this untested means every refactor or enhancement to roadmaps risks regression with no safety net. The fact that adjacent study-plan tab has 13 tests while the roadmaps tab has zero is a disproportionate coverage gap.
+## 2. Dashboard: 10 Widgets + 1 Provider Totally Untested
 
-2. **Session export is a data-critical output path.** CSV escaping bugs can corrupt exported data; PDF generation errors produce broken files for users; sharing failures silently fail since `shareCSV`/`shareJSON`/`sharePDF` catch no exceptions from file operations. These are I/O-heavy paths that are expensive to test manually but cheap to test programmatically.
+**Severity: High** — Core user-facing feature with zero widget-level coverage.
 
-3. **Mentor screen is a complex consumer-stateful widget** with Riverpod integration, streaming responses, scroll-to-bottom behavior, and sending guards. Current `mentor_service_test.dart` tests only the service layer, missing the entire UI state machine that users interact with.
+**Affected files (missing tests):**
+| Source | Expected test path |
+|---|---|
+| `lib/features/dashboard/presentation/widgets/badges_card.dart` | `test/features/dashboard/presentation/widgets/badges_card_test.dart` |
+| `lib/features/dashboard/presentation/widgets/dashboard_header.dart` | `test/features/dashboard/presentation/widgets/dashboard_header_test.dart` |
+| `lib/features/dashboard/presentation/widgets/export_section.dart` | `test/features/dashboard/presentation/widgets/export_section_test.dart` |
+| `lib/features/dashboard/presentation/widgets/mastery_progress_card.dart` | `test/features/dashboard/presentation/widgets/mastery_progress_card_test.dart` |
+| `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart` | `test/features/dashboard/presentation/widgets/plan_adherence_card_test.dart` |
+| `lib/features/dashboard/presentation/widgets/summary_row.dart` | `test/features/dashboard/presentation/widgets/summary_row_test.dart` |
+| `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart` | `test/features/dashboard/presentation/widgets/topic_breakdown_card_test.dart` |
+| `lib/features/dashboard/presentation/widgets/weak_areas_card.dart` | `test/features/dashboard/presentation/widgets/weak_areas_card_test.dart` |
+| `lib/features/dashboard/presentation/widgets/weekly_chart.dart` | `test/features/dashboard/presentation/widgets/weekly_chart_test.dart` |
+| `lib/features/dashboard/providers/dashboard_providers.dart` | `test/features/dashboard/providers/dashboard_providers_test.dart` |
 
-4. **Planner test's use of `StudentIdService` singleton** makes the test suite vulnerable to test-ordering issues (shared mutable state in a singleton) and environment dependencies (Hive box initialization). A true unit test should inject stubs for all external dependencies.
+**Additionally:**
+- `test/features/dashboard/dashboard_barrel_test.dart` is an **8-line skeleton** that only asserts `DashboardScreen` is not null.
+- A **907-line `dashboard_screen_coverage_test.dart`** exists alongside the main `dashboard_screen_test.dart` — this is a code smell: either redundant or should be consolidated.
 
-5. **Inconsistent test file placement** forces developers to guess where to put new tests, leads to duplicated test setup code, and slows CI by mixing fast unit tests with slow widget/integration tests in the same file.
+**Rationale:** The DashboardScreen uses all 9 widgets but only the screen-level integration is tested. Individual widget behavior (empty states, edge cases, interaction callbacks) is completely uncovered.
+
+---
+
+## 3. Practice Feature: 18 Source Files Untested
+
+**Severity: High** — Largest feature with fewest tests per source file (4 tests for 23 source files = 17% coverage).
+
+**Affected files (missing tests):**
+| Source | Expected test path |
+|---|---|
+| `lib/features/practice/presentation/models/practice_models.dart` | `test/features/practice/models/practice_models_test.dart` |
+| `lib/features/practice/presentation/services/practice_data_service.dart` | (non-standard location — see §5) |
+| `lib/features/practice/presentation/services/practice_session_service.dart` | (non-standard location — see §5) |
+| `lib/features/practice/presentation/widgets/practice_empty_state.dart` | `test/features/practice/presentation/widgets/practice_empty_state_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_feedback_widget.dart` | `test/features/practice/presentation/widgets/practice_feedback_widget_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_mode_card.dart` | `test/features/practice/presentation/widgets/practice_mode_card_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_mode_grid.dart` | `test/features/practice/presentation/widgets/practice_mode_grid_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_mode_option.dart` | `test/features/practice/presentation/widgets/practice_mode_option_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_mode_sheet.dart` | `test/features/practice/presentation/widgets/practice_mode_sheet_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_results_screen.dart` | `test/features/practice/presentation/widgets/practice_results_screen_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_session_nav_buttons.dart` | `test/features/practice/presentation/widgets/practice_session_nav_buttons_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_session_question_card.dart` | `test/features/practice/presentation/widgets/practice_session_question_card_test.dart` |
+| `lib/features/practice/presentation/widgets/practice_session_stats_bar.dart` | `test/features/practice/presentation/widgets/practice_session_stats_bar_test.dart` |
+| `lib/features/practice/presentation/widgets/spaced_repetition_sheet.dart` | `test/features/practice/presentation/widgets/spaced_repetition_sheet_test.dart` |
+| `lib/features/practice/presentation/widgets/subject_practice_card.dart` | `test/features/practice/presentation/widgets/subject_practice_card_test.dart` |
+| `lib/features/practice/presentation/widgets/subject_selection_sheet.dart` | `test/features/practice/presentation/widgets/subject_selection_sheet_test.dart` |
+| `lib/features/practice/presentation/widgets/topic_selection_sheet.dart` | `test/features/practice/presentation/widgets/topic_selection_sheet_test.dart` |
+| `lib/features/practice/presentation/widgets/weak_areas_sheet.dart` | `test/features/practice/presentation/widgets/weak_areas_sheet_test.dart` |
+| `lib/features/practice/services/question_type_localizer.dart` | `test/features/practice/services/question_type_localizer_test.dart` |
+
+**Additionally:**
+- `test/features/practice/providers/practice_providers_test.dart` is **43 lines** — only asserts providers can be read, never tests their behavior or business logic.
+- `test/features/practice/presentation/practice_test.dart` is at the wrong path (see §5).
+
+---
+
+## 4. Core Layer: 21 Untested Files Including Critical Services
+
+**Severity: Medium** — Untested foundational services risk silent regressions across all features.
+
+| Source | Notes |
+|---|---|
+| `lib/core/services/llm/llm_chat_service.dart` | LLM integration — untested |
+| `lib/core/services/llm/llm_embeddings_service.dart` | LLM integration — untested |
+| `lib/core/services/llm/llm_model_service.dart` | LLM integration — untested |
+| `lib/core/services/llm_task_manager.dart` | Task orchestration — untested |
+| `lib/core/services/llm_usage_meter.dart` | Cost tracking — untested |
+| `lib/core/services/engagement_scheduler.dart` | User engagement — untested |
+| `lib/core/services/mastery_calculation_service.dart` | Core mastery algorithm — untested |
+| `lib/core/services/notification_service.dart` | Notifications — untested |
+| `lib/core/services/progress_export_service.dart` | Data export — untested |
+| `lib/core/services/student_id_service.dart` | Student identity — untested |
+| `lib/core/utils/logger.dart` | Logging utility — untested |
+| `lib/core/utils/responsive.dart` | Responsive layout — untested |
+| `lib/core/utils/utils.dart` | General utilities — untested |
+| `lib/core/providers/app_providers.dart` | App-wide providers — untested |
+| `lib/core/providers/llm_providers.dart` | LLM providers — untested |
+| `lib/core/constants/app_config.dart` | Config constants — untested |
+| `lib/core/constants/app_constants.dart` | Constants — untested |
+| `lib/core/constants/security_config.dart` | Security config — untested |
+| `lib/core/constants/token_pricing_config.dart` | Pricing config — untested |
+| `lib/core/data/adapters/mastery_improvement_adapter.dart` | Hive adapter — untested |
+| `lib/core/data/adapters/plan_adherence_adapter.dart` | Hive adapter — untested |
+
+---
+
+## 5. Structural / Convention Violations
+
+| Issue | Path | Fix |
+|---|---|---|
+| Wrong location | `test/features/settings/data/models_test.dart` | Move to `test/features/settings/data/models/settings_box_test.dart` |
+| Wrong location | `test/features/practice/presentation/practice_test.dart` | Move to `test/features/practice/practice_test.dart` (tests the barrel) |
+| Empty directory | `test/features/questions/models/` | Remove or populate with tests |
+| Non-standard layout | `lib/features/questions/ui/widgets/` | Either rename to `presentation/widgets/` or update AGENTS.md to cover `ui/widgets/` |
+| Non-standard layout | `lib/features/practice/presentation/services/` | Convention has no rule for `presentation/services/` — services live at feature root in the convention. Either move them or add a convention exception. |
+| Non-standard layout | `lib/features/practice/presentation/models/` | Convention has `models/` at feature root, not under `presentation/` |
+| Duplicate test files | `test/features/quickguide/presentation/` 3 files for 1 source | Consolidate `quick_guide_screen_coverage_test.dart` and `quick_guide_screen_advanced_test.dart` into `quick_guide_screen_test.dart` or remove if redundant |
+| Duplicate test files | `test/features/dashboard/presentation/dashboard_screen_coverage_test.dart` (907 lines) | Consolidate into `dashboard_screen_test.dart` |
+| Missing model tests | `test/features/settings/data/models/accessibility_preferences_test.dart` | Missing dedicated test file (covered only partially in `models_test.dart`) |
+| Missing model tests | `test/features/settings/data/models/settings_model_test.dart` | Missing entirely |
+
+---
+
+## 6. Skeleton / Token Tests with Negligible Value
+
+These test files exist but provide minimal regression protection:
+
+| File | Lines | Problem |
+|---|---|---|
+| `test/features/dashboard/dashboard_barrel_test.dart` | 8 | Single `isNotNull` assertion |
+| `test/features/quickguide/quickguide_test.dart` | 34 | Only checks exported types exist |
+| `test/features/practice/providers/practice_providers_test.dart` | 43 | Only checks providers can be read — no behavior tests |
+| `test/features/practice/presentation/practice_test.dart` | 94 | Only 3 basic rendering assertions for PracticeScreen |
+
+---
 
 ## Acceptance Criteria
 
-### A. Planner Screen — Roadmaps Tab Coverage
-- [ ] `test/features/planner/presentation/planner_screen_test.dart` gains tests for the roadmaps tab:
-  - [ ] `_loadRoadmaps` shows `CircularProgressIndicator` while loading
-  - [ ] `_loadRoadmaps` shows the empty-state icon and message (`noRoadmapsYet`, `roadmapGoalHint`) when no roadmaps exist
-  - [ ] `_loadRoadmaps` shows a `ListView` of `_buildRoadmapCard` widgets when roadmaps exist (verify card renders status badge, goal text, progress bar, milestone count, target completion date)
-  - [ ] `_loadRoadmaps` error path does not crash and shows the empty state
-  - [ ] Tapping "Create Roadmap" opens an `AlertDialog` with goal and days fields
-  - [ ] Cancelling the roadmap dialog does not create a roadmap
-  - [ ] Submitting empty goal cancels creation
-  - [ ] Submitting valid goal creates a roadmap and shows success snackbar
-  - [ ] Roadmap card `_buildMilestoneTimeline` renders milestones correctly (completed, past-due, future milestone colors; zero milestones shows empty; multiple milestones render within width constraints)
-  - [ ] `_openTutorMode` triggers navigation when topic ID is non-empty
-  - [ ] Plan tab's `_generatePlan` validates edge cases: zero/negative days/hours, non-numeric input, empty course
+1. **Fix FocusSessionService fake (`focus_session_service_test.dart`):**
+   - Rewrite `FakeFocusSessionRepository` to actually preserve and retrieve session data.
+   - Add tests verifying `getTodayStats`, `getWeeklyFocusSeconds`, etc. return correct non-zero values with real session data.
+   - Add tests for `isDailyCapReached` and `getRemainingDailyCapMinutes` using a settings box mock.
+   - Remove the dead `Hive.init` call from `setUp`.
+   - Replace the flaky `Future.delayed(1500ms)` onTick test with a deterministic timer mock.
 
-### B. Planner Screen — Test Quality Improvements
-- [ ] `StudentIdService` dependency is removed from the test — inject a stub or use a configurable fake
-- [ ] `_loadExistingPlan` silent-catch behavior is explicitly tested (verify screen shows no plan when repository throws)
-- [ ] `_planRepo.init()` failure path in `initState` does not crash the screen
+2. **Add dashboard widget tests:** Write tests for all 9 dashboard widgets (badges_card: empty state, full state; dashboard_header: renders student info; weekly_chart: data rendering; etc.) and the dashboard provider.
 
-### C. SessionExportService Tests
-- [ ] `test/features/sessions/services/session_export_test.dart` created with:
-  - [ ] `sessionsToCSV` produces correct header row
-  - [ ] `sessionsToCSV` CSV-escapes commas, quotes, and newlines in fields
-  - [ ] `sessionsToCSV` formats accuracy as `0.0` when `questionsAnswered == 0`
-  - [ ] `sessionsToCSV` rounds duration to 1 decimal place
-  - [ ] `sessionsToJSON` returns correct `List<Map<String, dynamic>>` matching `toJson()`
-  - [ ] `sessionsToJSON` handles empty list
-  - [ ] `_formatDuration` correctly formats minutes+seconds and just-seconds cases
-  - [ ] `_formatTotalDuration` handles hours+minutes, just-minutes, and zero
-  - [ ] `sessionsToPDF` produces non-empty bytes for a non-empty session list
-  - [ ] `sessionsToPDF` produces non-empty bytes for an empty session list (no crash)
+3. **Add practice widget/service tests:** Write tests for at least the 18 untested practice files, prioritizing the services (`practice_data_service`, `practice_session_service`), models (`practice_models`), and session widgets (`practice_session_question_card`, `practice_session_nav_buttons`, `practice_results_screen`).
 
-### D. Mentor Screen — Presentation Layer Tests
-- [ ] `test/features/mentor/presentation/mentor_screen_test.dart` created with:
-  - [ ] Screen renders initial chat input and send button
-  - [ ] Loading state during `_initializeMentor` is shown
-  - [ ] Error state renders error message
-  - [ ] Sending a message disables input and shows sending indicator
-  - [ ] Streamed responses render as chat bubbles
-  - [ ] Scroll controller auto-scrolls on new messages
-  - [ ] Empty state shows welcome/placeholder message
+4. **Upgrade skeleton tests:**
+   - `dashboard_barrel_test.dart` → add actual widget smoke test or remove.
+   - `practice_providers_test.dart` → add behavior tests with mocked repositories.
+   - `practice_test.dart` → expand beyond 3 assertions.
 
-### E. Test Structure Standardization
-- [ ] Feature-level convention established in `AGENTS.md` or `CONTRIBUTING.md`:
-  - Every `lib/features/*/services/` file → `test/features/*/services/` test
-  - Every `lib/features/*/data/repositories/` file → `test/features/*/data/repositories/` test  
-  - Every `lib/features/*/providers/` file → `test/features/*/providers/` test
-  - Unit tests and widget tests are in separate files (not mixed)
-- [ ] `test/features/sessions/services/` directory created with `session_export_test.dart`
-- [ ] `test/features/practice/providers/` directory created with `practice_providers_test.dart`
-- [ ] `test/features/mentor/presentation/` directory created with `mentor_screen_test.dart`
+5. **Fix structural violations:**
+   - Move `test/features/settings/data/models_test.dart` to proper path.
+   - Move `test/features/practice/presentation/practice_test.dart` to feature root.
+   - Remove or populate `test/features/questions/models/`.
+   - Consolidate duplicate test files in dashboard and quickguide.
+
+6. **Add core service tests:** Write tests for at least the 5 highest-risk untested core services (llm_chat_service, mastery_calculation_service, student_id_service, notification_service, llm_task_manager).

@@ -5,12 +5,12 @@
 Every source file in `lib/features/*/` must have a corresponding test file following this convention:
 
 | Source Location | Test Location |
-|---|---|
+|---|---|---|
 | `lib/features/*/services/*.dart` | `test/features/*/services/*_test.dart` |
 | `lib/features/*/data/repositories/*.dart` | `test/features/*/data/repositories/*_test.dart` |
 | `lib/features/*/providers/*.dart` | `test/features/*/providers/*_test.dart` |
 | `lib/features/*/presentation/*.dart` | `test/features/*/presentation/*_test.dart` |
-| `lib/features/*/widgets/*.dart` | `test/features/*/widgets/*_test.dart` |
+| `lib/features/*/presentation/widgets/*.dart` | `test/features/*/presentation/widgets/*_test.dart` |
 | `lib/features/*/models/*.dart` | `test/features/*/models/*_test.dart` |
 
 ## Unit vs Widget Tests

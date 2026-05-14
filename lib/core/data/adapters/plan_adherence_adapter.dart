@@ -19,7 +19,7 @@ class PlanAdherenceMetricAdapter extends TypeAdapter<PlanAdherenceMetric> {
       plannedMinutes: fields[4] as int,
       actualMinutes: fields[5] as int,
       adherenceScore: fields[6] as double,
-      metadata: fields[7] as Map<String, dynamic>?,
+      metadata: fields[7] != null ? Map<String, dynamic>.from(fields[7] as Map) : null,
     );
   }
 

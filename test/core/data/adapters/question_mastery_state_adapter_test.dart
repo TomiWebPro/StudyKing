@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/src/adapters/date_time_adapter.dart';
 import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
@@ -18,6 +19,7 @@ void main() {
 
     test('write/read round-trip', () {
       final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
         ..registerAdapter(QuestionMasteryStateAdapter());
       final adapter = QuestionMasteryStateAdapter();
       final now = DateTime.now();
@@ -59,6 +61,7 @@ void main() {
 
     test('write/read with minimal fields', () {
       final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
         ..registerAdapter(QuestionMasteryStateAdapter());
       final adapter = QuestionMasteryStateAdapter();
       final now = DateTime.now();

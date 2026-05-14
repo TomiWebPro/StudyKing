@@ -135,6 +135,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             await exportService.shareComprehensiveCSV(
               StudentIdService().getStudentId(),
               'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
+              l10n,
             );
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -162,6 +163,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             await exportService.shareComprehensiveJSON(
               StudentIdService().getStudentId(),
               'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
+              l10n,
             );
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -287,7 +289,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 value: 'json',
                 child: ListTile(
                   leading: const Icon(Icons.code),
-                  title: Text('JSON'),
+                  title: Text(l10n.labelJson),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),

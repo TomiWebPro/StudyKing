@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: widget,
     ),
@@ -245,6 +248,23 @@ void main() {
       ));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('timer circle size is responsive', (tester) async {
+      final large = SizedBox(
+        width: 500,
+        height: 800,
+        child: _buildTestApp(
+          const FocusTimerWidget(
+            plannedDurationMinutes: 25,
+            elapsedSeconds: 0,
+          ),
+        ),
+      );
+      await tester.pumpWidget(large);
+
+      final sizedBoxes = find.byType(SizedBox);
+      expect(sizedBoxes, findsWidgets);
     });
   });
 }

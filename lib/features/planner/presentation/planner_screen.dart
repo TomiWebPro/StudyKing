@@ -4,9 +4,9 @@ import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../providers/planner_providers.dart';
-import '../widgets/plan_summary_card.dart';
-import '../widgets/daily_plan_card.dart';
-import '../widgets/roadmap_card.dart';
+import 'widgets/plan_summary_card.dart';
+import 'widgets/daily_plan_card.dart';
+import 'widgets/roadmap_card.dart';
 
 class PlannerScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;

@@ -9,7 +9,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/widgets.dart';
-import 'package:studyking/features/sessions/widgets/session_analytics.dart';
+import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import '../../../../core/utils/logger.dart';

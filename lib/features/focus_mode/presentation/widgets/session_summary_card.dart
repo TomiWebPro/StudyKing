@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionSummaryCard extends StatelessWidget {
   final Map<String, dynamic>? todayStats;
@@ -26,6 +27,8 @@ class SessionSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final stats = todayStats ?? {};
     final todaySeconds = stats['totalSeconds'] as int? ?? 0;
     final completed = stats['completedSessions'] as int? ?? 0;
@@ -40,10 +43,10 @@ class SessionSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.timer, color: theme.colorScheme.primary),
+                Icon(Icons.timer, color: cs.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Focus Time',
+                  l10n.focusTime,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -63,8 +66,8 @@ class SessionSummaryCard extends StatelessWidget {
                       child: MetricCard(
                         icon: Icons.access_time,
                         value: _formatDuration(todaySeconds),
-                        label: 'Today',
-                        accent: theme.colorScheme.primary,
+                        label: l10n.today,
+                        accent: cs.primary,
                       ),
                     ),
                     SizedBox(
@@ -72,8 +75,8 @@ class SessionSummaryCard extends StatelessWidget {
                       child: MetricCard(
                         icon: Icons.date_range,
                         value: _formatDuration(weeklySeconds),
-                        label: 'This Week',
-                        accent: theme.colorScheme.tertiary,
+                        label: l10n.thisWeek,
+                        accent: cs.tertiary,
                       ),
                     ),
                     SizedBox(
@@ -81,8 +84,8 @@ class SessionSummaryCard extends StatelessWidget {
                       child: MetricCard(
                         icon: Icons.check_circle,
                         value: '$completed/$total',
-                        label: 'Sessions',
-                        accent: Colors.green,
+                        label: l10n.sessionsLabel,
+                        accent: cs.primary,
                       ),
                     ),
                   ],
@@ -92,9 +95,9 @@ class SessionSummaryCard extends StatelessWidget {
             if (recentSessions.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
-                'Recent Sessions',
+                l10n.recentSessions,
                 style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: cs.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 8),
@@ -109,7 +112,7 @@ class SessionSummaryCard extends StatelessWidget {
                       Icon(
                         s.completed ? Icons.check_circle : Icons.cancel,
                         size: 16,
-                        color: s.completed ? Colors.green : theme.colorScheme.error,
+                        color: s.completed ? cs.primary : cs.error,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -121,7 +124,7 @@ class SessionSummaryCard extends StatelessWidget {
                       Text(
                         '${s.startTime.hour.toString().padLeft(2, '0')}:${s.startTime.minute.toString().padLeft(2, '0')}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ],

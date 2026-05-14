@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
-import '../../../core/data/enums.dart';
-import '../../../core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database;
-import 'package:studyking/core/routes/app_router.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/logger.dart';
-import 'package:studyking/core/utils/responsive.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/data/repositories/lesson_repository.dart';
+import '../../../core/providers/app_providers.dart' show database;
+import 'widgets/lesson_block_card.dart';
 
-class LessonDetailScreen extends StatefulWidget {
+class LessonDetailScreen extends ConsumerStatefulWidget {
   final LessonDetailArgs args;
   final LessonRepository? lessonRepository;
 
@@ -20,10 +21,11 @@ class LessonDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<LessonDetailScreen> createState() => _LessonDetailScreenState();
+  ConsumerState<LessonDetailScreen> createState() =>
+      _LessonDetailScreenState();
 }
 
-class _LessonDetailScreenState extends State<LessonDetailScreen> {
+class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   final Logger _logger = const Logger('LessonDetailScreen');
   Lesson? _lesson;
   Duration _elapsed = Duration.zero;
@@ -36,9 +38,6 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     _startTimer();
   }
 
-  LessonRepository get _lessonRepo =>
-      widget.lessonRepository ?? database.lessonRepository;
-
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
@@ -49,7 +48,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
   Future<void> _loadLesson() async {
     try {
-      final lesson = await _lessonRepo.get(widget.args.lessonId);
+      final repo = widget.lessonRepository ?? database.lessonRepository;
+      final lesson = await repo.get(widget.args.lessonId);
       if (mounted && lesson != null) setState(() => _lesson = lesson);
     } catch (e) {
       _logger.e('Error loading lesson', e);
@@ -63,6 +63,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   void _openTutorMode() {
+    if (!mounted) return;
     Navigator.pushNamed(
       context,
       AppRoutes.tutor,
@@ -108,27 +109,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           padding: ResponsiveUtils.listPadding(context),
           itemCount: lesson.blocks.length,
           itemBuilder: (context, i) {
-            final b = lesson.blocks[i];
             return FocusTraversalOrder(
               order: NumericFocusOrder(i.toDouble() + 1),
               child: Semantics(
-                label: _getBlockTitle(b.type, l10n),
-                child: Card(
-                margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListTile(
-                      leading: Icon(_getBlockIcon(b.type)),
-                      title: Text(_getBlockTitle(b.type, l10n)),
-                    ),
-                    Padding(
-                      padding: ResponsiveUtils.cardPadding(context),
-                      child: Text(b.content),
-                    ),
-                  ],
-                ),
-              ),
+                label: lesson.blocks[i].content,
+                child: LessonBlockCard(block: lesson.blocks[i]),
               ),
             );
           },
@@ -140,7 +125,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
             padding: ResponsiveUtils.screenPadding(context),
             child: Row(
               children: [
-                Text('${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'),
+                Text(
+                  '${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}',
+                ),
                 const Spacer(),
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(1),
@@ -160,39 +147,5 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getBlockIcon(LessonBlockType type) {
-    switch (type) {
-      case LessonBlockType.text:
-        return Icons.description;
-      case LessonBlockType.example:
-        return Icons.play_circle;
-      case LessonBlockType.exercise:
-        return Icons.note_add;
-      case LessonBlockType.slide:
-        return Icons.slideshow;
-      case LessonBlockType.quiz:
-        return Icons.question_answer;
-      case LessonBlockType.summary:
-        return Icons.check_circle;
-    }
-  }
-
-  String _getBlockTitle(LessonBlockType type, AppLocalizations l10n) {
-    switch (type) {
-      case LessonBlockType.text:
-        return l10n.blockTypeExplanation;
-      case LessonBlockType.example:
-        return l10n.blockTypeExample;
-      case LessonBlockType.exercise:
-        return l10n.blockTypeExercise;
-      case LessonBlockType.slide:
-        return l10n.blockTypeSlide;
-      case LessonBlockType.quiz:
-        return l10n.blockTypeQuiz;
-      case LessonBlockType.summary:
-        return l10n.blockTypeSummary;
-    }
   }
 }

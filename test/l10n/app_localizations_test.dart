@@ -1014,8 +1014,8 @@ void main() {
         expect(l10n.uploadDataFileDialog, 'Subir Archivo de Datos');
         expect(l10n.fileUploadImplemented, 'La funcionalidad de carga de archivos se implementaría aquí.');
         expect(l10n.graphValidation, 'Validación de Gráfico');
-        expect(l10n.considerUsingPieChart, 'Considere usar un Gráfico Circular para conjuntos pequeños de datos');
-        expect(l10n.considerUsingBarChart, 'Considere usar un Gráfico de Barras para conjuntos grandes de datos');
+      expect(l10n.considerUsingPieChart, 'Considere usar un gráfico circular para conjuntos pequeños de datos');
+      expect(l10n.considerUsingBarChart, 'Considere usar un gráfico de barras para conjuntos grandes de datos');
         expect(l10n.graphTypeMatchesData, 'El tipo de gráfico coincide con la estructura de datos');
         expect(l10n.graphRefreshed, 'Gráfico actualizado');
         expect(l10n.pleaseSelectGraphType, 'Por favor seleccione un tipo de gráfico primero');
@@ -1277,8 +1277,8 @@ void main() {
       });
 
       test('drawingWithStrokes', () {
-        expect(l10n.drawingWithStrokes(1), 'Dibujando con 1 trazo');
-        expect(l10n.drawingWithStrokes(3), 'Dibujando con 3 trazos');
+        expect(l10n.drawingWithStrokes(1), 'Dibujo con 1 trazo');
+        expect(l10n.drawingWithStrokes(3), 'Dibujo con 3 trazos');
       });
 
       test('ofLabel', () {

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/teaching/presentation/widgets/lesson_progress_bar.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget wrapApp(Widget child) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: child,
     ),
@@ -152,6 +155,64 @@ void main() {
       ));
 
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows remaining 1 min when one minute left', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 44,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('1 min remaining'), findsOneWidget);
+    });
+
+    testWidgets('shows error color and overtime text when exceeding duration', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 50,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('+5m'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows correct stat when count > 0', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 5,
+          plannedDurationMinutes: 45,
+          exerciseCount: 2,
+          correctCount: 1,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('1 correct'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+    });
+
+    testWidgets('shows zero questions label', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 5,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('0 questions'), findsOneWidget);
     });
   });
 }

@@ -1882,6 +1882,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionHistoryExportedPdf => 'Session history exported to PDF';
 
   @override
+  String get labelJson => 'JSON';
+
+  @override
   String get failedToStartPractice => 'Failed to start practice session';
 
   @override
@@ -2273,4 +2276,201 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allRequiredStepsMissing => 'Some required steps missing';
+
+  @override
+  String get focusMode => 'Focus Mode';
+
+  @override
+  String get newFocusSession => 'New Focus Session';
+
+  @override
+  String get refreshStats => 'Refresh stats';
+
+  @override
+  String errorStartingSession(String error) {
+    return 'Error starting session: $error';
+  }
+
+  @override
+  String get dailyLimitReached => 'Daily Limit Reached';
+
+  @override
+  String get dailyLimitReachedBody =>
+      'You\'ve reached your daily study limit — well done! Take a rest and come back tomorrow.';
+
+  @override
+  String get breakTime => 'Break Time!';
+
+  @override
+  String sessionCompleted(int minutes) {
+    return 'Session completed: ${minutes}m';
+  }
+
+  @override
+  String focusForMinutes(int minutes) {
+    return 'Focus for $minutes minutes';
+  }
+
+  @override
+  String get focusTime => 'Focus Time';
+
+  @override
+  String get timerRemaining => 'remaining';
+
+  @override
+  String get timerPaused => 'PAUSED';
+
+  @override
+  String get timerDone => 'DONE!';
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get markComplete => 'Mark Complete';
+
+  @override
+  String get csvOverallStats => 'OVERALL STATS';
+
+  @override
+  String get csvTopicMastery => 'TOPIC MASTERY';
+
+  @override
+  String get csvAllAttempts => 'ALL ATTEMPTS';
+
+  @override
+  String get csvWeeklyTrend => 'WEEKLY TREND';
+
+  @override
+  String get csvBadges => 'BADGES';
+
+  @override
+  String get csvColTotalAttempts => 'Total Attempts';
+
+  @override
+  String get csvColCorrect => 'Correct';
+
+  @override
+  String get csvColAccuracy => 'Accuracy (%)';
+
+  @override
+  String get csvColAvgTime => 'Avg Time (s)';
+
+  @override
+  String get csvColTotalHours => 'Total Hours';
+
+  @override
+  String get csvColWeeklyActivity => 'Weekly Activity';
+
+  @override
+  String get csvColDailyActivity => 'Daily Activity';
+
+  @override
+  String get csvColTopicsStudied => 'Topics Studied';
+
+  @override
+  String get csvColTopicId => 'Topic ID';
+
+  @override
+  String get csvColMasteryLevel => 'Mastery Level';
+
+  @override
+  String get csvColLastPracticed => 'Last Practiced';
+
+  @override
+  String get csvColReviewUrgency => 'Review Urgency';
+
+  @override
+  String get csvColQuestionId => 'Question ID';
+
+  @override
+  String get csvColSubjectId => 'Subject ID';
+
+  @override
+  String get csvColTime => 'Time (s)';
+
+  @override
+  String get csvColTimestamp => 'Timestamp';
+
+  @override
+  String get csvColWeek => 'Week';
+
+  @override
+  String get csvColAttempts => 'Attempts';
+
+  @override
+  String get csvColImprovement => 'Improvement';
+
+  @override
+  String get csvColBadgeName => 'Badge Name';
+
+  @override
+  String get csvColBadgeDescription => 'Description';
+
+  @override
+  String get csvColDateUnlocked => 'Date Unlocked';
+
+  @override
+  String get pdfProgressReport => 'StudyKing Progress Report';
+
+  @override
+  String pdfGenerated(String date) {
+    return 'Generated: $date';
+  }
+
+  @override
+  String pdfStudentId(String id) {
+    return 'Student ID: $id';
+  }
+
+  @override
+  String get pdfOverallStatistics => 'Overall Statistics';
+
+  @override
+  String get pdfMetric => 'Metric';
+
+  @override
+  String get pdfValue => 'Value';
+
+  @override
+  String get pdfTopicMasteryBreakdown => 'Topic Mastery Breakdown';
+
+  @override
+  String get pdfTableAttempts => 'Attempts';
+
+  @override
+  String get pdfTableLevel => 'Level';
+
+  @override
+  String get pdfTableTopic => 'Topic';
+
+  @override
+  String get pdfBadgesEarned => 'Badges Earned';
+
+  @override
+  String get pdfRecentActivitySummary => 'Recent Activity Summary';
+
+  @override
+  String get pdfNoMasteryData => 'No mastery data available yet.';
+
+  @override
+  String get pdfNoBadges => 'No badges earned yet. Keep studying!';
+
+  @override
+  String pdfTotalAttemptsRecorded(int count) {
+    return 'Total attempts recorded: $count';
+  }
+
+  @override
+  String pdfDateRange(String start, String end) {
+    return 'Date range: $start to $end';
+  }
+
+  @override
+  String pdfCorrectFraction(int correct, int total) {
+    return 'Correct: $correct/$total';
+  }
 }

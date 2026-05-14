@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/errors/handlers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
 import '../../../core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database;
+import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/core/utils/responsive.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/providers/app_providers.dart' show database;
 
-class TopicListScreen extends StatefulWidget {
+class TopicListScreen extends ConsumerStatefulWidget {
   final TopicRepository? topicRepository;
 
   const TopicListScreen({super.key, this.topicRepository});
 
   @override
-  State<TopicListScreen> createState() => _TopicListScreenState();
+  ConsumerState<TopicListScreen> createState() => _TopicListScreenState();
 }
 
-class _TopicListScreenState extends State<TopicListScreen> {
+class _TopicListScreenState extends ConsumerState<TopicListScreen> {
   List<Topic> _topics = [];
   bool _isLoading = true;
 
@@ -26,12 +27,11 @@ class _TopicListScreenState extends State<TopicListScreen> {
     _loadTopics();
   }
 
-  TopicRepository get _topicRepo =>
-      widget.topicRepository ?? database.topicRepository;
-
   Future<void> _loadTopics() async {
     try {
-      final topics = await _topicRepo.getAll();
+      final repo = widget.topicRepository ?? database.topicRepository;
+      final topics = await repo.getAll();
+      if (!mounted) return;
       setState(() {
         _topics = topics;
         _isLoading = false;
@@ -48,7 +48,7 @@ class _TopicListScreenState extends State<TopicListScreen> {
       }
     }
   }
-  
+
   Future<void> _retryLoadTopics() => _loadTopics();
 
   @override
@@ -63,22 +63,25 @@ class _TopicListScreenState extends State<TopicListScreen> {
       itemCount: _topics.length,
       itemBuilder: (context, index) {
         final t = _topics[index];
-          return Semantics(
-            label: t.title,
-            child: Card(
-            margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
-          child: ListTile(
-            leading: const Icon(Icons.folder, color: Colors.blue),
-            title: Text(t.title),
-            subtitle: Text(t.description),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(
-              context,
-              AppRoutes.lessonList,
-              arguments: LessonListArgs(topicId: t.id, topicTitle: t.title),
+        return Semantics(
+          label: t.title,
+          child: Card(
+            margin: EdgeInsets.only(
+              bottom: ResponsiveUtils.verticalSpacing(context) * 0.75,
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.folder, color: Colors.blue),
+              title: Text(t.title),
+              subtitle: Text(t.description),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.lessonList,
+                arguments: LessonListArgs(
+                    topicId: t.id, topicTitle: t.title),
+              ),
             ),
           ),
-        ),
         );
       },
     );

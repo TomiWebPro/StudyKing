@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
@@ -28,4 +29,8 @@ final dashboardFocusServiceProvider = Provider<FocusSessionService>((ref) {
   return FocusSessionService(
     repository: FocusSessionRepository(),
   );
+});
+
+final dashboardAdherenceRepositoryProvider = Provider<PlanAdherenceRepository>((ref) {
+  return PlanAdherenceRepository();
 });

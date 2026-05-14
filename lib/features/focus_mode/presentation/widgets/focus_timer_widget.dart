@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FocusTimerWidget extends StatefulWidget {
   final int plannedDurationMinutes;
@@ -42,7 +43,7 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    if (widget.isActive) {
+    if (widget.isActive && !widget.isPaused) {
       _pulseController.repeat(reverse: true);
     }
   }
@@ -50,9 +51,11 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
   @override
   void didUpdateWidget(FocusTimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
+    final wasRunning = oldWidget.isActive && !oldWidget.isPaused;
+    final isRunning = widget.isActive && !widget.isPaused;
+    if (isRunning && !wasRunning) {
       _pulseController.repeat(reverse: true);
-    } else if (!widget.isActive && oldWidget.isActive) {
+    } else if (!isRunning && wasRunning) {
       _pulseController.stop();
       _pulseController.reset();
     }
@@ -77,6 +80,8 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final remaining = remainingSeconds;
     final isComplete = widget.isActive && remaining <= 0;
     final progressColor = AppTheme.progressColor(progress, context);
@@ -84,62 +89,75 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            final pulse = widget.isPaused
-                ? 1.0
-                : 1.0 + (_pulseController.value * 0.03);
-            return Transform.scale(
-              scale: pulse,
-              child: child,
-            );
-          },
-          child: SizedBox(
-            width: 260,
-            height: 260,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 260,
-                  height: 260,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 12,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isComplete ? Colors.green : progressColor,
-                    ),
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth * 0.8;
+            final size = maxWidth.clamp(200.0, 260.0);
+            return AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                final pulse = widget.isPaused
+                    ? 1.0
+                    : 1.0 + (_pulseController.value * 0.03);
+                return Transform.scale(
+                  scale: pulse,
+                  child: child,
+                );
+              },
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(
-                      _formatTime(remaining),
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isComplete ? Colors.green : null,
+                    SizedBox(
+                      width: size,
+                      height: size,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 12,
+                        backgroundColor: cs.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isComplete ? cs.primary : progressColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.isPaused ? 'PAUSED' : isComplete ? 'DONE!' : 'remaining',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: widget.isPaused
-                            ? Colors.orange
-                            : isComplete
-                                ? Colors.green
-                                : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _formatTime(remaining),
+                            style: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isComplete ? cs.primary : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.isPaused
+                              ? l10n.timerPaused
+                              : isComplete
+                                  ? l10n.timerDone
+                                  : l10n.timerRemaining,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: widget.isPaused
+                                ? cs.tertiary
+                                : isComplete
+                                    ? cs.primary
+                                    : cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 32),
         if (widget.isActive) ...[
@@ -150,21 +168,21 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                 FilledButton.icon(
                   onPressed: widget.onResume,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Resume'),
+                  label: Text(l10n.resume),
                 )
               else
                 FilledButton.icon(
                   onPressed: widget.onPause,
                   icon: const Icon(Icons.pause),
-                  label: const Text('Pause'),
+                  label: Text(l10n.pause),
                 ),
               const SizedBox(width: 16),
               OutlinedButton.icon(
                 onPressed: widget.onCancel,
                 icon: const Icon(Icons.stop),
-                label: const Text('End'),
+                label: Text(l10n.end),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
+                  foregroundColor: cs.error,
                 ),
               ),
             ],
@@ -174,7 +192,7 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
             TextButton.icon(
               onPressed: widget.onComplete,
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Mark Complete'),
+              label: Text(l10n.markComplete),
             ),
         ],
       ],

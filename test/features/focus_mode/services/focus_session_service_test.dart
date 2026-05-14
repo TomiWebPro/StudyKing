@@ -1,13 +1,11 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 
-import 'dart:io';
-
 class FakeFocusSessionRepository extends FocusSessionRepository {
-  final Map<String, String> _store = {};
+  final Map<String, FocusSession> _store = {};
   bool initCalled = false;
 
   @override
@@ -17,38 +15,29 @@ class FakeFocusSessionRepository extends FocusSessionRepository {
 
   @override
   Future<void> save(FocusSession session) async {
-    _store[session.id] = session.toJson().toString();
+    _store[session.id] = session;
   }
 
   @override
   Future<FocusSession?> get(String id) async {
-    final raw = _store[id];
-    if (raw == null) return null;
-    return FocusSession(
-      id: id,
-      startTime: DateTime.now(),
-      plannedDurationMinutes: 25,
-    );
+    return _store[id];
   }
 
   @override
   Future<List<FocusSession>> getAll() async {
-    return _store.keys.map((id) => FocusSession(
-      id: id,
-      startTime: DateTime.now(),
-      plannedDurationMinutes: 25,
-    )).toList();
+    final sessions = _store.values.toList();
+    sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
+    return sessions;
   }
 
   @override
   Future<List<FocusSession>> getByDate(DateTime date) async {
-    return _store.keys.map((id) => FocusSession(
-      id: id,
-      startTime: DateTime.now(),
-      plannedDurationMinutes: 25,
-      actualDurationSeconds: 1500,
-      completed: id.contains('completed'),
-    )).toList();
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    final all = await getAll();
+    return all.where((s) =>
+        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        s.startTime.isBefore(end)).toList();
   }
 
   @override
@@ -62,15 +51,32 @@ class FakeFocusSessionRepository extends FocusSessionRepository {
   }
 }
 
+FocusSession _session({
+  required String id,
+  required DateTime startTime,
+  int plannedDurationMinutes = 25,
+  int actualDurationSeconds = 0,
+  bool completed = false,
+  String? subjectId,
+  String? topicId,
+}) {
+  return FocusSession(
+    id: id,
+    startTime: startTime,
+    plannedDurationMinutes: plannedDurationMinutes,
+    actualDurationSeconds: actualDurationSeconds,
+    completed: completed,
+    subjectId: subjectId,
+    topicId: topicId,
+    endTime: completed ? startTime.add(Duration(seconds: actualDurationSeconds)) : null,
+  );
+}
+
 void main() {
   late FocusSessionService service;
   late FakeFocusSessionRepository fakeRepo;
 
-  setUp(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('hive_test_');
-    Hive.init(dir.path);
-
+  setUp(() {
     fakeRepo = FakeFocusSessionRepository();
     service = FocusSessionService(repository: fakeRepo);
   });
@@ -216,28 +222,30 @@ void main() {
         expect(captured, isNull);
       });
 
-      test('onTick callback fires when timer ticks', () async {
-        await service.startSession(plannedDurationMinutes: 1);
-        int? captured;
-        service.addOnTick((elapsed) => captured = elapsed);
+      test('onTick callback fires when timer ticks', () {
+        fakeAsync((async) {
+          service.startSession(plannedDurationMinutes: 1);
+          int? captured;
+          service.addOnTick((elapsed) => captured = elapsed);
 
-        await Future.delayed(const Duration(milliseconds: 1500));
-        service.dispose();
+          async.elapse(const Duration(seconds: 1));
 
-        expect(captured, greaterThan(0));
+          expect(captured, greaterThan(0));
+        });
       });
 
-      test('removeOnTick removes callback', () async {
-        await service.startSession(plannedDurationMinutes: 1);
-        int? captured;
-        void callback(int e) => captured = e;
-        service.addOnTick(callback);
-        service.removeOnTick(callback);
+      test('removeOnTick removes callback', () {
+        fakeAsync((async) {
+          service.startSession(plannedDurationMinutes: 1);
+          int? captured;
+          void callback(int e) => captured = e;
+          service.addOnTick(callback);
+          service.removeOnTick(callback);
 
-        await Future.delayed(const Duration(milliseconds: 1500));
-        service.dispose();
+          async.elapse(const Duration(seconds: 1));
 
-        expect(captured, isNull);
+          expect(captured, isNull);
+        });
       });
     });
 
@@ -258,7 +266,93 @@ void main() {
       });
     });
 
-    group('stats', () {
+    group('stats with real data', () {
+      setUp(() async {
+        final today = DateTime.now();
+        final todayStart = DateTime(today.year, today.month, today.day);
+
+        await fakeRepo.save(_session(
+          id: 's1',
+          startTime: todayStart.add(const Duration(hours: 10)),
+          actualDurationSeconds: 1200,
+          completed: true,
+        ));
+        await fakeRepo.save(_session(
+          id: 's2',
+          startTime: todayStart.add(const Duration(hours: 14)),
+          actualDurationSeconds: 1800,
+          completed: true,
+        ));
+        await fakeRepo.save(_session(
+          id: 's3',
+          startTime: todayStart.add(const Duration(hours: 16)),
+          actualDurationSeconds: 600,
+          completed: false,
+        ));
+      });
+
+      test('getTodayFocusSeconds returns sum of today durations', () async {
+        final seconds = await service.getTodayFocusSeconds();
+        expect(seconds, 3600);
+      });
+
+      test('getTodaySessionCount returns correct count', () async {
+        final count = await service.getTodaySessionCount();
+        expect(count, 3);
+      });
+
+      test('getTodayCompletedSessionCount returns only completed', () async {
+        final count = await service.getTodayCompletedSessionCount();
+        expect(count, 2);
+      });
+
+      test('getTodayStats returns map with correct values', () async {
+        final stats = await service.getTodayStats();
+
+        expect(stats['totalSeconds'], 3600);
+        expect(stats['completedSessions'], 2);
+        expect(stats['totalSessions'], 3);
+        expect(stats['hours'], '1.0');
+      });
+
+      test('getRecentSessions returns saved sessions sorted by time', () async {
+        final recent = await service.getRecentSessions();
+        expect(recent.length, 3);
+      });
+    });
+
+    group('weekly stats', () {
+      setUp(() async {
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+
+        await fakeRepo.save(_session(
+          id: 'today_session',
+          startTime: todayStart.add(const Duration(hours: 12)),
+          actualDurationSeconds: 900,
+          completed: true,
+        ));
+        await fakeRepo.save(_session(
+          id: 'yesterday_session',
+          startTime: todayStart.subtract(const Duration(days: 1)).add(const Duration(hours: 10)),
+          actualDurationSeconds: 600,
+          completed: true,
+        ));
+        await fakeRepo.save(_session(
+          id: 'last_week_session',
+          startTime: todayStart.subtract(const Duration(days: 10)),
+          actualDurationSeconds: 300,
+          completed: false,
+        ));
+      });
+
+      test('getWeeklyFocusSeconds sums last 7 days', () async {
+        final seconds = await service.getWeeklyFocusSeconds();
+        expect(seconds, 1500);
+      });
+    });
+
+    group('stats edge cases', () {
       test('getTodayFocusSeconds returns 0 with no sessions', () async {
         final seconds = await service.getTodayFocusSeconds();
         expect(seconds, 0);
@@ -279,7 +373,7 @@ void main() {
         expect(seconds, 0);
       });
 
-      test('getTodayStats returns map with zero values', () async {
+      test('getTodayStats returns map with zeros when no sessions', () async {
         final stats = await service.getTodayStats();
 
         expect(stats['totalSeconds'], 0);
@@ -289,7 +383,7 @@ void main() {
         expect(stats['hours'], '0.0');
       });
 
-      test('getRecentSessions returns empty list', () async {
+      test('getRecentSessions returns empty list when no sessions', () async {
         final recent = await service.getRecentSessions();
         expect(recent, isEmpty);
       });
