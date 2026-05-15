@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
-import 'package:studyking/core/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
 class EngagementNudgeRepository extends Repository<EngagementNudgeModel> {
   Future<void> init() async {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 void main() {
@@ -169,10 +169,50 @@ void main() {
       });
     });
 
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = LessonBlock(
+          id: 'block-1',
+          subjectId: 'subject-1',
+          lessonId: 'lesson-1',
+          type: LessonBlockType.text,
+          content: 'Content',
+        );
+        final b = LessonBlock(
+          id: 'block-2',
+          subjectId: 'subject-2',
+          lessonId: 'lesson-2',
+          type: LessonBlockType.quiz,
+          content: 'Other',
+        );
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = LessonBlock(
+          id: 'block-1',
+          subjectId: 'subject-1',
+          lessonId: 'lesson-1',
+          type: LessonBlockType.text,
+          content: 'Content',
+        );
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
     group('Hive type annotation', () {
       test('class name matches HiveType', () {
         const block = LessonBlock;
         expect(block.toString(), 'LessonBlock');
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C', order: 1);
+        expect(obj.toString(), contains('LessonBlock'));
       });
     });
   });

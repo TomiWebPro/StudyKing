@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 
 void main() {
   group('AppRoutes', () {
@@ -294,31 +295,10 @@ void main() {
     });
 
     group('dashboard', () {
-      test('returns route with Map args containing studentId', () {
+      test('returns route with DashboardArgs', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.dashboard,
-          arguments: <String, dynamic>{'studentId': 'student-123'},
-        ));
-        expect(route, isNotNull);
-        expect(route!.settings.name, AppRoutes.dashboard);
-      });
-
-      test('returns route with Map args containing all keys', () {
-        final route = onGenerateRoute(RouteSettings(
-          name: AppRoutes.dashboard,
-          arguments: <String, dynamic>{
-            'studentId': 'student-123',
-            'masteryService': null,
-          },
-        ));
-        expect(route, isNotNull);
-        expect(route!.settings.name, AppRoutes.dashboard);
-      });
-
-      test('returns route with empty Map args', () {
-        final route = onGenerateRoute(RouteSettings(
-          name: AppRoutes.dashboard,
-          arguments: <String, dynamic>{},
+          arguments: const DashboardArgs(studentId: 'student-123'),
         ));
         expect(route, isNotNull);
         expect(route!.settings.name, AppRoutes.dashboard);
@@ -341,19 +321,10 @@ void main() {
         expect(route!.settings.name, AppRoutes.dashboard);
       });
 
-      test('returns route with non-Map args using defaults', () {
+      test('returns route with non-DashboardArgs using defaults', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.dashboard,
           arguments: 'invalid',
-        ));
-        expect(route, isNotNull);
-        expect(route!.settings.name, AppRoutes.dashboard);
-      });
-
-      test('returns route with int args using defaults', () {
-        final route = onGenerateRoute(RouteSettings(
-          name: AppRoutes.dashboard,
-          arguments: 42,
         ));
         expect(route, isNotNull);
         expect(route!.settings.name, AppRoutes.dashboard);
@@ -761,7 +732,7 @@ void main() {
     });
 
     test('preserves route settings arguments', () {
-      final args = <String, dynamic>{'key': 'value'};
+      final args = const DashboardArgs(studentId: 'test-student');
       final route = onGenerateRoute(RouteSettings(
         name: AppRoutes.dashboard,
         arguments: args,

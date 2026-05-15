@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/plan_adherence_model.dart';
-import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -24,9 +24,9 @@ class _FakeSessionRepo extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Session>> getByDate(DateTime date) async {
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
     if (shouldThrow) throw Exception('Session repo error');
-    return sessions ?? [];
+    return Result.success(sessions ?? []);
   }
 }
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 void main() {
   group('PersonalLearningPlan', () {
@@ -104,6 +104,80 @@ void main() {
         expect(restored.summary.totalQuestions, original.summary.totalQuestions);
         expect(restored.recommendations.length, original.recommendations.length);
       });
+
+      test('copyWith returns identical copy with no args', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1',
+          generatedAt: now,
+          dailyPlans: [dailyPlan],
+          summary: summary,
+          recommendations: [recommendation],
+          planDurationDays: 14,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 30,
+          metadata: {'version': '1.0'},
+        );
+        final copy = plan.copyWith();
+        expect(copy.studentId, 's1');
+        expect(copy.dailyPlans.length, 1);
+        expect(copy.planDurationDays, 14);
+        expect(copy.metadata?['version'], '1.0');
+      });
+
+      test('copyWith updates specific fields', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1',
+          generatedAt: now,
+          dailyPlans: [dailyPlan],
+          summary: summary,
+          recommendations: [recommendation],
+        );
+        expect(plan.copyWith(studentId: 's2').studentId, 's2');
+        expect(plan.copyWith(planDurationDays: 30).planDurationDays, 30);
+        expect(plan.copyWith(targetMinutesPerDay: 90.0).targetMinutesPerDay, 90.0);
+        expect(plan.copyWith(targetQuestionsPerDay: 50).targetQuestionsPerDay, 50);
+      });
+
+      test('copyWith null fields keep original values', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1',
+          generatedAt: now,
+          dailyPlans: [dailyPlan],
+          summary: summary,
+          recommendations: [recommendation],
+          planDurationDays: 14,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 30,
+          metadata: {'k': 'v'},
+        );
+        final copy = plan.copyWith(
+          studentId: null,
+          generatedAt: null,
+          dailyPlans: null,
+          summary: null,
+          recommendations: null,
+          planDurationDays: null,
+          targetMinutesPerDay: null,
+          targetQuestionsPerDay: null,
+          metadata: null,
+        );
+        expect(copy.studentId, 's1');
+        expect(copy.planDurationDays, 14);
+        expect(copy.targetMinutesPerDay, 60.0);
+        expect(copy.metadata?['k'], 'v');
+      });
+
+      test('copyWith does not mutate original', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1',
+          generatedAt: now,
+          dailyPlans: [dailyPlan],
+          summary: summary,
+          recommendations: [recommendation],
+        );
+        plan.copyWith(studentId: 's2');
+        expect(plan.studentId, 's1');
+      });
     });
 
     group('DailyPlan', () {
@@ -137,6 +211,44 @@ void main() {
         expect(restored.dayNumber, dailyPlan.dayNumber);
         expect(restored.targetQuestions, dailyPlan.targetQuestions);
         expect(restored.isRestDay, dailyPlan.isRestDay);
+      });
+
+      test('copyWith returns identical copy with no args', () {
+        final copy = dailyPlan.copyWith();
+        expect(copy.date, dailyPlan.date);
+        expect(copy.dayNumber, dailyPlan.dayNumber);
+        expect(copy.targetQuestions, dailyPlan.targetQuestions);
+        expect(copy.isRestDay, dailyPlan.isRestDay);
+        expect(copy.focus, dailyPlan.focus);
+      });
+
+      test('copyWith updates specific fields', () {
+        expect(dailyPlan.copyWith(dayNumber: 5).dayNumber, 5);
+        expect(dailyPlan.copyWith(targetQuestions: 99).targetQuestions, 99);
+        expect(dailyPlan.copyWith(isRestDay: true).isRestDay, isTrue);
+        expect(dailyPlan.copyWith(focus: 'New focus').focus, 'New focus');
+      });
+
+      test('copyWith null fields keep original values', () {
+        final copy = dailyPlan.copyWith(
+          date: null,
+          dayNumber: null,
+          priorityTopics: null,
+          reviewQuestionIds: null,
+          stretchGoalQuestionIds: null,
+          targetQuestions: null,
+          targetMinutes: null,
+          focus: null,
+          isRestDay: null,
+        );
+        expect(copy.date, dailyPlan.date);
+        expect(copy.dayNumber, dailyPlan.dayNumber);
+        expect(copy.focus, dailyPlan.focus);
+      });
+
+      test('copyWith does not mutate original', () {
+        dailyPlan.copyWith(dayNumber: 99);
+        expect(dailyPlan.dayNumber, 1);
       });
     });
 
@@ -194,6 +306,90 @@ void main() {
         expect(restored.topicId, recommendation.topicId);
         expect(restored.reason, recommendation.reason);
         expect(restored.priority, recommendation.priority);
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('PersonalLearningPlan handles null planDurationDays', () {
+        final json = {
+          'studentId': 's1',
+          'generatedAt': now.toIso8601String(),
+          'dailyPlans': [dailyPlan.toJson()],
+          'summary': summary.toJson(),
+          'recommendations': [recommendation.toJson()],
+          'planDurationDays': null,
+        };
+        final plan = PersonalLearningPlan.fromJson(json);
+        expect(plan.planDurationDays, 7);
+      });
+
+      test('PersonalLearningPlan handles null metadata', () {
+        final json = {
+          'studentId': 's1',
+          'generatedAt': now.toIso8601String(),
+          'dailyPlans': [dailyPlan.toJson()],
+          'summary': summary.toJson(),
+          'recommendations': [recommendation.toJson()],
+          'metadata': null,
+        };
+        final plan = PersonalLearningPlan.fromJson(json);
+        expect(plan.metadata, isNull);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality for PersonalLearningPlan', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1', generatedAt: now, dailyPlans: [], summary: summary,
+          recommendations: [], planDurationDays: 7,
+        );
+        expect(plan == plan, isTrue);
+      });
+
+      test('hashCode is consistent for DailyPlan', () {
+        final obj = dailyPlan;
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+
+      test('uses identity-based equality for PlanSummary', () {
+        final a = PlanSummary(totalQuestions: 10, totalMinutes: 60, newTopics: 1, reviewTopics: 2, estimatedCoverage: 0.5, focusAreas: ['math']);
+        final b = PlanSummary(totalQuestions: 10, totalMinutes: 60, newTopics: 1, reviewTopics: 2, estimatedCoverage: 0.5, focusAreas: ['math']);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('uses identity-based equality for PlanRecommendation', () {
+        final a = PlanRecommendation(topicId: 't1', reason: 'R', recommendationType: 'review', priority: 0.5, explanations: []);
+        final b = PlanRecommendation(topicId: 't1', reason: 'R', recommendationType: 'review', priority: 0.5, explanations: []);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+    });
+
+    group('toString', () {
+      test('PersonalLearningPlan includes class name', () {
+        final plan = PersonalLearningPlan(
+          studentId: 's1', generatedAt: now, dailyPlans: [], summary: summary,
+          recommendations: [], planDurationDays: 7,
+        );
+        expect(plan.toString(), contains('PersonalLearningPlan'));
+      });
+
+      test('PlannedTopic includes class name', () {
+        expect(dailyPlan.priorityTopics.first.toString(), contains('PlannedTopic'));
+      });
+
+      test('DailyPlan includes class name', () {
+        expect(dailyPlan.toString(), contains('DailyPlan'));
+      });
+
+      test('PlanSummary includes class name', () {
+        expect(summary.toString(), contains('PlanSummary'));
+      });
+
+      test('PlanRecommendation includes class name', () {
+        expect(recommendation.toString(), contains('PlanRecommendation'));
       });
     });
   });

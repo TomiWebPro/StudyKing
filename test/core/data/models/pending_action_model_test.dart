@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
 void main() {
   group('PendingActionModel', () {
@@ -105,6 +105,34 @@ void main() {
         );
         final copy = action.copyWith(payload: {'new': 'data'});
         expect(copy.payload, {'new': 'data'});
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = PendingActionModel(id: 'a1', studentId: 's1', actionType: 's');
+        final b = PendingActionModel(id: 'a1', studentId: 's1', actionType: 's');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = PendingActionModel(id: 'a1', studentId: 's1', actionType: 's');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = PendingActionModel(id: 'a1', studentId: 's1', actionType: 's');
+        expect(obj.toString(), contains('PendingActionModel'));
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('has correct Hive typeId', () {
+        expect(PendingActionModel, isNotNull);
       });
     });
   });

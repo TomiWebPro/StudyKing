@@ -2578,12 +2578,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeFirstStepDesc => 'Answered your first question!';
 
   @override
-  String get badgeCenturyName => 'Century Club';
-
-  @override
-  String get badgeCenturyDesc => 'Answered 100+ questions!';
-
-  @override
   String get badgeAccuracyGoldName => 'Accuracy Gold';
 
   @override
@@ -3116,4 +3110,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exerciseKeywords =>
       'exercise,practice,question,quiz,problem,test me,challenge,example';
+
+  @override
+  String get timeConflict => 'Time conflict with existing scheduled lesson';
 }

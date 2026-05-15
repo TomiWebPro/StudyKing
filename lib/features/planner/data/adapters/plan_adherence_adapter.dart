@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 
 class PlanAdherenceMetricAdapter extends TypeAdapter<PlanAdherenceMetric> {
   @override

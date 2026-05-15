@@ -1,7 +1,7 @@
 import 'dart:async';
 import '../../../core/data/database_service.dart';
-import '../../../core/data/models/conversation_message_model.dart';
-import '../../../core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
@@ -12,6 +12,7 @@ class TutorService {
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
   final String _modelId;
+  final PlanAdapter _planAdapter;
   ConversationManager? _currentManager;
 
   TutorService({
@@ -19,10 +20,12 @@ class TutorService {
     required LlmService llmService,
     required MasteryGraphService masteryService,
     required String modelId,
+    PlanAdapter? planAdapter,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
-        _modelId = modelId;
+        _modelId = modelId,
+        _planAdapter = planAdapter ?? PlanAdapter();
 
   ConversationManager? get currentManager => _currentManager;
 
@@ -104,8 +107,7 @@ class TutorService {
     }
 
     try {
-      final planAdapter = PlanAdapter();
-      await planAdapter.recordFromTutorSession(
+      await _planAdapter.recordFromTutorSession(
         studentId: session.studentId,
         actualMinutes: session.elapsedMinutes.clamp(1, 480),
       );

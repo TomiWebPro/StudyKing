@@ -1,9 +1,9 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/question_evaluation_model.dart';
-import 'package:studyking/core/data/models/question_mastery_state_model.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';

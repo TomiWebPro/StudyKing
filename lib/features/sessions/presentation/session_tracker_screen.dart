@@ -68,7 +68,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   Future<void> _loadSessions() async {
     try {
       await _sessionRepository.init();
-      final sessions = await _sessionRepository.getAll();
+      final sessionsResult = await _sessionRepository.getAll();
+      final sessions = sessionsResult.data ?? [];
       if (mounted) {
         setState(() {
           _allSessions = sessions.toList();

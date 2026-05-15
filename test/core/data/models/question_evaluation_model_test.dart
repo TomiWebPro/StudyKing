@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
 void main() {
   group('QuestionEvaluation', () {
@@ -204,6 +204,69 @@ void main() {
         expect(copy.correctAnswer, 'London');
         expect(copy.version, 2);
         expect(copy.questionId, 'q-1');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+        final b = QuestionEvaluation(questionId: 'q2', correctAnswer: 'London');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+        expect(obj.toString(), contains('QuestionEvaluation'));
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('handles null evaluationType', () {
+        final json = {
+          'questionId': 'q1',
+          'correctAnswer': 'Paris',
+          'evaluationType': null,
+        };
+        final eval = QuestionEvaluation.fromJson(json);
+        expect(eval.evaluationType, EvaluationType.exactMatch);
+      });
+
+      test('throws on out-of-range evaluationType index', () {
+        final json = {
+          'questionId': 'q1',
+          'correctAnswer': 'Paris',
+          'evaluationType': 99,
+        };
+        expect(() => QuestionEvaluation.fromJson(json), throwsA(isA<RangeError>()));
+      });
+
+      test('handles null metadata', () {
+        final json = {
+          'questionId': 'q1',
+          'correctAnswer': 'Paris',
+          'metadata': null,
+        };
+        final eval = QuestionEvaluation.fromJson(json);
+        expect(eval.metadata, isNull);
+      });
+
+      test('handles null explanation', () {
+        final json = {
+          'questionId': 'q1',
+          'correctAnswer': 'Paris',
+          'explanation': null,
+        };
+        final eval = QuestionEvaluation.fromJson(json);
+        expect(eval.explanation, isNull);
       });
     });
   });

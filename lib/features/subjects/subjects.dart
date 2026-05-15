@@ -1,4 +1,5 @@
 // Subject Feature Exports
+export 'data/models/topic_dependency_model.dart';
 export 'package:studyking/core/data/models/subject_model.dart';
 export 'data/repositories/progress_repository.dart';
 export 'data/repositories/subject_repository.dart';

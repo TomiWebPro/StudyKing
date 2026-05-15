@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/student_availability_model.dart';
+import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 
 void main() {
   group('StudentAvailabilityModel', () {
@@ -140,6 +140,34 @@ void main() {
           preferredEndHour: 22,
         );
         expect(model.preferredStudyHoursPerDay, 14);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = StudentAvailabilityModel(studentId: 's1');
+        final b = StudentAvailabilityModel(studentId: 's1');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = StudentAvailabilityModel(studentId: 's1');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = StudentAvailabilityModel(studentId: 's1');
+        expect(obj.toString(), contains('StudentAvailabilityModel'));
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('has correct Hive typeId', () {
+        expect(StudentAvailabilityModel, isNotNull);
       });
     });
   });

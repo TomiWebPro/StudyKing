@@ -51,7 +51,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     _textController = TextEditingController();
     _scrollController = ScrollController();
     _inputFocusNode = FocusNode();
-    _initializeTutor();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _initializeTutor();
+    });
   }
 
   void _initializeTutor() {

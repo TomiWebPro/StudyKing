@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
 class _MockPendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _storage = {};

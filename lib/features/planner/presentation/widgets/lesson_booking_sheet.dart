@@ -182,7 +182,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'This time conflicts with an existing scheduled lesson',
+                        l10n.timeConflict,
                         style: TextStyle(
                             color: theme.colorScheme.onErrorContainer,
                             fontSize: 12),
@@ -254,8 +254,9 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       );
       if (_hasConflict) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Time conflict with existing scheduled lesson')),
+            SnackBar(content: Text(l10n.timeConflict)),
           );
         }
         setState(() => _isScheduling = false);

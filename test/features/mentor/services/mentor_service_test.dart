@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -54,8 +54,8 @@ class FakeSessionRepository extends SessionRepository {
   void addSession(Session session) => sessions.add(session);
 
   @override
-  Future<List<Session>> getByStudent(String studentId) async {
-    return sessions.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    return Result.success(sessions.where((s) => s.studentId == studentId).toList());
   }
 }
 

@@ -7,7 +7,7 @@ import '../services/localization_service.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import '../data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
 class EngagementSchedulerConfig {
   final int checkHour;
@@ -187,7 +187,8 @@ class EngagementScheduler {
 
     if (_sessionRepository != null) {
       try {
-        final todaySessions = await _sessionRepository.getByDate(DateTime.now());
+        final todayResult = await _sessionRepository.getByDate(DateTime.now());
+        final todaySessions = todayResult.data ?? [];
         final totalMs = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
         final sessionHours = totalMs / 3600000;
         if (sessionHours > totalHours) {

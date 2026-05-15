@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
@@ -22,15 +23,16 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Session>> getAll() async => List<Session>.from(sessions);
+  Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
-  Future<void> save(Session session) async {
+  Future<Result<void>> save(Session session) async {
     if (throwOnSave) {
       throw Exception('save failed');
     }
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
+    return Result.success(null);
   }
 }
 

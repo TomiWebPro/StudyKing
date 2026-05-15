@@ -4478,18 +4478,6 @@ abstract class AppLocalizations {
   /// **'Answered your first question!'**
   String get badgeFirstStepDesc;
 
-  /// Name for the 'century' badge
-  ///
-  /// In en, this message translates to:
-  /// **'Century Club'**
-  String get badgeCenturyName;
-
-  /// Description for the 'century' badge
-  ///
-  /// In en, this message translates to:
-  /// **'Answered 100+ questions!'**
-  String get badgeCenturyDesc;
-
   /// Name for the 'accuracy gold' badge
   ///
   /// In en, this message translates to:
@@ -5377,6 +5365,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'exercise,practice,question,quiz,problem,test me,challenge,example'**
   String get exerciseKeywords;
+
+  /// Error message when a lesson time conflicts with an existing scheduled lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Time conflict with existing scheduled lesson'**
+  String get timeConflict;
 }
 
 class _AppLocalizationsDelegate

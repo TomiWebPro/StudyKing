@@ -11,5 +11,7 @@ supported-locales:
 # - Regional variants (es-MX, es-ES, es-AR) are not yet supported.
 # - To add Spain-specific vocabulary, create app_es_ES.arb with
 #   overrides for terms like "ordenador", "vale", "añadir", etc.
-# - The localeResolutionCallback in main.dart maps all Spanish variants
-#   to 'es'. See localeResolutionCallback for details.
+# - The locale resolution callback in lib/core/config/locale_config.dart
+#   maps all Spanish variants to 'es'. See AppLocale.resolveLocale().
+# - Adding a new locale: edit AppLocale enum in locale_config.dart only.
+#   l10n.yaml, main.dart, and profile_screen.dart derive from it.

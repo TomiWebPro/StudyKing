@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
-import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
 class PendingActionRepository extends Repository<PendingActionModel> {
   Future<void> init() async {

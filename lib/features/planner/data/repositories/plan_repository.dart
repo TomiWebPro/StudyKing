@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class PlanRepository extends Repository<PersonalLearningPlan> {
   Future<void> init() async {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../../../core/data/models/roadmap_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import 'milestone_timeline.dart';
 

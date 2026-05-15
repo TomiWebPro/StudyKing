@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 
 void main() {
   group('QuestionMasteryState', () {
@@ -194,6 +194,49 @@ void main() {
         expect(restored.masteryLevel, original.masteryLevel);
         expect(restored.reviewUrgency, original.reviewUrgency);
       });
+
+      test('fromJson handles null confidenceHistory defaults to empty', () {
+        final json = {
+          'studentId': 's1',
+          'questionId': 'q1',
+          'lastAttempt': now.toIso8601String(),
+          'confidenceHistory': null,
+        };
+        final state = QuestionMasteryState.fromJson(json);
+        expect(state.confidenceHistory, isEmpty);
+      });
+
+      test('fromJson handles null lastCorrect lastIncorrect nextReview', () {
+        final json = {
+          'studentId': 's1',
+          'questionId': 'q1',
+          'lastAttempt': now.toIso8601String(),
+          'lastCorrect': null,
+          'lastIncorrect': null,
+          'nextReview': null,
+        };
+        final state = QuestionMasteryState.fromJson(json);
+        expect(state.lastCorrect, isNull);
+        expect(state.lastIncorrect, isNull);
+        expect(state.nextReview, isNull);
+      });
+
+      test('fromJson handles null numeric fields', () {
+        final json = {
+          'studentId': 's1',
+          'questionId': 'q1',
+          'lastAttempt': now.toIso8601String(),
+          'correctCount': null,
+          'incorrectCount': null,
+          'masteryLevel': null,
+          'reviewUrgency': null,
+        };
+        final state = QuestionMasteryState.fromJson(json);
+        expect(state.correctCount, 0);
+        expect(state.incorrectCount, 0);
+        expect(state.masteryLevel, 0.0);
+        expect(state.reviewUrgency, 1.0);
+      });
     });
 
     group('copyWith', () {
@@ -207,6 +250,28 @@ void main() {
         expect(copy.correctCount, 5);
         expect(copy.masteryLevel, 0.9);
         expect(copy.studentId, 's1');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: now);
+        final b = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: now);
+        expect(obj.toString(), contains('QuestionMasteryState'));
       });
     });
   });

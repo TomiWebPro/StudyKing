@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 
 void main() {
   group('PlanAdherenceMetric', () {
@@ -80,6 +80,40 @@ void main() {
         );
         final json = metric.toJson();
         expect(json['metadata'], isNull);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = PlanAdherenceMetric(
+          date: now, studentId: 's1', plannedQuestions: 10, actualQuestions: 8,
+          plannedMinutes: 60, actualMinutes: 45, adherenceScore: 0.8,
+        );
+        final b = PlanAdherenceMetric(
+          date: now, studentId: 's1', plannedQuestions: 10, actualQuestions: 8,
+          plannedMinutes: 60, actualMinutes: 45, adherenceScore: 0.8,
+        );
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = PlanAdherenceMetric(
+          date: now, studentId: 's1', plannedQuestions: 10, actualQuestions: 8,
+          plannedMinutes: 60, actualMinutes: 45, adherenceScore: 0.8,
+        );
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = PlanAdherenceMetric(
+          date: now, studentId: 's1', plannedQuestions: 10, actualQuestions: 8,
+          plannedMinutes: 60, actualMinutes: 45, adherenceScore: 0.8,
+        );
+        expect(obj.toString(), contains('PlanAdherenceMetric'));
       });
     });
   });

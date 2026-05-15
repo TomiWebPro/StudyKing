@@ -14,11 +14,12 @@ class StudentIdService {
 
   Future<void> init() async {
     _box = await Hive.openBox(_boxName);
+    _cachedId = null;
   }
 
   String getStudentId() {
     if (_cachedId != null && _cachedId!.isNotEmpty) return _cachedId!;
-    if (_box != null) {
+    if (_box != null && _box!.isOpen) {
       final existing = _box!.get(_key) as String?;
       if (existing != null && existing.isNotEmpty) {
         _cachedId = existing;
@@ -27,13 +28,17 @@ class StudentIdService {
     }
     final newId = const Uuid().v4();
     _cachedId = newId;
-    _box?.put(_key, newId);
+    if (_box != null && _box!.isOpen) {
+      _box!.put(_key, newId);
+    }
     return newId;
   }
 
   void setStudentId(String id) {
     _cachedId = id;
-    _box?.put(_key, id);
+    if (_box != null && _box!.isOpen) {
+      _box!.put(_key, id);
+    }
   }
 }
 

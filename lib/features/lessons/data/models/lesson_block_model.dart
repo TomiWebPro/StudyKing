@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../enums.dart';
+import 'package:studyking/core/data/enums.dart';
 
 @HiveType(typeId: 6)
 class LessonBlock extends HiveObject {

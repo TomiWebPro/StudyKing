@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 
 class _MockConversationRepository extends ConversationRepository {
   final Map<String, ConversationMessage> _storage = {};

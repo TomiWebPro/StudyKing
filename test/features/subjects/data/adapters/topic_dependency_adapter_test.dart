@@ -3,7 +3,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 
 void main() {
   group('TopicDependencyAdapter', () {

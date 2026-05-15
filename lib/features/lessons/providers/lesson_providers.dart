@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import '../../../core/providers/app_providers.dart' show database;
 import '../../lessons/data/repositories/lesson_repository.dart';
 import '../../teaching/data/repositories/tutor_session_repository.dart';
 import '../services/lesson_service.dart';
 
 final lessonRepositoryProvider = Provider<LessonRepository>((ref) {
-  return LessonRepository();
+  return database.lessonRepository;
 });
 
 final tutorSessionRepositoryProvider = Provider<TutorSessionRepository>((ref) {
-  return TutorSessionRepository();
+  return database.tutorSessionRepository;
 });
 
 final lessonServiceProvider = Provider<LessonService>((ref) {

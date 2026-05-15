@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
 void main() {
   group('PlanAdherenceModel', () {
@@ -107,6 +107,34 @@ void main() {
         );
         expect(copy.planId, 'plan-2');
         expect(copy.metadata, {'note': 'test'});
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = PlanAdherenceModel(id: 'pa-1', studentId: 's1', date: now);
+        final b = PlanAdherenceModel(id: 'pa-1', studentId: 's1', date: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = PlanAdherenceModel(id: 'pa-1', studentId: 's1', date: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = PlanAdherenceModel(id: 'pa-1', studentId: 's1', date: now);
+        expect(obj.toString(), contains('PlanAdherenceModel'));
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('has correct Hive typeId', () {
+        expect(PlanAdherenceModel, isNotNull);
       });
     });
   });

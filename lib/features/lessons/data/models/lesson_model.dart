@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../enums.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'lesson_block_model.dart';
 
 @HiveType(typeId: 7)

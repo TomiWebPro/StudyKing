@@ -108,8 +108,7 @@ void main() {
     test('badge names and descriptions', () {
       expect(l10n.badgeFirstStepName, 'First Step');
       expect(l10n.badgeFirstStepDesc, 'Answered your first question!');
-      expect(l10n.badgeCenturyName, 'Century Club');
-      expect(l10n.badgeCenturyDesc, 'Answered 100+ questions!');
+
       expect(l10n.badgeAccuracyGoldName, 'Accuracy Gold');
       expect(l10n.badgeAccuracyGoldDesc, 'Achieved 90%+ accuracy!');
       expect(l10n.badgeDailyScholarName, 'Daily Scholar');
@@ -510,8 +509,7 @@ void main() {
     test('badge names and descriptions', () {
       expect(l10n.badgeFirstStepName, 'Primer Paso');
       expect(l10n.badgeFirstStepDesc, 'Respondió su primera pregunta!');
-      expect(l10n.badgeCenturyName, 'Club del Centenar');
-      expect(l10n.badgeCenturyDesc, '¡Respondió más de 100 preguntas!');
+
       expect(l10n.badgeAccuracyGoldName, 'Precisión de Oro');
       expect(l10n.badgeAccuracyGoldDesc, 'Logró más del 90% de precisión!');
       expect(l10n.badgeDailyScholarName, 'Estudiante Diario');
@@ -893,8 +891,7 @@ void main() {
                     Text(l.moreLessonsCount(5)),
                     Text(l.badgeFirstStepName),
                     Text(l.badgeFirstStepDesc),
-                    Text(l.badgeCenturyName),
-                    Text(l.badgeCenturyDesc),
+
                     Text(l.badgeAccuracyGoldName),
                     Text(l.badgeAccuracyGoldDesc),
                     Text(l.badgeDailyScholarName),

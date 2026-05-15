@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/widgets/conversation_input.dart';

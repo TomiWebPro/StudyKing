@@ -4,9 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
-import 'package:studyking/core/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/errors/result.dart';
 
 class _MockLessonRepository extends LessonRepository {
   final Map<String, Lesson> _storage = {};
@@ -17,8 +18,9 @@ class _MockLessonRepository extends LessonRepository {
   }
 
   @override
-  Future<void> create(Lesson lesson) async {
+  Future<Result<void>> create(Lesson lesson) async {
     _storage[lesson.id] = lesson;
+    return Result.success(null);
   }
 
   @override
@@ -32,35 +34,36 @@ class _MockLessonRepository extends LessonRepository {
   }
 
   @override
-  Future<List<Lesson>> getBySubject(String subjectId) async {
-    return _storage.values.where((l) => l.subjectId == subjectId).toList();
+  Future<Result<List<Lesson>>> getBySubject(String subjectId) async {
+    return Result.success(_storage.values.where((l) => l.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<Lesson>> getByTopic(String topicId) async {
-    return _storage.values.where((l) => l.topicId == topicId).toList();
+  Future<Result<List<Lesson>>> getByTopic(String topicId) async {
+    return Result.success(_storage.values.where((l) => l.topicId == topicId).toList());
   }
 
   @override
-  Future<List<Lesson>> getBySubjectAndTopic(String subjectId, String topicId) async {
-    return _storage.values
+  Future<Result<List<Lesson>>> getBySubjectAndTopic(String subjectId, String topicId) async {
+    return Result.success(_storage.values
         .where((l) => l.subjectId == subjectId && l.topicId == topicId)
-        .toList();
+        .toList());
   }
 
   @override
-  Future<void> addBlock(LessonBlock block) async {
+  Future<Result<void>> addBlock(LessonBlock block) async {
     _blockStorage[block.id] = block;
+    return Result.success(null);
   }
 
   @override
-  Future<List<LessonBlock>> getBlocksForLesson(String lessonId) async {
-    return _blockStorage.values.where((b) => b.lessonId == lessonId).toList();
+  Future<Result<List<LessonBlock>>> getBlocksForLesson(String lessonId) async {
+    return Result.success(_blockStorage.values.where((b) => b.lessonId == lessonId).toList());
   }
 
   @override
-  Future<List<LessonBlock>> getBlocksBySubject(String subjectId) async {
-    return _blockStorage.values.where((b) => b.subjectId == subjectId).toList();
+  Future<Result<List<LessonBlock>>> getBlocksBySubject(String subjectId) async {
+    return Result.success(_blockStorage.values.where((b) => b.subjectId == subjectId).toList());
   }
 
   @override
@@ -160,7 +163,7 @@ void main() {
         await repository.create(createTestLesson(id: 'l1', subjectId: 's1'));
         await repository.create(createTestLesson(id: 'l2', subjectId: 's1'));
         await repository.create(createTestLesson(id: 'l3', subjectId: 's2'));
-        expect((await repository.getBySubject('s1')).length, 2);
+        expect((await repository.getBySubject('s1')).data!.length, 2);
       });
     });
 
@@ -168,7 +171,7 @@ void main() {
       test('returns lessons for topic', () async {
         await repository.create(createTestLesson(id: 'l1', topicId: 't1'));
         await repository.create(createTestLesson(id: 'l2', topicId: 't2'));
-        expect((await repository.getByTopic('t1')).length, 1);
+        expect((await repository.getByTopic('t1')).data!.length, 1);
       });
     });
 
@@ -176,7 +179,7 @@ void main() {
       test('returns filtered lessons', () async {
         await repository.create(createTestLesson(id: 'l1', subjectId: 's1', topicId: 't1'));
         await repository.create(createTestLesson(id: 'l2', subjectId: 's1', topicId: 't2'));
-        expect((await repository.getBySubjectAndTopic('s1', 't1')).length, 1);
+        expect((await repository.getBySubjectAndTopic('s1', 't1')).data!.length, 1);
       });
     });
 
@@ -184,9 +187,9 @@ void main() {
       test('stores a lesson block', () async {
         final block = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'Content');
         await repository.addBlock(block);
-        final blocks = await repository.getBlocksForLesson('l1');
-        expect(blocks.length, 1);
-        expect(blocks.first.content, 'Content');
+        final blocksResult = await repository.getBlocksForLesson('l1');
+        expect(blocksResult.data!.length, 1);
+        expect(blocksResult.data!.first.content, 'Content');
       });
     });
 
@@ -195,7 +198,7 @@ void main() {
         await repository.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repository.addBlock(LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C2'));
         await repository.addBlock(LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l2', type: LessonBlockType.text, content: 'C3'));
-        expect((await repository.getBlocksForLesson('l1')).length, 2);
+        expect((await repository.getBlocksForLesson('l1')).data!.length, 2);
       });
     });
 
@@ -203,7 +206,7 @@ void main() {
       test('returns blocks for subject', () async {
         await repository.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repository.addBlock(LessonBlock(id: 'b2', subjectId: 's2', lessonId: 'l2', type: LessonBlockType.text, content: 'C2'));
-        expect((await repository.getBlocksBySubject('s1')).length, 1);
+        expect((await repository.getBlocksBySubject('s1')).data!.length, 1);
       });
     });
 
@@ -307,14 +310,18 @@ void main() {
         await repo.create(createTestLesson(id: 'l1', subjectId: 'math'));
         await repo.create(createTestLesson(id: 'l2', subjectId: 'math'));
         await repo.create(createTestLesson(id: 'l3', subjectId: 'physics'));
-        final mathLessons = await repo.getBySubject('math');
+        final mathLessonsResult = await repo.getBySubject('math');
+        expect(mathLessonsResult.isSuccess, isTrue);
+        final mathLessons = mathLessonsResult.data!;
         expect(mathLessons.length, 2);
         expect(mathLessons.every((l) => l.subjectId == 'math'), isTrue);
       });
 
       test('returns empty when no lessons match the subject', () async {
         await repo.create(createTestLesson(id: 'l1', subjectId: 'math'));
-        expect(await repo.getBySubject('physics'), isEmpty);
+        final result = await repo.getBySubject('physics');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -323,14 +330,18 @@ void main() {
         await repo.create(createTestLesson(id: 'l1', topicId: 'algebra'));
         await repo.create(createTestLesson(id: 'l2', topicId: 'algebra'));
         await repo.create(createTestLesson(id: 'l3', topicId: 'geometry'));
-        final algebraLessons = await repo.getByTopic('algebra');
+        final algebraLessonsResult = await repo.getByTopic('algebra');
+        expect(algebraLessonsResult.isSuccess, isTrue);
+        final algebraLessons = algebraLessonsResult.data!;
         expect(algebraLessons.length, 2);
         expect(algebraLessons.every((l) => l.topicId == 'algebra'), isTrue);
       });
 
       test('returns empty when no lessons match the topic', () async {
         await repo.create(createTestLesson(id: 'l1', topicId: 'algebra'));
-        expect(await repo.getByTopic('geometry'), isEmpty);
+        final result = await repo.getByTopic('geometry');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -340,14 +351,15 @@ void main() {
         await repo.create(createTestLesson(id: 'l2', subjectId: 'math', topicId: 'geometry'));
         await repo.create(createTestLesson(id: 'l3', subjectId: 'physics', topicId: 'algebra'));
         final result = await repo.getBySubjectAndTopic('math', 'algebra');
-        expect(result.length, 1);
-        expect(result.first.id, 'l1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 1);
+        expect(result.data!.first.id, 'l1');
       });
 
       test('returns empty when no lessons match', () async {
         await repo.create(createTestLesson(id: 'l1', subjectId: 'math', topicId: 'algebra'));
-        expect(await repo.getBySubjectAndTopic('physics', 'algebra'), isEmpty);
-        expect(await repo.getBySubjectAndTopic('math', 'geometry'), isEmpty);
+        expect((await repo.getBySubjectAndTopic('physics', 'algebra')).data, isEmpty);
+        expect((await repo.getBySubjectAndTopic('math', 'geometry')).data, isEmpty);
       });
     });
 
@@ -355,7 +367,9 @@ void main() {
       test('stores a lesson block and retrieves it', () async {
         final block = LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'Content');
         await repo.addBlock(block);
-        final blocks = await repo.getBlocksForLesson('l1');
+        final blocksResult = await repo.getBlocksForLesson('l1');
+        expect(blocksResult.isSuccess, isTrue);
+        final blocks = blocksResult.data!;
         expect(blocks.length, 1);
         expect(blocks.first.id, 'b1');
         expect(blocks.first.content, 'Content');
@@ -365,7 +379,9 @@ void main() {
       test('stores a block with all fields', () async {
         final block = LessonBlock(id: 'b2', subjectId: 'sub-1', lessonId: 'l1', type: LessonBlockType.example, content: 'Example', order: 5);
         await repo.addBlock(block);
-        final blocks = await repo.getBlocksForLesson('l1');
+        final blocksResult = await repo.getBlocksForLesson('l1');
+        expect(blocksResult.isSuccess, isTrue);
+        final blocks = blocksResult.data!;
         expect(blocks.length, 1);
         expect(blocks.first.order, 5);
         expect(blocks.first.type, LessonBlockType.example);
@@ -377,7 +393,9 @@ void main() {
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repo.addBlock(LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C2'));
         await repo.addBlock(LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l2', type: LessonBlockType.text, content: 'C3'));
-        final blocks = await repo.getBlocksForLesson('l1');
+        final blocksResult = await repo.getBlocksForLesson('l1');
+        expect(blocksResult.isSuccess, isTrue);
+        final blocks = blocksResult.data!;
         expect(blocks.length, 2);
         final ids = blocks.map((b) => b.id).toSet();
         expect(ids, containsAll(['b1', 'b2']));
@@ -385,7 +403,9 @@ void main() {
 
       test('returns empty when no blocks for lesson', () async {
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
-        expect(await repo.getBlocksForLesson('nonexistent'), isEmpty);
+        final result = await repo.getBlocksForLesson('nonexistent');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -394,13 +414,16 @@ void main() {
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repo.addBlock(LessonBlock(id: 'b2', subjectId: 'math', lessonId: 'l2', type: LessonBlockType.text, content: 'C2'));
         await repo.addBlock(LessonBlock(id: 'b3', subjectId: 'physics', lessonId: 'l3', type: LessonBlockType.text, content: 'C3'));
-        final mathBlocks = await repo.getBlocksBySubject('math');
-        expect(mathBlocks.length, 2);
+        final mathBlocksResult = await repo.getBlocksBySubject('math');
+        expect(mathBlocksResult.isSuccess, isTrue);
+        expect(mathBlocksResult.data!.length, 2);
       });
 
       test('returns empty when no blocks for subject', () async {
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
-        expect(await repo.getBlocksBySubject('physics'), isEmpty);
+        final result = await repo.getBlocksBySubject('physics');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 

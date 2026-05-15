@@ -1,5 +1,5 @@
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import '../data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import 'badge_service.dart';

@@ -1,3 +1,5 @@
+export 'data/models/conversation_message_model.dart';
+export 'data/models/tutor_session_model.dart';
 export 'data/repositories/conversation_repository.dart';
 export 'data/repositories/tutor_session_repository.dart';
 export 'services/conversation_manager.dart';

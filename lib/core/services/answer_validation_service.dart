@@ -1,7 +1,7 @@
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
-import '../data/models/markscheme_model.dart';
-import '../data/models/question_evaluation_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import '../data/models/question_model.dart';
 
 class ValidationResult {

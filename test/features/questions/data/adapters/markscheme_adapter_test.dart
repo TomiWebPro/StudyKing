@@ -3,7 +3,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/questions/data/adapters/markscheme_adapter.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 
 void main() {
   group('MarkschemeAdapter', () {

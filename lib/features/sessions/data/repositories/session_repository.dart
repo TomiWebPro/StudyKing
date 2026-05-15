@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class SessionRepository {
@@ -11,147 +12,260 @@ class SessionRepository {
 
   Future<void> init() async {}
 
-  Future<void> save(Session session) async {
-    await _box.put(session.id, jsonEncode(session.toJson()));
+  Future<Result<void>> save(Session session) async {
+    try {
+      await _box.put(session.id, jsonEncode(session.toJson()));
+      return Result.success(null);
+    } catch (e) {
+      _logger.e('Error saving session', e);
+      return Result.failure('Failed to save session: ${e.toString()}');
+    }
   }
 
-  Future<Session?> get(String id) async {
-    final raw = _box.get(id);
-    if (raw == null) return null;
+  Future<Result<Session?>> get(String id) async {
     try {
-      return Session.fromJson(jsonDecode(raw));
+      final raw = _box.get(id);
+      if (raw == null) return Result.success(null);
+      return Result.success(Session.fromJson(jsonDecode(raw)));
     } catch (e) {
       _logger.e('Error decoding session $id', e);
-      return null;
+      return Result.failure('Failed to get session: ${e.toString()}');
     }
   }
 
-  Future<List<Session>> getAll() async {
-    final sessions = <Session>[];
-    for (final raw in _box.values) {
-      try {
-        sessions.add(Session.fromJson(jsonDecode(raw)));
-      } catch (e) {
-        _logger.e('Error decoding session', e);
+  Future<Result<List<Session>>> getAll() async {
+    try {
+      final sessions = <Session>[];
+      for (final raw in _box.values) {
+        try {
+          sessions.add(Session.fromJson(jsonDecode(raw)));
+        } catch (e) {
+          _logger.e('Error decoding session', e);
+        }
       }
+      sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
+      return Result.success(sessions);
+    } catch (e) {
+      _logger.e('Error getting all sessions', e);
+      return Result.failure('Failed to get sessions: ${e.toString()}');
     }
-    sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
-    return sessions;
   }
 
-  Future<List<Session>> getByDate(DateTime date) async {
-    final start = DateTime(date.year, date.month, date.day);
-    final end = start.add(const Duration(days: 1));
-    final all = await getAll();
-    return all.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
-        s.startTime.isBefore(end)).toList();
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
+    try {
+      final start = DateTime(date.year, date.month, date.day);
+      final end = start.add(const Duration(days: 1));
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      final all = allResult.data!;
+      return Result.success(all.where((s) =>
+          s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+          s.startTime.isBefore(end)).toList());
+    } catch (e) {
+      _logger.e('Error getting sessions by date', e);
+      return Result.failure('Failed to get sessions by date: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getByType(SessionType type) async {
-    final all = await getAll();
-    return all.where((s) => s.type == type).toList();
+  Future<Result<List<Session>>> getByType(SessionType type) async {
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!.where((s) => s.type == type).toList());
+    } catch (e) {
+      _logger.e('Error getting sessions by type', e);
+      return Result.failure('Failed to get sessions: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getByStudent(String studentId) async {
-    final all = await getAll();
-    return all.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!.where((s) => s.studentId == studentId).toList());
+    } catch (e) {
+      _logger.e('Error getting sessions by student', e);
+      return Result.failure('Failed to get sessions: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getBySubject(String subjectId) async {
-    final all = await getAll();
-    return all.where((s) => s.subjectId == subjectId).toList();
+  Future<Result<List<Session>>> getBySubject(String subjectId) async {
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!.where((s) => s.subjectId == subjectId).toList());
+    } catch (e) {
+      _logger.e('Error getting sessions by subject', e);
+      return Result.failure('Failed to get sessions: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getByStudentAndSubject(
+  Future<Result<List<Session>>> getByStudentAndSubject(
       String studentId, String subjectId) async {
-    final all = await getAll();
-    return all.where((s) => s.studentId == studentId && s.subjectId == subjectId).toList();
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!
+          .where((s) => s.studentId == studentId && s.subjectId == subjectId)
+          .toList());
+    } catch (e) {
+      _logger.e('Error getting sessions by student and subject', e);
+      return Result.failure('Failed to get sessions: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getRecentSessionsForSubject(String subjectId,
+  Future<Result<List<Session>>> getRecentSessionsForSubject(String subjectId,
       {int limit = 10}) async {
-    final all = await getAll();
-    final filtered = all.where((s) => s.subjectId == subjectId).toList();
-    filtered.sort((a, b) =>
-        b.startTime.millisecondsSinceEpoch
-            .compareTo(a.startTime.millisecondsSinceEpoch));
-    return filtered.take(limit).toList();
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      final filtered = allResult.data!.where((s) => s.subjectId == subjectId).toList();
+      filtered.sort((a, b) =>
+          b.startTime.millisecondsSinceEpoch
+              .compareTo(a.startTime.millisecondsSinceEpoch));
+      return Result.success(filtered.take(limit).toList());
+    } catch (e) {
+      _logger.e('Error getting recent sessions', e);
+      return Result.failure('Failed to get recent sessions: ${e.toString()}');
+    }
   }
 
-  Future<int> getTotalStudyTimeForSubject(String subjectId) async {
-    final all = await getAll();
-    return all
-        .where((s) => s.subjectId == subjectId)
-        .fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+  Future<Result<int>> getTotalStudyTimeForSubject(String subjectId) async {
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!
+          .where((s) => s.subjectId == subjectId)
+          .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
+    } catch (e) {
+      _logger.e('Error getting total study time', e);
+      return Result.failure('Failed to get total study time: ${e.toString()}');
+    }
   }
 
-  Future<List<Session>> getActive() async {
-    final all = await getAll();
-    return all.where((s) => s.isActive).toList();
+  Future<Result<List<Session>>> getActive() async {
+    try {
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!.where((s) => s.isActive).toList());
+    } catch (e) {
+      _logger.e('Error getting active sessions', e);
+      return Result.failure('Failed to get active sessions: ${e.toString()}');
+    }
   }
 
-  Future<void> delete(String id) async {
-    await _box.delete(id);
+  Future<Result<void>> delete(String id) async {
+    try {
+      await _box.delete(id);
+      return Result.success(null);
+    } catch (e) {
+      _logger.e('Error deleting session', e);
+      return Result.failure('Failed to delete session: ${e.toString()}');
+    }
   }
 
-  Future<void> clearAll() async {
-    await _box.clear();
+  Future<Result<void>> clearAll() async {
+    try {
+      await _box.clear();
+      return Result.success(null);
+    } catch (e) {
+      _logger.e('Error clearing sessions', e);
+      return Result.failure('Failed to clear sessions: ${e.toString()}');
+    }
   }
 
-  Future<int> getTodayDurationMs() async {
-    final today = await getByDate(DateTime.now());
-    return today.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+  Future<Result<int>> getTodayDurationMs() async {
+    try {
+      final todayResult = await getByDate(DateTime.now());
+      if (todayResult.isFailure) return Result.failure(todayResult.error);
+      return Result.success(
+          todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
+    } catch (e) {
+      _logger.e('Error getting today duration', e);
+      return Result.failure('Failed to get today duration: ${e.toString()}');
+    }
   }
 
-  Future<int> getTodaySessionCount() async {
-    final today = await getByDate(DateTime.now());
-    return today.length;
+  Future<Result<int>> getTodaySessionCount() async {
+    try {
+      final todayResult = await getByDate(DateTime.now());
+      if (todayResult.isFailure) return Result.failure(todayResult.error);
+      return Result.success(todayResult.data!.length);
+    } catch (e) {
+      _logger.e('Error getting today session count', e);
+      return Result.failure('Failed to get session count: ${e.toString()}');
+    }
   }
 
-  Future<int> getTodayCompletedSessionCount() async {
-    final today = await getByDate(DateTime.now());
-    return today.where((s) => s.completed).length;
+  Future<Result<int>> getTodayCompletedSessionCount() async {
+    try {
+      final todayResult = await getByDate(DateTime.now());
+      if (todayResult.isFailure) return Result.failure(todayResult.error);
+      return Result.success(todayResult.data!.where((s) => s.completed).length);
+    } catch (e) {
+      _logger.e('Error getting completed session count', e);
+      return Result.failure('Failed to get completed count: ${e.toString()}');
+    }
   }
 
-  Future<int> getWeeklyDurationMs() async {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-    final all = await getAll();
-    return all
-        .where((s) => s.startTime.isAfter(weekAgo))
-        .fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+  Future<Result<int>> getWeeklyDurationMs() async {
+    try {
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      final allResult = await getAll();
+      if (allResult.isFailure) return Result.failure(allResult.error);
+      return Result.success(allResult.data!
+          .where((s) => s.startTime.isAfter(weekAgo))
+          .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
+    } catch (e) {
+      _logger.e('Error getting weekly duration', e);
+      return Result.failure('Failed to get weekly duration: ${e.toString()}');
+    }
   }
 
-  Future<Map<String, dynamic>> getTodayStats() async {
-    final now = DateTime.now();
-    final sessions = await getByDate(now);
-    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-    final completed = sessions.where((s) => s.completed).length;
-    final plannedMinutes = sessions.fold<int>(0, (sum, s) =>
-        sum + (s.plannedDurationMinutes ?? 0));
+  Future<Result<Map<String, dynamic>>> getTodayStats() async {
+    try {
+      final now = DateTime.now();
+      final sessionsResult = await getByDate(now);
+      if (sessionsResult.isFailure) return Result.failure(sessionsResult.error);
+      final sessions = sessionsResult.data!;
+      final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+      final completed = sessions.where((s) => s.completed).length;
+      final plannedMinutes = sessions.fold<int>(0, (sum, s) =>
+          sum + (s.plannedDurationMinutes ?? 0));
 
-    return {
-      'totalMs': totalMs,
-      'totalSeconds': totalMs ~/ 1000,
-      'completedSessions': completed,
-      'totalSessions': sessions.length,
-      'plannedMinutes': plannedMinutes,
-      'hours': ((totalMs / 3600000)).toStringAsFixed(1),
-    };
+      return Result.success({
+        'totalMs': totalMs,
+        'totalSeconds': totalMs ~/ 1000,
+        'completedSessions': completed,
+        'totalSessions': sessions.length,
+        'plannedMinutes': plannedMinutes,
+        'hours': ((totalMs / 3600000)).toStringAsFixed(1),
+      });
+    } catch (e) {
+      _logger.e('Error getting today stats', e);
+      return Result.failure('Failed to get today stats: ${e.toString()}');
+    }
   }
 
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async {
-    final sessions = await getBySubject(subjectId);
-    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-    final totalQuestions = sessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
-    final totalCorrect = sessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
-    return {
-      'totalSessions': sessions.length,
-      'totalDurationMs': totalMs,
-      'totalQuestions': totalQuestions,
-      'totalCorrect': totalCorrect,
-      'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
-    };
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    try {
+      final sessionsResult = await getBySubject(subjectId);
+      if (sessionsResult.isFailure) return Result.failure(sessionsResult.error);
+      final sessions = sessionsResult.data!;
+      final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+      final totalQuestions = sessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
+      final totalCorrect = sessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
+      return Result.success({
+        'totalSessions': sessions.length,
+        'totalDurationMs': totalMs,
+        'totalQuestions': totalQuestions,
+        'totalCorrect': totalCorrect,
+        'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
+      });
+    } catch (e) {
+      _logger.e('Error getting subject stats', e);
+      return Result.failure('Failed to get subject stats: ${e.toString()}');
+    }
   }
 }

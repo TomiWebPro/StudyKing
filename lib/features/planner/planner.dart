@@ -1,3 +1,5 @@
+export 'data/models/personal_learning_plan_model.dart';
+export 'data/models/plan_adherence_metric_model.dart';
 export 'data/repositories/engagement_nudge_repository.dart';
 export 'data/repositories/pending_action_repository.dart';
 export 'data/repositories/plan_adherence_repository.dart';

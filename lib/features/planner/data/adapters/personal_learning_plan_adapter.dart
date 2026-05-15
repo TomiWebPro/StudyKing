@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class PersonalLearningPlanAdapter extends TypeAdapter<PersonalLearningPlan> {
   @override

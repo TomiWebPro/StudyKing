@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/badge_model.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class BadgeRepository extends Repository<BadgeModel> {

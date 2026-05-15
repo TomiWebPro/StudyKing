@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+/// Shared model used by 4 features (subjects, practice, ingestion, questions).
+/// Retained in core because it is shared across >=3 features.
 @HiveType(typeId: 11)
 class Subject extends HiveObject {
   @HiveField(0)

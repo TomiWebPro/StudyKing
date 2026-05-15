@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
-import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
 
 Question _question({

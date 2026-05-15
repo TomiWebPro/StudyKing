@@ -152,7 +152,7 @@ void main() {
         expect(l10n.dashboard, 'Panel');
         expect(l10n.studyDashboard, 'Panel de Estudio');
         expect(l10n.studyTime, 'Tiempo de Estudio');
-        expect(l10n.planAdherence, 'Adherencia al Plan');
+        expect(l10n.planAdherence, 'Cumplimiento del Plan');
         expect(l10n.topicPerformance, 'Rendimiento por Tema');
         expect(l10n.achievements, 'Logros');
         expect(l10n.exportCsv, 'Exportar CSV');

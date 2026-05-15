@@ -7,7 +7,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';

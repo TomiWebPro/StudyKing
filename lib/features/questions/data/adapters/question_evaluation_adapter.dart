@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
 class QuestionEvaluationAdapter extends TypeAdapter<QuestionEvaluation> {
   @override

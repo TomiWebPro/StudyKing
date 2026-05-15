@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
-import '../../../core/data/models/conversation_message_model.dart';
-import '../../../core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 

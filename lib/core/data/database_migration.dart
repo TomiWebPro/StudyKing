@@ -2,75 +2,22 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/logger.dart';
 import 'hive_box_names.dart';
 
-/// Migration for StudyKing Hive database
-/// Handles schema updates and ensures robust data persistence
 class DatabaseMigration {
   static final Logger _logger = const Logger('DatabaseMigration');
   static const String versionBoxName = 'db_version';
   static const int currentVersionNum = 1;
 
-  /// Initialize and run all migrations
   static Future<void> runMigrations() async {
-    // Initialize version tracking and open the box if needed
     if (!Hive.isBoxOpen(versionBoxName)) {
       await Hive.openBox(versionBoxName);
     }
 
-    final box = Hive.box(versionBoxName);
-    await box.put('version', currentVersionNum);
-
-    // Run migrations based on current version
-    final existingVersion = box.get('version', defaultValue: 0);
-
-    if (existingVersion < 1) {
-      await _migrateToV1();
-      await box.put('version', 1);
-    }
-
-    _logger.i('Database migration complete. Current version: $existingVersion');
+    await Hive.box(versionBoxName).put('version', currentVersionNum);
+    _logger.i('Database version set to $currentVersionNum');
   }
 
-  /// Migration 1: Add subjectId to existing questions and lesson blocks
-  /// This migration ensures all questions and lesson blocks have subjectId
-  static Future<void> _migrateToV1() async {
-    _logger.i('Running migration v1: Adding subjectId to questions and lessons');
-
-    try {
-      // Migrate questions that might be missing subjectId
-      final questionBox = Hive.box<Map<String, dynamic>>(HiveBoxNames.questions);
-      await _migrateQuestionSubjectId(questionBox);
-
-      // Migrate lessons that might be missing subjectId
-      final lessonBox = Hive.box<Map<String, dynamic>>(HiveBoxNames.lessons);
-      await _migrateLessonSubjectId(lessonBox);
-
-      _logger.i('Migration v1 completed successfully');
-    } on Exception catch (e) {
-      _logger.e('Migration error', e);
-      rethrow;
-    } catch (e) {
-      _logger.e('Unexpected migration error', e);
-      rethrow;
-    }
-  }
-
-  static Future<int> _migrateQuestionSubjectId(Box questionBox) async {
-    final updatedCount = 0; // Placeholder for actual migration logic
-
-    // Note: With new models, this migration isn't needed if all data is created through proper channels
-    // Keeping as placeholder for future data validation
-
-    return updatedCount;
-  }
-
-  static Future<void> _migrateLessonSubjectId(Box lessonBox) async {
-    // Similar placeholder for lesson migration
-  }
-
-  /// Helper to validate current database schema
   static Future<DatabaseValidationResult> validateSchema() async {
     try {
-      // Validate all required boxes exist
       final boxes = [
         HiveBoxNames.topics,
         HiveBoxNames.questions,

@@ -1,4 +1,4 @@
-import '../../../core/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'planner_service.dart';
 
 class ActionExecutor {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/task_model.dart';
+import 'package:studyking/features/planner/data/models/task_model.dart';
 
 void main() {
   group('TaskModel', () {
@@ -107,6 +107,28 @@ void main() {
         expect(model.status, task.status);
         expect(model.priority, task.priority);
         expect(model.dueDate, task.dueDate);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = TaskModel(id: 't1', title: 'T', description: 'D');
+        final b = TaskModel(id: 't1', title: 'T', description: 'D');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = TaskModel(id: 't1', title: 'T', description: 'D');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = TaskModel(id: 't1', title: 'T', description: 'D');
+        expect(obj.toString(), contains('TaskModel'));
       });
     });
   });

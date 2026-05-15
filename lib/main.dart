@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'core/config/locale_config.dart';
 import 'core/utils/logger.dart';
 import 'core/theme/app_theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -125,20 +126,8 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('es'),
-      ],
-      localeResolutionCallback: (locale, supportedLocales) {
-        // All Spanish variants (es-MX, es-ES, es-AR, etc.) map to 'es'
-        // which targets neutral Latin American Spanish (formal "usted" register).
-        // A future app_es_ES.arb could override terms for Spain-specific vocabulary.
-        if (locale == null) return supportedLocales.first;
-        for (final supported in supportedLocales) {
-          if (supported.languageCode == locale.languageCode) return supported;
-        }
-        return supportedLocales.first;
-      },
+      supportedLocales: AppLocale.supportedLocales,
+      localeResolutionCallback: AppLocale.resolveLocale,
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -218,27 +207,39 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final _navigatorKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
+  late final List<Widget> _tabNavigators;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabNavigators = _buildTabNavigators();
+  }
 
   List<Widget> _buildTabNavigators() {
     final studentId = widget.fixedStudentId ?? StudentIdService().getStudentId();
     return [
       TabNavigator(
+        key: const ValueKey('tab_subjects'),
         rootScreen: const SubjectListScreen(),
         navigatorKey: _navigatorKeys[0],
       ),
       TabNavigator(
+        key: const ValueKey('tab_practice'),
         rootScreen: const PracticeScreen(),
         navigatorKey: _navigatorKeys[1],
       ),
       TabNavigator(
+        key: const ValueKey('tab_mentor'),
         rootScreen: const MentorScreen(),
         navigatorKey: _navigatorKeys[2],
       ),
       TabNavigator(
+        key: const ValueKey('tab_dashboard'),
         rootScreen: DashboardScreen(studentId: studentId),
         navigatorKey: _navigatorKeys[3],
       ),
       TabNavigator(
+        key: const ValueKey('tab_settings'),
         rootScreen: const SettingsScreen(),
         navigatorKey: _navigatorKeys[4],
       ),
@@ -257,9 +258,17 @@ class _MainScreenState extends State<MainScreen> {
     return Semantics(
       explicitChildNodes: true,
       child: Scaffold(
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: _buildTabNavigators(),
+        body: Stack(
+          children: [
+            for (int i = 0; i < _navigatorKeys.length; i++)
+              Offstage(
+                offstage: i != _selectedIndex,
+                child: TickerMode(
+                  enabled: i == _selectedIndex,
+                  child: _tabNavigators[i],
+                ),
+              ),
+          ],
         ),
         floatingActionButton: Semantics(
           button: true,

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/token_pricing_config.dart';
-import '../../../../core/data/models/llm_models.dart';
+import 'package:studyking/features/settings/data/models/llm_models.dart';
 
 @immutable
 class SettingsAPIKey {

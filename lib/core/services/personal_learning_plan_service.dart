@@ -6,11 +6,11 @@ import 'package:studyking/features/planner/data/repositories/plan_adherence_repo
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
-import '../data/models/topic_dependency_model.dart';
-import '../data/models/mastery_state_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import '../data/models/topic_model.dart';
-import '../data/models/personal_learning_plan_model.dart';
-import '../data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import 'localization_service.dart';

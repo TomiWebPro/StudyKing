@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';

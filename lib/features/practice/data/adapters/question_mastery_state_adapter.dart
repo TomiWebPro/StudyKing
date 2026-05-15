@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 
 class QuestionMasteryStateAdapter extends TypeAdapter<QuestionMasteryState> {
   @override

@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class SourceRepository extends Repository<Source> {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
 class PendingActionCard extends StatelessWidget {

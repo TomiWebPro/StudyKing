@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class AttemptRepository extends Repository<StudentAttempt> {

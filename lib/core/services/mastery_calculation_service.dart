@@ -1,4 +1,4 @@
-import '../data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 
 class MasteryCalculationService {
   MasteryState recordAttempt({

@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
@@ -57,7 +57,8 @@ class DashboardDataLoader {
 
     Map<String, dynamic>? focusTodayStats;
     try {
-      final todaySessions = await sessionRepo.getByDate(DateTime.now());
+      final todayResult = await sessionRepo.getByDate(DateTime.now());
+      final todaySessions = todayResult.data ?? [];
       final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
       if (focusToday.isNotEmpty) {
         final totalMs = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs);

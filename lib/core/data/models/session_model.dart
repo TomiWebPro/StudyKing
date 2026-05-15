@@ -1,5 +1,9 @@
+/// Shared model used by 5 features (sessions, dashboard, focus_mode, practice, subjects).
+/// Retained in core because it is shared across >=3 features.
 enum SessionType { practice, focus, tutoring, manual }
 
+/// Shared model used by 5 features (sessions, dashboard, focus_mode, practice, subjects).
+/// Retained in core because it is shared across >=3 features.
 class Session {
   final String id;
   final String studentId;

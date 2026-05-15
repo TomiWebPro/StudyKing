@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class TopicBreakdownCard extends StatelessWidget {

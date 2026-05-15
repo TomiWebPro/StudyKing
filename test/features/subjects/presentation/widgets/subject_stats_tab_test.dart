@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
@@ -13,9 +14,9 @@ class _FakeSessionRepository extends SessionRepository {
   _FakeSessionRepository(this._sessions, {this.shouldThrow = false});
 
   @override
-  Future<List<Session>> getAll() async {
+  Future<Result<List<Session>>> getAll() async {
     if (shouldThrow) throw Exception('test error');
-    return _sessions;
+    return Result.success(_sessions);
   }
 }
 

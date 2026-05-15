@@ -3,8 +3,8 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 
 void main() {
   group('ConversationMessageAdapter', () {

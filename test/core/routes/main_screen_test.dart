@@ -1,0 +1,290 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionRepositoryProvider, questionRepositoryProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/main.dart' show MainScreen;
+
+class _FakeSubjectRepository extends SubjectRepository {
+  @override
+  Future<List<Subject>> getAll() async => [];
+}
+
+class _FakeSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
+  final SubjectRepository repo;
+  _FakeSubjectsRepositoryNotifier(this.repo);
+
+  @override
+  Future<SubjectRepository> build() async => repo;
+}
+
+class _FakeQuestionRepository extends QuestionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) async {
+    return Result.success([]);
+  }
+}
+
+class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<int>> getSubjectDueCount(String subjectId) async {
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
+    return Result.success([]);
+  }
+}
+
+class _FakeMasteryGraphService extends MasteryGraphService {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async {
+    return Result.success({
+      'totalTopics': 0,
+      'masteredTopics': 0,
+      'weakTopics': 0,
+      'averageAccuracy': 0.0,
+      'avgReadiness': 0.0,
+    });
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
+  }
+}
+
+class _FakeLlmService extends LlmService {
+  _FakeLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: '',
+          ),
+        );
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    yield 'Mock response';
+  }
+}
+
+class _FakeAttemptRepository extends AttemptRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<StudentAttempt>> getByStudent(String studentId) async {
+    return [];
+  }
+}
+
+class _FakeStudyProgressTracker extends StudyProgressTracker {
+  _FakeStudyProgressTracker()
+      : super(
+          attemptRepo: _FakeAttemptRepository(),
+          masteryService: _FakeMasteryGraphService(),
+        );
+
+  @override
+  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+    return {};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+    return [];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
+    return [];
+  }
+}
+
+Widget _buildTestApp() {
+  return ProviderScope(
+    overrides: [
+      subjectsRepositoryProvider.overrideWith(
+        () => _FakeSubjectsRepositoryNotifier(_FakeSubjectRepository()),
+      ),
+      spacedRepetitionRepositoryProvider.overrideWithValue(
+        _FakeSpacedRepetitionRepository(),
+      ),
+      questionRepositoryProvider.overrideWithValue(
+        _FakeQuestionRepository(),
+      ),
+      masteryGraphServiceProvider.overrideWithValue(
+        _FakeMasteryGraphService(),
+      ),
+      llmServiceProvider.overrideWithValue(
+        _FakeLlmService(),
+      ),
+      mentorProgressTrackerProvider.overrideWithValue(
+        _FakeStudyProgressTracker(),
+      ),
+      mentorModelIdProvider.overrideWithValue('test-model'),
+      settingsProvider.overrideWith(
+        (ref) => SettingsController(SettingsRepository()),
+      ),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: const MainScreen(fixedStudentId: 'test-student'),
+    ),
+  );
+}
+
+void main() {
+  setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final dir = await Directory.systemTemp.createTemp('main_screen_test_');
+    Hive.init(dir.path);
+  });
+
+  tearDown(() async {
+    if (Hive.isBoxOpen('student_id')) {
+      await Hive.deleteBoxFromDisk('student_id');
+    }
+  });
+
+  group('MainScreen', () {
+    Future<void> pumpAndSettleSafe(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets('renders NavigationBar with 5 destinations', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
+    });
+
+    testWidgets('starts with subjects tab selected', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 0);
+    });
+
+    testWidgets('switching to practice tab updates selected index', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      await tester.tap(find.text('Practice'));
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 1);
+    });
+
+    testWidgets('switching to mentor tab updates selected index', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      await tester.tap(find.text('Mentor'));
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 2);
+    });
+
+    testWidgets('switching to dashboard tab updates selected index', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      await tester.tap(find.text('Dashboard'));
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 3);
+    });
+
+    testWidgets('switching to settings tab updates selected index', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      await tester.tap(find.text('Settings'));
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 4);
+    });
+
+    testWidgets('FAB switches to dashboard tab', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await pumpAndSettleSafe(tester);
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, 3);
+    });
+
+    testWidgets('can cycle through all tabs without crashing', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await pumpAndSettleSafe(tester);
+
+      for (int i = 1; i < 5; i++) {
+        await tester.tap(find.byType(NavigationBar).last);
+        await pumpAndSettleSafe(tester);
+      }
+
+      for (int i = 3; i >= 0; i--) {
+        await tester.tap(find.byType(NavigationBar).last);
+        await pumpAndSettleSafe(tester);
+      }
+
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.selectedIndex, isNonNegative);
+    });
+  });
+}

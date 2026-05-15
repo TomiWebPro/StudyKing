@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 

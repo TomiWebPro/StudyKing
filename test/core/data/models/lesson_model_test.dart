@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
-import 'package:studyking/core/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 void main() {
@@ -260,10 +260,52 @@ void main() {
       });
     });
 
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final now = DateTime(2026, 5, 12);
+        final a = Lesson(
+          id: 'lesson-1',
+          subjectId: 'subject-1',
+          title: 'Algebra',
+          topicId: 'topic-1',
+          createdAt: now,
+        );
+        final b = Lesson(
+          id: 'lesson-2',
+          subjectId: 'subject-2',
+          title: 'Geometry',
+          topicId: 'topic-2',
+          createdAt: now,
+        );
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final now = DateTime(2026, 5, 12);
+        final obj = Lesson(
+          id: 'lesson-1',
+          subjectId: 'subject-1',
+          title: 'Algebra',
+          topicId: 'topic-1',
+          createdAt: now,
+        );
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
     group('Hive type annotation', () {
       test('class name matches HiveType', () {
         const lesson = Lesson;
         expect(lesson.toString(), 'Lesson');
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
+        expect(obj.toString(), contains('Lesson'));
       });
     });
   });

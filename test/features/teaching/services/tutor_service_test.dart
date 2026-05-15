@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -12,6 +12,7 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 
@@ -97,6 +98,17 @@ class FakeLlmService extends LlmService {
   }
 }
 
+class FakePlanAdapter extends PlanAdapter {
+  FakePlanAdapter() : super();
+
+  @override
+  Future<void> recordFromTutorSession({
+    required String studentId,
+    required int actualMinutes,
+    String? planId,
+  }) async {}
+}
+
 class FakeMasteryGraphService extends MasteryGraphService {
   final List<Map<String, dynamic>> recordedAttempts = [];
 
@@ -153,6 +165,7 @@ void main() {
         llmService: llmService,
         masteryService: masteryService,
         modelId: 'test-model',
+        planAdapter: FakePlanAdapter(),
       );
     });
 

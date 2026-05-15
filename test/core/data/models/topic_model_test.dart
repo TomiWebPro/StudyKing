@@ -239,10 +239,50 @@ void main() {
       });
     });
 
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = Topic(
+          id: 'topic-1',
+          subjectId: 'subject-1',
+          title: 'Algebra',
+          description: 'Intro',
+          syllabusText: 'Syllabus',
+        );
+        final b = Topic(
+          id: 'topic-2',
+          subjectId: 'subject-2',
+          title: 'Geometry',
+          description: 'Shapes',
+          syllabusText: 'Chapter 2',
+        );
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = Topic(
+          id: 'topic-1',
+          subjectId: 'subject-1',
+          title: 'Algebra',
+          description: 'Intro',
+          syllabusText: 'Syllabus',
+        );
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
     group('Hive type annotation', () {
       test('class name matches HiveType', () {
         const topic = Topic;
         expect(topic.toString(), 'Topic');
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = Topic(id: 't1', subjectId: 's1', title: 'T', description: 'D', syllabusText: 'S');
+        expect(obj.toString(), contains('Topic'));
       });
     });
   });

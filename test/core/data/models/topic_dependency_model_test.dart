@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 
 void main() {
   group('TopicDependency', () {
@@ -169,6 +169,48 @@ void main() {
         expect(restored.syllabusWeight, original.syllabusWeight);
         expect(restored.masteryThreshold, original.masteryThreshold);
       });
+
+      test('fromJson handles null prerequisites defaults to empty', () {
+        final json = {
+          'topicId': 't1',
+          'prerequisites': null,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.prerequisites, isEmpty);
+      });
+
+      test('fromJson handles null downstreamTopics defaults to empty', () {
+        final json = {
+          'topicId': 't1',
+          'downstreamTopics': null,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.downstreamTopics, isEmpty);
+      });
+
+      test('fromJson handles null optional numeric fields', () {
+        final json = {
+          'topicId': 't1',
+          'syllabusWeight': null,
+          'masteryThreshold': null,
+          'sortOrder': null,
+          'isRequired': null,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.syllabusWeight, 1.0);
+        expect(dep.masteryThreshold, 0.8);
+        expect(dep.sortOrder, 0);
+        expect(dep.isRequired, isTrue);
+      });
+
+      test('fromJson handles null dependencyWeights', () {
+        final json = {
+          'topicId': 't1',
+          'dependencyWeights': null,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.dependencyWeights, isEmpty);
+      });
     });
 
     group('copyWith', () {
@@ -181,6 +223,28 @@ void main() {
         expect(copy.prerequisites, ['topic-0']);
         expect(copy.masteryThreshold, 0.9);
         expect(copy.topicId, 'topic-1');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = TopicDependency(topicId: 'topic-1');
+        final b = TopicDependency(topicId: 'topic-1');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = TopicDependency(topicId: 'topic-1');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = TopicDependency(topicId: 'topic-1');
+        expect(obj.toString(), contains('TopicDependency'));
       });
     });
   });

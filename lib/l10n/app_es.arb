@@ -1616,7 +1616,7 @@
   "@studyTime": {
     "description": "Label for study time metric"
   },
-  "planAdherence": "cumplimiento al Plan",
+  "planAdherence": "Cumplimiento del Plan",
   "@planAdherence": {
     "description": "Section title for plan adherence"
   },
@@ -3175,115 +3175,115 @@
   },
   "csvOverallStats": "ESTADÍSTICAS GENERALES",
   "@csvOverallStats": {
-    "description": "Encabezado para la sección de estadísticas generales en CSV"
+    "description": "CSV section header for overall statistics"
   },
   "csvTopicMastery": "DOMINIO DE TEMAS",
   "@csvTopicMastery": {
-    "description": "Encabezado para la sección de dominio de temas en CSV"
+    "description": "CSV section header for topic mastery breakdown"
   },
   "csvAllAttempts": "TODOS LOS INTENTOS",
   "@csvAllAttempts": {
-    "description": "Encabezado para la sección de todos los intentos en CSV"
+    "description": "CSV section header for all attempts"
   },
   "csvWeeklyTrend": "TENDENCIA SEMANAL",
   "@csvWeeklyTrend": {
-    "description": "Encabezado para la sección de tendencia semanal en CSV"
+    "description": "CSV section header for weekly trend"
   },
   "csvBadges": "INSIGNIAS",
   "@csvBadges": {
-    "description": "Encabezado para la sección de insignias en CSV"
+    "description": "CSV section header for badges"
   },
   "csvColTotalAttempts": "Intentos Totales",
   "@csvColTotalAttempts": {
-    "description": "Nombre de columna para intentos totales en CSV"
+    "description": "CSV column name for total attempts"
   },
   "csvColCorrect": "Correctas",
   "@csvColCorrect": {
-    "description": "Nombre de columna para respuestas correctas en CSV"
+    "description": "CSV column name for correct answers"
   },
   "csvColAccuracy": "Precisión (%)",
   "@csvColAccuracy": {
-    "description": "Nombre de columna para precisión en CSV"
+    "description": "CSV column name for accuracy"
   },
   "csvColAvgTime": "Tiempo Prom. (s)",
   "@csvColAvgTime": {
-    "description": "Nombre de columna para tiempo promedio en CSV"
+    "description": "CSV column name for average time"
   },
   "csvColTotalHours": "Horas Totales",
   "@csvColTotalHours": {
-    "description": "Nombre de columna para horas totales en CSV"
+    "description": "CSV column name for total hours"
   },
   "csvColWeeklyActivity": "Actividad Semanal",
   "@csvColWeeklyActivity": {
-    "description": "Nombre de columna para actividad semanal en CSV"
+    "description": "CSV column name for weekly activity"
   },
   "csvColDailyActivity": "Actividad Diaria",
   "@csvColDailyActivity": {
-    "description": "Nombre de columna para actividad diaria en CSV"
+    "description": "CSV column name for daily activity"
   },
   "csvColTopicsStudied": "Temas Estudiados",
   "@csvColTopicsStudied": {
-    "description": "Nombre de columna para temas estudiados en CSV"
+    "description": "CSV column name for topics studied"
   },
   "csvColTopicId": "ID del Tema",
   "@csvColTopicId": {
-    "description": "Nombre de columna para ID del tema en CSV"
+    "description": "CSV column name for topic ID"
   },
   "csvColMasteryLevel": "Nivel de Dominio",
   "@csvColMasteryLevel": {
-    "description": "Nombre de columna para nivel de dominio en CSV"
+    "description": "CSV column name for mastery level"
   },
   "csvColLastPracticed": "Última Práctica",
   "@csvColLastPracticed": {
-    "description": "Nombre de columna para última práctica en CSV"
+    "description": "CSV column name for last practiced"
   },
   "csvColReviewUrgency": "Urgencia de Revisión",
   "@csvColReviewUrgency": {
-    "description": "Nombre de columna para urgencia de revisión en CSV"
+    "description": "CSV column name for review urgency"
   },
   "csvColQuestionId": "ID de Pregunta",
   "@csvColQuestionId": {
-    "description": "Nombre de columna para ID de pregunta en CSV"
+    "description": "CSV column name for question ID"
   },
   "csvColSubjectId": "ID de Materia",
   "@csvColSubjectId": {
-    "description": "Nombre de columna para ID de materia en CSV"
+    "description": "CSV column name for subject ID"
   },
   "csvColTime": "Tiempo (s)",
   "@csvColTime": {
-    "description": "Nombre de columna para tiempo en CSV"
+    "description": "CSV column name for time"
   },
   "csvColTimestamp": "Marca de Tiempo",
   "@csvColTimestamp": {
-    "description": "Nombre de columna para marca de tiempo en CSV"
+    "description": "CSV column name for timestamp"
   },
   "csvColWeek": "Semana",
   "@csvColWeek": {
-    "description": "Nombre de columna para semana en CSV"
+    "description": "CSV column name for week"
   },
   "csvColAttempts": "Intentos",
   "@csvColAttempts": {
-    "description": "Nombre de columna para intentos en CSV"
+    "description": "CSV column name for attempts"
   },
   "csvColImprovement": "Mejora",
   "@csvColImprovement": {
-    "description": "Nombre de columna para mejora en CSV"
+    "description": "CSV column name for improvement"
   },
   "csvColBadgeName": "Nombre de Insignia",
   "@csvColBadgeName": {
-    "description": "Nombre de columna para nombre de insignia en CSV"
+    "description": "CSV column name for badge name"
   },
   "csvColBadgeDescription": "Descripción",
   "@csvColBadgeDescription": {
-    "description": "Nombre de columna para descripción en CSV"
+    "description": "CSV column name for description"
   },
   "csvColDateUnlocked": "Fecha de Desbloqueo",
   "@csvColDateUnlocked": {
-    "description": "Nombre de columna para fecha de desbloqueo en CSV"
+    "description": "CSV column name for date unlocked"
   },
   "pdfProgressReport": "Informe de Progreso StudyKing",
   "@pdfProgressReport": {
-    "description": "Título del informe de progreso en PDF"
+    "description": "Title for the PDF progress report"
   },
   "pdfGenerated": "Generado: {date}",
   "@pdfGenerated": {
@@ -3305,47 +3305,47 @@
   },
   "pdfOverallStatistics": "Estadísticas Generales",
   "@pdfOverallStatistics": {
-    "description": "Encabezado para estadísticas generales en PDF"
+    "description": "PDF section header for overall statistics"
   },
   "pdfMetric": "Métrica",
   "@pdfMetric": {
-    "description": "Encabezado de columna para métrica en PDF"
+    "description": "PDF table column header for metric"
   },
   "pdfValue": "Valor",
   "@pdfValue": {
-    "description": "Encabezado de columna para valor en PDF"
+    "description": "PDF table column header for value"
   },
   "pdfTopicMasteryBreakdown": "Desglose de Dominio de Temas",
   "@pdfTopicMasteryBreakdown": {
-    "description": "Encabezado para desglose de dominio de temas en PDF"
+    "description": "PDF section header for topic mastery breakdown"
   },
   "pdfTableAttempts": "Intentos",
   "@pdfTableAttempts": {
-    "description": "Encabezado de columna para intentos en tabla PDF"
+    "description": "PDF table column header for attempts"
   },
   "pdfTableLevel": "Nivel",
   "@pdfTableLevel": {
-    "description": "Encabezado de columna para nivel en tabla PDF"
+    "description": "PDF table column header for level"
   },
   "pdfTableTopic": "Tema",
   "@pdfTableTopic": {
-    "description": "Encabezado de columna para tema en tabla PDF"
+    "description": "PDF table column header for topic"
   },
   "pdfBadgesEarned": "Insignias Obtenidas",
   "@pdfBadgesEarned": {
-    "description": "Encabezado para insignias obtenidas en PDF"
+    "description": "PDF section header for badges earned"
   },
   "pdfRecentActivitySummary": "Resumen de Actividad Reciente",
   "@pdfRecentActivitySummary": {
-    "description": "Encabezado para resumen de actividad reciente en PDF"
+    "description": "PDF section header for recent activity summary"
   },
   "pdfNoMasteryData": "Aún no hay datos de dominio.",
   "@pdfNoMasteryData": {
-    "description": "Mensaje cuando no hay datos de dominio disponibles en PDF"
+    "description": "Empty state when no mastery data is available in PDF"
   },
   "pdfNoBadges": "Aún no hay insignias. ¡Sigue estudiando!",
   "@pdfNoBadges": {
-    "description": "Mensaje de estado vacío cuando no hay insignias en PDF"
+    "description": "Empty state when no badges are earned in PDF"
   },
   "pdfTotalAttemptsRecorded": "Intentos totales registrados: {count}",
   "@pdfTotalAttemptsRecorded": {
@@ -3503,20 +3503,13 @@
   },
   "badgeFirstStepName": "Primer Paso",
   "@badgeFirstStepName": {
-    "description": "Nombre de la insignia por responder la primera pregunta"
+    "description": "Name of the badge earned for answering the first question"
   },
   "badgeFirstStepDesc": "¡Respondió su primera pregunta!",
   "@badgeFirstStepDesc": {
     "description": "Description for the 'first attempt' badge"
   },
-  "badgeCenturyName": "Club del Centenar",
-  "@badgeCenturyName": {
-    "description": "Name for the 'century' badge"
-  },
-  "badgeCenturyDesc": "¡Respondió más de 100 preguntas!",
-  "@badgeCenturyDesc": {
-    "description": "Description for the 'century' badge"
-  },
+
   "badgeAccuracyGoldName": "Precisión de Oro",
   "@badgeAccuracyGoldName": {
     "description": "Name for the 'accuracy gold' badge"
@@ -3855,15 +3848,15 @@
   },
   "badgeCenturyClubName": "Club del Centenario",
   "@badgeCenturyClubName": {
-    "description": "Nombre de la insignia por responder 100 preguntas"
+    "description": "Name of the badge earned for answering 100 questions"
   },
   "badgeCenturyClubDesc": "¡Respondió más de 100 preguntas!",
   "@badgeCenturyClubDesc": {
-    "description": "Descripción de la insignia Club del Centenario"
+    "description": "Description of the Century Club badge"
   },
   "nudgeWeeklyDigest": "Resumen semanal: {weeklyActivity} preguntas respondidas, {accuracy}% precisión, {totalHours} horas estudiadas, {weakCount} áreas por mejorar, {badgeCount} insignias obtenidas.",
   "@nudgeWeeklyDigest": {
-    "description": "Resumen semanal de la actividad del estudiante",
+    "description": "Weekly digest message summarizing student activity",
     "placeholders": {
       "weeklyActivity": {
         "type": "int"
@@ -3884,11 +3877,11 @@
   },
   "notificationTimeToReviewTitle": "¡Hora de Repasar!",
   "@notificationTimeToReviewTitle": {
-    "description": "Título de la notificación de recordatorio de repaso"
+    "description": "Title for the revision reminder notification"
   },
   "notificationTimeToReviewBody": "Han pasado {days} días desde que practicó \"{topic}\".",
   "@notificationTimeToReviewBody": {
-    "description": "Cuerpo de la notificación de recordatorio de repaso",
+    "description": "Body for the revision reminder notification",
     "placeholders": {
       "days": {
         "type": "int"
@@ -3900,11 +3893,11 @@
   },
   "notificationTakeABreakTitle": "Tome un Descanso",
   "@notificationTakeABreakTitle": {
-    "description": "Título de la notificación de advertencia de sobrecarga"
+    "description": "Title for the overwork alert notification"
   },
   "notificationTakeABreakBody": "¡Ha estudiado {hours} horas hoy. Recuerde descansar!",
   "@notificationTakeABreakBody": {
-    "description": "Cuerpo de la notificación de advertencia de sobrecarga",
+    "description": "Body for the overwork alert notification",
     "placeholders": {
       "hours": {
         "type": "String"
@@ -3913,11 +3906,11 @@
   },
   "notificationPlanAdjustmentTitle": "Ajuste de Plan",
   "@notificationPlanAdjustmentTitle": {
-    "description": "Título de la notificación de sugerencia de ajuste del plan"
+    "description": "Title for the plan adjustment suggestion notification"
   },
   "notificationPlanAdjustmentBody": "¿Ha tenido {days} días de bajo cumplimiento. Ajustamos su plan?",
   "@notificationPlanAdjustmentBody": {
-    "description": "Cuerpo de la notificación de sugerencia de ajuste del plan",
+    "description": "Body for the plan adjustment suggestion notification",
     "placeholders": {
       "days": {
         "type": "int"
@@ -3926,11 +3919,11 @@
   },
   "notificationUpcomingLessonTitle": "Próxima Lección",
   "@notificationUpcomingLessonTitle": {
-    "description": "Título de la notificación de recordatorio de próxima lección"
+    "description": "Title for the upcoming lesson reminder notification"
   },
   "notificationUpcomingLessonBody": "Su lección \"{lesson}\" comienza a las {time}",
   "@notificationUpcomingLessonBody": {
-    "description": "Cuerpo de la notificación de recordatorio de próxima lección",
+    "description": "Body for the upcoming lesson reminder notification",
     "placeholders": {
       "lesson": {
         "type": "String"
@@ -3942,11 +3935,11 @@
   },
   "notificationTopicsNeedAttentionTitle": "Temas que Requieren Atención",
   "@notificationTopicsNeedAttentionTitle": {
-    "description": "Título de la notificación de advertencia de bajo dominio"
+    "description": "Title for the low mastery warning notification"
   },
   "notificationTopicsNeedAttentionBody": "Bajo dominio detectado en: {topics}",
   "@notificationTopicsNeedAttentionBody": {
-    "description": "Cuerpo de la notificación de advertencia de bajo dominio",
+    "description": "Body for the low mastery warning notification",
     "placeholders": {
       "topics": {
         "type": "String"
@@ -3955,11 +3948,11 @@
   },
   "notificationBadgeUnlockedTitle": "¡Insignia Desbloqueada!",
   "@notificationBadgeUnlockedTitle": {
-    "description": "Título de la notificación de insignia desbloqueada"
+    "description": "Title for the badge unlocked notification"
   },
   "notificationBadgeUnlockedBody": "Obtuvo la insignia \"{badge}\": {description}",
   "@notificationBadgeUnlockedBody": {
-    "description": "Cuerpo de la notificación de insignia desbloqueada",
+    "description": "Body for the badge unlocked notification",
     "placeholders": {
       "badge": {
         "type": "String"
@@ -3971,87 +3964,87 @@
   },
   "notificationChannelGeneralName": "Notificaciones de StudyKing",
   "@notificationChannelGeneralName": {
-    "description": "Nombre del canal general de notificaciones"
+    "description": "Name of the general notification channel"
   },
   "notificationChannelGeneralDesc": "Notificaciones generales de StudyKing",
   "@notificationChannelGeneralDesc": {
-    "description": "Descripción del canal general de notificaciones"
+    "description": "Description of the general notification channel"
   },
   "notificationChannelDailyReminderName": "Recordatorios Diarios de Estudio",
   "@notificationChannelDailyReminderName": {
-    "description": "Nombre del canal de recordatorios diarios de estudio"
+    "description": "Name of the daily study reminders channel"
   },
   "notificationChannelDailyReminderDesc": "Recordatorios diarios para estudiar",
   "@notificationChannelDailyReminderDesc": {
-    "description": "Descripción del canal de recordatorios diarios de estudio"
+    "description": "Description of the daily study reminders channel"
   },
   "notificationChannelRevisionName": "Recordatorios de Repaso",
   "@notificationChannelRevisionName": {
-    "description": "Nombre del canal de recordatorios de repaso"
+    "description": "Name of the revision reminders channel"
   },
   "notificationChannelRevisionDesc": "Recordatorios para repasar temas que necesitan práctica",
   "@notificationChannelRevisionDesc": {
-    "description": "Descripción del canal de recordatorios de repaso"
+    "description": "Description of the revision reminders channel"
   },
   "notificationChannelWellbeingName": "Alertas de Bienestar",
   "@notificationChannelWellbeingName": {
-    "description": "Nombre del canal de alertas de bienestar"
+    "description": "Name of the wellbeing alerts channel"
   },
   "notificationChannelWellbeingDesc": "Alertas sobre equilibrio estudio-vida y sobrecarga",
   "@notificationChannelWellbeingDesc": {
-    "description": "Descripción del canal de alertas de bienestar"
+    "description": "Description of the wellbeing alerts channel"
   },
   "notificationChannelPlanningName": "Sugerencias de Planificación",
   "@notificationChannelPlanningName": {
-    "description": "Nombre del canal de sugerencias de planificación"
+    "description": "Name of the planning suggestions channel"
   },
   "notificationChannelPlanningDesc": "Sugerencias sobre ajustes al plan de estudio",
   "@notificationChannelPlanningDesc": {
-    "description": "Descripción del canal de sugerencias de planificación"
+    "description": "Description of the planning suggestions channel"
   },
   "notificationChannelLessonsName": "Notificaciones de Lecciones",
   "@notificationChannelLessonsName": {
-    "description": "Nombre del canal de notificaciones de lecciones"
+    "description": "Name of the lesson notifications channel"
   },
   "notificationChannelLessonsDesc": "Notificaciones sobre próximas lecciones",
   "@notificationChannelLessonsDesc": {
-    "description": "Descripción del canal de notificaciones de lecciones"
+    "description": "Description of the lesson notifications channel"
   },
   "notificationChannelMasteryName": "Alertas de Dominio",
   "@notificationChannelMasteryName": {
-    "description": "Nombre del canal de alertas de dominio"
+    "description": "Name of the mastery alerts channel"
   },
   "notificationChannelMasteryDesc": "Alertas sobre bajo dominio de temas y áreas por mejorar",
   "@notificationChannelMasteryDesc": {
-    "description": "Descripción del canal de alertas de dominio"
+    "description": "Description of the mastery alerts channel"
   },
   "notificationChannelBadgesName": "Notificaciones de Insignias",
   "@notificationChannelBadgesName": {
-    "description": "Nombre del canal de notificaciones de insignias"
+    "description": "Name of the badge notifications channel"
   },
   "notificationChannelBadgesDesc": "Notificaciones sobre insignias y logros obtenidos",
   "@notificationChannelBadgesDesc": {
-    "description": "Descripción del canal de notificaciones de insignias"
+    "description": "Description of the badge notifications channel"
   },
   "planAccuracyLow": "La precisión está por debajo del 60% — necesita práctica enfocada",
   "@planAccuracyLow": {
-    "description": "Explicación cuando la precisión del tema está por debajo del 60 por ciento"
+    "description": "Explanation when topic accuracy is below 60 percent"
   },
   "planReviewOverdue": "El repaso está vencido — el riesgo de olvido es alto",
   "@planReviewOverdue": {
-    "description": "Explicación cuando el repaso está vencido y el riesgo de olvido es alto"
+    "description": "Explanation when review is overdue and forgetting risk is high"
   },
   "planStreakLow": "La racha es baja — se necesita constancia",
   "@planStreakLow": {
-    "description": "Explicación cuando la racha actual es baja"
+    "description": "Explanation when the current streak is low"
   },
   "planPrerequisite": "Requisito previo para temas próximos — debe dominarlo primero",
   "@planPrerequisite": {
-    "description": "Explicación cuando el tema es requisito previo para otros temas"
+    "description": "Explanation when the topic is a prerequisite for other topics"
   },
   "planBlocksDownstream": "Bloquea {count} tema(s) dependiente(s)",
   "@planBlocksDownstream": {
-    "description": "Explicación cuando el tema bloquea temas dependientes",
+    "description": "Explanation when the topic blocks dependent topics",
     "placeholders": {
       "count": {
         "type": "int"
@@ -4060,59 +4053,59 @@
   },
   "planRequiredForDependent": "Requerido para temas dependientes",
   "@planRequiredForDependent": {
-    "description": "Etiqueta de razón para temas prerrequisito"
+    "description": "Reason label for prerequisite topics"
   },
   "planWeakPerformance": "Rendimiento débil",
   "@planWeakPerformance": {
-    "description": "Etiqueta de razón para temas con rendimiento débil"
+    "description": "Reason label for weak performance topics"
   },
   "planHighForgettingRisk": "Alto riesgo de olvido",
   "@planHighForgettingRisk": {
-    "description": "Etiqueta de razón para temas con alto riesgo de olvido"
+    "description": "Reason label for high forgetting risk topics"
   },
   "planNewSyllabusTopic": "Nuevo tema del temario",
   "@planNewSyllabusTopic": {
-    "description": "Etiqueta de razón para temas nuevos del temario"
+    "description": "Reason label for new syllabus topics"
   },
   "planPartOfSyllabusGoal": "Parte del objetivo del temario",
   "@planPartOfSyllabusGoal": {
-    "description": "Explicación para inclusión de tema del objetivo del temario"
+    "description": "Explanation for topic inclusion from syllabus goal"
   },
   "planHighMastery": "Alto dominio — listo para avanzar",
   "@planHighMastery": {
-    "description": "Razón de recomendación para temas con alto dominio"
+    "description": "Recommendation reason for high mastery topics"
   },
   "planGoodProgress": "Buen progreso — mantenga la constancia",
   "@planGoodProgress": {
-    "description": "Razón de recomendación para temas con buen progreso"
+    "description": "Recommendation reason for good progress topics"
   },
   "planDeveloping": "En desarrollo — necesita más práctica",
   "@planDeveloping": {
-    "description": "Razón de recomendación para temas en desarrollo"
+    "description": "Recommendation reason for developing topics"
   },
   "planAtRisk": "En riesgo — repaso vencido",
   "@planAtRisk": {
-    "description": "Razón de recomendación para temas en riesgo"
+    "description": "Recommendation reason for at-risk topics"
   },
   "planNeedsAttention": "Necesita atención — enfoque en fundamentos",
   "@planNeedsAttention": {
-    "description": "Razón de recomendación para temas que necesitan atención"
+    "description": "Recommendation reason for topics needing attention"
   },
   "planRestAndReview": "Descanso y repaso",
   "@planRestAndReview": {
-    "description": "Etiqueta de enfoque para días de descanso"
+    "description": "Focus label for rest days"
   },
   "planGeneralReview": "Repaso general",
   "@planGeneralReview": {
-    "description": "Etiqueta de enfoque cuando no hay temas prioritarios programados"
+    "description": "Focus label when no priority topics are scheduled"
   },
   "planPracticeAndReview": "Práctica y repaso",
   "@planPracticeAndReview": {
-    "description": "Etiqueta de enfoque predeterminada para planes de estudio"
+    "description": "Default focus label for study plans"
   },
   "adherenceLowDaysAdjust": "Ha tenido {days} días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o consultar con su mentor.",
   "@adherenceLowDaysAdjust": {
-    "description": "Mensaje cuando la adherencia es baja por muchos días, sugiriendo consulta al mentor",
+    "description": "Message when adherence is low for many days, suggesting mentor consultation",
     "placeholders": {
       "days": {
         "type": "int"
@@ -4121,7 +4114,7 @@
   },
   "adherenceLowDaysRegenerate": "¿Ha tenido {days} días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?",
   "@adherenceLowDaysRegenerate": {
-    "description": "Mensaje cuando la adherencia es baja, sugiriendo regeneración del plan",
+    "description": "Message when adherence is low, suggesting plan regeneration",
     "placeholders": {
       "days": {
         "type": "int"
@@ -4130,39 +4123,39 @@
   },
   "recommendationAccuracyLow": "Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.",
   "@recommendationAccuracyLow": {
-    "description": "Recomendación cuando la precisión está por debajo del 60 por ciento"
+    "description": "Recommendation when accuracy is below 60 percent"
   },
   "recommendationReviewBasics": "Repase temas básicos antes de avanzar",
   "@recommendationReviewBasics": {
-    "description": "Sugerencia de acción para baja precisión"
+    "description": "Action suggestion for low accuracy"
   },
   "recommendationExcellentProgress": "¡Progreso excelente! Listo para temas avanzados.",
   "@recommendationExcellentProgress": {
-    "description": "Recomendación cuando la precisión supera el 85 por ciento"
+    "description": "Recommendation when accuracy exceeds 85 percent"
   },
   "recommendationChallengingPractice": "Pruebe preguntas de práctica desafiantes",
   "@recommendationChallengingPractice": {
-    "description": "Sugerencia de acción para alta precisión"
+    "description": "Action suggestion for high accuracy"
   },
   "recommendationLowHours": "¡Estudió menos de 1 hora en total. La constancia es clave!",
   "@recommendationLowHours": {
-    "description": "Recomendación cuando el tiempo de estudio es muy bajo"
+    "description": "Recommendation when study time is very low"
   },
   "recommendationSetDailyGoal": "Establezca una meta diaria de estudio de 30 minutos",
   "@recommendationSetDailyGoal": {
-    "description": "Sugerencia de acción para pocas horas de estudio"
+    "description": "Action suggestion for low study hours"
   },
   "recommendationNoActivity": "¡Sin actividad de estudio esta semana. Vuelva al ritmo!",
   "@recommendationNoActivity": {
-    "description": "Recomendación cuando no se detecta actividad semanal"
+    "description": "Recommendation when no weekly activity is detected"
   },
   "recommendationQuickReview": "Comience con una sesión rápida de repaso de 15 minutos",
   "@recommendationQuickReview": {
-    "description": "Sugerencia de acción para ninguna actividad semanal"
+    "description": "Action suggestion for no weekly activity"
   },
   "recommendationWeakTopics": "Tiene {count} tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.",
   "@recommendationWeakTopics": {
-    "description": "Recomendación cuando hay temas débiles que necesitan mejorar",
+    "description": "Recommendation when there are weak topics needing improvement",
     "placeholders": {
       "count": {
         "type": "int"
@@ -4171,23 +4164,23 @@
   },
   "recommendationReviewWithTutor": "Repase temas débiles con el tutor de IA",
   "@recommendationReviewWithTutor": {
-    "description": "Sugerencia de acción para temas débiles"
+    "description": "Action suggestion for weak topics"
   },
   "suggestionFundamentals": "Repase conceptos básicos primero",
   "@suggestionFundamentals": {
-    "description": "Sugerencia para temas con precisión inferior al 60 por ciento"
+    "description": "Suggestion for topics with accuracy below 60 percent"
   },
   "suggestionPractice": "Se recomiendan más preguntas de práctica",
   "@suggestionPractice": {
-    "description": "Sugerencia para temas con precisión entre 60 y 80 por ciento"
+    "description": "Suggestion for topics with accuracy between 60 and 80 percent"
   },
   "suggestionAdvanced": "Listo para temas avanzados",
   "@suggestionAdvanced": {
-    "description": "Sugerencia para temas con precisión superior al 80 por ciento"
+    "description": "Suggestion for topics with accuracy above 80 percent"
   },
   "shareSessionsText": "Sesiones de Estudio",
   "@shareSessionsText": {
-    "description": "Texto al compartir archivos de sesiones de estudio"
+    "description": "Text when sharing study session files"
   },
   "summary": "Resumen",
   "@summary": {
@@ -4251,7 +4244,7 @@
   },
   "overtimeLabel": "+{minutes} min",
   "@overtimeLabel": {
-    "description": "Etiqueta que muestra la duración del tiempo adicional en minutos",
+    "description": "Label showing the duration of additional time in minutes",
     "placeholders": {
       "minutes": {
         "type": "int"
@@ -4269,5 +4262,9 @@
   "exerciseKeywords": "ejercicio,práctica,pregunta,examen,problema,prueba,reto,ejemplo",
   "@exerciseKeywords": {
     "description": "Comma-separated list of keywords indicating an exercise request"
+  },
+  "timeConflict": "Conflicto de horario con una lección programada",
+  "@timeConflict": {
+    "description": "Error message when a lesson time conflicts with an existing scheduled lesson"
   }
 }

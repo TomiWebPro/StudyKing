@@ -1,5 +1,5 @@
 import '../data/models/question_model.dart';
-import '../data/models/topic_progress_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 import 'localization_service.dart';
 
 class AdaptivePracticeEngine {

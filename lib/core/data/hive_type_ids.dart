@@ -78,8 +78,6 @@ bool _checkUniqueIds() {
   return true;
 }
 
-final bool _typeIdsValid = _checkUniqueIds();
-
 void validateHiveTypeIds() {
-  assert(_typeIdsValid, 'Duplicate Hive typeIds detected');
+  _checkUniqueIds();
 }

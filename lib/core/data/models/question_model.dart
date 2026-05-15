@@ -1,7 +1,9 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../enums.dart';
-import 'markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 
+/// Shared model used by 4 features (questions, practice, planner, core services).
+/// Retained in core because it is shared across >=3 features.
 @HiveType(typeId: 2)
 class Question extends HiveObject {
   @HiveField(0)

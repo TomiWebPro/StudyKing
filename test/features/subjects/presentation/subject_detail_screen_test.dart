@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
@@ -16,7 +17,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Session>> getAll() async => _sessions;
+  Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
 }
 
 Session _session({

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import '../utils/logger.dart';
 import '../../core/data/models/question_model.dart';
-import '../data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../core/services/mastery_graph_service.dart';
 import '../../core/data/enums.dart';

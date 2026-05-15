@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
 
@@ -55,7 +55,8 @@ final dashboardFocusStatsProvider =
   await ref.watch(dashboardInitProvider.future);
   try {
     final sessionRepo = ref.read(sessionRepositoryProvider);
-    final todaySessions = await sessionRepo.getByDate(DateTime.now());
+    final todayResult = await sessionRepo.getByDate(DateTime.now());
+    final todaySessions = todayResult.data ?? [];
     final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
     if (focusToday.isEmpty) return null;
     final totalMs = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs);

@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class ConversationRepository extends Repository<ConversationMessage> {

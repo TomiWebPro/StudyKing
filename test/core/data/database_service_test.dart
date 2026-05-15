@@ -1,12 +1,170 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+
+class _FakeTopicRepository extends TopicRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeQuestionRepository extends QuestionRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeAttemptRepository extends AttemptRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeLessonRepository extends LessonRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeSessionRepository extends SessionRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeSubjectRepository extends SubjectRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeConversationRepository extends ConversationRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FakeTutorSessionRepository extends TutorSessionRepository {
+  int initCallCount = 0;
+
+  @override
+  Future<void> init() async {
+    initCallCount++;
+  }
+}
+
+class _FailingRepo extends TopicRepository {
+  @override
+  Future<void> init() async {
+    throw Exception('init failed');
+  }
+}
 
 void main() {
   group('DatabaseService', () {
-    test('creates with all repositories', () {
-      // DatabaseService requires all repositories; this tests the data class
-      // We just verify it can be constructed - the repositories themselves are tested separately
-      expect(DatabaseService, isNotNull);
+    late _FakeTopicRepository topicRepo;
+    late _FakeQuestionRepository questionRepo;
+    late _FakeAttemptRepository attemptRepo;
+    late _FakeLessonRepository lessonRepo;
+    late _FakeSessionRepository sessionRepo;
+    late _FakeSubjectRepository subjectRepo;
+    late _FakeConversationRepository conversationRepo;
+    late _FakeTutorSessionRepository tutorSessionRepo;
+
+    setUp(() {
+      topicRepo = _FakeTopicRepository();
+      questionRepo = _FakeQuestionRepository();
+      attemptRepo = _FakeAttemptRepository();
+      lessonRepo = _FakeLessonRepository();
+      sessionRepo = _FakeSessionRepository();
+      subjectRepo = _FakeSubjectRepository();
+      conversationRepo = _FakeConversationRepository();
+      tutorSessionRepo = _FakeTutorSessionRepository();
+    });
+
+    test('constructor stores all repository references', () {
+      final service = DatabaseService(
+        topicRepository: topicRepo,
+        questionRepository: questionRepo,
+        attemptRepository: attemptRepo,
+        lessonRepository: lessonRepo,
+        sessionRepository: sessionRepo,
+        subjectRepository: subjectRepo,
+        conversationRepository: conversationRepo,
+        tutorSessionRepository: tutorSessionRepo,
+      );
+      expect(service.topicRepository, topicRepo);
+      expect(service.questionRepository, questionRepo);
+      expect(service.attemptRepository, attemptRepo);
+      expect(service.lessonRepository, lessonRepo);
+      expect(service.sessionRepository, sessionRepo);
+      expect(service.subjectRepository, subjectRepo);
+      expect(service.conversationRepository, conversationRepo);
+      expect(service.tutorSessionRepository, tutorSessionRepo);
+    });
+
+    test('init calls init on all repositories', () async {
+      final service = DatabaseService(
+        topicRepository: topicRepo,
+        questionRepository: questionRepo,
+        attemptRepository: attemptRepo,
+        lessonRepository: lessonRepo,
+        sessionRepository: sessionRepo,
+        subjectRepository: subjectRepo,
+        conversationRepository: conversationRepo,
+        tutorSessionRepository: tutorSessionRepo,
+      );
+      await service.init();
+      expect(topicRepo.initCallCount, 1);
+      expect(questionRepo.initCallCount, 1);
+      expect(attemptRepo.initCallCount, 1);
+      expect(lessonRepo.initCallCount, 1);
+      expect(sessionRepo.initCallCount, 1);
+      expect(subjectRepo.initCallCount, 1);
+      expect(conversationRepo.initCallCount, 1);
+      expect(tutorSessionRepo.initCallCount, 1);
+    });
+
+    test('init propagates repository error', () async {
+      final service = DatabaseService(
+        topicRepository: _FailingRepo(),
+        questionRepository: questionRepo,
+        attemptRepository: attemptRepo,
+        lessonRepository: lessonRepo,
+        sessionRepository: sessionRepo,
+        subjectRepository: subjectRepo,
+        conversationRepository: conversationRepo,
+        tutorSessionRepository: tutorSessionRepo,
+      );
+      expect(service.init(), throwsA(isA<Exception>()));
     });
   });
 }

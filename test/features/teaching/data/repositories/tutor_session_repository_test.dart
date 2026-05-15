@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 
 class _MockTutorSessionRepository extends TutorSessionRepository {
   final Map<String, TutorSession> _storage = {};

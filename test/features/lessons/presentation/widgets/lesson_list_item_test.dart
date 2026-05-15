@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/lesson_block_model.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/lessons/presentation/widgets/lesson_list_item.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

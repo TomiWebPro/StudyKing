@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/lesson_block_model.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
@@ -29,7 +30,7 @@ class _FakeLessonRepository extends LessonRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(Lesson lesson) async {}
+  Future<Result<void>> create(Lesson lesson) async => Result.success(null);
 }
 
 Widget _buildTestApp({

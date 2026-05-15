@@ -1243,7 +1243,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get studyTime => 'Tiempo de Estudio';
 
   @override
-  String get planAdherence => 'cumplimiento al Plan';
+  String get planAdherence => 'Cumplimiento del Plan';
 
   @override
   String get masteryOverview => 'Resumen de Dominio';
@@ -2607,12 +2607,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeFirstStepDesc => '¡Respondió su primera pregunta!';
 
   @override
-  String get badgeCenturyName => 'Club del Centenar';
-
-  @override
-  String get badgeCenturyDesc => '¡Respondió más de 100 preguntas!';
-
-  @override
   String get badgeAccuracyGoldName => 'Precisión de Oro';
 
   @override
@@ -3153,4 +3147,7 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get exerciseKeywords =>
       'ejercicio,práctica,pregunta,examen,problema,prueba,reto,ejemplo';
+
+  @override
+  String get timeConflict => 'Conflicto de horario con una lección programada';
 }

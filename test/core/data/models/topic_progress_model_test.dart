@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/topic_progress_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 
 void main() {
   group('TopicProgress', () {
@@ -121,6 +121,20 @@ void main() {
         expect(progress.correctAnswers, 0);
         expect(progress.averageTimeMs, 0.0);
       });
+
+      test('handles null numeric fields', () {
+        final json = {
+          'topicId': 't1',
+          'lastUpdated': now.toIso8601String(),
+          'questionsAnswered': null,
+          'correctAnswers': null,
+          'averageTimeMs': null,
+        };
+        final progress = TopicProgress.fromJson(json);
+        expect(progress.questionsAnswered, 0);
+        expect(progress.correctAnswers, 0);
+        expect(progress.averageTimeMs, 0.0);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -178,6 +192,28 @@ void main() {
       test('class name matches HiveType', () {
         const progress = TopicProgress;
         expect(progress.toString(), 'TopicProgress');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = TopicProgress(topicId: 't1', lastUpdated: now);
+        final b = TopicProgress(topicId: 't1', lastUpdated: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = TopicProgress(topicId: 't1', lastUpdated: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = TopicProgress(topicId: 't1', lastUpdated: now);
+        expect(obj.toString(), contains('TopicProgress'));
       });
     });
   });

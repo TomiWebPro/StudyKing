@@ -49,6 +49,18 @@ class AiModel {
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          provider == other.provider;
+
+  @override
+  int get hashCode => Object.hash(id, name, provider);
+
+  @override
   String toString() => 'AiModel(id: $id, name: $name, provider: $provider)';
 
   factory AiModel.fromId(String id) {

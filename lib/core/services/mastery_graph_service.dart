@@ -1,8 +1,8 @@
 import '../errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
-import '../data/models/mastery_state_model.dart';
-import '../data/models/question_mastery_state_model.dart';
-import '../data/models/question_evaluation_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'mastery_calculation_service.dart';
 
 class MasteryGraphService {

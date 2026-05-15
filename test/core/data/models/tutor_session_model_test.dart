@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 
 void main() {
   group('SessionStatus', () {
@@ -292,6 +292,35 @@ void main() {
           expect(session.status, status);
         }
       });
+
+      test('throws on invalid status string', () {
+        final json = {
+          'id': 's', 'studentId': 'stu', 'subjectId': 'sub', 'topicId': 't',
+          'topicTitle': 'T', 'status': 'invalid_status',
+          'startTime': startTime.toIso8601String(),
+        };
+        expect(() => TutorSession.fromJson(json), throwsA(isA<StateError>()));
+      });
+
+      test('throws on malformed startTime', () {
+        final json = {
+          'id': 's', 'studentId': 'stu', 'subjectId': 'sub', 'topicId': 't',
+          'topicTitle': 'T', 'status': 'planned',
+          'startTime': 'not-a-date',
+        };
+        expect(() => TutorSession.fromJson(json), throwsA(isA<FormatException>()));
+      });
+
+      test('handles null topicsCovered defaults to empty list', () {
+        final json = {
+          'id': 's', 'studentId': 'stu', 'subjectId': 'sub', 'topicId': 't',
+          'topicTitle': 'T', 'status': 'planned',
+          'startTime': startTime.toIso8601String(),
+          'topicsCovered': null,
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.topicsCovered, isEmpty);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -380,6 +409,28 @@ void main() {
         expect(copy.confidenceRating, 5);
         expect(copy.tutorNotes, 'Excellent');
         expect(copy.totalTokensUsed, 10000);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = createSession();
+        final b = createSession();
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = createSession();
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = createSession();
+        expect(obj.toString(), contains('TutorSession'));
       });
     });
   });

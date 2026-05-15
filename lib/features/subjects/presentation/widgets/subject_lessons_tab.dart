@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/lesson_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class SubjectLessonsTab extends StatelessWidget {
+class SubjectLessonsTab extends ConsumerWidget {
   final String subjectId;
   final LessonRepository? lessonRepository;
 
@@ -16,9 +18,9 @@ class SubjectLessonsTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final lessonRepo = lessonRepository ?? LessonRepository();
+    final lessonRepo = (lessonRepository ?? ref.read(lessonRepositoryProvider))!;
 
     Future<List<Lesson>> loadLessons() async {
       try {

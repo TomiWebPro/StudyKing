@@ -17,6 +17,8 @@ void main() {
         'topic_dependencies', 'learning_plans',
         'subjects', 'topics', 'questions', 'answers', 'sources',
         'attempts', 'lessonBlocks', 'lessons', 'sessions', 'progress', 'tasks',
+        'conversations', 'tutor_sessions', 'plan_adherence_metrics',
+        'mastery_improvement_metrics',
         'db_version',
       ];
       for (final box in boxes) {
@@ -49,6 +51,10 @@ void main() {
       expect(Hive.isBoxOpen('sessions'), isTrue);
       expect(Hive.isBoxOpen('progress'), isTrue);
       expect(Hive.isBoxOpen('tasks'), isTrue);
+      expect(Hive.isBoxOpen('conversations'), isTrue);
+      expect(Hive.isBoxOpen('tutor_sessions'), isTrue);
+      expect(Hive.isBoxOpen('plan_adherence_metrics'), isTrue);
+      expect(Hive.isBoxOpen('mastery_improvement_metrics'), isTrue);
     }, timeout: const Timeout(Duration(seconds: 15)));
 
     test('initialize registers adapters', () async {
@@ -61,6 +67,10 @@ void main() {
       expect(Hive.isAdapterRegistered(18), isTrue);
       expect(Hive.isAdapterRegistered(19), isTrue);
       expect(Hive.isAdapterRegistered(12), isTrue);
+      expect(Hive.isAdapterRegistered(27), isTrue);
+      expect(Hive.isAdapterRegistered(28), isTrue);
+      expect(Hive.isAdapterRegistered(30), isTrue);
+      expect(Hive.isAdapterRegistered(31), isTrue);
     }, timeout: const Timeout(Duration(seconds: 15)));
   });
 }

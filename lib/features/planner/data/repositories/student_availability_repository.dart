@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
-import 'package:studyking/core/data/models/student_availability_model.dart';
+import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 
 class StudentAvailabilityRepository extends Repository<StudentAvailabilityModel> {
   Future<void> init() async {

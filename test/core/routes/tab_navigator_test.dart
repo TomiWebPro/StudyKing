@@ -361,4 +361,178 @@ void main() {
       expect(find.text('Level 0'), findsOneWidget);
     });
   });
+
+  group('TabNavigator with Offstage + TickerMode', () {
+    testWidgets('pushed routes preserved when switching tabs',
+        (tester) async {
+      final keys = List.generate(2, (_) => GlobalKey<NavigatorState>());
+      var selectedIndex = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setInnerState) => Scaffold(
+              body: Stack(
+                children: [
+                  for (int i = 0; i < keys.length; i++)
+                    Offstage(
+                      offstage: i != selectedIndex,
+                      child: TickerMode(
+                        enabled: i == selectedIndex,
+                        child: TabNavigator(
+                          navigatorKey: keys[i],
+                          customOnGenerateRoute: _testRouteGenerator,
+                          rootScreen: i == 0
+                              ? Scaffold(
+                                  body: Builder(
+                                    builder: (ctx) => ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.pushNamed(ctx, '/pushed'),
+                                      child: const Text('Tab0 Push'),
+                                    ),
+                                  ),
+                                )
+                              : const Scaffold(
+                                  body: Text('Tab1 Root'),
+                                ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (index) {
+                  setInnerState(() {
+                    selectedIndex = index;
+                  });
+                },
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.school),
+                    label: 'Tab0',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.play_arrow),
+                    label: 'Tab1',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tab0 Push'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(keys[0].currentState?.canPop(), isTrue);
+
+      await tester.tap(find.text('Tab1'));
+      await tester.pump();
+
+      expect(keys[1].currentState?.canPop(), isFalse);
+
+      await tester.tap(find.text('Tab0'));
+      await tester.pump();
+
+      expect(keys[0].currentState?.canPop(), isTrue);
+
+      keys[0].currentState?.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(keys[0].currentState?.canPop(), isFalse);
+    });
+
+    testWidgets('deep navigation preserved across tab switch',
+        (tester) async {
+      final keys = List.generate(2, (_) => GlobalKey<NavigatorState>());
+      var selectedIndex = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setInnerState) => Scaffold(
+              body: Stack(
+                children: [
+                  for (int i = 0; i < keys.length; i++)
+                    Offstage(
+                      offstage: i != selectedIndex,
+                      child: TickerMode(
+                        enabled: i == selectedIndex,
+                        child: TabNavigator(
+                          navigatorKey: keys[i],
+                          customOnGenerateRoute: _testRouteGenerator,
+                          rootScreen: i == 0
+                              ? Scaffold(
+                                  body: Builder(
+                                    builder: (ctx) => ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.pushNamed(ctx, '/level-1'),
+                                      child: const Text('Level 0'),
+                                    ),
+                                  ),
+                                )
+                              : const Scaffold(
+                                  body: Text('Tab1 Root'),
+                                ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (index) {
+                  setInnerState(() {
+                    selectedIndex = index;
+                  });
+                },
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.school),
+                    label: 'Tab0',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.play_arrow),
+                    label: 'Tab1',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Level 0'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      keys[0].currentState?.pushNamed('/level-2');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(keys[0].currentState?.canPop(), isTrue);
+
+      await tester.tap(find.text('Tab1'));
+      await tester.pump();
+
+      await tester.tap(find.text('Tab0'));
+      await tester.pump();
+
+      expect(keys[0].currentState?.canPop(), isTrue);
+
+      keys[0].currentState?.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(keys[0].currentState?.canPop(), isTrue);
+
+      keys[0].currentState?.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(keys[0].currentState?.canPop(), isFalse);
+      expect(find.text('Level 0'), findsOneWidget);
+    });
+  });
 }

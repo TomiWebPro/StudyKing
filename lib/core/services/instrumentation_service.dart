@@ -2,9 +2,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
-import '../data/models/mastery_state_model.dart';
-import '../data/models/plan_adherence_metric_model.dart';
-import '../data/models/mastery_improvement_metric_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
 import '../data/hive_box_names.dart';
 
 class PlanAdherenceTracker {

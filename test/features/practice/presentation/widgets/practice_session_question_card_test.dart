@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';

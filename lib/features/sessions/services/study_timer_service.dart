@@ -53,16 +53,16 @@ class StudyTimerService {
   Future<bool> isDailyCapReached(int additionalMinutes) async {
     final capMinutes = await getDailyCapMinutes();
     if (capMinutes <= 0) return false;
-    final todayStats = await _repository.getTodayStats();
-    final todayMinutes = (todayStats['totalMs'] as int? ?? 0) ~/ 60000;
+    final todayStatsResult = await _repository.getTodayStats();
+    final todayMinutes = (todayStatsResult.data?['totalMs'] as int? ?? 0) ~/ 60000;
     return (todayMinutes + additionalMinutes) > capMinutes;
   }
 
   Future<int> getRemainingDailyCapMinutes() async {
     final capMinutes = await getDailyCapMinutes();
     if (capMinutes <= 0) return -1;
-    final todayStats = await _repository.getTodayStats();
-    final todayMinutes = (todayStats['totalMs'] as int? ?? 0) ~/ 60000;
+    final todayStatsResult = await _repository.getTodayStats();
+    final todayMinutes = (todayStatsResult.data?['totalMs'] as int? ?? 0) ~/ 60000;
     return capMinutes - todayMinutes;
   }
 
@@ -177,23 +177,28 @@ class StudyTimerService {
   }
 
   Future<int> getTodayDurationMs() async {
-    return _repository.getTodayDurationMs();
+    final result = await _repository.getTodayDurationMs();
+    return result.data ?? 0;
   }
 
   Future<int> getTodaySessionCount() async {
-    return _repository.getTodaySessionCount();
+    final result = await _repository.getTodaySessionCount();
+    return result.data ?? 0;
   }
 
   Future<int> getTodayCompletedSessionCount() async {
-    return _repository.getTodayCompletedSessionCount();
+    final result = await _repository.getTodayCompletedSessionCount();
+    return result.data ?? 0;
   }
 
   Future<Map<String, dynamic>> getTodayStats() async {
-    return _repository.getTodayStats();
+    final result = await _repository.getTodayStats();
+    return result.data ?? {};
   }
 
   Future<List<Session>> getRecentSessions({int limit = 10}) async {
-    final all = await _repository.getAll();
+    final allResult = await _repository.getAll();
+    final all = allResult.data ?? [];
     return all.take(limit).toList();
   }
 

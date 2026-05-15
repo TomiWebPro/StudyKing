@@ -23,7 +23,8 @@ class SubjectStatsTab extends StatelessWidget {
 
     Future<List<Session>> loadSessions() async {
       try {
-        final sessions = await sessionRepo.getAll();
+        final result = await sessionRepo.getAll();
+        final sessions = result.data ?? [];
         return sessions.where((s) => s.subjectId == subjectId).toList();
       } catch (e) {
         return [];

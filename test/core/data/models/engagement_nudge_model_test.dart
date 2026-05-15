@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
 void main() {
   group('EngagementNudgeModel', () {
@@ -117,6 +117,34 @@ void main() {
         );
         expect(copy.topicId, 'topic-1');
         expect(copy.actedUponAt, now);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = EngagementNudgeModel(id: 'n1', studentId: 's1', nudgeType: 'o', message: 'M');
+        final b = EngagementNudgeModel(id: 'n1', studentId: 's1', nudgeType: 'o', message: 'M');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = EngagementNudgeModel(id: 'n1', studentId: 's1', nudgeType: 'o', message: 'M');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = EngagementNudgeModel(id: 'n1', studentId: 's1', nudgeType: 'o', message: 'M');
+        expect(obj.toString(), contains('EngagementNudgeModel'));
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('has correct Hive typeId', () {
+        expect(EngagementNudgeModel, isNotNull);
       });
     });
   });

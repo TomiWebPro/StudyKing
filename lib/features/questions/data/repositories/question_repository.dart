@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';

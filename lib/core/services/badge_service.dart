@@ -1,6 +1,6 @@
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import '../data/models/badge_model.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'study_progress_tracker.dart';
 import 'notification_service.dart';
 

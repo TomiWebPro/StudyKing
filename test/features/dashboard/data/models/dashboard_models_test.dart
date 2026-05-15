@@ -45,6 +45,11 @@ void main() {
         final snapshot = MasterySnapshot(totalTopics: 1);
         expect(snapshot.isEmpty, isFalse);
       });
+
+      test('isEmpty ignores avgReadiness and avgReviewUrgency', () {
+        expect(MasterySnapshot(avgReadiness: 0.5).isEmpty, isTrue);
+        expect(MasterySnapshot(avgReviewUrgency: 0.3).isEmpty, isTrue);
+      });
     });
 
     group('fromMap', () {
@@ -148,6 +153,12 @@ void main() {
         expect(OverallStats(accuracy: 1).isEmpty, isFalse);
         expect(OverallStats(weeklyActivity: 1).isEmpty, isFalse);
         expect(OverallStats(topicsStudied: 1).isEmpty, isFalse);
+      });
+
+      test('isEmpty ignores correctAttempts, avgTimePerQuestion, dailyActivity', () {
+        expect(OverallStats(correctAttempts: 100).isEmpty, isTrue);
+        expect(OverallStats(avgTimePerQuestion: 30).isEmpty, isTrue);
+        expect(OverallStats(dailyActivity: 5).isEmpty, isTrue);
       });
     });
 
@@ -318,6 +329,11 @@ void main() {
         expect(FocusTodayStats(totalSeconds: 1).isEmpty, isFalse);
         expect(FocusTodayStats(totalSessions: 1).isEmpty, isFalse);
       });
+
+      test('isEmpty ignores completedSessions and plannedMinutes', () {
+        expect(FocusTodayStats(completedSessions: 5).isEmpty, isTrue);
+        expect(FocusTodayStats(plannedMinutes: 30).isEmpty, isTrue);
+      });
     });
 
     group('hours', () {
@@ -343,6 +359,17 @@ void main() {
 
       test('handles large values', () {
         expect(FocusTodayStats(totalSeconds: 86400).hours, '24.0');
+      });
+
+      test('returns 0.0 for seconds less than 3600', () {
+        expect(FocusTodayStats(totalSeconds: 1).hours, '0.0');
+        expect(FocusTodayStats(totalSeconds: 1799).hours, '0.5');
+      });
+
+      test('returns correct rounding for fractional hours', () {
+        expect(FocusTodayStats(totalSeconds: 3660).hours, '1.0');
+        expect(FocusTodayStats(totalSeconds: 3720).hours, '1.0');
+        expect(FocusTodayStats(totalSeconds: 60).hours, '0.0');
       });
     });
 

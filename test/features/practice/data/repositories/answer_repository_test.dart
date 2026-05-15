@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/answer_repository.dart';
-import 'package:studyking/core/data/models/answer_model.dart';
+import 'package:studyking/features/practice/data/models/answer_model.dart';
 
 class _MockAnswerRepository extends AnswerRepository {
   final Map<String, Answer> _storage = {};
@@ -9,8 +10,9 @@ class _MockAnswerRepository extends AnswerRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(Answer answer) async {
+  Future<Result<void>> create(Answer answer) async {
     _storage[answer.id] = answer;
+    return Result.success(null);
   }
 
   @override
@@ -19,8 +21,8 @@ class _MockAnswerRepository extends AnswerRepository {
   }
 
   @override
-  Future<List<Answer>> getByQuestion(String questionId) async {
-    return _storage.values.where((a) => a.questionId == questionId).toList();
+  Future<Result<List<Answer>>> getByQuestion(String questionId) async {
+    return Result.success(_storage.values.where((a) => a.questionId == questionId).toList());
   }
 }
 
@@ -59,12 +61,14 @@ void main() {
         await repository.create(Answer(id: 'a2', questionId: 'q1', text: 'B', isCorrect: false));
         await repository.create(Answer(id: 'a3', questionId: 'q2', text: 'C', isCorrect: true));
         final result = await repository.getByQuestion('q1');
-        expect(result.length, 2);
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 2);
       });
 
       test('returns empty list when no answers for question', () async {
         final result = await repository.getByQuestion('none');
-        expect(result, isEmpty);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
   });

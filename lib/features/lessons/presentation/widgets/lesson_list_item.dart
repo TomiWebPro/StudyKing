@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class LessonListItem extends StatelessWidget {

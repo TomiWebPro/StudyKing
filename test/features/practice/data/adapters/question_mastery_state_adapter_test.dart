@@ -4,7 +4,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
-import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 
 void main() {
   group('QuestionMasteryStateAdapter', () {

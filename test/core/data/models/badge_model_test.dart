@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/badge_model.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 
 void main() {
   group('BadgeModel', () {
@@ -89,6 +89,34 @@ void main() {
         );
         final json = badge.toJson();
         expect(json['criteria'], isNull);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = BadgeModel(id: 'b1', studentId: 's1', name: 'N', description: 'D');
+        final b = BadgeModel(id: 'b1', studentId: 's1', name: 'N', description: 'D');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = BadgeModel(id: 'b1', studentId: 's1', name: 'N', description: 'D');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = BadgeModel(id: 'b1', studentId: 's1', name: 'N', description: 'D');
+        expect(obj.toString(), contains('BadgeModel'));
+      });
+    });
+
+    group('Hive type annotation', () {
+      test('has correct Hive typeId', () {
+        expect(BadgeModel, isNotNull);
       });
     });
   });

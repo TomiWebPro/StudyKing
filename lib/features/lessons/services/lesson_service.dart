@@ -1,6 +1,6 @@
 import 'dart:async';
 import '../../../core/data/database_service.dart';
-import '../../../core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import '../../../core/data/models/topic_model.dart';
 
 class LessonService {

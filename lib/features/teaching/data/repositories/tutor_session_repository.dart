@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class TutorSessionRepository extends Repository<TutorSession> {

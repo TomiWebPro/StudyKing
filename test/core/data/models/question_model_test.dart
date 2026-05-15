@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 
 void main() {
   group('Question', () {
@@ -323,6 +323,28 @@ void main() {
       test('class name matches HiveType', () {
         const question = Question;
         expect(question.toString(), 'Question');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = Question(id: 'q1', text: 'T', type: QuestionType.singleChoice, subjectId: 's1', topicId: 't1', createdAt: now, updatedAt: now);
+        final b = Question(id: 'q1', text: 'T', type: QuestionType.singleChoice, subjectId: 's1', topicId: 't1', createdAt: now, updatedAt: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = Question(id: 'q1', text: 'T', type: QuestionType.singleChoice, subjectId: 's1', topicId: 't1', createdAt: now, updatedAt: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = Question(id: 'q1', text: 'T', type: QuestionType.singleChoice, subjectId: 's1', topicId: 't1', createdAt: now, updatedAt: now);
+        expect(obj.toString(), contains('Question'));
       });
     });
   });

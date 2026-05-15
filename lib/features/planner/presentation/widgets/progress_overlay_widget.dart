@@ -107,7 +107,7 @@ class ProgressOverlayWidget extends StatelessWidget {
             style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         SizedBox(
-          height: 80,
+          height: 120,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: data.weeklyProgress.map((day) {

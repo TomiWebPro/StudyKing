@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
-import 'package:studyking/core/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
 class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
   Future<void> init() async {

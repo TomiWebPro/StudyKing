@@ -4,7 +4,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 TypeRegistryImpl _registry() {
   return TypeRegistryImpl()

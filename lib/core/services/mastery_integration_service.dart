@@ -1,6 +1,6 @@
 import '../errors/result.dart';
-import '../data/models/mastery_state_model.dart';
-import '../data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'mastery_graph_service.dart';
 import 'adaptive_practice_engine.dart';

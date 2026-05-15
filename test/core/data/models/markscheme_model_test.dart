@@ -3,7 +3,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/questions/data/adapters/markscheme_adapter.dart';
-import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 
 void main() {
   group('Markscheme', () {
@@ -278,6 +278,28 @@ void main() {
       expect(result.correctAnswer, 'Tokyo');
       expect(result.acceptableAnswers, []);
       expect(result.steps, []);
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = Markscheme(correctAnswer: 'Paris');
+        final b = Markscheme(correctAnswer: 'Paris');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = Markscheme(correctAnswer: 'Paris');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = Markscheme(correctAnswer: 'Paris');
+        expect(obj.toString(), contains('Markscheme'));
+      });
     });
   });
 }

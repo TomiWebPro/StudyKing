@@ -1,5 +1,5 @@
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/topic_progress_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class ProgressRepository extends Repository<TopicProgress> {

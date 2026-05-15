@@ -1,38 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
-
-class _MockPlanRepository extends PlanRepository {
-  final Map<String, PersonalLearningPlan> _storage = {};
-
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
-    _storage[plan.studentId] = plan;
-  }
-
-  @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return _storage[studentId];
-  }
-
-  @override
-  Future<void> deletePlan(String studentId) async {
-    _storage.remove(studentId);
-  }
-
-  @override
-  Future<bool> hasPlan(String studentId) async {
-    return _storage.containsKey(studentId);
-  }
-
-  @override
-  Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return _storage.values.toList();
-  }
-}
 
 PersonalLearningPlan createPlan({
   String studentId = 'student-1',
@@ -80,11 +52,42 @@ PersonalLearningPlan createPlan({
 }
 
 void main() {
-  group('PlanRepository', () {
-    late _MockPlanRepository repository;
+  group('PlanRepository with real Hive', () {
+    late String hivePath;
+    late PlanRepository repository;
 
-    setUp(() {
-      repository = _MockPlanRepository();
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('plan_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(19)) {
+        Hive.registerAdapter(PersonalLearningPlanAdapter());
+      }
+      if (!Hive.isAdapterRegistered(20)) {
+        Hive.registerAdapter(DailyPlanAdapter());
+      }
+      if (!Hive.isAdapterRegistered(21)) {
+        Hive.registerAdapter(PlannedTopicAdapter());
+      }
+      if (!Hive.isAdapterRegistered(22)) {
+        Hive.registerAdapter(PlanSummaryAdapter());
+      }
+      if (!Hive.isAdapterRegistered(23)) {
+        Hive.registerAdapter(PlanRecommendationAdapter());
+      }
+      repository = PlanRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        await Directory(hivePath).delete(recursive: true);
+      }
+    });
+
+    test('init opens the box and readies the repository', () {
+      expect(repository, isNotNull);
     });
 
     group('savePlan', () {
@@ -92,7 +95,15 @@ void main() {
         final plan = createPlan();
         await repository.savePlan(plan);
         final stored = await repository.loadPlan('student-1');
-        expect(stored?.studentId, 'student-1');
+        expect(stored, isNotNull);
+        expect(stored!.studentId, 'student-1');
+      });
+
+      test('stores a plan retrievable by studentId', () async {
+        final plan = createPlan(studentId: 'custom-student');
+        await repository.savePlan(plan);
+        final stored = await repository.loadPlan('custom-student');
+        expect(stored, isNotNull);
       });
 
       test('overwrites existing plan for same student', () async {
@@ -103,30 +114,59 @@ void main() {
         final stored = await repository.loadPlan('student-1');
         expect(stored?.planDurationDays, 14);
       });
+
+      test('preserves all fields', () async {
+        final plan = createPlan();
+        await repository.savePlan(plan);
+        final stored = await repository.loadPlan('student-1');
+        expect(stored!.generatedAt, plan.generatedAt);
+        expect(stored.summary.totalQuestions, 10);
+        expect(stored.recommendations.length, 1);
+        expect(stored.dailyPlans.length, 1);
+        expect(stored.dailyPlans[0].dayNumber, 1);
+      });
     });
 
     group('loadPlan', () {
       test('returns null for non-existent student', () async {
-        expect(await repository.loadPlan('none'), isNull);
+        expect(await repository.loadPlan('nonexistent'), isNull);
       });
 
       test('returns stored plan', () async {
         final plan = createPlan();
         await repository.savePlan(plan);
-        expect(await repository.loadPlan('student-1'), isNotNull);
+        final stored = await repository.loadPlan('student-1');
+        expect(stored, isNotNull);
+        expect(stored!.studentId, 'student-1');
+      });
+
+      test('returns different plans for different students', () async {
+        await repository.savePlan(createPlan(studentId: 's1', planDurationDays: 7));
+        await repository.savePlan(createPlan(studentId: 's2', planDurationDays: 14));
+        final s1 = await repository.loadPlan('s1');
+        final s2 = await repository.loadPlan('s2');
+        expect(s1!.planDurationDays, 7);
+        expect(s2!.planDurationDays, 14);
       });
     });
 
     group('deletePlan', () {
       test('removes a plan', () async {
-        final plan = createPlan();
-        await repository.savePlan(plan);
+        await repository.savePlan(createPlan());
         await repository.deletePlan('student-1');
         expect(await repository.loadPlan('student-1'), isNull);
       });
 
+      test('does not affect other students', () async {
+        await repository.savePlan(createPlan(studentId: 's1'));
+        await repository.savePlan(createPlan(studentId: 's2'));
+        await repository.deletePlan('s1');
+        expect(await repository.loadPlan('s1'), isNull);
+        expect(await repository.loadPlan('s2'), isNotNull);
+      });
+
       test('does nothing for non-existent plan', () async {
-        await repository.deletePlan('none');
+        await repository.deletePlan('nonexistent');
       });
     });
 
@@ -139,6 +179,12 @@ void main() {
         await repository.savePlan(createPlan());
         expect(await repository.hasPlan('student-1'), isTrue);
       });
+
+      test('returns false after plan is deleted', () async {
+        await repository.savePlan(createPlan());
+        await repository.deletePlan('student-1');
+        expect(await repository.hasPlan('student-1'), isFalse);
+      });
     });
 
     group('getAllPlans', () {
@@ -146,11 +192,21 @@ void main() {
         await repository.savePlan(createPlan(studentId: 's1'));
         await repository.savePlan(createPlan(studentId: 's2'));
         await repository.savePlan(createPlan(studentId: 's3'));
-        expect((await repository.getAllPlans()).length, 3);
+        final plans = await repository.getAllPlans();
+        expect(plans.length, 3);
       });
 
       test('returns empty when no plans', () async {
         expect(await repository.getAllPlans(), isEmpty);
+      });
+
+      test('returns updated list after deletion', () async {
+        await repository.savePlan(createPlan(studentId: 's1'));
+        await repository.savePlan(createPlan(studentId: 's2'));
+        await repository.deletePlan('s1');
+        final plans = await repository.getAllPlans();
+        expect(plans.length, 1);
+        expect(plans.first.studentId, 's2');
       });
     });
   });

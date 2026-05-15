@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+/// All repositories MUST wrap their public method return types in [Result].
+/// See [Result] in `core/errors/result.dart`.
+/// This ensures consistent error handling across all feature repositories.
 class Repository<T> {
   late Box<T> _box;
 
@@ -8,7 +11,6 @@ class Repository<T> {
     _box = await Hive.openBox<T>(boxName);
   }
 
-  @protected
   void attachBox(Box<T> box) {
     _box = box;
   }

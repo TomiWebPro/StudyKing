@@ -3509,14 +3509,7 @@
   "@badgeFirstStepDesc": {
     "description": "Description for the 'first attempt' badge"
   },
-  "badgeCenturyName": "Century Club",
-  "@badgeCenturyName": {
-    "description": "Name for the 'century' badge"
-  },
-  "badgeCenturyDesc": "Answered 100+ questions!",
-  "@badgeCenturyDesc": {
-    "description": "Description for the 'century' badge"
-  },
+
   "badgeAccuracyGoldName": "Accuracy Gold",
   "@badgeAccuracyGoldName": {
     "description": "Name for the 'accuracy gold' badge"
@@ -4269,5 +4262,9 @@
   "exerciseKeywords": "exercise,practice,question,quiz,problem,test me,challenge,example",
   "@exerciseKeywords": {
     "description": "Comma-separated list of keywords indicating an exercise request"
+  },
+  "timeConflict": "Time conflict with existing scheduled lesson",
+  "@timeConflict": {
+    "description": "Error message when a lesson time conflicts with an existing scheduled lesson"
   }
 }

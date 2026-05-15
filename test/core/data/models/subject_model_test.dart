@@ -546,5 +546,20 @@ void main() {
         expect(subject.toString(), 'Subject(id: subject-2, name: Chemistry)');
       });
     });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = Subject(id: 's1', name: 'Physics');
+        final b = Subject(id: 's1', name: 'Physics');
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = Subject(id: 's1', name: 'Physics');
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
   });
 }

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/roadmap_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
 void main() {
   group('RoadmapModel', () {
@@ -251,6 +251,28 @@ void main() {
         expect(restored.plannedVsActual, original.plannedVsActual);
       });
     });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = RoadmapModel(id: 'r1', studentId: 's1', goal: 'G', createdAt: now);
+        final b = RoadmapModel(id: 'r1', studentId: 's1', goal: 'G', createdAt: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = RoadmapModel(id: 'r1', studentId: 's1', goal: 'G', createdAt: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = RoadmapModel(id: 'r1', studentId: 's1', goal: 'G', createdAt: now);
+        expect(obj.toString(), contains('RoadmapModel'));
+      });
+    });
   });
 
   group('MilestoneModel', () {
@@ -423,6 +445,74 @@ void main() {
         expect(restored.title, original.title);
         expect(restored.deadline, original.deadline);
         expect(restored.isCompleted, original.isCompleted);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = MilestoneModel(id: 'ms-1', title: 'T', deadline: now);
+        final b = MilestoneModel(id: 'ms-1', title: 'T', deadline: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = MilestoneModel(id: 'ms-1', title: 'T', deadline: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = MilestoneModel(id: 'ms-1', title: 'T', deadline: now);
+        expect(obj.toString(), contains('MilestoneModel'));
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('handles null progress', () {
+        final json = {
+          'id': 'ms-1',
+          'title': 'Title',
+          'deadline': now.toIso8601String(),
+          'progress': null,
+        };
+        final ms = MilestoneModel.fromJson(json);
+        expect(ms.progress, 0.0);
+      });
+
+      test('handles null order', () {
+        final json = {
+          'id': 'ms-1',
+          'title': 'Title',
+          'deadline': now.toIso8601String(),
+          'order': null,
+        };
+        final ms = MilestoneModel.fromJson(json);
+        expect(ms.order, 0);
+      });
+
+      test('handles null isCompleted', () {
+        final json = {
+          'id': 'ms-1',
+          'title': 'Title',
+          'deadline': now.toIso8601String(),
+          'isCompleted': null,
+        };
+        final ms = MilestoneModel.fromJson(json);
+        expect(ms.isCompleted, isFalse);
+      });
+
+      test('handles null description', () {
+        final json = {
+          'id': 'ms-1',
+          'title': 'Title',
+          'deadline': now.toIso8601String(),
+          'description': null,
+        };
+        final ms = MilestoneModel.fromJson(json);
+        expect(ms.description, '');
       });
     });
   });

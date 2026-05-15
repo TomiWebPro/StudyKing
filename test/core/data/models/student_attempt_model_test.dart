@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 
 void main() {
   group('StudentAttempt', () {
@@ -155,6 +155,26 @@ void main() {
         final attempt = StudentAttempt.fromJson(json);
         expect(attempt.lastDueDate, isNull);
       });
+
+      test('handles null markschemeMatch', () {
+        final json = {
+          'id': 'a1', 'studentId': 's1', 'questionId': 'q1',
+          'subjectId': 'sub1', 'timestamp': now.toIso8601String(),
+          'markschemeMatch': null,
+        };
+        final attempt = StudentAttempt.fromJson(json);
+        expect(attempt.markschemeMatch, isNull);
+      });
+
+      test('handles null confidence defaults to 3', () {
+        final json = {
+          'id': 'a1', 'studentId': 's1', 'questionId': 'q1',
+          'subjectId': 'sub1', 'timestamp': now.toIso8601String(),
+          'confidence': null,
+        };
+        final attempt = StudentAttempt.fromJson(json);
+        expect(attempt.confidence, 3);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -226,6 +246,28 @@ void main() {
       test('class name matches HiveType', () {
         const attempt = StudentAttempt;
         expect(attempt.toString(), 'StudentAttempt');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = StudentAttempt(id: 'a1', questionId: 'q1', studentId: 's1', subjectId: 'subj1', userAnswer: 'P', isCorrect: true, timestamp: now);
+        final b = StudentAttempt(id: 'a1', questionId: 'q1', studentId: 's1', subjectId: 'subj1', userAnswer: 'P', isCorrect: true, timestamp: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = StudentAttempt(id: 'a1', questionId: 'q1', studentId: 's1', subjectId: 'subj1', userAnswer: 'P', isCorrect: true, timestamp: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = StudentAttempt(id: 'a1', questionId: 'q1', studentId: 's1', subjectId: 'subj1', userAnswer: 'P', isCorrect: true, timestamp: now);
+        expect(obj.toString(), contains('StudentAttempt'));
       });
     });
   });

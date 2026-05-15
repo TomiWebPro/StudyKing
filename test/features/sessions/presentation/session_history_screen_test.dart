@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -19,18 +20,20 @@ class _FakeSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<List<Session>> getAll() async => List<Session>.from(sessions);
+  Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
-  Future<void> save(Session session) async {
+  Future<Result<void>> save(Session session) async {
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
+    return Result.success(null);
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     if (throwOnDelete) throw Exception('delete failed');
     sessions.removeWhere((s) => s.id == id);
+    return Result.success(null);
   }
 }
 

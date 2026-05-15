@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/subjects/data/repositories/progress_repository.dart';
-import 'package:studyking/core/data/models/topic_progress_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 
 class _MockProgressRepository extends ProgressRepository {
   final Map<String, TopicProgress> _storage = {};

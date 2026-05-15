@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/question_mastery_state_model.dart';
-import 'package:studyking/core/data/models/question_evaluation_model.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
 class MockMasteryGraphRepository extends MasteryGraphRepository {

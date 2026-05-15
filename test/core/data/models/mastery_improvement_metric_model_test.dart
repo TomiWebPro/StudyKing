@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/mastery_improvement_metric_model.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 
 void main() {
   group('MasteryImprovementMetric', () {
@@ -151,6 +151,48 @@ void main() {
         final json = metric.toJson();
         expect(json['leveledUp'], isFalse);
         expect(json['metadata'], isNull);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = MasteryImprovementMetric(
+          date: now, studentId: 's1', topicId: 't1',
+          previousAccuracy: 0.5, currentAccuracy: 0.8, accuracyDelta: 0.3,
+          previousMasteryLevel: 0.3, currentMasteryLevel: 0.7,
+          previousLevel: MasteryLevel.novice, currentLevel: MasteryLevel.developing,
+        );
+        final b = MasteryImprovementMetric(
+          date: now, studentId: 's1', topicId: 't1',
+          previousAccuracy: 0.5, currentAccuracy: 0.8, accuracyDelta: 0.3,
+          previousMasteryLevel: 0.3, currentMasteryLevel: 0.7,
+          previousLevel: MasteryLevel.novice, currentLevel: MasteryLevel.developing,
+        );
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = MasteryImprovementMetric(
+          date: now, studentId: 's1', topicId: 't1',
+          previousAccuracy: 0.5, currentAccuracy: 0.8, accuracyDelta: 0.3,
+          previousMasteryLevel: 0.3, currentMasteryLevel: 0.7,
+          previousLevel: MasteryLevel.novice, currentLevel: MasteryLevel.developing,
+        );
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = MasteryImprovementMetric(
+          date: now, studentId: 's1', topicId: 't1',
+          previousAccuracy: 0.5, currentAccuracy: 0.8, accuracyDelta: 0.3,
+          previousMasteryLevel: 0.3, currentMasteryLevel: 0.7,
+          previousLevel: MasteryLevel.novice, currentLevel: MasteryLevel.developing,
+        );
+        expect(obj.toString(), contains('MasteryImprovementMetric'));
       });
     });
   });

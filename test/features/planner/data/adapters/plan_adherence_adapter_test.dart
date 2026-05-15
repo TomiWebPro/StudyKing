@@ -4,7 +4,7 @@ import 'package:hive/src/binary/binary_reader_impl.dart';
 import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
-import 'package:studyking/core/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 
 void main() {
   group('PlanAdherenceMetricAdapter', () {

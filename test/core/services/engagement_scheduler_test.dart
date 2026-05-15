@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/engagement_nudge_model.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/engagement_scheduler.dart';
@@ -160,7 +160,7 @@ class _FakeSessionRepo extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Session>> getByDate(DateTime date) async => [];
+  Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
 }
 
 void main() {

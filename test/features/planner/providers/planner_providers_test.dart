@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
-import 'package:studyking/core/data/models/roadmap_model.dart';
-import 'package:studyking/core/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
@@ -18,8 +18,8 @@ import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/models/pending_action_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 class _MockPlanRepository extends PlanRepository {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/llm_models.dart';
+import 'package:studyking/features/settings/data/models/llm_models.dart';
 
 void main() {
   group('ModelPrice', () {
@@ -76,6 +76,26 @@ void main() {
       expect(parsed.outputPrice, 1.5);
       expect(parsed.cacheReadPrice, 0.1);
       expect(parsed.contextWindow, 10000);
+    });
+
+    group('equality', () {
+      test('equal when all fields match', () {
+        const a = ModelPrice(modelId: 'm1', inputPrice: 0.5, outputPrice: 1.0, cacheReadPrice: 0.0, contextWindow: 4096);
+        const b = ModelPrice(modelId: 'm1', inputPrice: 0.5, outputPrice: 1.0, cacheReadPrice: 0.0, contextWindow: 4096);
+        expect(a == b, isTrue);
+        expect(a.hashCode, b.hashCode);
+      });
+
+      test('not equal when modelId differs', () {
+        const a = ModelPrice(modelId: 'm1', inputPrice: 0.5, outputPrice: 1.0, cacheReadPrice: 0.0, contextWindow: 4096);
+        const b = ModelPrice(modelId: 'm2', inputPrice: 0.5, outputPrice: 1.0, cacheReadPrice: 0.0, contextWindow: 4096);
+        expect(a == b, isFalse);
+      });
+
+      test('identical to itself', () {
+        const price = ModelPrice(modelId: 'm1', inputPrice: 0.5, outputPrice: 1.0, cacheReadPrice: 0.0, contextWindow: 4096);
+        expect(price == price, isTrue);
+      });
     });
   });
 

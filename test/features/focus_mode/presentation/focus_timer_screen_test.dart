@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -22,22 +24,23 @@ class FakeSessionRepository extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> save(Session session) async {
+  Future<Result<void>> save(Session session) async {
     _sessions.add(session);
+    return Result.success(null);
   }
 
   @override
-  Future<List<Session>> getAll() async => List.from(_sessions);
+  Future<Result<List<Session>>> getAll() async => Result.success(List.from(_sessions));
 
   @override
-  Future<Map<String, dynamic>> getTodayStats() async => {
+  Future<Result<Map<String, dynamic>>> getTodayStats() async => Result.success({
     'totalMs': 0,
     'totalSeconds': 0,
     'completedSessions': 0,
     'totalSessions': 0,
     'plannedMinutes': 0,
     'hours': '0.0',
-  };
+  });
 }
 
 class FakeStudyTimerService extends StudyTimerService {

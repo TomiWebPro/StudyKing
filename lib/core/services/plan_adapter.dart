@@ -2,7 +2,7 @@ import '../errors/result.dart';
 import '../errors/exceptions.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
-import '../data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'personal_learning_plan_service.dart';
 import 'mastery_graph_service.dart';
 import 'localization_service.dart';

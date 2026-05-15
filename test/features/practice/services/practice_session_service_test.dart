@@ -12,14 +12,15 @@ class _FakeSessionRepository extends SessionRepository {
   bool saveCalled = false;
 
   @override
-  Future<void> save(Session session) async {
+  Future<Result<void>> save(Session session) async {
     sessions.add(session);
     saveCalled = true;
+    return Result.success(null);
   }
 
   @override
-  Future<List<Session>> getAll() async {
-    return sessions;
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(sessions);
   }
 }
 
@@ -222,6 +223,6 @@ void main() {
 
 class _FailingSessionRepository extends SessionRepository {
   @override
-  Future<void> save(Session session) async =>
+  Future<Result<void>> save(Session session) async =>
       throw Exception('Save failed');
 }

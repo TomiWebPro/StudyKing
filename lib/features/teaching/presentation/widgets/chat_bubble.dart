@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 

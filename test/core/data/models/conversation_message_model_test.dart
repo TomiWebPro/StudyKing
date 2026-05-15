@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 
 void main() {
   group('MessageRole', () {
@@ -276,6 +276,54 @@ void main() {
         expect(copy.timestamp, newTime);
         expect(copy.tokenCount, 99);
         expect(copy.isStreaming, isTrue);
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = ConversationMessage(id: 'a', sessionId: 's1', role: MessageRole.tutor, type: MessageType.text, content: 'Hello', timestamp: now);
+        final b = ConversationMessage(id: 'b', sessionId: 's2', role: MessageRole.student, type: MessageType.quiz, content: 'Answer', timestamp: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = ConversationMessage(id: 'a', sessionId: 's1', role: MessageRole.tutor, type: MessageType.text, content: 'Hello', timestamp: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = ConversationMessage(id: 'a', sessionId: 's1', role: MessageRole.tutor, type: MessageType.text, content: 'Hello', timestamp: now);
+        expect(obj.toString(), contains('ConversationMessage'));
+      });
+    });
+
+    group('fromJson error handling', () {
+      test('throws on invalid role string', () {
+        final json = {
+          'id': 'msg-1',
+          'sessionId': 'session-1',
+          'role': 'invalid_role',
+          'type': 'text',
+          'content': 'Hello',
+          'timestamp': now.toIso8601String(),
+        };
+        expect(() => ConversationMessage.fromJson(json), throwsA(isA<StateError>()));
+      });
+
+      test('throws on invalid type string', () {
+        final json = {
+          'id': 'msg-1',
+          'sessionId': 'session-1',
+          'role': 'tutor',
+          'type': 'invalid_type',
+          'content': 'Hello',
+          'timestamp': now.toIso8601String(),
+        };
+        expect(() => ConversationMessage.fromJson(json), throwsA(isA<StateError>()));
       });
     });
   });

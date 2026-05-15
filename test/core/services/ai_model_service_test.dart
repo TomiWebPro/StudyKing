@@ -208,5 +208,37 @@ void main() {
         expect(model.pricing, isNull);
       });
     });
+
+    group('equality', () {
+      test('equal when id, name, and provider match', () {
+        const a = AiModel(id: 'm1', name: 'Model 1', provider: 'P1');
+        const b = AiModel(id: 'm1', name: 'Model 1', provider: 'P1');
+        expect(a == b, isTrue);
+        expect(a.hashCode, b.hashCode);
+      });
+
+      test('not equal when id differs', () {
+        const a = AiModel(id: 'm1', name: 'Model', provider: 'P');
+        const b = AiModel(id: 'm2', name: 'Model', provider: 'P');
+        expect(a == b, isFalse);
+      });
+
+      test('not equal when name differs', () {
+        const a = AiModel(id: 'm1', name: 'Model A', provider: 'P');
+        const b = AiModel(id: 'm1', name: 'Model B', provider: 'P');
+        expect(a == b, isFalse);
+      });
+
+      test('not equal when provider differs', () {
+        const a = AiModel(id: 'm1', name: 'Model', provider: 'P1');
+        const b = AiModel(id: 'm1', name: 'Model', provider: 'P2');
+        expect(a == b, isFalse);
+      });
+
+      test('identical to itself', () {
+        const model = AiModel(id: 'm1', name: 'M', provider: 'P');
+        expect(model == model, isTrue);
+      });
+    });
   });
 }

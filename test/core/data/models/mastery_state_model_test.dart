@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/core/services/mastery_calculation_service.dart';
 
 MasteryState _createTestState(String studentId, String topicId) {
@@ -307,6 +307,58 @@ void main() {
         expect(copy.accuracy, 0.9);
         expect(copy.masteryLevel, MasteryLevel.expert);
         expect(copy.studentId, 's1');
+      });
+    });
+
+    group('equality', () {
+      test('uses identity-based equality', () {
+        final a = MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now);
+        final b = MasteryState(studentId: 's2', topicId: 't2', lastAttempt: now, lastUpdated: now);
+        expect(a == b, isFalse);
+        expect(a == a, isTrue);
+      });
+
+      test('hashCode is consistent', () {
+        final obj = MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now);
+        final hash = obj.hashCode;
+        expect(obj.hashCode, hash);
+      });
+    });
+
+    group('toString', () {
+      test('includes class name', () {
+        final obj = MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now);
+        expect(obj.toString(), contains('MasteryState'));
+      });
+    });
+
+    group('fromJson edge cases', () {
+      test('throws on null lastAttempt', () {
+        final json = {
+          'studentId': 's1',
+          'topicId': 't1',
+          'lastUpdated': now.toIso8601String(),
+        };
+        expect(() => MasteryState.fromJson(json), throwsA(isA<TypeError>()));
+      });
+
+      test('throws on null lastUpdated', () {
+        final json = {
+          'studentId': 's1',
+          'topicId': 't1',
+          'lastAttempt': now.toIso8601String(),
+        };
+        expect(() => MasteryState.fromJson(json), throwsA(isA<TypeError>()));
+      });
+
+      test('throws on malformed lastAttempt timestamp', () {
+        final json = {
+          'studentId': 's1',
+          'topicId': 't1',
+          'lastAttempt': 'not-a-date',
+          'lastUpdated': now.toIso8601String(),
+        };
+        expect(() => MasteryState.fromJson(json), throwsA(isA<FormatException>()));
       });
     });
   });

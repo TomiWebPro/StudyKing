@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/config/locale_config.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsRepository, localeProvider;
 import '../data/models/user_profile_model.dart';
@@ -404,16 +405,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.language),
                         title: Text(l10n.language),
-                        subtitle: Text({
-                          'en': l10n.english,
-                          'es': l10n.spanish,
-                        }[_language] ?? _language),
+                        subtitle: Text(
+                          AppLocale.values
+                              .where((l) => l.locale.languageCode == _language)
+                              .firstOrNull
+                              ?.displayName ?? _language),
                         trailing: DropdownButton<String>(
                           value: _language,
-                          items: [
-                            DropdownMenuItem(value: 'en', child: Text(l10n.english)),
-                            DropdownMenuItem(value: 'es', child: Text(l10n.spanish)),
-                          ],
+                          items: AppLocale.buildDropdownItems(l10n),
                           onChanged: (value) {
                             if (value != null) {
                               setState(() => _language = value);
