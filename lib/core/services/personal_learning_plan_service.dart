@@ -4,6 +4,8 @@ import 'package:studyking/features/subjects/data/repositories/topic_repository.d
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/planner/services/syllabus_resolver.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import '../data/models/topic_dependency_model.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/topic_model.dart';
@@ -41,6 +43,8 @@ class PersonalLearningPlanService {
   final PlanRepository _planRepository;
   final PlanAdherenceRepository _adherenceRepository;
   final QuestionRepository _questionRepository;
+  final RoadmapRepository _roadmapRepository;
+  final SyllabusResolver? _syllabusResolver;
   PlanGenerationConfig config;
   final LocalizationService? _localizationService;
 
@@ -50,7 +54,9 @@ class PersonalLearningPlanService {
     TopicRepository? topicRepository,
     PlanRepository? planRepository,
     PlanAdherenceRepository? adherenceRepository,
+    RoadmapRepository? roadmapRepository,
     QuestionRepository? questionRepository,
+    SyllabusResolver? syllabusResolver,
     PlanGenerationConfig? config,
     LocalizationService? localizationService,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
@@ -58,7 +64,9 @@ class PersonalLearningPlanService {
         _topicRepository = topicRepository ?? TopicRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
+        _roadmapRepository = roadmapRepository ?? RoadmapRepository(),
         _questionRepository = questionRepository ?? QuestionRepository(),
+        _syllabusResolver = syllabusResolver,
         config = config ?? PlanGenerationConfig(),
         _localizationService = localizationService;
 
@@ -134,11 +142,26 @@ class PersonalLearningPlanService {
 
     recommendations.sort((a, b) => b.priority.compareTo(a.priority));
 
+    List<List<String>>? learningLevels;
+    final resolver = _syllabusResolver;
+    if (resolver != null) {
+      try {
+        final resolved = await resolver.resolveSyllabus(
+          subjectId: studentId,
+          studentId: studentId,
+        );
+        if (resolved.isSuccess && resolved.data!.isNotEmpty) {
+          learningLevels = resolver.buildLearningLevels(resolved.data!);
+        }
+      } catch (_) {}
+    }
+
     final dailyPlans = await _generateDailyPlans(
       studentId: studentId,
       recommendations: recommendations,
       dependencyMap: dependencyMap,
       completedTopicIds: completedTopicIds,
+      learningLevels: learningLevels,
     );
 
     final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
@@ -241,11 +264,26 @@ class PersonalLearningPlanService {
 
     recommendations.sort((a, b) => b.priority.compareTo(a.priority));
 
+    List<List<String>>? learningLevels;
+    final resolver = _syllabusResolver;
+    if (resolver != null) {
+      try {
+        final resolved = await resolver.resolveSyllabus(
+          subjectId: syllabusGoals.first.subjectId,
+          studentId: studentId,
+        );
+        if (resolved.isSuccess && resolved.data!.isNotEmpty) {
+          learningLevels = resolver.buildLearningLevels(resolved.data!);
+        }
+      } catch (_) {}
+    }
+
     final dailyPlans = await _generateDailyPlans(
       studentId: studentId,
       recommendations: recommendations,
       dependencyMap: dependencyMap,
       completedTopicIds: completedTopicIds,
+      learningLevels: learningLevels,
     );
 
     final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
@@ -365,6 +403,80 @@ class PersonalLearningPlanService {
       );
 
       await _adherenceRepository.create(model);
+
+      if (adherenceScore < 0.3 && plannedMinutes > 0) {
+        final missedMinutes = plannedMinutes - actualMinutes;
+        if (missedMinutes > 0) {
+          await _redistributeMissedWorkload(studentId, missedMinutes, plan);
+        }
+      }
+
+      if (adherenceScore >= 0.5 && todayPlan != null) {
+        final completedTopicIds = todayPlan.priorityTopics
+            .map((t) => t.topicId)
+            .toList();
+        if (completedTopicIds.isNotEmpty) {
+          await _linkDailyPlanToRoadmap(studentId, completedTopicIds);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _linkDailyPlanToRoadmap(
+    String studentId,
+    List<String> completedTopicIds,
+  ) async {
+    await _roadmapRepository.init();
+    final roadmaps = await _roadmapRepository.getRoadmapsByStudent(studentId);
+    for (final roadmap in roadmaps) {
+      if (roadmap.status == 'completed') continue;
+      bool changed = false;
+      final updatedMilestones = roadmap.milestones.map((m) {
+        if (m.isCompleted) return m;
+        final hasAny = completedTopicIds.any((id) => m.topicsCovered.contains(id));
+        if (hasAny) {
+          changed = true;
+          return m.copyWith(isCompleted: true);
+        }
+        return m;
+      }).toList();
+      if (changed) {
+        final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
+        final newPercentage = (completedCount / updatedMilestones.length * 100);
+        await _roadmapRepository.saveRoadmap(roadmap.copyWith(
+          milestones: updatedMilestones,
+          completionPercentage: newPercentage,
+          status: newPercentage >= 100 ? 'completed' : roadmap.status,
+        ));
+      }
+    }
+  }
+
+  Future<void> _redistributeMissedWorkload(
+    String studentId,
+    int missedMinutes,
+    PersonalLearningPlan plan,
+  ) async {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final redistributeDays = 3;
+    final extraPerDay = (missedMinutes / redistributeDays).ceil();
+
+    final updatedPlans = plan.dailyPlans.map((day) {
+      final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+      if (dDay.isAfter(todayStart) &&
+          dDay.difference(todayStart).inDays <= redistributeDays &&
+          !day.isRestDay) {
+        return day.copyWith(
+          targetMinutes: day.targetMinutes + extraPerDay,
+        );
+      }
+      return day;
+    }).toList();
+
+    final updated = plan.copyWith(dailyPlans: updatedPlans);
+    try {
+      await _planRepository.savePlan(updated);
     } catch (_) {}
   }
 
@@ -402,12 +514,33 @@ class PersonalLearningPlanService {
     required List<PlanRecommendation> recommendations,
     required Map<String, TopicDependency> dependencyMap,
     required Set<String> completedTopicIds,
+    List<List<String>>? learningLevels,
   }) async {
     final dailyPlans = <DailyPlan>[];
     final now = DateTime.now();
 
     var recommendationIndex = 0;
     final questionsPerTopic = <String, int>{};
+
+    final topicLevelMap = <String, int>{};
+    if (learningLevels != null) {
+      for (var level = 0; level < learningLevels.length; level++) {
+        for (final topicId in learningLevels[level]) {
+          topicLevelMap[topicId] = level;
+        }
+      }
+    }
+
+    final sortedRecs = List<PlanRecommendation>.from(recommendations);
+    if (topicLevelMap.isNotEmpty) {
+      sortedRecs.sort((a, b) {
+        final aLevel = topicLevelMap[a.topicId] ?? 999;
+        final bLevel = topicLevelMap[b.topicId] ?? 999;
+        final levelCmp = aLevel.compareTo(bLevel);
+        if (levelCmp != 0) return levelCmp;
+        return b.priority.compareTo(a.priority);
+      });
+    }
 
     for (var day = 1; day <= config.planDurationDays; day++) {
       final isRestDay = config.includeRestDays && day % config.restDayFrequency == 0;
@@ -434,10 +567,10 @@ class PersonalLearningPlanService {
       var questionsToday = 0;
       var minutesToday = 0.0;
 
-      while (recommendationIndex < recommendations.length &&
+      while (recommendationIndex < sortedRecs.length &&
              questionsToday < config.targetQuestionsPerDay &&
              minutesToday < config.targetMinutesPerDay) {
-        final rec = recommendations[recommendationIndex];
+        final rec = sortedRecs[recommendationIndex];
         final dependency = dependencyMap[rec.topicId];
 
         final readinessScore = await _getReadinessScore(rec.topicId);

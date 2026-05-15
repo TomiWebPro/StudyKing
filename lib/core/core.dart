@@ -14,13 +14,8 @@ export 'data/models/lesson_block_model.dart';
 export 'data/models/lesson_model.dart';
 export 'data/models/study_session_model.dart';
 
-// Extension for firstOrNull
-extension IterableExtension<T> on Iterable<T> {
-  T? get firstOrNull {
-    if (isEmpty) return null;
-    return first;
-  }
-}
+// Extensions
+export 'extensions/iterable_extensions.dart';
 
 // Database is defined in main.dart - import it directly from there
 // Usage: import '../../main.dart' show database;

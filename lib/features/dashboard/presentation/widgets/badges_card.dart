@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class BadgesCard extends StatelessWidget {
@@ -31,7 +31,10 @@ class BadgesCard extends StatelessWidget {
           children: [
             Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text(l10n.achievements, style: Theme.of(context).textTheme.titleMedium),
+            Semantics(
+              headingLevel: 3,
+              child: Text(l10n.achievements, style: Theme.of(context).textTheme.titleMedium),
+            ),
           ],
         ),
         const SizedBox(height: 16),

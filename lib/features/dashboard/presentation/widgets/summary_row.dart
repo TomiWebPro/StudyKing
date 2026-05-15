@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SummaryRow extends StatelessWidget {
@@ -17,16 +18,25 @@ class SummaryRow extends StatelessWidget {
     final totalHours = stats.totalStudyTimeHours;
     final weeklyActivity = stats.weeklyActivity;
     final topicsStudied = stats.topicsStudied;
+    final bp = ResponsiveUtils.breakpointOf(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 400;
+        final crossAxisCount = {
+          ScreenBreakpoint.xs: 2,
+          ScreenBreakpoint.sm: 3,
+          ScreenBreakpoint.md: 4,
+          ScreenBreakpoint.lg: 4,
+        }[bp] ?? 4;
+        final gap = 12.0;
+        final totalGap = gap * (crossAxisCount - 1);
+        final itemWidth = (constraints.maxWidth - totalGap) / crossAxisCount;
         return Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: gap,
+          runSpacing: gap,
           children: [
             SizedBox(
-              width: narrow ? (constraints.maxWidth - 12) / 2 : 160,
+              width: itemWidth,
               child: MetricCard(
                 icon: Icons.check_circle,
                 value: '$accuracy%',
@@ -35,7 +45,7 @@ class SummaryRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: narrow ? (constraints.maxWidth - 12) / 2 : 160,
+              width: itemWidth,
               child: MetricCard(
                 icon: Icons.timer,
                 value: '${totalHours}h',
@@ -44,7 +54,7 @@ class SummaryRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: narrow ? (constraints.maxWidth - 12) / 2 : 160,
+              width: itemWidth,
               child: MetricCard(
                 icon: Icons.trending_up,
                 value: '$weeklyActivity',
@@ -53,7 +63,7 @@ class SummaryRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: narrow ? (constraints.maxWidth - 12) / 2 : 160,
+              width: itemWidth,
               child: MetricCard(
                 icon: Icons.book,
                 value: '$topicsStudied',

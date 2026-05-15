@@ -3084,4 +3084,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subjectIdHint => 'e.g. sub_physics';
+
+  @override
+  String adherenceLowToday(Object actualMinutes, Object plannedMinutes) {
+    return 'You studied $actualMinutes min today vs $plannedMinutes min planned. Consider redistributing the remaining workload.';
+  }
+
+  @override
+  String adherencePartialToday(Object actualMinutes, Object plannedMinutes) {
+    return 'You studied $actualMinutes min today vs $plannedMinutes min planned. Try to catch up with the remaining topics.';
+  }
+
+  @override
+  String adherenceExceededToday(Object actualMinutes, Object plannedMinutes) {
+    return 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
+  }
 }

@@ -1,4 +1,5 @@
 // Settings module
+export 'data/models/accessibility_preferences.dart';
 export 'data/models/settings_box.dart';
 export 'data/models/settings_model.dart';
 export 'data/models/user_profile_model.dart';

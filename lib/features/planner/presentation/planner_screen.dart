@@ -9,6 +9,8 @@ import 'widgets/daily_plan_card.dart';
 import 'widgets/roadmap_card.dart';
 import 'widgets/pending_action_card.dart';
 import 'widgets/lesson_booking_sheet.dart';
+import 'widgets/progress_overlay_widget.dart';
+import 'widgets/calendar_view_widget.dart';
 
 class PlannerScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;
@@ -30,7 +32,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(plannerProvider.notifier).loadInitialData();
     });
@@ -65,6 +67,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   Future<void> _openLessonBooking(
       String topicId, String topicTitle, String subjectId) async {
     if (!mounted) return;
+    final plannerService = ref.read(plannerServiceProvider);
+    if (!mounted) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -72,6 +76,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         topicId: topicId,
         topicTitle: topicTitle,
         subjectId: subjectId,
+        plannerService: plannerService,
         onSchedule: (scheduledTime, durationMinutes) async {
           await ref.read(plannerProvider.notifier).scheduleLesson(
                 topicId: topicId,
@@ -217,6 +222,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           controller: _tabController,
           tabs: [
             Tab(text: l10n.studyPlanner),
+            const Tab(text: 'Calendar'),
             Tab(text: l10n.roadmaps),
           ],
         ),
@@ -225,6 +231,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         controller: _tabController,
         children: [
           _buildStudyPlanTab(l10n, state),
+          _buildCalendarTab(l10n, state),
           _buildRoadmapsTab(l10n, state),
         ],
       ),
@@ -245,6 +252,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             if (state.adherenceDeviation != null &&
                 state.adherenceDeviation!.requiresRegeneration) ...[
               _buildAdherenceBanner(l10n, state),
+              const SizedBox(height: 16),
+            ],
+            if (state.plan != null) ...[
+              _buildProgressOverlay(),
               const SizedBox(height: 16),
             ],
             if (state.scheduledLessons.isNotEmpty) ...[
@@ -451,6 +462,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
   Widget _buildAdherenceBanner(AppLocalizations l10n, PlannerState state) {
     final deviation = state.adherenceDeviation!;
+    final missedMinutes = state.plan?.targetMinutesPerDay.toInt() ?? 60;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -478,16 +490,27 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   deviation.message,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (deviation.requiresRegeneration) ...[
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () => ref
-                        .read(plannerProvider.notifier)
-                        .regenerateFromAdherence(),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: Text(l10n.regeneratePlan),
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => ref
+                          .read(plannerProvider.notifier)
+                          .redistributeWorkload(missedMinutes),
+                      icon: const Icon(Icons.replay, size: 16),
+                      label: const Text('Redistribute'),
+                    ),
+                    const SizedBox(width: 8),
+                    if (deviation.requiresRegeneration)
+                      TextButton.icon(
+                        onPressed: () => ref
+                            .read(plannerProvider.notifier)
+                            .regenerateFromAdherence(),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: Text(l10n.regeneratePlan),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -559,6 +582,41 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProgressOverlay() {
+    final progressAsync = ref.watch(planProgressProvider);
+    return progressAsync.when(
+      data: (data) {
+        if (data.totalPlanDays == 0) return const SizedBox.shrink();
+        return ProgressOverlayWidget(data: data);
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildCalendarTab(AppLocalizations l10n, PlannerState state) {
+    if (state.plan == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.calendar_month,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text('No study plan yet', style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+      );
+    }
+    return CalendarViewWidget(
+      plan: state.plan!,
+      onDayTap: (topicId, topicTitle, subjectId) {
+        _openTutorMode(topicId, topicTitle, subjectId);
+      },
     );
   }
 

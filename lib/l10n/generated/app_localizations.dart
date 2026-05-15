@@ -5335,6 +5335,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. sub_physics'**
   String get subjectIdHint;
+
+  /// Message when student is far below daily study target
+  ///
+  /// In en, this message translates to:
+  /// **'You studied {actualMinutes} min today vs {plannedMinutes} min planned. Consider redistributing the remaining workload.'**
+  String adherenceLowToday(Object actualMinutes, Object plannedMinutes);
+
+  /// Message when student partially meets daily study target
+  ///
+  /// In en, this message translates to:
+  /// **'You studied {actualMinutes} min today vs {plannedMinutes} min planned. Try to catch up with the remaining topics.'**
+  String adherencePartialToday(Object actualMinutes, Object plannedMinutes);
+
+  /// Message when student exceeds daily study target
+  ///
+  /// In en, this message translates to:
+  /// **'Great work! You studied {actualMinutes} min vs {plannedMinutes} min planned.'**
+  String adherenceExceededToday(Object actualMinutes, Object plannedMinutes);
 }
 
 class _AppLocalizationsDelegate

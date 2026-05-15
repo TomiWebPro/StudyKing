@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'

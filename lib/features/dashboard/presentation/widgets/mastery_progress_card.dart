@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MasteryProgressCard extends StatelessWidget {
@@ -26,9 +26,12 @@ class MasteryProgressCard extends StatelessWidget {
           children: [
             Icon(Icons.analytics, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text(
-              l10n.masteryOverview,
-              style: Theme.of(context).textTheme.titleMedium,
+            Semantics(
+              headingLevel: 3,
+              child: Text(
+                l10n.masteryOverview,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -68,27 +69,32 @@ class CollapsibleCard extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          InkWell(
-            onTap: () =>
-                ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(child: title),
-                  Icon(
-                    isCollapsed ? Icons.expand_more : Icons.expand_less,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ],
+          Semantics(
+            headingLevel: 2,
+            button: true,
+            expanded: !isCollapsed,
+            child: InkWell(
+              onTap: () =>
+                  ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
+              child: Padding(
+                padding: ResponsiveUtils.cardPadding(context),
+                child: Row(
+                  children: [
+                    Expanded(child: title),
+                    Icon(
+                      isCollapsed ? Icons.expand_more : Icons.expand_less,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           if (!isCollapsed) ...[
             const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: ResponsiveUtils.cardPadding(context),
               child: content,
             ),
           ],

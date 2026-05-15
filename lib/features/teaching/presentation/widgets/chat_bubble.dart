@@ -22,8 +22,8 @@ class ChatBubble extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: isStudent ? ResponsiveUtils.horizontalSpacing(context) : 0,
-        right: isStudent ? 0 : ResponsiveUtils.horizontalSpacing(context),
+        left: ResponsiveUtils.horizontalSpacing(context),
+        right: ResponsiveUtils.horizontalSpacing(context),
         bottom: 8,
       ),
       child: Row(

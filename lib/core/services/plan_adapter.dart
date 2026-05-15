@@ -152,6 +152,70 @@ class PlanAdapter {
     }
   }
 
+  /// Provides per-day real-time adherence feedback after a session.
+  /// Returns a message like "You studied 20min today vs 45min planned (44%).
+  /// Want to adjust tomorrow's target?"
+  Future<String?> getDailyAdherenceFeedback(String studentId) async {
+    try {
+      await _planRepository.init();
+      final plan = await _planRepository.loadPlan(studentId);
+      if (plan == null) return null;
+
+      await _adherenceRepository.init();
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+
+      int plannedMinutes = 0;
+      int plannedQuestions = 0;
+      for (final day in plan.dailyPlans) {
+        final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+        if (dDay == todayStart) {
+          plannedMinutes = day.targetMinutes;
+          plannedQuestions = day.targetQuestions;
+          break;
+        }
+      }
+
+      final todayRecords = await _adherenceRepository.getByStudent(studentId);
+      int actualMinutes = 0;
+      int actualQuestions = 0;
+      for (final r in todayRecords) {
+        final rDay = DateTime(r.date.year, r.date.month, r.date.day);
+        if (rDay == todayStart) {
+          actualMinutes += r.actualMinutes;
+          actualQuestions += r.actualQuestions;
+        }
+      }
+
+      if (plannedMinutes == 0 && plannedQuestions == 0) return null;
+
+      final minRatio = plannedMinutes > 0
+          ? actualMinutes / plannedMinutes
+          : 1.0;
+      final qRatio = plannedQuestions > 0
+          ? actualQuestions / plannedQuestions
+          : 1.0;
+      final overallRatio = (minRatio * 0.6 + qRatio * 0.4).clamp(0.0, 1.5);
+
+      final l10n = _localizationService;
+      if (overallRatio < 0.3) {
+        return l10n?.adherenceLowToday(actualMinutes, plannedMinutes)
+            ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
+               'Consider redistributing the remaining workload.';
+      } else if (overallRatio < 0.7) {
+        return l10n?.adherencePartialToday(actualMinutes, plannedMinutes)
+            ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
+               'Try to catch up with the remaining topics.';
+      } else if (overallRatio > 1.2) {
+        return l10n?.adherenceExceededToday(actualMinutes, plannedMinutes)
+            ?? 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> recordFromFocusSession({
     required String studentId,
     required int actualMinutes,

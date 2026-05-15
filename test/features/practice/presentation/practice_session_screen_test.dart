@@ -10,7 +10,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/practice/presentation/models/practice_models.dart';
+import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';

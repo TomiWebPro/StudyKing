@@ -4298,5 +4298,29 @@
   "subjectIdHint": "p. ej. sub_física",
   "@subjectIdHint": {
     "description": "Hint text for subject ID field in planner"
+  },
+  "adherenceLowToday": "Ha estudiado {actualMinutes} min hoy frente a los {plannedMinutes} min planificados. Considere redistribuir la carga restante.",
+  "@adherenceLowToday": {
+    "description": "Message when student is far below daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
+  },
+  "adherencePartialToday": "Ha estudiado {actualMinutes} min hoy frente a los {plannedMinutes} min planificados. Intente ponerse al día con los temas restantes.",
+  "@adherencePartialToday": {
+    "description": "Message when student partially meets daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
+  },
+  "adherenceExceededToday": "¡Buen trabajo! Ha estudiado {actualMinutes} min frente a los {plannedMinutes} min planificados.",
+  "@adherenceExceededToday": {
+    "description": "Message when student exceeds daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
   }
 }

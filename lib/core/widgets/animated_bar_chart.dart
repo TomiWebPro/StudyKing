@@ -6,7 +6,7 @@ class AnimatedBarChart extends StatefulWidget {
   final Color accentColor;
   final double minBarHeight;
   final double maxBarHeight;
-  final double barWidth;
+  final double? barWidth;
   final double borderRadius;
   final String? yAxisLabel;
   final bool showValueTooltips;
@@ -18,12 +18,14 @@ class AnimatedBarChart extends StatefulWidget {
     this.accentColor = Colors.blue,
     this.minBarHeight = 40,
     this.maxBarHeight = 120,
-    this.barWidth = 32,
+    this.barWidth,
     this.borderRadius = 6,
     this.yAxisLabel,
     this.showValueTooltips = true,
     this.reduceMotion = false,
   });
+
+  static const double minBarWidth = 24;
 
   @override
   State<AnimatedBarChart> createState() => _AnimatedBarChartState();
@@ -32,10 +34,18 @@ class AnimatedBarChart extends StatefulWidget {
 class _AnimatedBarChartState extends State<AnimatedBarChart> {
   bool _hasAnimated = false;
 
-  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme) {
+  double _computeBarWidth(double availableWidth) {
+    if (widget.barWidth != null) return widget.barWidth!;
+    final count = widget.data.length;
+    if (count == 0) return AnimatedBarChart.minBarWidth;
+    final computed = (availableWidth - 8 * (count - 1)) / count;
+    return computed.clamp(AnimatedBarChart.minBarWidth, double.infinity);
+  }
+
+  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme, double barWidth) {
     if (widget.reduceMotion) {
       return Container(
-        width: widget.barWidth,
+        width: barWidth,
         height: height,
         decoration: BoxDecoration(
           color: count > 0
@@ -54,7 +64,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Container(
-          width: widget.barWidth,
+          width: barWidth,
           height: value,
           decoration: BoxDecoration(
             color: count > 0
@@ -87,7 +97,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
       padding: ResponsiveUtils.cardPadding(context),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
@@ -105,51 +115,56 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                 ),
               ),
             ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: widget.data.keys.map((day) {
-              final count = widget.data[day] ?? 0;
-              final height = widget.minBarHeight +
-                  (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final barWidth = _computeBarWidth(constraints.maxWidth);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: widget.data.keys.map((day) {
+                  final count = widget.data[day] ?? 0;
+                  final height = widget.minBarHeight +
+                      (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
-              return Expanded(
-                child: Column(
-                  key: ValueKey('bar_$day'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.showValueTooltips && count > 0)
-                      Tooltip(
-                        message: '$count',
-                        child: Text(
-                          '$count',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: count > 0
-                                ? widget.accentColor
-                                : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
+                  return Expanded(
+                    child: Column(
+                      key: ValueKey('bar_$day'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.showValueTooltips && count > 0)
+                          Tooltip(
+                            message: '$count',
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: count > 0
+                                    ? widget.accentColor
+                                    : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
+                              ),
+                            ),
                           ),
+                        const SizedBox(height: 4),
+                        _buildBar(context, height, count, maxCount, theme, barWidth),
+                        const SizedBox(height: 6),
+                        Text(
+                          day,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    const SizedBox(height: 4),
-                    _buildBar(context, height, count, maxCount, theme),
-                    const SizedBox(height: 6),
-                    Text(
-                      day,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
           ),
         ],
       ),

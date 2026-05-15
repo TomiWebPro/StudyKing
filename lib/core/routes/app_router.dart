@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';

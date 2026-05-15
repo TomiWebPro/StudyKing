@@ -4,7 +4,7 @@ import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/presentation/services/practice_session_service.dart';
+import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeStudySessionRepository extends StudySessionRepository {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/mentor/models/progress_report.dart';
+import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 
 void main() {

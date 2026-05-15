@@ -29,4 +29,5 @@ class HiveBoxNames {
   static const String topicDependencies = 'topic_dependencies';
   static const String topics = 'topics';
   static const String tutorSessions = 'tutor_sessions';
+  static const String studentAvailability = 'student_availability';
 }

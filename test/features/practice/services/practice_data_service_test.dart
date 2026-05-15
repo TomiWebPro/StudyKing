@@ -11,7 +11,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/practice/presentation/services/practice_data_service.dart';
+import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';

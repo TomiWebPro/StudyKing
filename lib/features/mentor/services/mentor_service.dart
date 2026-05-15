@@ -6,8 +6,8 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/data/models/pending_action_model.dart';
-import 'package:studyking/features/mentor/models/progress_report.dart';
-import 'package:studyking/features/mentor/models/mentor_action.dart';
+import 'package:studyking/features/mentor/data/models/progress_report.dart';
+import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 
 class MentorService {
   final DatabaseService _database;
@@ -88,14 +88,45 @@ class MentorService {
       final existing = await _pendingActionRepo.getPending(_studentId);
       if (existing.isNotEmpty) return;
 
+      final topicTitle = _extractTopic(originalMessage);
+
+      String? topicId;
+      String? subjectId;
+      if (topicTitle.isNotEmpty && topicTitle != 'general') {
+        await _database.topicRepository.init();
+        final allTopics = await _database.topicRepository.getAll();
+        final match = allTopics.where(
+          (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),
+        ).firstOrNull;
+        topicId = match?.id;
+        subjectId = match?.subjectId;
+      }
+
+      final scheduledTime = DateTime.now().add(const Duration(hours: 1));
+      final nextHour = DateTime(
+        scheduledTime.year,
+        scheduledTime.month,
+        scheduledTime.day,
+        scheduledTime.hour,
+        0,
+      );
+
+      final payload = <String, dynamic>{
+        'originalMessage': originalMessage,
+        if (topicId != null) 'topicId': topicId,
+        if (subjectId != null) 'subjectId': subjectId,
+        'scheduledTime': nextHour.toIso8601String(),
+        'durationMinutes': 30,
+      };
+
       final action = PendingActionModel(
         id: 'action_${DateTime.now().millisecondsSinceEpoch}',
         studentId: _studentId,
         actionType: lower.contains('reschedule')
             ? PendingActionType.reschedule.name
             : PendingActionType.schedule.name,
-        topicTitle: _extractTopic(originalMessage),
-        payload: {'originalMessage': originalMessage},
+        topicTitle: topicTitle,
+        payload: payload,
       );
       await _pendingActionRepo.create(action);
     } catch (_) {}
@@ -191,12 +222,28 @@ Current student context:
     final session = await _database.tutorSessionRepository.getSession(sessionId);
     if (session == null) return;
 
+    final nextSlot = DateTime.now().add(const Duration(hours: 1));
+    final nextHour = DateTime(
+      nextSlot.year,
+      nextSlot.month,
+      nextSlot.day,
+      nextSlot.hour,
+      0,
+    );
+
     final action = PendingActionModel(
       id: 'resched_${DateTime.now().millisecondsSinceEpoch}',
       studentId: _studentId,
       actionType: PendingActionType.reschedule.name,
       topicTitle: session.topicTitle,
       sessionId: sessionId,
+      payload: {
+        'topicId': session.topicId,
+        'subjectId': session.subjectId,
+        'scheduledTime': nextHour.toIso8601String(),
+        'durationMinutes': session.plannedDurationMinutes,
+        'originalSessionStart': session.startTime.toIso8601String(),
+      },
     );
     await _pendingActionRepo.init();
     await _pendingActionRepo.create(action);

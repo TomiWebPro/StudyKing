@@ -536,6 +536,13 @@ void main() {
         studentId: 'test-student',
         actionType: 'schedule',
         status: 'pending',
+        topicTitle: 'Test Topic',
+        payload: {
+          'topicId': 'topic-1',
+          'subjectId': 'subject-1',
+          'scheduledTime': DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+          'durationMinutes': 30,
+        },
       ));
 
       final success = await service.acceptPendingAction('action-1');
@@ -572,19 +579,18 @@ void main() {
       expect(deviation, isNotNull);
     });
 
-    test('recordFocusSession records adherence', () async {
-      await service.recordFocusSession(25);
+    test('getAdherenceMetrics returns metrics', () async {
+      final metrics = await service.getAdherenceMetrics();
+      expect(metrics, contains('actualMinutesToday'));
+      expect(metrics, contains('actualQuestionsToday'));
     });
 
-    test('recordPracticeSession records adherence', () async {
-      await service.recordPracticeSession(
-        actualQuestions: 10,
-        actualMinutes: 30,
+    test('hasSchedulingConflict returns false with no sessions', () async {
+      final conflict = await service.hasSchedulingConflict(
+        startTime: DateTime.now(),
+        durationMinutes: 30,
       );
-    });
-
-    test('recordTutorSession records adherence', () async {
-      await service.recordTutorSession(45);
+      expect(conflict, false);
     });
   });
 }

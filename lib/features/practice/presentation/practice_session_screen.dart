@@ -12,9 +12,9 @@ import 'package:studyking/features/practice/data/repositories/spaced_repetition_
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/practice/presentation/models/practice_models.dart';
-import 'package:studyking/features/practice/presentation/services/practice_session_service.dart';
-import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
+import 'package:studyking/features/practice/data/models/practice_models.dart';
+import 'package:studyking/features/practice/services/practice_session_service.dart';
+import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/presentation/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
@@ -223,12 +223,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final elapsedMinutes = DateTime.now()
         .difference(_sessionService.sessionStartTime)
         .inMinutes;
-    final integrationService = SessionPlanIntegrationService(
-      fixedStudentId: StudentIdService().getStudentId(),
-    );
-    await integrationService.recordPracticeSessionCompletion(
+    final planAdapter = PlanAdapter();
+    await planAdapter.recordFromPracticeSession(
+      studentId: StudentIdService().getStudentId(),
       actualQuestions: _questions.length,
-      elapsedMinutes: elapsedMinutes,
+      actualMinutes: elapsedMinutes.clamp(1, 480),
     );
   }
 

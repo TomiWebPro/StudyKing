@@ -11,7 +11,6 @@ void main() {
     test('exports DashboardHeader', () => expect(DashboardHeader, isNotNull));
     test('exports ExportSection', () => expect(ExportSection, isNotNull));
     test('exports MasteryProgressCard', () => expect(MasteryProgressCard, isNotNull));
-    test('exports PlanAdherenceCard', () => expect(PlanAdherenceCard, isNotNull));
     test('exports SummaryRow', () => expect(SummaryRow, isNotNull));
     test('exports TopicBreakdownCard', () => expect(TopicBreakdownCard, isNotNull));
     test('exports WeakAreasCard', () => expect(WeakAreasCard, isNotNull));

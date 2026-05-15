@@ -170,6 +170,15 @@ class LocalizationService {
   String adherenceLowDaysRegenerate(int days) =>
       _l10n.adherenceLowDaysRegenerate(days);
 
+  String adherenceLowToday(int actualMinutes, int plannedMinutes) =>
+      _l10n.adherenceLowToday(actualMinutes, plannedMinutes);
+
+  String adherencePartialToday(int actualMinutes, int plannedMinutes) =>
+      _l10n.adherencePartialToday(actualMinutes, plannedMinutes);
+
+  String adherenceExceededToday(int actualMinutes, int plannedMinutes) =>
+      _l10n.adherenceExceededToday(actualMinutes, plannedMinutes);
+
   String recommendationAccuracyLow() => _l10n.recommendationAccuracyLow;
 
   String recommendationReviewBasics() => _l10n.recommendationReviewBasics;

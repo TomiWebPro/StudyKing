@@ -12,7 +12,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/practice/presentation/services/practice_data_service.dart';
+import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_grid.dart';
 import 'package:studyking/features/practice/presentation/widgets/subject_practice_card.dart';

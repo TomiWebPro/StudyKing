@@ -182,6 +182,24 @@ void main() {
 
       expect(result1.data!.id, isNot(result2.data!.id));
     });
+
+    test('passes through topicId, syllabusId, and language when provided',
+        () async {
+      final result = await pipeline.processUpload(
+        title: 'Biology Notes',
+        content: 'Cell structure',
+        type: SourceType.pdf,
+        studentId: 's1',
+        topicId: 'topic_bio',
+        syllabusId: 'syllabus_1',
+        language: 'en',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.topicId, 'topic_bio');
+      expect(result.data!.syllabusId, 'syllabus_1');
+      expect(result.data!.language, 'en');
+    });
   });
 
   group('ContentPipeline.processAndClassify', () {
@@ -294,6 +312,65 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.topicId, isEmpty);
+    });
+
+    test('matches topic with case-insensitive comparison', () async {
+      mockTopicRepo.addTopic(Topic(
+        id: 'topic_math',
+        subjectId: 'sub_math',
+        title: 'MATH',
+        description: 'Mathematics',
+        syllabusText: 'Math topics',
+      ));
+
+      final result = await pipeline.processAndClassify(
+        title: 'Algebra Notes',
+        content: 'Algebra content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        possibleTopics: ['Math'],
+        modelId: 'model-1',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.topicId, 'topic_math');
+    });
+
+    test('matches topic by substring/contains', () async {
+      mockTopicRepo.addTopic(Topic(
+        id: 'topic_adv_math',
+        subjectId: 'sub_math',
+        title: 'Advanced Mathematics',
+        description: 'Advanced math topics',
+        syllabusText: 'Calculus, Algebra',
+      ));
+
+      final result = await pipeline.processAndClassify(
+        title: 'Calc Notes',
+        content: 'Calculus content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        possibleTopics: ['Math'],
+        modelId: 'model-1',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.topicId, 'topic_adv_math');
+    });
+
+    test('passes through language to the created source', () async {
+      final result = await pipeline.processAndClassify(
+        title: 'French Notes',
+        content: 'French content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        possibleTopics: ['French'],
+        modelId: 'model-1',
+        language: 'fr',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.language, 'fr');
     });
   });
 

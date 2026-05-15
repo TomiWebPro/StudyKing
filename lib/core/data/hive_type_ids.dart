@@ -30,6 +30,7 @@ const int _typeIdConversationMessage = 27;
 const int _typeIdTutorSession = 28;
 const int _typeIdPlanAdherenceMetric = 30;
 const int _typeIdMasteryImprovementMetric = 31;
+const int _typeIdStudentAvailability = 35;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -62,6 +63,7 @@ const List<int> _allTypeIds = [
   _typeIdTutorSession,
   _typeIdPlanAdherenceMetric,
   _typeIdMasteryImprovementMetric,
+  _typeIdStudentAvailability,
 ];
 
 bool _checkUniqueIds() {

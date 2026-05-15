@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class ConversationInput extends StatefulWidget {
   final TextEditingController controller;
@@ -46,8 +47,8 @@ class _ConversationInputState extends State<ConversationInput> {
       child: FocusTraversalGroup(
         child: Container(
           padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
+            left: ResponsiveUtils.screenPadding(context).left,
+            right: ResponsiveUtils.screenPadding(context).right,
             top: 8,
             bottom: MediaQuery.of(context).padding.bottom + 8,
           ),

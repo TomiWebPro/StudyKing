@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../data/repositories/student_availability_repository.dart';
+import '../../services/planner_service.dart';
 
 class LessonBookingSheet extends StatefulWidget {
   final String topicId;
@@ -7,6 +9,7 @@ class LessonBookingSheet extends StatefulWidget {
   final String subjectId;
   final Future<void> Function(DateTime scheduledTime, int durationMinutes)
       onSchedule;
+  final PlannerService? plannerService;
 
   const LessonBookingSheet({
     super.key,
@@ -14,6 +17,7 @@ class LessonBookingSheet extends StatefulWidget {
     required this.topicTitle,
     required this.subjectId,
     required this.onSchedule,
+    this.plannerService,
   });
 
   @override
@@ -28,6 +32,33 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
   DateTime _selectedDate = DateTime.now();
   int _durationMinutes = 30;
   bool _isScheduling = false;
+  bool _hasConflict = false;
+  bool _isCheckingConflict = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailability();
+  }
+
+  Future<void> _loadAvailability() async {
+    try {
+      final repo = StudentAvailabilityRepository();
+      await repo.init();
+      final availability = await repo.getByStudent(
+        widget.plannerService?.studentId ?? '',
+      );
+      if (availability != null && mounted) {
+        setState(() {
+          _selectedTime = TimeOfDay(
+            hour: availability.preferredStartHour,
+            minute: 0,
+          );
+          _durationMinutes = availability.defaultSessionDurationMinutes;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +114,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                 );
                 if (picked != null) {
                   setState(() => _selectedDate = picked);
+                  _checkConflicts(_buildScheduledTime());
                 }
               },
               child: Text(l10n.change),
@@ -100,6 +132,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                 );
                 if (picked != null) {
                   setState(() => _selectedTime = picked);
+                  _checkConflicts(_buildScheduledTime());
                 }
               },
               child: Text(l10n.change),
@@ -115,23 +148,54 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                 IconButton(
                   icon: const Icon(Icons.remove_circle_outline),
                   onPressed: _durationMinutes > 15
-                      ? () => setState(() => _durationMinutes -= 15)
+                      ? () {
+                          setState(() => _durationMinutes -= 15);
+                          _checkConflicts(_buildScheduledTime());
+                        }
                       : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: _durationMinutes < 120
-                      ? () => setState(() => _durationMinutes += 15)
+                      ? () {
+                          setState(() => _durationMinutes += 15);
+                          _checkConflicts(_buildScheduledTime());
+                        }
                       : null,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          if (_hasConflict)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        size: 18, color: theme.colorScheme.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This time conflicts with an existing scheduled lesson',
+                        style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                            fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _isScheduling ? null : _schedule,
+              onPressed: _isScheduling || _isCheckingConflict ? null : _schedule,
               icon: _isScheduling
                   ? const SizedBox(
                       width: 18,
@@ -148,6 +212,36 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
     );
   }
 
+  DateTime _buildScheduledTime() {
+    return DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+  }
+
+  Future<void> _checkConflicts(DateTime time) async {
+    final service = widget.plannerService;
+    if (service == null) return;
+    setState(() => _isCheckingConflict = true);
+    try {
+      final conflict = await service.hasSchedulingConflict(
+        startTime: time,
+        durationMinutes: _durationMinutes,
+      );
+      if (mounted) {
+        setState(() => _hasConflict = conflict);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingConflict = false);
+      }
+    }
+  }
+
   Future<void> _schedule() async {
     setState(() => _isScheduling = true);
     try {
@@ -158,6 +252,15 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
         _selectedTime.hour,
         _selectedTime.minute,
       );
+      if (_hasConflict) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Time conflict with existing scheduled lesson')),
+          );
+        }
+        setState(() => _isScheduling = false);
+        return;
+      }
       await widget.onSchedule(scheduledTime, _durationMinutes);
       if (mounted) {
         Navigator.pop(context);

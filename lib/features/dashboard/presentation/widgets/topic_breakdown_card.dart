@@ -16,15 +16,13 @@ class TopicBreakdownCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     if (allMastery.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            child: Text(
-              l10n.noTopicDataYet,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Text(
+            l10n.noTopicDataYet,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -34,26 +32,27 @@ class TopicBreakdownCard extends StatelessWidget {
     final sorted = List<MasteryState>.from(allMastery)
       ..sort((a, b) => a.accuracy.compareTo(b.accuracy));
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.pie_chart, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pie_chart, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Semantics(
+                headingLevel: 3,
+                child: Text(
                   l10n.topicPerformance,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ],
-            ),
-            const Divider(),
-            ...sorted.take(10).map((state) => _buildTopicRow(context, state)),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const Divider(),
+          ...sorted.take(10).map((state) => _buildTopicRow(context, state)),
+        ],
       ),
     );
   }

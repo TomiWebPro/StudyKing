@@ -22,9 +22,12 @@ class PlanAdherenceCard extends StatelessWidget {
             Icon(Icons.event_note,
                 color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text(
-              l10n.planAdherence,
-              style: Theme.of(context).textTheme.titleMedium,
+            Semantics(
+              headingLevel: 3,
+              child: Text(
+                l10n.planAdherence,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ],
         ),

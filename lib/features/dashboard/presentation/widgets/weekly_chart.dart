@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
-import 'package:studyking/features/dashboard/presentation/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class WeeklyChart extends ConsumerWidget {
@@ -30,9 +30,12 @@ class WeeklyChart extends ConsumerWidget {
             children: [
               Icon(Icons.show_chart, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
-              Text(
-                l10n.weeklyActivity,
-                style: Theme.of(context).textTheme.titleMedium,
+              Semantics(
+                headingLevel: 3,
+                child: Text(
+                  l10n.weeklyActivity,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ],
           ),

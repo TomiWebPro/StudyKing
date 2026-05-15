@@ -4298,5 +4298,29 @@
   "subjectIdHint": "e.g. sub_physics",
   "@subjectIdHint": {
     "description": "Hint text for subject ID field in planner"
+  },
+  "adherenceLowToday": "You studied {actualMinutes} min today vs {plannedMinutes} min planned. Consider redistributing the remaining workload.",
+  "@adherenceLowToday": {
+    "description": "Message when student is far below daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
+  },
+  "adherencePartialToday": "You studied {actualMinutes} min today vs {plannedMinutes} min planned. Try to catch up with the remaining topics.",
+  "@adherencePartialToday": {
+    "description": "Message when student partially meets daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
+  },
+  "adherenceExceededToday": "Great work! You studied {actualMinutes} min vs {plannedMinutes} min planned.",
+  "@adherenceExceededToday": {
+    "description": "Message when student exceeds daily study target",
+    "placeholders": {
+      "actualMinutes": {},
+      "plannedMinutes": {}
+    }
   }
 }

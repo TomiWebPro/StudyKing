@@ -691,6 +691,13 @@ void main() {
           studentId: 'test-student',
           actionType: 'schedule',
           status: 'pending',
+          topicTitle: 'Test Topic',
+          payload: {
+            'topicId': 'topic-1',
+            'subjectId': 'subject-1',
+            'scheduledTime': DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+            'durationMinutes': 30,
+          },
         ));
 
         await notifier.loadPendingActions();
@@ -721,6 +728,13 @@ void main() {
           studentId: 'test-student',
           actionType: 'schedule',
           status: 'pending',
+          topicTitle: 'Test Topic',
+          payload: {
+            'topicId': 'topic-1',
+            'subjectId': 'subject-1',
+            'scheduledTime': DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+            'durationMinutes': 30,
+          },
         ));
         await notifier.loadPendingActions();
 
@@ -786,8 +800,8 @@ void main() {
       test('acceptPendingAction on non-existent action', () async {
         await notifier.acceptPendingAction('non-existent');
 
-        expect(notifier.currentState.error, isNull);
-        expect(notifier.currentState.successMessage, 'Action accepted');
+        expect(notifier.currentState.error, 'Failed to execute action — missing parameters');
+        expect(notifier.currentState.successMessage, isNull);
       });
     });
 

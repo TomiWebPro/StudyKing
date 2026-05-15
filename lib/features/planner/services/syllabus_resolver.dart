@@ -13,7 +13,6 @@ class SyllabusTopicNode {
   final TopicDependency? dependency;
   final MasteryState? mastery;
   final List<String> prerequisiteTopicIds;
-  final List<SyllabusTopicNode> prerequisites;
   final bool isReady;
   final double priority;
 
@@ -22,7 +21,6 @@ class SyllabusTopicNode {
     this.dependency,
     this.mastery,
     this.prerequisiteTopicIds = const [],
-    this.prerequisites = const [],
     this.isReady = false,
     this.priority = 0.0,
   });
@@ -101,20 +99,6 @@ class SyllabusResolver {
           isReady: isReady,
           priority: priority,
         ));
-      }
-
-      for (final node in nodes) {
-        final prereqNodes = <SyllabusTopicNode>[];
-        for (final prereqId in node.prerequisiteTopicIds) {
-          final prereqTopic = topicMap[prereqId];
-          if (prereqTopic != null) {
-            final prereqNode = nodes.firstWhere(
-              (n) => n.topic.id == prereqId,
-              orElse: () => SyllabusTopicNode(topic: prereqTopic),
-            );
-            prereqNodes.add(prereqNode);
-          }
-        }
       }
 
       final sortedNodes = _topologicalSort(nodes, topicMap);

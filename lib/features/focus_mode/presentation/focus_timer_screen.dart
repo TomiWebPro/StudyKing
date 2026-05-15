@@ -6,7 +6,7 @@ import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_w
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
-import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
+import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 
@@ -83,11 +83,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   }
 
   Future<void> _recordAdherence(FocusSession session) async {
-    final integrationService = SessionPlanIntegrationService(
-      fixedStudentId: StudentIdService().getStudentId(),
-    );
-    await integrationService.recordFocusSessionCompletion(
-      actualDurationSeconds: session.actualDurationSeconds,
+    final planAdapter = PlanAdapter();
+    final actualMinutes = (session.actualDurationSeconds / 60).ceil().clamp(1, 480);
+    await planAdapter.recordFromFocusSession(
+      studentId: StudentIdService().getStudentId(),
+      actualMinutes: actualMinutes,
     );
   }
 

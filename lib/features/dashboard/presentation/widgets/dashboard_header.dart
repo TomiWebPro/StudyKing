@@ -11,10 +11,13 @@ class DashboardHeader extends StatelessWidget {
       children: [
         Icon(Icons.dashboard, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Text(
-          l10n.studyDashboard,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+        Semantics(
+          headingLevel: 1,
+          child: Text(
+            l10n.studyDashboard,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],

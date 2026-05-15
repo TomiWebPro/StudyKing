@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
@@ -16,6 +17,7 @@ import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'syllabus_resolver.dart';
+import 'action_executor.dart';
 
 class PlannerService {
   final PlanRepository planRepo;
@@ -28,7 +30,14 @@ class PlannerService {
   final PendingActionRepository pendingActionRepo;
   final PlanAdapter planAdapter;
   final SyllabusResolver syllabusResolver;
+  final PlanAdherenceRepository adherenceRepo;
+  ActionExecutor? _actionExecutor;
   final String? fixedStudentId;
+
+  ActionExecutor get actionExecutor {
+    _actionExecutor ??= ActionExecutor(plannerService: this);
+    return _actionExecutor!;
+  }
 
   PlannerService({
     PlanRepository? planRepo,
@@ -41,6 +50,8 @@ class PlannerService {
     PendingActionRepository? pendingActionRepo,
     PlanAdapter? planAdapter,
     SyllabusResolver? syllabusResolver,
+    PlanAdherenceRepository? adherenceRepo,
+    ActionExecutor? actionExecutor,
     this.fixedStudentId,
   })  : planRepo = planRepo ?? PlanRepository(),
         masteryService = masteryService ?? MasteryGraphService(),
@@ -53,7 +64,9 @@ class PlannerService {
         tutorRepo = tutorRepo ?? TutorSessionRepository(),
         pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         planAdapter = planAdapter ?? PlanAdapter(),
-        syllabusResolver = syllabusResolver ?? SyllabusResolver();
+        syllabusResolver = syllabusResolver ?? SyllabusResolver(),
+        adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
+        _actionExecutor = actionExecutor;
 
   String get studentId =>
       fixedStudentId ?? StudentIdService().getStudentId();
@@ -86,6 +99,7 @@ class PlannerService {
       repository: repository,
       topicRepository: topicRepository,
       planRepository: planRepo,
+      syllabusResolver: syllabusResolver,
       config: PlanGenerationConfig(
         planDurationDays: daysValue,
         targetMinutesPerDay: (hoursValue * 60).toDouble(),
@@ -110,6 +124,7 @@ class PlannerService {
       repository: repository,
       topicRepository: topicRepository,
       planRepository: planRepo,
+      syllabusResolver: syllabusResolver,
       config: PlanGenerationConfig(
         planDurationDays: daysValue,
         targetMinutesPerDay: (hoursValue * 60).toDouble(),
@@ -283,8 +298,11 @@ class PlannerService {
       await pendingActionRepo.init();
       final action = await pendingActionRepo.get(actionId);
       if (action == null) return false;
-      await pendingActionRepo.markCompleted(actionId);
-      return true;
+      final executed = await actionExecutor.execute(action);
+      if (executed) {
+        await pendingActionRepo.markCompleted(actionId);
+      }
+      return executed;
     } catch (_) {
       return false;
     }
@@ -315,28 +333,97 @@ class PlannerService {
     return result.isSuccess ? result.data : null;
   }
 
-  Future<void> recordFocusSession(int actualMinutes) async {
-    await planAdapter.recordFromFocusSession(
-      studentId: studentId,
-      actualMinutes: actualMinutes,
-    );
-  }
-
-  Future<void> recordPracticeSession({
-    required int actualQuestions,
-    required int actualMinutes,
+  Future<bool> hasSchedulingConflict({
+    required DateTime startTime,
+    required int durationMinutes,
+    String? excludeSessionId,
   }) async {
-    await planAdapter.recordFromPracticeSession(
-      studentId: studentId,
-      actualQuestions: actualQuestions,
-      actualMinutes: actualMinutes,
-    );
+    await tutorRepo.init();
+    final sessions = await tutorRepo.getStudentSessions(studentId);
+    final proposedEnd = startTime.add(Duration(minutes: durationMinutes));
+    for (final session in sessions) {
+      if (session.status != SessionStatus.planned) continue;
+      if (session.id == excludeSessionId) continue;
+      final sessionEnd = session.startTime
+          .add(Duration(minutes: session.plannedDurationMinutes));
+      if (startTime.isBefore(sessionEnd) && proposedEnd.isAfter(session.startTime)) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  Future<void> recordTutorSession(int actualMinutes) async {
-    await planAdapter.recordFromTutorSession(
-      studentId: studentId,
-      actualMinutes: actualMinutes,
-    );
+  Future<Map<String, int>> getAdherenceMetrics() async {
+    await adherenceRepo.init();
+    final records = await adherenceRepo.getByStudent(studentId);
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    int actualMinutesToday = 0;
+    int actualQuestionsToday = 0;
+    for (final r in records) {
+      final rDay = DateTime(r.date.year, r.date.month, r.date.day);
+      if (rDay == todayStart) {
+        actualMinutesToday += r.actualMinutes;
+        actualQuestionsToday += r.actualQuestions;
+      }
+    }
+    return {
+      'actualMinutesToday': actualMinutesToday,
+      'actualQuestionsToday': actualQuestionsToday,
+    };
+  }
+
+  Future<void> redistributeWorkload(int missedMinutes) async {
+    await planRepo.init();
+    final plan = await planRepo.loadPlan(studentId);
+    if (plan == null) return;
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final redistributeDays = 3;
+    final extraPerDay = (missedMinutes / redistributeDays).ceil();
+
+    final updatedPlans = plan.dailyPlans.map((day) {
+      final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+      if (dDay.isAfter(todayStart) &&
+          dDay.difference(todayStart).inDays <= redistributeDays &&
+          !day.isRestDay) {
+        return day.copyWith(
+          targetMinutes: day.targetMinutes + extraPerDay,
+        );
+      }
+      return day;
+    }).toList();
+
+    final updated = plan.copyWith(dailyPlans: updatedPlans);
+    await planRepo.savePlan(updated);
+  }
+
+  Future<void> linkDailyPlanToRoadmap(List<String> completedTopicIds) async {
+    await roadmapRepo.init();
+    final roadmaps = await roadmapRepo.getRoadmapsByStudent(studentId);
+    for (final roadmap in roadmaps) {
+      if (roadmap.status == 'completed') continue;
+      bool changed = false;
+      final updatedMilestones = roadmap.milestones.map((m) {
+        if (m.isCompleted) return m;
+        final hasAny = completedTopicIds.any((id) => m.topicsCovered.contains(id));
+        if (hasAny) {
+          changed = true;
+          return m.copyWith(isCompleted: true);
+        }
+        return m;
+      }).toList();
+      if (changed) {
+        final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
+        final newPercentage = (completedCount / updatedMilestones.length * 100);
+        await roadmapRepo.saveRoadmap(roadmap.copyWith(
+          milestones: updatedMilestones,
+          completionPercentage: newPercentage,
+          status: newPercentage >= 100 ? 'completed' : roadmap.status,
+        ));
+      }
+    }
   }
 }

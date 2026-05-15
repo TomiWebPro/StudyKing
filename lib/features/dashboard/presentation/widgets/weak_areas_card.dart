@@ -19,10 +19,9 @@ class WeakAreasCard extends StatelessWidget {
     final weakStates = allMastery.where((s) => s.accuracy < 0.6).toList();
     if (weakStates.isEmpty) return const SizedBox.shrink();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -77,7 +76,6 @@ class WeakAreasCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
     );
   }
 

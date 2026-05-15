@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/mentor/models/mentor_action.dart';
+import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 
 void main() {
   group('MentorAction', () {
