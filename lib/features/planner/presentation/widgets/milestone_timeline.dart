@@ -107,7 +107,7 @@ class MilestoneTimeline extends StatelessWidget {
             final isPast = ms.deadline.isBefore(DateTime.now());
             return Semantics(
               label: l10n.milestoneOfWithDeadline(
-                  ms.title, DateFormat.yMMMd().format(ms.deadline)),
+                  ms.title, DateFormat.yMMMd(l10n.localeName).format(ms.deadline)),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -120,7 +120,7 @@ class MilestoneTimeline extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${ms.title}: ${DateFormat.MMMd().format(ms.deadline)}',
+                  '${ms.title}: ${DateFormat.MMMd(l10n.localeName).format(ms.deadline)}',
                   style: TextStyle(
                     fontSize: 10,
                     color: ms.isCompleted

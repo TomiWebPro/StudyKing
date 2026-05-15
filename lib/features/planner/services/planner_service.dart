@@ -155,6 +155,7 @@ class PlannerService {
       final result = await syllabusResolver.resolveSyllabus(
         subjectId: subjectId,
         studentId: studentId,
+        l10n: l10n,
       );
       if (result.isSuccess) {
         syllabusTopicIds = result.data!.map((n) => n.topic.id).toList();
@@ -173,7 +174,7 @@ class PlannerService {
         id: const Uuid().v4(),
         title: l10n.weekNumber(i + 1),
         description: subjectId != null
-            ? 'Topics: ${milestoneTopics.length} syllabus topics'
+            ? l10n.syllabusTopics(milestoneTopics.length)
             : l10n.milestoneForWeek(i + 1),
         deadline: now.add(Duration(
           days: ((i + 1) * days / numMilestones).round(),
@@ -181,7 +182,7 @@ class PlannerService {
         order: i + 1,
         topicsCovered: milestoneTopics,
         assessmentCriteria: subjectId != null
-            ? ['Mastery >= 80% on all milestone topics']
+            ? [l10n.masteryRequirement]
             : [],
       ));
     }

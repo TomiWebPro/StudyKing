@@ -337,6 +337,7 @@ void main() {
   group('PlannerNotifier', () {
     late _MockPlanRepository planRepo;
     late _MockMasteryRepository masteryRepo;
+    late AppLocalizationsEn l10n;
     late _MockTopicRepository topicRepo;
     late _MockRoadmapRepository roadmapRepo;
     late _MockTutorRepo tutorRepo;
@@ -349,6 +350,7 @@ void main() {
       Hive.init(Directory.systemTemp.createTempSync('planner_prov_test_').path);
       planRepo = _MockPlanRepository();
       masteryRepo = _MockMasteryRepository();
+      l10n = AppLocalizationsEn();
       topicRepo = _MockTopicRepository();
       roadmapRepo = _MockRoadmapRepository();
       tutorRepo = _MockTutorRepo();
@@ -412,6 +414,7 @@ void main() {
           course: 'Physics',
           daysValue: 7,
           hoursValue: 2,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, true);
@@ -424,6 +427,7 @@ void main() {
           course: 'Physics',
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.plan, isNotNull);
@@ -435,6 +439,7 @@ void main() {
           course: 'Physics',
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.successMessage, isNotNull);
@@ -447,10 +452,11 @@ void main() {
           course: 'Physics',
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, false);
-        expect(notifier.currentState.error, 'Failed to generate plan');
+        expect(notifier.currentState.error, l10n.failedToGeneratePlan);
       });
 
       test('sets error when service throws', () async {
@@ -460,6 +466,7 @@ void main() {
           course: 'Physics',
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, false);
@@ -480,6 +487,7 @@ void main() {
           ],
           daysValue: 7,
           hoursValue: 2,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.plan, isNotNull);
@@ -498,6 +506,7 @@ void main() {
           ],
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, true);
@@ -519,10 +528,11 @@ void main() {
           ],
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, false);
-        expect(notifier.currentState.error, 'Failed to generate syllabus plan');
+        expect(notifier.currentState.error, l10n.failedToGenerateSyllabusPlan);
       });
 
       test('sets error when service throws', () async {
@@ -539,6 +549,7 @@ void main() {
           ],
           daysValue: 3,
           hoursValue: 1,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.isGenerating, false);
@@ -604,6 +615,7 @@ void main() {
           roadmapId: roadmap.id,
           milestoneId: milestoneId,
           isCompleted: true,
+          l10n: l10n,
         );
 
         final updated = notifier.currentState.roadmaps.first;
@@ -625,6 +637,7 @@ void main() {
           roadmapId: roadmap.id,
           milestoneId: 'nonexistent',
           isCompleted: true,
+          l10n: l10n,
         );
 
         expect(notifier.currentState.error, 'Failed to update milestone');
@@ -639,6 +652,7 @@ void main() {
           subjectId: 'sub_physics',
           scheduledTime: DateTime.now().add(const Duration(days: 1)),
           durationMinutes: 30,
+          l10n: l10n,
         );
 
         expect(success, true);
@@ -651,6 +665,7 @@ void main() {
           topicTitle: 'Kinematics',
           subjectId: 'sub_physics',
           scheduledTime: DateTime.now().add(const Duration(days: 1)),
+          l10n: l10n,
         );
 
         expect(success, true);
@@ -677,6 +692,7 @@ void main() {
           topicTitle: 'Kinematics',
           subjectId: 'sub_physics',
           scheduledTime: DateTime.now(),
+          l10n: l10n,
         );
 
         expect(result, false);
@@ -703,7 +719,7 @@ void main() {
         await notifier.loadPendingActions();
         expect(notifier.currentState.pendingActions, hasLength(1));
 
-        await notifier.acceptPendingAction('action-1');
+        await notifier.acceptPendingAction('action-1', l10n);
         expect(notifier.currentState.pendingActions, isEmpty);
       });
 
@@ -718,7 +734,7 @@ void main() {
         await notifier.loadPendingActions();
         expect(notifier.currentState.pendingActions, hasLength(1));
 
-        await notifier.dismissPendingAction('action-2');
+        await notifier.dismissPendingAction('action-2', l10n);
         expect(notifier.currentState.pendingActions, isEmpty);
       });
 
@@ -738,7 +754,7 @@ void main() {
         ));
         await notifier.loadPendingActions();
 
-        await notifier.acceptPendingAction('action-3');
+        await notifier.acceptPendingAction('action-3', l10n);
 
         expect(notifier.currentState.successMessage, 'Action accepted');
       });
@@ -765,7 +781,7 @@ void main() {
           status: 'pending',
         ));
 
-        await throwingNotifier.acceptPendingAction('action-4');
+        await throwingNotifier.acceptPendingAction('action-4', l10n);
 
         expect(throwingNotifier.currentState.error, 'Failed to accept action');
       });
@@ -792,13 +808,13 @@ void main() {
           status: 'pending',
         ));
 
-        await throwingNotifier.dismissPendingAction('action-5');
+        await throwingNotifier.dismissPendingAction('action-5', l10n);
 
         expect(throwingNotifier.currentState.error, 'Failed to dismiss action');
       });
 
       test('acceptPendingAction on non-existent action', () async {
-        await notifier.acceptPendingAction('non-existent');
+        await notifier.acceptPendingAction('non-existent', l10n);
 
         expect(notifier.currentState.error, 'Failed to execute action — missing parameters');
         expect(notifier.currentState.successMessage, isNull);
@@ -807,7 +823,7 @@ void main() {
 
     group('regenerateFromAdherence', () {
       test('shows error when plan adapter returns null', () async {
-        await notifier.regenerateFromAdherence();
+        await notifier.regenerateFromAdherence(l10n);
         expect(notifier.currentState.isGenerating, false);
         expect(notifier.currentState.error, isNotNull);
       });
@@ -828,7 +844,7 @@ void main() {
           recommendations: [],
         ));
 
-        await notifier.regenerateFromAdherence();
+        await notifier.regenerateFromAdherence(l10n);
 
         expect(notifier.currentState.isGenerating, false);
         expect(notifier.currentState.plan, isNotNull);
@@ -838,7 +854,7 @@ void main() {
       test('sets error when service throws', () async {
         planAdapter.setThrowOnSuggestRegeneration();
 
-        await notifier.regenerateFromAdherence();
+        await notifier.regenerateFromAdherence(l10n);
 
         expect(notifier.currentState.isGenerating, false);
         expect(notifier.currentState.error, contains('Error:'));

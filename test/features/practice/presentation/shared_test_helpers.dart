@@ -28,12 +28,6 @@ class FakeQuestionRepository extends QuestionRepository {
 
 class FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
-  bool initCalled = false;
-
-  @override
-  Future<void> init() async {
-    initCalled = true;
-  }
 
   @override
   Future<Result<void>> save(Session session) async {

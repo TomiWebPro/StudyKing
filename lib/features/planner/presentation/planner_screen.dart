@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
 import '../providers/planner_providers.dart';
 import 'widgets/plan_summary_card.dart';
@@ -67,6 +68,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   Future<void> _openLessonBooking(
       String topicId, String topicTitle, String subjectId) async {
     if (!mounted) return;
+    final l10nCtx = AppLocalizations.of(context)!;
     final plannerService = ref.read(plannerServiceProvider);
     if (!mounted) return;
     await showModalBottomSheet(
@@ -83,6 +85,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 topicTitle: topicTitle,
                 subjectId: subjectId,
                 scheduledTime: scheduledTime,
+                l10n: l10nCtx,
                 durationMinutes: durationMinutes,
               );
         },
@@ -108,10 +111,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       return;
     }
 
+    final l10nGen = AppLocalizations.of(context)!;
     await ref.read(plannerProvider.notifier).generatePlan(
           course: course,
           daysValue: daysValue,
           hoursValue: hoursValue,
+          l10n: l10nGen,
         );
   }
 
@@ -222,7 +227,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           controller: _tabController,
           tabs: [
             Tab(text: l10n.studyPlanner),
-            const Tab(text: 'Calendar'),
+            Tab(text: l10n.calendar),
             Tab(text: l10n.roadmaps),
           ],
         ),
@@ -414,11 +419,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   ? goal.subjectTitle
                   : goal.subjectId),
               subtitle: Text(
-                  '${goal.targetDays} ${l10n.days.toLowerCase()} ${l10n.planSummary.toLowerCase()} · $topicCount ${l10n.topics.toLowerCase()}'),
+                  '${goal.targetDays} ${l10n.days} ${l10n.planSummary} · $topicCount ${l10n.topics}'),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('${goal.targetHoursPerDay}h/${l10n.days.toLowerCase()}',
+                  Text('${goal.targetHoursPerDay}h/${l10n.days}',
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -451,10 +456,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               action: action,
               onAccept: () => ref
                   .read(plannerProvider.notifier)
-                  .acceptPendingAction(action.id),
+                  .acceptPendingAction(action.id, l10n),
               onDismiss: () => ref
                   .read(plannerProvider.notifier)
-                  .dismissPendingAction(action.id),
+                  .dismissPendingAction(action.id, l10n),
             )),
       ],
     );
@@ -496,16 +501,16 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                     TextButton.icon(
                       onPressed: () => ref
                           .read(plannerProvider.notifier)
-                          .redistributeWorkload(missedMinutes),
+                          .redistributeWorkload(missedMinutes, l10n),
                       icon: const Icon(Icons.replay, size: 16),
-                      label: const Text('Redistribute'),
+                      label: Text(l10n.redistribute),
                     ),
                     const SizedBox(width: 8),
                     if (deviation.requiresRegeneration)
                       TextButton.icon(
                         onPressed: () => ref
                             .read(plannerProvider.notifier)
-                            .regenerateFromAdherence(),
+                            .regenerateFromAdherence(l10n),
                         icon: const Icon(Icons.refresh, size: 16),
                         label: Text(l10n.regeneratePlan),
                       ),
@@ -535,8 +540,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ),
         const SizedBox(height: 8),
         ...state.scheduledLessons.take(3).map((lesson) {
-          final time =
-              '${lesson.startTime.hour}:${lesson.startTime.minute.toString().padLeft(2, '0')}';
+          final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
           return Card(
             margin: const EdgeInsets.only(bottom: 4),
             child: ListTile(
@@ -607,7 +611,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 size: 64,
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text('No study plan yet', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.noStudyPlanYet, style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
       );
@@ -679,6 +683,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                             roadmapId: roadmapId,
                             milestoneId: milestoneId,
                             isCompleted: isCompleted,
+                            l10n: l10n,
                           );
                     },
                   );

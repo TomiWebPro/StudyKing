@@ -1,33 +1,32 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class PracticeDataService {
-  final SpacedRepetitionRepository _srRepo;
+  final SpacedRepetitionService _srService;
   final QuestionRepository _questionRepo;
-  final WidgetRef _ref;
+  final SubjectRepository _subjectRepo;
 
-  PracticeDataService(WidgetRef ref)
-      : _ref = ref,
-        _srRepo = ref.read(spacedRepetitionRepositoryProvider),
-        _questionRepo = ref.read(questionRepositoryProvider);
+  PracticeDataService({
+    required SpacedRepetitionService srService,
+    required QuestionRepository questionRepo,
+    required SubjectRepository subjectRepo,
+  })  : _srService = srService,
+        _questionRepo = questionRepo,
+        _subjectRepo = subjectRepo;
 
   Future<List<Subject>> fetchSubjects() async {
-    final repo = await _ref.read(subjectsRepositoryProvider.future);
-    return repo.getAll();
+    return _subjectRepo.getAll();
   }
 
   Future<Map<String, int>> loadDueCounts(List<Subject> subjects) async {
     final dueCounts = <String, int>{};
     for (final subject in subjects) {
-      final result = await _srRepo.getSubjectDueCount(subject.id);
+      final result = await _srService.getSubjectDueCount(subject.id);
       if (result.isSuccess && result.data != null) {
         dueCounts[subject.id] = result.data!;
       } else {
@@ -60,16 +59,22 @@ class PracticeDataService {
     }
   }
 
-  Future<List<Question>> loadWeakAreaQuestions(MasteryGraphService masteryService, BuildContext context) async {
+  Future<List<Question>> loadWeakAreaQuestions(
+      MasteryGraphService masteryService) async {
     final studentId = StudentIdService().getStudentId();
     final weakTopicsResult = await masteryService.getWeakTopics(studentId);
-    if (weakTopicsResult.isFailure || weakTopicsResult.data == null || weakTopicsResult.data!.isEmpty) {
+    if (weakTopicsResult.isFailure ||
+        weakTopicsResult.data == null ||
+        weakTopicsResult.data!.isEmpty) {
       return [];
     }
-    final weakTopicIds = weakTopicsResult.data!.map((s) => s.topicId).toSet();
+    final weakTopicIds =
+        weakTopicsResult.data!.map((s) => s.topicId).toSet();
     try {
       final allQuestions = await _questionRepo.getAll();
-      return allQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
+      return allQuestions
+          .where((q) => weakTopicIds.contains(q.topicId))
+          .toList();
     } catch (_) {
       return [];
     }

@@ -906,7 +906,6 @@ void main() {
         await tester.tap(find.text(_kNext));
         await tester.pump(const Duration(milliseconds: 600));
 
-        expect(sessionRepo.initCalled, isTrue);
         expect(sessionRepo.sessions.length, 1);
         expect(sessionRepo.sessions.first.subjectId, 'subject-a');
         expect(sessionRepo.sessions.first.correctAnswers, 1);

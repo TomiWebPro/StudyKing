@@ -7,17 +7,11 @@ import 'package:studyking/features/sessions/presentation/session_history_screen.
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnInit = false, this.throwOnDelete = false})
+  _FakeSessionRepository({List<Session>? seed, this.throwOnDelete = false})
       : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
-  final bool throwOnInit;
   final bool throwOnDelete;
-
-  @override
-  Future<void> init() async {
-    if (throwOnInit) throw Exception('init failed');
-  }
 
   @override
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
@@ -617,16 +611,6 @@ void main() {
       final view = binding.platformDispatcher.implicitView!;
       view.physicalSize = const Size(1080, 2400);
       view.devicePixelRatio = 1.0;
-    });
-
-    testWidgets('handles init error gracefully', (tester) async {
-      final repo = _FakeSessionRepository(throwOnInit: true);
-
-      await tester.pumpWidget(_buildTestApp(repo));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('Sessions'), findsWidgets);
     });
 
     testWidgets('shows sessions after successful load', (tester) async {

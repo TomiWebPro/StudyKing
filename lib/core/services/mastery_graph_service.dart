@@ -1,18 +1,39 @@
 import '../errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'mastery_calculation_service.dart';
 
 class MasteryGraphService {
+  final MasteryStateRepository masteryStateRepo;
+  final QuestionMasteryStateRepository questionMasteryRepo;
+  final TopicDependencyRepository topicDependencyRepo;
+  final QuestionEvaluationRepository questionEvaluationRepo;
   final MasteryGraphRepository _repository;
   final MasteryCalculationService _calculationService;
 
   MasteryGraphService({
     MasteryGraphRepository? repository,
+    MasteryStateRepository? masteryStateRepo,
+    QuestionMasteryStateRepository? questionMasteryRepo,
+    TopicDependencyRepository? topicDependencyRepo,
+    QuestionEvaluationRepository? questionEvaluationRepo,
     MasteryCalculationService? calculationService,
-  })  : _repository = repository ?? MasteryGraphRepository(),
+  })  : _repository = repository ?? MasteryGraphRepository(
+          masteryStateRepo: masteryStateRepo,
+          questionMasteryRepo: questionMasteryRepo,
+          topicDependencyRepo: topicDependencyRepo,
+          questionEvaluationRepo: questionEvaluationRepo,
+        ),
+        masteryStateRepo = masteryStateRepo ?? MasteryStateRepository(),
+        questionMasteryRepo = questionMasteryRepo ?? QuestionMasteryStateRepository(),
+        topicDependencyRepo = topicDependencyRepo ?? TopicDependencyRepository(),
+        questionEvaluationRepo = questionEvaluationRepo ?? QuestionEvaluationRepository(),
         _calculationService = calculationService ?? MasteryCalculationService();
 
   Future<void> init() => _repository.init();
@@ -26,7 +47,8 @@ class MasteryGraphService {
     required int timeSpentMs,
     String? subtopicId,
   }) async {
-    final topicMasteryResult = await _repository.getMasteryState(studentId, topicId);
+    final topicMasteryResult =
+        await masteryStateRepo.getMasteryState(studentId, topicId);
     if (topicMasteryResult.isFailure) {
       return Result.failure(topicMasteryResult.error);
     }
@@ -39,12 +61,15 @@ class MasteryGraphService {
       subtopicId: subtopicId,
     );
 
-    final updateResult = await _repository.updateMasteryState(updatedTopicMastery);
+    final updateResult =
+        await masteryStateRepo.updateMasteryState(updatedTopicMastery);
     if (updateResult.isFailure) {
       return updateResult;
     }
 
-    final questionMasteryResult = await _repository.getQuestionMasteryState(studentId, questionId);
+    final questionMasteryResult =
+        await questionMasteryRepo.getQuestionMasteryState(
+            studentId, questionId);
     if (questionMasteryResult.isFailure) {
       return Result.failure(questionMasteryResult.error);
     }
@@ -56,41 +81,45 @@ class MasteryGraphService {
       timeSpentMs: timeSpentMs,
     );
 
-    return _repository.updateQuestionMasteryState(questionMastery);
+    return questionMasteryRepo.updateQuestionMasteryState(questionMastery);
   }
 
-  Future<Result<MasteryState>> getTopicMastery(String studentId, String topicId) {
-    return _repository.getMasteryState(studentId, topicId);
+  Future<Result<MasteryState>> getTopicMastery(
+      String studentId, String topicId) {
+    return masteryStateRepo.getMasteryState(studentId, topicId);
   }
 
-  Future<Result<QuestionMasteryState>> getQuestionMastery(String studentId, String questionId) {
-    return _repository.getQuestionMasteryState(studentId, questionId);
+  Future<Result<QuestionMasteryState>> getQuestionMastery(
+      String studentId, String questionId) {
+    return questionMasteryRepo.getQuestionMasteryState(studentId, questionId);
   }
 
   Future<Result<List<QuestionMasteryState>>> getQuestionsDueForReview(
     String studentId, {
     DateTime? asOf,
   }) {
-    return _repository.getDueQuestions(studentId, asOf: asOf);
+    return questionMasteryRepo.getDueQuestions(studentId, asOf: asOf);
   }
 
   Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
     String studentId, {
     double threshold = 0.5,
   }) {
-    return _repository.getAtRiskQuestions(studentId, threshold: threshold);
+    return questionMasteryRepo.getAtRiskQuestions(
+        studentId, threshold: threshold);
   }
 
-  Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) {
-    return _repository.getTopicsNeedingReview(studentId);
+  Future<Result<List<MasteryState>>> getTopicsNeedingReview(
+      String studentId) {
+    return masteryStateRepo.getTopicsNeedingReview(studentId);
   }
 
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) {
-    return _repository.getWeakTopics(studentId);
+    return masteryStateRepo.getWeakTopics(studentId);
   }
 
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) {
-    return _repository.getMasterySnapshot(studentId);
+    return masteryStateRepo.getMasterySnapshot(studentId);
   }
 
   Future<Result<void>> migrateLegacyQuestion({
@@ -100,7 +129,7 @@ class MasteryGraphService {
     List<String>? options,
     String? explanation,
   }) {
-    return _repository.migrateFromLegacy(
+    return questionEvaluationRepo.migrateFromLegacy(
       questionId: questionId,
       markscheme: markscheme,
       correctAnswer: correctAnswer,
@@ -110,21 +139,25 @@ class MasteryGraphService {
   }
 
   Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) {
-    return _repository.saveEvaluation(evaluation);
+    return questionEvaluationRepo.saveEvaluation(evaluation);
   }
 
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) {
-    return _repository.getAllMasteryStates(studentId);
+    return masteryStateRepo.getAllMasteryStates(studentId);
   }
 
-  Future<Result<double>> getReadinessScore(String studentId, String topicId) async {
-    final result = await _repository.getMasteryState(studentId, topicId);
+  Future<Result<double>> getReadinessScore(
+      String studentId, String topicId) async {
+    final result =
+        await masteryStateRepo.getMasteryState(studentId, topicId);
     if (result.isFailure) return Result.failure(result.error);
     return Result.success(result.data!.readinessScore);
   }
 
-  Future<Result<double>> getReviewUrgency(String studentId, String topicId) async {
-    final result = await _repository.getMasteryState(studentId, topicId);
+  Future<Result<double>> getReviewUrgency(
+      String studentId, String topicId) async {
+    final result =
+        await masteryStateRepo.getMasteryState(studentId, topicId);
     if (result.isFailure) return Result.failure(result.error);
     return Result.success(result.data!.reviewUrgency);
   }

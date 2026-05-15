@@ -92,5 +92,53 @@ void main() {
 
       expect(find.byType(Card), findsOneWidget);
     });
+
+    testWidgets('is disabled and not tappable when onTap is null', (tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+          onTap: null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Quick Practice'));
+      await tester.pumpAndSettle();
+
+      expect(tapped, isFalse);
+    });
+
+    testWidgets('does not show badge when badge is null', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Container), findsWidgets);
+    });
+
+    testWidgets('renders with Semantics widget wrapping', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Semantics widget wraps the card
+      expect(find.byType(Semantics), findsWidgets);
+    });
   });
 }

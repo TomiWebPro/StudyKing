@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../../../core/utils/logger.dart';
-import '../services/session_export_service.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   final SessionRepository? sessionRepository;
@@ -37,7 +37,6 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
   Future<void> _loadSessions() async {
     try {
-      await _sessionRepository.init();
       final sessionsResult = await _sessionRepository.getAll();
       final sessions = sessionsResult.data ?? [];
       if (mounted) {

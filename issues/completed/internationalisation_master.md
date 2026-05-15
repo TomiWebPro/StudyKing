@@ -1,212 +1,96 @@
-# Internationalisation Master: Architectural Bottlenecks & Spanish Translation Quality
+# Planner Feature L10n Bleed: Hardcoded English Strings Bypass Translation System
 
-## Summary
+## Context
 
-The codebase has **879 localisation keys** across 2 locales (EN, ES) with full key parity — but several **architectural bottlenecks** make adding new languages unnecessarily error-prone, and the **Spanish translation has quality defects** that set a poor template for future languages.
+The project has a well-engineered ARB-based i18n pipeline with full English/Spanish coverage (1757 keys each). However, the **planner feature** — the app's most complex feature — contains **30+ hardcoded English strings** across providers, widgets, and services that completely bypass the translation system. These strings appear as success/error messages, progress labels, calendar headers, empty-state text, and button labels. A Spanish user sees a jarring mix of Spanish (from ARB keys) and untranslated English in adjacent UI elements. When adding future languages (French, German, etc.), these strings will remain stubbornly in English.
 
----
-
-## Issue 1: No Centralised Locale Registry (High Severity)
-
-### Problem
-Adding a new language requires editing **4 separate locations** with no single source of truth, making the process fragile and error-prone:
-
-| File | What must change |
-|---|---|
-| `l10n.yaml` | Add locale to `supported-locales` list |
-| `lib/main.dart` | Add `Locale('xx')` to `supportedLocales` + locale resolution callback |
-| `lib/features/settings/presentation/profile_screen.dart` | Add `DropdownMenuItem` for the new language |
-| `lib/l10n/app_xx.arb` | Create new ARB file with 879 translated keys |
-
-There is no `enum`, `const` list, or config class that centralises which locales are supported.
-
-### Rationale
-Every new language risks silent inconsistencies (e.g. missing `supportedLocales` entry but present in dropdown, or vice versa). A `LocaleConfig` registry would eliminate this.
-
-### Affected Files
-- `l10n.yaml` (lines 6-8)
-- `lib/main.dart` (`supportedLocales`, locale resolution)
-- `lib/features/settings/presentation/profile_screen.dart` (language dropdown)
-- `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`
-- `docs/i18n.md`
-
-### Acceptance Criteria
-- [ ] Create `lib/core/config/locale_config.dart` with:
-  - An `enum AppLocale { en, es }` (extensible) mapping to `Locale` objects
-  - A static `List<Locale> get supportedLocales` derived from the enum
-  - A static `String Function(AppLocale)` for display name lookup
-  - A static `List<DropdownMenuItem>` builder for the language picker
-- [ ] Refactor `l10n.yaml` `supported-locales`, `main.dart` `supportedLocales`, and `profile_screen.dart` dropdown to use this single source of truth
-- [ ] Update `docs/i18n.md` to reference the enum as the single registration step
+The `planner_providers.dart` `StateNotifier` is the single worst offender: it cannot access `AppLocalizations` because there is no `BuildContext` in a `StateNotifier`. The existing pattern of threading an `AppLocalizations?` parameter through individual methods (used in `createRoadmap` and `scheduleLessonWithConflictCheck`) is inconsistent — 16 of 18 error/success messages remain hardcoded.
 
 ---
 
-## Issue 2: Spanish Translation Grammar Defect — `planAdherence` (High Severity)
+## Affected Files
 
-### Problem
-`lib/l10n/app_es.arb` line 1619:
-```json
-"planAdherence": "cumplimiento al Plan"
-```
-
-This is grammatically incorrect. The Spanish preposition should be **"del"** (de + el), not **"al"** (a + el):
-- ❌ `"cumplimiento al Plan"` → implies "compliance TO the Plan"
-- ✅ `"Cumplimiento del Plan"` → means "Plan Adherence" (correct)
-
-Additionally, the lowercase `c` is inconsistent with all other ES section headers which use title case (e.g. `"Resumen de Dominio"`, `"Progreso de la Lección"`, `"Tiempo Total de Estudio"`).
-
-### Impact
-This string appears in the **dashboard UI** as a section card title (`lib/features/dashboard/presentation/dashboard_screen.dart:122` and `plan_adherence_card.dart:28`). Every Spanish-speaking user sees a grammatically incorrect label.
-
-### Affected Files
-- `lib/l10n/app_es.arb` (line 1619-1620)
-- `lib/l10n/generated/app_localizations_es.dart` (line 1246)
-- `lib/features/dashboard/presentation/dashboard_screen.dart`
-- `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart`
-
-### Acceptance Criteria
-- [ ] Change to `"Cumplimiento del Plan"` in `app_es.arb`
-- [ ] Regenerate localizations with `flutter gen-l10n`
-- [ ] Verify rendering in dashboard screen renders correct title-case header
-
----
-
-## Issue 3: Hardcoded User-Facing String in Planner (High Severity)
-
-### Problem
-Two hardcoded English strings exist that bypass the entire localisation system:
-
-| File | Line | String |
+| File | Problem | Count |
 |---|---|---|
-| `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` | 258 | `'Time conflict with existing scheduled lesson'` |
-| `lib/features/planner/providers/planner_providers.dart` | 446 | `'Time conflict with existing scheduled lesson'` |
-
-These are displayed to the user via `SnackBar` and `state.error` respectively, and **cannot be translated**.
-
-### Rationale
-As discovered during exploration, the `subjects`, `practice`, and `settings` features are fully localised, making this hardcoded string in `planner` a regression that must be fixed before adding new languages.
-
-### Affected Files
-- `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` (258)
-- `lib/features/planner/providers/planner_providers.dart` (446)
-
-### Acceptance Criteria
-- [ ] Add a new key `"timeConflict"` to `app_en.arb` and `app_es.arb`
-- [ ] Replace both hardcoded strings with `l10n.timeConflict`
-- [ ] Confirm via test/localisation coverage check
-
----
-
-## Issue 4: Duplicate Badge Key Definitions (Medium Severity)
-
-### Problem
-Two sets of keys exist for the same badge concept:
-
-| Old Key | Duplicate Key | Same value |
-|---|---|---|
-| `badgeCenturyName` | `badgeCenturyClubName` | `"Club del Centenar"` / `"Club del Centenario"` |
-| `badgeCenturyDesc` | `badgeCenturyClubDesc` | `"¡Respondió más de 100 preguntas!"` |
-
-The `badgeCenturyName` key (ES line 3512) uses `"Club del Centenar"` while `badgeCenturyClubName` (ES line 3856) uses `"Club del Centenario"` — they are **different translations of the same concept**. The `LocalizationService` references `badgeCenturyClub*` for the "century" badge ID.
-
-This means:
-- One translation is never displayed (dead key)
-- The two translations differ (`Centenar` vs `Centenario`), risking confusion
-- Any future language would inherit this duplication
-
-### Affected Files
-- `lib/l10n/app_en.arb` (century badge)
-- `lib/l10n/app_es.arb` (lines 3512-3519, 3856-3863)
-
-### Acceptance Criteria
-- [ ] Remove `badgeCenturyName` / `badgeCenturyDesc` from both ARB files (keep `badgeCenturyClub*` which is what `LocalizationService` uses)
-- [ ] Regenerate localizations
-- [ ] Verify coverage test still passes
+| `lib/features/planner/providers/planner_providers.dart:280-471` | Hardcoded English success/error messages in `PlannerNotifier` that have no access to `AppLocalizations` | **21 strings** |
+| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart:24,50,60,64,106,122,148,163,167,181` | Hardcoded English "Progress Overview", "Today's Progress", "Planned: X min", "Actual: Y min", "Weekly", English day abbreviations `['M','T','W','T','F','S','S']`, "Actual"/"Planned" legend, "X/Y days — Z% of plan" | **10 strings** |
+| `lib/features/planner/presentation/widgets/calendar_view_widget.dart:96` | Hardcoded English day header abbreviations `['M','T','W','T','F','S','S']` | **7 strings** |
+| `lib/features/planner/presentation/widgets/calendar_view_widget.dart:80` | `DateFormat.yMMM()` without locale parameter → always shows English month names | **1 usage** |
+| `lib/features/planner/presentation/widgets/milestone_timeline.dart:110,123` | `DateFormat.yMMMd()` / `DateFormat.MMMd()` without locale → always English dates | **2 usages** |
+| `lib/features/planner/presentation/widgets/roadmap_card.dart:98` | `DateFormat.yMMMd()` without locale → always English dates | **1 usage** |
+| `lib/features/planner/presentation/widgets/roadmap_card.dart:90` | `${l10n.milestones.toLowerCase()}` — `.toLowerCase()` is a non-l10n hack that breaks for languages with different casing rules | **1 usage** |
+| `lib/features/planner/presentation/widgets/roadmap_card.dart:123` | Hardcoded `'${milestone.topicsCovered.length} topics'` | **1 string** |
+| `lib/features/planner/presentation/planner_screen.dart:225` | `const Tab(text: 'Calendar')` — hardcoded tab label | **1 string** |
+| `lib/features/planner/presentation/planner_screen.dart:417,421` | `${l10n.days.toLowerCase()}` — `.toLowerCase()` hack | **2 usages** |
+| `lib/features/planner/presentation/planner_screen.dart:501` | `const Text('Redistribute')` — hardcoded button label | **1 string** |
+| `lib/features/planner/presentation/planner_screen.dart:539` | Manual `'${hour}:${minute}'` time formatting — not locale-aware (should use `DateFormat.jm()` with locale) | **1 usage** |
+| `lib/features/planner/presentation/planner_screen.dart:610` | `Text('No study plan yet')` — hardcoded empty-state text | **1 string** |
+| `lib/features/planner/services/planner_service.dart:176` | Hardcoded `'Topics: ${milestoneTopics.length} syllabus topics'` | **1 string** |
+| `lib/features/planner/services/planner_service.dart:184` | Hardcoded `'Mastery >= 80% on all milestone topics'` | **1 string** |
+| `lib/features/planner/services/syllabus_resolver.dart:50,109,122,140` | Hardcoded English error messages | **4 strings** |
 
 ---
 
-## Issue 5: Inconsistent Description Languages in ARB (Medium Severity)
+## Rationale
 
-### Problem
-The `@key` description fields in `app_es.arb` are a **mix of Spanish and English**, making maintenance harder for native Spanish translators:
+1. **Broken Spanish UX:** ARB keys exist for `failedToGeneratePlan` ("Error al generar el plan"), `timeConflict` ("Conflicto de horario con una lección programada"), `milestones` ("Hitos"), `topics` ("Temas"), `targetCompletion` ("Finalización Prevista"), and `noStudyPlanToday` ("No hay plan de estudio para hoy") — **none of which are used** in the planner code. Instead, hardcoded English equivalents appear.
 
-- English descriptions: `"The application title"`, `"Bottom navigation label for subjects"`
-- Spanish descriptions: `"Nombre de la insignia por responder la primera pregunta"`, `"Encabezado para la sección de estadísticas generales en CSV"`
+2. **Day abbreviations are language-specific:** `['M', 'T', 'W', 'T', 'F', 'S', 'S']` is correct for English but wrong for Spanish (where it should be `['L', 'M', 'M', 'J', 'V', 'S', 'D']` for lunes→domingo). Using `DateFormat.E()` with the user's locale solves this properly.
 
-This split means:
-- A translator cannot quickly scan descriptions for context
-- Generated code comments (from descriptions) are in mixed languages
-- No consistent policy is documented
+3. **`.toLowerCase()` breaks l10n:** `${l10n.milestones.toLowerCase()}` works by accident in English and Spanish (Latin script) but breaks in Turkish (`İ` → `i` instead of `i`), and is meaningless for scripts like Arabic or Chinese. The ARB keys should return text in the correct case for each locale.
 
-### Affected Files
-- `lib/l10n/app_es.arb` (throughout — ~50% of descriptions are in Spanish, ~50% in English)
+4. **DateFormat defaults to English:** `DateFormat.yMMMd()` without a locale argument always formats in English. It must receive the current locale from `AppLocalizations` (e.g., `DateFormat.yMMMd(l10n.localeName)`).
 
-### Acceptance Criteria
-- [ ] Decide and document in `docs/i18n.md` the convention: descriptions in the locale's source language (English) or the target language
-- [ ] Audit and normalise all `@key` descriptions in `app_es.arb` to follow the chosen convention
-- [ ] Regenerate localizations
+5. **PlannerNotifier pattern is broken:** A `StateNotifier` has no `BuildContext`, so it cannot call `AppLocalizations.of(context)`. The fix should pass `AppLocalizations` as a parameter (already done for `createRoadmap` and `scheduleLessonWithConflictCheck`) but must be applied **consistently** to all methods.
 
 ---
 
-## Issue 6: No Regional Variant Infrastructure (Low Severity, Strategic)
+## Acceptance Criteria
 
-### Problem
-`l10n.yaml` (lines 9-15) has a comment:
-```yaml
-# - 'es' targets neutral Latin American Spanish (formal "usted" register).
-# - Regional variants (es-MX, es-ES, es-AR) are not yet supported.
-# - To add Spain-specific vocabulary, create app_es_ES.arb with
-#   overrides for terms like "ordenador", "vale", "añadir", etc.
-```
+- [ ] **AC1 — ARB keys added:** Add the following new keys to both `app_en.arb` and `app_es.arb` (Spanish values provided):
+  - `planGeneratedSuccessfully` → "Plan generated successfully" / "Plan generado exitosamente"
+  - `failedToGeneratePlan` → Already exists — just wire it up
+  - `syllabusPlanGenerated` → "Syllabus-based plan generated successfully" / "Plan basado en el programa generado exitosamente"
+  - `failedToGenerateSyllabusPlan` → "Failed to generate syllabus plan" / "Error al generar el plan basado en el programa"
+  - `failedToCreateRoadmap` → "Failed to create roadmap" / "Error al crear la hoja de ruta"
+  - `failedToUpdateMilestone` → "Failed to update milestone" / "Error al actualizar el hito"
+  - `actionAccepted` → "Action accepted" / "Acción aceptada"
+  - `failedToExecuteAction` → "Failed to execute action — missing parameters" / "Error al ejecutar la acción — faltan parámetros"
+  - `failedToAcceptAction` → "Failed to accept action" / "Error al aceptar la acción"
+  - `failedToDismissAction` → "Failed to dismiss action" / "Error al descartar la acción"
+  - `lessonScheduled` → "Lesson scheduled" / "Lección programada"
+  - `failedToScheduleLesson` → "Failed to schedule lesson" / "Error al programar la lección"
+  - `planRegeneratedFromAdherence` → "Plan regenerated based on your adherence" / "Plan regenerado según tu cumplimiento"
+  - `failedToRegeneratePlan` → "Failed to regenerate plan" / "Error al regenerar el plan"
+  - `missedWorkloadRedistributed` → "Missed workload redistributed over next 3 days" / "Trabajo pendiente redistribuido en los próximos 3 días"
+  - `failedToRedistributeWorkload` → "Failed to redistribute workload" / "Error al redistribuir el trabajo pendiente"
+  - `progressOverview` → "Progress Overview" / "Resumen de Progreso"
+  - `todaysProgress` → "Today's Progress" / "Progreso de Hoy"
+  - `weekly` → "Weekly" / "Semanal"
+  - `actual` → "Actual" / "Real"
+  - `planned` → "Planned" / "Planificado"
+  - `noStudyPlanYet` → "No study plan yet" / "Aún no hay plan de estudio"
+  - `calendar` → "Calendar" / "Calendario"
+  - `redistribute` → "Redistribute" / "Redistribuir"
 
-But there is no `localeResolutionCallback` fallback chain or documentation for how to add regional variants. The locale resolution callback in `main.dart` currently maps all Spanish variants to `'es'` — which is correct, but undocumented and invisible to future contributors.
+- [ ] **AC2 — PlannerNotifier uses ARB keys:** Refactor `PlannerNotifier` so all methods that set `successMessage` or `error` accept `AppLocalizations l10n` as a parameter (like `createRoadmap` already does). The caller in `planner_screen.dart` must pass `l10n` when invoking these methods.
 
-### Affected Files
-- `l10n.yaml` (lines 9-15)
-- `lib/main.dart` (locale resolution callback)
-- `docs/i18n.md`
+- [ ] **AC3 — ProgressOverlayWidget uses ARB keys:** Replace all hardcoded English strings in `progress_overlay_widget.dart` with `AppLocalizations.of(context)!` lookups.
 
-### Acceptance Criteria
-- [ ] Document the regional variant fallback chain in `docs/i18n.md`
-- [ ] Extract locale resolution logic from `main.dart` into `LocaleConfig.supportedLocales` (see Issue 1)
-- [ ] Add test confirming that `Locale('es_MX')` resolves to `Locale('es')` and uses the base ES ARB
+- [ ] **AC4 — Day abbreviations use DateFormat:** Replace hardcoded `['M', 'T', 'W', 'T', 'F', 'S', 'S']` in both `calendar_view_widget.dart` and `progress_overlay_widget.dart` with `DateFormat.E()` using the user's locale.
 
----
+- [ ] **AC5 — All DateFormat calls pass locale:** Every `DateFormat.xxx().format(...)` call in the planner feature must include the locale parameter, e.g. `DateFormat.yMMMd(l10n.localeName).format(...)`.
 
-## Issue 7: `durationMinutes` Abbreviation Inconsistency (Low Severity)
+- [ ] **AC6 — `.toLowerCase()` removed:** Eliminate all `.toLowerCase()` hacks on localized strings in `roadmap_card.dart` and `planner_screen.dart`. Use properly cased ARB values or ICU plural variants.
 
-### Problem
-English abbreviates minutes as `"1m"` / `"{count}m"` while Spanish uses `"1min"` / `"{count}min"`. This is a legitimate locale-aware difference, but it reveals that **duration abbreviations are not consistently locale-aware** across all duration keys:
+- [ ] **AC7 — Hardcoded `'topics'` string replaced:** Replace `'${milestone.topicsCovered.length} topics'` in `roadmap_card.dart` with an ICU plural ARB key (e.g., `topicCount` with `{count, plural, =1{1 topic} other{{count} topics}}`).
 
-| Key | EN | ES |
-|---|---|---|
-| `durationMinutes` | `1m` / `{count}m` | `1min` / `{count}min` |
-| `durationHours` | `1h` / `{count}h` | `1h` / `{count}h` (identical — no `h` → `hr` change) |
-| `durationDays` | `1d` / `{count}d` | `1d` / `{count}d` (identical) |
-| `durationSeconds` | `1s` / `{count}s` | `1s` / `{count}s` (identical) |
+- [ ] **AC8 — `planner_screen.dart` hardcoded strings replaced:**
+  - `'Calendar'` tab label → use new `l10n.calendar` key
+  - `'Redistribute'` button → use new `l10n.redistribute` key
+  - `'No study plan yet'` → use new `l10n.noStudyPlanYet` key
+  - Manual time formatting → `DateFormat.Hm(l10n.localeName)` or `DateFormat.jm(l10n.localeName)`
 
-If the intent is that abbreviations should be locale-sensitive (as shown by `minutes`), then `hours`, `days`, and `seconds` should follow. If the intent is to keep abbreviations universal, `minutes` should be aligned.
+- [ ] **AC9 — Service-layer errors wired:** Add `AppLocalizations` parameter to `planner_service.dart` and `syllabus_resolver.dart` error messages, or raise errors with codes that the provider translates.
 
-### Affected Files
-- `lib/l10n/app_en.arb` (durationMinutes, durationHours, durationDays, durationSeconds)
-- `lib/l10n/app_es.arb` (same keys)
-
-### Acceptance Criteria
-- [ ] Decide and document policy: are time abbreviations locale-sensitive or universal?
-- [ ] If locale-sensitive: update ES hours to `"1h"` → `"1hr"` (or 1h remains universal)
-- [ ] If universal: align ES `durationMinutes` to match EN `"1m"` / `"{count}m"`
-- [ ] Verify all 4 duration keys are consistent per the chosen policy
-
----
-
-## Summary of Impact
-
-| # | Issue | Severity | Effort | Category |
-|---|---|---|---|---|
-| 1 | No centralised locale registry | High | 2-3 days | Architecture |
-| 2 | `planAdherence` grammar error | High | 30 min | Translation quality |
-| 3 | Hardcoded `Time conflict` in planner | High | 1 hour | Missing localisation |
-| 4 | Duplicate badge key definitions | Medium | 1 hour | Maintenance |
-| 5 | Inconsistent ARB description languages | Medium | 2 hours | Convention |
-| 6 | No regional variant infrastructure | Low | 1 day | Architecture |
-| 7 | Duration abbreviation inconsistency | Low | 30 min | Consistency |
+- [ ] **AC10 — Verify with Spanish locale:** Run the app with `Locale('es')` and confirm every hardcoded English string listed above now appears in Spanish.

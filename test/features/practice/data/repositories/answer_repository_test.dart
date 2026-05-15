@@ -3,41 +3,41 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/answer_repository.dart';
 import 'package:studyking/features/practice/data/models/answer_model.dart';
 
-class _MockAnswerRepository extends AnswerRepository {
-  final Map<String, Answer> _storage = {};
+class _MockQuestionChoiceRepository extends QuestionChoiceRepository {
+  final Map<String, QuestionChoice> _storage = {};
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<Result<void>> create(Answer answer) async {
-    _storage[answer.id] = answer;
+  Future<Result<void>> create(QuestionChoice choice) async {
+    _storage[choice.id] = choice;
     return Result.success(null);
   }
 
   @override
-  Future<Answer?> get(String id) async {
+  Future<QuestionChoice?> get(String id) async {
     return _storage[id];
   }
 
   @override
-  Future<Result<List<Answer>>> getByQuestion(String questionId) async {
+  Future<Result<List<QuestionChoice>>> getByQuestion(String questionId) async {
     return Result.success(_storage.values.where((a) => a.questionId == questionId).toList());
   }
 }
 
 void main() {
-  group('AnswerRepository', () {
-    late _MockAnswerRepository repository;
+  group('QuestionChoiceRepository', () {
+    late _MockQuestionChoiceRepository repository;
 
     setUp(() {
-      repository = _MockAnswerRepository();
+      repository = _MockQuestionChoiceRepository();
     });
 
     group('create', () {
-      test('stores an answer', () async {
-        final answer = Answer(id: 'a1', questionId: 'q1', text: 'Paris', isCorrect: true);
-        await repository.create(answer);
+      test('stores a question choice', () async {
+        final choice = QuestionChoice(id: 'a1', questionId: 'q1', text: 'Paris', isCorrect: true);
+        await repository.create(choice);
         final stored = await repository.get('a1');
         expect(stored?.text, 'Paris');
       });
@@ -48,24 +48,24 @@ void main() {
         expect(await repository.get('none'), isNull);
       });
 
-      test('returns stored answer', () async {
-        final answer = Answer(id: 'a1', questionId: 'q1', text: 'Paris', isCorrect: true);
-        await repository.create(answer);
+      test('returns stored choice', () async {
+        final choice = QuestionChoice(id: 'a1', questionId: 'q1', text: 'Paris', isCorrect: true);
+        await repository.create(choice);
         expect(await repository.get('a1'), isNotNull);
       });
     });
 
     group('getByQuestion', () {
-      test('returns answers for question', () async {
-        await repository.create(Answer(id: 'a1', questionId: 'q1', text: 'A', isCorrect: true));
-        await repository.create(Answer(id: 'a2', questionId: 'q1', text: 'B', isCorrect: false));
-        await repository.create(Answer(id: 'a3', questionId: 'q2', text: 'C', isCorrect: true));
+      test('returns choices for question', () async {
+        await repository.create(QuestionChoice(id: 'a1', questionId: 'q1', text: 'A', isCorrect: true));
+        await repository.create(QuestionChoice(id: 'a2', questionId: 'q1', text: 'B', isCorrect: false));
+        await repository.create(QuestionChoice(id: 'a3', questionId: 'q2', text: 'C', isCorrect: true));
         final result = await repository.getByQuestion('q1');
         expect(result.isSuccess, isTrue);
         expect(result.data!.length, 2);
       });
 
-      test('returns empty list when no answers for question', () async {
+      test('returns empty list when no choices for question', () async {
         final result = await repository.getByQuestion('none');
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);

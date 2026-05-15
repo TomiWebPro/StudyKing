@@ -41,7 +41,14 @@ void main() {
         ),
       ));
 
-      expect(find.text('100%'), findsOneWidget);
+      final textWidget = tester.widget<Text>(find.text('100%'));
+      expect(textWidget.style?.color, Colors.green);
+
+      final indicator = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator).first,
+      );
+      final animation = indicator.valueColor;
+      expect(animation, isA<Animation<Color?>>());
     });
 
     testWidgets('displays orange color for 50-99% progress', (tester) async {
@@ -51,7 +58,14 @@ void main() {
         ),
       ));
 
-      expect(find.text('50%'), findsOneWidget);
+      final textWidget = tester.widget<Text>(find.text('50%'));
+      expect(textWidget.style?.color, Colors.orange);
+
+      final indicator = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator).first,
+      );
+      final animation = indicator.valueColor;
+      expect(animation, isA<Animation<Color?>>());
     });
 
     testWidgets('displays red color for below 50% progress', (tester) async {
@@ -61,7 +75,14 @@ void main() {
         ),
       ));
 
-      expect(find.text('30%'), findsOneWidget);
+      final textWidget = tester.widget<Text>(find.text('30%'));
+      expect(textWidget.style?.color, Colors.red);
+
+      final indicator = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator).first,
+      );
+      final animation = indicator.valueColor;
+      expect(animation, isA<Animation<Color?>>());
     });
 
     testWidgets('empty weeklyProgress hides weekly section', (tester) async {

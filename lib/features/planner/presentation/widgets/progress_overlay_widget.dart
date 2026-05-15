@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../providers/planner_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class ProgressOverlayWidget extends StatelessWidget {
   final PlanProgressData data;
@@ -9,6 +11,7 @@ class ProgressOverlayWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       child: Padding(
@@ -21,23 +24,23 @@ class ProgressOverlayWidget extends StatelessWidget {
                 Icon(Icons.bar_chart,
                     color: theme.colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text('Progress Overview',
+                Text(l10n.progressOverview,
                     style: theme.textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 16),
-            _buildTodayProgress(theme),
+            _buildTodayProgress(theme, l10n),
             const SizedBox(height: 16),
-            _buildWeeklyChart(theme),
+            _buildWeeklyChart(theme, l10n),
             const SizedBox(height: 16),
-            _buildCumulativeProgress(theme),
+            _buildCumulativeProgress(theme, l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTodayProgress(ThemeData theme) {
+  Widget _buildTodayProgress(ThemeData theme, AppLocalizations l10n) {
     final progressColor = data.todayProgress >= 1.0
         ? Colors.green
         : data.todayProgress >= 0.5
@@ -47,7 +50,7 @@ class ProgressOverlayWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Today\'s Progress',
+        Text(l10n.todaysProgress,
             style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         Row(
@@ -57,11 +60,11 @@ class ProgressOverlayWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Planned: ${data.plannedMinutesToday} min',
+                    '${l10n.planned}: ${data.plannedMinutesToday} min',
                     style: theme.textTheme.bodySmall,
                   ),
                   Text(
-                    'Actual: ${data.actualMinutesToday} min',
+                    '${l10n.actual}: ${data.actualMinutesToday} min',
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -97,13 +100,13 @@ class ProgressOverlayWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildWeeklyChart(ThemeData theme) {
+  Widget _buildWeeklyChart(ThemeData theme, AppLocalizations l10n) {
     if (data.weeklyProgress.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Weekly',
+        Text(l10n.weekly,
             style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         SizedBox(
@@ -119,7 +122,9 @@ class ProgressOverlayWidget extends StatelessWidget {
               final actualH = maxVal > 0
                   ? (day.actualMinutes / maxVal * 60).clamp(0.0, 60.0)
                   : 0.0;
-              final dayLabel = ['M', 'T', 'W', 'T', 'F', 'S', 'S'][day.date.weekday - 1];
+              final dayLabel = DateFormat.E(l10n.localeName)
+                  .format(day.date)
+                  .substring(0, 1);
 
               return Expanded(
                 child: Padding(
@@ -160,25 +165,25 @@ class ProgressOverlayWidget extends StatelessWidget {
           children: [
             Container(width: 8, height: 8, color: theme.colorScheme.primary),
             const SizedBox(width: 4),
-            Text('Actual', style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
+            Text(l10n.actual, style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
             const SizedBox(width: 12),
             Container(width: 8, height: 8, color: theme.colorScheme.primaryContainer),
             const SizedBox(width: 4),
-            Text('Planned', style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
+            Text(l10n.planned, style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildCumulativeProgress(ThemeData theme) {
+  Widget _buildCumulativeProgress(ThemeData theme, AppLocalizations l10n) {
     return Row(
       children: [
         Icon(Icons.trending_up, size: 18, color: theme.colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            '${data.completedDays}/${data.totalPlanDays} days — ${(data.cumulativeProgress * 100).round()}% of plan',
+            '${data.completedDays}/${data.totalPlanDays} ${l10n.days} — ${(data.cumulativeProgress * 100).round()}%',
             style: theme.textTheme.bodySmall,
           ),
         ),

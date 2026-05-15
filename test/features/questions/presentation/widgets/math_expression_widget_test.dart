@@ -547,5 +547,58 @@ void main() {
       final widgetSpans = spans.whereType<WidgetSpan>().toList();
       expect(widgetSpans, isNotEmpty);
     });
+
+    testWidgets('caret at end of expression renders without error', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x^'));
+
+      expect(find.byType(RichText), findsOneWidget);
+    });
+
+    testWidgets('underscore at end of expression renders without error', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x_'));
+
+      expect(find.byType(RichText), findsOneWidget);
+    });
+
+    testWidgets('superscript with negative number renders', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x^{-2}'));
+
+      final spans = _getSpans(tester);
+      expect(spans.whereType<WidgetSpan>().length, greaterThan(0));
+    });
+
+    testWidgets('frac with nested braces in numerator', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: r'\frac{x+y}{z}'));
+
+      final spans = _getSpans(tester);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '/'), isTrue);
+    });
+
+    testWidgets('handles plus operator at end', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x+'));
+
+      expect(find.byType(RichText), findsOneWidget);
+    });
+
+    testWidgets('handles multiple equals signs', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'a=b=c'));
+
+      final spans = _getSpans(tester);
+      final eqSpans = spans.whereType<TextSpan>().where((s) => s.text == '=').toList();
+      expect(eqSpans.length, 2);
+    });
+
+    testWidgets('handles mixed superscript and regular text', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x^2+y^2'));
+
+      final spans = _getSpans(tester);
+      expect(spans.whereType<WidgetSpan>().length, greaterThanOrEqualTo(2));
+    });
+
+    testWidgets('handles backslash followed by non-letter at start', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: r'\!'));
+
+      expect(find.byType(RichText), findsOneWidget);
+    });
   });
 }

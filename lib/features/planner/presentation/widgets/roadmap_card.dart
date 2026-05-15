@@ -87,7 +87,7 @@ class RoadmapCard extends StatelessWidget {
                   style: theme.textTheme.bodySmall,
                 ),
                 Text(
-                  '$completedMilestones/$totalMilestones ${l10n.milestones.toLowerCase()}',
+                  '$completedMilestones/$totalMilestones ${l10n.milestones}',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -95,7 +95,7 @@ class RoadmapCard extends StatelessWidget {
             if (roadmap.targetCompletionDate != null) ...[
               const SizedBox(height: 4),
               Text(
-                '${l10n.targetCompletion}: ${DateFormat.yMMMd().format(roadmap.targetCompletionDate!)}',
+                '${l10n.targetCompletion}: ${DateFormat.yMMMd(l10n.localeName).format(roadmap.targetCompletionDate!)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -120,7 +120,7 @@ class RoadmapCard extends StatelessWidget {
                         )),
                     subtitle: milestone.topicsCovered.isNotEmpty
                         ? Text(
-                            '${milestone.topicsCovered.length} topics',
+                            l10n.topicCount(milestone.topicsCovered.length),
                             style: theme.textTheme.bodySmall,
                           )
                         : null,

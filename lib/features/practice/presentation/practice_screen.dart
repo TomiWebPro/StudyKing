@@ -13,6 +13,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_grid.dart';
 import 'package:studyking/features/practice/presentation/widgets/subject_practice_card.dart';
@@ -42,9 +43,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   @override
   void initState() {
     super.initState();
-    _dataService = PracticeDataService(ref);
+    final srService = ref.read(spacedRepetitionServiceProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
     _questionRepo = ref.read(questionRepositoryProvider);
+    _dataService = PracticeDataService(
+      srService: srService,
+      questionRepo: _questionRepo,
+      subjectRepo: SubjectRepository(),
+    );
     _loadSubjects();
   }
 

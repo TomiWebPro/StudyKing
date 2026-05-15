@@ -71,132 +71,33 @@ class PersonalLearningPlanService {
         _localizationService = localizationService;
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
-    try {
-      await _repository.init();
-    } catch (e) {
-      return Result.failure('Failed to initialize repository: $e');
-    }
-
-    final masteryStatesResult = await _repository.getAllMasteryStates(studentId);
-    if (masteryStatesResult.isFailure) {
-      return Result.failure(masteryStatesResult.error);
-    }
-
-    final allDependenciesResult = await _repository.getAllDependencies();
-    if (allDependenciesResult.isFailure) {
-      return Result.failure(allDependenciesResult.error);
-    }
-
-    final topicMastery = masteryStatesResult.data!;
-    final dependencies = allDependenciesResult.data!;
-    final dependencyMap = {for (var d in dependencies) d.topicId: d};
-
-    final completedTopicIds = topicMastery
-        .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
-        .map((s) => s.topicId)
-        .toSet();
-
-    final recommendations = <PlanRecommendation>[];
-
-    for (final state in topicMastery) {
-      final dependency = dependencyMap[state.topicId];
-      final isPrereq = dependency?.prerequisites.any((p) => !completedTopicIds.contains(p)) ?? false;
-      final downstreamCount = dependency?.downstreamTopics.length ?? 0;
-
-      final priority = dependency?.calculatePriority(
-            masteryState: state.accuracy,
-            isPrerequisite: isPrereq,
-            downstreamCount: downstreamCount,
-          ) ??
-          (1 - state.accuracy);
-
-      final explanations = <String>[];
-      final l10n = _localizationService;
-      if (state.accuracy < 0.6) {
-        explanations.add(l10n?.planAccuracyLow() ?? 'Accuracy is below 60% — needs focused practice');
-      }
-      if (state.reviewUrgency > 0.7) {
-        explanations.add(l10n?.planReviewOverdue() ?? 'Review is overdue — forgetting risk is high');
-      }
-      if (state.currentStreak < 3) {
-        explanations.add(l10n?.planStreakLow() ?? 'Streak is low — consistency needed');
-      }
-      if (isPrereq) {
-        explanations.add(l10n?.planPrerequisite() ?? 'Prerequisite for upcoming topics — must master first');
-      }
-      if (downstreamCount > 0) {
-        explanations.add(l10n?.planBlocksDownstream(downstreamCount) ?? 'Blocks $downstreamCount downstream topic(s)');
-      }
-
-      recommendations.add(PlanRecommendation(
-        topicId: state.topicId,
-        reason: _generateRecommendationReason(state),
-        recommendationType: _classifyRecommendation(state),
-        priority: priority,
-        explanations: explanations,
-        prerequisiteReason: isPrereq ? (_localizationService?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
-        weaknessReason: state.accuracy < 0.6 ? (_localizationService?.planWeakPerformance() ?? 'Weak performance') : null,
-        reviewReason: state.reviewUrgency > 0.7 ? (_localizationService?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
-      ));
-    }
-
-    recommendations.sort((a, b) => b.priority.compareTo(a.priority));
-
-    List<List<String>>? learningLevels;
-    final resolver = _syllabusResolver;
-    if (resolver != null) {
-      try {
-        final resolved = await resolver.resolveSyllabus(
-          subjectId: studentId,
-          studentId: studentId,
-        );
-        if (resolved.isSuccess && resolved.data!.isNotEmpty) {
-          learningLevels = resolver.buildLearningLevels(resolved.data!);
-        }
-      } catch (_) {}
-    }
-
-    final dailyPlans = await _generateDailyPlans(
-      studentId: studentId,
-      recommendations: recommendations,
-      dependencyMap: dependencyMap,
-      completedTopicIds: completedTopicIds,
-      learningLevels: learningLevels,
-    );
-
-    final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
-    final summary = _generateSummary(linkedPlans, recommendations);
-    final plan = PersonalLearningPlan(
-      studentId: studentId,
-      generatedAt: DateTime.now(),
-      dailyPlans: linkedPlans,
-      summary: summary,
-      recommendations: recommendations,
-      planDurationDays: config.planDurationDays,
-      targetMinutesPerDay: config.targetMinutesPerDay,
-      targetQuestionsPerDay: config.targetQuestionsPerDay,
-    );
-
-    try {
-      await _planRepository.init();
-      await _planRepository.savePlan(plan);
-    } catch (_) {}
-
-    return Result.success(plan);
+    return _buildPlan(studentId: studentId);
   }
 
   Future<Result<PersonalLearningPlan>> generatePlanFromSyllabus({
     required String studentId,
     required List<SyllabusGoal> syllabusGoals,
   }) async {
+    return _buildPlan(
+      studentId: studentId,
+      syllabusGoals: syllabusGoals,
+    );
+  }
+
+  Future<Result<PersonalLearningPlan>> _buildPlan({
+    required String studentId,
+    List<SyllabusGoal>? syllabusGoals,
+  }) async {
     try {
       await _repository.init();
     } catch (e) {
       return Result.failure('Failed to initialize repository: $e');
     }
-    try {
-      await _adherenceRepository.init();
-    } catch (_) {}
+    if (syllabusGoals != null) {
+      try {
+        await _adherenceRepository.init();
+      } catch (_) {}
+    }
 
     final masteryStatesResult = await _repository.getAllMasteryStates(studentId);
     if (masteryStatesResult.isFailure) {
@@ -218,48 +119,26 @@ class PersonalLearningPlanService {
         .toSet();
 
     final allTopics = <String, Topic>{};
-    for (final goal in syllabusGoals) {
-      final topics = await _topicRepository.getBySubject(goal.subjectId);
-      for (final topic in topics) {
-        allTopics[topic.id] = topic;
+    if (syllabusGoals != null) {
+      for (final goal in syllabusGoals) {
+        final topics = await _topicRepository.getBySubject(goal.subjectId);
+        for (final topic in topics) {
+          allTopics[topic.id] = topic;
+        }
       }
     }
 
-    final recommendations = <PlanRecommendation>[];
-    for (final state in topicMastery) {
-      final dependency = dependencyMap[state.topicId];
-      final isPrereq = dependency?.prerequisites.any((p) => !completedTopicIds.contains(p)) ?? false;
-      final downstreamCount = dependency?.downstreamTopics.length ?? 0;
-      final priority = dependency?.calculatePriority(
-            masteryState: state.accuracy,
-            isPrerequisite: isPrereq,
-            downstreamCount: downstreamCount,
-          ) ??
-          (1 - state.accuracy);
+    final recommendations = _buildRecommendations(
+      topicMastery: topicMastery,
+      dependencyMap: dependencyMap,
+      completedTopicIds: completedTopicIds,
+    );
 
-      recommendations.add(PlanRecommendation(
-        topicId: state.topicId,
-        reason: _generateRecommendationReason(state),
-        recommendationType: _classifyRecommendation(state),
-        priority: priority,
-        explanations: [],
-        prerequisiteReason: isPrereq ? (_localizationService?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
-        weaknessReason: state.accuracy < 0.6 ? (_localizationService?.planWeakPerformance() ?? 'Weak performance') : null,
-        reviewReason: state.reviewUrgency > 0.7 ? (_localizationService?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
-      ));
-    }
-
-    final syllabusTopicIds = allTopics.keys.toSet();
-    for (final topicId in syllabusTopicIds) {
-      if (!recommendations.any((r) => r.topicId == topicId)) {
-        recommendations.add(PlanRecommendation(
-          topicId: topicId,
-          reason: _localizationService?.planNewSyllabusTopic() ?? 'New syllabus topic',
-          recommendationType: 'syllabus',
-          priority: 1.0,
-          explanations: [_localizationService?.planPartOfSyllabusGoal() ?? 'Part of syllabus goal'],
-        ));
-      }
+    if (syllabusGoals != null) {
+      _addSyllabusRecommendations(
+        recommendations: recommendations,
+        syllabusTopicIds: allTopics.keys.toSet(),
+      );
     }
 
     recommendations.sort((a, b) => b.priority.compareTo(a.priority));
@@ -268,8 +147,11 @@ class PersonalLearningPlanService {
     final resolver = _syllabusResolver;
     if (resolver != null) {
       try {
+        final subjectId = syllabusGoals != null
+            ? syllabusGoals.first.subjectId
+            : studentId;
         final resolved = await resolver.resolveSyllabus(
-          subjectId: syllabusGoals.first.subjectId,
+          subjectId: subjectId,
           studentId: studentId,
         );
         if (resolved.isSuccess && resolved.data!.isNotEmpty) {
@@ -289,9 +171,11 @@ class PersonalLearningPlanService {
     final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
     final summary = _generateSummary(linkedPlans, recommendations);
 
-    final updatedMetadata = <String, dynamic>{
-      'syllabus_goals': syllabusGoals.map((g) => g.toJson()).toList(),
-    };
+    final metadata = syllabusGoals != null
+        ? <String, dynamic>{
+            'syllabus_goals': syllabusGoals.map((g) => g.toJson()).toList(),
+          }
+        : null;
 
     final plan = PersonalLearningPlan(
       studentId: studentId,
@@ -302,7 +186,7 @@ class PersonalLearningPlanService {
       planDurationDays: config.planDurationDays,
       targetMinutesPerDay: config.targetMinutesPerDay,
       targetQuestionsPerDay: config.targetQuestionsPerDay,
-      metadata: updatedMetadata,
+      metadata: metadata,
     );
 
     try {
@@ -311,6 +195,70 @@ class PersonalLearningPlanService {
     } catch (_) {}
 
     return Result.success(plan);
+  }
+
+  List<PlanRecommendation> _buildRecommendations({
+    required List<MasteryState> topicMastery,
+    required Map<String, TopicDependency> dependencyMap,
+    required Set<String> completedTopicIds,
+  }) {
+    return topicMastery.map((state) {
+      final dependency = dependencyMap[state.topicId];
+      final isPrereq = dependency?.prerequisites.any((p) => !completedTopicIds.contains(p)) ?? false;
+      final downstreamCount = dependency?.downstreamTopics.length ?? 0;
+      final priority = dependency?.calculatePriority(
+            masteryState: state.accuracy,
+            isPrerequisite: isPrereq,
+            downstreamCount: downstreamCount,
+          ) ??
+          (1 - state.accuracy);
+
+      final l10n = _localizationService;
+      final explanations = <String>[];
+      if (state.accuracy < 0.6) {
+        explanations.add(l10n?.planAccuracyLow() ?? 'Accuracy is below 60% — needs focused practice');
+      }
+      if (state.reviewUrgency > 0.7) {
+        explanations.add(l10n?.planReviewOverdue() ?? 'Review is overdue — forgetting risk is high');
+      }
+      if (state.currentStreak < 3) {
+        explanations.add(l10n?.planStreakLow() ?? 'Streak is low — consistency needed');
+      }
+      if (isPrereq) {
+        explanations.add(l10n?.planPrerequisite() ?? 'Prerequisite for upcoming topics — must master first');
+      }
+      if (downstreamCount > 0) {
+        explanations.add(l10n?.planBlocksDownstream(downstreamCount) ?? 'Blocks $downstreamCount downstream topic(s)');
+      }
+
+      return PlanRecommendation(
+        topicId: state.topicId,
+        reason: _generateRecommendationReason(state),
+        recommendationType: _classifyRecommendation(state),
+        priority: priority,
+        explanations: explanations,
+        prerequisiteReason: isPrereq ? (l10n?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
+        weaknessReason: state.accuracy < 0.6 ? (l10n?.planWeakPerformance() ?? 'Weak performance') : null,
+        reviewReason: state.reviewUrgency > 0.7 ? (l10n?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
+      );
+    }).toList();
+  }
+
+  void _addSyllabusRecommendations({
+    required List<PlanRecommendation> recommendations,
+    required Set<String> syllabusTopicIds,
+  }) {
+    for (final topicId in syllabusTopicIds) {
+      if (!recommendations.any((r) => r.topicId == topicId)) {
+        recommendations.add(PlanRecommendation(
+          topicId: topicId,
+          reason: _localizationService?.planNewSyllabusTopic() ?? 'New syllabus topic',
+          recommendationType: 'syllabus',
+          priority: 1.0,
+          explanations: [_localizationService?.planPartOfSyllabusGoal() ?? 'Part of syllabus goal'],
+        ));
+      }
+    }
   }
 
   Future<List<DailyPlan>> _linkQuestionsToDailyPlans(

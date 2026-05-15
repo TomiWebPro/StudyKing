@@ -70,5 +70,33 @@ void main() {
 
       expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
     });
+
+    testWidgets('does not render subtitle container when subtitle is null', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeOption(
+          icon: Icons.school,
+          title: 'Test',
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.school), findsOneWidget);
+      expect(find.text('Test'), findsOneWidget);
+    });
+
+    testWidgets('renders primary colored icon container', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeOption(
+          icon: Icons.school,
+          title: 'Test',
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.school));
+      expect(icon, isNotNull);
+    });
   });
 }

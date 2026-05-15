@@ -570,5 +570,81 @@ void main() {
         expect(find.bySemanticsLabel(RegExp('Option B.*Incorrect')), findsOneWidget);
       });
     });
+
+    group('correct answer with correctAnswer null', () {
+      testWidgets('option color transparent when correctAnswer is null even if submitted', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+      });
+
+      testWidgets('no color highlighting when correctAnswer is null', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+        expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(3));
+      });
+    });
+
+    group('selected answer styling', () {
+      testWidgets('selected option has primary color border', (tester) async {
+        await tester.pumpWidget(buildWidget(selectedAnswer: 'Option A'));
+
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+      });
+
+      testWidgets('non-selected option has outline color border', (tester) async {
+        await tester.pumpWidget(buildWidget(selectedAnswer: 'Option A'));
+
+        expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(3));
+      });
+    });
+
+    group('feedback with reduceMotion and wrong answer', () {
+      testWidgets('incorrect feedback with reduceMotion', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          reduceMotion: true,
+        ));
+
+        expect(find.text('Incorrect'), findsOneWidget);
+        expect(find.text('Try again'), findsOneWidget);
+      });
+    });
+
+    group('option semantics with null correctAnswer and submitted', () {
+      testWidgets('no feedback in semantics when correctAnswer is null', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option A')), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('Correct')), findsNothing);
+      });
+
+      testWidgets('selected answer semantics without correct answer', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: null,
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option B')), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('Incorrect')), findsNothing);
+      });
+    });
   });
 }

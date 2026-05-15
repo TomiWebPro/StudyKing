@@ -1,7 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
 @HiveType(typeId: 3)
-class Answer extends HiveObject {
+class QuestionChoice extends HiveObject {
   @HiveField(0)
   final String id;
 
@@ -23,7 +23,7 @@ class Answer extends HiveObject {
   @HiveField(6, defaultValue: 0.0)
   final double confidenceScore;
 
-  Answer({
+  QuestionChoice({
     required this.id,
     required this.questionId,
     required this.text,
@@ -43,7 +43,7 @@ class Answer extends HiveObject {
     'confidenceScore': confidenceScore,
   };
 
-  factory Answer.fromJson(Map<String, dynamic> json) => Answer(
+  factory QuestionChoice.fromJson(Map<String, dynamic> json) => QuestionChoice(
     id: json['id'],
     questionId: json['questionId'],
     text: json['text'],

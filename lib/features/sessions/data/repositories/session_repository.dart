@@ -10,14 +10,12 @@ class SessionRepository {
 
   Box<String> get _box => Hive.box<String>(HiveBoxNames.sessions);
 
-  Future<void> init() async {}
-
   Future<Result<void>> save(Session session) async {
     try {
       await _box.put(session.id, jsonEncode(session.toJson()));
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error saving session', e);
+      _logger.w('Error saving session', e);
       return Result.failure('Failed to save session: ${e.toString()}');
     }
   }
@@ -28,7 +26,7 @@ class SessionRepository {
       if (raw == null) return Result.success(null);
       return Result.success(Session.fromJson(jsonDecode(raw)));
     } catch (e) {
-      _logger.e('Error decoding session $id', e);
+      _logger.w('Error decoding session $id', e);
       return Result.failure('Failed to get session: ${e.toString()}');
     }
   }
@@ -40,13 +38,13 @@ class SessionRepository {
         try {
           sessions.add(Session.fromJson(jsonDecode(raw)));
         } catch (e) {
-          _logger.e('Error decoding session', e);
+          _logger.w('Error decoding session', e);
         }
       }
       sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
       return Result.success(sessions);
     } catch (e) {
-      _logger.e('Error getting all sessions', e);
+      _logger.w('Error getting all sessions', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
     }
   }
@@ -62,7 +60,7 @@ class SessionRepository {
           s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
           s.startTime.isBefore(end)).toList());
     } catch (e) {
-      _logger.e('Error getting sessions by date', e);
+      _logger.w('Error getting sessions by date', e);
       return Result.failure('Failed to get sessions by date: ${e.toString()}');
     }
   }
@@ -73,7 +71,7 @@ class SessionRepository {
       if (allResult.isFailure) return Result.failure(allResult.error);
       return Result.success(allResult.data!.where((s) => s.type == type).toList());
     } catch (e) {
-      _logger.e('Error getting sessions by type', e);
+      _logger.w('Error getting sessions by type', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
     }
   }
@@ -84,7 +82,7 @@ class SessionRepository {
       if (allResult.isFailure) return Result.failure(allResult.error);
       return Result.success(allResult.data!.where((s) => s.studentId == studentId).toList());
     } catch (e) {
-      _logger.e('Error getting sessions by student', e);
+      _logger.w('Error getting sessions by student', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
     }
   }
@@ -95,7 +93,7 @@ class SessionRepository {
       if (allResult.isFailure) return Result.failure(allResult.error);
       return Result.success(allResult.data!.where((s) => s.subjectId == subjectId).toList());
     } catch (e) {
-      _logger.e('Error getting sessions by subject', e);
+      _logger.w('Error getting sessions by subject', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
     }
   }
@@ -109,7 +107,7 @@ class SessionRepository {
           .where((s) => s.studentId == studentId && s.subjectId == subjectId)
           .toList());
     } catch (e) {
-      _logger.e('Error getting sessions by student and subject', e);
+      _logger.w('Error getting sessions by student and subject', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
     }
   }
@@ -125,7 +123,7 @@ class SessionRepository {
               .compareTo(a.startTime.millisecondsSinceEpoch));
       return Result.success(filtered.take(limit).toList());
     } catch (e) {
-      _logger.e('Error getting recent sessions', e);
+      _logger.w('Error getting recent sessions', e);
       return Result.failure('Failed to get recent sessions: ${e.toString()}');
     }
   }
@@ -138,7 +136,7 @@ class SessionRepository {
           .where((s) => s.subjectId == subjectId)
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
-      _logger.e('Error getting total study time', e);
+      _logger.w('Error getting total study time', e);
       return Result.failure('Failed to get total study time: ${e.toString()}');
     }
   }
@@ -149,7 +147,7 @@ class SessionRepository {
       if (allResult.isFailure) return Result.failure(allResult.error);
       return Result.success(allResult.data!.where((s) => s.isActive).toList());
     } catch (e) {
-      _logger.e('Error getting active sessions', e);
+      _logger.w('Error getting active sessions', e);
       return Result.failure('Failed to get active sessions: ${e.toString()}');
     }
   }
@@ -159,7 +157,7 @@ class SessionRepository {
       await _box.delete(id);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error deleting session', e);
+      _logger.w('Error deleting session', e);
       return Result.failure('Failed to delete session: ${e.toString()}');
     }
   }
@@ -169,7 +167,7 @@ class SessionRepository {
       await _box.clear();
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error clearing sessions', e);
+      _logger.w('Error clearing sessions', e);
       return Result.failure('Failed to clear sessions: ${e.toString()}');
     }
   }
@@ -181,7 +179,7 @@ class SessionRepository {
       return Result.success(
           todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
-      _logger.e('Error getting today duration', e);
+      _logger.w('Error getting today duration', e);
       return Result.failure('Failed to get today duration: ${e.toString()}');
     }
   }
@@ -192,7 +190,7 @@ class SessionRepository {
       if (todayResult.isFailure) return Result.failure(todayResult.error);
       return Result.success(todayResult.data!.length);
     } catch (e) {
-      _logger.e('Error getting today session count', e);
+      _logger.w('Error getting today session count', e);
       return Result.failure('Failed to get session count: ${e.toString()}');
     }
   }
@@ -203,7 +201,7 @@ class SessionRepository {
       if (todayResult.isFailure) return Result.failure(todayResult.error);
       return Result.success(todayResult.data!.where((s) => s.completed).length);
     } catch (e) {
-      _logger.e('Error getting completed session count', e);
+      _logger.w('Error getting completed session count', e);
       return Result.failure('Failed to get completed count: ${e.toString()}');
     }
   }
@@ -218,7 +216,7 @@ class SessionRepository {
           .where((s) => s.startTime.isAfter(weekAgo))
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
-      _logger.e('Error getting weekly duration', e);
+      _logger.w('Error getting weekly duration', e);
       return Result.failure('Failed to get weekly duration: ${e.toString()}');
     }
   }
@@ -243,7 +241,7 @@ class SessionRepository {
         'hours': ((totalMs / 3600000)).toStringAsFixed(1),
       });
     } catch (e) {
-      _logger.e('Error getting today stats', e);
+      _logger.w('Error getting today stats', e);
       return Result.failure('Failed to get today stats: ${e.toString()}');
     }
   }
@@ -264,7 +262,7 @@ class SessionRepository {
         'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
       });
     } catch (e) {
-      _logger.e('Error getting subject stats', e);
+      _logger.w('Error getting subject stats', e);
       return Result.failure('Failed to get subject stats: ${e.toString()}');
     }
   }

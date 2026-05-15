@@ -1,7 +1,12 @@
 export 'data/repositories/answer_repository.dart';
 export 'data/repositories/attempt_repository.dart';
 export 'data/repositories/mastery_graph_repository.dart';
+export 'data/repositories/mastery_state_repository.dart';
+export 'data/repositories/question_mastery_state_repository.dart';
+export 'data/repositories/topic_dependency_repository.dart';
+export 'data/repositories/question_evaluation_repository.dart';
 export 'data/repositories/spaced_repetition_repository.dart';
+export 'services/spaced_repetition_service.dart';
 export 'providers/practice_providers.dart';
 export 'presentation/practice_screen.dart';
 export 'presentation/practice_session_screen.dart';

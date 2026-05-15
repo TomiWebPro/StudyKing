@@ -4266,5 +4266,155 @@
   "timeConflict": "Conflicto de horario con una lección programada",
   "@timeConflict": {
     "description": "Error message when a lesson time conflicts with an existing scheduled lesson"
+  },
+  "planGeneratedSuccessfully": "Plan generado exitosamente",
+  "@planGeneratedSuccessfully": {
+    "description": "Success message when plan is generated"
+  },
+  "syllabusPlanGenerated": "Plan basado en el programa generado exitosamente",
+  "@syllabusPlanGenerated": {
+    "description": "Success message when syllabus-based plan is generated"
+  },
+  "failedToGenerateSyllabusPlan": "Error al generar el plan basado en el programa",
+  "@failedToGenerateSyllabusPlan": {
+    "description": "Error message when syllabus plan generation fails"
+  },
+  "failedToCreateRoadmap": "Error al crear la hoja de ruta",
+  "@failedToCreateRoadmap": {
+    "description": "Error message when roadmap creation fails"
+  },
+  "failedToUpdateMilestone": "Error al actualizar el hito",
+  "@failedToUpdateMilestone": {
+    "description": "Error message when milestone update fails"
+  },
+  "actionAccepted": "Acción aceptada",
+  "@actionAccepted": {
+    "description": "Success message when action is accepted"
+  },
+  "failedToExecuteAction": "Error al ejecutar la acción — faltan parámetros",
+  "@failedToExecuteAction": {
+    "description": "Error message when action execution fails due to missing parameters"
+  },
+  "failedToAcceptAction": "Error al aceptar la acción",
+  "@failedToAcceptAction": {
+    "description": "Error message when accepting action fails"
+  },
+  "failedToDismissAction": "Error al descartar la acción",
+  "@failedToDismissAction": {
+    "description": "Error message when dismissing action fails"
+  },
+  "lessonScheduled": "Lección programada",
+  "@lessonScheduled": {
+    "description": "Success message when lesson is scheduled"
+  },
+  "failedToScheduleLesson": "Error al programar la lección",
+  "@failedToScheduleLesson": {
+    "description": "Error message when lesson scheduling fails"
+  },
+  "planRegeneratedFromAdherence": "Plan regenerado según tu cumplimiento",
+  "@planRegeneratedFromAdherence": {
+    "description": "Success message when plan is regenerated from adherence"
+  },
+  "failedToRegeneratePlan": "Error al regenerar el plan",
+  "@failedToRegeneratePlan": {
+    "description": "Error message when plan regeneration fails"
+  },
+  "missedWorkloadRedistributed": "Trabajo pendiente redistribuido en los próximos 3 días",
+  "@missedWorkloadRedistributed": {
+    "description": "Success message when workload is redistributed"
+  },
+  "failedToRedistributeWorkload": "Error al redistribuir el trabajo pendiente",
+  "@failedToRedistributeWorkload": {
+    "description": "Error message when workload redistribution fails"
+  },
+  "progressOverview": "Resumen de Progreso",
+  "@progressOverview": {
+    "description": "Title for the progress overview section"
+  },
+  "todaysProgress": "Progreso de Hoy",
+  "@todaysProgress": {
+    "description": "Title for today's progress section"
+  },
+  "weekly": "Semanal",
+  "@weekly": {
+    "description": "Label for weekly view"
+  },
+  "actual": "Real",
+  "@actual": {
+    "description": "Label for actual (real) values"
+  },
+  "planned": "Planificado",
+  "@planned": {
+    "description": "Label for planned values"
+  },
+  "noStudyPlanYet": "Aún no hay plan de estudio",
+  "@noStudyPlanYet": {
+    "description": "Empty state message when no study plan exists"
+  },
+  "calendar": "Calendario",
+  "@calendar": {
+    "description": "Tab label for calendar view"
+  },
+  "redistribute": "Redistribuir",
+  "@redistribute": {
+    "description": "Button label to redistribute workload"
+  },
+  "topicCount": "{count, plural, =1{1 tema} other{{count} temas}}",
+  "@topicCount": {
+    "description": "Pluralized topic count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syllabusTopics": "Temas: {count} temas del programa",
+  "@syllabusTopics": {
+    "description": "Milestone description when syllabus is linked",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "masteryRequirement": "Dominio >= 80% en todos los temas del hito",
+  "@masteryRequirement": {
+    "description": "Assessment criteria for milestone completion"
+  },
+  "noTopicsFoundForSubject": "No se encontraron temas para la materia {subjectId}",
+  "@noTopicsFoundForSubject": {
+    "description": "Error message when no topics are found for a subject",
+    "placeholders": {
+      "subjectId": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToResolveSyllabus": "Error al resolver el programa: {error}",
+  "@failedToResolveSyllabus": {
+    "description": "Error message when syllabus resolution fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToGetQuestionsForTopic": "Error al obtener preguntas para el tema: {error}",
+  "@failedToGetQuestionsForTopic": {
+    "description": "Error message when getting questions for a topic fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToGetQuestionsForTopics": "Error al obtener preguntas para los temas: {error}",
+  "@failedToGetQuestionsForTopics": {
+    "description": "Error message when getting questions for topics fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

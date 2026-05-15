@@ -1,0 +1,359 @@
+import 'dart:async';
+
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+
+class FakePlanRepository extends PlanRepository {
+  final Map<String, PersonalLearningPlan> _storage = {};
+  bool failOnInit = false;
+
+  void addPlan(PersonalLearningPlan plan) {
+    _storage[plan.studentId] = plan;
+  }
+
+  @override
+  Future<void> init() async {
+    if (failOnInit) throw Exception('Init failed');
+  }
+
+  @override
+  Future<void> savePlan(PersonalLearningPlan plan) async {
+    _storage[plan.studentId] = plan;
+  }
+
+  @override
+  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
+    return _storage[studentId];
+  }
+
+  @override
+  Future<bool> hasPlan(String studentId) async {
+    return _storage.containsKey(studentId);
+  }
+
+  @override
+  Future<List<PersonalLearningPlan>> getAllPlans() async {
+    return _storage.values.toList();
+  }
+
+  @override
+  Future<void> deletePlan(String studentId) async {
+    _storage.remove(studentId);
+  }
+}
+
+class FakeMasteryGraphRepository extends MasteryGraphRepository {
+  final Map<String, MasteryState> _masteryStates = {};
+  bool failOnGenerate = false;
+  Completer<Result<List<MasteryState>>>? generateCompleter;
+
+  FakeMasteryGraphRepository()
+      : super(
+          masteryStateRepo: null,
+          questionMasteryRepo: null,
+          topicDependencyRepo: null,
+          questionEvaluationRepo: null,
+        );
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
+    if (generateCompleter != null) {
+      return generateCompleter!.future;
+    }
+    if (failOnGenerate) {
+      return Result.failure('Simulated generation error');
+    }
+    return Result.success(
+      _masteryStates.values.where((s) => s.studentId == studentId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    final key = '${studentId}_$topicId';
+    if (_masteryStates.containsKey(key)) {
+      return Result.success(_masteryStates[key]!);
+    }
+    final state = MasteryState.initial(studentId: studentId, topicId: topicId);
+    _masteryStates[key] = state;
+    return Result.success(state);
+  }
+}
+
+class FakeTopicRepository extends TopicRepository {
+  final Map<String, Topic> _topics = {};
+  bool shouldThrow = false;
+
+  void addTopic(Topic topic) => _topics[topic.id] = topic;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Topic?> get(String id) async {
+    if (shouldThrow) throw Exception('Topic error');
+    return _topics[id];
+  }
+
+  @override
+  Future<List<Topic>> getAll() async => _topics.values.toList();
+}
+
+class FakeRoadmapRepository extends RoadmapRepository {
+  final Map<String, RoadmapModel> _storage = {};
+  bool failOnInit = false;
+  bool failOnGet = false;
+  bool failOnSave = false;
+  Completer<void>? loadCompleter;
+
+  @override
+  Future<void> init() async {
+    if (failOnInit) throw Exception('Init failed');
+    if (loadCompleter != null) await loadCompleter!.future;
+  }
+
+  @override
+  Future<void> saveRoadmap(RoadmapModel roadmap) async {
+    if (failOnSave) throw Exception('Save failed');
+    _storage[roadmap.id] = roadmap;
+  }
+
+  @override
+  Future<RoadmapModel?> loadRoadmap(String id) async {
+    return _storage[id];
+  }
+
+  @override
+  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
+    if (loadCompleter != null) await loadCompleter!.future;
+    if (failOnGet) throw Exception('Get failed');
+    return _storage.values
+        .where((r) => r.studentId == studentId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  @override
+  Future<List<RoadmapModel>> getAllRoadmaps() async {
+    return _storage.values.toList();
+  }
+
+  @override
+  Future<void> deleteRoadmap(String id) async {
+    _storage.remove(id);
+  }
+}
+
+class FakeTutorSessionRepository extends TutorSessionRepository {
+  final Map<String, TutorSession> _storage = {};
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> saveSession(TutorSession session) async {
+    _storage[session.id] = session;
+  }
+
+  @override
+  Future<TutorSession?> getSession(String id) async {
+    return _storage[id];
+  }
+
+  @override
+  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+    return _storage.values
+        .where((s) => s.studentId == studentId)
+        .toList();
+  }
+}
+
+class FakePendingActionRepository extends PendingActionRepository {
+  final Map<String, PendingActionModel> _storage = {};
+
+  void addAction(PendingActionModel action) {
+    _storage[action.id] = action;
+  }
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<PendingActionModel>> getPending(String studentId) async {
+    return _storage.values
+        .where((a) => a.studentId == studentId && a.status == 'pending')
+        .toList();
+  }
+
+  @override
+  Future<PendingActionModel?> get(String id) async {
+    return _storage[id];
+  }
+
+  @override
+  Future<void> markCompleted(String id) async {
+    final action = _storage[id];
+    if (action != null) {
+      _storage[id] = action.copyWith(status: 'completed');
+    }
+  }
+
+  @override
+  Future<void> markRejected(String id) async {
+    final action = _storage[id];
+    if (action != null) {
+      _storage[id] = action.copyWith(status: 'rejected');
+    }
+  }
+}
+
+class FakePlanAdapter extends PlanAdapter {
+  FakePlanAdapter()
+      : super(
+          adherenceRepository: null,
+          planRepository: null,
+          planService: null,
+          masteryService: null,
+          localizationService: null,
+        );
+
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    return Result.success(const AdherenceDeviation());
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getAdherenceReport(String studentId) async {
+    return Result.success({'totalDays': 0, 'averageAdherence': 1.0, 'lowAdherenceDays': 0, 'weeklyTrend': <double>[]});
+  }
+
+  @override
+  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+
+  @override
+  Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
+    return Result.success(null);
+  }
+}
+
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> sessions = [];
+  bool throwOnSave = false;
+  bool throwOnDelete = false;
+
+  FakeSessionRepository({List<Session>? seed}) {
+    if (seed != null) {
+      sessions.addAll(seed);
+    }
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(List.from(sessions));
+  }
+
+  @override
+  Future<Result<void>> save(Session session) async {
+    if (throwOnSave) throw Exception('save failed');
+    sessions.removeWhere((s) => s.id == session.id);
+    sessions.add(session);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> delete(String id) async {
+    if (throwOnDelete) throw Exception('delete failed');
+    sessions.removeWhere((s) => s.id == id);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    try {
+      final session = sessions.where((s) => s.id == id).firstOrNull;
+      return Result.success(session);
+    } catch (_) {
+      return Result.success(null);
+    }
+  }
+
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
+    final allResult = await getAll();
+    if (allResult.isFailure) return Result.failure(allResult.error);
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    return Result.success(allResult.data!
+        .where((s) =>
+            s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            s.startTime.isBefore(end))
+        .toList());
+  }
+}
+
+class FakeQuestionRepository extends QuestionRepository {
+  final List<Question> _questions = [];
+
+  FakeQuestionRepository({List<Question>? seed}) {
+    if (seed != null) {
+      _questions.addAll(seed);
+    }
+  }
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<Question>> getAll() async => List.from(_questions);
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) async {
+    return Result.success(
+      _questions.where((q) => q.subjectId == subjectId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<List<Question>>> getByTopic(String topicId) async {
+    return Result.success(
+      _questions.where((q) => q.topicId == topicId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    _questions.add(question);
+    return Result.success(null);
+  }
+}

@@ -274,8 +274,7 @@ class EngagementScheduler {
   }
 }
 
-enum NudgeType { overwork, revision, planAdjustment, lessonReminder, autoRegeneration }
-enum NudgeSeverity { low, medium, high }
+// NudgeType and NudgeSeverity are imported from engagement_nudge_model.dart
 
 class EngagementNudge {
   final NudgeType type;

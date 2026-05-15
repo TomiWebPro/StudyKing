@@ -106,5 +106,30 @@ void main() {
       // Previous is above Next
       expect(prev.dy, lessThan(next.dy));
     });
+
+    testWidgets('renders FocusTraversalOrder widgets', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionNavButtons(
+          onPrevious: () {},
+          onNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // FocusTraversalOrder wraps each button
+      expect(find.byType(FocusTraversalOrder), findsNWidgets(2));
+    });
+
+    testWidgets('renders ElevatedButton for each nav action', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionNavButtons(
+          onPrevious: () {},
+          onNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ElevatedButton), findsNWidgets(2));
+    });
   });
 }

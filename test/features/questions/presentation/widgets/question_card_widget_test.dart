@@ -1007,6 +1007,57 @@ void main() {
         expect(chips[0].backgroundColor, cs.primaryContainer);
       });
 
+      testWidgets('single choice chip has primaryContainer background', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-sc-chip', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.primaryContainer);
+      });
+
+      testWidgets('multi choice chip has primaryContainer background', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-mc-chip', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.primaryContainer);
+      });
+
+      testWidgets('math expression chip has secondaryContainer background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.mathExpression);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.secondaryContainer);
+      });
+
+      testWidgets('graph drawing chip has primaryContainer background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.graphDrawing);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.primaryContainer);
+      });
+
+      testWidgets('step by step chip has surfaceContainerHighest background', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.stepByStep);
+        await tester.pumpWidget(buildWidget(question: question));
+        final chips = tester.widgetList<Chip>(find.byType(Chip)).toList();
+        expect(chips.length, greaterThanOrEqualTo(2));
+        final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
+        expect(chips[0].backgroundColor, cs.surfaceContainerHighest);
+      });
+
       testWidgets('unsupported type chip has surfaceContainerHighest background', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
         await tester.pumpWidget(buildWidget(question: question));
@@ -1250,6 +1301,173 @@ void main() {
           find.widgetWithText(ElevatedButton, 'Submit Answer'),
         );
         expect(submitButton.onPressed, isNull);
+      });
+    });
+
+    group('multi choice didUpdateWidget sync edge cases', () {
+      testWidgets('syncs multi choice from null to non-null answer', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-mc-sync-null', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: null));
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'A||B'));
+        await tester.pump();
+
+        expect(find.byType(CheckboxListTile), findsNWidgets(3));
+      });
+
+      testWidgets('multi choice didUpdateWidget no change keeps state', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-mc-sync-keep', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A||B',
+          onAnswerChanged: (_) {},
+        ));
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A||B',
+          onAnswerChanged: (_) {},
+        ));
+        await tester.pump();
+
+        expect(find.byType(CheckboxListTile), findsNWidgets(3));
+      });
+    });
+
+    group('multi choice submit behavior', () {
+      testWidgets('submit with multi choice answer', (tester) async {
+        String? submittedAnswer;
+        final question = _questionWithOptions(
+          id: 'q-mc-submit', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerSubmitted: (answer) => submittedAnswer = answer,
+          onAnswerChanged: (_) {},
+        ));
+
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'A'));
+        await tester.pump();
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'B'));
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Answer'));
+        await tester.pump();
+
+        expect(submittedAnswer, contains('A'));
+        expect(submittedAnswer, contains('B'));
+      });
+    });
+
+    group('essay answer with whitespace edge cases', () {
+      testWidgets('essay answer with whitespace cleared sets answer null', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), 'my essay');
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), '');
+        await tester.pump();
+
+        expect(changedAnswer, isNull);
+      });
+
+      testWidgets('essay pre-filled with whitespace sets answer null on change', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'prefilled',
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+
+        expect(changedAnswer, isNull);
+      });
+    });
+
+    group('single answer widget integration', () {
+      testWidgets('selecting option and submitting calls onAnswerSubmitted', (tester) async {
+        String? submittedAnswer;
+        final question = _questionWithOptions(
+          id: 'q-sa-submit', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerSubmitted: (answer) => submittedAnswer = answer,
+        ));
+
+        await tester.tap(find.text('A'));
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Answer'));
+        await tester.pump();
+
+        expect(submittedAnswer, 'A');
+      });
+
+      testWidgets('single choice submitted without selecting shows disabled submit', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-sa-nosel', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(question: question));
+
+        final submitButton = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Submit Answer'),
+        );
+        expect(submitButton.onPressed, isNull);
+      });
+    });
+
+    group('typed answer didUpdateWidget edge cases', () {
+      testWidgets('updates from answer to null via didUpdateWidget', (tester) async {
+        await tester.pumpWidget(buildWidget(currentAnswer: 'hello'));
+        await tester.pumpWidget(buildWidget(currentAnswer: null));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, isEmpty);
+      });
+
+      testWidgets('didUpdateWidget with same answer no change', (tester) async {
+        await tester.pumpWidget(buildWidget(currentAnswer: 'hello'));
+        await tester.pumpWidget(buildWidget(currentAnswer: 'hello'));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, 'hello');
+      });
+    });
+
+    group('canvas drawing with largeTouchTargets', () {
+      testWidgets('canvas type with largeTouchTargets renders buttons', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: QuestionCardWidget(
+              question: question,
+              onAnswerSubmitted: (_) {},
+              largeTouchTargets: true,
+            ),
+          ),
+        ));
+
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+        expect(find.byIcon(Icons.delete_outline), findsOneWidget);
       });
     });
   });

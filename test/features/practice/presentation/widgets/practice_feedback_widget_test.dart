@@ -65,5 +65,39 @@ void main() {
 
       expect(find.text('Correct!'), findsOneWidget);
     });
+
+    testWidgets('handles non-const instantiation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeFeedbackWidget(isCorrect: false, explanation: 'Wrong answer'),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect'), findsOneWidget);
+      expect(find.text('Wrong answer'), findsOneWidget);
+    });
+
+    testWidgets('renders container with correct decoration', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PracticeFeedbackWidget(isCorrect: true, explanation: 'Explanation text'),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Container), findsWidgets);
+      expect(find.text('Explanation text'), findsOneWidget);
+    });
+
+    testWidgets('shows incorrect feedback with explanation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PracticeFeedbackWidget(
+          isCorrect: false,
+          explanation: 'The correct answer is Paris.',
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('The correct answer is Paris.'), findsOneWidget);
+    });
   });
 }

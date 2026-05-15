@@ -1,88 +1,92 @@
-# Architectural Inconsistency: Scattered Hive Adapters & Unclear Model Ownership
+# Inconsistent Code Quality Patterns: Dead Code, Mixed Import Styles, and Inappropriate Log Levels
 
 ## Context
 
-The codebase suffers from a structural anti-pattern where **28 domain models are dumped into `core/data/models/`** while their corresponding Hive `TypeAdapter`s are scattered across **5 different feature-specific `data/adapters/` directories**. This makes it impossible to determine which feature "owns" a given model without cross-referencing multiple locations. Adapters drift far from their models, violating the principle of locality.
+While auditing the `sessions` feature per the codebase conventions, several systemic code quality issues were identified that negatively impact maintainability, readability, and production log hygiene. These patterns recur across multiple files and features.
 
-## Inconsistency Pattern
+## Findings
 
-| Model (in `core/data/models/`) | Adapter Location |
+### 1. Duplicate Test Files for `SessionExportService` (Dead Code)
+
+Two test files test identical production code:
+
+| File | Lines |
 |---|---|
-| `markscheme_model.dart` | `features/questions/data/adapters/markscheme_adapter.dart` |
-| `question_evaluation_model.dart` | `features/questions/data/adapters/question_evaluation_adapter.dart` |
-| `mastery_state_model.dart` | `features/practice/data/adapters/mastery_state_adapter.dart` |
-| `mastery_improvement_metric_model.dart` | `features/practice/data/adapters/mastery_improvement_adapter.dart` |
-| `question_mastery_state_model.dart` | `features/practice/data/adapters/question_mastery_state_adapter.dart` |
-| `personal_learning_plan_model.dart` | `features/planner/data/adapters/personal_learning_plan_adapter.dart` |
-| `plan_adherence_metric_model.dart` | `features/planner/data/adapters/plan_adherence_adapter.dart` |
-| `topic_dependency_model.dart` | `features/subjects/data/adapters/topic_dependency_adapter.dart` |
-| `conversation_message_model.dart` | `features/teaching/data/adapters/conversation_message_adapter.dart` |
-| `tutor_session_model.dart` | `features/teaching/data/adapters/...` |
+| `test/features/sessions/services/session_export_test.dart` | 305 |
+| `test/features/sessions/services/session_export_service_test.dart` | 217 |
 
-Meanwhile, `subject_model.dart`, `topic_model.dart`, `question_model.dart`, `answer_model.dart`, `lesson_model.dart`, `lesson_block_model.dart`, `study_session_model.dart`, `source_model.dart`, `student_attempt_model.dart` — all in `core/data/models/` — have **no adapters in their owning features** (they likely rely on implicit Hive adapters or are registered elsewhere).
+Both target `SessionExportService` with overlapping coverage. This creates confusion about which file is canonical, doubles maintenance surface area, and inflates the test suite with redundancy.
 
-To make matters worse, some features (`practice/`, `settings/`, `mentor/`) define their own local `data/models/` meaning there are **three patterns in play simultaneously**:
-1. Model in `core/data/models/`, adapter in a feature's `data/adapters/`
-2. Model in feature's `data/models/`, adapter in same feature's `data/adapters/`
-3. Model in `core/data/models/` with no visible adapter file at all
+### 2. Empty `init()` Method in `SessionRepository`
 
-## Additional Related Issues
+`lib/features/sessions/data/repositories/session_repository.dart:13`:
 
-- **Repository output inconsistency**: `QuestionRepository` wraps all methods in `Result<T>` with `Logger` calls, while `AnswerRepository`, `StudySessionRepository`, and `LessonRepository` return raw values with no error handling. No shared contract exists.
-- **Dead placeholder code in `core/data/database_migration.dart`** (lines 57–68): `_migrateToV1()` contains empty methods whose comment reads "Placeholder for actual migration logic". This code executes unconditionally on startup but does nothing.
-- **`hive_type_ids.dart` runs a top-level side-effect** (`final bool _typeIdsValid = _checkUniqueIds()`) that is never consumed — `validateHiveTypeIds()` is never called outside the file.
+```dart
+Future<void> init() async {}
+```
+
+This empty method is still called by:
+- `session_tracker_screen.dart:70` (`_loadSessions -> _sessionRepository.init()`)
+- `session_history_screen.dart:40` (`_loadSessions -> _sessionRepository.init()`)
+
+It gives a false sense of initialization logic and introduces unnecessary async overhead in callers.
+
+### 3. Empty `focus_mode/data/` Directory
+
+`lib/features/focus_mode/data/` exists but contains zero files. It is an orphaned directory — either a leftover from refactoring or a never-populated shell. Every other feature's `data/` directory contains at least one subdirectory or barrel file.
+
+### 4. Mixed Import Styles in Session Presentation Files
+
+Both screen files mix `package:` absolute imports with deep relative `../../../../` imports:
+
+**`lib/features/sessions/presentation/session_tracker_screen.dart`**:
+- Lines 1–13: `package:studyking/...`
+- Lines 15–18: `../../../../core/...`
+
+**`lib/features/sessions/presentation/session_history_screen.dart`**:
+- Lines 1–9: `package:studyking/...`
+- Line 10: `../../../../core/utils/logger.dart`
+- Line 11: `../services/session_export_service.dart`
+
+This inconsistency makes automated refactoring (e.g., moving files) error-prone and reduces readability.
+
+### 5. Inappropriate Use of `.e()` (Error) Log Level in `SessionRepository`
+
+`lib/features/sessions/data/repositories/session_repository.dart` uses `_logger.e(...)` for **every** caught exception (15+ call sites). Examples:
+
+```dart
+// Expected/recoverable failures logged as ERROR
+_logger.e('Error saving session', e);
+_logger.e('Error getting sessions by date', e);
+_logger.e('Error getting sessions by type', e);
+_logger.e('Error deleting session', e);
+```
+
+The `Logger.e()` level is reserved for **unexpected/unrecoverable** errors per `lib/core/utils/logger.dart:46` — it is always logged even in production. Operational failures like "session not found" or "failed to query" should use `_logger.w()` (warn), which is also always visible but signals a recoverable condition rather than a system malfunction.
 
 ## Affected Files
 
-- `lib/core/data/models/` (entire 29-file directory)
-- `lib/core/data/hive_type_ids.dart` (lines 35–83, top-level side-effect)
-- `lib/core/data/database_migration.dart` (lines 57–68, dead placeholder)
-- `lib/core/data/hive_initializer.dart` (lines 6–14, fragile adapter registration)
-- `lib/features/questions/data/adapters/markscheme_adapter.dart`
-- `lib/features/questions/data/adapters/question_evaluation_adapter.dart`
-- `lib/features/practice/data/adapters/mastery_state_adapter.dart`
-- `lib/features/practice/data/adapters/mastery_improvement_adapter.dart`
-- `lib/features/practice/data/adapters/question_mastery_state_adapter.dart`
-- `lib/features/planner/data/adapters/personal_learning_plan_adapter.dart`
-- `lib/features/planner/data/adapters/plan_adherence_adapter.dart`
-- `lib/features/subjects/data/adapters/topic_dependency_adapter.dart`
-- `lib/features/teaching/data/adapters/conversation_message_adapter.dart`
-- `lib/features/questions/data/repositories/question_repository.dart` (inconsistent Result wrapping)
-- `lib/features/practice/data/repositories/answer_repository.dart` (no Result wrapping)
-- `lib/features/sessions/data/repositories/study_session_repository.dart` (no Result wrapping)
-- `lib/features/lessons/data/repositories/lesson_repository.dart` (no Result wrapping)
+| File | Issue |
+|---|---|
+| `test/features/sessions/services/session_export_test.dart` | Duplicate test file — candidate for deletion |
+| `test/features/sessions/services/session_export_service_test.dart` | Duplicate test file — prefer this as canonical |
+| `lib/features/sessions/data/repositories/session_repository.dart` | Empty `init()` method (line 13); 15+ `.e()` calls that should be `.w()` |
+| `lib/features/sessions/presentation/session_tracker_screen.dart` | Mixed import styles (lines 1–13 vs 15–18); unused `import 'dart:math'` |
+| `lib/features/sessions/presentation/session_history_screen.dart` | Mixed import styles (lines 1–9 vs 10–11) |
+| `lib/features/focus_mode/data/` | Empty orphaned directory — candidate for removal |
 
 ## Rationale
 
-1. **Discoverability**: A developer working on the "questions" feature must know to look in `core/data/models/` for the Question model, then in `features/questions/data/adapters/` for its adapter. This cognitive overhead slows onboarding and refactoring.
-2. **Ownership ambiguity**: When a model conceptually belongs to a feature (e.g., `Markscheme` belongs to `questions`), placing it in a shared `core/` directory creates a "tragedy of the commons" — no team/owner feels responsible for it.
-3. **Maintenance hazard**: The `hive_initializer.dart` must import every adapter by absolute path from `features/*/data/adapters/` (see lines 6–14). Adding a new model requires touching 3–4 files in different feature trees.
-4. **Dead code**: The 32-line migration boilerplate that does nothing (`database_migration.dart:57-68`) adds noise and misleads future readers into thinking a migration system exists when it doesn't.
-5. **Testing difficulty**: Without a consistent repository contract (`Result<T>` vs raw), writing a shared test fake or mock is impossible — each repository must be stubbed individually.
+- **Dead code** increases maintenance burden and confuses developers. The duplicate test files and empty `init()` method serve no purpose.
+- **Mixed imports** break consistency with the project's `package:` import convention used everywhere else, making code harder to refactor and review.
+- **Misused log levels** pollute production error monitoring with expected failures, making it harder to distinguish real system errors from routine operational edge cases.
+- **Orphaned empty directories** accumulate over time without detection, cluttering the project structure.
 
 ## Acceptance Criteria
 
-1. **Model co-location**: Each feature that owns a domain model must define its model within that feature's `data/models/` directory. Models truly shared across ≥3 features may remain in `core/data/models/` but must be explicitly justified with a doc comment.
-   - Move `markscheme_model.dart` → `features/questions/data/models/`
-   - Move `question_evaluation_model.dart` → `features/questions/data/models/`
-   - Move `mastery_state_model.dart` → `features/practice/data/models/`
-   - Move `question_mastery_state_model.dart` → `features/practice/data/models/`
-   - Move `mastery_improvement_metric_model.dart` → `features/practice/data/models/`
-   - Move `personal_learning_plan_model.dart` → `features/planner/data/models/`
-   - Move `plan_adherence_metric_model.dart` → `features/planner/data/models/`
-   - Move `topic_dependency_model.dart` → `features/subjects/data/models/`
-   - Move `conversation_message_model.dart` → `features/teaching/data/models/`
-   - Move `tutor_session_model.dart` → `features/teaching/data/models/`
-
-2. **Adapter co-location**: After the moves above, every feature that contains a Hive model must also contain its `TypeAdapter` in `data/adapters/` — the adapter must live next to the model, not in a different feature.
-
-3. **Repository contract consistency**: All repositories must adopt a unified return type. Either:
-   - All use `Result<T>` (like `QuestionRepository`), or
-   - All return raw types (like `AnswerRepository`).
-   Document the decision in `core/data/repository.dart`.
-
-4. **Remove dead migration code**: Delete or complete the empty placeholder methods `_migrateQuestionSubjectId` and `_migrateLessonSubjectId` in `database_migration.dart`. If no migration is needed, remove the migration framework entirely.
-
-5. **Eliminate top-level side-effect in `hive_type_ids.dart`**: Remove the `_typeIdsValid` evaluation at line 83. Either make `validateHiveTypeIds()` a real function called from `hive_initializer.dart` or delete it.
-
-6. **Simplify `hive_initializer.dart`**: Replace explicit feature path imports (lines 6–14) with a registration mechanism that each feature exposes via its own barrel file (e.g., `QuestionsModule.registerAdapters()`), so no single file needs to know the full adapter registry.
+- [ ] `session_export_test.dart` is removed (or its unique coverage is merged into `session_export_service_test.dart`), leaving exactly one canonical test file for `SessionExportService`.
+- [ ] The empty `init()` method in `SessionRepository` is removed along with all call sites in screens.
+- [ ] The empty `lib/features/focus_mode/data/` directory is deleted.
+- [ ] All imports in `session_tracker_screen.dart` and `session_history_screen.dart` use the consistent `package:studyking/...` style (relative `../services/` is acceptable for intra-feature imports per convention).
+- [ ] All `.e()` calls in `session_repository.dart` are audited and changed to `.w()` for expected/recoverable failures; only truly unexpected errors retain `.e()`.
+- [ ] No existing tests break after the refactor.

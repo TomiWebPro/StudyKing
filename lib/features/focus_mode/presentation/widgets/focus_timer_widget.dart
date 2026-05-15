@@ -72,6 +72,9 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
       } else if (!_pulseController.isAnimating) {
         _pulseController.repeat(reverse: true);
       }
+    } else {
+      _pulseController.stop();
+      _pulseController.reset();
     }
   }
 
@@ -97,10 +100,11 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth * 0.8;
-            final size = maxWidth.clamp(200.0, 260.0);
+        RepaintBoundary(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxWidth = constraints.maxWidth * 0.8;
+              final size = maxWidth.clamp(200.0, 260.0);
               return AnimatedBuilder(
                 animation: _pulseController,
                 builder: (context, child) {
@@ -167,6 +171,7 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
               ),
             );
           },
+          ),
         ),
         const SizedBox(height: 32),
         if (widget.isActive) ...[

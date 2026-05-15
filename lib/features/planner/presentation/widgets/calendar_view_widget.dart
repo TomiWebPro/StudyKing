@@ -40,7 +40,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
       children: [
         _buildMonthHeader(theme, l10n),
         const SizedBox(height: 8),
-        _buildDayHeaders(theme),
+        _buildDayHeaders(theme, l10n),
         const SizedBox(height: 4),
         Expanded(
           child: GridView.builder(
@@ -77,7 +77,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
           },
         ),
         Text(
-          DateFormat.yMMM().format(_currentMonth),
+          DateFormat.yMMM(l10n.localeName).format(_currentMonth),
           style: theme.textTheme.titleMedium,
         ),
         IconButton(
@@ -92,8 +92,13 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
     );
   }
 
-  Widget _buildDayHeaders(ThemeData theme) {
-    final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  Widget _buildDayHeaders(ThemeData theme, AppLocalizations l10n) {
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final days = List.generate(7, (i) {
+      final date = weekStart.add(Duration(days: i));
+      return DateFormat.E(l10n.localeName).format(date).substring(0, 1);
+    });
     return Row(
       children: days
           .map((d) => Expanded(

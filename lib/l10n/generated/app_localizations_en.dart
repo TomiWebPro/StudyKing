@@ -3113,4 +3113,116 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timeConflict => 'Time conflict with existing scheduled lesson';
+
+  @override
+  String get planGeneratedSuccessfully => 'Plan generated successfully';
+
+  @override
+  String get syllabusPlanGenerated =>
+      'Syllabus-based plan generated successfully';
+
+  @override
+  String get failedToGenerateSyllabusPlan => 'Failed to generate syllabus plan';
+
+  @override
+  String get failedToCreateRoadmap => 'Failed to create roadmap';
+
+  @override
+  String get failedToUpdateMilestone => 'Failed to update milestone';
+
+  @override
+  String get actionAccepted => 'Action accepted';
+
+  @override
+  String get failedToExecuteAction =>
+      'Failed to execute action — missing parameters';
+
+  @override
+  String get failedToAcceptAction => 'Failed to accept action';
+
+  @override
+  String get failedToDismissAction => 'Failed to dismiss action';
+
+  @override
+  String get lessonScheduled => 'Lesson scheduled';
+
+  @override
+  String get failedToScheduleLesson => 'Failed to schedule lesson';
+
+  @override
+  String get planRegeneratedFromAdherence =>
+      'Plan regenerated based on your adherence';
+
+  @override
+  String get failedToRegeneratePlan => 'Failed to regenerate plan';
+
+  @override
+  String get missedWorkloadRedistributed =>
+      'Missed workload redistributed over next 3 days';
+
+  @override
+  String get failedToRedistributeWorkload => 'Failed to redistribute workload';
+
+  @override
+  String get progressOverview => 'Progress Overview';
+
+  @override
+  String get todaysProgress => 'Today\'s Progress';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get actual => 'Actual';
+
+  @override
+  String get planned => 'Planned';
+
+  @override
+  String get noStudyPlanYet => 'No study plan yet';
+
+  @override
+  String get calendar => 'Calendar';
+
+  @override
+  String get redistribute => 'Redistribute';
+
+  @override
+  String topicCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics',
+      one: '1 topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syllabusTopics(int count) {
+    return 'Topics: $count syllabus topics';
+  }
+
+  @override
+  String get masteryRequirement => 'Mastery >= 80% on all milestone topics';
+
+  @override
+  String noTopicsFoundForSubject(String subjectId) {
+    return 'No topics found for subject $subjectId';
+  }
+
+  @override
+  String failedToResolveSyllabus(String error) {
+    return 'Failed to resolve syllabus: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopic(String error) {
+    return 'Failed to get questions for topic: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopics(String error) {
+    return 'Failed to get questions for topics: $error';
+  }
 }

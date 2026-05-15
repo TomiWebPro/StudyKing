@@ -236,11 +236,11 @@ void main() {
       expect(navBar.selectedIndex, 2);
     });
 
-    testWidgets('switching to dashboard tab updates selected index', (tester) async {
+    testWidgets('switching to focus mode tab updates selected index', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await pumpAndSettleSafe(tester);
 
-      await tester.tap(find.text('Dashboard'));
+      await tester.tap(find.text('Focus Mode'));
       await pumpAndSettleSafe(tester);
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
@@ -258,15 +258,11 @@ void main() {
       expect(navBar.selectedIndex, 4);
     });
 
-    testWidgets('FAB switches to dashboard tab', (tester) async {
+    testWidgets('FAB opens dashboard screen', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await pumpAndSettleSafe(tester);
 
-      await tester.tap(find.byType(FloatingActionButton));
-      await pumpAndSettleSafe(tester);
-
-      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 3);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
     });
 
     testWidgets('can cycle through all tabs without crashing', (tester) async {

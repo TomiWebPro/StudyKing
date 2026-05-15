@@ -1,134 +1,100 @@
-# Critical Test Gaps: 8 Untested Core Models, 6 Missing Feature Tests, and Pervasive Inadequate Coverage
+# Test Coverage Quality & Structural Gaps
 
 ## Context
 
-Despite a large test suite, **structural weaknesses** undermine regression protection. The completed issue `test_master.md` covered `MentorService._checkAndHandlePlanningIntent` and provider boilerplate. This issue addresses **remaining gaps at every layer**: untested foundational models, missing feature‑level test files, dangerously shallow tests, and universal holes across all model tests.
+The test suite is **complete by file count** — every source widget, service, provider, repository, model, and adapter has a matching test file. However, many tests are **superficial, missing assertions, or omit critical scenarios**. Additionally, **85 `_Fake*` classes are duplicated** across files rather than shared, creating maintenance fragility.
 
 ---
 
-## Problem 1: 8 Core Data Models Have Zero Tests
+## Issue 1 — Vacuous Tests (no assertions)
 
-These models underpin the entire app — they are persisted via Hive and consumed by every feature — yet have **no test file whatsoever**. A regression in serialization, field mapping, or default values would go undetected until runtime.
+Two tests in `plan_summary_card_test.dart` call `pumpWidget` but never call `expect` — they pass trivially and provide zero coverage value.
 
-| Source File | Key Classes | Risk |
-|---|---|---|
-| `lib/core/data/models/badge_model.dart` | `BadgeModel`, `BadgeDefinition`, `BadgeDefinitions`, `CheckOperator` | Badge logic (`isSatisfiedBy`, `getById`) and Hive persistence |
-| `lib/core/data/models/engagement_nudge_model.dart` | `EngagementNudgeModel`, `NudgeType`, `NudgeSeverity` | Nudge creation & dedup, enum mappings, `copyWith` (9 fields) |
-| `lib/core/data/models/mastery_improvement_metric_model.dart` | `MasteryImprovementMetric`, `MasteryLevel` | JSON serialization, `leveledUp` computed getter |
-| `lib/core/data/models/pending_action_model.dart` | `PendingActionModel`, `PendingActionType` | Action type discrimination, string/name consistency, `copyWith` (8 fields) |
-| `lib/core/data/models/plan_adherence_metric_model.dart` | `PlanAdherenceMetric` | JSON serialization, adherence score field wiring |
-| `lib/core/data/models/plan_adherence_model.dart` | `PlanAdherenceModel` | Hive roundtrip, `copyWith` (10 fields), nullable fields |
-| `lib/core/data/models/roadmap_model.dart` | `RoadmapModel`, `MilestoneModel` | Nested JSON with `plannedVsActual` and `milestones`, two Hive type IDs |
-| `lib/core/data/models/student_availability_model.dart` | `StudentAvailabilityModel` | `isAvailableOn` date logic, `copyWith` (7 fields), blackout dates, Hive type 35 |
+**Files:**
+- `test/features/planner/presentation/widgets/plan_summary_card_test.dart:71` — `shows estimated coverage percentage` (no assertions)
+- `test/features/planner/presentation/widgets/plan_summary_card_test.dart:104` — `does not show focus areas section when empty` (no assertions)
 
-**Acceptance Criteria:**
-- Each model above has a corresponding `*_test.dart` in `test/core/data/models/`
-- Tests cover: all constructors (required + named), `copyWith` (each field + null semantics), `toJson`/`fromJson` roundtrip (where applicable), `==`/`hashCode`, `toString`, edge cases (null/empty/negative/boundary), and `HiveObject` type IDs
+**Rationale:** These tests create a widget with specific data but verify nothing. They give a false sense of coverage and waste CI time.
+
+**AC:** Both tests should contain appropriate `expect` calls (e.g. verifying the coverage % text renders, verifying focus area text is absent).
 
 ---
 
-## Problem 2: 6 Feature-Level Source Files Missing Tests
+## Issue 2 — Duplicate Identical Test
 
-Per AGENTS.md convention, every source file must have a matching test. These files are entirely uncovered:
+Two tests in `planner_screen_test.dart` assert exactly the same thing.
 
-| Source File | Expected Test | Type | Complexity |
-|---|---|---|---|
-| `lib/features/planner/data/repositories/student_availability_repository.dart` | `test/features/planner/data/repositories/student_availability_repository_test.dart` | Repository | Hive CRUD + date queries |
-| `lib/features/planner/presentation/widgets/calendar_view_widget.dart` | `test/features/planner/presentation/widgets/calendar_view_widget_test.dart` | Widget | 175‑line StatefulWidget with calendar grid |
-| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | `test/features/planner/presentation/widgets/progress_overlay_widget_test.dart` | Widget | 188‑line complex progress UI |
-| `lib/features/planner/services/action_executor.dart` | `test/features/planner/services/action_executor_test.dart` | Service | Pending action execution pipeline |
-| `lib/features/sessions/services/session_export_service.dart` | `test/features/sessions/services/session_export_service_test.dart` | Service | Data export logic |
-| `lib/features/subjects/providers/topic_repository_provider.dart` | `test/features/subjects/providers/topic_repository_provider_test.dart` | Provider | Riverpod provider wiring |
+**Files:**
+- `test/features/planner/presentation/planner_screen_test.dart:304` — `shows title and form fields`
+- `test/features/planner/presentation/planner_screen_test.dart:315` — `shows title and form labels`
 
-**Acceptance Criteria:**
-- All 6 files above have matching `*_test.dart` files following existing conventions (hand‑written fakes, `ProviderScope` with overrides for widgets)
-- Repository and service tests cover success paths, error/edge cases, and Hive interaction
-- Widget tests verify rendering and user interaction
+Both pump the same widget and assert `find.text('Study Planner')`, `find.text('Create Study Plan')`, `find.text('Generate Plan')`.
+
+**Rationale:** Duplicate tests increase maintenance burden without improving coverage.
+
+**AC:** Remove the duplicate (`shows title and form labels`) or differentiate it with a unique assertion.
 
 ---
 
-## Problem 3: Existing Tests That Are Dangerously Inadequate
+## Issue 3 — Incomplete / Misleading Test Scenarios
 
-Four existing tests provide **false confidence** — they are either placeholder tests or test mocks instead of real logic:
+### 3a. "duration can be decreased" never decreases
+`lesson_booking_sheet_test.dart:170` — test name promises a decrease interaction but only checks the initial `'30 minutes'` text. The decrease button is never tapped.
 
-### 3a. `source_model_test.dart` — 3 assertions, no serialization
-Only tests 3 constructor variants. **`toJson`, `fromJson`, `copyWith`, `==`/`hashCode`, `toString`, and all edge cases are missing.**
+**Fix:** Tap `Icons.remove_circle_outline` and verify `'15 minutes'` appears.
 
-### 3b. `database_service_test.dart` — Placeholder
-Single test: `expect(DatabaseService(), isNotNull)`. **Zero behavior is exercised.**
+### 3b. ProgressOverlayWidget color tests only check text, not color
+`progress_overlay_widget_test.dart:37-65` — Three tests ("green/50%/red" for 100%/50%/30%) only assert the percentage text string. The actual `progressColor` logic determining green/orange/red is never verified.
 
-### 3c. `student_id_service_test.dart` — Singleton + null check only
-Tests singleton identity and that one provider is not null. **ID generation, caching, persistence, Hive interaction, and all other providers are untested.**
+**Fix:** Check for specific `Color` values on the rendered container or progress bar using `tester.widget`.
 
-### 3d. `plan_repository_test.dart` — Tests a mock, not the real class
-Uses `_MockPlanRepository` with in-memory map that bypasses all real Hive logic. `init()` is never called. The test suite is self‑referential — it tests `MockPlanRepository`'s in‑memory map, not `PlanRepository`.
+### 3c. CalendarViewWidget misses key behaviors
+`calendar_view_widget_test.dart` — covers month header, day cells, and navigation, but misses:
+- Tapping a day **without** topics (no `onDayTap` fire)
+- Rest day rendering in calendar
+- Empty plan (zero `dailyPlans`)
+- Month-boundary navigation (Dec → Jan)
 
-**Acceptance Criteria:**
-- `source_model_test.dart`: Add `toJson`/`fromJson` roundtrip, `copyWith` each field, `==`/`hashCode`, `toString`, edge cases (null `title`/`type`, invalid `type` string in JSON)
-- `database_service_test.dart`: Add real integration tests or replace with a meaningful contract test
-- `student_id_service_test.dart`: Test `getStudentId()` (first‑call generation vs. cached), `setStudentId()` persistence, all 3 providers resolve correctly
-- `plan_repository_test.dart`: Test the real `PlanRepository` backed by a temp Hive box, covering `init`, `savePlan`, `loadPlan`, `deletePlan`, `hasPlan`, `getAllPlans`; remove self‑referential mock test
+**Fix:** Add tests for each edge case.
 
----
+### 3d. LessonBookingSheet: conflict UI untested
+The source widget has a `_hasConflict` flag showing a `warning_amber_rounded` icon and a red container, plus a `SnackBar` when scheduling with a conflict. None of these paths are tested.
 
-## Problem 4: Universal Gaps Across ALL Model Tests
+**Fix:** Add tests for conflict detection rendering and conflict-blocked scheduling.
 
-Every model test file (`test/core/data/models/*_test.dart`) is missing the same three categories:
+### 3e. PlannerScreen: "Pending Actions" tab untested
+The 1408-line `planner_screen_test.dart` covers "Study Plan" and "Roadmaps" tabs thoroughly, but never switches to the "Pending Actions" tab.
 
-| Gap | Example Files Affected | Impact |
-|---|---|---|
-| **`==` operator / `hashCode`** | All 20 existing model tests | Identity vs. equality bugs go undetected. Many models use `HiveObject` identity equality — never verified. |
-| **`toString`** | 18 of 20 model tests | Debug output silently changes; no test catches it. |
-| **Error handling** (malformed JSON, missing non‑nullable fields, wrong types, DateTime parsing failures) | All 20 existing model tests | Every `fromJson` has `??` fallbacks and error recovery that are never exercised. A regression that silently returns broken defaults instead of throwing would be invisible. |
-
-**Acceptance Criteria:**
-- Every `*_model_test.dart` adds at least one test for `==`/`hashCode` (or documents intentional identity‑based equality)
-- Every `*_model_test.dart` adds at least one `toString` assertion
-- Every test for a model with `fromJson` adds at least one malformed/null/missing‑field JSON edge case
+**Fix:** Add tests for the Pending Actions tab — empty state, list rendering, accept/dismiss interactions.
 
 ---
 
-## Problem 5: `hive_initializer_test.dart` Incomplete
+## Issue 4 — Massive Duplication of Fake Classes (85 classes)
 
-The source `lib/core/data/hive_initializer.dart` registers **5 additional boxes** (`conversations`, `tutorSessions`, `planAdherenceMetrics`, `masteryImprovementMetrics`, `focusSessions`) and **4 additional adapter type IDs** (27, 28, 30, 31) that the test never verifies.
+**85 `_Fake*` classes** are defined across the test suite, with identical fakes for the same repository/service repeated across files:
 
-**Acceptance Criteria:**
-- Test asserts all 5 missing boxes are opened
-- Test asserts all 4 missing adapter type IDs are registered
-- Test asserts the `tearDown` list includes all opened boxes
-
----
-
-## Affected Files
-
-| File | Issue |
+| Fake Class | Files where duplicated |
 |---|---|
-| `lib/core/data/models/badge_model.dart` | No test file |
-| `lib/core/data/models/engagement_nudge_model.dart` | No test file |
-| `lib/core/data/models/mastery_improvement_metric_model.dart` | No test file |
-| `lib/core/data/models/pending_action_model.dart` | No test file |
-| `lib/core/data/models/plan_adherence_metric_model.dart` | No test file |
-| `lib/core/data/models/plan_adherence_model.dart` | No test file |
-| `lib/core/data/models/roadmap_model.dart` | No test file |
-| `lib/core/data/models/student_availability_model.dart` | No test file |
-| `test/core/data/models/source_model_test.dart` | Missing `toJson`/`fromJson`/`copyWith`/`==`/`hashCode`/`toString`/edge cases |
-| `test/core/data/database_service_test.dart` | Placeholder — one `isNotNull` assertion |
-| `test/core/services/student_id_service_test.dart` | Only singleton + null check, no logic tests |
-| `test/features/planner/data/repositories/plan_repository_test.dart` | Tests mock, not real `PlanRepository` |
-| `test/core/data/hive_initializer_test.dart` | Missing 5 boxes and 4 adapter ID checks |
-| `lib/features/planner/data/repositories/student_availability_repository.dart` | No test file |
-| `lib/features/planner/presentation/widgets/calendar_view_widget.dart` | No test file |
-| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | No test file |
-| `lib/features/planner/services/action_executor.dart` | No test file |
-| `lib/features/sessions/services/session_export_service.dart` | No test file |
-| `lib/features/subjects/providers/topic_repository_provider.dart` | No test file |
-| All `test/core/data/models/*_test.dart` (20 files) | Missing `==`/`hashCode`/`toString`/error‑handling tests |
+| `_FakeSessionRepository` | `session_history_screen_test`, `subject_detail_screen_test`, `subject_history_tab_test`, `subject_stats_tab_test`, `dashboard_data_loader_test`, `practice_session_service_test`, `engagement_scheduler_test`, `session_tracker_screen_test`, `planner_screen_test` |
+| `_FakeTopicRepository` | `planner_screen_test`, `lesson_service_test`, `dashboard_data_loader_test`, `topic_list_screen_test`, `upload_screen_test`, `database_service_test` |
+| `_FakeMasteryGraphRepository` | `planner_screen_test`, `dashboard_screen_test` |
+| `_FakeQuestionRepository` | `practice_data_service_test`, `practice_screen_test`, `database_service_test`, `main_screen_test`, `question_repository_test` |
+
+**Root Cause:** There are no shared test utility or `test_helpers` directories. Each test file reinvents its own fakes.
+
+**Rationale:** When a repository interface changes, every file with its duplicate fake must be updated. This has already caused inconsistency (some fakes use `noSuchMethod`, others don't; some implement all methods, others only partial).
+
+**AC:** Extract shared fake classes into `test/helpers/` or per-feature `test/features/*/helpers/`. Each repository/service should have exactly one canonical fake used across the suite.
 
 ---
 
-## Rationale
+## Acceptance Criteria (Summary)
 
-1. **Core models are the foundation** — 8 untested `HiveObject` subclasses create risk of silent data corruption. A wrong `copyWith` default, a missing `toJson` field, or a broken `fromJson` null‑handling path would corrupt persisted data before anyone notices.
-2. **Placeholder and mock‑test tests inflate the suite** — They pass CI but catch zero real bugs. The `plan_repository_test.dart` pattern (test a mock != test the real class) is especially dangerous because it provides the illusion of coverage.
-3. **Universal gaps compound** — No model test checks `==`/`hashCode` or `toString`. Every model test lacks `fromJson` error‑handling coverage. Fixing these once across all models is far cheaper than fixing each individually.
-4. **Hive initializer incompleteness** is a ticking clock — if a new box name changes or an adapter ID collides, no test will catch it.
+1. Add assertions to the two vacuous tests in `plan_summary_card_test.dart`.
+2. Remove the duplicate planner screen test.
+3. Add the missing interaction/assertion to `lesson_booking_sheet` duration decrease test.
+4. Verify actual rendered colors (not just text) in `progress_overlay_widget` color tests.
+5. Add edge-case tests to `calendar_view_widget`: empty plan, rest day, no-topic tap.
+6. Add conflict-UI and conflict-blocking tests to `lesson_booking_sheet`.
+7. Add "Pending Actions" tab tests to `planner_screen_test`.
+8. Extract the 85 duplicated `_Fake*` classes into shared test helpers.

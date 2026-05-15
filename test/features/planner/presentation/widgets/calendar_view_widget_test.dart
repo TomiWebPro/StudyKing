@@ -154,5 +154,115 @@ void main() {
       expect(capturedTopicTitle, 'Algebra');
       expect(capturedSubjectId, 'subj-1');
     });
+
+    testWidgets('tapping a day without topics does not fire onDayTap',
+        (tester) async {
+      bool wasCalled = false;
+
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(
+          plan: createPlan(),
+          onDayTap: (topicId, topicTitle, subjectId) {
+            wasCalled = true;
+          },
+        ),
+      ));
+
+      final now = DateTime.now();
+      final tomorrow = now.add(const Duration(days: 1));
+      final dayCell = find.text('${tomorrow.day}').last;
+      await tester.tap(dayCell);
+      await tester.pumpAndSettle();
+
+      expect(wasCalled, isFalse);
+    });
+
+    testWidgets('renders rest day without minutes', (tester) async {
+      final now = DateTime.now();
+      final plan = PersonalLearningPlan(
+        studentId: 'student-1',
+        generatedAt: now,
+        dailyPlans: [
+          DailyPlan(
+            date: now,
+            dayNumber: 1,
+            priorityTopics: [],
+            reviewQuestionIds: [],
+            stretchGoalQuestionIds: [],
+            targetQuestions: 0,
+            targetMinutes: 0,
+            isRestDay: true,
+          ),
+        ],
+        summary: PlanSummary(
+          totalQuestions: 0,
+          totalMinutes: 0,
+          newTopics: 0,
+          reviewTopics: 0,
+          estimatedCoverage: 0,
+          focusAreas: [],
+        ),
+        recommendations: [],
+        planDurationDays: 1,
+      );
+
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: plan),
+      ));
+
+      expect(find.text('${now.day}'), findsOneWidget);
+      expect(find.text('0m'), findsNothing);
+    });
+
+    testWidgets('renders with empty plan (no daily plans)', (tester) async {
+      final now = DateTime.now();
+      final plan = PersonalLearningPlan(
+        studentId: 'student-1',
+        generatedAt: now,
+        dailyPlans: [],
+        summary: PlanSummary(
+          totalQuestions: 0,
+          totalMinutes: 0,
+          newTopics: 0,
+          reviewTopics: 0,
+          estimatedCoverage: 0,
+          focusAreas: [],
+        ),
+        recommendations: [],
+        planDurationDays: 0,
+      );
+
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: plan),
+      ));
+
+      final expected = DateFormat.yMMM().format(DateTime(now.year, now.month));
+      expect(find.text(expected), findsOneWidget);
+      for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S']) {
+        expect(find.text(day), findsAtLeast(1));
+      }
+    });
+
+    testWidgets('month-boundary navigation from December to January',
+        (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: createPlan()),
+      ));
+      final monthsToDec = ((now.month - 12) % 12);
+      for (var i = 0; i < monthsToDec; i++) {
+        await tester.tap(find.byIcon(Icons.chevron_left));
+      }
+      await tester.pumpAndSettle();
+
+      final decYear = now.month > monthsToDec ? now.year : now.year - 1;
+      expect(find.text('Dec $decYear'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+
+      final janYear = decYear + 1;
+      expect(find.text('Jan $janYear'), findsOneWidget);
+    });
   });
 }

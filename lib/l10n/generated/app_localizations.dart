@@ -5371,6 +5371,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Time conflict with existing scheduled lesson'**
   String get timeConflict;
+
+  /// Success message when plan is generated
+  ///
+  /// In en, this message translates to:
+  /// **'Plan generated successfully'**
+  String get planGeneratedSuccessfully;
+
+  /// Success message when syllabus-based plan is generated
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus-based plan generated successfully'**
+  String get syllabusPlanGenerated;
+
+  /// Error message when syllabus plan generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to generate syllabus plan'**
+  String get failedToGenerateSyllabusPlan;
+
+  /// Error message when roadmap creation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create roadmap'**
+  String get failedToCreateRoadmap;
+
+  /// Error message when milestone update fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update milestone'**
+  String get failedToUpdateMilestone;
+
+  /// Success message when action is accepted
+  ///
+  /// In en, this message translates to:
+  /// **'Action accepted'**
+  String get actionAccepted;
+
+  /// Error message when action execution fails due to missing parameters
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to execute action — missing parameters'**
+  String get failedToExecuteAction;
+
+  /// Error message when accepting action fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to accept action'**
+  String get failedToAcceptAction;
+
+  /// Error message when dismissing action fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to dismiss action'**
+  String get failedToDismissAction;
+
+  /// Success message when lesson is scheduled
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson scheduled'**
+  String get lessonScheduled;
+
+  /// Error message when lesson scheduling fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to schedule lesson'**
+  String get failedToScheduleLesson;
+
+  /// Success message when plan is regenerated from adherence
+  ///
+  /// In en, this message translates to:
+  /// **'Plan regenerated based on your adherence'**
+  String get planRegeneratedFromAdherence;
+
+  /// Error message when plan regeneration fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to regenerate plan'**
+  String get failedToRegeneratePlan;
+
+  /// Success message when workload is redistributed
+  ///
+  /// In en, this message translates to:
+  /// **'Missed workload redistributed over next 3 days'**
+  String get missedWorkloadRedistributed;
+
+  /// Error message when workload redistribution fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to redistribute workload'**
+  String get failedToRedistributeWorkload;
+
+  /// Title for the progress overview section
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Overview'**
+  String get progressOverview;
+
+  /// Title for today's progress section
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Progress'**
+  String get todaysProgress;
+
+  /// Label for weekly view
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weekly;
+
+  /// Label for actual (real) values
+  ///
+  /// In en, this message translates to:
+  /// **'Actual'**
+  String get actual;
+
+  /// Label for planned values
+  ///
+  /// In en, this message translates to:
+  /// **'Planned'**
+  String get planned;
+
+  /// Empty state message when no study plan exists
+  ///
+  /// In en, this message translates to:
+  /// **'No study plan yet'**
+  String get noStudyPlanYet;
+
+  /// Tab label for calendar view
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendar;
+
+  /// Button label to redistribute workload
+  ///
+  /// In en, this message translates to:
+  /// **'Redistribute'**
+  String get redistribute;
+
+  /// Pluralized topic count
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 topic} other{{count} topics}}'**
+  String topicCount(int count);
+
+  /// Milestone description when syllabus is linked
+  ///
+  /// In en, this message translates to:
+  /// **'Topics: {count} syllabus topics'**
+  String syllabusTopics(int count);
+
+  /// Assessment criteria for milestone completion
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery >= 80% on all milestone topics'**
+  String get masteryRequirement;
+
+  /// Error message when no topics are found for a subject
+  ///
+  /// In en, this message translates to:
+  /// **'No topics found for subject {subjectId}'**
+  String noTopicsFoundForSubject(String subjectId);
+
+  /// Error message when syllabus resolution fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to resolve syllabus: {error}'**
+  String failedToResolveSyllabus(String error);
+
+  /// Error message when getting questions for a topic fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to get questions for topic: {error}'**
+  String failedToGetQuestionsForTopic(String error);
+
+  /// Error message when getting questions for topics fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to get questions for topics: {error}'**
+  String failedToGetQuestionsForTopics(String error);
 }
 
 class _AppLocalizationsDelegate

@@ -118,5 +118,128 @@ void main() {
 
       expect(find.byType(GridView), findsOneWidget);
     });
+
+    testWidgets('calls onQuickPractice when Quick Practice tapped', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          onQuickPractice: () => called = true,
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Quick Practice'));
+      await tester.pumpAndSettle();
+
+      expect(called, isTrue);
+    });
+
+    testWidgets('calls onSpacedRepetition when due and tapped', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {'s1': 3},
+          hasSubjects: true,
+          onQuickPractice: () {},
+          onSpacedRepetition: () => called = true,
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Spaced Repetition'));
+      await tester.pumpAndSettle();
+
+      expect(called, isTrue);
+    });
+
+    testWidgets('calls onTopicFocus when tapped', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () => called = true,
+          onWeakAreas: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Topic Focus'));
+      await tester.pumpAndSettle();
+
+      expect(called, isTrue);
+    });
+
+    testWidgets('calls onWeakAreas when subjects exist and tapped', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () => called = true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Weak Areas'));
+      await tester.pumpAndSettle();
+
+      expect(called, isTrue);
+    });
+
+    testWidgets('shows badge on spaced repetition when due count > 0', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {'s1': 7},
+          hasSubjects: true,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('7'), findsOneWidget);
+      expect(find.text('7 due'), findsOneWidget);
+    });
+
+    testWidgets('weak areas card is disabled when no subjects', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: false,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () => called = true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Weak Areas'));
+      await tester.pumpAndSettle();
+
+      expect(called, isFalse);
+    });
   });
 }

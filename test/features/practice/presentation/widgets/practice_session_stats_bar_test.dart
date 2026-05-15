@@ -92,5 +92,58 @@ void main() {
       expect(find.byIcon(Icons.star), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
+
+    testWidgets('renders Semantics widgets for each stat', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionStatsBar(
+          elapsedTime: '5:00',
+          correctAnswers: 8,
+          currentIndex: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Each stat has a Semantics wrapper
+      expect(find.byType(Semantics), findsWidgets);
+    });
+
+    testWidgets('renders high score percentage with correct calculation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionStatsBar(
+          elapsedTime: '1:00',
+          correctAnswers: 9,
+          currentIndex: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('90%'), findsOneWidget);
+    });
+
+    testWidgets('renders medium score percentage', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionStatsBar(
+          elapsedTime: '1:00',
+          correctAnswers: 5,
+          currentIndex: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('50%'), findsOneWidget);
+    });
+
+    testWidgets('renders low score percentage', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionStatsBar(
+          elapsedTime: '1:00',
+          correctAnswers: 1,
+          currentIndex: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('10%'), findsOneWidget);
+    });
   });
 }

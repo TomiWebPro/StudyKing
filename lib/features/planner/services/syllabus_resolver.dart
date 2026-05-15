@@ -7,6 +7,7 @@ import '../../../core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import '../../../core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class SyllabusTopicNode {
   final Topic topic;
@@ -42,12 +43,15 @@ class SyllabusResolver {
   Future<Result<List<SyllabusTopicNode>>> resolveSyllabus({
     required String subjectId,
     String? studentId,
+    AppLocalizations? l10n,
   }) async {
     try {
       await _topicRepository.init();
       final topics = await _topicRepository.getBySubject(subjectId);
       if (topics.isEmpty) {
-        return Result.failure('No topics found for subject $subjectId');
+        return Result.failure(
+          l10n?.noTopicsFoundForSubject(subjectId) ?? 'No topics found for subject $subjectId',
+        );
       }
 
       final depsResult = await _masteryRepository.getAllDependencies();
@@ -106,11 +110,16 @@ class SyllabusResolver {
     } on SyllabusException {
       rethrow;
     } catch (e) {
-      return Result.failure('Failed to resolve syllabus: $e');
+      return Result.failure(
+        l10n?.failedToResolveSyllabus(e.toString()) ?? 'Failed to resolve syllabus: $e',
+      );
     }
   }
 
-  Future<Result<List<Question>>> getQuestionsForTopic(String topicId) async {
+  Future<Result<List<Question>>> getQuestionsForTopic(
+    String topicId, {
+    AppLocalizations? l10n,
+  }) async {
     try {
       await _questionRepository.init();
       final allQuestions = await _questionRepository.getAll();
@@ -119,13 +128,16 @@ class SyllabusResolver {
           .toList();
       return Result.success(questions);
     } catch (e) {
-      return Result.failure('Failed to get questions for topic: $e');
+      return Result.failure(
+        l10n?.failedToGetQuestionsForTopic(e.toString()) ?? 'Failed to get questions for topic: $e',
+      );
     }
   }
 
   Future<Result<Map<String, List<Question>>>> getQuestionsForTopics(
-    List<String> topicIds,
-  ) async {
+    List<String> topicIds, {
+    AppLocalizations? l10n,
+  }) async {
     try {
       await _questionRepository.init();
       final allQuestions = await _questionRepository.getAll();
@@ -137,7 +149,9 @@ class SyllabusResolver {
       }
       return Result.success(result);
     } catch (e) {
-      return Result.failure('Failed to get questions for topics: $e');
+      return Result.failure(
+        l10n?.failedToGetQuestionsForTopics(e.toString()) ?? 'Failed to get questions for topics: $e',
+      );
     }
   }
 

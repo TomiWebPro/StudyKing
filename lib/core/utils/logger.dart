@@ -9,7 +9,7 @@ class Logger {
 
   void d(String message) => _log(LogLevel.debug, message);
   void i(String message) => _log(LogLevel.info, message);
-  void w(String message) => _log(LogLevel.warn, message);
+  void w(String message, [Object? error, StackTrace? stack]) => _log(LogLevel.warn, message, error, stack);
   void e(String message, [Object? error, StackTrace? stack]) => _log(LogLevel.error, message, error, stack);
 
   void _log(LogLevel level, String message, [Object? error, StackTrace? stack]) {

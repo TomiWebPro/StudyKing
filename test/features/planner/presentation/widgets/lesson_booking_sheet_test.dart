@@ -1,11 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
   await tester.pumpWidget(MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     home: Scaffold(
       body: Center(
         child: Builder(
@@ -31,6 +38,9 @@ Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
 }
 
 void main() {
+  setUpAll(() {
+    Hive.init(Directory.systemTemp.createTempSync('lesson_test_').path);
+  });
   group('LessonBookingSheet', () {
     testWidgets('renders title and topic title', (tester) async {
       await _showSheet(tester, const LessonBookingSheet(
@@ -73,6 +83,9 @@ void main() {
       final observer = _NavigatorObserverMock();
 
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         navigatorObservers: [observer],
         home: Scaffold(
           body: Center(
@@ -114,6 +127,9 @@ void main() {
       final scheduleCompleter = Completer<void>();
 
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         home: Scaffold(
           body: Center(
             child: Builder(
@@ -176,6 +192,119 @@ void main() {
       ));
 
       expect(find.text('30 minutes'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.remove_circle_outline));
+      await tester.pump();
+
+      expect(find.text('15 minutes'), findsOneWidget);
+    });
+
+    testWidgets('shows conflict warning icon and container when conflict detected',
+        (tester) async {
+      final conflictService = _FakeConflictPlannerService(conflictResult: true);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Center(
+            child: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => MediaQuery(
+                    data: const MediaQueryData(size: Size(400, 800)),
+                    child: LessonBookingSheet(
+                      topicId: 'topic-1',
+                      topicTitle: 'Algebra Basics',
+                      subjectId: 'subj-1',
+                      plannerService: conflictService,
+                      onSchedule: _fakeSchedule,
+                    ),
+                  ),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byIcon(Icons.add_circle_outline));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+    });
+
+    testWidgets('scheduling with conflict shows snackbar instead of calling onSchedule',
+        (tester) async {
+      bool onScheduleCalled = false;
+      final conflictService = _FakeConflictPlannerService(conflictResult: true);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Center(
+            child: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => MediaQuery(
+                    data: const MediaQueryData(size: Size(400, 800)),
+                    child: LessonBookingSheet(
+                      topicId: 'topic-1',
+                      topicTitle: 'Algebra Basics',
+                      subjectId: 'subj-1',
+                      plannerService: conflictService,
+                      onSchedule: (time, duration) async {
+                        onScheduleCalled = true;
+                      },
+                    ),
+                  ),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byIcon(Icons.add_circle_outline));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Schedule Lesson').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(onScheduleCalled, isFalse);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('no conflict warning when plannerService is null',
+        (tester) async {
+      await _showSheet(tester, const LessonBookingSheet(
+        topicId: 'topic-1',
+        topicTitle: 'Algebra Basics',
+        subjectId: 'subj-1',
+        onSchedule: _fakeSchedule,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     });
   });
 }
@@ -188,5 +317,21 @@ class _NavigatorObserverMock extends NavigatorObserver {
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     popCount++;
     super.didPop(route, previousRoute);
+  }
+}
+
+class _FakeConflictPlannerService extends PlannerService {
+  final bool conflictResult;
+
+  _FakeConflictPlannerService({this.conflictResult = false})
+      : super(fixedStudentId: 'test');
+
+  @override
+  Future<bool> hasSchedulingConflict({
+    required DateTime startTime,
+    required int durationMinutes,
+    String? excludeSessionId,
+  }) async {
+    return conflictResult;
   }
 }

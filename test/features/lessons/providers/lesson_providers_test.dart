@@ -52,31 +52,31 @@ class _FakeLessonService extends LessonService {
 
   @override
   Future<List<TutorSession>> getLessonsForStudent(String studentId) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _lessons;
   }
 
   @override
   Future<double> getCompletionRate(String studentId) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _completionRate;
   }
 
   @override
   Future<Map<String, double>> getProgressBySubject(String studentId) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _progressBySubject;
   }
 
   @override
   Future<Map<String, int>> getLessonCountBySubject(String studentId) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _countBySubject;
   }
 
   @override
   Future<List<TutorSession>> getUpcomingLessons(String studentId) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _upcoming;
   }
 
@@ -85,7 +85,7 @@ class _FakeLessonService extends LessonService {
     String studentId, {
     int limit = 5,
   }) async {
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _recent;
   }
 }

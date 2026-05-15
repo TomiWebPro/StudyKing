@@ -21,30 +21,24 @@ class _FakeSessionRepo extends SessionRepository {
   _FakeSessionRepo({this.sessions, this.shouldThrow = false});
 
   @override
-  Future<void> init() async {}
-
-  @override
   Future<Result<List<Session>>> getByDate(DateTime date) async {
-    if (shouldThrow) throw Exception('Session repo error');
+    if (shouldThrow) return Result.failure('Failed');
     return Result.success(sessions ?? []);
   }
 }
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   final List<MasteryState>? allMastery;
-  final Map<String, dynamic>? snapshot;
   final bool failGetAllMastery;
+  final Map<String, dynamic>? snapshot;
   final bool failGetSnapshot;
 
   _FakeMasteryGraphService({
     this.allMastery,
-    this.snapshot,
     this.failGetAllMastery = false,
+    this.snapshot,
     this.failGetSnapshot = false,
   });
-
-  @override
-  Future<void> init() async {}
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {

@@ -56,10 +56,6 @@ void main() {
       }
     });
 
-    test('init completes without error', () async {
-      await repository.init();
-    });
-
     group('save', () {
       test('stores a session', () async {
         final session = createSession(startTime: DateTime(2025, 1, 15, 10, 0));

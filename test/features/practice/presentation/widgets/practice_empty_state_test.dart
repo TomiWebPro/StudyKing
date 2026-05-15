@@ -28,5 +28,23 @@ void main() {
       expect(find.byIcon(Icons.add), findsOneWidget);
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
+
+    testWidgets('shows snackbar when add subject button tapped', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const PracticeEmptyState()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Add Subject'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add subjects from the Subjects tab'), findsOneWidget);
+    });
+
+    testWidgets('renders descriptive text', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const PracticeEmptyState()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No Practice Sessions Yet'), findsOneWidget);
+      expect(find.text('Add subjects and questions to start practicing'), findsOneWidget);
+    });
   });
 }

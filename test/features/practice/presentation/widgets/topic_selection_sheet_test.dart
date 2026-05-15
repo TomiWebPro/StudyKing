@@ -53,5 +53,61 @@ void main() {
 
       expect(find.byIcon(Icons.topic), findsNWidgets(2));
     });
+
+    testWidgets('renders select topic title', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicSelectionSheet(
+          topics: ['Algebra'],
+          onTopicSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select Topic'), findsOneWidget);
+    });
+
+    testWidgets('renders empty topics list gracefully', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicSelectionSheet(
+          topics: [],
+          onTopicSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select Topic'), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    });
+
+    testWidgets('static show displays bottom sheet', (tester) async {
+      String? selected;
+      await tester.pumpWidget(_buildTestApp(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              TopicSelectionSheet.show(
+                context,
+                topics: ['Algebra', 'Geometry'],
+                onTopicSelected: (t) => selected = t,
+              );
+            },
+            child: const Text('Show Sheet'),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select Topic'), findsOneWidget);
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Geometry'), findsOneWidget);
+
+      await tester.tap(find.text('Geometry'));
+      await tester.pumpAndSettle();
+
+      expect(selected, 'Geometry');
+    });
   });
 }

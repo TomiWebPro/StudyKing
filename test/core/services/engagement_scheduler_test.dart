@@ -156,8 +156,6 @@ class _FakePlanAdapter extends PlanAdapter {
 }
 
 class _FakeSessionRepo extends SessionRepository {
-  @override
-  Future<void> init() async {}
 
   @override
   Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);

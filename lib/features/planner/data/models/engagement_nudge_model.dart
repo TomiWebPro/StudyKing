@@ -66,6 +66,6 @@ class EngagementNudgeModel extends HiveObject {
   }
 }
 
-enum NudgeType { overwork, revision, planAdjustment, lessonReminder }
+enum NudgeType { overwork, revision, planAdjustment, lessonReminder, autoRegeneration }
 
 enum NudgeSeverity { low, medium, high }

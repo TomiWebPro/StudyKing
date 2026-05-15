@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -26,8 +27,7 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
   ConsumerState<FocusTimerScreen> createState() => _FocusTimerScreenState();
 }
 
-class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
-    with TickerProviderStateMixin {
+class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
   late final StudyTimerService _service;
 
   bool _initialized = false;
@@ -37,7 +37,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   bool _inBreak = false;
   int _breakRemaining = 0;
   final int _breakDuration = 300;
-  late AnimationController _breakController;
+  Timer? _breakTimer;
 
   Map<String, dynamic>? _todayStats;
   int _weeklyMs = 0;
@@ -46,10 +46,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   @override
   void initState() {
     super.initState();
-    _breakController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    );
     _service = ref.read(studyTimerServiceProvider);
     _initService();
   }
@@ -97,16 +93,15 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   }
 
   void _startBreakTimer() {
-    _breakController.repeat(
-      period: const Duration(seconds: 1),
-    );
-    _breakController.addListener(() {
+    _breakTimer?.cancel();
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
         _breakRemaining--;
       });
       if (_breakRemaining <= 0) {
-        _breakController.stop();
+        _breakTimer?.cancel();
+        _breakTimer = null;
         setState(() {
           _inBreak = false;
           _showSetup = true;
@@ -178,7 +173,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
 
   @override
   void dispose() {
-    _breakController.dispose();
+    _breakTimer?.cancel();
     _service.removeOnSessionComplete(_onSessionComplete);
     _service.removeOnTick(_onTick);
     _service.dispose();

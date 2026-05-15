@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
+import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -144,6 +146,93 @@ void main() {
           onAnswerSelected: (_) {},
         ),
       ));
+    });
+
+    testWidgets('renders math expression question type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.mathExpression),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Math'), findsOneWidget);
+      expect(find.text('What is 2+2?'), findsOneWidget);
+    });
+
+    testWidgets('shows no options available for single choice without options', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.singleChoice, options: []),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No options available'), findsOneWidget);
+    });
+
+    testWidgets('calls onAnswerSelected when single choice option tapped', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.singleChoice,
+            options: ['3', '4', '5'],
+            correctAnswer: '4',
+          ),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('4'));
+      expect(captured, '4');
+    });
+
+    testWidgets('renders canvas drawing question type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Diagram'), findsOneWidget);
+      expect(find.text('What is 2+2?'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('canvas onDrawingComplete calls onAnswerSelected with drawing submitted', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final canvas = tester.widget<CanvasDrawingWidget>(find.byType(CanvasDrawingWidget));
+      canvas.onDrawingComplete(Uint8List(0));
+
+      expect(captured, 'Drawing submitted');
     });
   });
 }

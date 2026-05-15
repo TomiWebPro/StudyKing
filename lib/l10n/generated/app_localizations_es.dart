@@ -3150,4 +3150,118 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get timeConflict => 'Conflicto de horario con una lección programada';
+
+  @override
+  String get planGeneratedSuccessfully => 'Plan generado exitosamente';
+
+  @override
+  String get syllabusPlanGenerated =>
+      'Plan basado en el programa generado exitosamente';
+
+  @override
+  String get failedToGenerateSyllabusPlan =>
+      'Error al generar el plan basado en el programa';
+
+  @override
+  String get failedToCreateRoadmap => 'Error al crear la hoja de ruta';
+
+  @override
+  String get failedToUpdateMilestone => 'Error al actualizar el hito';
+
+  @override
+  String get actionAccepted => 'Acción aceptada';
+
+  @override
+  String get failedToExecuteAction =>
+      'Error al ejecutar la acción — faltan parámetros';
+
+  @override
+  String get failedToAcceptAction => 'Error al aceptar la acción';
+
+  @override
+  String get failedToDismissAction => 'Error al descartar la acción';
+
+  @override
+  String get lessonScheduled => 'Lección programada';
+
+  @override
+  String get failedToScheduleLesson => 'Error al programar la lección';
+
+  @override
+  String get planRegeneratedFromAdherence =>
+      'Plan regenerado según tu cumplimiento';
+
+  @override
+  String get failedToRegeneratePlan => 'Error al regenerar el plan';
+
+  @override
+  String get missedWorkloadRedistributed =>
+      'Trabajo pendiente redistribuido en los próximos 3 días';
+
+  @override
+  String get failedToRedistributeWorkload =>
+      'Error al redistribuir el trabajo pendiente';
+
+  @override
+  String get progressOverview => 'Resumen de Progreso';
+
+  @override
+  String get todaysProgress => 'Progreso de Hoy';
+
+  @override
+  String get weekly => 'Semanal';
+
+  @override
+  String get actual => 'Real';
+
+  @override
+  String get planned => 'Planificado';
+
+  @override
+  String get noStudyPlanYet => 'Aún no hay plan de estudio';
+
+  @override
+  String get calendar => 'Calendario';
+
+  @override
+  String get redistribute => 'Redistribuir';
+
+  @override
+  String topicCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temas',
+      one: '1 tema',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syllabusTopics(int count) {
+    return 'Temas: $count temas del programa';
+  }
+
+  @override
+  String get masteryRequirement => 'Dominio >= 80% en todos los temas del hito';
+
+  @override
+  String noTopicsFoundForSubject(String subjectId) {
+    return 'No se encontraron temas para la materia $subjectId';
+  }
+
+  @override
+  String failedToResolveSyllabus(String error) {
+    return 'Error al resolver el programa: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopic(String error) {
+    return 'Error al obtener preguntas para el tema: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopics(String error) {
+    return 'Error al obtener preguntas para los temas: $error';
+  }
 }

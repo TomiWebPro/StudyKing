@@ -23,7 +23,7 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
-import 'features/dashboard/presentation/dashboard_screen.dart';
+import 'features/focus_mode/presentation/focus_timer_screen.dart';
 
 final Logger _mainLogger = const Logger('App');
 
@@ -216,7 +216,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   List<Widget> _buildTabNavigators() {
-    final studentId = widget.fixedStudentId ?? StudentIdService().getStudentId();
     return [
       TabNavigator(
         key: const ValueKey('tab_subjects'),
@@ -234,8 +233,8 @@ class _MainScreenState extends State<MainScreen> {
         navigatorKey: _navigatorKeys[2],
       ),
       TabNavigator(
-        key: const ValueKey('tab_dashboard'),
-        rootScreen: DashboardScreen(studentId: studentId),
+        key: const ValueKey('tab_focus_mode'),
+        rootScreen: const FocusTimerScreen(),
         navigatorKey: _navigatorKeys[3],
       ),
       TabNavigator(
@@ -247,9 +246,9 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _openDashboard() {
-    setState(() {
-      _selectedIndex = 3;
-    });
+    _navigatorKeys[_selectedIndex].currentState?.pushNamed(
+      AppRoutes.dashboard,
+    );
   }
 
   @override
@@ -303,9 +302,9 @@ class _MainScreenState extends State<MainScreen> {
               label: l10n.mentor,
             ),
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: l10n.dashboard,
+              icon: Icon(Icons.timer_outlined),
+              selectedIcon: Icon(Icons.timer),
+              label: l10n.focusMode,
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

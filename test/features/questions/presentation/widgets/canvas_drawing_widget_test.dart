@@ -416,6 +416,17 @@ void main() {
 
         expect(find.text('Canvas is empty'), findsNothing);
       });
+
+      testWidgets('shows stroke count after single stroke', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.textContaining('1 stroke'), findsOneWidget);
+      });
     });
 
     group('initial drawing edge cases', () {
@@ -539,7 +550,7 @@ void main() {
     });
 
     group('save completion', () {
-      testWidgets('save completes with empty data when no paint boundary', (tester) async {
+      testWidgets('save completes with data when paint boundary exists', (tester) async {
         Uint8List? captured;
         await tester.pumpWidget(buildWidget(
           onDrawingComplete: (data) => captured = data,
@@ -559,7 +570,42 @@ void main() {
         expect(captured, isNotNull);
       });
 
+      testWidgets('save with error triggers callback regardless', (tester) async {
+        bool callbackCalled = false;
+        await tester.pumpWidget(buildWidget(
+          onDrawingComplete: (_) { callbackCalled = true; },
+        ));
 
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(callbackCalled, isTrue);
+      });
+
+      testWidgets('save button re-enabled after save completes', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsOneWidget);
+      });
     });
 
     group('painter edge cases', () {

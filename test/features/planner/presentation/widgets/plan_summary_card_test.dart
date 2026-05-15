@@ -81,6 +81,8 @@ void main() {
           ),
         ),
       ));
+
+      expect(find.text('85%'), findsOneWidget);
     });
 
     testWidgets('shows focus areas when provided', (tester) async {
@@ -114,6 +116,9 @@ void main() {
           ),
         ),
       ));
+
+      expect(find.textContaining('Algebra'), findsNothing);
+      expect(find.textContaining('Geometry'), findsNothing);
     });
 
     testWidgets('renders summary chips in a wrap layout', (tester) async {

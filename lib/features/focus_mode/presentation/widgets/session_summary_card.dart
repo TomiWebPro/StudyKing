@@ -33,6 +33,7 @@ class SessionSummaryCard extends StatelessWidget {
     final stats = todayStats ?? {};
     final completed = stats['completedSessions'] as int? ?? 0;
     final total = stats['totalSessions'] as int? ?? 0;
+    final todayMs = stats['totalMs'] as int? ?? (stats['totalSeconds'] as int? ?? 0) * 1000;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -65,7 +66,7 @@ class SessionSummaryCard extends StatelessWidget {
                       width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
                       child: MetricCard(
                         icon: Icons.access_time,
-                        value: _formatDuration(stats['totalMs'] as int? ?? 0),
+                        value: _formatDuration(todayMs),
                         label: l10n.today,
                         accent: cs.primary,
                       ),

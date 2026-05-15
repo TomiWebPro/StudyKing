@@ -46,12 +46,6 @@ class _FakeLessonRepository extends LessonRepository {
 }
 
 class _FakeSessionRepository extends SessionRepository {
-  int initCallCount = 0;
-
-  @override
-  Future<void> init() async {
-    initCallCount++;
-  }
 }
 
 class _FakeSubjectRepository extends SubjectRepository {
@@ -147,7 +141,6 @@ void main() {
       expect(questionRepo.initCallCount, 1);
       expect(attemptRepo.initCallCount, 1);
       expect(lessonRepo.initCallCount, 1);
-      expect(sessionRepo.initCallCount, 1);
       expect(subjectRepo.initCallCount, 1);
       expect(conversationRepo.initCallCount, 1);
       expect(tutorSessionRepo.initCallCount, 1);

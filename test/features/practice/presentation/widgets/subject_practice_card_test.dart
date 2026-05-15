@@ -78,5 +78,43 @@ void main() {
       expect(find.byType(Card), findsOneWidget);
       expect(find.byIcon(Icons.school), findsOneWidget);
     });
+
+    testWidgets('renders practice available text for subject without code', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SubjectPracticeCard(
+          subject: Subject(id: 's1', name: 'Mathematics'),
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice available'), findsOneWidget);
+      expect(find.byIcon(Icons.quiz), findsOneWidget);
+    });
+
+    testWidgets('renders subject with code showing code', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SubjectPracticeCard(
+          subject: Subject(id: 's1', name: 'Mathematics', code: 'MATH101'),
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MATH101'), findsOneWidget);
+      expect(find.text('Practice available'), findsOneWidget);
+    });
+
+    testWidgets('renders InkWell tap target', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SubjectPracticeCard(
+          subject: Subject(id: 's1', name: 'Mathematics'),
+          onTap: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(InkWell), findsOneWidget);
+    });
   });
 }

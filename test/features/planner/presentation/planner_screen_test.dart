@@ -184,6 +184,10 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
 class _FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _storage = {};
 
+  void addAction(PendingActionModel action) {
+    _storage[action.id] = action;
+  }
+
   @override
   Future<void> init() async {}
 
@@ -302,17 +306,6 @@ void main() {
   group('PlannerScreen', () {
     group('Study Plan tab', () {
       testWidgets('renders title and form fields', (tester) async {
-        await tester.pumpWidget(_buildTestApp(
-          fixedStudentId: 'test-student',
-        ));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Study Planner'), findsWidgets);
-        expect(find.text('Create Study Plan'), findsOneWidget);
-        expect(find.text('Generate Plan'), findsOneWidget);
-      });
-
-      testWidgets('shows title and form labels', (tester) async {
         await tester.pumpWidget(_buildTestApp(
           fixedStudentId: 'test-student',
         ));
@@ -1402,6 +1395,98 @@ void main() {
 
         expect(find.text('Archived goal'), findsOneWidget);
         expect(find.text('archived'), findsOneWidget);
+      });
+    });
+
+    group('Pending Actions', () {
+      testWidgets('shows pending actions section when actions exist',
+          (tester) async {
+        final pendingRepo = _FakePendingActionRepository();
+        pendingRepo.addAction(PendingActionModel(
+          id: 'action-1',
+          studentId: 'test-student',
+          actionType: 'schedule',
+          topicTitle: 'Algebra',
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          pendingActionRepository: pendingRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pending Actions'), findsOneWidget);
+        expect(find.text('Algebra'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+        expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+      });
+
+      testWidgets('accept pending action marks it as completed',
+          (tester) async {
+        final pendingRepo = _FakePendingActionRepository();
+        pendingRepo.addAction(PendingActionModel(
+          id: 'action-2',
+          studentId: 'test-student',
+          actionType: 'schedule',
+          topicTitle: 'Physics',
+          payload: {
+            'topicId': 'topic-1',
+            'subjectId': 'subj-1',
+            'scheduledTime': DateTime.now()
+                .add(const Duration(days: 1))
+                .toIso8601String(),
+            'durationMinutes': 30,
+          },
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          pendingActionRepository: pendingRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Physics'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.check_circle_outline));
+        await tester.pumpAndSettle();
+
+        final action = await pendingRepo.get('action-2');
+        expect(action?.status, 'completed');
+      });
+
+      testWidgets('dismiss pending action marks it as rejected',
+          (tester) async {
+        final pendingRepo = _FakePendingActionRepository();
+        pendingRepo.addAction(PendingActionModel(
+          id: 'action-3',
+          studentId: 'test-student',
+          actionType: 'reschedule',
+          topicTitle: 'Chemistry',
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          pendingActionRepository: pendingRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Chemistry'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.cancel_outlined));
+        await tester.pumpAndSettle();
+
+        final action = await pendingRepo.get('action-3');
+        expect(action?.status, 'rejected');
+      });
+
+      testWidgets('pending actions section not shown when empty',
+          (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pending Actions'), findsNothing);
       });
     });
   });
