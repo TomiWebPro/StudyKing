@@ -1,93 +1,141 @@
-# Dashboard & Settings: Hardcoded English strings bypassing ARB l10n system
+# Spanish Localisation Quality Audit — Translation Duplication, Register Inconsistency & Hardcoded English
 
-## Context
+## Summary
 
-The codebase has a well-established ARB-based l10n system (2,213 keys, `en` + `es`). However, several high-traffic screens contain hardcoded English strings that bypass `AppLocalizations.of(context)!`, so Spanish users see English text on critical UI surfaces.
+A systematic audit of the Spanish (`es`) localisation reveals three categories of issues: **(A)** critical duplicate keys in ARB files causing silent translation degradation, **(B)** inconsistent register and terminology in the Spanish translation itself, and **(C)** hardcoded English strings in widget code that bypass `AppLocalizations`.  These must be resolved before adding further locales (e.g. `fr`, `de`, `pt`) because they erode trust in the i18n pipeline and create a fragile foundation for scaling.
 
-## Translation mistakes / inappropriate localisation
+---
 
-Most Spanish ARB translations are correct. The root cause is **code that ignores existing ARB keys** — not mistranslation of the ARB file itself. The Spanish translations exist but are never rendered because the code passes raw English string literals to `Text()` instead of `l10n.someKey`.
+## A — Duplicate Translation Keys in Both ARB Files
 
-## Affected files
+### Issue
+Both `lib/l10n/app_en.arb` and `lib/l10n/app_es.arb` contain **13 duplicate translation keys** in a second block starting at ~line 3856.  Because ARB files are parsed as JSON and JSON takes the **last** value for duplicate keys, the generated Dart code silently uses the *second* (duplicate) translation, which is of **lower quality**.
 
-### 1. `lib/features/dashboard/presentation/dashboard_screen.dart` (lines 88–164)
+### Affected Keys (confirmed in both `.arb` files)
 
-Seven of the eight `CollapsibleCard` titles use hardcoded English in `_cardTitle(...)`:
-
-| Line | Hardcoded string | Existing ARB key | Spanish translation (already in `app_es.arb`) |
+| Key | First occurrence | Duplicate (used) | Notes |
 |---|---|---|---|
-| 88 | `'Summary'` | **missing** — needs new key | — |
-| 96 | `'Focus Time'` | `focusTime` | `"Tiempo de Enfoque"` |
-| 113 | `'Weekly Activity'` | `weeklyActivity` | `"Actividad Semanal"` |
-| 121 | `'Plan Adherence'` | `planAdherence` | `"Adherencia al Plan"` |
-| 132 | `'Mastery Overview'` | `masteryOverview` | `"Resumen de Dominio"` |
-| 140 | `'Weak Areas'` | `weakAreas` | `"Áreas por mejorar"` |
-| 153 | `'Topic Performance'` | `topicPerformance` | `"Rendimiento por Tema"` |
-| 164 | `'Achievements'` | `achievements` | `"Logros"` |
+| `badgeAccuracyGoldDesc` | `¡Alcanzó más del 90% de precisión!` | `Logró más del 90% de precisión!` | Missing opening `¡` |
+| `badgeDailyScholarDesc` | `¡Estudió constantemente hoy!` | `Estudió consistentemente hoy!` | Missing `¡` + word change |
+| `badgeDailyScholarName` | `Estudioso Diario` | `Estudiante Diario` | Different translation |
+| `badgeWeeklyWarriorDesc` | `¡Activo durante una semana completa!` | `Activo durante una semana completa!` | Missing `¡` |
+| `nudgeOverwork` | `Ha estudiado {hours} horas hoy. ¡Considere tomar un descanso!` | `Ha estudiado {hours} horas hoy. Considere tomar un descanso!` | Missing `¡` |
+| `nudgeRevision` | `¡Hora de repasar!` | `Es hora de repasar!` | Missing `¡`, different structure |
+| `nudgePlanAdjustment` | `Ha tenido {days} días de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?` | `Ha tenido {days} días de baja adherencia. Le gustaría ajustar su plan de estudio?` | Missing `¿`, different vocabulary |
+| `badgeFirstStepDesc` | etc. | | See full diff below |
 
-For `'Summary'` a new key must be added to both ARB files (e.g. `"summary": "Summary"` / `"summary": "Resumen"`).
+### Root Cause
+The last ~450 lines of each ARB file appear to be a second generation pass or merge artifact that overlapped the original key set. The generated Dart (`lib/l10n/generated/app_localizations_es.dart`) confirms the **duplicate values are the ones actually used at runtime**.
 
-### 2. `lib/features/settings/presentation/settings_screen.dart` (lines 159–165)
+### Rationale for Fix
+- Flutter's `gen-l10n` + `dart:convert` picks the last duplicate — no warning is emitted.
+- A developer adding a new language would copy one of these files as a template, propagating the duplicates.
+- The build pipeline should be CI-gated to reject duplicate keys.
+
+### Files
+- `lib/l10n/app_es.arb` (lines 3504–3550 and 3856–3903 overlap)
+- `lib/l10n/app_en.arb` (lines 3504–3550 and 3856–3903 overlap)
+- `lib/l10n/generated/app_localizations_es.dart` (consumer)
+
+---
+
+## B — Spanish Translation Quality Issues
+
+### B.1 Inconsistent Register
+
+The project targets **neutral Latin American Spanish (formal "usted")** per `l10n.yaml:12`.  Most translations correctly use the formal imperative (e.g. `"Agregue materias"`, `"Concéntrese en sus errores"`), but one key slips into informal:
+
+| Key | Current | Should be |
+|---|---|---|
+| `practiceQuestionsFrom` (line 936) | `"Practica preguntas de {subjectName}"` | `"Practique preguntas de {subjectName}"` |
+
+### B.2 Inconsistent Terminology for Same Concept
+
+| Concept | Translation A | Translation B | Location |
+|---|---|---|---|
+| "adherence" | `cumplimiento` (line 3745) | `adherencia` (line 3925) | l. 3745 vs 3925 |
+| "consistency" | `constancia` (line 3762) | `consistencia` (line 4114) | l. 3762 vs 4114 |
+| "weak areas" | `áreas por mejorar` (line 219) | `áreas débiles` (line 4179) | l. 219, 1663 vs 3814, 4179 |
+
+**Fix**: Choose one term per concept and apply consistently across the entire `app_es.arb`.  `cumplimiento` (for adherence) and `áreas por mejorar` (for weak areas) are more idiomatic in formal Spanish.
+
+### B.3 Anglicism / Spanglish
+
+| Line | Current | Suggested |
+|---|---|---|
+| 1078 | `"Sube o pegue datos para visualizar"` | `"Cargue o pegue datos para visualizar"` |
+| 1798 | `"Error al subir"` | `"Error al cargar"` |
+
+In computing contexts `subir` (direct calque of "upload") is widely accepted but `cargar` is more formal and consistent with "usted" register.
+
+### B.4 Missing Opening Punctuation in Duplicate Section
+
+Every exclamation and question in the duplicate block (lines 3856–4302) is missing the **opening** Spanish punctuation mark (`¡` / `¿`):
+
+- `"Logró más del 90% de precisión!"` → should be `"¡Logró más del 90% de precisión!"`
+- `"Le gustaría ajustar su plan de estudio?"` → `"¿Le gustaría ajustar su plan de estudio?"`
+- `"Considere tomar un descanso!"` → `"¡Considere tomar un descanso!"`
+
+These are **actively displayed to users** because the duplicate overrides take precedence.
+
+---
+
+## C — Hardcoded English Strings Bypassing AppLocalizations
+
+### C.1 `ConversationInput` default tooltip — Localisation Trap
+
+**File:** `lib/core/widgets/conversation_input.dart:24`
 
 ```dart
-_section('Focus Mode', [
-  _tile('Focus Timer', 'Start a focused study session', ...),
-  _tile('Daily Study Cap', _getDailyCapLabel(), ...),
-]),
+this.sendTooltip = 'Send',  // hardcoded English fallback
 ```
 
-- `'Focus Mode'` → use existing `focusMode` key (`"Modo de Enfoque"` in `app_es.arb`)
-- `'Focus Timer'` → use existing `focusTime` key (`"Tiempo de Enfoque"`)
-- `'Start a focused study session'` → **missing** — needs new key
-- `'Daily Study Cap'` → **missing** — needs new key
+While the main caller (`tutor_screen.dart:291`) correctly passes `l10n.send`, any *other* widget using `ConversationInput` without explicitly setting `sendTooltip` will silently show "Send" in every locale.
 
-### 3. `lib/features/settings/presentation/settings_screen.dart` (lines 400–421, `_getDailyCapLabel` and `_showDailyCapDialog`)
+### C.2 Overtime Duration Format in Lesson Progress Bar
+
+**File:** `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:56`
 
 ```dart
-return cap > 0 ? '$cap min/day' : 'No limit';
-// ...
-title: Text(m == 0 ? 'No limit' : '$m minutes'),
+'+${elapsedMinutes - plannedDurationMinutes}m'
 ```
 
-- `'No limit'` → **missing** — needs new key in both ARB files
-- `'$cap min/day'` / `'$m minutes'` → should use `minutesValue` key (already exists: `"{count} minutos"`)
+Hardcodes the `+` prefix and `m` suffix.  A localised version should delegate to `AppLocalizations` so that Spanish users see `+5 min` (not `+5m`).
 
-### 4. `lib/features/planner/presentation/planner_screen.dart` (lines 147–148)
+### C.3 LLM Keyword Lists are English-Only
 
-```dart
-labelText: 'Subject ID (optional)',
-hintText: 'e.g. sub_physics',
-```
+**File:** `lib/features/teaching/services/conversation_manager.dart`
 
-The profile screen already has `studentIdOptional: "Student ID (Optional)"` in ARB — the planner should reuse this key instead of hardcoding.
+| Lines | Purpose | Problem |
+|---|---|---|
+| 220–222 | Answer-correctness keywords | `['correct', 'right', 'yes', ...]` — wrong for Spanish student input |
+| 225–226 | Incorrect-answer keywords | `['wrong', 'incorrect', 'not sure', ...]` — wrong for Spanish |
+| 249–250 | Exercise-detection keywords | `['exercise', 'practice', 'question', ...]` — wrong for Spanish |
 
-### 5. `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` (lines 109–125)
+A Spanish student writing `"correcto"`, `"sí"`, or `"ejercicio"` will not match any keyword.  These lists should either be localised via ARB keys or replaced with locale-agnostic heuristics.
 
-```dart
-Text('Token Usage Summary'),
-_buildUsageStat(context, 'Total Tokens', ...),
-_buildUsageStat(context, 'Total Cost', ...),
-_buildUsageStat(context, 'Done', ...),
-_buildUsageStat(context, 'Failed', ...),
-```
+---
 
-All five strings are hardcoded. ARB keys exist for `done` and `failed`; new keys needed for `'Token Usage Summary'`, `'Total Tokens'`, and `'Total Cost'`.
+## D — Systematic Gaps for Adding New Languages
 
-## Rationale
+### Infrastructure Issues
 
-1. **Dashboard** is the app's landing screen — the first thing Spanish users see. Having English card titles (`Plan Adherence`, `Weak Areas`, etc.) on this screen is the most visible l10n defect.
-2. **Settings** is where users configure their experience. Untranslated section headers diminish trust.
-3. **Planner** and **LLM Task Manager** are secondary but still actively used screens.
-4. All fixes follow the existing, well-tested pattern (`AppLocalizations.of(context)!`) already used in 182+ places across the codebase.
-5. Adding a `summary` key and a `noLimit` key to the ARB files establishes reusable translations for future screens.
+1. **No CI validation for duplicate ARB keys**: a pre-commit hook or CI step should run `flutter gen-l10n` and reject any output diff that introduces duplicates.
+2. **No lint rule for `AppLocalizations` usage**: a custom lint (or code review checklist) should ensure every `"hardcoded string"` in a presentation widget is replaced with a localised lookup.
+3. **Locale selector currently limited to `en`/`es`**: `lib/features/settings/presentation/profile_screen.dart` only offers two `DropdownMenuItem` options.  New locales require updating the dropdown, the locale provider fallback in `lib/main.dart`, and the `localeResolutionCallback`.
+4. **`l10n.yaml` only lists `en`/`es`**: adding a third language (e.g. `fr`) requires adding `app_fr.arb` and updating `supported-locales` in both `l10n.yaml` and `lib/main.dart`.
 
-## Acceptance criteria
+---
 
-- [ ] `lib/features/dashboard/presentation/dashboard_screen.dart` uses `l10n.focusTime`, `l10n.weeklyActivity`, `l10n.planAdherence`, `l10n.masteryOverview`, `l10n.weakAreas`, `l10n.topicPerformance`, `l10n.achievements`, and a new `l10n.summary` key instead of hardcoded strings.
-- [ ] `lib/features/settings/presentation/settings_screen.dart` uses `l10n.focusMode`, `l10n.focusTime`, and new keys for `'Start a focused study session'`, `'Daily Study Cap'`, and `'No limit'` / `'$cap min/day'`.
-- [ ] `lib/features/planner/presentation/planner_screen.dart` uses `l10n.studentIdOptional` instead of `'Subject ID (optional)'` and a new key for `'e.g. sub_physics'`.
-- [ ] `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` uses `l10n.done`, `l10n.failed`, and new keys for `'Token Usage Summary'`, `'Total Tokens'`, `'Total Cost'`.
-- [ ] New translation keys (`summary`, `noLimit`, `focusTimerDescription`, `dailyStudyCap`, `tokenUsageSummary`, `totalTokens`, `totalCost`, `subjectIdHint`) are added to both `app_en.arb` and `app_es.arb` with proper `@` metadata annotations.
-- [ ] `flutter gen-l10n` regenerates without errors.
-- [ ] Existing l10n tests (`test/l10n/*`) still pass.
-- [ ] Visual verification on both `en` and `es` locales confirms no hardcoded English remains on these screens.
+## Acceptance Criteria
+
+- [ ] **A.1** — Duplicate keys removed from `app_en.arb` (keep first occurrences).
+- [ ] **A.2** — Duplicate keys removed from `app_es.arb` (keep first occurrences).
+- [ ] **A.3** — `flutter gen-l10n` re-run; generated files reflect correct (first) translations.
+- [ ] **A.4** — A validation script/CI step exists that rejects duplicate keys in ARB files.
+- [ ] **B.1** — `"Practica"` → `"Practique"` in `app_es.arb:936`.
+- [ ] **B.2** — Chosen terminology (e.g. `cumplimiento`, `constancia`, `áreas por mejorar`) is applied consistently.
+- [ ] **B.4** — All Spanish strings use `¡` / `¿` where required.
+- [ ] **C.1** — Remove default `sendTooltip` in `conversation_input.dart` or make it required.
+- [ ] **C.2** — `lesson_progress_bar.dart:56` delegates overtime format to `AppLocalizations`.
+- [ ] **C.3** — Keyword lists in `conversation_manager.dart` are either localised or replaced with locale-agnostic logic.

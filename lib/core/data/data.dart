@@ -9,7 +9,7 @@ export 'models/source_model.dart';
 export 'models/student_attempt_model.dart';
 export 'models/lesson_block_model.dart';
 export 'models/lesson_model.dart';
-export 'models/study_session_model.dart';
+export 'models/session_model.dart';
 export 'models/conversation_message_model.dart';
 export 'models/tutor_session_model.dart';
 export 'models/subject_model.dart';

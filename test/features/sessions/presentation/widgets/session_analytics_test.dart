@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -22,17 +22,18 @@ Widget buildTestApp(SessionAnalyticsWidget widget) {
 void main() {
   final asOf = DateTime(2026, 1, 7, 10, 0);
 
-  StudySession buildSession({
+  Session buildSession({
     required String id,
     required DateTime start,
     int timeSpentMs = 0,
   }) {
-    return StudySession(
+    return Session(
       id: id,
       studentId: 'student-1',
       subjectId: 'math',
+      type: SessionType.practice,
       startTime: start,
-      timeSpentMs: timeSpentMs,
+      actualDurationMs: timeSpentMs,
     );
   }
 
@@ -523,6 +524,169 @@ void main() {
         final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
+    });
+
+    testWidgets('renders chart data correctly with reduceMotion and sessions', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 3600000),
+        buildSession(id: '2', start: asOf.subtract(const Duration(days: 1)), timeSpentMs: 1800000),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 2,
+          asOf: asOf,
+          reduceMotion: true,
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+      expect(find.byType(SessionAnalyticsWidget), findsOneWidget);
+    });
+  });
+
+  group('SessionAnalyticsWidget - Localization', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('renders day names in Spanish with es locale', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+        home: Scaffold(
+          body: SizedBox(
+            height: 1200,
+            child: SessionAnalyticsWidget(
+              sessions: [],
+              currentStreak: 0,
+              asOf: asOf,
+            ),
+          ),
+        ),
+      ));
+
+      for (var i = 0; i < 7; i++) {
+        final day = DateFormat('E', 'es').format(asOf.subtract(Duration(days: i)));
+        expect(find.text(day), findsOneWidget);
+      }
+    });
+
+    testWidgets('renders metric card labels in Spanish', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+        home: Scaffold(
+          body: SizedBox(
+            height: 1200,
+            child: const SessionAnalyticsWidget(
+              sessions: [],
+              currentStreak: 0,
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text('Sesión Prom.'), findsOneWidget);
+      expect(find.text('Sesiones Totales'), findsOneWidget);
+      expect(find.text('Racha Actual'), findsOneWidget);
+      expect(find.text('Tiempo Total'), findsOneWidget);
+    });
+  });
+
+  group('SessionAnalyticsWidget - daysToShow window boundaries', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('renders single day with daysToShow=1', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 3600000),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 1,
+          daysToShow: 1,
+          asOf: asOf,
+        ),
+      ));
+
+      final day = DateFormat('E').format(asOf);
+      expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
+      expect(find.text('1'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('renders large window with daysToShow=30', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 3600000),
+        buildSession(id: '2', start: asOf.subtract(const Duration(days: 15)), timeSpentMs: 1800000),
+        buildSession(id: '3', start: asOf.subtract(const Duration(days: 29)), timeSpentMs: 900000),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 3,
+          daysToShow: 30,
+          asOf: asOf,
+        ),
+      ));
+
+      for (var i = 0; i < 30; i++) {
+        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
+      }
+    });
+
+    testWidgets('handles daysToShow=1 with no sessions', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+          daysToShow: 1,
+        ),
+      ));
+
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
+    });
+  });
+
+  group('SessionAnalyticsWidget - Zero duration edge cases', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('handles sessions with zero actualDurationMs', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 0),
+        buildSession(id: '2', start: asOf, timeSpentMs: 0),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 0,
+          asOf: asOf,
+        ),
+      ));
+
+      expect(find.text('2'), findsAtLeastNWidgets(1));
+      expect(find.text('0s'), findsAtLeastNWidgets(1));
     });
   });
 }

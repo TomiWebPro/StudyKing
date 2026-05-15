@@ -4472,7 +4472,7 @@ abstract class AppLocalizations {
   /// **'First Step'**
   String get badgeFirstStepName;
 
-  /// Description of the First Step badge
+  /// Description for the 'first attempt' badge
   ///
   /// In en, this message translates to:
   /// **'Answered your first question!'**
@@ -4490,49 +4490,49 @@ abstract class AppLocalizations {
   /// **'Answered 100+ questions!'**
   String get badgeCenturyDesc;
 
-  /// Name of the badge earned for achieving 90 percent accuracy
+  /// Name for the 'accuracy gold' badge
   ///
   /// In en, this message translates to:
   /// **'Accuracy Gold'**
   String get badgeAccuracyGoldName;
 
-  /// Description of the Accuracy Gold badge
+  /// Description for the 'accuracy gold' badge
   ///
   /// In en, this message translates to:
   /// **'Achieved 90%+ accuracy!'**
   String get badgeAccuracyGoldDesc;
 
-  /// Name of the badge earned for studying consistently today
+  /// Name for the 'daily streak' badge
   ///
   /// In en, this message translates to:
   /// **'Daily Scholar'**
   String get badgeDailyScholarName;
 
-  /// Description of the Daily Scholar badge
+  /// Description for the 'daily streak' badge
   ///
   /// In en, this message translates to:
   /// **'Studied consistently today!'**
   String get badgeDailyScholarDesc;
 
-  /// Name of the badge earned for studying 10 plus hours total
+  /// Name for the 'ten hours' badge
   ///
   /// In en, this message translates to:
   /// **'Dedicated Learner'**
   String get badgeDedicatedLearnerName;
 
-  /// Description of the Dedicated Learner badge
+  /// Description for the 'ten hours' badge
   ///
   /// In en, this message translates to:
   /// **'Studied 10+ hours total!'**
   String get badgeDedicatedLearnerDesc;
 
-  /// Name of the badge earned for being active for a full week
+  /// Name for the 'week streak' badge
   ///
   /// In en, this message translates to:
   /// **'Weekly Warrior'**
   String get badgeWeeklyWarriorName;
 
-  /// Description of the Weekly Warrior badge
+  /// Description for the 'week streak' badge
   ///
   /// In en, this message translates to:
   /// **'Active for a full week!'**
@@ -4730,19 +4730,19 @@ abstract class AppLocalizations {
   /// **'Review weak topics with the AI tutor'**
   String get recommendAiTutor;
 
-  /// Nudge message when student overworks, showing hours studied
+  /// Overwork nudge message
   ///
   /// In en, this message translates to:
   /// **'You have studied {hours} hours today. Consider taking a break!'**
   String nudgeOverwork(String hours);
 
-  /// Nudge message to remind student to review a topic
+  /// Revision nudge message
   ///
   /// In en, this message translates to:
   /// **'It has been {days} days since you practiced \"{topic}\". Time for a review!'**
   String nudgeRevision(int days, String topic);
 
-  /// Nudge message suggesting plan adjustment due to low adherence
+  /// Plan adjustment nudge message
   ///
   /// In en, this message translates to:
   /// **'You have had {days} days of low plan adherence. Would you like to adjust your study plan?'**
@@ -4838,7 +4838,7 @@ abstract class AppLocalizations {
   /// **'General review'**
   String get planFocusGeneralReview;
 
-  /// Focus label when most topics are weak areas
+  /// Weak areas focus label
   ///
   /// In en, this message translates to:
   /// **'Focus on weak areas'**
@@ -5353,6 +5353,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Great work! You studied {actualMinutes} min vs {plannedMinutes} min planned.'**
   String adherenceExceededToday(Object actualMinutes, Object plannedMinutes);
+
+  /// Label showing overtime duration in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'+{minutes}m'**
+  String overtimeLabel(int minutes);
+
+  /// Comma-separated list of keywords indicating a correct answer
+  ///
+  /// In en, this message translates to:
+  /// **'correct,right,yes,got it,understood,i see,that makes sense,true,exactly'**
+  String get correctAnswerKeywords;
+
+  /// Comma-separated list of keywords indicating an incorrect answer
+  ///
+  /// In en, this message translates to:
+  /// **'wrong,incorrect,not sure,confused,don\'t know,don\'t understand,no,mistake,error'**
+  String get incorrectAnswerKeywords;
+
+  /// Comma-separated list of keywords indicating an exercise request
+  ///
+  /// In en, this message translates to:
+  /// **'exercise,practice,question,quiz,problem,test me,challenge,example'**
+  String get exerciseKeywords;
 }
 
 class _AppLocalizationsDelegate

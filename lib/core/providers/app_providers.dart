@@ -5,7 +5,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -20,7 +20,7 @@ final database = DatabaseService(
   questionRepository: QuestionRepository(),
   attemptRepository: AttemptRepository(),
   lessonRepository: LessonRepository(),
-  sessionRepository: StudySessionRepository(),
+  sessionRepository: SessionRepository(),
   subjectRepository: SubjectRepository(),
   conversationRepository: ConversationRepository(),
   tutorSessionRepository: TutorSessionRepository(),

@@ -19,6 +19,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Type a message...',
+          sendTooltip: 'Send',
           onSend: () {},
         ),
       ));
@@ -35,6 +36,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () => sent = true,
         ),
       ));
@@ -51,6 +53,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () => sent = true,
         ),
       ));
@@ -67,6 +70,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           isLoading: true,
           onSend: () {},
         ),
@@ -83,6 +87,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           isLoading: true,
           onSend: () {},
         ),
@@ -99,6 +104,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           isEnabled: false,
           onSend: () {},
         ),
@@ -115,6 +121,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           isEnabled: false,
           onSend: () {},
         ),
@@ -131,6 +138,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () {},
           leading: const Icon(Icons.attach_file),
         ),
@@ -146,6 +154,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () {},
           trailing: [
             IconButton(
@@ -160,13 +169,14 @@ void main() {
       expect(find.byIcon(Icons.send_rounded), findsNothing);
     });
 
-    testWidgets('shows default send button when trailing is null', (tester) async {
+    testWidgets('shows send button when trailing is null', (tester) async {
       final controller = TextEditingController();
 
       await tester.pumpWidget(wrapApp(
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () {},
         ),
       ));
@@ -190,13 +200,14 @@ void main() {
       expect(find.byTooltip('Send message'), findsOneWidget);
     });
 
-    testWidgets('send button has semantics with default tooltip', (tester) async {
+    testWidgets('send button shows provided tooltip', (tester) async {
       final controller = TextEditingController();
 
       await tester.pumpWidget(wrapApp(
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () {},
         ),
       ));
@@ -214,6 +225,7 @@ void main() {
           controller: controller,
           focusNode: focusNode,
           hintText: 'Message',
+          sendTooltip: 'Send',
           onSend: () {},
         ),
       ));
@@ -231,6 +243,7 @@ void main() {
         ConversationInput(
           controller: controller,
           hintText: 'Message',
+          sendTooltip: 'Send',
           isLoading: true,
           isEnabled: true,
           onSend: () {},
@@ -254,6 +267,7 @@ void main() {
               body: ConversationInput(
                 controller: controller,
                 hintText: 'Message',
+                sendTooltip: 'Send',
                 onSend: () {},
               ),
             ),

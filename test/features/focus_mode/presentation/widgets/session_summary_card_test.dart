@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -11,6 +11,25 @@ Widget _buildTestApp(Widget widget) {
     home: Scaffold(
       body: widget,
     ),
+  );
+}
+
+Session _session({
+  required String id,
+  required DateTime startTime,
+  int plannedDurationMinutes = 25,
+  int actualDurationMs = 1500000,
+  bool completed = true,
+}) {
+  return Session(
+    id: id,
+    studentId: 'student-1',
+    startTime: startTime,
+    endTime: completed ? startTime.add(Duration(milliseconds: actualDurationMs)) : null,
+    plannedDurationMinutes: plannedDurationMinutes,
+    actualDurationMs: actualDurationMs,
+    completed: completed,
+    type: SessionType.focus,
   );
 }
 
@@ -27,7 +46,7 @@ void main() {
     testWidgets('renders today duration', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
-          todayStats: {'totalSeconds': 3600},
+          todayStats: {'totalMs': 3600000},
         ),
       ));
 
@@ -37,7 +56,7 @@ void main() {
     testWidgets('renders today duration in minutes when < 1 hour', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
-          todayStats: {'totalSeconds': 1500},
+          todayStats: {'totalMs': 1500000},
         ),
       ));
 
@@ -47,7 +66,7 @@ void main() {
     testWidgets('renders weekly duration', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
-          weeklySeconds: 7200,
+          weeklyMs: 7200000,
         ),
       ));
 
@@ -58,7 +77,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
           todayStats: {
-            'totalSeconds': 3600,
+            'totalMs': 3600000,
             'completedSessions': 3,
             'totalSessions': 5,
           },
@@ -88,12 +107,11 @@ void main() {
     testWidgets('shows recent sessions', (tester) async {
       final now = DateTime(2026, 5, 14, 10, 30);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(minutes: 25)),
           plannedDurationMinutes: 25,
-          actualDurationSeconds: 1500,
+          actualDurationMs: 1500000,
           completed: true,
         ),
       ];
@@ -109,12 +127,11 @@ void main() {
     testWidgets('shows incomplete session in recent list', (tester) async {
       final now = DateTime(2026, 5, 14, 10, 30);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(minutes: 10)),
           plannedDurationMinutes: 25,
-          actualDurationSeconds: 600,
+          actualDurationMs: 600000,
           completed: false,
         ),
       ];
@@ -130,11 +147,11 @@ void main() {
       final now = DateTime(2026, 5, 14);
       final sessions = List.generate(
         5,
-        (i) => FocusSession(
+        (i) => _session(
           id: 's$i',
           startTime: now,
           plannedDurationMinutes: 25,
-          actualDurationSeconds: 1500,
+          actualDurationMs: 1500000,
           completed: true,
         ),
       );
@@ -161,11 +178,11 @@ void main() {
           child: _buildTestApp(
             const SessionSummaryCard(
               todayStats: {
-                'totalSeconds': 3600,
+                'totalMs': 3600000,
                 'completedSessions': 2,
                 'totalSessions': 3,
               },
-              weeklySeconds: 7200,
+              weeklyMs: 7200000,
             ),
           ),
         ),
@@ -179,12 +196,11 @@ void main() {
     testWidgets('shows session time with hours in recent list', (tester) async {
       final now = DateTime(2026, 5, 14, 10, 30);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(hours: 1, minutes: 30)),
           plannedDurationMinutes: 90,
-          actualDurationSeconds: 5400,
+          actualDurationMs: 5400000,
           completed: true,
         ),
       ];
@@ -199,12 +215,11 @@ void main() {
     testWidgets('shows session start time correctly', (tester) async {
       final now = DateTime(2026, 5, 14, 8, 5);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(minutes: 25)),
           plannedDurationMinutes: 25,
-          actualDurationSeconds: 1500,
+          actualDurationMs: 1500000,
           completed: true,
         ),
       ];
@@ -219,12 +234,10 @@ void main() {
     testWidgets('shows correct icon for completed session', (tester) async {
       final now = DateTime(2026, 5, 14, 10, 30);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(minutes: 25)),
-          plannedDurationMinutes: 25,
-          actualDurationSeconds: 1500,
+          actualDurationMs: 1500000,
           completed: true,
         ),
       ];
@@ -239,12 +252,10 @@ void main() {
     testWidgets('shows correct icon for incomplete session', (tester) async {
       final now = DateTime(2026, 5, 14, 10, 30);
       final sessions = [
-        FocusSession(
+        _session(
           id: 's1',
           startTime: now,
-          endTime: now.add(const Duration(minutes: 10)),
-          plannedDurationMinutes: 25,
-          actualDurationSeconds: 600,
+          actualDurationMs: 600000,
           completed: false,
         ),
       ];
@@ -259,7 +270,7 @@ void main() {
     testWidgets('renders today stat with minutes only format', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
-          todayStats: {'totalSeconds': 45},
+          todayStats: {'totalMs': 45000},
         ),
       ));
 

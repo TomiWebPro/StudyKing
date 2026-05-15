@@ -3,8 +3,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -19,7 +19,7 @@ import '../../../../core/services/mastery_graph_service.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 
 class SessionTrackerScreen extends ConsumerStatefulWidget {
-  final StudySessionRepository? sessionRepository;
+  final SessionRepository? sessionRepository;
 
   const SessionTrackerScreen({super.key, this.sessionRepository});
 
@@ -29,9 +29,9 @@ class SessionTrackerScreen extends ConsumerStatefulWidget {
 
 class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> with WidgetsBindingObserver {
   final Logger _logger = const Logger('SessionTrackerScreen');
-  late StudySessionRepository _sessionRepository;
-  List<StudySession> _allSessions = [];
-  List<StudySession> _sortedSessions = [];
+  late SessionRepository _sessionRepository;
+  List<Session> _allSessions = [];
+  List<Session> _sortedSessions = [];
   int _currentStreak = 0;
   bool _isTrackingSession = false;
   DateTime? _sessionStartTime;
@@ -43,7 +43,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _sessionRepository = widget.sessionRepository ?? StudySessionRepository();
+    _sessionRepository = widget.sessionRepository ?? SessionRepository();
     _loadSessions();
   }
 
@@ -72,7 +72,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       if (mounted) {
         setState(() {
           _allSessions = sessions.toList();
-          _sortedSessions = List<StudySession>.from(_allSessions)
+          _sortedSessions = List<Session>.from(_allSessions)
             ..sort((a, b) => b.startTime.millisecondsSinceEpoch.compareTo(a.startTime.millisecondsSinceEpoch));
           _isLoading = false;
         });
@@ -149,15 +149,16 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 
     try {
-      await _sessionRepository.create(StudySession(
+      await _sessionRepository.save(Session(
         id: id,
         startTime: startTime,
         endTime: endTime,
-        timeSpentMs: duration,
+        actualDurationMs: duration,
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
         studentId: studentId,
         subjectId: 'all',
+        type: SessionType.manual,
       ));
     } catch (e) {
       if (mounted) {
@@ -360,6 +361,32 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     );
   }
 
+  IconData _sessionIcon(SessionType type) {
+    switch (type) {
+      case SessionType.focus:
+        return Icons.timer;
+      case SessionType.practice:
+        return Icons.play_arrow;
+      case SessionType.tutoring:
+        return Icons.school;
+      case SessionType.manual:
+        return Icons.edit_note;
+    }
+  }
+
+  Color _sessionColor(SessionType type, ThemeData theme) {
+    switch (type) {
+      case SessionType.focus:
+        return theme.colorScheme.tertiary;
+      case SessionType.practice:
+        return theme.colorScheme.primary;
+      case SessionType.tutoring:
+        return theme.colorScheme.secondary;
+      case SessionType.manual:
+        return theme.colorScheme.onSurfaceVariant;
+    }
+  }
+
   Widget _buildRecentSessionsList(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     if (_allSessions.isEmpty) {
@@ -387,22 +414,38 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         final session = recentSessions[index];
         final position = _sortedSessions.indexOf(session);
 
+        final icon = _sessionIcon(session.type);
+        final color = _sessionColor(session.type, theme);
+
         return Semantics(
           label: l10n.sessionNumber(_sortedSessions.length - position),
           child: Card(
             margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
             child: ListTile(
-              leading: Icon(Icons.play_arrow, color: theme.primaryColor),
-              title: Text(
-                l10n.sessionNumber(_sortedSessions.length - position),
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              title: Row(
+                children: [
+                  Text(
+                    l10n.sessionNumber(_sortedSessions.length - position),
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(icon, size: 14, color: color),
+                ],
               ),
               subtitle: Text(
-                '${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))} • ${formatDateFromContext(context, session.startTime)}',
+                '${formatDurationFromContext(context, session.actualDuration)} • ${formatDateFromContext(context, session.startTime)}',
                 style: theme.textTheme.bodySmall,
               ),
               trailing: Text(
-                formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs)),
+                formatDurationFromContext(context, session.actualDuration),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.primaryColor,

@@ -13,7 +13,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'shared_test_helpers.dart';
 
@@ -885,8 +885,8 @@ void main() {
         Hive.init(Directory.systemTemp.createTempSync('prac_session_test_').path);
       });
 
-      testWidgets('saves session on completion via StudySessionRepository', (tester) async {
-        final sessionRepo = FakeStudySessionRepository();
+      testWidgets('saves session on completion via SessionRepository', (tester) async {
+        final sessionRepo = FakeSessionRepository();
         final questions = [
           question(id: 'q1', text: 'Test', type: QuestionType.typedAnswer, markschemeText: 'a'),
         ];
@@ -912,7 +912,7 @@ void main() {
       });
 
       testWidgets('_sessionAutoSaved guard prevents duplicate saves', (tester) async {
-        final sessionRepo = FakeStudySessionRepository();
+        final sessionRepo = FakeSessionRepository();
         final questions = [
           question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
           question(id: 'q2', text: 'Q2', type: QuestionType.typedAnswer, markschemeText: 'b'),
@@ -978,7 +978,7 @@ Widget sessionAppWithRepo({
   String? topicId,
   int? questionCount,
   NavigatorObserver? observer,
-  StudySessionRepository? sessionRepo,
+  SessionRepository? sessionRepo,
   SpacedRepetitionRepository? srRepo,
   bool isSpacedRepetition = false,
 }) {
@@ -986,7 +986,7 @@ Widget sessionAppWithRepo({
     overrides: [
       questionRepositoryProvider.overrideWithValue(result),
       if (sessionRepo != null)
-        studySessionRepositoryProvider.overrideWithValue(sessionRepo),
+        sessionRepositoryProvider.overrideWithValue(sessionRepo),
       if (srRepo != null)
         spacedRepetitionRepositoryProvider.overrideWithValue(srRepo),
     ],

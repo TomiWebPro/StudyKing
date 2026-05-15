@@ -7,7 +7,7 @@ import 'package:studyking/features/practice/data/repositories/attempt_repository
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -60,7 +60,7 @@ class _FakeTutorService extends TutorService {
             questionRepository: QuestionRepository(),
             attemptRepository: AttemptRepository(),
             lessonRepository: LessonRepository(),
-            sessionRepository: StudySessionRepository(),
+            sessionRepository: SessionRepository(),
             subjectRepository: SubjectRepository(),
             conversationRepository: ConversationRepository(),
             tutorSessionRepository: TutorSessionRepository(),
@@ -76,12 +76,18 @@ class _FakeTutorService extends TutorService {
     required String subjectId,
     required String topicId,
     required String topicTitle,
+    required List<String> correctKeywords,
+    required List<String> incorrectKeywords,
+    required List<String> exerciseKeywords,
     int durationMinutes = 45,
   }) async {
     final manager = ConversationManager(
       llmService: _FakeLlmService(),
       modelId: 'test-model',
       sessionId: 'test-session',
+      correctKeywords: correctKeywords,
+      incorrectKeywords: incorrectKeywords,
+      exerciseKeywords: exerciseKeywords,
     );
     manager.initialize(
       studentId: studentId,

@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/engagement_nudge_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/plan_adherence_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
@@ -14,8 +15,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
 class _MockAttemptRepo extends AttemptRepository {
   @override
@@ -155,16 +155,12 @@ class _FakePlanAdapter extends PlanAdapter {
   }
 }
 
-class _FakeFocusSessionService extends FocusSessionService {
-  _FakeFocusSessionService() : super(repository: _FakeFocusSessionRepo());
-
-  @override
-  Future<int> getTodayFocusSeconds() async => 0;
-}
-
-class _FakeFocusSessionRepo extends FocusSessionRepository {
+class _FakeSessionRepo extends SessionRepository {
   @override
   Future<void> init() async {}
+
+  @override
+  Future<List<Session>> getByDate(DateTime date) async => [];
 }
 
 void main() {
@@ -189,7 +185,7 @@ void main() {
         nudgeRepository: nudgeRepo,
         adherenceRepository: adherenceRepo,
         planAdapter: planAdapter,
-        focusSessionService: _FakeFocusSessionService(),
+        sessionRepository: _FakeSessionRepo(),
         config: const EngagementSchedulerConfig(
           checkHour: 9,
           checkMinute: 0,

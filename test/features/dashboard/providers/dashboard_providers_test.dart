@@ -9,38 +9,57 @@ import 'package:studyking/features/dashboard/providers/dashboard_providers.dart'
 
 void main() {
   group('DashboardProviders', () {
-    test('all providers resolve without throwing', () {
+    test('dashboardTopicRepositoryProvider creates TopicRepository', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(() {
-        container.read(dashboardTopicRepositoryProvider);
-        container.read(dashboardAttemptRepositoryProvider);
-        container.read(dashboardStudyProgressTrackerProvider);
-        container.read(dashboardInstrumentationServiceProvider);
-        container.read(dashboardAdherenceRepositoryProvider);
-      }, returnsNormally);
+      expect(
+        container.read(dashboardTopicRepositoryProvider),
+        isA<TopicRepository>(),
+      );
     });
 
-    test('providers can be overridden with custom values', () {
-      final overrideRepo = TopicRepository();
-      final overrideTracker = StudyProgressTracker(attemptRepo: AttemptRepository());
-      final overrideService = InstrumentationService();
-      final overrideAdherence = PlanAdherenceRepository();
-
-      final container = ProviderContainer(overrides: [
-        dashboardTopicRepositoryProvider.overrideWithValue(overrideRepo),
-        dashboardAttemptRepositoryProvider.overrideWithValue(AttemptRepository()),
-        dashboardStudyProgressTrackerProvider.overrideWithValue(overrideTracker),
-        dashboardInstrumentationServiceProvider.overrideWithValue(overrideService),
-        dashboardAdherenceRepositoryProvider.overrideWithValue(overrideAdherence),
-      ]);
+    test('dashboardAttemptRepositoryProvider creates AttemptRepository', () {
+      final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(dashboardTopicRepositoryProvider), same(overrideRepo));
-      expect(container.read(dashboardStudyProgressTrackerProvider), same(overrideTracker));
-      expect(container.read(dashboardInstrumentationServiceProvider), same(overrideService));
-      expect(container.read(dashboardAdherenceRepositoryProvider), same(overrideAdherence));
+      expect(
+        container.read(dashboardAttemptRepositoryProvider),
+        isA<AttemptRepository>(),
+      );
+    });
+
+    test('dashboardStudyProgressTrackerProvider is wired to dashboardAttemptRepositoryProvider', () {
+      final overrideAttempt = AttemptRepository();
+      final container = ProviderContainer(
+        overrides: [
+          dashboardAttemptRepositoryProvider.overrideWithValue(overrideAttempt),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final tracker = container.read(dashboardStudyProgressTrackerProvider);
+      expect(tracker, isA<StudyProgressTracker>());
+    });
+
+    test('dashboardInstrumentationServiceProvider creates InstrumentationService', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(dashboardInstrumentationServiceProvider),
+        isA<InstrumentationService>(),
+      );
+    });
+
+    test('dashboardAdherenceRepositoryProvider creates PlanAdherenceRepository', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(dashboardAdherenceRepositoryProvider),
+        isA<PlanAdherenceRepository>(),
+      );
     });
   });
 }

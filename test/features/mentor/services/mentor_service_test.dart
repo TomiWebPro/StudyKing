@@ -5,14 +5,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/pending_action_model.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -48,14 +48,14 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
   }
 }
 
-class FakeStudySessionRepository extends StudySessionRepository {
-  final List<StudySession> _sessions = [];
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> sessions = [];
 
-  void addSession(StudySession session) => _sessions.add(session);
+  void addSession(Session session) => sessions.add(session);
 
   @override
-  Future<List<StudySession>> getByStudent(String studentId) async {
-    return _sessions.where((s) => s.studentId == studentId).toList();
+  Future<List<Session>> getByStudent(String studentId) async {
+    return sessions.where((s) => s.studentId == studentId).toList();
   }
 }
 
@@ -97,15 +97,19 @@ class FakeLlmService extends LlmService {
 
 class FakePendingActionRepository extends PendingActionRepository {
   final List<PendingActionModel> _actions = [];
+  bool _throwOnCreate = false;
 
   List<PendingActionModel> get createdActions =>
       List.unmodifiable(_actions);
+
+  void setThrowOnCreate() => _throwOnCreate = true;
 
   @override
   Future<void> init() async {}
 
   @override
   Future<void> create(PendingActionModel action) async {
+    if (_throwOnCreate) throw Exception('Simulated error');
     _actions.add(action);
   }
 
@@ -187,7 +191,7 @@ MentorService createMentorService({
         questionRepository: QuestionRepository(),
         attemptRepository: AttemptRepository(),
         lessonRepository: LessonRepository(),
-        sessionRepository: FakeStudySessionRepository(),
+        sessionRepository: FakeSessionRepository(),
         subjectRepository: FakeSubjectRepository(),
         conversationRepository: ConversationRepository(),
         tutorSessionRepository: FakeTutorSessionRepository(),
@@ -302,7 +306,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: FakeSubjectRepository(),
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
@@ -420,7 +424,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: subjectRepo,
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: FakeTutorSessionRepository(),
@@ -450,7 +454,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: FakeSubjectRepository(),
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
@@ -476,7 +480,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: FakeSubjectRepository(),
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
@@ -507,7 +511,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: FakeSubjectRepository(),
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
@@ -541,7 +545,7 @@ void main() {
           questionRepository: QuestionRepository(),
           attemptRepository: AttemptRepository(),
           lessonRepository: LessonRepository(),
-          sessionRepository: FakeStudySessionRepository(),
+          sessionRepository: FakeSessionRepository(),
           subjectRepository: FakeSubjectRepository(),
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
@@ -753,6 +757,19 @@ void main() {
         );
         final chunks = await service.chat('schedule math review').toList();
         expect(chunks, isNotEmpty);
+      });
+
+      test('repository throws are caught silently during planning intent',
+          () async {
+        final throwingPending = FakePendingActionRepository();
+        throwingPending.setThrowOnCreate();
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: throwingPending,
+        );
+        final chunks = await service.chat('schedule a lesson').toList();
+        expect(chunks, isNotEmpty);
+        expect(throwingPending.createdActions, isEmpty);
       });
     });
 

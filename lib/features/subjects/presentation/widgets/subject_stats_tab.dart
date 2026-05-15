@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
@@ -8,7 +8,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectStatsTab extends StatelessWidget {
   final String subjectId;
-  final StudySessionRepository? sessionRepository;
+  final SessionRepository? sessionRepository;
 
   const SubjectStatsTab({
     super.key,
@@ -19,9 +19,9 @@ class SubjectStatsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sessionRepo = sessionRepository ?? StudySessionRepository();
+    final sessionRepo = sessionRepository ?? SessionRepository();
 
-    Future<List<StudySession>> loadSessions() async {
+    Future<List<Session>> loadSessions() async {
       try {
         final sessions = await sessionRepo.getAll();
         return sessions.where((s) => s.subjectId == subjectId).toList();
@@ -30,7 +30,7 @@ class SubjectStatsTab extends StatelessWidget {
       }
     }
 
-    return FutureBuilder<List<StudySession>>(
+    return FutureBuilder<List<Session>>(
       future: loadSessions(),
       builder: (context, snapshot) {
         final subjectSessions = snapshot.data ?? [];
@@ -38,7 +38,7 @@ class SubjectStatsTab extends StatelessWidget {
         final totalSessions = subjectSessions.length;
         final totalQuestions = subjectSessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
         final totalCorrect = subjectSessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
-        final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + s.timeSpentMs);
+        final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
         final avgScore = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0;
 
         return Column(

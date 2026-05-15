@@ -58,7 +58,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
-    final sessionRepo = ref.read(studySessionRepositoryProvider);
+    final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
       srRepo: _srRepo,

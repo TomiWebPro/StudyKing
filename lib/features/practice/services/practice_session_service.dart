@@ -2,16 +2,16 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
 class PracticeSessionService {
   final Logger _logger = const Logger('PracticeSessionService');
-  final StudySessionRepository _sessionRepo;
+  final SessionRepository _sessionRepo;
   final SpacedRepetitionRepository _srRepo;
   final String subjectId;
   Timer? _timer;
@@ -19,7 +19,7 @@ class PracticeSessionService {
   String? _elapsedTimeFormatted;
 
   PracticeSessionService({
-    required StudySessionRepository sessionRepo,
+    required SessionRepository sessionRepo,
     required SpacedRepetitionRepository srRepo,
     required this.subjectId,
   })  : _sessionRepo = sessionRepo,
@@ -57,20 +57,20 @@ class PracticeSessionService {
     required int correctAnswers,
   }) async {
     try {
-      await _sessionRepo.init();
       final endTime = DateTime.now();
       final duration = endTime.difference(_sessionStartTime).inMilliseconds;
       final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 
-      await _sessionRepo.create(StudySession(
+      await _sessionRepo.save(Session(
         id: id,
         startTime: _sessionStartTime,
         endTime: endTime,
-        timeSpentMs: duration,
+        actualDurationMs: duration,
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
         studentId: StudentIdService().getStudentId(),
         subjectId: subjectId,
+        type: SessionType.practice,
       ));
     } catch (e) {
       _logger.e('Failed to auto-save session', e);

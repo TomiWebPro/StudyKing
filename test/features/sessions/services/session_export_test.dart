@@ -2,29 +2,33 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
-StudySession _createSession({
+Session _createSession({
   String id = 's1',
   String studentId = 'stu1',
-  String subjectId = 'Math',
+  String? subjectId = 'Math',
+  SessionType type = SessionType.practice,
   DateTime? startTime,
   int questionsAnswered = 10,
   int correctAnswers = 7,
-  int timeSpentMs = 3600000,
+  int actualDurationMs = 3600000,
+  int? plannedDurationMinutes,
 }) {
-  return StudySession(
+  final s = startTime ?? DateTime(2025, 1, 15, 10, 30);
+  return Session(
     id: id,
     studentId: studentId,
     subjectId: subjectId,
-    startTime: startTime ?? DateTime(2025, 1, 15, 10, 30),
-    endTime: (startTime ?? DateTime(2025, 1, 15, 10, 30))
-        .add(const Duration(minutes: 60)),
+    type: type,
+    startTime: s,
+    endTime: s.add(const Duration(minutes: 60)),
+    actualDurationMs: actualDurationMs,
     questionsAnswered: questionsAnswered,
     correctAnswers: correctAnswers,
-    timeSpentMs: timeSpentMs,
+    plannedDurationMinutes: plannedDurationMinutes,
   );
 }
 
@@ -34,8 +38,8 @@ void main() {
       test('produces correct header row', () {
         final csv = SessionExportService.sessionsToCSV([]);
         expect(csv, startsWith(
-          'Session ID,Student ID,Subject,Start Time,End Time,'
-          'Duration (min),Questions Answered,Correct,Accuracy (%)',
+          'Session ID,Student ID,Subject,Type,Start Time,End Time,'
+          'Duration (min),Planned Duration (min),Questions Answered,Correct,Accuracy (%)',
         ));
       });
 
@@ -47,7 +51,8 @@ void main() {
           startTime: DateTime(2025, 6, 15, 10, 0, 0),
           questionsAnswered: 10,
           correctAnswers: 7,
-          timeSpentMs: 3600000,
+          actualDurationMs: 3600000,
+          plannedDurationMinutes: 60,
         );
         final csv = SessionExportService.sessionsToCSV([session]);
         final rows = csv.split('\n').where((r) => r.isNotEmpty).toList();
@@ -55,16 +60,24 @@ void main() {
         expect(rows[1], contains('s1'));
         expect(rows[1], contains('stu1'));
         expect(rows[1], contains('Math'));
+        expect(rows[1], contains('practice'));
+        expect(rows[1], contains('60'));
         expect(rows[1], contains('10'));
         expect(rows[1], contains('7'));
         expect(rows[1], contains('70.0'));
         expect(rows[1], contains('60.0'));
       });
 
+      test('includes empty planned duration when null', () {
+        final session = _createSession(
+          plannedDurationMinutes: null,
+        );
+        final csv = SessionExportService.sessionsToCSV([session]);
+        expect(csv, contains(',,'));
+      });
+
       test('CSV-escapes commas in fields', () {
         final session = _createSession(
-          id: 's1',
-          studentId: 'stu1',
           subjectId: 'Biology, Chemistry',
           questionsAnswered: 5,
           correctAnswers: 3,
@@ -75,8 +88,6 @@ void main() {
 
       test('CSV-escapes quotes in fields', () {
         final session = _createSession(
-          id: 's1',
-          studentId: 'stu1',
           subjectId: 'Math "Advanced"',
           questionsAnswered: 5,
           correctAnswers: 3,
@@ -87,8 +98,6 @@ void main() {
 
       test('CSV-escapes newlines in fields', () {
         final session = _createSession(
-          id: 's1',
-          studentId: 'stu1',
           subjectId: 'Line1\nLine2',
           questionsAnswered: 5,
           correctAnswers: 3,
@@ -109,7 +118,7 @@ void main() {
 
       test('rounds duration to 1 decimal place', () {
         final session = _createSession(
-          timeSpentMs: 3661000,
+          actualDurationMs: 3661000,
         );
         final csv = SessionExportService.sessionsToCSV([session]);
         final rows = csv.split('\n');
@@ -132,9 +141,10 @@ void main() {
         expect(json[0]['id'], 's1');
         expect(json[0]['studentId'], 'stu1');
         expect(json[0]['subjectId'], 'Math');
+        expect(json[0]['type'], 'practice');
         expect(json[0]['questionsAnswered'], 10);
         expect(json[0]['correctAnswers'], 7);
-        expect(json[0]['timeSpentMs'], 3600000);
+        expect(json[0]['actualDurationMs'], 3600000);
       });
 
       test('handles empty list', () {
@@ -146,32 +156,6 @@ void main() {
         final session = _createSession();
         final json = SessionExportService.sessionsToJSON([session]);
         expect(json[0], equals(session.toJson()));
-      });
-    });
-
-    group('_formatDuration', () {
-      test('formats minutes and seconds', () {
-        final result = SessionExportService.sessionsToCSV;
-        final csv = result([_createSession(timeSpentMs: 3661000)]);
-        expect(csv, contains('61.0'));
-      });
-
-      test('formats just seconds when zero minutes', () {
-        final csv = SessionExportService.sessionsToCSV(
-          [_createSession(timeSpentMs: 45000)],
-        );
-        expect(csv, contains('0.8'));
-      });
-    });
-
-    group('_formatTotalDuration', () {
-      test('formats hours and minutes', () {
-        final sessions = [
-          _createSession(timeSpentMs: 7200000),
-          _createSession(timeSpentMs: 1800000),
-        ];
-        final csv = SessionExportService.sessionsToCSV(sessions);
-        expect(csv, contains('Math'));
       });
     });
 

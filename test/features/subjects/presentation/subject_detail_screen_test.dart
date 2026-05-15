@@ -1,36 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _FakeStudySessionRepository extends StudySessionRepository {
-  final List<StudySession> _sessions;
+class _FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions;
 
-  _FakeStudySessionRepository(this._sessions) : super();
+  _FakeSessionRepository(this._sessions);
 
   @override
-  Future<List<StudySession>> getAll() async => _sessions;
+  Future<void> init() async {}
+
+  @override
+  Future<List<Session>> getAll() async => _sessions;
 }
 
-StudySession _session({
+Session _session({
   required String id,
   required String subjectId,
   int questionsAnswered = 10,
   int correctAnswers = 8,
-  int timeSpentMs = 3600000,
+  int actualDurationMs = 3600000,
 }) {
-  return StudySession(
+  return Session(
     id: id,
     studentId: 'student-1',
     subjectId: subjectId,
+    type: SessionType.practice,
     startTime: DateTime(2024, 6, 15, 10, 30),
+    actualDurationMs: actualDurationMs,
     questionsAnswered: questionsAnswered,
     correctAnswers: correctAnswers,
-    timeSpentMs: timeSpentMs,
   );
 }
 
@@ -126,7 +130,7 @@ Widget _buildTestAppWithObserver(_TestNavigatorObserver observer) {
   );
 }
 
-Widget _buildTestAppWithSessionRepo(StudySessionRepository sessionRepo) {
+Widget _buildTestAppWithSessionRepo(SessionRepository sessionRepo) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -462,8 +466,8 @@ void main() {
     });
 
     testWidgets('session details dialog shows session info with correct answers', (tester) async {
-      final repo = _FakeStudySessionRepository([
-        _session(id: 's1', subjectId: 'test-id', correctAnswers: 8, questionsAnswered: 10, timeSpentMs: 3600000),
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: 'test-id', correctAnswers: 8, questionsAnswered: 10, actualDurationMs: 3600000),
       ]);
       await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));
       await tester.pump();
@@ -480,7 +484,7 @@ void main() {
     });
 
     testWidgets('session details dialog close button dismisses dialog', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: 'test-id'),
       ]);
       await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));

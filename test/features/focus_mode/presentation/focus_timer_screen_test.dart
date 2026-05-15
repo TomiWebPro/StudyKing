@@ -4,31 +4,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 final _today = DateTime.now();
 final _todayStart = DateTime(_today.year, _today.month, _today.day);
 
-class FakeFocusSessionRepository extends FocusSessionRepository {
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions = [];
+
   @override
   Future<void> init() async {}
+
+  @override
+  Future<void> save(Session session) async {
+    _sessions.add(session);
+  }
+
+  @override
+  Future<List<Session>> getAll() async => List.from(_sessions);
+
+  @override
+  Future<Map<String, dynamic>> getTodayStats() async => {
+    'totalMs': 0,
+    'totalSeconds': 0,
+    'completedSessions': 0,
+    'totalSessions': 0,
+    'plannedMinutes': 0,
+    'hours': '0.0',
+  };
 }
 
-class FakeFocusSessionService extends FocusSessionService {
-  FakeFocusSessionService()
-      : super(repository: FakeFocusSessionRepository());
-
+class FakeStudyTimerService extends StudyTimerService {
   bool _hasActiveSession = false;
   bool _isPaused = false;
   int _elapsedSeconds = 0;
-  FocusSession? _fakeCurrentSession;
-  final List<void Function(FocusSession)> _sessionCompleteCallbacks = [];
+  Session? _fakeCurrentSession;
+  final List<void Function(Session)> _sessionCompleteCallbacks = [];
+
+  FakeStudyTimerService() : super(repository: FakeSessionRepository());
 
   @override
   bool get hasActiveSession => _hasActiveSession;
@@ -40,15 +59,15 @@ class FakeFocusSessionService extends FocusSessionService {
   int get elapsedSeconds => _elapsedSeconds;
 
   @override
-  FocusSession? get currentSession => _fakeCurrentSession;
+  Session? get currentSession => _fakeCurrentSession;
 
   @override
-  void addOnSessionComplete(void Function(FocusSession) callback) {
+  void addOnSessionComplete(void Function(Session) callback) {
     _sessionCompleteCallbacks.add(callback);
   }
 
   @override
-  void removeOnSessionComplete(void Function(FocusSession) callback) {
+  void removeOnSessionComplete(void Function(Session) callback) {
     _sessionCompleteCallbacks.remove(callback);
   }
 
@@ -60,6 +79,7 @@ class FakeFocusSessionService extends FocusSessionService {
 
   @override
   Future<Map<String, dynamic>> getTodayStats() async => {
+    'totalMs': 0,
     'totalSeconds': 0,
     'completedSessions': 0,
     'totalSessions': 0,
@@ -68,22 +88,28 @@ class FakeFocusSessionService extends FocusSessionService {
   };
 
   @override
-  Future<int> getWeeklyFocusSeconds() async => 0;
+  Future<int> getTodayDurationMs() async => 0;
 
   @override
-  Future<List<FocusSession>> getRecentSessions({int limit = 10}) async => [];
+  Future<List<Session>> getRecentSessions({int limit = 10}) async => [];
 
   @override
-  Future<FocusSession> startSession({
+  Future<Session> startSession({
     required int plannedDurationMinutes,
+    SessionType type = SessionType.focus,
+    String? studentId,
     String? subjectId,
     String? topicId,
   }) async {
     _hasActiveSession = true;
     _isPaused = false;
     _elapsedSeconds = 0;
-    _fakeCurrentSession = FocusSession(
+    _fakeCurrentSession = Session(
       id: 'test_session',
+      studentId: studentId ?? '',
+      subjectId: subjectId,
+      topicId: topicId,
+      type: type,
       startTime: DateTime.now(),
       plannedDurationMinutes: plannedDurationMinutes,
     );
@@ -101,16 +127,18 @@ class FakeFocusSessionService extends FocusSessionService {
   }
 
   @override
-  Future<FocusSession> completeSession() async {
+  Future<Session> completeSession() async {
     _hasActiveSession = false;
     _isPaused = false;
     _fakeCurrentSession = null;
-    final session = FocusSession(
+    final session = Session(
       id: 'test_session',
+      studentId: '',
+      type: SessionType.focus,
       startTime: DateTime.now(),
       endTime: DateTime.now(),
       plannedDurationMinutes: 25,
-      actualDurationSeconds: 1500,
+      actualDurationMs: 1500000,
       completed: true,
     );
     for (final cb in _sessionCompleteCallbacks) {
@@ -120,16 +148,18 @@ class FakeFocusSessionService extends FocusSessionService {
   }
 
   @override
-  Future<FocusSession> cancelSession() async {
+  Future<Session> cancelSession() async {
     _hasActiveSession = false;
     _isPaused = false;
     _fakeCurrentSession = null;
-    return FocusSession(
+    return Session(
       id: 'test_session',
+      studentId: '',
+      type: SessionType.focus,
       startTime: DateTime.now(),
       endTime: DateTime.now(),
       plannedDurationMinutes: 25,
-      actualDurationSeconds: 0,
+      actualDurationMs: 0,
       completed: false,
     );
   }
@@ -138,15 +168,17 @@ class FakeFocusSessionService extends FocusSessionService {
   Future<void> dispose() async {}
 }
 
-class _FakeCapReachedService extends FakeFocusSessionService {
+class _FakeCapReachedService extends FakeStudyTimerService {
   @override
   Future<bool> isDailyCapReached(int additionalMinutes) async => true;
 }
 
-class _FakeStartErrorService extends FakeFocusSessionService {
+class _FakeStartErrorService extends FakeStudyTimerService {
   @override
-  Future<FocusSession> startSession({
+  Future<Session> startSession({
     required int plannedDurationMinutes,
+    SessionType type = SessionType.focus,
+    String? studentId,
     String? subjectId,
     String? topicId,
   }) async {
@@ -154,10 +186,11 @@ class _FakeStartErrorService extends FakeFocusSessionService {
   }
 }
 
-class _FakeStatsService extends FakeFocusSessionService {
+class _FakeStatsService extends FakeStudyTimerService {
   @override
   Future<Map<String, dynamic>> getTodayStats() async {
     return {
+      'totalMs': 3600000,
       'totalSeconds': 3600,
       'completedSessions': 2,
       'totalSessions': 3,
@@ -167,47 +200,62 @@ class _FakeStatsService extends FakeFocusSessionService {
   }
 
   @override
-  Future<int> getWeeklyFocusSeconds() async => 7200;
+  Future<int> getTodayDurationMs() async => 7200000;
 
   @override
-  Future<List<FocusSession>> getRecentSessions({int limit = 10}) async {
+  Future<List<Session>> getRecentSessions({int limit = 10}) async {
     return [
-      FocusSession(
+      Session(
         id: 's1',
+        studentId: '',
+        subjectId: null,
+        type: SessionType.focus,
         startTime: _todayStart.add(const Duration(hours: 9)),
         endTime: _todayStart.add(const Duration(hours: 9, minutes: 25)),
         plannedDurationMinutes: 25,
-        actualDurationSeconds: 1500,
+        actualDurationMs: 1500000,
         completed: true,
+        questionsAnswered: 0,
+        correctAnswers: 0,
       ),
-      FocusSession(
+      Session(
         id: 's2',
+        studentId: '',
+        subjectId: null,
+        type: SessionType.focus,
         startTime: _todayStart.add(const Duration(hours: 11)),
         endTime: _todayStart.add(const Duration(hours: 11, minutes: 20)),
         plannedDurationMinutes: 30,
-        actualDurationSeconds: 1200,
+        actualDurationMs: 1200000,
         completed: true,
+        questionsAnswered: 0,
+        correctAnswers: 0,
       ),
-      FocusSession(
+      Session(
         id: 's3',
+        studentId: '',
+        subjectId: null,
+        type: SessionType.focus,
         startTime: _todayStart.add(const Duration(hours: 14)),
         endTime: _todayStart.add(const Duration(hours: 14, minutes: 5)),
         plannedDurationMinutes: 25,
-        actualDurationSeconds: 300,
+        actualDurationMs: 300000,
         completed: false,
+        questionsAnswered: 0,
+        correctAnswers: 0,
       ),
     ];
   }
 }
 
-Widget _wrapApp(Widget widget, {FocusSessionService? serviceOverride}) {
+Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride}) {
   return ProviderScope(
     overrides: [
-      focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
+      sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
       if (serviceOverride != null)
-        focusSessionServiceProvider.overrideWithValue(serviceOverride)
+        studyTimerServiceProvider.overrideWithValue(serviceOverride)
       else
-        focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
+        studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -220,8 +268,8 @@ Widget _wrapApp(Widget widget, {FocusSessionService? serviceOverride}) {
 Widget _buildTestApp(Widget widget) {
   return ProviderScope(
     overrides: [
-      focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
-      focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
+      sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+      studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

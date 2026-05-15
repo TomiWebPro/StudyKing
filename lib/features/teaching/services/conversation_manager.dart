@@ -20,6 +20,9 @@ class ConversationManager {
   final ConversationMemory _memory;
   final String sessionId;
   final ConversationRepository? _persistenceRepo;
+  final List<String> _correctKeywords;
+  final List<String> _incorrectKeywords;
+  final List<String> _exerciseKeywords;
 
   String _studentId = '';
   String _topicTitle = '';
@@ -36,10 +39,16 @@ class ConversationManager {
     required LlmService llmService,
     required String modelId,
     required this.sessionId,
+    required List<String> correctKeywords,
+    required List<String> incorrectKeywords,
+    required List<String> exerciseKeywords,
     ConversationRepository? persistenceRepo,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
+        _correctKeywords = correctKeywords,
+        _incorrectKeywords = incorrectKeywords,
+        _exerciseKeywords = exerciseKeywords,
         _memory = ConversationMemory(
           maxTurns: 30,
           sessionId: sessionId,
@@ -217,17 +226,9 @@ Be conversational, warm, and educational.
   void _evaluateExerciseResponse(String content) {
     _exerciseCount++;
     final lower = content.toLowerCase();
-    final correctKeywords = [
-      'correct', 'right', 'yes', 'got it', 'understood', 'i see',
-      'that makes sense', 'true', 'exactly',
-    ];
-    final incorrectKeywords = [
-      'wrong', 'incorrect', 'not sure', 'confused', "don't know",
-      "don't understand", 'no', 'mistake', 'error',
-    ];
 
-    final isCorrect = correctKeywords.any((k) => lower.contains(k));
-    final isIncorrect = incorrectKeywords.any((k) => lower.contains(k));
+    final isCorrect = _correctKeywords.any((k) => lower.contains(k));
+    final isIncorrect = _incorrectKeywords.any((k) => lower.contains(k));
 
     if (isCorrect && !isIncorrect) {
       _correctCount++;
@@ -245,11 +246,7 @@ Be conversational, warm, and educational.
 
   void _detectExerciseRequest(String content) {
     final lower = content.toLowerCase();
-    final exerciseKeywords = [
-      'exercise', 'practice', 'question', 'quiz', 'problem',
-      'test me', 'challenge', 'example',
-    ];
-    if (exerciseKeywords.any((k) => lower.contains(k))) {
+    if (_exerciseKeywords.any((k) => lower.contains(k))) {
       _phase = ConversationPhase.exercise;
       return;
     }

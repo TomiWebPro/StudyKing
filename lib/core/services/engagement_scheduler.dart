@@ -6,8 +6,8 @@ import '../services/plan_adapter.dart';
 import '../services/localization_service.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import '../data/models/engagement_nudge_model.dart';
-import '../../features/focus_mode/services/focus_session_service.dart';
 
 class EngagementSchedulerConfig {
   final int checkHour;
@@ -36,7 +36,7 @@ class EngagementScheduler {
   final EngagementNudgeRepository _nudgeRepository;
   final PlanAdherenceRepository _adherenceRepository;
   final PlanAdapter? _planAdapter;
-  final FocusSessionService? _focusSessionService;
+  final SessionRepository? _sessionRepository;
   final EngagementSchedulerConfig _config;
   final LocalizationService? _localizationService;
 
@@ -51,7 +51,7 @@ class EngagementScheduler {
     EngagementNudgeRepository? nudgeRepository,
     PlanAdherenceRepository? adherenceRepository,
     PlanAdapter? planAdapter,
-    FocusSessionService? focusSessionService,
+    SessionRepository? sessionRepository,
     EngagementSchedulerConfig? config,
     LocalizationService? localizationService,
   })  :         _tracker = tracker,
@@ -60,7 +60,7 @@ class EngagementScheduler {
         _nudgeRepository = nudgeRepository ?? EngagementNudgeRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planAdapter = planAdapter,
-        _focusSessionService = focusSessionService,
+        _sessionRepository = sessionRepository,
         _config = config ?? const EngagementSchedulerConfig(),
         _localizationService = localizationService;
 
@@ -185,12 +185,13 @@ class EngagementScheduler {
       totalHours = double.tryParse(stats['totalStudyTimeHours'] as String? ?? '0') ?? 0;
     } catch (_) {}
 
-    if (_focusSessionService != null) {
+    if (_sessionRepository != null) {
       try {
-        final focusSeconds = await _focusSessionService.getTodayFocusSeconds();
-        final focusHours = focusSeconds / 3600;
-        if (focusHours > totalHours) {
-          totalHours = focusHours;
+        final todaySessions = await _sessionRepository.getByDate(DateTime.now());
+        final totalMs = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+        final sessionHours = totalMs / 3600000;
+        if (sessionHours > totalHours) {
+          totalHours = sessionHours;
         }
       } catch (_) {}
     }

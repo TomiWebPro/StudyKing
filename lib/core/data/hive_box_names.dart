@@ -6,6 +6,7 @@ class HiveBoxNames {
   static const String badges = 'badges';
   static const String conversations = 'conversations';
   static const String engagementNudges = 'engagement_nudges';
+  static const String focusSessions = 'focus_sessions';
   static const String learningPlans = 'learning_plans';
   static const String lessonBlocks = 'lessonBlocks';
   static const String lessons = 'lessons';
@@ -22,7 +23,6 @@ class HiveBoxNames {
   static const String sessions = 'sessions';
   static const String settings = 'settings';
   static const String profile = 'profile';
-  static const String focusSessions = 'focus_sessions';
   static const String sources = 'sources';
   static const String subjects = 'subjects';
   static const String tasks = 'tasks';

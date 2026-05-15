@@ -778,7 +778,7 @@ void main() {
     });
 
     test('exportFailed', () {
-      expect(l10n.exportFailed('disco lleno'), 'Exportación fallida: disco lleno');
+      expect(l10n.exportFailed('disco lleno'), 'Error al exportar: disco lleno');
     });
 
     test('attemptsCount', () {

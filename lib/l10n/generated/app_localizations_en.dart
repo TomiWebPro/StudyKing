@@ -3099,4 +3099,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String adherenceExceededToday(Object actualMinutes, Object plannedMinutes) {
     return 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
   }
+
+  @override
+  String overtimeLabel(int minutes) {
+    return '+${minutes}m';
+  }
+
+  @override
+  String get correctAnswerKeywords =>
+      'correct,right,yes,got it,understood,i see,that makes sense,true,exactly';
+
+  @override
+  String get incorrectAnswerKeywords =>
+      'wrong,incorrect,not sure,confused,don\'t know,don\'t understand,no,mistake,error';
+
+  @override
+  String get exerciseKeywords =>
+      'exercise,practice,question,quiz,problem,test me,challenge,example';
 }

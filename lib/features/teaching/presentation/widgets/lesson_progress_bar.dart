@@ -53,7 +53,7 @@ class LessonProgressBar extends StatelessWidget {
               ),
               Text(
                 isOvertime
-                    ? '+${elapsedMinutes - plannedDurationMinutes}m'
+                    ? l10n.overtimeLabel(elapsedMinutes - plannedDurationMinutes)
                     : l10n.remainingMinLabel(remaining),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: isOvertime

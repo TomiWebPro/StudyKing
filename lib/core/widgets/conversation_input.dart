@@ -22,7 +22,7 @@ class ConversationInput extends StatefulWidget {
     this.isEnabled = true,
     this.isLoading = false,
     required this.hintText,
-    this.sendTooltip = 'Send',
+    required this.sendTooltip,
     required this.onSend,
     this.leading,
     this.trailing,

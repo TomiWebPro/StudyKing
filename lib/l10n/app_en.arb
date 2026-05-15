@@ -3503,7 +3503,7 @@
   },
   "badgeFirstStepName": "First Step",
   "@badgeFirstStepName": {
-    "description": "Name for the 'first attempt' badge"
+    "description": "Name of the badge earned for answering the first question"
   },
   "badgeFirstStepDesc": "Answered your first question!",
   "@badgeFirstStepDesc": {
@@ -3853,14 +3853,6 @@
   "@adapSuggestionAdvancedTopics": {
     "description": "Suggestion for advanced topics"
   },
-"badgeFirstStepName": "First Step",
-  "@badgeFirstStepName": {
-    "description": "Name of the badge earned for answering the first question"
-  },
-  "badgeFirstStepDesc": "Answered your first question!",
-  "@badgeFirstStepDesc": {
-    "description": "Description of the First Step badge"
-  },
   "badgeCenturyClubName": "Century Club",
   "@badgeCenturyClubName": {
     "description": "Name of the badge earned for answering 100 questions"
@@ -3868,68 +3860,6 @@
   "badgeCenturyClubDesc": "Answered 100+ questions!",
   "@badgeCenturyClubDesc": {
     "description": "Description of the Century Club badge"
-  },
-  "badgeAccuracyGoldName": "Accuracy Gold",
-  "@badgeAccuracyGoldName": {
-    "description": "Name of the badge earned for achieving 90 percent accuracy"
-  },
-  "badgeAccuracyGoldDesc": "Achieved 90%+ accuracy!",
-  "@badgeAccuracyGoldDesc": {
-    "description": "Description of the Accuracy Gold badge"
-  },
-  "badgeDailyScholarName": "Daily Scholar",
-  "@badgeDailyScholarName": {
-    "description": "Name of the badge earned for studying consistently today"
-  },
-  "badgeDailyScholarDesc": "Studied consistently today!",
-  "@badgeDailyScholarDesc": {
-    "description": "Description of the Daily Scholar badge"
-  },
-  "badgeDedicatedLearnerName": "Dedicated Learner",
-  "@badgeDedicatedLearnerName": {
-    "description": "Name of the badge earned for studying 10 plus hours total"
-  },
-  "badgeDedicatedLearnerDesc": "Studied 10+ hours total!",
-  "@badgeDedicatedLearnerDesc": {
-    "description": "Description of the Dedicated Learner badge"
-  },
-  "badgeWeeklyWarriorName": "Weekly Warrior",
-  "@badgeWeeklyWarriorName": {
-    "description": "Name of the badge earned for being active for a full week"
-  },
-  "badgeWeeklyWarriorDesc": "Active for a full week!",
-  "@badgeWeeklyWarriorDesc": {
-    "description": "Description of the Weekly Warrior badge"
-  },
-  "nudgeOverwork": "You have studied {hours} hours today. Consider taking a break!",
-  "@nudgeOverwork": {
-    "description": "Nudge message when student overworks, showing hours studied",
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "nudgeRevision": "It has been {days} days since you practiced \"{topic}\". Time for a review!",
-  "@nudgeRevision": {
-    "description": "Nudge message to remind student to review a topic",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      },
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "nudgePlanAdjustment": "You have had {days} days of low plan adherence. Would you like to adjust your study plan?",
-  "@nudgePlanAdjustment": {
-    "description": "Nudge message suggesting plan adjustment due to low adherence",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
   },
   "nudgeWeeklyDigest": "Weekly Digest: {weeklyActivity} questions answered, {accuracy}% accuracy, {totalHours} hours studied, {weakCount} weak areas, {badgeCount} badges earned.",
   "@nudgeWeeklyDigest": {
@@ -4176,10 +4106,6 @@
   "@planGeneralReview": {
     "description": "Focus label when no priority topics are scheduled"
   },
-  "planFocusWeakAreas": "Focus on weak areas",
-  "@planFocusWeakAreas": {
-    "description": "Focus label when most topics are weak areas"
-  },
   "planPracticeAndReview": "Practice and review",
   "@planPracticeAndReview": {
     "description": "Default focus label for study plans"
@@ -4322,5 +4248,26 @@
       "actualMinutes": {},
       "plannedMinutes": {}
     }
+  },
+  "overtimeLabel": "+{minutes}m",
+  "@overtimeLabel": {
+    "description": "Label showing overtime duration in minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "correctAnswerKeywords": "correct,right,yes,got it,understood,i see,that makes sense,true,exactly",
+  "@correctAnswerKeywords": {
+    "description": "Comma-separated list of keywords indicating a correct answer"
+  },
+  "incorrectAnswerKeywords": "wrong,incorrect,not sure,confused,don't know,don't understand,no,mistake,error",
+  "@incorrectAnswerKeywords": {
+    "description": "Comma-separated list of keywords indicating an incorrect answer"
+  },
+  "exerciseKeywords": "exercise,practice,question,quiz,problem,test me,challenge,example",
+  "@exerciseKeywords": {
+    "description": "Comma-separated list of keywords indicating an exercise request"
   }
 }

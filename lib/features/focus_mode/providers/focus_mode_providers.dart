@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/services/study_timer_service.dart';
 
-final focusSessionRepositoryProvider = Provider<FocusSessionRepository>((ref) {
-  return FocusSessionRepository();
+final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  return SessionRepository();
 });
 
-final focusSessionServiceProvider = Provider<FocusSessionService>((ref) {
-  final repository = ref.watch(focusSessionRepositoryProvider);
-  return FocusSessionService(repository: repository);
+final studyTimerServiceProvider = Provider<StudyTimerService>((ref) {
+  final repository = ref.watch(sessionRepositoryProvider);
+  return StudyTimerService(repository: repository);
 });

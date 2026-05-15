@@ -268,7 +268,7 @@
   "@noWeakAreasFound": {
     "description": "Message when no weak areas are found"
   },
-  "noWeakAreasQuestions": "No hay preguntas disponibles para sus áreas débiles.",
+  "noWeakAreasQuestions": "No hay preguntas disponibles para sus áreas por mejorar.",
   "@noWeakAreasQuestions": {
     "description": "Message when no questions found for weak areas"
   },
@@ -933,7 +933,7 @@
       }
     }
   },
-  "practiceQuestionsFrom": "Practica preguntas de {subjectName}",
+  "practiceQuestionsFrom": "Practique preguntas de {subjectName}",
   "@practiceQuestionsFrom": {
     "description": "Subtitle for practice tab showing subject name",
     "placeholders": {
@@ -1075,7 +1075,7 @@
   "@noDataUploaded": {
     "description": "Empty state message when no data is uploaded"
   },
-  "uploadOrPasteData": "Sube o pegue datos para visualizar",
+  "uploadOrPasteData": "Cargue o pegue datos para visualizar",
   "@uploadOrPasteData": {
     "description": "Empty state subtitle for graph"
   },
@@ -1616,7 +1616,7 @@
   "@studyTime": {
     "description": "Label for study time metric"
   },
-  "planAdherence": "Adherencia al Plan",
+  "planAdherence": "cumplimiento al Plan",
   "@planAdherence": {
     "description": "Section title for plan adherence"
   },
@@ -1660,7 +1660,7 @@
   "@topics": {
     "description": "Label for topics count"
   },
-  "practiceAllWeakAreas": "Practicar Todas las Áreas Débiles",
+  "practiceAllWeakAreas": "Practicar Todas las áreas por mejorar",
   "@practiceAllWeakAreas": {
     "description": "Button to practice all weak areas"
   },
@@ -1787,7 +1787,7 @@
   "@contentUploadedSuccessfully": {
     "description": "Success message after upload"
   },
-  "uploadFailed": "Error al subir: {error}",
+  "uploadFailed": "Error al cargar: {error}",
   "@uploadFailed": {
     "description": "Error message when upload fails",
     "placeholders": {
@@ -3384,7 +3384,7 @@
   "@gettingStarted": {
     "description": "Heading for empty dashboard getting started checklist"
   },
-  "gettingStartedDesc": "Complete estos pasos para aprovechar al m\u00e1ximo StudyKing",
+  "gettingStartedDesc": "Complete estos pasos para aprovechar al máximo StudyKing",
   "@gettingStartedDesc": {
     "description": "Subtitle for empty dashboard checklist"
   },
@@ -3400,19 +3400,19 @@
   "@uploadMaterialDesc": {
     "description": "Description for upload material checklist item"
   },
-  "takePracticeQuiz": "Realice su Primer Cuestionario de Pr\u00e1ctica",
+  "takePracticeQuiz": "Realice su Primer Cuestionario de Práctica",
   "@takePracticeQuiz": {
     "description": "Checklist item for taking first practice quiz"
   },
-  "takePracticeQuizDesc": "Ponga a prueba sus conocimientos con preguntas de pr\u00e1ctica adaptativas",
+  "takePracticeQuizDesc": "Ponga a prueba sus conocimientos con preguntas de práctica adaptativas",
   "@takePracticeQuizDesc": {
     "description": "Description for practice quiz checklist item"
   },
-  "scheduleAiTutor": "Programe una Sesi\u00f3n con el Tutor de IA",
+  "scheduleAiTutor": "Programe una Sesión con el Tutor de IA",
   "@scheduleAiTutor": {
     "description": "Checklist item for scheduling AI tutor"
   },
-  "scheduleAiTutorDesc": "Reciba tutor\u00eda personalizada uno a uno con IA",
+  "scheduleAiTutorDesc": "Reciba tutoría personalizada uno a uno con IA",
   "@scheduleAiTutorDesc": {
     "description": "Description for AI tutor checklist item"
   },
@@ -3424,7 +3424,7 @@
   "@fileShared": {
     "description": "Snackbar message when file is shared"
   },
-  "noBadgesYet": "A\u00fan no hay logros. \u00a1Sigue estudiando!",
+  "noBadgesYet": "Aún no hay logros. ¡Sigue estudiando!",
   "@noBadgesYet": {
     "description": "Empty state message when no badges earned"
   },
@@ -3503,7 +3503,7 @@
   },
   "badgeFirstStepName": "Primer Paso",
   "@badgeFirstStepName": {
-    "description": "Name for the 'first attempt' badge"
+    "description": "Nombre de la insignia por responder la primera pregunta"
   },
   "badgeFirstStepDesc": "¡Respondió su primera pregunta!",
   "@badgeFirstStepDesc": {
@@ -3853,85 +3853,15 @@
   "@adapSuggestionAdvancedTopics": {
     "description": "Suggestion for advanced topics"
   },
-"badgeFirstStepName": "Primer Paso",
-  "@badgeFirstStepName": {
-    "description": "Nombre de la insignia por responder la primera pregunta"
-  },
-  "badgeFirstStepDesc": "Respondió su primera pregunta!",
-  "@badgeFirstStepDesc": {
-    "description": "Descripción de la insignia Primer Paso"
-  },
   "badgeCenturyClubName": "Club del Centenario",
   "@badgeCenturyClubName": {
     "description": "Nombre de la insignia por responder 100 preguntas"
   },
-  "badgeCenturyClubDesc": "Respondió más de 100 preguntas!",
+  "badgeCenturyClubDesc": "¡Respondió más de 100 preguntas!",
   "@badgeCenturyClubDesc": {
     "description": "Descripción de la insignia Club del Centenario"
   },
-  "badgeAccuracyGoldName": "Precisión de Oro",
-  "@badgeAccuracyGoldName": {
-    "description": "Nombre de la insignia por lograr 90 por ciento de precisión"
-  },
-  "badgeAccuracyGoldDesc": "Logró más del 90% de precisión!",
-  "@badgeAccuracyGoldDesc": {
-    "description": "Descripción de la insignia Precisión de Oro"
-  },
-  "badgeDailyScholarName": "Estudiante Diario",
-  "@badgeDailyScholarName": {
-    "description": "Nombre de la insignia por estudiar consistentemente hoy"
-  },
-  "badgeDailyScholarDesc": "Estudió consistentemente hoy!",
-  "@badgeDailyScholarDesc": {
-    "description": "Descripción de la insignia Estudiante Diario"
-  },
-  "badgeDedicatedLearnerName": "Aprendiz Dedicado",
-  "@badgeDedicatedLearnerName": {
-    "description": "Nombre de la insignia por estudiar más de 10 horas en total"
-  },
-  "badgeDedicatedLearnerDesc": "Estudió más de 10 horas en total!",
-  "@badgeDedicatedLearnerDesc": {
-    "description": "Descripción de la insignia Aprendiz Dedicado"
-  },
-  "badgeWeeklyWarriorName": "Guerrero Semanal",
-  "@badgeWeeklyWarriorName": {
-    "description": "Nombre de la insignia por estar activo durante una semana completa"
-  },
-  "badgeWeeklyWarriorDesc": "Activo durante una semana completa!",
-  "@badgeWeeklyWarriorDesc": {
-    "description": "Descripción de la insignia Guerrero Semanal"
-  },
-  "nudgeOverwork": "Ha estudiado {hours} horas hoy. Considere tomar un descanso!",
-  "@nudgeOverwork": {
-    "description": "Mensaje de aviso cuando el estudiante estudia en exceso",
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "nudgeRevision": "Han pasado {days} días desde que practicó \"{topic}\". Es hora de repasar!",
-  "@nudgeRevision": {
-    "description": "Mensaje de aviso para recordar al estudiante repasar un tema",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      },
-      "topic": {
-        "type": "String"
-      }
-    }
-  },
-  "nudgePlanAdjustment": "Ha tenido {days} días de baja adherencia. Le gustaría ajustar su plan de estudio?",
-  "@nudgePlanAdjustment": {
-    "description": "Mensaje de aviso sugiriendo ajuste del plan por baja adherencia",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "nudgeWeeklyDigest": "Resumen semanal: {weeklyActivity} preguntas respondidas, {accuracy}% precisión, {totalHours} horas estudiadas, {weakCount} áreas débiles, {badgeCount} insignias obtenidas.",
+  "nudgeWeeklyDigest": "Resumen semanal: {weeklyActivity} preguntas respondidas, {accuracy}% precisión, {totalHours} horas estudiadas, {weakCount} áreas por mejorar, {badgeCount} insignias obtenidas.",
   "@nudgeWeeklyDigest": {
     "description": "Resumen semanal de la actividad del estudiante",
     "placeholders": {
@@ -3952,7 +3882,7 @@
       }
     }
   },
-  "notificationTimeToReviewTitle": "Hora de Repasar!",
+  "notificationTimeToReviewTitle": "¡Hora de Repasar!",
   "@notificationTimeToReviewTitle": {
     "description": "Título de la notificación de recordatorio de repaso"
   },
@@ -3972,7 +3902,7 @@
   "@notificationTakeABreakTitle": {
     "description": "Título de la notificación de advertencia de sobrecarga"
   },
-  "notificationTakeABreakBody": "Ha estudiado {hours} horas hoy. Recuerde descansar!",
+  "notificationTakeABreakBody": "¡Ha estudiado {hours} horas hoy. Recuerde descansar!",
   "@notificationTakeABreakBody": {
     "description": "Cuerpo de la notificación de advertencia de sobrecarga",
     "placeholders": {
@@ -3985,7 +3915,7 @@
   "@notificationPlanAdjustmentTitle": {
     "description": "Título de la notificación de sugerencia de ajuste del plan"
   },
-  "notificationPlanAdjustmentBody": "Ha tenido {days} días de baja adherencia. Ajustamos su plan?",
+  "notificationPlanAdjustmentBody": "¿Ha tenido {days} días de bajo cumplimiento. Ajustamos su plan?",
   "@notificationPlanAdjustmentBody": {
     "description": "Cuerpo de la notificación de sugerencia de ajuste del plan",
     "placeholders": {
@@ -4023,7 +3953,7 @@
       }
     }
   },
-  "notificationBadgeUnlockedTitle": "Insignia Desbloqueada!",
+  "notificationBadgeUnlockedTitle": "¡Insignia Desbloqueada!",
   "@notificationBadgeUnlockedTitle": {
     "description": "Título de la notificación de insignia desbloqueada"
   },
@@ -4091,7 +4021,7 @@
   "@notificationChannelMasteryName": {
     "description": "Nombre del canal de alertas de dominio"
   },
-  "notificationChannelMasteryDesc": "Alertas sobre bajo dominio de temas y áreas débiles",
+  "notificationChannelMasteryDesc": "Alertas sobre bajo dominio de temas y áreas por mejorar",
   "@notificationChannelMasteryDesc": {
     "description": "Descripción del canal de alertas de dominio"
   },
@@ -4111,7 +4041,7 @@
   "@planReviewOverdue": {
     "description": "Explicación cuando el repaso está vencido y el riesgo de olvido es alto"
   },
-  "planStreakLow": "La racha es baja — se necesita consistencia",
+  "planStreakLow": "La racha es baja — se necesita constancia",
   "@planStreakLow": {
     "description": "Explicación cuando la racha actual es baja"
   },
@@ -4152,7 +4082,7 @@
   "@planHighMastery": {
     "description": "Razón de recomendación para temas con alto dominio"
   },
-  "planGoodProgress": "Buen progreso — mantenga la consistencia",
+  "planGoodProgress": "Buen progreso — mantenga la constancia",
   "@planGoodProgress": {
     "description": "Razón de recomendación para temas con buen progreso"
   },
@@ -4176,15 +4106,11 @@
   "@planGeneralReview": {
     "description": "Etiqueta de enfoque cuando no hay temas prioritarios programados"
   },
-  "planFocusWeakAreas": "Enfoque en áreas débiles",
-  "@planFocusWeakAreas": {
-    "description": "Etiqueta de enfoque cuando la mayoría de temas son áreas débiles"
-  },
   "planPracticeAndReview": "Práctica y repaso",
   "@planPracticeAndReview": {
     "description": "Etiqueta de enfoque predeterminada para planes de estudio"
   },
-  "adherenceLowDaysAdjust": "Ha tenido {days} días consecutivos de baja adherencia. Considere ajustar su plan de estudio o consultar con su mentor.",
+  "adherenceLowDaysAdjust": "Ha tenido {days} días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o consultar con su mentor.",
   "@adherenceLowDaysAdjust": {
     "description": "Mensaje cuando la adherencia es baja por muchos días, sugiriendo consulta al mentor",
     "placeholders": {
@@ -4193,7 +4119,7 @@
       }
     }
   },
-  "adherenceLowDaysRegenerate": "Ha tenido {days} días consecutivos de baja adherencia. Le gustaría regenerar su plan con objetivos ajustados?",
+  "adherenceLowDaysRegenerate": "¿Ha tenido {days} días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?",
   "@adherenceLowDaysRegenerate": {
     "description": "Mensaje cuando la adherencia es baja, sugiriendo regeneración del plan",
     "placeholders": {
@@ -4210,7 +4136,7 @@
   "@recommendationReviewBasics": {
     "description": "Sugerencia de acción para baja precisión"
   },
-  "recommendationExcellentProgress": "Progreso excelente! Listo para temas avanzados.",
+  "recommendationExcellentProgress": "¡Progreso excelente! Listo para temas avanzados.",
   "@recommendationExcellentProgress": {
     "description": "Recomendación cuando la precisión supera el 85 por ciento"
   },
@@ -4218,7 +4144,7 @@
   "@recommendationChallengingPractice": {
     "description": "Sugerencia de acción para alta precisión"
   },
-  "recommendationLowHours": "Estudió menos de 1 hora en total. La consistencia es clave!",
+  "recommendationLowHours": "¡Estudió menos de 1 hora en total. La constancia es clave!",
   "@recommendationLowHours": {
     "description": "Recomendación cuando el tiempo de estudio es muy bajo"
   },
@@ -4226,7 +4152,7 @@
   "@recommendationSetDailyGoal": {
     "description": "Sugerencia de acción para pocas horas de estudio"
   },
-  "recommendationNoActivity": "Sin actividad de estudio esta semana. Vuelva al ritmo!",
+  "recommendationNoActivity": "¡Sin actividad de estudio esta semana. Vuelva al ritmo!",
   "@recommendationNoActivity": {
     "description": "Recomendación cuando no se detecta actividad semanal"
   },
@@ -4322,5 +4248,26 @@
       "actualMinutes": {},
       "plannedMinutes": {}
     }
+  },
+  "overtimeLabel": "+{minutes} min",
+  "@overtimeLabel": {
+    "description": "Etiqueta que muestra la duración del tiempo adicional en minutos",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "correctAnswerKeywords": "correcto,bien,sí,entiendo,comprendo,cierto,exactamente,así es",
+  "@correctAnswerKeywords": {
+    "description": "Comma-separated list of keywords indicating a correct answer"
+  },
+  "incorrectAnswerKeywords": "incorrecto,mal,no estoy seguro,confundido,no sé,no entiendo,no comprendo,error,equivocado",
+  "@incorrectAnswerKeywords": {
+    "description": "Comma-separated list of keywords indicating an incorrect answer"
+  },
+  "exerciseKeywords": "ejercicio,práctica,pregunta,examen,problema,prueba,reto,ejemplo",
+  "@exerciseKeywords": {
+    "description": "Comma-separated list of keywords indicating an exercise request"
   }
 }

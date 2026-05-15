@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectHistoryTab extends StatelessWidget {
   final String subjectId;
-  final void Function(StudySession session) onSessionTap;
-  final StudySessionRepository? sessionRepository;
+  final void Function(Session session) onSessionTap;
+  final SessionRepository? sessionRepository;
 
   const SubjectHistoryTab({
     super.key,
@@ -20,9 +20,9 @@ class SubjectHistoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sessionRepo = sessionRepository ?? StudySessionRepository();
+    final sessionRepo = sessionRepository ?? SessionRepository();
 
-    Future<List<StudySession>> loadSessions() async {
+    Future<List<Session>> loadSessions() async {
       try {
         final sessions = await sessionRepo.getAll();
         return sessions.where((s) => s.subjectId == subjectId).toList();
@@ -31,7 +31,7 @@ class SubjectHistoryTab extends StatelessWidget {
       }
     }
 
-    return FutureBuilder<List<StudySession>>(
+    return FutureBuilder<List<Session>>(
       future: loadSessions(),
       builder: (context, snapshot) {
         final subjectSessions = snapshot.data ?? [];
@@ -67,6 +67,8 @@ class SubjectHistoryTab extends StatelessWidget {
             final score = session.questionsAnswered > 0
                 ? (session.correctAnswers / session.questionsAnswered) * 100
                 : 0.0;
+            final icon = _sessionIcon(session.type);
+            final color = _sessionColor(session.type, context);
 
             return Card(
               margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
@@ -74,15 +76,19 @@ class SubjectHistoryTab extends StatelessWidget {
                 leading: CircleAvatar(
                   backgroundColor: _scoreColor(context, score).withValues(alpha: 0.2),
                   child: Icon(
-                    score >= 80
-                        ? Icons.check_circle
-                        : Icons.sticky_note_2,
-                    color: _scoreColor(context, score),
+                    icon,
+                    color: color,
                   ),
                 ),
-                title: Text(l10n.sessionNumber(index + 1)),
+                title: Row(
+                  children: [
+                    Text(l10n.sessionNumber(index + 1)),
+                    const SizedBox(width: 8),
+                    Icon(icon, size: 14, color: color),
+                  ],
+                ),
                 subtitle: Text(
-                  '${formatDateFromContext(context, session.startTime)} \u2022 ${formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))}',
+                  '${formatDateFromContext(context, session.startTime)} \u2022 ${formatDurationFromContext(context, session.actualDuration)}',
                 ),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -109,6 +115,33 @@ class SubjectHistoryTab extends StatelessWidget {
         );
       },
     );
+  }
+
+  IconData _sessionIcon(SessionType type) {
+    switch (type) {
+      case SessionType.focus:
+        return Icons.timer;
+      case SessionType.practice:
+        return Icons.play_arrow;
+      case SessionType.tutoring:
+        return Icons.school;
+      case SessionType.manual:
+        return Icons.edit_note;
+    }
+  }
+
+  Color _sessionColor(SessionType type, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    switch (type) {
+      case SessionType.focus:
+        return cs.tertiary;
+      case SessionType.practice:
+        return cs.primary;
+      case SessionType.tutoring:
+        return cs.secondary;
+      case SessionType.manual:
+        return cs.onSurfaceVariant;
+    }
   }
 
   Color _scoreColor(BuildContext context, double score) {

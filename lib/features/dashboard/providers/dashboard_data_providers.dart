@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
@@ -13,7 +14,6 @@ final dashboardInitProvider = FutureProvider<void>((ref) async {
     ref.read(dashboardInstrumentationServiceProvider).init(),
     ref.read(dashboardTopicRepositoryProvider).init(),
     ref.read(dashboardAdherenceRepositoryProvider).init(),
-    ref.read(focusSessionServiceProvider).repository.init(),
   ]);
 });
 
@@ -53,10 +53,20 @@ final dashboardWeeklyTrendProvider =
 final dashboardFocusStatsProvider =
     FutureProvider.family<FocusTodayStats?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final focusService = ref.read(focusSessionServiceProvider);
   try {
-    final stats = await focusService.getTodayStats();
-    return FocusTodayStats.fromMap(stats);
+    final sessionRepo = ref.read(sessionRepositoryProvider);
+    final todaySessions = await sessionRepo.getByDate(DateTime.now());
+    final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
+    if (focusToday.isEmpty) return null;
+    final totalMs = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+    return FocusTodayStats.fromMap({
+      'totalMs': totalMs,
+      'totalSeconds': totalMs ~/ 1000,
+      'completedSessions': focusToday.where((s) => s.completed).length,
+      'totalSessions': focusToday.length,
+      'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
+      'hours': (totalMs / 3600000).toStringAsFixed(1),
+    });
   } catch (_) {
     return null;
   }

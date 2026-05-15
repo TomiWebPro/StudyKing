@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionAnalyticsWidget extends StatelessWidget {
-  final List<StudySession> sessions;
+  final List<Session> sessions;
   final int currentStreak;
   final int daysToShow;
   final DateTime? asOf;
@@ -23,7 +23,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
 
   Duration get _totalStudyTime => sessions.fold(
     Duration.zero,
-    (sum, s) => sum + Duration(milliseconds: s.timeSpentMs),
+    (sum, s) => sum + s.actualDuration,
   );
 
   @override

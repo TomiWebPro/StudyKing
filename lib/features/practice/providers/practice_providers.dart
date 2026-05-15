@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
@@ -16,6 +16,6 @@ final masteryGraphServiceProvider = Provider<MasteryGraphService>((ref) {
   return MasteryGraphService();
 });
 
-final studySessionRepositoryProvider = Provider<StudySessionRepository>((ref) {
-  return StudySessionRepository();
+final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  return SessionRepository();
 });

@@ -6,7 +6,7 @@ import 'package:studyking/features/practice/data/repositories/attempt_repository
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -141,7 +141,7 @@ void main() {
         questionRepository: QuestionRepository(),
         attemptRepository: AttemptRepository(),
         lessonRepository: LessonRepository(),
-        sessionRepository: StudySessionRepository(),
+        sessionRepository: SessionRepository(),
         subjectRepository: SubjectRepository(),
         conversationRepository: conversationRepo,
         tutorSessionRepository: tutorSessionRepo,
@@ -169,6 +169,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
           durationMinutes: 45,
         );
 
@@ -183,6 +186,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
           durationMinutes: 30,
         );
 
@@ -202,6 +208,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
 
         final sessions = tutorSessionRepo._sessions;
@@ -223,6 +232,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -237,6 +249,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -253,6 +268,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
         manager.recordCorrectAnswer();
@@ -273,6 +291,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -287,6 +308,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -308,6 +332,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
 
         final history = await tutorService.getLessonHistory('student-1');
@@ -330,6 +357,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
 
         final stats = await tutorService.getStats('student-1');
@@ -369,6 +399,9 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          correctKeywords: [],
+          incorrectKeywords: [],
+          exerciseKeywords: [],
         );
 
         final session = await tutorService.getActiveSession();

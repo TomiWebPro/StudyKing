@@ -340,8 +340,8 @@ void main() {
     });
 
     test('at risk and ready to advance', () {
-      expect(l10n.atRiskTopics, 'Temas con dificultades');
-      expect(l10n.noAtRiskTopics, 'Sin temas con dificultades. ¡Siga así!');
+      expect(l10n.atRiskTopics, 'Temas en riesgo');
+      expect(l10n.noAtRiskTopics, 'No hay temas en riesgo. ¡Siga así!');
       expect(l10n.readyToAdvance, 'Listo para Avanzar');
       expect(l10n.keepPracticingToUnlock, '¡Siga practicando para desbloquear temas avanzados!');
     });
@@ -363,7 +363,7 @@ void main() {
     });
 
     test('quick guide system prompt', () {
-      expect(l10n.quickGuideSystemPrompt, 'Eres la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.');
+      expect(l10n.quickGuideSystemPrompt, 'Es la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.');
     });
 
     test('fallback AI responses', () {
@@ -400,7 +400,7 @@ void main() {
       expect(l10n.mentorToday, 'hoy');
       expect(l10n.mentorWelcomeStart, '¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?');
       expect(l10n.mentorActivityCheckError, 'Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?');
-      expect(l10n.mentorNewSessionAdded, '¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.');
+      expect(l10n.mentorNewSessionAdded, '¡Genial! He agregado una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.');
       expect(l10n.mentorChangesDone, '¡Listo! Los cambios se han realizado en su horario.');
       expect(l10n.mentorProgressReportTitle, '📊 **Su Informe de Progreso de Estudio**\n');
       expect(l10n.mentorAreasNeedingAttention, '\n**Áreas que necesitan atención:**');

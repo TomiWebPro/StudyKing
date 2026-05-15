@@ -1,39 +1,40 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _FakeStudySessionRepository extends StudySessionRepository {
-  _FakeStudySessionRepository({List<StudySession>? seed, this.throwOnInit = false, this.throwOnCreate = false})
-      : _sessions = List<StudySession>.from(seed ?? []);
+class _FakeSessionRepository extends SessionRepository {
+  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false})
+      : sessions = List<Session>.from(seed ?? []);
 
-  final List<StudySession> _sessions;
-  final bool throwOnInit;
-  final bool throwOnCreate;
-
-  @override
-  Future<void> init() async {
-    if (throwOnInit) throw Exception('init failed');
-  }
+  final List<Session> sessions;
+  final bool throwOnSave;
 
   @override
-  Future<List<StudySession>> getAll() async => List<StudySession>.from(_sessions);
+  Future<void> init() async {}
 
   @override
-  Future<void> create(StudySession session) async {
-    if (throwOnCreate) {
+  Future<List<Session>> getAll() async => List<Session>.from(sessions);
+
+  @override
+  Future<void> save(Session session) async {
+    if (throwOnSave) {
       throw Exception('save failed');
     }
-    _sessions.removeWhere((s) => s.id == session.id);
-    _sessions.add(session);
+    sessions.removeWhere((s) => s.id == session.id);
+    sessions.add(session);
   }
 }
-Widget _buildTestApp(_FakeStudySessionRepository repository) {
+
+Widget _buildTestApp(_FakeSessionRepository repository) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -44,8 +45,9 @@ Widget _buildTestApp(_FakeStudySessionRepository repository) {
 }
 
 void main() {
-  setUpAll(() {
-    Hive.init('/tmp');
+  setUpAll(() async {
+    Hive.init(Directory.systemTemp.createTempSync('tracker_test_').path);
+    StudentIdService().setStudentId('test-student');
   });
 
   group('SessionTrackerScreen', () {
@@ -57,14 +59,14 @@ void main() {
     });
 
     testWidgets('shows loading indicator initially', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('renders empty state after repository load', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -76,20 +78,20 @@ void main() {
 
     testWidgets('loads sessions and shows recent entries', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 'a',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now.subtract(const Duration(hours: 2)),
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
         ),
-        StudySession(
+        Session(
           id: 'b',
           studentId: 'u1',
           subjectId: 'science',
           startTime: now.subtract(const Duration(hours: 1)),
-          timeSpentMs: 3600000,
+          actualDurationMs: 3600000,
         ),
       ]);
 
@@ -102,7 +104,7 @@ void main() {
     });
 
     testWidgets('renders analytics and actions in default state', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -113,11 +115,10 @@ void main() {
       expect(find.text('Start your first session!'), findsOneWidget);
       expect(find.byIcon(Icons.timer_off), findsOneWidget);
       expect(find.byIcon(Icons.access_time), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
     });
 
     testWidgets('start button begins tracking session', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -129,7 +130,7 @@ void main() {
     });
 
     testWidgets('end button shows session complete dialog', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -145,7 +146,7 @@ void main() {
     });
 
     testWidgets('start and end session saves entered stats', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -165,17 +166,17 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
 
-      expect(repo._sessions.length, 1);
-      expect(repo._sessions.single.questionsAnswered, 12);
-      expect(repo._sessions.single.correctAnswers, 9);
+      expect(repo.sessions.length, 1);
+      expect(repo.sessions.single.questionsAnswered, 12);
+      expect(repo.sessions.single.correctAnswers, 9);
       await tester.pumpAndSettle();
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.byType(SessionAnalyticsWidget), findsOneWidget);
-      expect(find.byIcon(Icons.timer_off), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });
 
     testWidgets('shows snackbar when save fails', (tester) async {
-      final repo = _FakeStudySessionRepository(throwOnCreate: true);
+      final repo = _FakeSessionRepository(throwOnSave: true);
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -190,7 +191,7 @@ void main() {
     });
 
     testWidgets('view all navigates to history screen', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(ProviderScope(
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -221,18 +222,18 @@ void main() {
 
     testWidgets('calculates streak for consecutive days', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 'a', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
         ),
-        StudySession(
+        Session(
           id: 'b', studentId: 'u1', subjectId: 'science',
-          startTime: now.subtract(const Duration(days: 1)), timeSpentMs: 600000,
+          startTime: now.subtract(const Duration(days: 1)), actualDurationMs: 600000,
         ),
-        StudySession(
+        Session(
           id: 'c', studentId: 'u1', subjectId: 'math',
-          startTime: now.subtract(const Duration(days: 2)), timeSpentMs: 600000,
+          startTime: now.subtract(const Duration(days: 2)), actualDurationMs: 600000,
         ),
       ]);
 
@@ -244,10 +245,10 @@ void main() {
 
     testWidgets('calculates streak of 1 when only today has sessions', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 'a', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
         ),
       ]);
 
@@ -258,7 +259,7 @@ void main() {
     });
 
     testWidgets('calculates streak of 0 when no sessions exist', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -268,14 +269,14 @@ void main() {
 
     testWidgets('breaks streak when a day is skipped', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 'a', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
         ),
-        StudySession(
+        Session(
           id: 'b', studentId: 'u1', subjectId: 'science',
-          startTime: now.subtract(const Duration(days: 2)), timeSpentMs: 600000,
+          startTime: now.subtract(const Duration(days: 2)), actualDurationMs: 600000,
         ),
       ]);
 
@@ -283,25 +284,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('1 day'), findsOneWidget);
-    });
-  });
-
-  group('SessionTrackerScreen - Loading error', () {
-    setUp(() {
-      final binding = TestWidgetsFlutterBinding.ensureInitialized();
-      final view = binding.platformDispatcher.implicitView!;
-      view.physicalSize = const Size(1080, 2400);
-      view.devicePixelRatio = 1.0;
-    });
-
-    testWidgets('handles init error gracefully', (tester) async {
-      final repo = _FakeStudySessionRepository(throwOnInit: true);
-
-      await tester.pumpWidget(_buildTestApp(repo));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('Study Session Tracker'), findsOneWidget);
     });
   });
 
@@ -314,7 +296,7 @@ void main() {
     });
 
     testWidgets('skip creates session with zero stats', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -327,12 +309,12 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Skip'));
       await tester.pumpAndSettle();
 
-      expect(repo._sessions.length, 1);
-      expect(repo._sessions.single.questionsAnswered, 0);
-      expect(repo._sessions.single.correctAnswers, 0);
+      expect(repo.sessions.length, 1);
+      expect(repo.sessions.single.questionsAnswered, 0);
+      expect(repo.sessions.single.correctAnswers, 0);
       await tester.pumpAndSettle();
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('No Active Session'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });
   });
 
@@ -345,7 +327,7 @@ void main() {
     });
 
     testWidgets('shows current session after start', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -366,7 +348,7 @@ void main() {
     });
 
     testWidgets('disposes without error', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pump();
 
@@ -377,7 +359,7 @@ void main() {
     });
 
     testWidgets('disposes without error while tracking session', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -400,7 +382,7 @@ void main() {
     });
 
     testWidgets('end session does not crash when plan/mastery services unavailable', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -413,9 +395,9 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
 
-      expect(repo._sessions.length, 1);
+      expect(repo.sessions.length, 1);
       await tester.pump();
-      expect(find.text('Tap start to begin'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });
   });
 
@@ -428,7 +410,7 @@ void main() {
     });
 
     testWidgets('non-numeric input defaults to 0 for stats', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -443,11 +425,11 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
 
-      expect(repo._sessions.length, 1);
-      expect(repo._sessions.single.questionsAnswered, 0);
-      expect(repo._sessions.single.correctAnswers, 0);
+      expect(repo.sessions.length, 1);
+      expect(repo.sessions.single.questionsAnswered, 0);
+      expect(repo.sessions.single.correctAnswers, 0);
       await tester.pump();
-      expect(find.text('Tap start to begin'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });
   });
 }

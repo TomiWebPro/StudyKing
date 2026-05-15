@@ -7,7 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../core/data/models/study_session_model.dart';
+import '../../../core/data/models/session_model.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class SessionExportService {
@@ -18,26 +18,29 @@ class SessionExportService {
     return value;
   }
 
-  static String sessionsToCSV(List<StudySession> sessions) {
+  static String sessionsToCSV(List<Session> sessions) {
     final buffer = StringBuffer();
-    buffer.writeln('Session ID,Student ID,Subject,Start Time,End Time,'
-        'Duration (min),Questions Answered,Correct,Accuracy (%)');
+    buffer.writeln('Session ID,Student ID,Subject,Type,Start Time,End Time,'
+        'Duration (min),Planned Duration (min),Questions Answered,Correct,Accuracy (%)');
 
     for (final s in sessions) {
       final startStr = s.startTime.toIso8601String();
       final endStr = s.endTime?.toIso8601String() ?? '';
-      final durationMin = (s.timeSpentMs / 60000).toStringAsFixed(1);
+      final durationMin = (s.actualDurationMs / 60000).toStringAsFixed(1);
       final accuracy = s.questionsAnswered > 0
           ? ((s.correctAnswers / s.questionsAnswered) * 100).toStringAsFixed(1)
           : '0.0';
 
+      final plannedDuration = s.plannedDurationMinutes?.toString() ?? '';
       buffer.writeln(
         '${_csvEscape(s.id)},'
         '${_csvEscape(s.studentId)},'
-        '${_csvEscape(s.subjectId)},'
+        '${_csvEscape(s.subjectId ?? '')},'
+        '${s.type.name},'
         '$startStr,'
         '$endStr,'
         '$durationMin,'
+        '$plannedDuration,'
         '${s.questionsAnswered},'
         '${s.correctAnswers},'
         '$accuracy',
@@ -48,12 +51,12 @@ class SessionExportService {
   }
 
   static List<Map<String, dynamic>> sessionsToJSON(
-      List<StudySession> sessions) {
+      List<Session> sessions) {
     return sessions.map((s) => s.toJson()).toList();
   }
 
   static Future<List<int>> sessionsToPDF(
-    List<StudySession> sessions,
+    List<Session> sessions,
     AppLocalizations l10n,
   ) async {
     final pdf = pw.Document();
@@ -87,23 +90,24 @@ class SessionExportService {
           if (sessions.isNotEmpty)
             pw.TableHelper.fromTextArray(
               headers: ['#', l10n.subjects, l10n.date, l10n.duration,
-                  l10n.correct, l10n.accuracy],
+                  l10n.correct, l10n.accuracy, 'Type'],
               data: sessions.asMap().entries.map((entry) {
                 final i = entry.key + 1;
                 final s = entry.value;
                 final date =
                     '${s.startTime.day}/${s.startTime.month}/${s.startTime.year}';
-                final dur = _formatDuration(s.timeSpentMs);
+                final dur = _formatDuration(s.actualDurationMs);
                 final accuracy = s.questionsAnswered > 0
                     ? '${((s.correctAnswers / s.questionsAnswered) * 100).toStringAsFixed(1)}%'
                     : '-';
                 return [
                   '$i',
-                  s.subjectId,
+                  s.subjectId ?? '',
                   date,
                   dur,
                   '${s.correctAnswers}/${s.questionsAnswered}',
                   accuracy,
+                  s.type.name,
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(
@@ -121,6 +125,7 @@ class SessionExportService {
                 3: pw.Alignment.centerRight,
                 4: pw.Alignment.centerRight,
                 5: pw.Alignment.centerRight,
+                6: pw.Alignment.centerLeft,
               },
             ),
           if (sessions.isEmpty)
@@ -143,8 +148,8 @@ class SessionExportService {
     return pdf.save();
   }
 
-  static String _formatTotalDuration(List<StudySession> sessions) {
-    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.timeSpentMs);
+  static String _formatTotalDuration(List<Session> sessions) {
+    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
     final minutes = totalMs ~/ 60000;
     final hours = minutes ~/ 60;
     final remainingMin = minutes % 60;
@@ -165,7 +170,7 @@ class SessionExportService {
 
   @visibleForTesting
   static Future<File> writeCSVFile(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename, {
     Directory? directory,
   }) async {
@@ -178,7 +183,7 @@ class SessionExportService {
 
   @visibleForTesting
   static Future<File> writeJSONFile(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename, {
     Directory? directory,
   }) async {
@@ -191,7 +196,7 @@ class SessionExportService {
 
   @visibleForTesting
   static Future<File> writePDFFile(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename,
     AppLocalizations l10n, {
     Directory? directory,
@@ -204,7 +209,7 @@ class SessionExportService {
   }
 
   static Future<void> shareCSV(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename, {
     AppLocalizations? l10n,
   }) async {
@@ -213,7 +218,7 @@ class SessionExportService {
   }
 
   static Future<void> shareJSON(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename, {
     AppLocalizations? l10n,
   }) async {
@@ -222,7 +227,7 @@ class SessionExportService {
   }
 
   static Future<void> sharePDF(
-    List<StudySession> sessions,
+    List<Session> sessions,
     String filename,
     AppLocalizations l10n, {
     AppLocalizations? shareL10n,

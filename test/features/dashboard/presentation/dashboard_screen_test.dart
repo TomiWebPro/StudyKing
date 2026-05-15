@@ -19,9 +19,6 @@ import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -43,24 +40,6 @@ MasteryState _masteryState({
     lastAttempt: DateTime.now(),
     lastUpdated: DateTime.now(),
   );
-}
-
-class FakeFocusSessionRepository extends FocusSessionRepository {
-  @override
-  Future<void> init() async {}
-}
-
-class FakeFocusSessionService extends FocusSessionService {
-  FakeFocusSessionService() : super(repository: FakeFocusSessionRepository());
-
-  @override
-  Future<Map<String, dynamic>> getTodayStats() async => {
-    'totalSeconds': 0,
-    'completedSessions': 0,
-    'totalSessions': 0,
-    'plannedMinutes': 0,
-    'hours': '0.0',
-  };
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -280,8 +259,6 @@ Widget _buildTestApp(
       dashboardAdherenceRepositoryProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(),
       ),
-      focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
-      focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -317,8 +294,6 @@ Widget _buildTestAppWithRoutes(
       dashboardAdherenceRepositoryProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(),
       ),
-      focusSessionRepositoryProvider.overrideWithValue(FakeFocusSessionRepository()),
-      focusSessionServiceProvider.overrideWithValue(FakeFocusSessionService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

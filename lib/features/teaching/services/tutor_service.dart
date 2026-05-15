@@ -31,6 +31,9 @@ class TutorService {
     required String subjectId,
     required String topicId,
     required String topicTitle,
+    required List<String> correctKeywords,
+    required List<String> incorrectKeywords,
+    required List<String> exerciseKeywords,
     int durationMinutes = 45,
   }) async {
     final sessionId = 'tutor_${DateTime.now().millisecondsSinceEpoch}';
@@ -51,6 +54,9 @@ class TutorService {
       llmService: _llmService,
       modelId: _modelId,
       sessionId: sessionId,
+      correctKeywords: correctKeywords,
+      incorrectKeywords: incorrectKeywords,
+      exerciseKeywords: exerciseKeywords,
     );
 
     manager.initialize(

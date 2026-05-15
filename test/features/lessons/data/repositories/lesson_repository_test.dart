@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/models/lesson_block_model.dart';
@@ -62,6 +66,46 @@ class _MockLessonRepository extends LessonRepository {
   @override
   Future<void> delete(String id) async {
     _storage.remove(id);
+  }
+}
+
+class _TestLessonAdapter extends TypeAdapter<Lesson> {
+  @override
+  final int typeId = 7;
+
+  @override
+  Lesson read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return Lesson.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, Lesson obj) {
+    writer.write(obj.toJson());
+  }
+}
+
+class _TestLessonBlockAdapter extends TypeAdapter<LessonBlock> {
+  @override
+  final int typeId = 6;
+
+  @override
+  LessonBlock read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return LessonBlock.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, LessonBlock obj) {
+    writer.write(obj.toJson());
   }
 }
 
@@ -168,6 +212,219 @@ void main() {
         await repository.create(createTestLesson(id: 'l1'));
         await repository.delete('l1');
         expect(await repository.get('l1'), isNull);
+      });
+    });
+  });
+
+  group('LessonRepository Hive integration', () {
+    late String hivePath;
+    late LessonRepository repo;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final dir = await Directory.systemTemp.createTemp('hive_lesson_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(7)) {
+        Hive.registerAdapter(_TestLessonAdapter());
+      }
+      if (!Hive.isAdapterRegistered(6)) {
+        Hive.registerAdapter(_TestLessonBlockAdapter());
+      }
+      repo = LessonRepository();
+      await repo.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        await Directory(hivePath).delete(recursive: true);
+      }
+    });
+
+    test('init opens boxes and readies the repository', () async {
+      expect(repo, isNotNull);
+    });
+
+    group('create', () {
+      test('stores a lesson and retrieves it', () async {
+        final lesson = createTestLesson();
+        await repo.create(lesson);
+        final stored = await repo.get('lesson-1');
+        expect(stored, isNotNull);
+        expect(stored!.title, 'Test Lesson');
+        expect(stored.subjectId, 'sub-1');
+        expect(stored.topicId, 'topic-1');
+      });
+
+      test('stores a lesson with all fields', () async {
+        final lesson = Lesson(
+          id: 'full-lesson',
+          subjectId: 'sub-1',
+          title: 'Full Lesson',
+          topicId: 'topic-1',
+          blocks: [
+            LessonBlock(id: 'b1', subjectId: 'sub-1', lessonId: 'full-lesson', type: LessonBlockType.text, content: 'Block 1', order: 1),
+          ],
+          difficulty: 3,
+          generatedBy: GeneratedBy.ai,
+          createdAt: DateTime(2026, 5, 15),
+          markscheme: 'Answer key',
+        );
+        await repo.create(lesson);
+        final stored = await repo.get('full-lesson');
+        expect(stored, isNotNull);
+        expect(stored!.difficulty, 3);
+        expect(stored.generatedBy, GeneratedBy.ai);
+        expect(stored.markscheme, 'Answer key');
+        expect(stored.blocks.length, 1);
+        expect(stored.blocks.first.content, 'Block 1');
+      });
+    });
+
+    group('get', () {
+      test('returns null for non-existent lesson', () async {
+        expect(await repo.get('nonexistent'), isNull);
+      });
+    });
+
+    group('getAll', () {
+      test('returns empty list when no lessons exist', () async {
+        expect(await repo.getAll(), isEmpty);
+      });
+
+      test('returns all stored lessons', () async {
+        await repo.create(createTestLesson(id: 'l1'));
+        await repo.create(createTestLesson(id: 'l2'));
+        await repo.create(createTestLesson(id: 'l3'));
+        final all = await repo.getAll();
+        expect(all.length, 3);
+      });
+    });
+
+    group('getBySubject', () {
+      test('returns lessons matching the subject', () async {
+        await repo.create(createTestLesson(id: 'l1', subjectId: 'math'));
+        await repo.create(createTestLesson(id: 'l2', subjectId: 'math'));
+        await repo.create(createTestLesson(id: 'l3', subjectId: 'physics'));
+        final mathLessons = await repo.getBySubject('math');
+        expect(mathLessons.length, 2);
+        expect(mathLessons.every((l) => l.subjectId == 'math'), isTrue);
+      });
+
+      test('returns empty when no lessons match the subject', () async {
+        await repo.create(createTestLesson(id: 'l1', subjectId: 'math'));
+        expect(await repo.getBySubject('physics'), isEmpty);
+      });
+    });
+
+    group('getByTopic', () {
+      test('returns lessons matching the topic', () async {
+        await repo.create(createTestLesson(id: 'l1', topicId: 'algebra'));
+        await repo.create(createTestLesson(id: 'l2', topicId: 'algebra'));
+        await repo.create(createTestLesson(id: 'l3', topicId: 'geometry'));
+        final algebraLessons = await repo.getByTopic('algebra');
+        expect(algebraLessons.length, 2);
+        expect(algebraLessons.every((l) => l.topicId == 'algebra'), isTrue);
+      });
+
+      test('returns empty when no lessons match the topic', () async {
+        await repo.create(createTestLesson(id: 'l1', topicId: 'algebra'));
+        expect(await repo.getByTopic('geometry'), isEmpty);
+      });
+    });
+
+    group('getBySubjectAndTopic', () {
+      test('returns lessons matching both subject and topic', () async {
+        await repo.create(createTestLesson(id: 'l1', subjectId: 'math', topicId: 'algebra'));
+        await repo.create(createTestLesson(id: 'l2', subjectId: 'math', topicId: 'geometry'));
+        await repo.create(createTestLesson(id: 'l3', subjectId: 'physics', topicId: 'algebra'));
+        final result = await repo.getBySubjectAndTopic('math', 'algebra');
+        expect(result.length, 1);
+        expect(result.first.id, 'l1');
+      });
+
+      test('returns empty when no lessons match', () async {
+        await repo.create(createTestLesson(id: 'l1', subjectId: 'math', topicId: 'algebra'));
+        expect(await repo.getBySubjectAndTopic('physics', 'algebra'), isEmpty);
+        expect(await repo.getBySubjectAndTopic('math', 'geometry'), isEmpty);
+      });
+    });
+
+    group('addBlock', () {
+      test('stores a lesson block and retrieves it', () async {
+        final block = LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'Content');
+        await repo.addBlock(block);
+        final blocks = await repo.getBlocksForLesson('l1');
+        expect(blocks.length, 1);
+        expect(blocks.first.id, 'b1');
+        expect(blocks.first.content, 'Content');
+        expect(blocks.first.type, LessonBlockType.text);
+      });
+
+      test('stores a block with all fields', () async {
+        final block = LessonBlock(id: 'b2', subjectId: 'sub-1', lessonId: 'l1', type: LessonBlockType.example, content: 'Example', order: 5);
+        await repo.addBlock(block);
+        final blocks = await repo.getBlocksForLesson('l1');
+        expect(blocks.length, 1);
+        expect(blocks.first.order, 5);
+        expect(blocks.first.type, LessonBlockType.example);
+      });
+    });
+
+    group('getBlocksForLesson', () {
+      test('returns blocks for a specific lesson', () async {
+        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
+        await repo.addBlock(LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C2'));
+        await repo.addBlock(LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l2', type: LessonBlockType.text, content: 'C3'));
+        final blocks = await repo.getBlocksForLesson('l1');
+        expect(blocks.length, 2);
+        final ids = blocks.map((b) => b.id).toSet();
+        expect(ids, containsAll(['b1', 'b2']));
+      });
+
+      test('returns empty when no blocks for lesson', () async {
+        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
+        expect(await repo.getBlocksForLesson('nonexistent'), isEmpty);
+      });
+    });
+
+    group('getBlocksBySubject', () {
+      test('returns blocks for a specific subject', () async {
+        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
+        await repo.addBlock(LessonBlock(id: 'b2', subjectId: 'math', lessonId: 'l2', type: LessonBlockType.text, content: 'C2'));
+        await repo.addBlock(LessonBlock(id: 'b3', subjectId: 'physics', lessonId: 'l3', type: LessonBlockType.text, content: 'C3'));
+        final mathBlocks = await repo.getBlocksBySubject('math');
+        expect(mathBlocks.length, 2);
+      });
+
+      test('returns empty when no blocks for subject', () async {
+        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
+        expect(await repo.getBlocksBySubject('physics'), isEmpty);
+      });
+    });
+
+    group('delete', () {
+      test('removes a stored lesson', () async {
+        await repo.create(createTestLesson(id: 'to-delete'));
+        expect(await repo.get('to-delete'), isNotNull);
+        await repo.delete('to-delete');
+        expect(await repo.get('to-delete'), isNull);
+      });
+
+      test('does not throw when deleting non-existent lesson', () async {
+        await repo.create(createTestLesson(id: 'existing'));
+        await repo.delete('nonexistent');
+        expect(await repo.get('existing'), isNotNull);
+      });
+    });
+
+    group('save (update)', () {
+      test('updates an existing lesson via save', () async {
+        await repo.create(createTestLesson(id: 'updatable', title: 'Original'));
+        await repo.save('updatable', createTestLesson(id: 'updatable', title: 'Updated'));
+        final stored = await repo.get('updatable');
+        expect(stored?.title, 'Updated');
       });
     });
   });

@@ -1,10 +1,11 @@
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
 class DashboardData {
   final List<MasteryState> allMastery;
@@ -35,7 +36,7 @@ class DashboardDataLoader {
   final StudyProgressTracker tracker;
   final InstrumentationService instrumentation;
   final TopicRepository topicRepo;
-  final FocusSessionService focusService;
+  final SessionRepository sessionRepo;
   final PlanAdherenceRepository adherenceRepo;
   final String studentId;
 
@@ -44,7 +45,7 @@ class DashboardDataLoader {
     required this.tracker,
     required this.instrumentation,
     required this.topicRepo,
-    required this.focusService,
+    required this.sessionRepo,
     required this.adherenceRepo,
     required this.studentId,
   });
@@ -56,7 +57,19 @@ class DashboardDataLoader {
 
     Map<String, dynamic>? focusTodayStats;
     try {
-      focusTodayStats = await focusService.getTodayStats();
+      final todaySessions = await sessionRepo.getByDate(DateTime.now());
+      final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
+      if (focusToday.isNotEmpty) {
+        final totalMs = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+        focusTodayStats = {
+          'totalMs': totalMs,
+          'totalSeconds': totalMs ~/ 1000,
+          'completedSessions': focusToday.where((s) => s.completed).length,
+          'totalSessions': focusToday.length,
+          'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
+          'hours': (totalMs / 3600000).toStringAsFixed(1),
+        };
+      }
     } catch (_) {}
 
     List<MasteryState> allMastery = [];

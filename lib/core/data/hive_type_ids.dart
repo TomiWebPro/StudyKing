@@ -8,7 +8,6 @@ const int _typeIdSettingsBox = 4;
 const int _typeIdSourceModel = 26;
 const int _typeIdLessonBlockModel = 6;
 const int _typeIdLessonModel = 7;
-const int _typeIdStudySessionModel = 8;
 const int _typeIdTaskModel = 9;
 const int _typeIdUserProfileModel = 10;
 const int _typeIdSubjectModel = 11;
@@ -41,7 +40,6 @@ const List<int> _allTypeIds = [
   _typeIdSourceModel,
   _typeIdLessonBlockModel,
   _typeIdLessonModel,
-  _typeIdStudySessionModel,
   _typeIdTaskModel,
   _typeIdUserProfileModel,
   _typeIdSubjectModel,

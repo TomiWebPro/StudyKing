@@ -15,6 +15,7 @@ import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 
 import 'core/routes/app_router.dart';
+import 'core/routes/tab_navigator.dart';
 import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/settings_screen.dart';
@@ -205,7 +206,9 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final String? fixedStudentId;
+
+  const MainScreen({super.key, this.fixedStudentId});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -214,19 +217,31 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  List<Widget> _screens = [];
+  final _navigatorKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
 
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      const SubjectListScreen(),
-      const PracticeScreen(),
-      const MentorScreen(),
-      DashboardScreen(
-        studentId: StudentIdService().getStudentId(),
+  List<Widget> _buildTabNavigators() {
+    final studentId = widget.fixedStudentId ?? StudentIdService().getStudentId();
+    return [
+      TabNavigator(
+        rootScreen: const SubjectListScreen(),
+        navigatorKey: _navigatorKeys[0],
       ),
-      const SettingsScreen(),
+      TabNavigator(
+        rootScreen: const PracticeScreen(),
+        navigatorKey: _navigatorKeys[1],
+      ),
+      TabNavigator(
+        rootScreen: const MentorScreen(),
+        navigatorKey: _navigatorKeys[2],
+      ),
+      TabNavigator(
+        rootScreen: DashboardScreen(studentId: studentId),
+        navigatorKey: _navigatorKeys[3],
+      ),
+      TabNavigator(
+        rootScreen: const SettingsScreen(),
+        navigatorKey: _navigatorKeys[4],
+      ),
     ];
   }
 
@@ -244,7 +259,7 @@ class _MainScreenState extends State<MainScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: _selectedIndex,
-          children: _screens,
+          children: _buildTabNavigators(),
         ),
         floatingActionButton: Semantics(
           button: true,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
+import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -28,20 +28,20 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
 
 class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     with TickerProviderStateMixin {
-  late final FocusSessionService _service;
+  late final StudyTimerService _service;
 
   bool _initialized = false;
   bool _showSetup = true;
   int _selectedMinutes = 25;
-  FocusSession? _completedSession;
+  Session? _completedSession;
   bool _inBreak = false;
   int _breakRemaining = 0;
   final int _breakDuration = 300;
   late AnimationController _breakController;
 
   Map<String, dynamic>? _todayStats;
-  int _weeklySeconds = 0;
-  List<FocusSession> _recentSessions = [];
+  int _weeklyMs = 0;
+  List<Session> _recentSessions = [];
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    _service = ref.read(focusSessionServiceProvider);
+    _service = ref.read(studyTimerServiceProvider);
     _initService();
   }
 
@@ -69,7 +69,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     }
   }
 
-  void _onSessionComplete(FocusSession session) {
+  void _onSessionComplete(Session session) {
     if (!mounted) return;
     setState(() {
       _completedSession = session;
@@ -82,16 +82,17 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     _recordAdherence(session);
   }
 
-  Future<void> _recordAdherence(FocusSession session) async {
+  Future<void> _recordAdherence(Session session) async {
     final planAdapter = PlanAdapter();
-    final actualMinutes = (session.actualDurationSeconds / 60).ceil().clamp(1, 480);
+    final elapsedSeconds = session.actualDurationMs ~/ 1000;
+    final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
     await planAdapter.recordFromFocusSession(
       studentId: StudentIdService().getStudentId(),
       actualMinutes: actualMinutes,
     );
   }
 
-  void _onTick(int elapsed) {
+  void _onTick(int elapsedMs) {
     if (mounted) setState(() {});
   }
 
@@ -118,12 +119,12 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
   Future<void> _loadStats() async {
     try {
       final stats = await _service.getTodayStats();
-      final weekly = await _service.getWeeklyFocusSeconds();
+      final weekly = await _service.getTodayDurationMs();
       final recent = await _service.getRecentSessions();
       if (mounted) {
         setState(() {
           _todayStats = stats;
-          _weeklySeconds = weekly;
+          _weeklyMs = weekly;
           _recentSessions = recent;
         });
       }
@@ -158,6 +159,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
 
       await _service.startSession(
         plannedDurationMinutes: _selectedMinutes,
+        type: SessionType.focus,
         subjectId: widget.preselectedSubjectId,
         topicId: widget.preselectedTopicId,
       );
@@ -223,7 +225,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
             const SizedBox(height: 24),
             SessionSummaryCard(
               todayStats: _todayStats,
-              weeklySeconds: _weeklySeconds,
+              weeklyMs: _weeklyMs,
               recentSessions: _recentSessions,
             ),
           ],
@@ -259,7 +261,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              l10n.sessionCompleted(_completedSession!.actualDurationSeconds ~/ 60),
+              l10n.sessionCompleted(_completedSession!.actualDurationMs ~/ 60000),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
@@ -278,7 +280,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
         child: Column(
           children: [
             FocusTimerWidget(
-              plannedDurationMinutes: _service.currentSession!.plannedDurationMinutes,
+              plannedDurationMinutes: _service.currentSession!.plannedDurationMinutes ?? 25,
               elapsedSeconds: _service.elapsedSeconds,
               isPaused: _service.isPaused,
               isActive: true,

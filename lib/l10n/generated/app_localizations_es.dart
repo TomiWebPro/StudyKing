@@ -236,7 +236,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noWeakAreasQuestions =>
-      'No hay preguntas disponibles para sus áreas débiles.';
+      'No hay preguntas disponibles para sus áreas por mejorar.';
 
   @override
   String get noQuestionsAvailable => 'No Hay Preguntas Disponibles';
@@ -738,7 +738,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String practiceQuestionsFrom(String subjectName) {
-    return 'Practica preguntas de $subjectName';
+    return 'Practique preguntas de $subjectName';
   }
 
   @override
@@ -840,7 +840,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noDataUploaded => 'No hay datos subidos';
 
   @override
-  String get uploadOrPasteData => 'Sube o pegue datos para visualizar';
+  String get uploadOrPasteData => 'Cargue o pegue datos para visualizar';
 
   @override
   String get selectGraphType => 'Seleccione un tipo de gráfico para visualizar';
@@ -1243,7 +1243,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get studyTime => 'Tiempo de Estudio';
 
   @override
-  String get planAdherence => 'Adherencia al Plan';
+  String get planAdherence => 'cumplimiento al Plan';
 
   @override
   String get masteryOverview => 'Resumen de Dominio';
@@ -1276,7 +1276,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topics => 'Temas';
 
   @override
-  String get practiceAllWeakAreas => 'Practicar Todas las Áreas Débiles';
+  String get practiceAllWeakAreas => 'Practicar Todas las áreas por mejorar';
 
   @override
   String get practiceThisTopic => 'Practicar este tema';
@@ -1371,7 +1371,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String uploadFailed(String error) {
-    return 'Error al subir: $error';
+    return 'Error al cargar: $error';
   }
 
   @override
@@ -2604,7 +2604,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeFirstStepName => 'Primer Paso';
 
   @override
-  String get badgeFirstStepDesc => 'Respondió su primera pregunta!';
+  String get badgeFirstStepDesc => '¡Respondió su primera pregunta!';
 
   @override
   String get badgeCenturyName => 'Club del Centenar';
@@ -2616,25 +2616,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeAccuracyGoldName => 'Precisión de Oro';
 
   @override
-  String get badgeAccuracyGoldDesc => 'Logró más del 90% de precisión!';
+  String get badgeAccuracyGoldDesc => '¡Alcanzó más del 90% de precisión!';
 
   @override
-  String get badgeDailyScholarName => 'Estudiante Diario';
+  String get badgeDailyScholarName => 'Estudioso Diario';
 
   @override
-  String get badgeDailyScholarDesc => 'Estudió consistentemente hoy!';
+  String get badgeDailyScholarDesc => '¡Estudió constantemente hoy!';
 
   @override
   String get badgeDedicatedLearnerName => 'Aprendiz Dedicado';
 
   @override
-  String get badgeDedicatedLearnerDesc => 'Estudió más de 10 horas en total!';
+  String get badgeDedicatedLearnerDesc => '¡Estudió más de 10 horas en total!';
 
   @override
   String get badgeWeeklyWarriorName => 'Guerrero Semanal';
 
   @override
-  String get badgeWeeklyWarriorDesc => 'Activo durante una semana completa!';
+  String get badgeWeeklyWarriorDesc => '¡Activo durante una semana completa!';
 
   @override
   String get notifChannelGeneral => 'Notificaciones de StudyKing';
@@ -2756,17 +2756,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String nudgeOverwork(String hours) {
-    return 'Ha estudiado $hours horas hoy. Considere tomar un descanso!';
+    return 'Ha estudiado $hours horas hoy. ¡Considere tomar un descanso!';
   }
 
   @override
   String nudgeRevision(int days, String topic) {
-    return 'Han pasado $days días desde que practicó \"$topic\". Es hora de repasar!';
+    return 'Han pasado $days días desde que practicó \"$topic\". ¡Hora de repasar!';
   }
 
   @override
   String nudgePlanAdjustment(int days) {
-    return 'Ha tenido $days días de baja adherencia. Le gustaría ajustar su plan de estudio?';
+    return 'Ha tenido $days días de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?';
   }
 
   @override
@@ -2822,7 +2822,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get planFocusGeneralReview => 'Repaso general';
 
   @override
-  String get planFocusWeakAreas => 'Enfoque en áreas débiles';
+  String get planFocusWeakAreas => 'Enfoque en áreas por mejorar';
 
   @override
   String get planFocusPracticeReview => 'Práctica y repaso';
@@ -2854,7 +2854,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeCenturyClubName => 'Club del Centenario';
 
   @override
-  String get badgeCenturyClubDesc => 'Respondió más de 100 preguntas!';
+  String get badgeCenturyClubDesc => '¡Respondió más de 100 preguntas!';
 
   @override
   String nudgeWeeklyDigest(
@@ -2864,11 +2864,11 @@ class AppLocalizationsEs extends AppLocalizations {
     int weakCount,
     int badgeCount,
   ) {
-    return 'Resumen semanal: $weeklyActivity preguntas respondidas, $accuracy% precisión, $totalHours horas estudiadas, $weakCount áreas débiles, $badgeCount insignias obtenidas.';
+    return 'Resumen semanal: $weeklyActivity preguntas respondidas, $accuracy% precisión, $totalHours horas estudiadas, $weakCount áreas por mejorar, $badgeCount insignias obtenidas.';
   }
 
   @override
-  String get notificationTimeToReviewTitle => 'Hora de Repasar!';
+  String get notificationTimeToReviewTitle => '¡Hora de Repasar!';
 
   @override
   String notificationTimeToReviewBody(int days, String topic) {
@@ -2880,7 +2880,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String notificationTakeABreakBody(String hours) {
-    return 'Ha estudiado $hours horas hoy. Recuerde descansar!';
+    return '¡Ha estudiado $hours horas hoy. Recuerde descansar!';
   }
 
   @override
@@ -2888,7 +2888,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String notificationPlanAdjustmentBody(int days) {
-    return 'Ha tenido $days días de baja adherencia. Ajustamos su plan?';
+    return '¿Ha tenido $days días de bajo cumplimiento. Ajustamos su plan?';
   }
 
   @override
@@ -2909,7 +2909,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get notificationBadgeUnlockedTitle => 'Insignia Desbloqueada!';
+  String get notificationBadgeUnlockedTitle => '¡Insignia Desbloqueada!';
 
   @override
   String notificationBadgeUnlockedBody(String badge, String description) {
@@ -2964,7 +2964,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationChannelMasteryDesc =>
-      'Alertas sobre bajo dominio de temas y áreas débiles';
+      'Alertas sobre bajo dominio de temas y áreas por mejorar';
 
   @override
   String get notificationChannelBadgesName => 'Notificaciones de Insignias';
@@ -2982,7 +2982,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'El repaso está vencido — el riesgo de olvido es alto';
 
   @override
-  String get planStreakLow => 'La racha es baja — se necesita consistencia';
+  String get planStreakLow => 'La racha es baja — se necesita constancia';
 
   @override
   String get planPrerequisite =>
@@ -3012,7 +3012,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get planHighMastery => 'Alto dominio — listo para avanzar';
 
   @override
-  String get planGoodProgress => 'Buen progreso — mantenga la consistencia';
+  String get planGoodProgress => 'Buen progreso — mantenga la constancia';
 
   @override
   String get planDeveloping => 'En desarrollo — necesita más práctica';
@@ -3034,12 +3034,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String adherenceLowDaysAdjust(int days) {
-    return 'Ha tenido $days días consecutivos de baja adherencia. Considere ajustar su plan de estudio o consultar con su mentor.';
+    return 'Ha tenido $days días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o consultar con su mentor.';
   }
 
   @override
   String adherenceLowDaysRegenerate(int days) {
-    return 'Ha tenido $days días consecutivos de baja adherencia. Le gustaría regenerar su plan con objetivos ajustados?';
+    return '¿Ha tenido $days días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?';
   }
 
   @override
@@ -3052,7 +3052,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recommendationExcellentProgress =>
-      'Progreso excelente! Listo para temas avanzados.';
+      '¡Progreso excelente! Listo para temas avanzados.';
 
   @override
   String get recommendationChallengingPractice =>
@@ -3060,7 +3060,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recommendationLowHours =>
-      'Estudió menos de 1 hora en total. La consistencia es clave!';
+      '¡Estudió menos de 1 hora en total. La constancia es clave!';
 
   @override
   String get recommendationSetDailyGoal =>
@@ -3068,7 +3068,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recommendationNoActivity =>
-      'Sin actividad de estudio esta semana. Vuelva al ritmo!';
+      '¡Sin actividad de estudio esta semana. Vuelva al ritmo!';
 
   @override
   String get recommendationQuickReview =>
@@ -3136,4 +3136,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String adherenceExceededToday(Object actualMinutes, Object plannedMinutes) {
     return '¡Buen trabajo! Ha estudiado $actualMinutes min frente a los $plannedMinutes min planificados.';
   }
+
+  @override
+  String overtimeLabel(int minutes) {
+    return '+$minutes min';
+  }
+
+  @override
+  String get correctAnswerKeywords =>
+      'correcto,bien,sí,entiendo,comprendo,cierto,exactamente,así es';
+
+  @override
+  String get incorrectAnswerKeywords =>
+      'incorrecto,mal,no estoy seguro,confundido,no sé,no entiendo,no comprendo,error,equivocado';
+
+  @override
+  String get exerciseKeywords =>
+      'ejercicio,práctica,pregunta,examen,problema,prueba,reto,ejemplo';
 }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_history_tab.dart';
@@ -15,7 +15,7 @@ import 'package:studyking/features/subjects/presentation/widgets/subject_stats_t
 
 class SubjectDetailScreen extends ConsumerStatefulWidget {
   final SubjectDetailArgs args;
-  final StudySessionRepository? sessionRepository;
+  final SessionRepository? sessionRepository;
 
   const SubjectDetailScreen({
     super.key,
@@ -272,7 +272,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     );
   }
 
-  void _showSessionDetails(StudySession session) {
+  void _showSessionDetails(Session session) {
     final questions = session.questionsAnswered;
     final correct = session.correctAnswers;
     final l10n = AppLocalizations.of(context)!;
@@ -286,7 +286,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow(l10n.date, formatDateFromContext(context, session.startTime)),
-            _detailRow(l10n.duration, formatDurationFromContext(context, Duration(milliseconds: session.timeSpentMs))),
+            _detailRow(l10n.duration, formatDurationFromContext(context, session.actualDuration)),
             _detailRow(l10n.questions, questions.toString()),
             if (correct > 0)
               Padding(

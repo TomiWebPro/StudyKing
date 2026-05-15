@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -25,8 +25,8 @@ class FakeQuestionRepository extends QuestionRepository {
   Future<Result<List<Question>>> getBySubject(String subjectId) async => result;
 }
 
-class FakeStudySessionRepository extends StudySessionRepository {
-  final List<StudySession> sessions = [];
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> sessions = [];
   bool initCalled = false;
 
   @override
@@ -35,7 +35,7 @@ class FakeStudySessionRepository extends StudySessionRepository {
   }
 
   @override
-  Future<void> create(StudySession session) async {
+  Future<void> save(Session session) async {
     sessions.add(session);
   }
 }
@@ -95,7 +95,7 @@ Widget sessionApp({
   String? topicId,
   int? questionCount,
   NavigatorObserver? observer,
-  StudySessionRepository? sessionRepo,
+  SessionRepository? sessionRepo,
   SpacedRepetitionRepository? srRepo,
   bool isSpacedRepetition = false,
 }) {
@@ -103,7 +103,7 @@ Widget sessionApp({
     overrides: [
       questionRepositoryProvider.overrideWithValue(FakeQuestionRepository(result)),
       if (sessionRepo != null)
-        studySessionRepositoryProvider.overrideWithValue(sessionRepo),
+        sessionRepositoryProvider.overrideWithValue(sessionRepo),
       if (srRepo != null)
         spacedRepetitionRepositoryProvider.overrideWithValue(srRepo),
     ],

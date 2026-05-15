@@ -1,5 +1,5 @@
 // All features
-export 'focus_mode/focus_mode.dart';
+export 'focus_mode/focus_mode.dart' hide sessionRepositoryProvider, studyTimerServiceProvider;
 export 'lessons/lessons.dart';
 export 'planner/planner.dart';
 export 'practice/practice.dart';

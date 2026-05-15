@@ -57,6 +57,9 @@ void main() {
         llmService: llmService,
         modelId: 'test-model',
         sessionId: 'test-session',
+        correctKeywords: ['correct', 'right', 'yes'],
+        incorrectKeywords: ['wrong', 'incorrect', 'no'],
+        exerciseKeywords: ['exercise', 'practice', 'quiz'],
       );
     });
 

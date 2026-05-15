@@ -12,6 +12,7 @@ import 'package:studyking/features/questions/data/adapters/markscheme_adapter.da
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
+import 'package:studyking/features/sessions/services/session_migration_service.dart';
 import 'models/question_evaluation_model.dart';
 import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
@@ -42,7 +43,7 @@ class HiveInitializer {
     await Hive.openBox(HiveBoxNames.attempts);
     await Hive.openBox(HiveBoxNames.lessonBlocks);
     await Hive.openBox(HiveBoxNames.lessons);
-    await Hive.openBox(HiveBoxNames.sessions);
+    await Hive.openBox<String>(HiveBoxNames.sessions);
     await Hive.openBox(HiveBoxNames.progress);
     await Hive.openBox(HiveBoxNames.tasks);
 
@@ -50,7 +51,7 @@ class HiveInitializer {
     await Hive.openBox<TutorSession>(HiveBoxNames.tutorSessions);
     await Hive.openBox(HiveBoxNames.planAdherenceMetrics);
     await Hive.openBox(HiveBoxNames.masteryImprovementMetrics);
-    await Hive.openBox<String>(HiveBoxNames.focusSessions);
+    await SessionMigrationService.migrateIfNeeded();
 
     _logger.i('Hive initialized successfully with migrations');
   }

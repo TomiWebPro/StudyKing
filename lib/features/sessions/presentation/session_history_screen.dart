@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -11,7 +11,7 @@ import '../../../../core/utils/logger.dart';
 import '../services/session_export_service.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
-  final StudySessionRepository? sessionRepository;
+  final SessionRepository? sessionRepository;
 
   const SessionHistoryScreen({super.key, this.sessionRepository});
 
@@ -21,9 +21,9 @@ class SessionHistoryScreen extends StatefulWidget {
 
 class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   final Logger _logger = const Logger('SessionHistoryScreen');
-  late StudySessionRepository _sessionRepository;
-  List<StudySession> _allSessions = [];
-  List<StudySession> _filteredSessions = [];
+  late SessionRepository _sessionRepository;
+  List<Session> _allSessions = [];
+  List<Session> _filteredSessions = [];
   DateTime? _selectedDate;
   String? _selectedSubject;
   bool _isLoading = true;
@@ -31,7 +31,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _sessionRepository = widget.sessionRepository ?? StudySessionRepository();
+    _sessionRepository = widget.sessionRepository ?? SessionRepository();
     _loadSessions();
   }
 
@@ -182,7 +182,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     }
   }
 
-  Future<bool> _deleteSession(StudySession session) async {
+  Future<bool> _deleteSession(Session session) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -217,7 +217,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               action: SnackBarAction(
                 label: l10n.undo,
                 onPressed: () {
-                  _sessionRepository.create(session);
+                  _sessionRepository.save(session);
                   _loadSessions();
                 },
               ),
@@ -247,7 +247,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     final l10n = AppLocalizations.of(context)!;
     final totalMinutes = _filteredSessions.fold<int>(
       0,
-      (sum, s) => sum + _formatTimeMinutes(Duration(milliseconds: s.timeSpentMs)),
+      (sum, s) => sum + _formatTimeMinutes(s.actualDuration),
     );
 
     return Scaffold(
@@ -445,8 +445,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final session = _filteredSessions[index];
-        final timeSpent = Duration(milliseconds: session.timeSpentMs);
         final position = _allSessions.indexOf(session);
+        final icon = _sessionIcon(session.type);
+        final color = _sessionColor(session.type, theme);
 
         return Dismissible(
           key: Key(session.id),
@@ -464,16 +465,22 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.play_arrow, color: theme.colorScheme.primary),
+                child: Icon(icon, color: color),
               ),
-              title: Text(
-                l10n.sessionNumber(_allSessions.length - position),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+              title: Row(
+                children: [
+                  Text(
+                    l10n.sessionNumber(_allSessions.length - position),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(icon, size: 14, color: color),
+                ],
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +504,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 ],
               ),
               trailing: Text(
-                formatDurationFromContext(context, timeSpent),
+                formatDurationFromContext(context, session.actualDuration),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -531,7 +538,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
   Future<void> _showSubjectFilter() async {
     final l10n = AppLocalizations.of(context)!;
-    final subjects = _allSessions.map((s) => s.subjectId).toSet().toList()..sort();
+    final subjects = _allSessions.map((s) => s.subjectId).nonNulls.toSet().toList()..sort();
 
     if (subjects.isEmpty) return;
 
@@ -567,5 +574,31 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       _selectedSubject = selected;
     });
     _filterSessions();
+  }
+
+  IconData _sessionIcon(SessionType type) {
+    switch (type) {
+      case SessionType.focus:
+        return Icons.timer;
+      case SessionType.practice:
+        return Icons.play_arrow;
+      case SessionType.tutoring:
+        return Icons.school;
+      case SessionType.manual:
+        return Icons.edit_note;
+    }
+  }
+
+  Color _sessionColor(SessionType type, ThemeData theme) {
+    switch (type) {
+      case SessionType.focus:
+        return theme.colorScheme.tertiary;
+      case SessionType.practice:
+        return theme.colorScheme.primary;
+      case SessionType.tutoring:
+        return theme.colorScheme.secondary;
+      case SessionType.manual:
+        return theme.colorScheme.onSurfaceVariant;
+    }
   }
 }

@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _FakeStudySessionRepository extends StudySessionRepository {
-  final List<StudySession> sessions = [];
-  bool initCalled = false;
+class _FakeSessionRepository extends SessionRepository {
+  final List<Session> sessions = [];
+  bool saveCalled = false;
 
   @override
-  Future<void> init() async {
-    initCalled = true;
+  Future<void> save(Session session) async {
+    sessions.add(session);
+    saveCalled = true;
   }
 
   @override
-  Future<void> create(StudySession session) async {
-    sessions.add(session);
+  Future<List<Session>> getAll() async {
+    return sessions;
   }
 }
 
@@ -44,12 +45,12 @@ class _UpdateCall {
 
 void main() {
   group('PracticeSessionService', () {
-    late _FakeStudySessionRepository sessionRepo;
+    late _FakeSessionRepository sessionRepo;
     late _FakeSpacedRepetitionRepository srRepo;
     late PracticeSessionService service;
 
     setUp(() {
-      sessionRepo = _FakeStudySessionRepository();
+      sessionRepo = _FakeSessionRepository();
       srRepo = _FakeSpacedRepetitionRepository();
       service = PracticeSessionService(
         sessionRepo: sessionRepo,
@@ -167,7 +168,7 @@ void main() {
           correctAnswers: 7,
         );
 
-        expect(sessionRepo.initCalled, isTrue);
+        expect(sessionRepo.saveCalled, isTrue);
         expect(sessionRepo.sessions, hasLength(1));
         expect(sessionRepo.sessions[0].subjectId, 'subj-1');
         expect(sessionRepo.sessions[0].questionsAnswered, 10);
@@ -203,7 +204,7 @@ void main() {
       });
 
       test('does not throw when save fails', () async {
-        final failingRepo = _FailingStudySessionRepository();
+        final failingRepo = _FailingSessionRepository();
         final failingService = PracticeSessionService(
           sessionRepo: failingRepo,
           srRepo: srRepo,
@@ -219,11 +220,8 @@ void main() {
   });
 }
 
-class _FailingStudySessionRepository extends StudySessionRepository {
+class _FailingSessionRepository extends SessionRepository {
   @override
-  Future<void> init() async => throw Exception('Init failed');
-
-  @override
-  Future<void> create(StudySession session) async =>
-      throw Exception('Create failed');
+  Future<void> save(Session session) async =>
+      throw Exception('Save failed');
 }

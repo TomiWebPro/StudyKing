@@ -2,7 +2,7 @@ import '../utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -14,7 +14,7 @@ class DatabaseService {
   final QuestionRepository questionRepository;
   final AttemptRepository attemptRepository;
   final LessonRepository lessonRepository;
-  final StudySessionRepository sessionRepository;
+  final SessionRepository sessionRepository;
   final SubjectRepository subjectRepository;
   final ConversationRepository conversationRepository;
   final TutorSessionRepository tutorSessionRepository;

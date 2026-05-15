@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
-import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionSummaryCard extends StatelessWidget {
   final Map<String, dynamic>? todayStats;
-  final int weeklySeconds;
-  final List<FocusSession> recentSessions;
+  final int weeklyMs;
+  final List<Session> recentSessions;
 
   const SessionSummaryCard({
     super.key,
     this.todayStats,
-    this.weeklySeconds = 0,
+    this.weeklyMs = 0,
     this.recentSessions = const [],
   });
 
-  String _formatDuration(int totalSeconds) {
+  String _formatDuration(int totalMs) {
+    final totalSeconds = totalMs ~/ 1000;
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     if (hours > 0) {
@@ -30,7 +31,6 @@ class SessionSummaryCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final stats = todayStats ?? {};
-    final todaySeconds = stats['totalSeconds'] as int? ?? 0;
     final completed = stats['completedSessions'] as int? ?? 0;
     final total = stats['totalSessions'] as int? ?? 0;
 
@@ -65,7 +65,7 @@ class SessionSummaryCard extends StatelessWidget {
                       width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
                       child: MetricCard(
                         icon: Icons.access_time,
-                        value: _formatDuration(todaySeconds),
+                        value: _formatDuration(stats['totalMs'] as int? ?? 0),
                         label: l10n.today,
                         accent: cs.primary,
                       ),
@@ -74,7 +74,7 @@ class SessionSummaryCard extends StatelessWidget {
                       width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
                       child: MetricCard(
                         icon: Icons.date_range,
-                        value: _formatDuration(weeklySeconds),
+                        value: _formatDuration(weeklyMs),
                         label: l10n.thisWeek,
                         accent: cs.tertiary,
                       ),
@@ -102,9 +102,9 @@ class SessionSummaryCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               ...recentSessions.take(3).map((s) {
-                final dur = s.actualDurationSeconds;
-                final durStr = _formatDuration(dur);
-                final plannedStr = '${s.plannedDurationMinutes}m';
+                final durMs = s.actualDurationMs;
+                final durStr = _formatDuration(durMs);
+                final plannedStr = '${s.plannedDurationMinutes ?? 0}m';
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(

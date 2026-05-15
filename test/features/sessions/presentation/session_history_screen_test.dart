@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _FakeStudySessionRepository extends StudySessionRepository {
-  _FakeStudySessionRepository({List<StudySession>? seed, this.throwOnInit = false, this.throwOnDelete = false})
-      : _sessions = List<StudySession>.from(seed ?? []);
+class _FakeSessionRepository extends SessionRepository {
+  _FakeSessionRepository({List<Session>? seed, this.throwOnInit = false, this.throwOnDelete = false})
+      : sessions = List<Session>.from(seed ?? []);
 
-  final List<StudySession> _sessions;
+  final List<Session> sessions;
   final bool throwOnInit;
   final bool throwOnDelete;
 
@@ -19,22 +19,22 @@ class _FakeStudySessionRepository extends StudySessionRepository {
   }
 
   @override
-  Future<List<StudySession>> getAll() async => List<StudySession>.from(_sessions);
+  Future<List<Session>> getAll() async => List<Session>.from(sessions);
 
   @override
-  Future<void> create(StudySession session) async {
-    _sessions.removeWhere((s) => s.id == session.id);
-    _sessions.add(session);
+  Future<void> save(Session session) async {
+    sessions.removeWhere((s) => s.id == session.id);
+    sessions.add(session);
   }
 
   @override
   Future<void> delete(String id) async {
     if (throwOnDelete) throw Exception('delete failed');
-    _sessions.removeWhere((s) => s.id == id);
+    sessions.removeWhere((s) => s.id == id);
   }
 }
 
-Widget _buildTestApp(_FakeStudySessionRepository repository) {
+Widget _buildTestApp(_FakeSessionRepository repository) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -52,7 +52,7 @@ void main() {
     });
 
     testWidgets('shows loading indicator initially', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -69,24 +69,26 @@ void main() {
 
     testWidgets('displays correct summary for multiple sessions', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
           questionsAnswered: 10,
           correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2',
           studentId: 'u1',
           subjectId: 'science',
           startTime: now.subtract(const Duration(days: 1)),
           questionsAnswered: 5,
           correctAnswers: 3,
-          timeSpentMs: 1200000,
+          actualDurationMs: 1200000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -99,7 +101,7 @@ void main() {
     });
 
     testWidgets('displays zero stats when no sessions', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -109,20 +111,22 @@ void main() {
 
     testWidgets('shows correct average time', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
-          timeSpentMs: 1200000,
+          actualDurationMs: 1200000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2',
           studentId: 'u1',
           subjectId: 'science',
           startTime: now,
-          timeSpentMs: 600000,
+          actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -143,13 +147,14 @@ void main() {
 
     testWidgets('shows date picker when filter by date is tapped', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
-          timeSpentMs: 600000,
+          actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -164,13 +169,14 @@ void main() {
 
     testWidgets('date filter confirms selection on ok', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
-          timeSpentMs: 600000,
+          actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -196,7 +202,7 @@ void main() {
     });
 
     testWidgets('shows no sessions message when empty', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
@@ -206,13 +212,14 @@ void main() {
 
     testWidgets('shows no results message when filters return empty', (tester) async {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: yesterday,
-          timeSpentMs: 600000,
+          actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -246,20 +253,22 @@ void main() {
 
     testWidgets('displays session list with correct order', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now.subtract(const Duration(days: 1)),
-          timeSpentMs: 1200000,
+          actualDurationMs: 1200000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2',
           studentId: 'u1',
           subjectId: 'science',
           startTime: now,
-          timeSpentMs: 600000,
+          actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -272,15 +281,16 @@ void main() {
 
     testWidgets('displays session duration and questions info', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
           questionsAnswered: 15,
           correctAnswers: 12,
-          timeSpentMs: 3600000,
+          actualDurationMs: 3600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -293,15 +303,16 @@ void main() {
 
     testWidgets('shows correct accuracy color for good score', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
           questionsAnswered: 10,
           correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -313,15 +324,16 @@ void main() {
 
     testWidgets('shows correct accuracy color for poor score', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
           questionsAnswered: 10,
           correctAnswers: 3,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -333,15 +345,16 @@ void main() {
 
     testWidgets('hides questions info when no questions answered', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
           questionsAnswered: 0,
           correctAnswers: 0,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -363,13 +376,14 @@ void main() {
 
     testWidgets('calculates minutes from milliseconds correctly', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1',
           studentId: 'u1',
           subjectId: 'math',
           startTime: now,
-          timeSpentMs: 900000,
+          actualDurationMs: 900000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -390,14 +404,16 @@ void main() {
 
     testWidgets('filters by subject and clears filters', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2', studentId: 'u1', subjectId: 'science',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -428,10 +444,11 @@ void main() {
 
     testWidgets('dismiss delete supports cancel, delete, and undo', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -471,11 +488,12 @@ void main() {
 
     testWidgets('shows export button in app bar', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
           startTime: now, questionsAnswered: 10, correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -487,11 +505,12 @@ void main() {
 
     testWidgets('export menu shows CSV, PDF, and JSON options', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
           startTime: now, questionsAnswered: 10, correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -507,7 +526,7 @@ void main() {
     });
 
     testWidgets('shows snackbar when exporting with no sessions', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -521,7 +540,7 @@ void main() {
     });
 
     testWidgets('export CSV with no sessions shows no sessions snackbar', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -536,10 +555,11 @@ void main() {
 
     testWidgets('comprehensive export options show in menu', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -556,11 +576,12 @@ void main() {
 
     testWidgets('export menu items are tappable without crash', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
           startTime: now, questionsAnswered: 10, correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -596,7 +617,7 @@ void main() {
     });
 
     testWidgets('handles init error gracefully', (tester) async {
-      final repo = _FakeStudySessionRepository(throwOnInit: true);
+      final repo = _FakeSessionRepository(throwOnInit: true);
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -607,10 +628,11 @@ void main() {
 
     testWidgets('shows sessions after successful load', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -632,12 +654,13 @@ void main() {
 
     testWidgets('shows error snackbar when delete fails', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(
+      final repo = _FakeSessionRepository(
         throwOnDelete: true,
         seed: [
-          StudySession(
+          Session(
             id: 's1', studentId: 'u1', subjectId: 'math',
-            startTime: now, timeSpentMs: 600000,
+            startTime: now, actualDurationMs: 600000,
+            type: SessionType.manual,
           ),
         ],
       );
@@ -664,7 +687,7 @@ void main() {
     });
 
     testWidgets('subject filter does not open dialog when no sessions', (tester) async {
-      final repo = _FakeStudySessionRepository();
+      final repo = _FakeSessionRepository();
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -677,14 +700,16 @@ void main() {
 
     testWidgets('clear filter resets subject filter', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2', studentId: 'u1', subjectId: 'science',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -706,10 +731,11 @@ void main() {
 
     testWidgets('shows subject name in filter button after selection', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'physics',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -735,10 +761,11 @@ void main() {
 
     testWidgets('date picker cancel does not apply filter', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -756,10 +783,11 @@ void main() {
 
     testWidgets('clear filters button appears after applying date filter', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -788,14 +816,16 @@ void main() {
 
     testWidgets('date and subject filters work together', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
-          startTime: now, timeSpentMs: 600000,
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
-        StudySession(
+        Session(
           id: 's2', studentId: 'u1', subjectId: 'science',
-          startTime: now.subtract(const Duration(days: 2)), timeSpentMs: 600000,
+          startTime: now.subtract(const Duration(days: 2)), actualDurationMs: 600000,
+          type: SessionType.manual,
         ),
       ]);
 
@@ -826,11 +856,12 @@ void main() {
 
     testWidgets('comprehensive export items are tappable without crash', (tester) async {
       final now = DateTime.now();
-      final repo = _FakeStudySessionRepository(seed: [
-        StudySession(
+      final repo = _FakeSessionRepository(seed: [
+        Session(
           id: 's1', studentId: 'u1', subjectId: 'math',
           startTime: now, questionsAnswered: 10, correctAnswers: 8,
-          timeSpentMs: 1800000,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
         ),
       ]);
 

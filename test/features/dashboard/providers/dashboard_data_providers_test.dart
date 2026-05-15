@@ -62,42 +62,50 @@ void main() {
 
   group('DashboardLayoutNotifier', () {
     test('default state has empty collapsedCards', () {
-      final notifier = DashboardLayoutNotifier();
-      expect(notifier.state.collapsedCards, isEmpty);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(container.read(dashboardLayoutPreferencesProvider).collapsedCards, isEmpty);
     });
 
     group('toggleCollapsed', () {
       test('adds card to collapsed set', () {
-        final notifier = DashboardLayoutNotifier();
-        notifier.toggleCollapsed('test-card');
-        expect(notifier.state.isCollapsed('test-card'), isTrue);
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        container.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed('test-card');
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isTrue);
       });
 
       test('removes card from collapsed set on second toggle', () {
-        final notifier = DashboardLayoutNotifier();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
         notifier.toggleCollapsed('test-card');
-        expect(notifier.state.isCollapsed('test-card'), isTrue);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isTrue);
 
         notifier.toggleCollapsed('test-card');
-        expect(notifier.state.isCollapsed('test-card'), isFalse);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isFalse);
       });
 
       test('multiple cards independently toggle', () {
-        final notifier = DashboardLayoutNotifier();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
         notifier.toggleCollapsed('card-a');
         notifier.toggleCollapsed('card-b');
 
-        expect(notifier.state.isCollapsed('card-a'), isTrue);
-        expect(notifier.state.isCollapsed('card-b'), isTrue);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-a'), isTrue);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-b'), isTrue);
 
         notifier.toggleCollapsed('card-a');
 
-        expect(notifier.state.isCollapsed('card-a'), isFalse);
-        expect(notifier.state.isCollapsed('card-b'), isTrue);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-a'), isFalse);
+        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-b'), isTrue);
       });
 
       test('emits new state after toggle', () {
-        final notifier = DashboardLayoutNotifier();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
         final states = <DashboardLayoutPreferences>[];
         notifier.addListener((state) => states.add(state), fireImmediately: false);
 
@@ -107,10 +115,12 @@ void main() {
       });
 
       test('empty collapsed set works after toggle and untoggle', () {
-        final notifier = DashboardLayoutNotifier();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
         notifier.toggleCollapsed('card');
         notifier.toggleCollapsed('card');
-        expect(notifier.state.collapsedCards, isEmpty);
+        expect(container.read(dashboardLayoutPreferencesProvider).collapsedCards, isEmpty);
       });
     });
   });

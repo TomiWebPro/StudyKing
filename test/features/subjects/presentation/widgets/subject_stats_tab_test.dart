@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _FakeStudySessionRepository extends StudySessionRepository {
-  final List<StudySession> _sessions;
+class _FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions;
   final bool shouldThrow;
 
-  _FakeStudySessionRepository(this._sessions, {this.shouldThrow = false});
+  _FakeSessionRepository(this._sessions, {this.shouldThrow = false});
 
   @override
-  Future<List<StudySession>> getAll() async {
+  Future<List<Session>> getAll() async {
     if (shouldThrow) throw Exception('test error');
     return _sessions;
   }
 }
 
-StudySession _session({
+Session _session({
   required String id,
   required String subjectId,
   int questionsAnswered = 10,
   int correctAnswers = 8,
   int timeSpentMs = 3600000,
 }) {
-  return StudySession(
+  return Session(
     id: id,
     studentId: 'student-1',
     subjectId: subjectId,
+    type: SessionType.practice,
     startTime: DateTime(2024, 6, 15, 10, 30),
     questionsAnswered: questionsAnswered,
     correctAnswers: correctAnswers,
-    timeSpentMs: timeSpentMs,
+    actualDurationMs: timeSpentMs,
+    completed: true,
+    createdAt: DateTime(2024, 6, 15, 10, 30),
   );
 }
 
@@ -50,7 +53,7 @@ void main() {
     const testSubjectId = 'subject-1';
 
     testWidgets('shows stat cards with zeros when no sessions', (tester) async {
-      final repo = _FakeStudySessionRepository([]);
+      final repo = _FakeSessionRepository([]);
       await tester.pumpWidget(_buildTestApp(
         SubjectStatsTab(
           subjectId: testSubjectId,
@@ -69,7 +72,7 @@ void main() {
     });
 
     testWidgets('shows stat cards with zeros when repo throws', (tester) async {
-      final repo = _FakeStudySessionRepository([], shouldThrow: true);
+      final repo = _FakeSessionRepository([], shouldThrow: true);
       await tester.pumpWidget(_buildTestApp(
         SubjectStatsTab(
           subjectId: testSubjectId,
@@ -83,7 +86,7 @@ void main() {
     });
 
     testWidgets('displays correct session count', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),
         _session(id: 's2', subjectId: testSubjectId),
       ]);
@@ -99,7 +102,7 @@ void main() {
     });
 
     testWidgets('displays correct accuracy percentage', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -114,7 +117,7 @@ void main() {
     });
 
     testWidgets('displays total questions count', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 20),
         _session(id: 's2', subjectId: testSubjectId, questionsAnswered: 15),
       ]);
@@ -130,7 +133,7 @@ void main() {
     });
 
     testWidgets('aggregates stats across multiple sessions', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(
             id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10, timeSpentMs: 60000),
         _session(
@@ -150,7 +153,7 @@ void main() {
     });
 
     testWidgets('filters sessions by subjectId', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 10),
         _session(id: 's2', subjectId: 'other-subject', questionsAnswered: 100),
       ]);
@@ -167,7 +170,7 @@ void main() {
     });
 
     testWidgets('renders MetricCard widgets', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -182,7 +185,7 @@ void main() {
     });
 
     testWidgets('shows LinearProgressIndicator with correct value', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -198,7 +201,7 @@ void main() {
     });
 
     testWidgets('shows ProgressIndicator header', (tester) async {
-      final repo = _FakeStudySessionRepository([]);
+      final repo = _FakeSessionRepository([]);
       await tester.pumpWidget(_buildTestApp(
         SubjectStatsTab(
           subjectId: testSubjectId,
@@ -211,7 +214,7 @@ void main() {
     });
 
     testWidgets('shows 100% accuracy for perfect score', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 10, questionsAnswered: 10),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -226,7 +229,7 @@ void main() {
     });
 
     testWidgets('shows 0.0% accuracy when no questions answered', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 0, correctAnswers: 0),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -241,7 +244,7 @@ void main() {
     });
 
     testWidgets('shows overall score section with percentage', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
       ]);
       await tester.pumpWidget(_buildTestApp(
@@ -257,7 +260,7 @@ void main() {
     });
 
     testWidgets('shows correct total time formatting', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, timeSpentMs: 3600000),
         _session(id: 's2', subjectId: testSubjectId, timeSpentMs: 1800000),
       ]);
@@ -273,7 +276,7 @@ void main() {
     });
 
     testWidgets('shows section header with Practice Progress', (tester) async {
-      final repo = _FakeStudySessionRepository([
+      final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),
       ]);
       await tester.pumpWidget(_buildTestApp(

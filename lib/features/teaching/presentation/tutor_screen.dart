@@ -75,12 +75,16 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
 
   Future<void> _startLesson() async {
     final studentId = StudentIdService().getStudentId();
+    final l10n = AppLocalizations.of(context)!;
     final manager = await _tutorService.startLesson(
       studentId: studentId,
       subjectId: widget.subjectId,
       topicId: widget.topicId,
       topicTitle: widget.topicTitle,
       durationMinutes: widget.durationMinutes,
+      correctKeywords: l10n.correctAnswerKeywords.split(',').map((s) => s.trim()).toList(),
+      incorrectKeywords: l10n.incorrectAnswerKeywords.split(',').map((s) => s.trim()).toList(),
+      exerciseKeywords: l10n.exerciseKeywords.split(',').map((s) => s.trim()).toList(),
     );
 
     _timer = Timer.periodic(const Duration(minutes: 1), (_) {

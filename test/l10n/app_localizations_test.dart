@@ -824,7 +824,7 @@ void main() {
         expect(l10n.reviewDueQuestions, 'Repasar preguntas pendientes');
         expect(l10n.selectTopic, 'Seleccionar Tema');
         expect(l10n.noTopicsAvailable, 'No hay temas disponibles');
-        expect(l10n.noWeakAreasFound, 'No se encontraron áreas débiles. ¡Siga así!');
+        expect(l10n.noWeakAreasFound, 'No se encontraron áreas por mejorar. ¡Siga así!');
         expect(l10n.noWeakAreasQuestions, 'No hay preguntas disponibles para sus áreas débiles.');
         expect(l10n.questionsDueForReview, 'preguntas pendientes de repaso');
         expect(l10n.spacedRepetitionMode, 'Repetición Espaciada');
@@ -979,7 +979,7 @@ void main() {
       });
 
       test('session tracker section', () {
-        expect(l10n.studySessionTracker, 'Rastreador de Sesiones de Estudio');
+        expect(l10n.studySessionTracker, 'Seguimiento de sesiones de estudio');
         expect(l10n.start, 'Iniciar');
         expect(l10n.end, 'Finalizar');
         expect(l10n.sessionComplete, 'Sesión Completada');
@@ -1007,7 +1007,7 @@ void main() {
         expect(l10n.describeWhatYouSee, 'Describa lo que ve en el gráfico...');
         expect(l10n.validateWithLlm, 'Validar con LLM');
         expect(l10n.validating, 'Validando...');
-        expect(l10n.renderedGraph, 'Gráfico Renderizado');
+        expect(l10n.renderedGraph, 'Gráfico generado');
         expect(l10n.noDataUploaded, 'No hay datos subidos');
         expect(l10n.uploadOrPasteData, 'Sube o pegue datos para visualizar');
         expect(l10n.selectGraphType, 'Seleccione un tipo de gráfico para visualizar');
@@ -1020,7 +1020,7 @@ void main() {
         expect(l10n.graphRefreshed, 'Gráfico actualizado');
         expect(l10n.pleaseSelectGraphType, 'Por favor seleccione un tipo de gráfico primero');
         expect(l10n.validationComplete, 'Validación completada');
-        expect(l10n.graphTypeDetectionError, 'La detección del tipo de gráfico falló');
+        expect(l10n.graphTypeDetectionError, 'Error al detectar el tipo de gráfico');
       });
 
       test('lesson scheduler section', () {
@@ -1136,9 +1136,9 @@ void main() {
       });
 
       test('sessionDurationMinutes', () {
-        expect(l10n.sessionDurationMinutes(1), '1 min de sesión');
-        expect(l10n.sessionDurationMinutes(30), '30 min de sesión');
-        expect(l10n.sessionDurationMinutes(60), '60 min de sesión');
+        expect(l10n.sessionDurationMinutes(1), 'Sesión de 1 min');
+        expect(l10n.sessionDurationMinutes(30), 'Sesión de 30 min');
+        expect(l10n.sessionDurationMinutes(60), 'Sesión de 60 min');
       });
 
       test('generatedPlanOverDays', () {
@@ -1256,7 +1256,7 @@ void main() {
       });
 
       test('graphTypeSetTo', () {
-        expect(l10n.graphTypeSetTo('Líneas'), 'Tipo de gráfico cambiado a Líneas');
+        expect(l10n.graphTypeSetTo('Líneas'), 'Gráfico cambiado a Líneas');
       });
 
       test('typeLabel', () {

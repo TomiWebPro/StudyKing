@@ -2,40 +2,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/services/dashboard_data_loader.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/focus_mode/services/focus_session_service.dart';
 
-class _FakeFocusSessionRepository extends FocusSessionRepository {
-  @override
-  Future<void> init() async {}
-}
-
-class _FakeFocusSessionService extends FocusSessionService {
-  final Map<String, dynamic>? stats;
+class _FakeSessionRepo extends SessionRepository {
+  final List<Session>? sessions;
   final bool shouldThrow;
 
-  _FakeFocusSessionService({this.stats, this.shouldThrow = false})
-      : super(repository: _FakeFocusSessionRepository());
+  _FakeSessionRepo({this.sessions, this.shouldThrow = false});
 
   @override
-  Future<Map<String, dynamic>> getTodayStats() async {
-    if (shouldThrow) throw Exception('Focus service error');
-    return stats ?? {
-      'totalSeconds': 0,
-      'completedSessions': 0,
-      'totalSessions': 0,
-      'plannedMinutes': 0,
-      'hours': '0.0',
-    };
+  Future<void> init() async {}
+
+  @override
+  Future<List<Session>> getByDate(DateTime date) async {
+    if (shouldThrow) throw Exception('Session repo error');
+    return sessions ?? [];
   }
 }
 
@@ -194,13 +185,16 @@ void main() {
           description: '',
           syllabusText: '',
         )),
-        focusService: _FakeFocusSessionService(stats: {
-          'totalSeconds': 3600,
-          'completedSessions': 2,
-          'totalSessions': 3,
-          'plannedMinutes': 75,
-          'hours': '1.0',
-        }),
+        sessionRepo: _FakeSessionRepo(sessions: [
+          Session(
+            id: 'focus-1',
+            studentId: 's1',
+            startTime: DateTime.now(),
+            type: SessionType.focus,
+            actualDurationMs: 3600000,
+            completed: true,
+          ),
+        ]),
         adherenceRepo: _FakePlanAdherenceRepository(records: [
           PlanAdherenceModel(
             id: 'a1',
@@ -236,7 +230,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(),
-        focusService: _FakeFocusSessionService(shouldThrow: true),
+        sessionRepo: _FakeSessionRepo(shouldThrow: true),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -251,7 +245,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(),
-        focusService: _FakeFocusSessionService(),
+        sessionRepo: _FakeSessionRepo(),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -266,7 +260,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(),
-        focusService: _FakeFocusSessionService(),
+        sessionRepo: _FakeSessionRepo(),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -284,7 +278,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(),
-        focusService: _FakeFocusSessionService(shouldThrow: true),
+        sessionRepo: _FakeSessionRepo(shouldThrow: true),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -317,7 +311,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(shouldThrow: true),
-        focusService: _FakeFocusSessionService(),
+        sessionRepo: _FakeSessionRepo(),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -332,7 +326,7 @@ void main() {
         tracker: _FakeStudyProgressTracker(),
         instrumentation: _FakeInstrumentationService(),
         topicRepo: _FakeTopicRepository(),
-        focusService: _FakeFocusSessionService(),
+        sessionRepo: _FakeSessionRepo(),
         adherenceRepo: _FakePlanAdherenceRepository(),
         studentId: 's1',
       );
@@ -341,9 +335,4 @@ void main() {
       expect(data.weeklyAdherence, 0.0);
     });
   });
-}
-
-class FakeFocusSessionRepository2 extends FocusSessionRepository {
-  @override
-  Future<void> init() async {}
 }

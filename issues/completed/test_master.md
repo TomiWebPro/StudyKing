@@ -1,139 +1,54 @@
-# Test Quality and Coverage Gaps — Lessons Feature and Beyond
+# Critical Test Gap: `MentorService._checkAndHandlePlanningIntent` Entirely Untested
 
-## Summary
+## Context
 
-A comprehensive audit of the test suite reveals several high-value improvement opportunities: critical logic paths (error handling, navigation) go untested in lessons screen tests, the pattern for dependency injection in those tests is inconsistent with the rest of the project, a test is broken (no-op assertions), and a file is duplicated. Additionally, two model files in the `mentor` feature have zero test coverage.
+`MentorService.chat()` (at `lib/features/mentor/services/mentor_service.dart:50`) delegates to `_checkAndHandlePlanningIntent` (`:73`), which contains the most complex branching logic in the service:
 
----
+- Keyword-based planning intent detection with **internationalized** Spanish support (`programar`, `reprogramar`, `planificar`)
+- `PendingActionRepository` dedup check before creation
+- Action type differentiation (`schedule` vs `reschedule`)
+- `_extractTopic()` topic parsing with two distinct keyword sets
+- A bare `catch (_)` that silently swallows all repository exceptions
 
-## Issue 1: Error-handling code paths are untested in all lessons screen tests
+**Zero lines of this method are tested.** The existing `mentor_service_test.dart` only verifies that `chat()` yields LLM chunks to the caller — it never asserts that planning keywords actually create pending actions, that duplicate intents are skipped, that Spanish keywords work, or that repository failures are handled gracefully.
 
-**Context:** Every `_Fake*Repository` in the lessons presentation tests defines a `shouldThrow` flag and a throw path in its overridden methods, yet **not a single test sets `shouldThrow = true` and asserts the resulting error UI**.
+## Affected Files
 
-| File | `shouldThrow` defined? | Error state tested? |
-|---|---|---|
-| `topic_list_screen_test.dart` | Yes | **Broken** — sets `shouldThrow = true`, then never asserts a snackbar, error text, or any error indicator. The test name promises `'shows error snackbar with retry when load fails'` but ends without a single `expect` call related to errors. |
-| `lesson_detail_screen_test.dart` | Yes | **Never** used in any test. |
-| `lesson_list_screen_test.dart` | Yes | **Never** used in any test. |
+| File | Issue |
+|---|---|
+| `lib/features/mentor/services/mentor_service.dart` (lines 50–102, 124–145) | Untested `_checkAndHandlePlanningIntent`, `_extractTopic`, error paths |
+| `test/features/mentor/services/mentor_service_test.dart` | Covers only LLM delegation, `suggestNextAction`, `suggestReschedule`, `getProgressReport` — **no planning-intent coverage** |
 
-**Rationale:** Error states are user-facing (snackbars, retry buttons, fallback UI). If repository throws, users see either a perpetual loading spinner or an unhandled exception. Neither is acceptable, and neither is tested.
+## Systemic Pattern: Boilerplate-Only Provider Tests
 
-**Affected files:**
-- `test/features/lessons/presentation/topic_list_screen_test.dart` (line 91-106)
-- `test/features/lessons/presentation/lesson_detail_screen_test.dart` (lines 11-31)
-- `test/features/lessons/presentation/lesson_list_screen_test.dart` (lines 13-36)
+Beyond the mentor service gap, every provider test file (`test/features/*/providers/*_test.dart`) follows an identical boilerplate pattern that **tests Riverpod framework behavior** (resolution, override, singleton, lifecycle) rather than real business logic. None verify that the constructed dependency chains are actually wired correctly. This affects 7 files:
 
-**Acceptance criteria:**
-- Each screen test file adds at least one test that sets `shouldThrow = true` and verifies the error UI (snackbar, error widget, or retry button) is displayed.
-- The existing broken error test in `topic_list_screen_test.dart` is fixed to actually assert error behavior.
+- `test/features/mentor/providers/mentor_providers_test.dart` — 137 lines, all boilerplate
+- `test/features/practice/providers/practice_providers_test.dart` — 165 lines, all boilerplate
+- `test/features/dashboard/providers/dashboard_providers_test.dart`
+- `test/features/focus_mode/providers/focus_mode_providers_test.dart`
+- `test/features/lessons/providers/lesson_providers_test.dart`
+- `test/features/planner/providers/planner_providers_test.dart`
+- `test/features/subjects/providers/subjects_repository_provider_test.dart`
 
----
+These tests provide **near-zero regression protection** and inflate the test suite with low-value assertions.
 
-## Issue 2: Navigation is never verified in lessons screen tests
+## Rationale
 
-**Context:** `AGENTS.md` recommends using `NavigatorObserver` for verifying navigation. The practice feature follows this convention (`practice_test.dart`, `practice_session_screen_test.dart`). The lessons feature does not — screen tests tap items but never assert that a route was pushed.
+1. **Planning intent is the riskiest path** — it bridges LLM output → database writes. A bug here creates silent data corruption or missed study plans.
+2. **Silent error swallowing** (`catch (_) {}` at line 101) hides repository failures during planning intent handling, making production issues invisible.
+3. **i18n keywords** (`programar`, `reprogramar`, `planificar`) have no test coverage — a typo or regression would go undetected.
+4. **Provider tests consume maintenance effort** without catching regressions. Real dependency wiring errors (e.g., a new required constructor param) are never caught by the current boilerplate.
 
-| File | Tap action | Navigation verified? |
-|---|---|---|
-| `topic_list_screen_test.dart` | Taps topic | No assert — just `pumpAndSettle` (line 118-119) |
-| `lesson_list_screen_test.dart` | Taps lesson | No assert — just `pumpAndSettle` (lines 240-241) |
-| `lesson_detail_screen_test.dart` | Teaching-mode buttons exist but are never tapped | No test for `_openTutorMode` navigation at all |
+## Acceptance Criteria
 
-**Affected files:**
-- `test/features/lessons/presentation/topic_list_screen_test.dart`
-- `test/features/lessons/presentation/lesson_list_screen_test.dart`
-- `test/features/lessons/presentation/lesson_detail_screen_test.dart`
-
-**Acceptance criteria:**
-- Each screen test that triggers navigation injects a `NavigatorObserver` and asserts the correct route was pushed.
-- `lesson_detail_screen_test.dart` adds tests that tap the teaching-mode buttons (both AppBar and bottom bar) and verify navigation to the tutor route.
-
----
-
-## Issue 3: Inconsistent dependency injection pattern in lessons presentation tests
-
-**Context:** Lessons screen tests inject dependencies via **constructor parameters** (e.g., `LessonDetailScreen(lessonRepository: _FakeLessonRepository(...))`), while the rest of the project — especially the practice feature — consistently uses `ProviderScope` with `overrides`. This creates two problems:
-1. New contributors must learn two patterns.
-2. The screens cannot be tested in a Riverpod-native way, meaning changes to provider wiring (e.g., refactoring a `Provider` into a `FutureProvider`) may not be caught.
-
-**Evidence:**
-- `test/features/lessons/presentation/lesson_detail_screen_test.dart` — constructor injection throughout
-- `test/features/lessons/presentation/lesson_list_screen_test.dart` — constructor injection throughout
-- `test/features/lessons/presentation/topic_list_screen_test.dart` — constructor injection throughout
-- `test/features/practice/presentation/practice_screen_test.dart` — `ProviderScope` with overrides (reference pattern)
-- `test/features/lessons/providers/lesson_providers_test.dart` — `ProviderContainer` with overrides (correct)
-
-**Affected files:**
-- `test/features/lessons/presentation/lesson_detail_screen_test.dart`
-- `test/features/lessons/presentation/lesson_list_screen_test.dart`
-- `test/features/lessons/presentation/topic_list_screen_test.dart`
-
-**Acceptance criteria:**
-- Lessons presentation tests are refactored to use `ProviderScope` with `overrides`, matching the convention established by the practice feature and `AGENTS.md`.
-
----
-
-## Issue 4: No-op test in `topic_list_screen_test.dart`
-
-**Context:** The test `'uses default database repository when none injected'` (lines 122-124) pumps a widget with zero assertions. It provides no value.
-
-```dart
-testWidgets('uses default database repository when none injected', (tester) async {
-  await tester.pumpWidget(_buildTestApp(const TopicListScreen()));
-});
-```
-
-**Affected file:**
-- `test/features/lessons/presentation/topic_list_screen_test.dart`, lines 122-124
-
-**Acceptance criteria:**
-- The test is either removed or converted into a meaningful assertion (e.g., verifying that the default repository does not throw during init and loading).
-
----
-
-## Issue 5: Duplicate test file for `PracticeScreen`
-
-**Context:** Two files test the same `PracticeScreen` widget:
-
-| File | Lines | Description |
-|---|---|---|
-| `test/features/practice/presentation/practice_screen_test.dart` | 436 | Thorough, 18 tests, uses `ProviderScope` |
-| `test/features/practice/presentation/practice_test.dart` | 94 | 3 tests, older/overlapping |
-
-The second file tests loading, empty state, and FAB navigation — all covered (or should be covered) by the first. Maintaining two files risks drift and confusion.
-
-**Affected files:**
-- `test/features/practice/presentation/practice_test.dart`
-- `test/features/practice/presentation/practice_screen_test.dart`
-
-**Acceptance criteria:**
-- Tests in `practice_test.dart` are assessed for unique coverage (e.g., the `NavigatorObserver` FAB test). Any unique scenarios are merged into `practice_screen_test.dart`, then `practice_test.dart` is removed.
-
----
-
-## Issue 6: `lib/features/mentor/models/` has zero test coverage
-
-**Context:** Two model files in the mentor feature lack any test file:
-
-| Source file | Test file | Status |
-|---|---|---|
-| `lib/features/mentor/models/mentor_action.dart` | — | **Missing** |
-| `lib/features/mentor/models/progress_report.dart` | — | **Missing** |
-
-The convention (`AGENTS.md`) requires `lib/features/*/models/*.dart` → `test/features/*/models/*_test.dart`. The directory `test/features/mentor/models/` does not exist.
-
-**Affected files:**
-- `lib/features/mentor/models/mentor_action.dart`
-- `lib/features/mentor/models/progress_report.dart`
-
-**Acceptance criteria:**
-- Model tests are added for `mentor_action.dart` and `progress_report.dart`, placed in `test/features/mentor/models/`.
-- Tests cover serialization (`fromJson`/`toJson`), equality, and any computed properties.
-
----
-
-## File structure
-
-```
-issues/open/test_master.md
-```
+1. **`MentorService._checkAndHandlePlanningIntent` is fully covered**, including:
+   - Each planning keyword (`schedule`, `reschedule`, `plan`, `roadmap`, and Spanish variants)
+   - Non-planning messages do NOT create pending actions
+   - `reschedule` keyword creates a `PendingActionModel` with `actionType == PendingActionType.reschedule.name`
+   - Other planning keywords create `PendingActionType.schedule` actions
+   - Existing pending actions prevent duplicate creation
+   - Repository throws are caught silently (no crash, no side-effect)
+   - `_extractTopic` extracts topics from `about`, `for`, `on`, `study`, `learn`, `review`, `practice` prefixed phrases and falls back to `topic`, `subject`, `lesson` keywords
+   - Non-matching messages return `'general'`
+2. **Provider tests are replaced with behavior-validating tests** that verify correct dependency wiring (e.g., `mentorProgressTrackerProvider` uses `mentorAttemptRepositoryProvider` as its `attemptRepo`) rather than just type-checking Riverpod resolution.
