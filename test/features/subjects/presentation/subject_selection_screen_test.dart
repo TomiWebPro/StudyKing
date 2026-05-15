@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
@@ -16,7 +16,7 @@ class _MockSubjectBox {
 
 class _FakeSubjectRepository extends SubjectRepository {
   final _MockSubjectBox _box;
-  _FakeSubjectRepository(this._box) : super(subjectBox: null);
+  _FakeSubjectRepository(this._box);
 
   @override
   Future<List<Subject>> getAll() async => _box._storage.values.toList();
@@ -25,22 +25,22 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Subject?> get(String id) async => _box.get(id);
 
   @override
-  Future<void> save(Subject subject) async {
+  Future<void> create(Subject subject) async {
     await _box.put(subject.id, subject);
   }
 }
 
 class _FailingSubjectRepository extends SubjectRepository {
-  _FailingSubjectRepository() : super(subjectBox: null);
+  _FailingSubjectRepository();
 
   @override
-  Future<void> save(Subject subject) async {
+  Future<void> create(Subject subject) async {
     throw Exception('Save failed');
   }
 }
 
 class _SlowSubjectRepository extends SubjectRepository {
-  _SlowSubjectRepository() : super(subjectBox: null);
+  _SlowSubjectRepository();
 
   @override
   Future<List<Subject>> getAll() async => [];
@@ -49,7 +49,7 @@ class _SlowSubjectRepository extends SubjectRepository {
   Future<Subject?> get(String id) async => null;
 
   @override
-  Future<void> save(Subject subject) async {
+  Future<void> create(Subject subject) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
 }

@@ -11,8 +11,8 @@ import 'core/providers/app_providers.dart';
 import 'core/constants/app_constants.dart';
 import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
-import 'core/data/adapters/plan_adherence_adapter.dart';
-import 'core/data/adapters/mastery_improvement_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 
 import 'core/routes/app_router.dart';
 import 'features/settings/data/models/user_profile_model.dart';
@@ -21,7 +21,7 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
-import 'features/focus_mode/presentation/focus_timer_screen.dart';
+import 'features/dashboard/presentation/dashboard_screen.dart';
 
 final Logger _mainLogger = const Logger('App');
 
@@ -129,6 +129,9 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         Locale('es'),
       ],
       localeResolutionCallback: (locale, supportedLocales) {
+        // All Spanish variants (es-MX, es-ES, es-AR, etc.) map to 'es'
+        // which targets neutral Latin American Spanish (formal "usted" register).
+        // A future app_es_ES.arb could override terms for Spain-specific vocabulary.
         if (locale == null) return supportedLocales.first;
         for (final supported in supportedLocales) {
           if (supported.languageCode == locale.languageCode) return supported;
@@ -211,16 +214,26 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    SubjectListScreen(),
-    PracticeScreen(),
-    MentorScreen(),
-    FocusTimerScreen(),
-    SettingsScreen(),
-  ];
+  List<Widget> _screens = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const SubjectListScreen(),
+      const PracticeScreen(),
+      const MentorScreen(),
+      DashboardScreen(
+        studentId: StudentIdService().getStudentId(),
+      ),
+      const SettingsScreen(),
+    ];
+  }
 
   void _openDashboard() {
-    Navigator.pushNamed(context, AppRoutes.dashboard);
+    setState(() {
+      _selectedIndex = 3;
+    });
   }
 
   @override
@@ -233,7 +246,9 @@ class _MainScreenState extends State<MainScreen> {
           index: _selectedIndex,
           children: _screens,
         ),
-        floatingActionButton: Focus(
+        floatingActionButton: Semantics(
+          button: true,
+          label: l10n.dashboard,
           child: FloatingActionButton.small(
             onPressed: () => _openDashboard(),
             tooltip: l10n.dashboard,
@@ -264,9 +279,9 @@ class _MainScreenState extends State<MainScreen> {
               label: l10n.mentor,
             ),
             NavigationDestination(
-              icon: Icon(Icons.timer_outlined),
-              selectedIcon: Icon(Icons.timer),
-              label: l10n.focus,
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: l10n.dashboard,
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

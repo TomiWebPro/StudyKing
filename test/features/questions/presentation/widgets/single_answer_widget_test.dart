@@ -507,5 +507,68 @@ void main() {
         expect(find.text('Try again'), findsOneWidget);
       });
     });
+
+    group('non-selected correct option highlighting', () {
+      testWidgets('correct option highlighted even when not selected', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+      });
+    });
+
+    group('submitted with no selected answer', () {
+      testWidgets('handles submitted with no selected answer and no correct answer', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          selectedAnswer: null,
+          isSubmitted: true,
+          isFeedbackVisible: true,
+        ));
+
+        expect(find.byIcon(Icons.check_circle), findsNothing);
+        expect(find.byIcon(Icons.error_outline), findsNothing);
+      });
+    });
+
+    group('reduceMotion AnimatedSwitcher feedback', () {
+      testWidgets('AnimatedSwitcher wraps feedback when reduceMotion is false', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          reduceMotion: false,
+        ));
+
+        expect(find.byIcon(Icons.check_circle), findsOneWidget);
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+    });
+
+    group('correct answer semantics for non-selected option', () {
+      testWidgets('correct answer option gets correct feedback in semantics even when not selected', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option A.*Correct!')), findsOneWidget);
+      });
+
+      testWidgets('wrong selected option gets incorrect feedback in semantics', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          correctAnswer: 'Option A',
+          selectedAnswer: 'Option B',
+          isSubmitted: true,
+        ));
+
+        expect(find.bySemanticsLabel(RegExp('Option B.*Incorrect')), findsOneWidget);
+      });
+    });
   });
 }

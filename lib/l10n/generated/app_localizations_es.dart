@@ -54,7 +54,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String sessionDurationMinutes(int minutes) {
-    return '$minutes min de sesión';
+    return 'Sesión de $minutes min';
   }
 
   @override
@@ -231,7 +231,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicSelectionComingSoon => '¡Selección de temas próximamente!';
 
   @override
-  String get noWeakAreasFound => 'No se encontraron áreas débiles. ¡Siga así!';
+  String get noWeakAreasFound =>
+      'No se encontraron áreas por mejorar. ¡Siga así!';
 
   @override
   String get noWeakAreasQuestions =>
@@ -758,7 +759,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get selectFormat => 'Seleccione el formato de pregunta:';
 
   @override
-  String get studySessionTracker => 'Rastreador de Sesiones de Estudio';
+  String get studySessionTracker => 'Seguimiento de sesiones de estudio';
 
   @override
   String get start => 'Iniciar';
@@ -833,7 +834,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get validating => 'Validando...';
 
   @override
-  String get renderedGraph => 'Gráfico Renderizado';
+  String get renderedGraph => 'Gráfico generado';
 
   @override
   String get noDataUploaded => 'No hay datos subidos';
@@ -856,7 +857,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String graphTypeSetTo(String graphType) {
-    return 'Tipo de gráfico cambiado a $graphType';
+    return 'Gráfico cambiado a $graphType';
   }
 
   @override
@@ -902,8 +903,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get graphTypeDetectionError =>
-      'La detección del tipo de gráfico falló';
+  String get graphTypeDetectionError => 'Error al detectar el tipo de gráfico';
 
   @override
   String get imageCaptured =>
@@ -1307,7 +1307,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String exportFailed(String error) {
-    return 'Exportación fallida: $error';
+    return 'Error al exportar: $error';
   }
 
   @override
@@ -1664,10 +1664,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get atRiskTopics => 'Temas con dificultades';
+  String get atRiskTopics => 'Temas en riesgo';
 
   @override
-  String get noAtRiskTopics => 'Sin temas con dificultades. ¡Siga así!';
+  String get noAtRiskTopics => 'No hay temas en riesgo. ¡Siga así!';
 
   @override
   String accuracyLabel(String percent) {
@@ -1758,7 +1758,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get quickGuideSystemPrompt =>
-      'Eres la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.';
+      'Es la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.';
 
   @override
   String get aboutApplicationName => 'StudyKing';
@@ -2068,7 +2068,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorNewSessionAdded =>
-      '¡Genial! He añadido una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.';
+      '¡Genial! He agregado una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.';
 
   @override
   String get mentorChangesDone =>
@@ -2549,4 +2549,576 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noOptionsAvailable => 'No hay opciones disponibles';
+
+  @override
+  String get subjectProgress => 'Progreso de la Materia';
+
+  @override
+  String get pendingActions => 'Acciones Pendientes';
+
+  @override
+  String get scheduledLessons => 'Lecciones Programadas';
+
+  @override
+  String get regeneratePlan => 'Regenerar Plan';
+
+  @override
+  String get viewAllLessons => 'Ver Todas las Lecciones';
+
+  @override
+  String get change => 'Cambiar';
+
+  @override
+  String get scheduling => 'Programando...';
+
+  @override
+  String get accept => 'Aceptar';
+
+  @override
+  String get scheduleALesson => 'Programar una lección';
+
+  @override
+  String get rescheduleLesson => 'Reprogramar lección';
+
+  @override
+  String get planAdjustmentTitle => 'Ajuste de plan sugerido';
+
+  @override
+  String get actionNeeded => 'Acción necesaria';
+
+  @override
+  String get somethingWentWrong => 'Algo salió mal';
+
+  @override
+  String get openPlanner => 'Abrir Planificador';
+
+  @override
+  String get studyPlanOverview => 'Resumen del Plan de Estudio';
+
+  @override
+  String moreLessonsCount(int count) {
+    return '$count más...';
+  }
+
+  @override
+  String get badgeFirstStepName => 'Primer Paso';
+
+  @override
+  String get badgeFirstStepDesc => 'Respondió su primera pregunta!';
+
+  @override
+  String get badgeCenturyName => 'Club del Centenar';
+
+  @override
+  String get badgeCenturyDesc => '¡Respondió más de 100 preguntas!';
+
+  @override
+  String get badgeAccuracyGoldName => 'Precisión de Oro';
+
+  @override
+  String get badgeAccuracyGoldDesc => 'Logró más del 90% de precisión!';
+
+  @override
+  String get badgeDailyScholarName => 'Estudiante Diario';
+
+  @override
+  String get badgeDailyScholarDesc => 'Estudió consistentemente hoy!';
+
+  @override
+  String get badgeDedicatedLearnerName => 'Aprendiz Dedicado';
+
+  @override
+  String get badgeDedicatedLearnerDesc => 'Estudió más de 10 horas en total!';
+
+  @override
+  String get badgeWeeklyWarriorName => 'Guerrero Semanal';
+
+  @override
+  String get badgeWeeklyWarriorDesc => 'Activo durante una semana completa!';
+
+  @override
+  String get notifChannelGeneral => 'Notificaciones de StudyKing';
+
+  @override
+  String get notifChannelGeneralDesc => 'Notificaciones generales de StudyKing';
+
+  @override
+  String get notifChannelRevision => 'Recordatorios de Revisión';
+
+  @override
+  String get notifChannelWellbeing => 'Alertas de Bienestar';
+
+  @override
+  String get notifChannelPlanning => 'Sugerencias de Planificación';
+
+  @override
+  String get notifChannelLessons => 'Notificaciones de Lecciones';
+
+  @override
+  String get notifChannelMastery => 'Alertas de Dominio';
+
+  @override
+  String get notifChannelBadges => 'Notificaciones de Insignias';
+
+  @override
+  String get notifChannelDailyReminder => 'Recordatorios de Estudio Diarios';
+
+  @override
+  String get notifChannelDailyReminderDesc =>
+      'Recordatorios diarios para estudiar';
+
+  @override
+  String get notifTitleTimeToReview => '¡Hora de Repasar!';
+
+  @override
+  String notifBodyRevision(int days, String topicName) {
+    return 'Han pasado $days días desde que practicó \"$topicName\".';
+  }
+
+  @override
+  String get notifTitleTakeBreak => 'Tome un Descanso';
+
+  @override
+  String notifBodyOverwork(String hours) {
+    return 'Ha estudiado $hours horas hoy. ¡Recuerde descansar!';
+  }
+
+  @override
+  String get notifTitlePlanAdjustment => 'Ajuste de Plan';
+
+  @override
+  String notifBodyPlanAdjustment(int days) {
+    return 'Ha tenido $days días de bajo cumplimiento. ¿Ajustamos su plan?';
+  }
+
+  @override
+  String get notifTitleUpcomingLesson => 'Próxima Lección';
+
+  @override
+  String notifBodyLessonReminder(String lessonTitle, String time) {
+    return 'Su lección \"$lessonTitle\" comienza a las $time.';
+  }
+
+  @override
+  String get notifTitleTopicsNeedAttention => 'Temas que Requieren Atención';
+
+  @override
+  String notifBodyLowMastery(String topics) {
+    return 'Bajo dominio detectado en: $topics';
+  }
+
+  @override
+  String get notifTitleBadgeUnlocked => '¡Insignia Desbloqueada!';
+
+  @override
+  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription) {
+    return '¡Obtuvo la insignia \"$badgeName\": $badgeDescription';
+  }
+
+  @override
+  String get recommendAccuracyBelow60 =>
+      'Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.';
+
+  @override
+  String get recommendReviewBasics => 'Repase temas básicos antes de avanzar';
+
+  @override
+  String get recommendAccuracyExcellent =>
+      '¡Excelente progreso! Listo para temas avanzados.';
+
+  @override
+  String get recommendChallengingQuestions =>
+      'Intente preguntas de práctica desafiantes';
+
+  @override
+  String get recommendConsistency =>
+      'Estudió menos de 1 hora en total. ¡La constancia es clave!';
+
+  @override
+  String get recommendSetDailyGoal =>
+      'Establezca una meta diaria de 30 minutos';
+
+  @override
+  String get recommendNoActivity =>
+      'Sin actividad de estudio esta semana. ¡Retome el ritmo!';
+
+  @override
+  String get recommendQuickReview =>
+      'Comience con una sesión de repaso rápido de 15 minutos';
+
+  @override
+  String recommendWeakTopics(int count) {
+    return 'Tiene $count tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.';
+  }
+
+  @override
+  String get recommendAiTutor => 'Repase temas débiles con el tutor IA';
+
+  @override
+  String nudgeOverwork(String hours) {
+    return 'Ha estudiado $hours horas hoy. Considere tomar un descanso!';
+  }
+
+  @override
+  String nudgeRevision(int days, String topic) {
+    return 'Han pasado $days días desde que practicó \"$topic\". Es hora de repasar!';
+  }
+
+  @override
+  String nudgePlanAdjustment(int days) {
+    return 'Ha tenido $days días de baja adherencia. Le gustaría ajustar su plan de estudio?';
+  }
+
+  @override
+  String get planExplanationAccuracyBelow60 =>
+      'La precisión está por debajo del 60% — necesita práctica enfocada';
+
+  @override
+  String get planExplanationOverdueReview =>
+      'El repaso está vencido — el riesgo de olvido es alto';
+
+  @override
+  String get planExplanationLowStreak =>
+      'La racha es baja — se necesita constancia';
+
+  @override
+  String get planExplanationPrerequisite =>
+      'Requisito previo para temas próximos — debe dominarlo primero';
+
+  @override
+  String get planExplanationHighMastery => 'Dominio alto — listo para avanzar';
+
+  @override
+  String get planExplanationGoodProgress =>
+      'Buen progreso — mantenga la constancia';
+
+  @override
+  String get planExplanationDeveloping =>
+      'En desarrollo — necesita más práctica';
+
+  @override
+  String get planExplanationAtRisk => 'En riesgo — repaso vencido';
+
+  @override
+  String get planExplanationNeedsAttention =>
+      'Necesita atención — enfoque en fundamentos';
+
+  @override
+  String get planReasonRequiredDependent => 'Requerido para temas dependientes';
+
+  @override
+  String get planReasonWeakPerformance => 'Rendimiento bajo';
+
+  @override
+  String get planReasonHighForgettingRisk => 'Alto riesgo de olvido';
+
+  @override
+  String get planReasonNewSyllabusTopic => 'Nuevo tema del plan de estudios';
+
+  @override
+  String get planReasonPartOfGoal => 'Parte del objetivo del plan de estudios';
+
+  @override
+  String get planFocusGeneralReview => 'Repaso general';
+
+  @override
+  String get planFocusWeakAreas => 'Enfoque en áreas débiles';
+
+  @override
+  String get planFocusPracticeReview => 'Práctica y repaso';
+
+  @override
+  String get planFocusRestAndReview => 'Descanso y repaso';
+
+  @override
+  String adherenceLow7Days(int days) {
+    return 'Ha tenido $days días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o hablar con su mentor.';
+  }
+
+  @override
+  String adherenceLow3Days(int days) {
+    return 'Ha tenido $days días consecutivos de bajo cumplimiento. ¿Desea regenerar su plan con objetivos ajustados?';
+  }
+
+  @override
+  String get adapSuggestionFundamentals => 'Repase conceptos básicos primero';
+
+  @override
+  String get adapSuggestionMorePractice =>
+      'Se recomiendan más preguntas de práctica';
+
+  @override
+  String get adapSuggestionAdvancedTopics => 'Listo para temas avanzados';
+
+  @override
+  String get badgeCenturyClubName => 'Club del Centenario';
+
+  @override
+  String get badgeCenturyClubDesc => 'Respondió más de 100 preguntas!';
+
+  @override
+  String nudgeWeeklyDigest(
+    int weeklyActivity,
+    int accuracy,
+    String totalHours,
+    int weakCount,
+    int badgeCount,
+  ) {
+    return 'Resumen semanal: $weeklyActivity preguntas respondidas, $accuracy% precisión, $totalHours horas estudiadas, $weakCount áreas débiles, $badgeCount insignias obtenidas.';
+  }
+
+  @override
+  String get notificationTimeToReviewTitle => 'Hora de Repasar!';
+
+  @override
+  String notificationTimeToReviewBody(int days, String topic) {
+    return 'Han pasado $days días desde que practicó \"$topic\".';
+  }
+
+  @override
+  String get notificationTakeABreakTitle => 'Tome un Descanso';
+
+  @override
+  String notificationTakeABreakBody(String hours) {
+    return 'Ha estudiado $hours horas hoy. Recuerde descansar!';
+  }
+
+  @override
+  String get notificationPlanAdjustmentTitle => 'Ajuste de Plan';
+
+  @override
+  String notificationPlanAdjustmentBody(int days) {
+    return 'Ha tenido $days días de baja adherencia. Ajustamos su plan?';
+  }
+
+  @override
+  String get notificationUpcomingLessonTitle => 'Próxima Lección';
+
+  @override
+  String notificationUpcomingLessonBody(String lesson, String time) {
+    return 'Su lección \"$lesson\" comienza a las $time';
+  }
+
+  @override
+  String get notificationTopicsNeedAttentionTitle =>
+      'Temas que Requieren Atención';
+
+  @override
+  String notificationTopicsNeedAttentionBody(String topics) {
+    return 'Bajo dominio detectado en: $topics';
+  }
+
+  @override
+  String get notificationBadgeUnlockedTitle => 'Insignia Desbloqueada!';
+
+  @override
+  String notificationBadgeUnlockedBody(String badge, String description) {
+    return 'Obtuvo la insignia \"$badge\": $description';
+  }
+
+  @override
+  String get notificationChannelGeneralName => 'Notificaciones de StudyKing';
+
+  @override
+  String get notificationChannelGeneralDesc =>
+      'Notificaciones generales de StudyKing';
+
+  @override
+  String get notificationChannelDailyReminderName =>
+      'Recordatorios Diarios de Estudio';
+
+  @override
+  String get notificationChannelDailyReminderDesc =>
+      'Recordatorios diarios para estudiar';
+
+  @override
+  String get notificationChannelRevisionName => 'Recordatorios de Repaso';
+
+  @override
+  String get notificationChannelRevisionDesc =>
+      'Recordatorios para repasar temas que necesitan práctica';
+
+  @override
+  String get notificationChannelWellbeingName => 'Alertas de Bienestar';
+
+  @override
+  String get notificationChannelWellbeingDesc =>
+      'Alertas sobre equilibrio estudio-vida y sobrecarga';
+
+  @override
+  String get notificationChannelPlanningName => 'Sugerencias de Planificación';
+
+  @override
+  String get notificationChannelPlanningDesc =>
+      'Sugerencias sobre ajustes al plan de estudio';
+
+  @override
+  String get notificationChannelLessonsName => 'Notificaciones de Lecciones';
+
+  @override
+  String get notificationChannelLessonsDesc =>
+      'Notificaciones sobre próximas lecciones';
+
+  @override
+  String get notificationChannelMasteryName => 'Alertas de Dominio';
+
+  @override
+  String get notificationChannelMasteryDesc =>
+      'Alertas sobre bajo dominio de temas y áreas débiles';
+
+  @override
+  String get notificationChannelBadgesName => 'Notificaciones de Insignias';
+
+  @override
+  String get notificationChannelBadgesDesc =>
+      'Notificaciones sobre insignias y logros obtenidos';
+
+  @override
+  String get planAccuracyLow =>
+      'La precisión está por debajo del 60% — necesita práctica enfocada';
+
+  @override
+  String get planReviewOverdue =>
+      'El repaso está vencido — el riesgo de olvido es alto';
+
+  @override
+  String get planStreakLow => 'La racha es baja — se necesita consistencia';
+
+  @override
+  String get planPrerequisite =>
+      'Requisito previo para temas próximos — debe dominarlo primero';
+
+  @override
+  String planBlocksDownstream(int count) {
+    return 'Bloquea $count tema(s) dependiente(s)';
+  }
+
+  @override
+  String get planRequiredForDependent => 'Requerido para temas dependientes';
+
+  @override
+  String get planWeakPerformance => 'Rendimiento débil';
+
+  @override
+  String get planHighForgettingRisk => 'Alto riesgo de olvido';
+
+  @override
+  String get planNewSyllabusTopic => 'Nuevo tema del temario';
+
+  @override
+  String get planPartOfSyllabusGoal => 'Parte del objetivo del temario';
+
+  @override
+  String get planHighMastery => 'Alto dominio — listo para avanzar';
+
+  @override
+  String get planGoodProgress => 'Buen progreso — mantenga la consistencia';
+
+  @override
+  String get planDeveloping => 'En desarrollo — necesita más práctica';
+
+  @override
+  String get planAtRisk => 'En riesgo — repaso vencido';
+
+  @override
+  String get planNeedsAttention => 'Necesita atención — enfoque en fundamentos';
+
+  @override
+  String get planRestAndReview => 'Descanso y repaso';
+
+  @override
+  String get planGeneralReview => 'Repaso general';
+
+  @override
+  String get planPracticeAndReview => 'Práctica y repaso';
+
+  @override
+  String adherenceLowDaysAdjust(int days) {
+    return 'Ha tenido $days días consecutivos de baja adherencia. Considere ajustar su plan de estudio o consultar con su mentor.';
+  }
+
+  @override
+  String adherenceLowDaysRegenerate(int days) {
+    return 'Ha tenido $days días consecutivos de baja adherencia. Le gustaría regenerar su plan con objetivos ajustados?';
+  }
+
+  @override
+  String get recommendationAccuracyLow =>
+      'Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.';
+
+  @override
+  String get recommendationReviewBasics =>
+      'Repase temas básicos antes de avanzar';
+
+  @override
+  String get recommendationExcellentProgress =>
+      'Progreso excelente! Listo para temas avanzados.';
+
+  @override
+  String get recommendationChallengingPractice =>
+      'Pruebe preguntas de práctica desafiantes';
+
+  @override
+  String get recommendationLowHours =>
+      'Estudió menos de 1 hora en total. La consistencia es clave!';
+
+  @override
+  String get recommendationSetDailyGoal =>
+      'Establezca una meta diaria de estudio de 30 minutos';
+
+  @override
+  String get recommendationNoActivity =>
+      'Sin actividad de estudio esta semana. Vuelva al ritmo!';
+
+  @override
+  String get recommendationQuickReview =>
+      'Comience con una sesión rápida de repaso de 15 minutos';
+
+  @override
+  String recommendationWeakTopics(int count) {
+    return 'Tiene $count tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.';
+  }
+
+  @override
+  String get recommendationReviewWithTutor =>
+      'Repase temas débiles con el tutor de IA';
+
+  @override
+  String get suggestionFundamentals => 'Repase conceptos básicos primero';
+
+  @override
+  String get suggestionPractice => 'Se recomiendan más preguntas de práctica';
+
+  @override
+  String get suggestionAdvanced => 'Listo para temas avanzados';
+
+  @override
+  String get shareSessionsText => 'Sesiones de Estudio';
+
+  @override
+  String get summary => 'Resumen';
+
+  @override
+  String get noLimit => 'Sin límite';
+
+  @override
+  String get focusTimerDescription => 'Inicie una sesión de estudio enfocada';
+
+  @override
+  String get dailyStudyCap => 'Límite Diario de Estudio';
+
+  @override
+  String get tokenUsageSummary => 'Resumen de Uso de Tokens';
+
+  @override
+  String get totalTokens => 'Tokens Totales';
+
+  @override
+  String get totalCost => 'Costo Total';
+
+  @override
+  String get failed => 'Fallidas';
+
+  @override
+  String get subjectIdHint => 'p. ej. sub_física';
 }

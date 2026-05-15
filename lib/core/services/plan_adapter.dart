@@ -1,10 +1,11 @@
 import '../errors/result.dart';
 import '../errors/exceptions.dart';
-import '../data/repositories/plan_adherence_repository.dart';
-import '../data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import 'personal_learning_plan_service.dart';
 import 'mastery_graph_service.dart';
+import 'localization_service.dart';
 
 class AdherenceDeviation {
   final int consecutiveLowDays;
@@ -29,16 +30,19 @@ class PlanAdapter {
   final PlanRepository _planRepository;
   final PersonalLearningPlanService _planService;
   final MasteryGraphService _masteryService;
+  final LocalizationService? _localizationService;
 
   PlanAdapter({
     PlanAdherenceRepository? adherenceRepository,
     PlanRepository? planRepository,
     PersonalLearningPlanService? planService,
     MasteryGraphService? masteryService,
+    LocalizationService? localizationService,
   })  : _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _planService = planService ?? PersonalLearningPlanService(),
-        _masteryService = masteryService ?? MasteryGraphService();
+        _masteryService = masteryService ?? MasteryGraphService(),
+        _localizationService = localizationService;
 
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
     try {
@@ -55,8 +59,9 @@ class PlanAdapter {
           averageAdherence: avgAdherence,
           requiresRegeneration: true,
           requiresEscalation: true,
-          message: 'You have had $lowDays consecutive days of low adherence. '
-              'Consider adjusting your study plan or discussing with your mentor.',
+          message: _localizationService?.adherenceLowDaysAdjust(lowDays)
+              ?? 'You have had $lowDays consecutive days of low adherence. '
+                 'Consider adjusting your study plan or discussing with your mentor.',
         );
       } else if (lowDays >= 3) {
         result = AdherenceDeviation(
@@ -64,8 +69,9 @@ class PlanAdapter {
           averageAdherence: avgAdherence,
           requiresRegeneration: true,
           requiresEscalation: false,
-          message: 'You have had $lowDays consecutive days of low adherence. '
-              'Would you like to regenerate your plan with adjusted targets?',
+          message: _localizationService?.adherenceLowDaysRegenerate(lowDays)
+              ?? 'You have had $lowDays consecutive days of low adherence. '
+                 'Would you like to regenerate your plan with adjusted targets?',
         );
       } else {
         result = AdherenceDeviation(

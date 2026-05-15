@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/utils/logger.dart';
 import '../models/focus_session_model.dart';
 
 class FocusSessionRepository {
   final Logger _logger = const Logger('FocusSessionRepository');
 
-  Box<String> get _box => Hive.box<String>('focus_sessions');
+  Box<String> get _box => Hive.box<String>(HiveBoxNames.focusSessions);
 
   Future<void> init() async {}
 

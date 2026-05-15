@@ -8,12 +8,12 @@ import 'package:studyking/core/data/models/roadmap_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/pending_action_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
-import 'package:studyking/core/data/repositories/roadmap_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -153,7 +153,7 @@ class _MockPendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> save(PendingActionModel action) async {
+  Future<void> create(PendingActionModel action) async {
     _actions[action.id] = action;
   }
 

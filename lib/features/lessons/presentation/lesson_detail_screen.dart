@@ -4,20 +4,17 @@ import 'dart:async';
 import '../../../core/data/models/lesson_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
-import '../../../core/data/repositories/lesson_repository.dart';
-import '../../../core/providers/app_providers.dart' show database;
+import '../../../core/errors/handlers.dart';
+import '../../lessons/providers/lesson_providers.dart';
 import 'widgets/lesson_block_card.dart';
 
 class LessonDetailScreen extends ConsumerStatefulWidget {
   final LessonDetailArgs args;
-  final LessonRepository? lessonRepository;
 
   const LessonDetailScreen({
     super.key,
     required this.args,
-    this.lessonRepository,
   });
 
   @override
@@ -26,10 +23,10 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
-  final Logger _logger = const Logger('LessonDetailScreen');
   Lesson? _lesson;
   Duration _elapsed = Duration.zero;
   Timer? _timer;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -46,13 +43,29 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     });
   }
 
+  Future<void> _retryLoadLesson() => _loadLesson();
+
   Future<void> _loadLesson() async {
     try {
-      final repo = widget.lessonRepository ?? database.lessonRepository;
+      final repo = ref.read(lessonRepositoryProvider);
       final lesson = await repo.get(widget.args.lessonId);
-      if (mounted && lesson != null) setState(() => _lesson = lesson);
+      if (mounted) {
+        setState(() {
+          _lesson = lesson;
+          _loadError = false;
+        });
+      }
     } catch (e) {
-      _logger.e('Error loading lesson', e);
+      if (mounted) {
+        setState(() => _loadError = true);
+        AppErrorHandler.handleError(
+          context,
+          e,
+          'Lesson Detail Load',
+          retry: true,
+          retryCallback: _retryLoadLesson,
+        );
+      }
     }
   }
 
@@ -80,6 +93,11 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (_loadError) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     if (_lesson == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

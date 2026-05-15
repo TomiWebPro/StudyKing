@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/plan_adherence_model.dart';
-import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/personal_learning_plan_service.dart';
 
@@ -16,7 +16,7 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   }
 
   @override
-  Future<void> save(PlanAdherenceModel model) async {
+  Future<void> create(PlanAdherenceModel model) async {
     _storage.add(model);
   }
 
@@ -107,7 +107,7 @@ class _FakePlanService extends PersonalLearningPlanService {
       adherenceScore: actualQuestions > 0 || actualMinutes > 0 ? 0.8 : 0.0,
       planId: planId,
     );
-    await adherenceRepo.save(model);
+    await adherenceRepo.create(model);
   }
 }
 
@@ -139,13 +139,13 @@ void main() {
       });
 
       test('returns no deviation when adherence is high', () async {
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_1',
           studentId: 'student-1',
           date: DateTime.now(),
           adherenceScore: 0.9,
         ));
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_2',
           studentId: 'student-1',
           date: DateTime.now().subtract(const Duration(days: 1)),
@@ -161,7 +161,7 @@ void main() {
 
       test('returns regeneration suggestion after 3+ low adherence days', () async {
         for (var i = 0; i < 3; i++) {
-          await adherenceRepo.save(PlanAdherenceModel(
+          await adherenceRepo.create(PlanAdherenceModel(
             id: 'adh_low_$i',
             studentId: 'student-1',
             date: DateTime.now().subtract(Duration(days: i)),
@@ -179,7 +179,7 @@ void main() {
 
       test('returns escalation after 7+ low adherence days', () async {
         for (var i = 0; i < 7; i++) {
-          await adherenceRepo.save(PlanAdherenceModel(
+          await adherenceRepo.create(PlanAdherenceModel(
             id: 'adh_vlow_$i',
             studentId: 'student-1',
             date: DateTime.now().subtract(Duration(days: i)),
@@ -204,13 +204,13 @@ void main() {
       });
 
       test('breaks consecutive count on high adherence day', () async {
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_high',
           studentId: 'student-1',
           date: DateTime.now(),
           adherenceScore: 0.9,
         ));
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_low',
           studentId: 'student-1',
           date: DateTime.now().subtract(const Duration(days: 1)),
@@ -296,13 +296,13 @@ void main() {
       });
 
       test('returns accurate report from stored data', () async {
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_r1',
           studentId: 'student-1',
           date: DateTime.now(),
           adherenceScore: 0.8,
         ));
-        await adherenceRepo.save(PlanAdherenceModel(
+        await adherenceRepo.create(PlanAdherenceModel(
           id: 'adh_r2',
           studentId: 'student-1',
           date: DateTime.now().subtract(const Duration(days: 1)),

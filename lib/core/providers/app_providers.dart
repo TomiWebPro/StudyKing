@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/data.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../data/database_service.dart';
 
 final database = DatabaseService(
   topicRepository: TopicRepository(),

@@ -1,4 +1,5 @@
 // All features
+export 'focus_mode/focus_mode.dart';
 export 'lessons/lessons.dart';
 export 'planner/planner.dart';
 export 'practice/practice.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -18,7 +18,7 @@ class _MockSubjectBox {
 
 class _FakeSubjectRepository extends SubjectRepository {
   final _MockSubjectBox _box;
-  _FakeSubjectRepository(this._box) : super(subjectBox: null);
+  _FakeSubjectRepository(this._box);
 
   @override
   Future<List<Subject>> getAll() async => _box.values.toList();
@@ -27,11 +27,11 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Subject?> get(String id) async => _box.get(id);
 
   @override
-  Future<void> save(Subject subject) async => _box.put(subject.id, subject);
+  Future<void> create(Subject subject) async => _box.put(subject.id, subject);
 }
 
 class _ErrorSubjectRepository extends SubjectRepository {
-  _ErrorSubjectRepository() : super(subjectBox: null);
+  _ErrorSubjectRepository();
 
   @override
   Future<List<Subject>> getAll() async {

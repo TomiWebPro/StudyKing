@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/personal_learning_plan_service.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 
-class MockMasteryGraphRepository implements MasteryGraphRepository {
+class MockMasteryGraphRepository extends MasteryGraphRepository {
   @override
   Future<void> init() async {}
 
@@ -96,7 +96,7 @@ class MockMasteryGraphRepository implements MasteryGraphRepository {
   Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
-class MockTopicRepository implements TopicRepository {
+class MockTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
 
   void addTopic(Topic topic) {
@@ -345,7 +345,7 @@ void main() {
   });
 }
 
-class _FailingMasteryGraphRepository implements MasteryGraphRepository {
+class _FailingMasteryGraphRepository extends MasteryGraphRepository {
   @override
   Future<void> init() async => throw Exception('Init failed');
 

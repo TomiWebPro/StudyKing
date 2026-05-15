@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 

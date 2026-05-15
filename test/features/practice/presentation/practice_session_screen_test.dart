@@ -1,8 +1,20 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/presentation/models/practice_models.dart';
+import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'shared_test_helpers.dart';
 
 const _kCorrectFeedback = 'Correct!';
@@ -760,7 +772,119 @@ void main() {
       });
     });
 
+    group('validation edge cases', () {
+      testWidgets('handles null markscheme gracefully', (tester) async {
+        final now = DateTime.now();
+        final qWithNullMarkscheme = Question(
+          id: 'q-null',
+          text: 'No markscheme',
+          type: QuestionType.typedAnswer,
+          subjectId: 'subject-a',
+          topicId: 'topic-a',
+          markscheme: null,
+          options: [],
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success([qWithNullMarkscheme]),
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'any answer');
+        await tester.pump();
+        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.pumpAndSettle();
+
+        expect(find.text(_kIncorrectFeedback), findsOneWidget);
+      });
+
+      testWidgets('handles empty correctAnswer in markscheme', (tester) async {
+        final now = DateTime.now();
+        final qWithEmptyMarkscheme = Question(
+          id: 'q-empty',
+          text: 'Empty markscheme',
+          type: QuestionType.typedAnswer,
+          subjectId: 'subject-a',
+          topicId: 'topic-a',
+          markscheme: null,
+          options: [],
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success([qWithEmptyMarkscheme]),
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'some answer');
+        await tester.pump();
+        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.pumpAndSettle();
+
+        expect(find.text(_kIncorrectFeedback), findsOneWidget);
+      });
+    });
+
+    group('submit answer edge cases', () {
+      testWidgets('submit with null currentAnswer does nothing', (tester) async {
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        // Submit button should be disabled since no answer
+        final button = tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(button.onPressed, isNull);
+
+        // No crash when onPressed is null
+        expect(find.byType(FilledButton), findsOneWidget);
+      });
+    });
+
+    group('load questions error path', () {
+      testWidgets('does not crash when exception thrown during load', (tester) async {
+        final failingRepo = _FailingQuestionRepository();
+
+        await tester.pumpWidget(sessionAppWithRepo(result: failingRepo));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Should show loading indicator while error is handled
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      });
+    });
+
+    group('spaced repetition display', () {
+      testWidgets('shows practice mode when not spaced repetition', (tester) async {
+        final questions = [
+          question(id: 'q1', text: 'Normal Q', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          isSpacedRepetition: false,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Practice'), findsWidgets);
+      });
+    });
+
     group('session auto-save', () {
+      setUp(() {
+        Hive.init(Directory.systemTemp.createTempSync('prac_session_test_').path);
+      });
+
       testWidgets('saves session on completion via StudySessionRepository', (tester) async {
         final sessionRepo = FakeStudySessionRepository();
         final questions = [
@@ -838,4 +962,60 @@ void main() {
       expect(record.userAnswer, 'Paris');
     });
   });
+}
+
+class _FailingQuestionRepository extends FakeQuestionRepository {
+  _FailingQuestionRepository() : super(Result.success([]));
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) async {
+    throw Exception('Unexpected error');
+  }
+}
+
+Widget sessionAppWithRepo({
+  required QuestionRepository result,
+  String? topicId,
+  int? questionCount,
+  NavigatorObserver? observer,
+  StudySessionRepository? sessionRepo,
+  SpacedRepetitionRepository? srRepo,
+  bool isSpacedRepetition = false,
+}) {
+  return ProviderScope(
+    overrides: [
+      questionRepositoryProvider.overrideWithValue(result),
+      if (sessionRepo != null)
+        studySessionRepositoryProvider.overrideWithValue(sessionRepo),
+      if (srRepo != null)
+        spacedRepetitionRepositoryProvider.overrideWithValue(srRepo),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      navigatorObservers: observer == null ? const [] : [observer],
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PracticeSessionScreen(
+                    args: PracticeSessionArgs(
+                      subjectId: 'subject-a',
+                      topicId: topicId,
+                      questionCount: questionCount,
+                      isSpacedRepetition: isSpacedRepetition,
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('Open Session'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

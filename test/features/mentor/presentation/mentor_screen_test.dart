@@ -31,6 +31,7 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
     if (shouldThrow) throw Exception('Simulated LLM error');
     if (responseDelay != null) await Future.delayed(responseDelay!);

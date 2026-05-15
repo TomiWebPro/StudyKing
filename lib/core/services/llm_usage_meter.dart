@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart';
-import '../../features/settings/data/models/settings_model.dart';
+import 'package:studyking/features/settings/data/models/settings_model.dart';
 
 class LlmUsageRecord {
   final String id;
@@ -90,9 +89,4 @@ class LlmUsageMeter {
   void clear() => _records.clear();
 }
 
-class Logger {
-  final String name;
-  const Logger(this.name);
-  void i(String msg) => debugPrint('[$name] $msg');
-  void e(String msg, [Object? error]) => debugPrint('[$name] ERROR: $msg $error');
-}
+

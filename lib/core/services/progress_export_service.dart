@@ -7,7 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

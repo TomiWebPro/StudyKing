@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:uuid/uuid.dart';
-import '../../../core/data/repositories/plan_repository.dart';
-import '../../../core/data/repositories/mastery_graph_repository.dart';
-import '../../../core/data/repositories/topic_repository.dart';
-import '../../../core/data/repositories/roadmap_repository.dart';
-import '../../../core/data/repositories/tutor_session_repository.dart';
-import '../../../core/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import '../../../core/data/models/roadmap_model.dart';
 import '../../../core/data/models/personal_learning_plan_model.dart';
 import '../../../core/data/models/tutor_session_model.dart';

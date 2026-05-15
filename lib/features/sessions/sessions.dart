@@ -1,3 +1,4 @@
+export 'data/repositories/study_session_repository.dart';
 // Sessions module
 export 'presentation/session_history_screen.dart';
 export 'presentation/session_tracker_screen.dart';

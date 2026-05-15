@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -38,21 +38,26 @@ class PracticeDataService {
   }
 
   Future<List<String>> loadTopics(QuestionRepository questionRepo) async {
-    final result = await questionRepo.getAll();
-    if (result.isFailure || result.data == null || result.data!.isEmpty) {
+    try {
+      final questions = await questionRepo.getAll();
+      if (questions.isEmpty) return [];
+      return questions
+          .where((q) => q.topic != null && q.topic!.isNotEmpty)
+          .map((q) => q.topic!)
+          .toSet()
+          .toList();
+    } catch (_) {
       return [];
     }
-    return result.data!
-        .where((q) => q.topic != null && q.topic!.isNotEmpty)
-        .map((q) => q.topic!)
-        .toSet()
-        .toList();
   }
 
   Future<List<Question>> loadTopicQuestions(String topic) async {
-    final result = await _questionRepo.getAll();
-    if (result.isFailure || result.data == null) return [];
-    return result.data!.where((q) => q.topic == topic).toList();
+    try {
+      final questions = await _questionRepo.getAll();
+      return questions.where((q) => q.topic == topic).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Question>> loadWeakAreaQuestions(MasteryGraphService masteryService, BuildContext context) async {
@@ -62,8 +67,11 @@ class PracticeDataService {
       return [];
     }
     final weakTopicIds = weakTopicsResult.data!.map((s) => s.topicId).toSet();
-    final questionsResult = await _questionRepo.getAll();
-    if (questionsResult.isFailure || questionsResult.data == null) return [];
-    return questionsResult.data!.where((q) => weakTopicIds.contains(q.topicId)).toList();
+    try {
+      final allQuestions = await _questionRepo.getAll();
+      return allQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 }

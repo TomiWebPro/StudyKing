@@ -2,15 +2,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/logger.dart';
 
 import 'database_migration.dart';
-import 'adapters/question_evaluation_adapter.dart';
-import 'adapters/mastery_state_adapter.dart';
-import 'adapters/topic_dependency_adapter.dart';
-import 'adapters/question_mastery_state_adapter.dart';
-import 'adapters/personal_learning_plan_adapter.dart';
-import 'adapters/markscheme_adapter.dart';
-import 'adapters/conversation_message_adapter.dart';
-import 'adapters/plan_adherence_adapter.dart';
-import 'adapters/mastery_improvement_adapter.dart';
+import 'hive_box_names.dart';
+import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_state_adapter.dart';
+import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
+import 'package:studyking/features/questions/data/adapters/markscheme_adapter.dart';
+import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'models/question_evaluation_model.dart';
 import 'models/mastery_state_model.dart';
 import 'models/topic_dependency_model.dart';
@@ -27,29 +28,29 @@ class HiveInitializer {
     await DatabaseMigration.runMigrations();
     await _registerAdapters();
 
-    await Hive.openBox<QuestionEvaluation>('question_evaluations');
-    await Hive.openBox<MasteryState>('mastery_states');
-    await Hive.openBox<QuestionMasteryState>('question_mastery_states');
-    await Hive.openBox<TopicDependency>('topic_dependencies');
-    await Hive.openBox<PersonalLearningPlan>('learning_plans');
+    await Hive.openBox<QuestionEvaluation>(HiveBoxNames.questionEvaluations);
+    await Hive.openBox<MasteryState>(HiveBoxNames.masteryStates);
+    await Hive.openBox<QuestionMasteryState>(HiveBoxNames.questionMasteryStates);
+    await Hive.openBox<TopicDependency>(HiveBoxNames.topicDependencies);
+    await Hive.openBox<PersonalLearningPlan>(HiveBoxNames.learningPlans);
 
-    await Hive.openBox('subjects');
-    await Hive.openBox('topics');
-    await Hive.openBox('questions');
-    await Hive.openBox('answers');
-    await Hive.openBox('sources');
-    await Hive.openBox('attempts');
-    await Hive.openBox('lessonBlocks');
-    await Hive.openBox('lessons');
-    await Hive.openBox('sessions');
-    await Hive.openBox('progress');
-    await Hive.openBox('tasks');
+    await Hive.openBox(HiveBoxNames.subjects);
+    await Hive.openBox(HiveBoxNames.topics);
+    await Hive.openBox(HiveBoxNames.questions);
+    await Hive.openBox(HiveBoxNames.answers);
+    await Hive.openBox(HiveBoxNames.sources);
+    await Hive.openBox(HiveBoxNames.attempts);
+    await Hive.openBox(HiveBoxNames.lessonBlocks);
+    await Hive.openBox(HiveBoxNames.lessons);
+    await Hive.openBox(HiveBoxNames.sessions);
+    await Hive.openBox(HiveBoxNames.progress);
+    await Hive.openBox(HiveBoxNames.tasks);
 
-    await Hive.openBox<ConversationMessage>('conversations');
-    await Hive.openBox<TutorSession>('tutor_sessions');
-    await Hive.openBox('plan_adherence_metrics');
-    await Hive.openBox('mastery_improvement_metrics');
-    await Hive.openBox<String>('focus_sessions');
+    await Hive.openBox<ConversationMessage>(HiveBoxNames.conversations);
+    await Hive.openBox<TutorSession>(HiveBoxNames.tutorSessions);
+    await Hive.openBox(HiveBoxNames.planAdherenceMetrics);
+    await Hive.openBox(HiveBoxNames.masteryImprovementMetrics);
+    await Hive.openBox<String>(HiveBoxNames.focusSessions);
 
     _logger.i('Hive initialized successfully with migrations');
   }

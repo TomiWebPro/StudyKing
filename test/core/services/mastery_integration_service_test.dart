@@ -4,12 +4,12 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/mastery_integration_service.dart';
 import 'package:studyking/core/services/adaptive_practice_engine.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 
-class MockMasteryGraphRepository implements MasteryGraphRepository {
+class MockMasteryGraphRepository extends MasteryGraphRepository {
   @override
   Future<void> init() async {}
 

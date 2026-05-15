@@ -2520,4 +2520,568 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noOptionsAvailable => 'No options available';
+
+  @override
+  String get subjectProgress => 'Subject Progress';
+
+  @override
+  String get pendingActions => 'Pending Actions';
+
+  @override
+  String get scheduledLessons => 'Scheduled Lessons';
+
+  @override
+  String get regeneratePlan => 'Regenerate Plan';
+
+  @override
+  String get viewAllLessons => 'View All Lessons';
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get scheduling => 'Scheduling...';
+
+  @override
+  String get accept => 'Accept';
+
+  @override
+  String get scheduleALesson => 'Schedule a lesson';
+
+  @override
+  String get rescheduleLesson => 'Reschedule lesson';
+
+  @override
+  String get planAdjustmentTitle => 'Plan adjustment suggested';
+
+  @override
+  String get actionNeeded => 'Action needed';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong';
+
+  @override
+  String get openPlanner => 'Open Planner';
+
+  @override
+  String get studyPlanOverview => 'Study Plan Overview';
+
+  @override
+  String moreLessonsCount(int count) {
+    return '$count more...';
+  }
+
+  @override
+  String get badgeFirstStepName => 'First Step';
+
+  @override
+  String get badgeFirstStepDesc => 'Answered your first question!';
+
+  @override
+  String get badgeCenturyName => 'Century Club';
+
+  @override
+  String get badgeCenturyDesc => 'Answered 100+ questions!';
+
+  @override
+  String get badgeAccuracyGoldName => 'Accuracy Gold';
+
+  @override
+  String get badgeAccuracyGoldDesc => 'Achieved 90%+ accuracy!';
+
+  @override
+  String get badgeDailyScholarName => 'Daily Scholar';
+
+  @override
+  String get badgeDailyScholarDesc => 'Studied consistently today!';
+
+  @override
+  String get badgeDedicatedLearnerName => 'Dedicated Learner';
+
+  @override
+  String get badgeDedicatedLearnerDesc => 'Studied 10+ hours total!';
+
+  @override
+  String get badgeWeeklyWarriorName => 'Weekly Warrior';
+
+  @override
+  String get badgeWeeklyWarriorDesc => 'Active for a full week!';
+
+  @override
+  String get notifChannelGeneral => 'StudyKing Notifications';
+
+  @override
+  String get notifChannelGeneralDesc => 'General StudyKing notifications';
+
+  @override
+  String get notifChannelRevision => 'Revision Reminders';
+
+  @override
+  String get notifChannelWellbeing => 'Wellbeing Alerts';
+
+  @override
+  String get notifChannelPlanning => 'Planning Suggestions';
+
+  @override
+  String get notifChannelLessons => 'Lesson Notifications';
+
+  @override
+  String get notifChannelMastery => 'Mastery Alerts';
+
+  @override
+  String get notifChannelBadges => 'Badge Notifications';
+
+  @override
+  String get notifChannelDailyReminder => 'Daily Study Reminders';
+
+  @override
+  String get notifChannelDailyReminderDesc => 'Daily reminders to study';
+
+  @override
+  String get notifTitleTimeToReview => 'Time to Review!';
+
+  @override
+  String notifBodyRevision(int days, String topicName) {
+    return 'It\'s been $days days since you practiced \"$topicName\".';
+  }
+
+  @override
+  String get notifTitleTakeBreak => 'Take a Break';
+
+  @override
+  String notifBodyOverwork(String hours) {
+    return 'You\'ve studied $hours hours today. Remember to rest!';
+  }
+
+  @override
+  String get notifTitlePlanAdjustment => 'Plan Adjustment';
+
+  @override
+  String notifBodyPlanAdjustment(int days) {
+    return 'You\'ve had $days days of low adherence. Shall we adjust your plan?';
+  }
+
+  @override
+  String get notifTitleUpcomingLesson => 'Upcoming Lesson';
+
+  @override
+  String notifBodyLessonReminder(String lessonTitle, String time) {
+    return 'Your lesson \"$lessonTitle\" starts at $time.';
+  }
+
+  @override
+  String get notifTitleTopicsNeedAttention => 'Topics Need Attention';
+
+  @override
+  String notifBodyLowMastery(String topics) {
+    return 'Low mastery detected in: $topics';
+  }
+
+  @override
+  String get notifTitleBadgeUnlocked => 'Badge Unlocked!';
+
+  @override
+  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription) {
+    return 'You earned the \"$badgeName\" badge: $badgeDescription';
+  }
+
+  @override
+  String get recommendAccuracyBelow60 =>
+      'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.';
+
+  @override
+  String get recommendReviewBasics => 'Review basic topics before advancing';
+
+  @override
+  String get recommendAccuracyExcellent =>
+      'Excellent progress! Ready for advanced topics.';
+
+  @override
+  String get recommendChallengingQuestions =>
+      'Try challenging practice questions';
+
+  @override
+  String get recommendConsistency =>
+      'You studied less than 1 hour total. Consistency is key!';
+
+  @override
+  String get recommendSetDailyGoal => 'Set a daily study goal of 30 minutes';
+
+  @override
+  String get recommendNoActivity =>
+      'No study activity this week. Get back on track!';
+
+  @override
+  String get recommendQuickReview =>
+      'Start with a quick 15-minute review session';
+
+  @override
+  String recommendWeakTopics(int count) {
+    return 'You have $count topic(s) that need improvement. Focus on strengthening these areas.';
+  }
+
+  @override
+  String get recommendAiTutor => 'Review weak topics with the AI tutor';
+
+  @override
+  String nudgeOverwork(String hours) {
+    return 'You have studied $hours hours today. Consider taking a break!';
+  }
+
+  @override
+  String nudgeRevision(int days, String topic) {
+    return 'It has been $days days since you practiced \"$topic\". Time for a review!';
+  }
+
+  @override
+  String nudgePlanAdjustment(int days) {
+    return 'You have had $days days of low plan adherence. Would you like to adjust your study plan?';
+  }
+
+  @override
+  String get planExplanationAccuracyBelow60 =>
+      'Accuracy is below 60% — needs focused practice';
+
+  @override
+  String get planExplanationOverdueReview =>
+      'Review is overdue — forgetting risk is high';
+
+  @override
+  String get planExplanationLowStreak => 'Streak is low — consistency needed';
+
+  @override
+  String get planExplanationPrerequisite =>
+      'Prerequisite for upcoming topics — must master first';
+
+  @override
+  String get planExplanationHighMastery => 'High mastery — ready to advance';
+
+  @override
+  String get planExplanationGoodProgress =>
+      'Good progress — maintain consistency';
+
+  @override
+  String get planExplanationDeveloping => 'Developing — needs more practice';
+
+  @override
+  String get planExplanationAtRisk => 'At risk — review overdue';
+
+  @override
+  String get planExplanationNeedsAttention =>
+      'Needs attention — focus on fundamentals';
+
+  @override
+  String get planReasonRequiredDependent => 'Required for dependent topics';
+
+  @override
+  String get planReasonWeakPerformance => 'Weak performance';
+
+  @override
+  String get planReasonHighForgettingRisk => 'High forgetting risk';
+
+  @override
+  String get planReasonNewSyllabusTopic => 'New syllabus topic';
+
+  @override
+  String get planReasonPartOfGoal => 'Part of syllabus goal';
+
+  @override
+  String get planFocusGeneralReview => 'General review';
+
+  @override
+  String get planFocusWeakAreas => 'Focus on weak areas';
+
+  @override
+  String get planFocusPracticeReview => 'Practice and review';
+
+  @override
+  String get planFocusRestAndReview => 'Rest and review';
+
+  @override
+  String adherenceLow7Days(int days) {
+    return 'You have had $days consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.';
+  }
+
+  @override
+  String adherenceLow3Days(int days) {
+    return 'You have had $days consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?';
+  }
+
+  @override
+  String get adapSuggestionFundamentals => 'Review basic concepts first';
+
+  @override
+  String get adapSuggestionMorePractice =>
+      'More practice questions recommended';
+
+  @override
+  String get adapSuggestionAdvancedTopics => 'Ready for advanced topics';
+
+  @override
+  String get badgeCenturyClubName => 'Century Club';
+
+  @override
+  String get badgeCenturyClubDesc => 'Answered 100+ questions!';
+
+  @override
+  String nudgeWeeklyDigest(
+    int weeklyActivity,
+    int accuracy,
+    String totalHours,
+    int weakCount,
+    int badgeCount,
+  ) {
+    return 'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, $badgeCount badges earned.';
+  }
+
+  @override
+  String get notificationTimeToReviewTitle => 'Time to Review!';
+
+  @override
+  String notificationTimeToReviewBody(int days, String topic) {
+    return 'It\'s been $days days since you practiced \"$topic\".';
+  }
+
+  @override
+  String get notificationTakeABreakTitle => 'Take a Break';
+
+  @override
+  String notificationTakeABreakBody(String hours) {
+    return 'You\'ve studied $hours hours today. Remember to rest!';
+  }
+
+  @override
+  String get notificationPlanAdjustmentTitle => 'Plan Adjustment';
+
+  @override
+  String notificationPlanAdjustmentBody(int days) {
+    return 'You\'ve had $days days of low adherence. Shall we adjust your plan?';
+  }
+
+  @override
+  String get notificationUpcomingLessonTitle => 'Upcoming Lesson';
+
+  @override
+  String notificationUpcomingLessonBody(String lesson, String time) {
+    return 'Your lesson \"$lesson\" starts at $time';
+  }
+
+  @override
+  String get notificationTopicsNeedAttentionTitle => 'Topics Need Attention';
+
+  @override
+  String notificationTopicsNeedAttentionBody(String topics) {
+    return 'Low mastery detected in: $topics';
+  }
+
+  @override
+  String get notificationBadgeUnlockedTitle => 'Badge Unlocked!';
+
+  @override
+  String notificationBadgeUnlockedBody(String badge, String description) {
+    return 'You earned the \"$badge\" badge: $description';
+  }
+
+  @override
+  String get notificationChannelGeneralName => 'StudyKing Notifications';
+
+  @override
+  String get notificationChannelGeneralDesc =>
+      'General StudyKing notifications';
+
+  @override
+  String get notificationChannelDailyReminderName => 'Daily Study Reminders';
+
+  @override
+  String get notificationChannelDailyReminderDesc => 'Daily reminders to study';
+
+  @override
+  String get notificationChannelRevisionName => 'Revision Reminders';
+
+  @override
+  String get notificationChannelRevisionDesc =>
+      'Reminders to review topics that need practice';
+
+  @override
+  String get notificationChannelWellbeingName => 'Wellbeing Alerts';
+
+  @override
+  String get notificationChannelWellbeingDesc =>
+      'Alerts about study-life balance and overwork';
+
+  @override
+  String get notificationChannelPlanningName => 'Planning Suggestions';
+
+  @override
+  String get notificationChannelPlanningDesc =>
+      'Suggestions about study plan adjustments';
+
+  @override
+  String get notificationChannelLessonsName => 'Lesson Notifications';
+
+  @override
+  String get notificationChannelLessonsDesc =>
+      'Notifications about upcoming lessons';
+
+  @override
+  String get notificationChannelMasteryName => 'Mastery Alerts';
+
+  @override
+  String get notificationChannelMasteryDesc =>
+      'Alerts about low topic mastery and weak areas';
+
+  @override
+  String get notificationChannelBadgesName => 'Badge Notifications';
+
+  @override
+  String get notificationChannelBadgesDesc =>
+      'Notifications about earned badges and achievements';
+
+  @override
+  String get planAccuracyLow =>
+      'Accuracy is below 60% — needs focused practice';
+
+  @override
+  String get planReviewOverdue => 'Review is overdue — forgetting risk is high';
+
+  @override
+  String get planStreakLow => 'Streak is low — consistency needed';
+
+  @override
+  String get planPrerequisite =>
+      'Prerequisite for upcoming topics — must master first';
+
+  @override
+  String planBlocksDownstream(int count) {
+    return 'Blocks $count downstream topic(s)';
+  }
+
+  @override
+  String get planRequiredForDependent => 'Required for dependent topics';
+
+  @override
+  String get planWeakPerformance => 'Weak performance';
+
+  @override
+  String get planHighForgettingRisk => 'High forgetting risk';
+
+  @override
+  String get planNewSyllabusTopic => 'New syllabus topic';
+
+  @override
+  String get planPartOfSyllabusGoal => 'Part of syllabus goal';
+
+  @override
+  String get planHighMastery => 'High mastery — ready to advance';
+
+  @override
+  String get planGoodProgress => 'Good progress — maintain consistency';
+
+  @override
+  String get planDeveloping => 'Developing — needs more practice';
+
+  @override
+  String get planAtRisk => 'At risk — review overdue';
+
+  @override
+  String get planNeedsAttention => 'Needs attention — focus on fundamentals';
+
+  @override
+  String get planRestAndReview => 'Rest and review';
+
+  @override
+  String get planGeneralReview => 'General review';
+
+  @override
+  String get planPracticeAndReview => 'Practice and review';
+
+  @override
+  String adherenceLowDaysAdjust(int days) {
+    return 'You have had $days consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.';
+  }
+
+  @override
+  String adherenceLowDaysRegenerate(int days) {
+    return 'You have had $days consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?';
+  }
+
+  @override
+  String get recommendationAccuracyLow =>
+      'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.';
+
+  @override
+  String get recommendationReviewBasics =>
+      'Review basic topics before advancing';
+
+  @override
+  String get recommendationExcellentProgress =>
+      'Excellent progress! Ready for advanced topics.';
+
+  @override
+  String get recommendationChallengingPractice =>
+      'Try challenging practice questions';
+
+  @override
+  String get recommendationLowHours =>
+      'You studied less than 1 hour total. Consistency is key!';
+
+  @override
+  String get recommendationSetDailyGoal =>
+      'Set a daily study goal of 30 minutes';
+
+  @override
+  String get recommendationNoActivity =>
+      'No study activity this week. Get back on track!';
+
+  @override
+  String get recommendationQuickReview =>
+      'Start with a quick 15-minute review session';
+
+  @override
+  String recommendationWeakTopics(int count) {
+    return 'You have $count topic(s) that need improvement. Focus on strengthening these areas.';
+  }
+
+  @override
+  String get recommendationReviewWithTutor =>
+      'Review weak topics with the AI tutor';
+
+  @override
+  String get suggestionFundamentals => 'Review basic concepts first';
+
+  @override
+  String get suggestionPractice => 'More practice questions recommended';
+
+  @override
+  String get suggestionAdvanced => 'Ready for advanced topics';
+
+  @override
+  String get shareSessionsText => 'Study Sessions';
+
+  @override
+  String get summary => 'Summary';
+
+  @override
+  String get noLimit => 'No limit';
+
+  @override
+  String get focusTimerDescription => 'Start a focused study session';
+
+  @override
+  String get dailyStudyCap => 'Daily Study Cap';
+
+  @override
+  String get tokenUsageSummary => 'Token Usage Summary';
+
+  @override
+  String get totalTokens => 'Total Tokens';
+
+  @override
+  String get totalCost => 'Total Cost';
+
+  @override
+  String get failed => 'Failed';
+
+  @override
+  String get subjectIdHint => 'e.g. sub_physics';
 }

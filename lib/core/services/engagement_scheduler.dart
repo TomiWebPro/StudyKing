@@ -3,8 +3,9 @@ import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
 import '../services/plan_adapter.dart';
-import '../data/repositories/plan_adherence_repository.dart';
-import '../data/repositories/engagement_nudge_repository.dart';
+import '../services/localization_service.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import '../data/models/engagement_nudge_model.dart';
 import '../../features/focus_mode/services/focus_session_service.dart';
 
@@ -37,6 +38,7 @@ class EngagementScheduler {
   final PlanAdapter? _planAdapter;
   final FocusSessionService? _focusSessionService;
   final EngagementSchedulerConfig _config;
+  final LocalizationService? _localizationService;
 
   Timer? _dailyTimer;
   bool _isInitialized = false;
@@ -51,6 +53,7 @@ class EngagementScheduler {
     PlanAdapter? planAdapter,
     FocusSessionService? focusSessionService,
     EngagementSchedulerConfig? config,
+    LocalizationService? localizationService,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
@@ -58,7 +61,8 @@ class EngagementScheduler {
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planAdapter = planAdapter,
         _focusSessionService = focusSessionService,
-        _config = config ?? const EngagementSchedulerConfig();
+        _config = config ?? const EngagementSchedulerConfig(),
+        _localizationService = localizationService;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -91,7 +95,7 @@ class EngagementScheduler {
           message: nudge.message,
           severity: nudge.severity.name,
         );
-        await _nudgeRepository.save(model);
+        await _nudgeRepository.create(model);
         await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
           hoursStudied: double.tryParse(
@@ -112,7 +116,7 @@ class EngagementScheduler {
           severity: nudge.severity.name,
           topicId: nudge.topicId,
         );
-        await _nudgeRepository.save(model);
+        await _nudgeRepository.create(model);
         if (nudge.topicId != null) {
           final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
           final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
@@ -135,7 +139,7 @@ class EngagementScheduler {
           message: nudge.message,
           severity: nudge.severity.name,
         );
-        await _nudgeRepository.save(model);
+        await _nudgeRepository.create(model);
         final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
         final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
         await _notificationService.showPlanAdjustmentSuggestion(
@@ -168,7 +172,7 @@ class EngagementScheduler {
                 ? NudgeSeverity.high.name
                 : NudgeSeverity.medium.name,
           );
-          await _nudgeRepository.save(model);
+          await _nudgeRepository.create(model);
         }
       } catch (_) {}
     }
@@ -192,9 +196,11 @@ class EngagementScheduler {
     }
 
     if (totalHours > 4) {
+      final hoursStr = totalHours.toStringAsFixed(1);
       return [EngagementNudge(
         type: NudgeType.overwork,
-        message: 'You have studied ${totalHours.toStringAsFixed(1)} hours today. Consider taking a break!',
+        message: _localizationService?.nudgeOverwork(hoursStr)
+            ?? 'You have studied $hoursStr hours today. Consider taking a break!',
         severity: NudgeSeverity.medium,
       )];
     }
@@ -208,9 +214,11 @@ class EngagementScheduler {
       for (final state in weakResult.data!) {
         final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
         if (daysSince >= 3) {
+          final l10n = _localizationService;
           nudges.add(EngagementNudge(
             type: NudgeType.revision,
-            message: 'It has been $daysSince days since you practiced "${state.topicId}". Time for a review!',
+            message: l10n?.nudgeRevision(daysSince, state.topicId)
+                ?? 'It has been $daysSince days since you practiced "${state.topicId}". Time for a review!',
             severity: daysSince >= 7 ? NudgeSeverity.high : NudgeSeverity.low,
             topicId: state.topicId,
           ));
@@ -227,7 +235,8 @@ class EngagementScheduler {
       if (consecutiveLow >= 3) {
         nudges.add(EngagementNudge(
           type: NudgeType.planAdjustment,
-          message: 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
+          message: _localizationService?.nudgePlanAdjustment(consecutiveLow)
+              ?? 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
           severity: NudgeSeverity.medium,
         ));
       }
@@ -243,7 +252,15 @@ class EngagementScheduler {
     final badges = await _tracker.getBadges(studentId);
     final weakResult = await _masteryService.getWeakTopics(studentId);
     final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
-    return 'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, ${badges.length} badges earned.';
+    final l10n = _localizationService;
+    return l10n?.nudgeWeeklyDigest(
+          weeklyActivity: weeklyActivity,
+          accuracy: accuracy,
+          totalHours: totalHours,
+          weakCount: weakCount,
+          badgeCount: badges.length,
+        ) ??
+        'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, ${badges.length} badges earned.';
   }
 
   Future<List<EngagementNudgeModel>> getNudgeHistory(String studentId) async {

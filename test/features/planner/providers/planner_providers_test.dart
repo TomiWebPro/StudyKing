@@ -1,17 +1,18 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/roadmap_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
-import 'package:studyking/core/data/repositories/roadmap_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/core/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
@@ -23,25 +24,46 @@ import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 class _MockPlanRepository extends PlanRepository {
   PersonalLearningPlan? _plan;
+  bool _throwOnLoadPlan = false;
+  final bool _throwOnSavePlan = false;
+
+  void setThrowOnLoadPlan() => _throwOnLoadPlan = true;
+  void setPlan(PersonalLearningPlan p) => _plan = p;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async => _plan;
+  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
+    if (_throwOnLoadPlan) throw Exception('load plan error');
+    return _plan;
+  }
 
   @override
   Future<void> savePlan(PersonalLearningPlan plan) async {
+    if (_throwOnSavePlan) throw Exception('save plan error');
     _plan = plan;
   }
 }
 
 class _MockMasteryRepository extends MasteryGraphRepository {
+  bool _throwOnGetAllMasteryStates = false;
+  bool _returnFailureOnGetAllMasteryStates = false;
+
+  void setThrowOnGetAllMasteryStates() =>
+      _throwOnGetAllMasteryStates = true;
+  void setReturnFailure() =>
+      _returnFailureOnGetAllMasteryStates = true;
+
   @override
   Future<void> init() async {}
 
   @override
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
+    if (_throwOnGetAllMasteryStates) throw Exception('mastery error');
+    if (_returnFailureOnGetAllMasteryStates) {
+      return Result.failure('mastery repo failure');
+    }
     return Result.success([]);
   }
 
@@ -69,22 +91,35 @@ class _MockTopicRepository extends TopicRepository {
 
 class _MockRoadmapRepository extends RoadmapRepository {
   final Map<String, RoadmapModel> _roadmaps = {};
+  bool _throwOnGetRoadmaps = false;
+  bool _throwOnSaveRoadmap = false;
+  bool _throwOnLoadRoadmap = false;
+
+  void setThrowOnGetRoadmaps() => _throwOnGetRoadmaps = true;
+  void setThrowOnSaveRoadmap() => _throwOnSaveRoadmap = true;
+  void setThrowOnLoadRoadmap() => _throwOnLoadRoadmap = true;
+  void addRoadmap(RoadmapModel r) => _roadmaps[r.id] = r;
 
   @override
   Future<void> init() async {}
 
   @override
   Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
+    if (_throwOnGetRoadmaps) throw Exception('get roadmaps error');
     return _roadmaps.values.where((r) => r.studentId == studentId).toList();
   }
 
   @override
   Future<void> saveRoadmap(RoadmapModel roadmap) async {
+    if (_throwOnSaveRoadmap) throw Exception('save roadmap error');
     _roadmaps[roadmap.id] = roadmap;
   }
 
   @override
-  Future<RoadmapModel?> loadRoadmap(String id) async => _roadmaps[id];
+  Future<RoadmapModel?> loadRoadmap(String id) async {
+    if (_throwOnLoadRoadmap) throw Exception('load roadmap error');
+    return _roadmaps[id];
+  }
 
   @override
   Future<List<RoadmapModel>> getAllRoadmaps() async => _roadmaps.values.toList();
@@ -97,6 +132,10 @@ class _MockRoadmapRepository extends RoadmapRepository {
 
 class _MockTutorRepo extends TutorSessionRepository {
   final Map<String, TutorSession> _sessions = {};
+  bool _throwOnGetSessions = false;
+
+  void setThrowOnGetSessions() => _throwOnGetSessions = true;
+  void addSession(TutorSession s) => _sessions[s.id] = s;
 
   @override
   Future<void> init() async {}
@@ -111,18 +150,24 @@ class _MockTutorRepo extends TutorSessionRepository {
 
   @override
   Future<List<TutorSession>> getStudentSessions(String studentId) async {
+    if (_throwOnGetSessions) throw Exception('get sessions error');
     return _sessions.values.where((s) => s.studentId == studentId).toList();
   }
 }
 
 class _MockPendingActionRepo extends PendingActionRepository {
   final Map<String, PendingActionModel> _actions = {};
+  bool _throwOnGetPending = false;
+
+  void setThrowOnGetPending() => _throwOnGetPending = true;
+  void addAction(PendingActionModel action) => _actions[action.id] = action;
 
   @override
   Future<void> init() async {}
 
   @override
   Future<List<PendingActionModel>> getPending(String studentId) async {
+    if (_throwOnGetPending) throw Exception('get pending error');
     return _actions.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
         .toList();
@@ -146,15 +191,25 @@ class _MockPendingActionRepo extends PendingActionRepository {
       _actions[id] = action.copyWith(status: 'rejected');
     }
   }
-
-  void addAction(PendingActionModel action) => _actions[action.id] = action;
 }
 
 class _MockPlanAdapter extends PlanAdapter {
   _MockPlanAdapter() : super();
 
+  AdherenceDeviation? _deviation;
+  PersonalLearningPlan? _regeneratedPlan;
+  bool _throwOnCheckAdherence = false;
+  bool _throwOnSuggestRegeneration = false;
+
+  void setDeviation(AdherenceDeviation d) => _deviation = d;
+  void setRegeneratedPlan(PersonalLearningPlan p) => _regeneratedPlan = p;
+  void setThrowOnCheckAdherence() => _throwOnCheckAdherence = true;
+  void setThrowOnSuggestRegeneration() => _throwOnSuggestRegeneration = true;
+
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    if (_throwOnCheckAdherence) throw Exception('check adherence error');
+    if (_deviation != null) return Result.success(_deviation!);
     return Result.success(const AdherenceDeviation());
   }
 
@@ -165,6 +220,8 @@ class _MockPlanAdapter extends PlanAdapter {
 
   @override
   Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
+    if (_throwOnSuggestRegeneration) throw Exception('suggest regeneration error');
+    if (_regeneratedPlan != null) return Result.success(_regeneratedPlan);
     return Result.success(null);
   }
 
@@ -178,7 +235,105 @@ class _MockPlanAdapter extends PlanAdapter {
   Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
 }
 
+class _FakeErrorPlannerService extends PlannerService {
+  final bool throwOnScheduleLesson;
+  final bool throwOnAcceptPendingAction;
+  final bool throwOnDismissPendingAction;
+
+  _FakeErrorPlannerService({
+    required PlanRepository planRepo,
+    required MasteryGraphService masteryService,
+    required TopicRepository topicRepository,
+    required RoadmapRepository roadmapRepo,
+    required TutorSessionRepository tutorRepo,
+    required PendingActionRepository pendingActionRepo,
+    required PlanAdapter planAdapter,
+    super.fixedStudentId,
+    super.repository,
+    this.throwOnScheduleLesson = false,
+    this.throwOnAcceptPendingAction = false,
+    this.throwOnDismissPendingAction = false,
+  }) : super(
+    planRepo: planRepo,
+    masteryService: masteryService,
+    topicRepository: topicRepository,
+    roadmapRepo: roadmapRepo,
+    tutorRepo: tutorRepo,
+    pendingActionRepo: pendingActionRepo,
+    planAdapter: planAdapter,
+  );
+
+  @override
+  Future<bool> scheduleLesson({
+    required String topicId,
+    required String topicTitle,
+    required String subjectId,
+    required DateTime scheduledTime,
+    int durationMinutes = 30,
+  }) async {
+    if (throwOnScheduleLesson) throw Exception('schedule error');
+    return super.scheduleLesson(
+      topicId: topicId,
+      topicTitle: topicTitle,
+      subjectId: subjectId,
+      scheduledTime: scheduledTime,
+      durationMinutes: durationMinutes,
+    );
+  }
+
+  @override
+  Future<bool> acceptPendingAction(String actionId) async {
+    if (throwOnAcceptPendingAction) throw Exception('accept error');
+    return super.acceptPendingAction(actionId);
+  }
+
+  @override
+  Future<bool> dismissPendingAction(String actionId) async {
+    if (throwOnDismissPendingAction) throw Exception('dismiss error');
+    return super.dismissPendingAction(actionId);
+  }
+}
+
 void main() {
+  group('PlannerState', () {
+    test('default state has correct initial values', () {
+      const state = PlannerState();
+      expect(state.plan, isNull);
+      expect(state.roadmaps, isEmpty);
+      expect(state.isGenerating, false);
+      expect(state.isLoadingRoadmaps, false);
+      expect(state.error, isNull);
+      expect(state.successMessage, isNull);
+      expect(state.pendingActions, isEmpty);
+      expect(state.scheduledLessons, isEmpty);
+      expect(state.adherenceDeviation, isNull);
+      expect(state.activeTab, 0);
+    });
+
+    test('clearMessages clears error and successMessage', () {
+      final state = PlannerState(error: 'err', successMessage: 'ok')
+          .clearMessages();
+      expect(state.error, isNull);
+      expect(state.successMessage, isNull);
+    });
+
+    test('copyWith preserves existing values for null fields', () {
+      final state = PlannerState(
+        plan: null,
+        roadmaps: const [],
+        isGenerating: true,
+        error: 'err',
+        successMessage: 'ok',
+        activeTab: 2,
+      );
+      final copied = state.copyWith(activeTab: 3);
+      expect(copied.isGenerating, true);
+      expect(copied.error, isNull);
+      expect(copied.successMessage, isNull);
+      expect(copied.activeTab, 3);
+    });
+  });
+
   group('PlannerNotifier', () {
     late _MockPlanRepository planRepo;
     late _MockMasteryRepository masteryRepo;
@@ -230,11 +385,21 @@ void main() {
         notifier.setActiveTab(1);
         expect(notifier.currentState.activeTab, 1);
       });
+
+      test('updates to different indices', () {
+        notifier.setActiveTab(2);
+        expect(notifier.currentState.activeTab, 2);
+        notifier.setActiveTab(0);
+        expect(notifier.currentState.activeTab, 0);
+      });
     });
 
     group('clearMessages', () {
       test('clears error and success message', () {
-        notifier.currentState = notifier.currentState.copyWith(error: 'test error', successMessage: 'test success');
+        notifier.currentState = notifier.currentState.copyWith(
+          error: 'test error',
+          successMessage: 'test success',
+        );
         notifier.clearMessages();
         expect(notifier.currentState.error, isNull);
         expect(notifier.currentState.successMessage, isNull);
@@ -273,6 +438,32 @@ void main() {
         );
 
         expect(notifier.currentState.successMessage, isNotNull);
+      });
+
+      test('sets error when service returns null', () async {
+        masteryRepo.setReturnFailure();
+
+        await notifier.generatePlan(
+          course: 'Physics',
+          daysValue: 3,
+          hoursValue: 1,
+        );
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.error, 'Failed to generate plan');
+      });
+
+      test('sets error when service throws', () async {
+        masteryRepo.setThrowOnGetAllMasteryStates();
+
+        await notifier.generatePlan(
+          course: 'Physics',
+          daysValue: 3,
+          hoursValue: 1,
+        );
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.error, contains('Error:'));
       });
     });
 
@@ -313,6 +504,46 @@ void main() {
         await future;
         expect(notifier.currentState.isGenerating, false);
       });
+
+      test('sets error when service returns null', () async {
+        masteryRepo.setReturnFailure();
+
+        await notifier.generatePlanFromSyllabus(
+          syllabusGoals: [
+            const SyllabusGoal(
+              subjectId: 'sub_physics',
+              subjectTitle: 'IB Physics',
+              targetDays: 3,
+              targetHoursPerDay: 1,
+            ),
+          ],
+          daysValue: 3,
+          hoursValue: 1,
+        );
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.error, 'Failed to generate syllabus plan');
+      });
+
+      test('sets error when service throws', () async {
+        masteryRepo.setThrowOnGetAllMasteryStates();
+
+        await notifier.generatePlanFromSyllabus(
+          syllabusGoals: [
+            const SyllabusGoal(
+              subjectId: 'sub_physics',
+              subjectTitle: 'IB Physics',
+              targetDays: 3,
+              targetHoursPerDay: 1,
+            ),
+          ],
+          daysValue: 3,
+          hoursValue: 1,
+        );
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.error, contains('Error:'));
+      });
     });
 
     group('createRoadmap', () {
@@ -341,6 +572,19 @@ void main() {
 
         expect(notifier.currentState.roadmaps.first.subjectId, 'sub_physics');
       });
+
+      test('sets error when service throws', () async {
+        roadmapRepo.setThrowOnSaveRoadmap();
+        final l10n = AppLocalizationsEn();
+
+        await notifier.createRoadmap(
+          goal: 'Learn Physics',
+          days: 14,
+          l10n: l10n,
+        );
+
+        expect(notifier.currentState.error, 'Failed to create roadmap');
+      });
     });
 
     group('toggleMilestoneCompletion', () {
@@ -366,6 +610,25 @@ void main() {
         final milestone = updated.milestones.firstWhere((m) => m.id == milestoneId);
         expect(milestone.isCompleted, true);
       });
+
+      test('sets error when service throws', () async {
+        final l10n = AppLocalizationsEn();
+        await notifier.createRoadmap(
+          goal: 'Learn Physics',
+          days: 14,
+          l10n: l10n,
+        );
+        final roadmap = notifier.currentState.roadmaps.first;
+        roadmapRepo.setThrowOnLoadRoadmap();
+
+        await notifier.toggleMilestoneCompletion(
+          roadmapId: roadmap.id,
+          milestoneId: 'nonexistent',
+          isCompleted: true,
+        );
+
+        expect(notifier.currentState.error, 'Failed to update milestone');
+      });
     });
 
     group('scheduleLesson', () {
@@ -380,6 +643,44 @@ void main() {
 
         expect(success, true);
         expect(notifier.currentState.scheduledLessons, hasLength(1));
+      });
+
+      test('returns true and sets success message', () async {
+        final success = await notifier.scheduleLesson(
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          subjectId: 'sub_physics',
+          scheduledTime: DateTime.now().add(const Duration(days: 1)),
+        );
+
+        expect(success, true);
+        expect(notifier.currentState.successMessage, 'Lesson scheduled');
+      });
+
+      test('sets error when service throws', () async {
+        final fakeService = _FakeErrorPlannerService(
+          planRepo: planRepo,
+          masteryService: MasteryGraphService(repository: masteryRepo),
+          repository: masteryRepo,
+          topicRepository: topicRepo,
+          roadmapRepo: roadmapRepo,
+          tutorRepo: tutorRepo,
+          pendingActionRepo: pendingActionRepo,
+          planAdapter: planAdapter,
+          fixedStudentId: 'test-student',
+          throwOnScheduleLesson: true,
+        );
+        final throwingNotifier = PlannerNotifier(fakeService);
+
+        final result = await throwingNotifier.scheduleLesson(
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          subjectId: 'sub_physics',
+          scheduledTime: DateTime.now(),
+        );
+
+        expect(result, false);
+        expect(throwingNotifier.currentState.error, 'Failed to schedule lesson');
       });
     });
 
@@ -413,6 +714,81 @@ void main() {
         await notifier.dismissPendingAction('action-2');
         expect(notifier.currentState.pendingActions, isEmpty);
       });
+
+      test('acceptPendingAction sets success message', () async {
+        pendingActionRepo.addAction(PendingActionModel(
+          id: 'action-3',
+          studentId: 'test-student',
+          actionType: 'schedule',
+          status: 'pending',
+        ));
+        await notifier.loadPendingActions();
+
+        await notifier.acceptPendingAction('action-3');
+
+        expect(notifier.currentState.successMessage, 'Action accepted');
+      });
+
+      test('acceptPendingAction sets error when service throws', () async {
+        final fakeService = _FakeErrorPlannerService(
+          planRepo: planRepo,
+          masteryService: MasteryGraphService(repository: masteryRepo),
+          repository: masteryRepo,
+          topicRepository: topicRepo,
+          roadmapRepo: roadmapRepo,
+          tutorRepo: tutorRepo,
+          pendingActionRepo: pendingActionRepo,
+          planAdapter: planAdapter,
+          fixedStudentId: 'test-student',
+          throwOnAcceptPendingAction: true,
+        );
+        final throwingNotifier = PlannerNotifier(fakeService);
+
+        pendingActionRepo.addAction(PendingActionModel(
+          id: 'action-4',
+          studentId: 'test-student',
+          actionType: 'schedule',
+          status: 'pending',
+        ));
+
+        await throwingNotifier.acceptPendingAction('action-4');
+
+        expect(throwingNotifier.currentState.error, 'Failed to accept action');
+      });
+
+      test('dismissPendingAction sets error when service throws', () async {
+        final fakeService = _FakeErrorPlannerService(
+          planRepo: planRepo,
+          masteryService: MasteryGraphService(repository: masteryRepo),
+          repository: masteryRepo,
+          topicRepository: topicRepo,
+          roadmapRepo: roadmapRepo,
+          tutorRepo: tutorRepo,
+          pendingActionRepo: pendingActionRepo,
+          planAdapter: planAdapter,
+          fixedStudentId: 'test-student',
+          throwOnDismissPendingAction: true,
+        );
+        final throwingNotifier = PlannerNotifier(fakeService);
+
+        pendingActionRepo.addAction(PendingActionModel(
+          id: 'action-5',
+          studentId: 'test-student',
+          actionType: 'schedule',
+          status: 'pending',
+        ));
+
+        await throwingNotifier.dismissPendingAction('action-5');
+
+        expect(throwingNotifier.currentState.error, 'Failed to dismiss action');
+      });
+
+      test('acceptPendingAction on non-existent action', () async {
+        await notifier.acceptPendingAction('non-existent');
+
+        expect(notifier.currentState.error, isNull);
+        expect(notifier.currentState.successMessage, 'Action accepted');
+      });
     });
 
     group('regenerateFromAdherence', () {
@@ -421,23 +797,331 @@ void main() {
         expect(notifier.currentState.isGenerating, false);
         expect(notifier.currentState.error, isNotNull);
       });
+
+      test('regenerates plan successfully', () async {
+        planAdapter.setRegeneratedPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+        ));
+
+        await notifier.regenerateFromAdherence();
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.plan, isNotNull);
+        expect(notifier.currentState.successMessage, 'Plan regenerated based on your adherence');
+      });
+
+      test('sets error when service throws', () async {
+        planAdapter.setThrowOnSuggestRegeneration();
+
+        await notifier.regenerateFromAdherence();
+
+        expect(notifier.currentState.isGenerating, false);
+        expect(notifier.currentState.error, contains('Error:'));
+      });
+    });
+
+    group('loadExistingPlan', () {
+      test('loads plan into state when plan exists', () async {
+        planRepo.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+        ));
+
+        await notifier.loadExistingPlan();
+
+        expect(notifier.currentState.plan, isNotNull);
+        expect(notifier.currentState.plan!.studentId, 'test-student');
+      });
+
+      test('does not update state when no plan exists', () async {
+        await notifier.loadExistingPlan();
+
+        expect(notifier.currentState.plan, isNull);
+      });
+
+      test('handles exception gracefully', () async {
+        planRepo.setThrowOnLoadPlan();
+
+        await notifier.loadExistingPlan();
+
+        expect(notifier.currentState.plan, isNull);
+      });
+    });
+
+    group('loadRoadmaps', () {
+      test('loads roadmaps into state', () async {
+        roadmapRepo.addRoadmap(RoadmapModel(
+          id: 'rm-1',
+          studentId: 'test-student',
+          goal: 'Learn Dart',
+          createdAt: DateTime.now(),
+        ));
+
+        await notifier.loadRoadmaps();
+
+        expect(notifier.currentState.roadmaps, hasLength(1));
+        expect(notifier.currentState.roadmaps.first.goal, 'Learn Dart');
+        expect(notifier.currentState.isLoadingRoadmaps, false);
+      });
+
+      test('handles exception gracefully', () async {
+        notifier.currentState = notifier.currentState.copyWith(
+          roadmaps: [],
+          isLoadingRoadmaps: false,
+        );
+        roadmapRepo.setThrowOnGetRoadmaps();
+
+        await notifier.loadRoadmaps();
+
+        expect(notifier.currentState.isLoadingRoadmaps, false);
+        expect(notifier.currentState.roadmaps, isEmpty);
+      });
+    });
+
+    group('loadPendingActions', () {
+      test('loads pending actions into state', () async {
+        pendingActionRepo.addAction(PendingActionModel(
+          id: 'pa-1',
+          studentId: 'test-student',
+          actionType: 'review',
+          status: 'pending',
+        ));
+
+        await notifier.loadPendingActions();
+
+        expect(notifier.currentState.pendingActions, hasLength(1));
+        expect(notifier.currentState.pendingActions.first.id, 'pa-1');
+      });
+
+      test('handles exception gracefully', () async {
+        pendingActionRepo.setThrowOnGetPending();
+
+        await notifier.loadPendingActions();
+
+        expect(notifier.currentState.pendingActions, isEmpty);
+      });
+    });
+
+    group('loadScheduledLessons', () {
+      test('loads scheduled lessons into state', () async {
+        tutorRepo.addSession(TutorSession(
+          id: 'ts-1',
+          studentId: 'test-student',
+          subjectId: 'sub_physics',
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          status: SessionStatus.planned,
+          startTime: DateTime.now().add(const Duration(days: 1)),
+        ));
+
+        await notifier.loadScheduledLessons();
+
+        expect(notifier.currentState.scheduledLessons, hasLength(1));
+        expect(notifier.currentState.scheduledLessons.first.id, 'ts-1');
+      });
+    });
+
+    group('checkAdherence', () {
+      test('updates state with adherence deviation', () async {
+        planAdapter.setDeviation(const AdherenceDeviation(
+          consecutiveLowDays: 5,
+          averageAdherence: 0.4,
+          requiresRegeneration: true,
+          message: 'Low adherence detected',
+        ));
+
+        await notifier.checkAdherence();
+
+        expect(notifier.currentState.adherenceDeviation, isNotNull);
+        expect(notifier.currentState.adherenceDeviation!.consecutiveLowDays, 5);
+        expect(notifier.currentState.adherenceDeviation!.requiresRegeneration, true);
+      });
+
+      test('sets default deviation when adapter returns no significant deviation', () async {
+        await notifier.checkAdherence();
+
+        expect(notifier.currentState.adherenceDeviation, isNotNull);
+        expect(notifier.currentState.adherenceDeviation!.consecutiveLowDays, 0);
+        expect(notifier.currentState.adherenceDeviation!.requiresRegeneration, false);
+      });
+
+      test('handles exception gracefully', () async {
+        planAdapter.setThrowOnCheckAdherence();
+
+        await notifier.checkAdherence();
+
+        expect(notifier.currentState.adherenceDeviation, isNull);
+      });
     });
 
     group('loadInitialData', () {
       test('loads plan and roadmaps', () async {
         await notifier.loadInitialData();
-        // Plan is null since none saved, roadmaps empty
         expect(notifier.currentState.plan, isNull);
         expect(notifier.currentState.roadmaps, isEmpty);
+      });
+
+      test('loads plan and roadmaps when data exists', () async {
+        planRepo.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+        ));
+        roadmapRepo.addRoadmap(RoadmapModel(
+          id: 'rm-init',
+          studentId: 'test-student',
+          goal: 'Master Math',
+          createdAt: DateTime.now(),
+        ));
+
+        await notifier.loadInitialData();
+
+        expect(notifier.currentState.plan, isNotNull);
+        expect(notifier.currentState.roadmaps, hasLength(1));
+        expect(notifier.currentState.roadmaps.first.goal, 'Master Math');
       });
     });
 
     group('loadAdditionalData', () {
-      test('loads pending actions and scheduled lessons', () async {
+      test('loads pending actions, scheduled lessons, and adherence', () async {
         await notifier.loadAdditionalData();
         expect(notifier.currentState.pendingActions, isEmpty);
         expect(notifier.currentState.scheduledLessons, isEmpty);
       });
+
+      test('loads data when actions and deviations exist', () async {
+        pendingActionRepo.addAction(PendingActionModel(
+          id: 'pa-add',
+          studentId: 'test-student',
+          actionType: 'practice',
+          status: 'pending',
+        ));
+        tutorRepo.addSession(TutorSession(
+          id: 'ts-add',
+          studentId: 'test-student',
+          subjectId: 'sub_physics',
+          topicId: 'topic-2',
+          topicTitle: 'Vectors',
+          status: SessionStatus.planned,
+          startTime: DateTime.now().add(const Duration(days: 2)),
+        ));
+        planAdapter.setDeviation(const AdherenceDeviation(
+          consecutiveLowDays: 3,
+          averageAdherence: 0.5,
+          requiresRegeneration: true,
+          message: 'Consider regenerating',
+        ));
+
+        await notifier.loadAdditionalData();
+
+        expect(notifier.currentState.pendingActions, hasLength(1));
+        expect(notifier.currentState.scheduledLessons, hasLength(1));
+        expect(notifier.currentState.adherenceDeviation, isNotNull);
+      });
+    });
+  });
+
+  group('plannerServiceProvider', () {
+    test('creates PlannerService with default construction', () {
+      Hive.init(Directory.systemTemp.createTempSync('planner_prov_test_provider_default_').path);
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final service = container.read(plannerServiceProvider);
+      expect(service, isA<PlannerService>());
+    });
+  });
+
+  group('plannerProvider', () {
+    test('creates PlannerNotifier with PlannerService', () {
+      Hive.init(Directory.systemTemp.createTempSync('planner_prov_test_provider_').path);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(
+            PlannerService(
+              planRepo: _MockPlanRepository(),
+              masteryService: MasteryGraphService(
+                repository: _MockMasteryRepository(),
+              ),
+              repository: _MockMasteryRepository(),
+              topicRepository: _MockTopicRepository(),
+              roadmapRepo: _MockRoadmapRepository(),
+              tutorRepo: _MockTutorRepo(),
+              pendingActionRepo: _MockPendingActionRepo(),
+              planAdapter: _MockPlanAdapter(),
+              fixedStudentId: 'test-student',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(plannerProvider.notifier);
+      expect(notifier, isA<PlannerNotifier>());
+      expect(notifier.currentState, isA<PlannerState>());
+      expect(notifier.currentState.activeTab, 0);
+    });
+
+    test('can set active tab through provider', () {
+      Hive.init(Directory.systemTemp.createTempSync('planner_prov_test_provider_tab_').path);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(
+            PlannerService(
+              planRepo: _MockPlanRepository(),
+              masteryService: MasteryGraphService(
+                repository: _MockMasteryRepository(),
+              ),
+              repository: _MockMasteryRepository(),
+              topicRepository: _MockTopicRepository(),
+              roadmapRepo: _MockRoadmapRepository(),
+              tutorRepo: _MockTutorRepo(),
+              pendingActionRepo: _MockPendingActionRepo(),
+              planAdapter: _MockPlanAdapter(),
+              fixedStudentId: 'test-student',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(plannerProvider.notifier);
+      notifier.setActiveTab(2);
+
+      expect(container.read(plannerProvider).activeTab, 2);
     });
   });
 }

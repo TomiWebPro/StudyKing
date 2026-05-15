@@ -1,9 +1,8 @@
 import '../errors/result.dart';
-import '../data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
 import '../data/models/question_evaluation_model.dart';
-import 'answer_validation_service.dart';
 import 'mastery_calculation_service.dart';
 
 class MasteryGraphService {
@@ -108,25 +107,6 @@ class MasteryGraphService {
       options: options,
       explanation: explanation,
     );
-  }
-
-  Future<Result<QuestionEvaluation>> evaluateAnswer(String questionId, String userAnswer) async {
-    final evalResult = await _repository.getEvaluation(questionId);
-    if (evalResult.isFailure) {
-      return Result.failure(evalResult.error);
-    }
-
-    final evaluation = evalResult.data!;
-    final validationService = AnswerValidationService();
-    final result = validationService.validateWithEvaluation(evaluation, userAnswer);
-
-    return Result.success(evaluation.copyWith(
-      metadata: {
-        ...?evaluation.metadata,
-        'lastEvaluation': DateTime.now().toIso8601String(),
-        'matched': result.isCorrect,
-      },
-    ));
   }
 
   Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) {

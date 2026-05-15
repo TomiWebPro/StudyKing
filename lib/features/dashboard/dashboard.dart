@@ -1,3 +1,4 @@
+export 'data/repositories/badge_repository.dart';
 export 'presentation/dashboard_screen.dart';
 export 'providers/dashboard_providers.dart';
 export 'providers/dashboard_data_providers.dart';

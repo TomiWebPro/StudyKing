@@ -4028,169 +4028,169 @@ abstract class AppLocalizations {
   /// **'Mark Complete'**
   String get markComplete;
 
-  /// Auto-generated key for csvOverallStats
+  /// CSV section header for overall statistics
   ///
   /// In en, this message translates to:
   /// **'OVERALL STATS'**
   String get csvOverallStats;
 
-  /// Auto-generated key for csvTopicMastery
+  /// CSV section header for topic mastery breakdown
   ///
   /// In en, this message translates to:
   /// **'TOPIC MASTERY'**
   String get csvTopicMastery;
 
-  /// Auto-generated key for csvAllAttempts
+  /// CSV section header for all question attempts
   ///
   /// In en, this message translates to:
   /// **'ALL ATTEMPTS'**
   String get csvAllAttempts;
 
-  /// Auto-generated key for csvWeeklyTrend
+  /// CSV section header for weekly performance trend
   ///
   /// In en, this message translates to:
   /// **'WEEKLY TREND'**
   String get csvWeeklyTrend;
 
-  /// Auto-generated key for csvBadges
+  /// CSV section header for earned badges
   ///
   /// In en, this message translates to:
   /// **'BADGES'**
   String get csvBadges;
 
-  /// Auto-generated key for csvColTotalAttempts
+  /// CSV column: total number of attempts
   ///
   /// In en, this message translates to:
   /// **'Total Attempts'**
   String get csvColTotalAttempts;
 
-  /// Auto-generated key for csvColCorrect
+  /// CSV column: number of correct answers
   ///
   /// In en, this message translates to:
   /// **'Correct'**
   String get csvColCorrect;
 
-  /// Auto-generated key for csvColAccuracy
+  /// CSV column: accuracy percentage
   ///
   /// In en, this message translates to:
   /// **'Accuracy (%)'**
   String get csvColAccuracy;
 
-  /// Auto-generated key for csvColAvgTime
+  /// CSV column: average time per question in seconds
   ///
   /// In en, this message translates to:
   /// **'Avg Time (s)'**
   String get csvColAvgTime;
 
-  /// Auto-generated key for csvColTotalHours
+  /// CSV column: total study hours
   ///
   /// In en, this message translates to:
   /// **'Total Hours'**
   String get csvColTotalHours;
 
-  /// Auto-generated key for csvColWeeklyActivity
+  /// CSV column: number of questions answered this week
   ///
   /// In en, this message translates to:
   /// **'Weekly Activity'**
   String get csvColWeeklyActivity;
 
-  /// Auto-generated key for csvColDailyActivity
+  /// CSV column: number of questions answered today
   ///
   /// In en, this message translates to:
   /// **'Daily Activity'**
   String get csvColDailyActivity;
 
-  /// Auto-generated key for csvColTopicsStudied
+  /// CSV column: number of distinct topics studied
   ///
   /// In en, this message translates to:
   /// **'Topics Studied'**
   String get csvColTopicsStudied;
 
-  /// Auto-generated key for csvColTopicId
+  /// CSV column: topic identifier
   ///
   /// In en, this message translates to:
   /// **'Topic ID'**
   String get csvColTopicId;
 
-  /// Auto-generated key for csvColMasteryLevel
+  /// CSV column: mastery level label for a topic
   ///
   /// In en, this message translates to:
   /// **'Mastery Level'**
   String get csvColMasteryLevel;
 
-  /// Auto-generated key for csvColLastPracticed
+  /// CSV column: date when topic was last practiced
   ///
   /// In en, this message translates to:
   /// **'Last Practiced'**
   String get csvColLastPracticed;
 
-  /// Auto-generated key for csvColReviewUrgency
+  /// CSV column: review urgency score
   ///
   /// In en, this message translates to:
   /// **'Review Urgency'**
   String get csvColReviewUrgency;
 
-  /// Auto-generated key for csvColQuestionId
+  /// CSV column: question identifier
   ///
   /// In en, this message translates to:
   /// **'Question ID'**
   String get csvColQuestionId;
 
-  /// Auto-generated key for csvColSubjectId
+  /// CSV column: subject identifier
   ///
   /// In en, this message translates to:
   /// **'Subject ID'**
   String get csvColSubjectId;
 
-  /// Auto-generated key for csvColTime
+  /// CSV column: time in seconds
   ///
   /// In en, this message translates to:
   /// **'Time (s)'**
   String get csvColTime;
 
-  /// Auto-generated key for csvColTimestamp
+  /// CSV column: timestamp of the event
   ///
   /// In en, this message translates to:
   /// **'Timestamp'**
   String get csvColTimestamp;
 
-  /// Auto-generated key for csvColWeek
+  /// CSV column: week number/identifier
   ///
   /// In en, this message translates to:
   /// **'Week'**
   String get csvColWeek;
 
-  /// Auto-generated key for csvColAttempts
+  /// CSV column: number of attempts
   ///
   /// In en, this message translates to:
   /// **'Attempts'**
   String get csvColAttempts;
 
-  /// Auto-generated key for csvColImprovement
+  /// CSV column: improvement percentage over previous period
   ///
   /// In en, this message translates to:
   /// **'Improvement'**
   String get csvColImprovement;
 
-  /// Auto-generated key for csvColBadgeName
+  /// CSV column: name of the badge
   ///
   /// In en, this message translates to:
   /// **'Badge Name'**
   String get csvColBadgeName;
 
-  /// Auto-generated key for csvColBadgeDescription
+  /// CSV column: description of the badge
   ///
   /// In en, this message translates to:
   /// **'Description'**
   String get csvColBadgeDescription;
 
-  /// Auto-generated key for csvColDateUnlocked
+  /// CSV column: date when badge was unlocked
   ///
   /// In en, this message translates to:
   /// **'Date Unlocked'**
   String get csvColDateUnlocked;
 
-  /// Auto-generated key for pdfProgressReport
+  /// Title for the PDF progress report document
   ///
   /// In en, this message translates to:
   /// **'StudyKing Progress Report'**
@@ -4208,67 +4208,67 @@ abstract class AppLocalizations {
   /// **'Student ID: {id}'**
   String pdfStudentId(String id);
 
-  /// Auto-generated key for pdfOverallStatistics
+  /// Section heading for overall statistics in PDF
   ///
   /// In en, this message translates to:
   /// **'Overall Statistics'**
   String get pdfOverallStatistics;
 
-  /// Auto-generated key for pdfMetric
+  /// Table column header for metric name in PDF
   ///
   /// In en, this message translates to:
   /// **'Metric'**
   String get pdfMetric;
 
-  /// Auto-generated key for pdfValue
+  /// Table column header for metric value in PDF
   ///
   /// In en, this message translates to:
   /// **'Value'**
   String get pdfValue;
 
-  /// Auto-generated key for pdfTopicMasteryBreakdown
+  /// Section heading for topic mastery breakdown in PDF
   ///
   /// In en, this message translates to:
   /// **'Topic Mastery Breakdown'**
   String get pdfTopicMasteryBreakdown;
 
-  /// Auto-generated key for pdfTableAttempts
+  /// Table column header for number of attempts in PDF
   ///
   /// In en, this message translates to:
   /// **'Attempts'**
   String get pdfTableAttempts;
 
-  /// Auto-generated key for pdfTableLevel
+  /// Table column header for mastery level in PDF
   ///
   /// In en, this message translates to:
   /// **'Level'**
   String get pdfTableLevel;
 
-  /// Auto-generated key for pdfTableTopic
+  /// Table column header for topic name in PDF
   ///
   /// In en, this message translates to:
   /// **'Topic'**
   String get pdfTableTopic;
 
-  /// Auto-generated key for pdfBadgesEarned
+  /// Section heading for badges earned in PDF
   ///
   /// In en, this message translates to:
   /// **'Badges Earned'**
   String get pdfBadgesEarned;
 
-  /// Auto-generated key for pdfRecentActivitySummary
+  /// Section heading for recent activity summary in PDF
   ///
   /// In en, this message translates to:
   /// **'Recent Activity Summary'**
   String get pdfRecentActivitySummary;
 
-  /// Auto-generated key for pdfNoMasteryData
+  /// Empty state message when no mastery data is available in PDF
   ///
   /// In en, this message translates to:
   /// **'No mastery data available yet.'**
   String get pdfNoMasteryData;
 
-  /// Auto-generated key for pdfNoBadges
+  /// Empty state message when no badges have been earned in PDF
   ///
   /// In en, this message translates to:
   /// **'No badges earned yet. Keep studying!'**
@@ -4369,6 +4369,972 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No options available'**
   String get noOptionsAvailable;
+
+  /// Section title for subject progress in planner
+  ///
+  /// In en, this message translates to:
+  /// **'Subject Progress'**
+  String get subjectProgress;
+
+  /// Section title for pending actions in planner
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Actions'**
+  String get pendingActions;
+
+  /// Section title for scheduled lessons in planner
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Lessons'**
+  String get scheduledLessons;
+
+  /// Button label to regenerate study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate Plan'**
+  String get regeneratePlan;
+
+  /// Button to view all scheduled lessons
+  ///
+  /// In en, this message translates to:
+  /// **'View All Lessons'**
+  String get viewAllLessons;
+
+  /// Button label to change date/time
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get change;
+
+  /// Button label while scheduling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduling...'**
+  String get scheduling;
+
+  /// Tooltip for accept action
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get accept;
+
+  /// Action title for scheduling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule a lesson'**
+  String get scheduleALesson;
+
+  /// Action title for rescheduling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule lesson'**
+  String get rescheduleLesson;
+
+  /// Action title for plan adjustment suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'Plan adjustment suggested'**
+  String get planAdjustmentTitle;
+
+  /// Fallback action title
+  ///
+  /// In en, this message translates to:
+  /// **'Action needed'**
+  String get actionNeeded;
+
+  /// Error message when something goes wrong
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get somethingWentWrong;
+
+  /// Button to open the study planner
+  ///
+  /// In en, this message translates to:
+  /// **'Open Planner'**
+  String get openPlanner;
+
+  /// Section title for study plan overview in dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Study Plan Overview'**
+  String get studyPlanOverview;
+
+  /// Label showing number of additional lessons
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more...'**
+  String moreLessonsCount(int count);
+
+  /// Name of the badge earned for answering the first question
+  ///
+  /// In en, this message translates to:
+  /// **'First Step'**
+  String get badgeFirstStepName;
+
+  /// Description of the First Step badge
+  ///
+  /// In en, this message translates to:
+  /// **'Answered your first question!'**
+  String get badgeFirstStepDesc;
+
+  /// Name for the 'century' badge
+  ///
+  /// In en, this message translates to:
+  /// **'Century Club'**
+  String get badgeCenturyName;
+
+  /// Description for the 'century' badge
+  ///
+  /// In en, this message translates to:
+  /// **'Answered 100+ questions!'**
+  String get badgeCenturyDesc;
+
+  /// Name of the badge earned for achieving 90 percent accuracy
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy Gold'**
+  String get badgeAccuracyGoldName;
+
+  /// Description of the Accuracy Gold badge
+  ///
+  /// In en, this message translates to:
+  /// **'Achieved 90%+ accuracy!'**
+  String get badgeAccuracyGoldDesc;
+
+  /// Name of the badge earned for studying consistently today
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Scholar'**
+  String get badgeDailyScholarName;
+
+  /// Description of the Daily Scholar badge
+  ///
+  /// In en, this message translates to:
+  /// **'Studied consistently today!'**
+  String get badgeDailyScholarDesc;
+
+  /// Name of the badge earned for studying 10 plus hours total
+  ///
+  /// In en, this message translates to:
+  /// **'Dedicated Learner'**
+  String get badgeDedicatedLearnerName;
+
+  /// Description of the Dedicated Learner badge
+  ///
+  /// In en, this message translates to:
+  /// **'Studied 10+ hours total!'**
+  String get badgeDedicatedLearnerDesc;
+
+  /// Name of the badge earned for being active for a full week
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Warrior'**
+  String get badgeWeeklyWarriorName;
+
+  /// Description of the Weekly Warrior badge
+  ///
+  /// In en, this message translates to:
+  /// **'Active for a full week!'**
+  String get badgeWeeklyWarriorDesc;
+
+  /// General notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Notifications'**
+  String get notifChannelGeneral;
+
+  /// General notification channel description
+  ///
+  /// In en, this message translates to:
+  /// **'General StudyKing notifications'**
+  String get notifChannelGeneralDesc;
+
+  /// Revision reminder notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Revision Reminders'**
+  String get notifChannelRevision;
+
+  /// Wellbeing notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Wellbeing Alerts'**
+  String get notifChannelWellbeing;
+
+  /// Planning suggestion notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Planning Suggestions'**
+  String get notifChannelPlanning;
+
+  /// Lesson notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Notifications'**
+  String get notifChannelLessons;
+
+  /// Mastery alert notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Alerts'**
+  String get notifChannelMastery;
+
+  /// Badge notification channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Notifications'**
+  String get notifChannelBadges;
+
+  /// Daily study reminder channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Study Reminders'**
+  String get notifChannelDailyReminder;
+
+  /// Daily study reminder channel description
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminders to study'**
+  String get notifChannelDailyReminderDesc;
+
+  /// Title for revision reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'Time to Review!'**
+  String get notifTitleTimeToReview;
+
+  /// Body for revision reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s been {days} days since you practiced \"{topicName}\".'**
+  String notifBodyRevision(int days, String topicName);
+
+  /// Title for overwork warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'Take a Break'**
+  String get notifTitleTakeBreak;
+
+  /// Body for overwork warning
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve studied {hours} hours today. Remember to rest!'**
+  String notifBodyOverwork(String hours);
+
+  /// Title for plan adjustment notification
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Adjustment'**
+  String get notifTitlePlanAdjustment;
+
+  /// Body for plan adjustment suggestion
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve had {days} days of low adherence. Shall we adjust your plan?'**
+  String notifBodyPlanAdjustment(int days);
+
+  /// Title for upcoming lesson notification
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Lesson'**
+  String get notifTitleUpcomingLesson;
+
+  /// Body for lesson reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'Your lesson \"{lessonTitle}\" starts at {time}.'**
+  String notifBodyLessonReminder(String lessonTitle, String time);
+
+  /// Title for low mastery warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'Topics Need Attention'**
+  String get notifTitleTopicsNeedAttention;
+
+  /// Body for low mastery warning
+  ///
+  /// In en, this message translates to:
+  /// **'Low mastery detected in: {topics}'**
+  String notifBodyLowMastery(String topics);
+
+  /// Title for badge unlock notification
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Unlocked!'**
+  String get notifTitleBadgeUnlocked;
+
+  /// Body for badge unlock notification
+  ///
+  /// In en, this message translates to:
+  /// **'You earned the \"{badgeName}\" badge: {badgeDescription}'**
+  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription);
+
+  /// Recommendation when accuracy is below 60%
+  ///
+  /// In en, this message translates to:
+  /// **'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.'**
+  String get recommendAccuracyBelow60;
+
+  /// Action recommendation to review basics
+  ///
+  /// In en, this message translates to:
+  /// **'Review basic topics before advancing'**
+  String get recommendReviewBasics;
+
+  /// Recommendation when accuracy is above 85%
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent progress! Ready for advanced topics.'**
+  String get recommendAccuracyExcellent;
+
+  /// Action recommendation for advanced practice
+  ///
+  /// In en, this message translates to:
+  /// **'Try challenging practice questions'**
+  String get recommendChallengingQuestions;
+
+  /// Recommendation when study time is low
+  ///
+  /// In en, this message translates to:
+  /// **'You studied less than 1 hour total. Consistency is key!'**
+  String get recommendConsistency;
+
+  /// Action recommendation to set daily goal
+  ///
+  /// In en, this message translates to:
+  /// **'Set a daily study goal of 30 minutes'**
+  String get recommendSetDailyGoal;
+
+  /// Recommendation when no weekly activity
+  ///
+  /// In en, this message translates to:
+  /// **'No study activity this week. Get back on track!'**
+  String get recommendNoActivity;
+
+  /// Action recommendation for quick review
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a quick 15-minute review session'**
+  String get recommendQuickReview;
+
+  /// Recommendation when weak topics exist
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} topic(s) that need improvement. Focus on strengthening these areas.'**
+  String recommendWeakTopics(int count);
+
+  /// Action recommendation for AI tutor review
+  ///
+  /// In en, this message translates to:
+  /// **'Review weak topics with the AI tutor'**
+  String get recommendAiTutor;
+
+  /// Nudge message when student overworks, showing hours studied
+  ///
+  /// In en, this message translates to:
+  /// **'You have studied {hours} hours today. Consider taking a break!'**
+  String nudgeOverwork(String hours);
+
+  /// Nudge message to remind student to review a topic
+  ///
+  /// In en, this message translates to:
+  /// **'It has been {days} days since you practiced \"{topic}\". Time for a review!'**
+  String nudgeRevision(int days, String topic);
+
+  /// Nudge message suggesting plan adjustment due to low adherence
+  ///
+  /// In en, this message translates to:
+  /// **'You have had {days} days of low plan adherence. Would you like to adjust your study plan?'**
+  String nudgePlanAdjustment(int days);
+
+  /// Plan explanation when accuracy is low
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy is below 60% — needs focused practice'**
+  String get planExplanationAccuracyBelow60;
+
+  /// Plan explanation when review is overdue
+  ///
+  /// In en, this message translates to:
+  /// **'Review is overdue — forgetting risk is high'**
+  String get planExplanationOverdueReview;
+
+  /// Plan explanation when streak is low
+  ///
+  /// In en, this message translates to:
+  /// **'Streak is low — consistency needed'**
+  String get planExplanationLowStreak;
+
+  /// Plan explanation for prerequisite topics
+  ///
+  /// In en, this message translates to:
+  /// **'Prerequisite for upcoming topics — must master first'**
+  String get planExplanationPrerequisite;
+
+  /// Plan explanation for high mastery
+  ///
+  /// In en, this message translates to:
+  /// **'High mastery — ready to advance'**
+  String get planExplanationHighMastery;
+
+  /// Plan explanation for good progress
+  ///
+  /// In en, this message translates to:
+  /// **'Good progress — maintain consistency'**
+  String get planExplanationGoodProgress;
+
+  /// Plan explanation for developing topics
+  ///
+  /// In en, this message translates to:
+  /// **'Developing — needs more practice'**
+  String get planExplanationDeveloping;
+
+  /// Plan explanation for at-risk topics
+  ///
+  /// In en, this message translates to:
+  /// **'At risk — review overdue'**
+  String get planExplanationAtRisk;
+
+  /// Plan explanation for topics needing attention
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention — focus on fundamentals'**
+  String get planExplanationNeedsAttention;
+
+  /// Reason for prerequisite topics
+  ///
+  /// In en, this message translates to:
+  /// **'Required for dependent topics'**
+  String get planReasonRequiredDependent;
+
+  /// Reason for weak performance
+  ///
+  /// In en, this message translates to:
+  /// **'Weak performance'**
+  String get planReasonWeakPerformance;
+
+  /// Reason for high forgetting risk
+  ///
+  /// In en, this message translates to:
+  /// **'High forgetting risk'**
+  String get planReasonHighForgettingRisk;
+
+  /// Reason for new syllabus topic
+  ///
+  /// In en, this message translates to:
+  /// **'New syllabus topic'**
+  String get planReasonNewSyllabusTopic;
+
+  /// Reason related to syllabus goal
+  ///
+  /// In en, this message translates to:
+  /// **'Part of syllabus goal'**
+  String get planReasonPartOfGoal;
+
+  /// General review focus label
+  ///
+  /// In en, this message translates to:
+  /// **'General review'**
+  String get planFocusGeneralReview;
+
+  /// Focus label when most topics are weak areas
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on weak areas'**
+  String get planFocusWeakAreas;
+
+  /// Practice and review focus label
+  ///
+  /// In en, this message translates to:
+  /// **'Practice and review'**
+  String get planFocusPracticeReview;
+
+  /// Rest day focus label
+  ///
+  /// In en, this message translates to:
+  /// **'Rest and review'**
+  String get planFocusRestAndReview;
+
+  /// Message when 7+ consecutive low adherence days
+  ///
+  /// In en, this message translates to:
+  /// **'You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.'**
+  String adherenceLow7Days(int days);
+
+  /// Message when 3+ consecutive low adherence days
+  ///
+  /// In en, this message translates to:
+  /// **'You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?'**
+  String adherenceLow3Days(int days);
+
+  /// Suggestion to review fundamentals
+  ///
+  /// In en, this message translates to:
+  /// **'Review basic concepts first'**
+  String get adapSuggestionFundamentals;
+
+  /// Suggestion for more practice
+  ///
+  /// In en, this message translates to:
+  /// **'More practice questions recommended'**
+  String get adapSuggestionMorePractice;
+
+  /// Suggestion for advanced topics
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for advanced topics'**
+  String get adapSuggestionAdvancedTopics;
+
+  /// Name of the badge earned for answering 100 questions
+  ///
+  /// In en, this message translates to:
+  /// **'Century Club'**
+  String get badgeCenturyClubName;
+
+  /// Description of the Century Club badge
+  ///
+  /// In en, this message translates to:
+  /// **'Answered 100+ questions!'**
+  String get badgeCenturyClubDesc;
+
+  /// Weekly digest message summarizing student activity
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Digest: {weeklyActivity} questions answered, {accuracy}% accuracy, {totalHours} hours studied, {weakCount} weak areas, {badgeCount} badges earned.'**
+  String nudgeWeeklyDigest(
+    int weeklyActivity,
+    int accuracy,
+    String totalHours,
+    int weakCount,
+    int badgeCount,
+  );
+
+  /// Title of revision reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'Time to Review!'**
+  String get notificationTimeToReviewTitle;
+
+  /// Body of revision reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s been {days} days since you practiced \"{topic}\".'**
+  String notificationTimeToReviewBody(int days, String topic);
+
+  /// Title of overwork warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'Take a Break'**
+  String get notificationTakeABreakTitle;
+
+  /// Body of overwork warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve studied {hours} hours today. Remember to rest!'**
+  String notificationTakeABreakBody(String hours);
+
+  /// Title of plan adjustment suggestion notification
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Adjustment'**
+  String get notificationPlanAdjustmentTitle;
+
+  /// Body of plan adjustment suggestion notification
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve had {days} days of low adherence. Shall we adjust your plan?'**
+  String notificationPlanAdjustmentBody(int days);
+
+  /// Title of upcoming lesson reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Lesson'**
+  String get notificationUpcomingLessonTitle;
+
+  /// Body of upcoming lesson reminder notification
+  ///
+  /// In en, this message translates to:
+  /// **'Your lesson \"{lesson}\" starts at {time}'**
+  String notificationUpcomingLessonBody(String lesson, String time);
+
+  /// Title of low mastery warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'Topics Need Attention'**
+  String get notificationTopicsNeedAttentionTitle;
+
+  /// Body of low mastery warning notification
+  ///
+  /// In en, this message translates to:
+  /// **'Low mastery detected in: {topics}'**
+  String notificationTopicsNeedAttentionBody(String topics);
+
+  /// Title of badge unlocked notification
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Unlocked!'**
+  String get notificationBadgeUnlockedTitle;
+
+  /// Body of badge unlocked notification
+  ///
+  /// In en, this message translates to:
+  /// **'You earned the \"{badge}\" badge: {description}'**
+  String notificationBadgeUnlockedBody(String badge, String description);
+
+  /// Name of the general notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Notifications'**
+  String get notificationChannelGeneralName;
+
+  /// Description of the general notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'General StudyKing notifications'**
+  String get notificationChannelGeneralDesc;
+
+  /// Name of the daily study reminders channel
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Study Reminders'**
+  String get notificationChannelDailyReminderName;
+
+  /// Description of the daily study reminders channel
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminders to study'**
+  String get notificationChannelDailyReminderDesc;
+
+  /// Name of the revision reminders channel
+  ///
+  /// In en, this message translates to:
+  /// **'Revision Reminders'**
+  String get notificationChannelRevisionName;
+
+  /// Description of the revision reminders channel
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders to review topics that need practice'**
+  String get notificationChannelRevisionDesc;
+
+  /// Name of the wellbeing alerts channel
+  ///
+  /// In en, this message translates to:
+  /// **'Wellbeing Alerts'**
+  String get notificationChannelWellbeingName;
+
+  /// Description of the wellbeing alerts channel
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts about study-life balance and overwork'**
+  String get notificationChannelWellbeingDesc;
+
+  /// Name of the planning suggestions channel
+  ///
+  /// In en, this message translates to:
+  /// **'Planning Suggestions'**
+  String get notificationChannelPlanningName;
+
+  /// Description of the planning suggestions channel
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions about study plan adjustments'**
+  String get notificationChannelPlanningDesc;
+
+  /// Name of the lesson notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Notifications'**
+  String get notificationChannelLessonsName;
+
+  /// Description of the lesson notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications about upcoming lessons'**
+  String get notificationChannelLessonsDesc;
+
+  /// Name of the mastery alerts channel
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Alerts'**
+  String get notificationChannelMasteryName;
+
+  /// Description of the mastery alerts channel
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts about low topic mastery and weak areas'**
+  String get notificationChannelMasteryDesc;
+
+  /// Name of the badge notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'Badge Notifications'**
+  String get notificationChannelBadgesName;
+
+  /// Description of the badge notifications channel
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications about earned badges and achievements'**
+  String get notificationChannelBadgesDesc;
+
+  /// Explanation when topic accuracy is below 60 percent
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy is below 60% — needs focused practice'**
+  String get planAccuracyLow;
+
+  /// Explanation when review is overdue and forgetting risk is high
+  ///
+  /// In en, this message translates to:
+  /// **'Review is overdue — forgetting risk is high'**
+  String get planReviewOverdue;
+
+  /// Explanation when current streak is low
+  ///
+  /// In en, this message translates to:
+  /// **'Streak is low — consistency needed'**
+  String get planStreakLow;
+
+  /// Explanation when topic is a prerequisite for other topics
+  ///
+  /// In en, this message translates to:
+  /// **'Prerequisite for upcoming topics — must master first'**
+  String get planPrerequisite;
+
+  /// Explanation when topic blocks downstream topics
+  ///
+  /// In en, this message translates to:
+  /// **'Blocks {count} downstream topic(s)'**
+  String planBlocksDownstream(int count);
+
+  /// Reason label for prerequisite topics
+  ///
+  /// In en, this message translates to:
+  /// **'Required for dependent topics'**
+  String get planRequiredForDependent;
+
+  /// Reason label for topics with weak performance
+  ///
+  /// In en, this message translates to:
+  /// **'Weak performance'**
+  String get planWeakPerformance;
+
+  /// Reason label for topics with high forgetting risk
+  ///
+  /// In en, this message translates to:
+  /// **'High forgetting risk'**
+  String get planHighForgettingRisk;
+
+  /// Reason label for new syllabus topics
+  ///
+  /// In en, this message translates to:
+  /// **'New syllabus topic'**
+  String get planNewSyllabusTopic;
+
+  /// Explanation for syllabus goal topic inclusion
+  ///
+  /// In en, this message translates to:
+  /// **'Part of syllabus goal'**
+  String get planPartOfSyllabusGoal;
+
+  /// Recommendation reason for high mastery topics
+  ///
+  /// In en, this message translates to:
+  /// **'High mastery — ready to advance'**
+  String get planHighMastery;
+
+  /// Recommendation reason for topics with good progress
+  ///
+  /// In en, this message translates to:
+  /// **'Good progress — maintain consistency'**
+  String get planGoodProgress;
+
+  /// Recommendation reason for developing topics
+  ///
+  /// In en, this message translates to:
+  /// **'Developing — needs more practice'**
+  String get planDeveloping;
+
+  /// Recommendation reason for at-risk topics
+  ///
+  /// In en, this message translates to:
+  /// **'At risk — review overdue'**
+  String get planAtRisk;
+
+  /// Recommendation reason for topics needing attention
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention — focus on fundamentals'**
+  String get planNeedsAttention;
+
+  /// Focus label for rest days
+  ///
+  /// In en, this message translates to:
+  /// **'Rest and review'**
+  String get planRestAndReview;
+
+  /// Focus label when no priority topics are scheduled
+  ///
+  /// In en, this message translates to:
+  /// **'General review'**
+  String get planGeneralReview;
+
+  /// Default focus label for study plans
+  ///
+  /// In en, this message translates to:
+  /// **'Practice and review'**
+  String get planPracticeAndReview;
+
+  /// Message shown when adherence is low for many days, suggesting mentor consultation
+  ///
+  /// In en, this message translates to:
+  /// **'You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.'**
+  String adherenceLowDaysAdjust(int days);
+
+  /// Message shown when adherence is low, suggesting plan regeneration
+  ///
+  /// In en, this message translates to:
+  /// **'You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?'**
+  String adherenceLowDaysRegenerate(int days);
+
+  /// Recommendation when accuracy is below 60 percent
+  ///
+  /// In en, this message translates to:
+  /// **'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.'**
+  String get recommendationAccuracyLow;
+
+  /// Action suggestion for low accuracy
+  ///
+  /// In en, this message translates to:
+  /// **'Review basic topics before advancing'**
+  String get recommendationReviewBasics;
+
+  /// Recommendation when accuracy is above 85 percent
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent progress! Ready for advanced topics.'**
+  String get recommendationExcellentProgress;
+
+  /// Action suggestion for high accuracy
+  ///
+  /// In en, this message translates to:
+  /// **'Try challenging practice questions'**
+  String get recommendationChallengingPractice;
+
+  /// Recommendation when study time is very low
+  ///
+  /// In en, this message translates to:
+  /// **'You studied less than 1 hour total. Consistency is key!'**
+  String get recommendationLowHours;
+
+  /// Action suggestion for low study hours
+  ///
+  /// In en, this message translates to:
+  /// **'Set a daily study goal of 30 minutes'**
+  String get recommendationSetDailyGoal;
+
+  /// Recommendation when no weekly activity detected
+  ///
+  /// In en, this message translates to:
+  /// **'No study activity this week. Get back on track!'**
+  String get recommendationNoActivity;
+
+  /// Action suggestion for no weekly activity
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a quick 15-minute review session'**
+  String get recommendationQuickReview;
+
+  /// Recommendation when there are weak topics needing improvement
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} topic(s) that need improvement. Focus on strengthening these areas.'**
+  String recommendationWeakTopics(int count);
+
+  /// Action suggestion for weak topics
+  ///
+  /// In en, this message translates to:
+  /// **'Review weak topics with the AI tutor'**
+  String get recommendationReviewWithTutor;
+
+  /// Suggestion for topics with accuracy below 60 percent
+  ///
+  /// In en, this message translates to:
+  /// **'Review basic concepts first'**
+  String get suggestionFundamentals;
+
+  /// Suggestion for topics with accuracy between 60 and 80 percent
+  ///
+  /// In en, this message translates to:
+  /// **'More practice questions recommended'**
+  String get suggestionPractice;
+
+  /// Suggestion for topics with accuracy above 80 percent
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for advanced topics'**
+  String get suggestionAdvanced;
+
+  /// Share text when sharing study session files
+  ///
+  /// In en, this message translates to:
+  /// **'Study Sessions'**
+  String get shareSessionsText;
+
+  /// Section title for summary card on dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summary;
+
+  /// Label when there is no daily cap set
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get noLimit;
+
+  /// Subtitle for focus timer settings tile
+  ///
+  /// In en, this message translates to:
+  /// **'Start a focused study session'**
+  String get focusTimerDescription;
+
+  /// Tile title for daily study cap setting
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Study Cap'**
+  String get dailyStudyCap;
+
+  /// Section title for token usage summary
+  ///
+  /// In en, this message translates to:
+  /// **'Token Usage Summary'**
+  String get tokenUsageSummary;
+
+  /// Label for total tokens stat
+  ///
+  /// In en, this message translates to:
+  /// **'Total Tokens'**
+  String get totalTokens;
+
+  /// Label for total cost stat
+  ///
+  /// In en, this message translates to:
+  /// **'Total Cost'**
+  String get totalCost;
+
+  /// Label for failed tasks count
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get failed;
+
+  /// Hint text for subject ID field in planner
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. sub_physics'**
+  String get subjectIdHint;
 }
 
 class _AppLocalizationsDelegate

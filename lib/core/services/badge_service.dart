@@ -1,5 +1,5 @@
-import '../data/repositories/badge_repository.dart';
-import '../data/repositories/attempt_repository.dart';
+import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import '../data/models/badge_model.dart';
 import 'study_progress_tracker.dart';
 import 'notification_service.dart';
@@ -47,7 +47,7 @@ class BadgeService {
           },
         );
 
-        await _repository.save(badge);
+        await _repository.create(badge);
         newlyUnlocked.add(badge);
 
         try {

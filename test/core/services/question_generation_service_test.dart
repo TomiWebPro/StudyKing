@@ -3,7 +3,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/question_generation_service.dart';
@@ -29,6 +29,7 @@ class MockLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
     chatCallCount++;
     if (shouldThrow) {
@@ -38,7 +39,7 @@ class MockLlmService extends LlmService {
   }
 }
 
-class MockQuestionRepository implements QuestionRepository {
+class MockQuestionRepository extends QuestionRepository {
   bool shouldFailCreate = false;
   int createCallCount = 0;
 
@@ -55,10 +56,10 @@ class MockQuestionRepository implements QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<Question?>> get(String id) async => Result.success(null);
+  Future<Question?> get(String id) async => null;
 
   @override
-  Future<Result<List<Question>>> getAll() async => Result.success([]);
+  Future<List<Question>> getAll() async => [];
 
   @override
   Future<Result<List<Question>>> getByTopic(String topicId) async =>
@@ -96,7 +97,7 @@ class MockQuestionRepository implements QuestionRepository {
   ) async => Result.success(null);
 
   @override
-  Future<Result<void>> delete(String id) async => Result.success(null);
+  Future<void> delete(String id) async {}
 }
 
 class MockMasteryGraphService extends MasteryGraphService {
@@ -213,6 +214,7 @@ void main() {
       service = QuestionGenerationService(
         llmService: mockLlm,
         questionRepo: mockRepo,
+        defaultModelId: 'gpt-3.5-turbo',
       );
     });
 
@@ -417,6 +419,7 @@ void main() {
       service = QuestionGenerationService(
         llmService: mockLlm,
         questionRepo: mockRepo,
+        defaultModelId: 'gpt-3.5-turbo',
       );
     });
 
@@ -468,6 +471,7 @@ void main() {
       final retryService = QuestionGenerationService(
         llmService: mockLlmWithRetry,
         questionRepo: mockRepo,
+        defaultModelId: 'gpt-3.5-turbo',
       );
 
       final result = await retryService.generateQuestions(
@@ -536,6 +540,7 @@ void main() {
         llmService: mockLlm,
         questionRepo: mockRepo,
         masteryService: mockMastery,
+        defaultModelId: 'gpt-3.5-turbo',
       );
     });
 

@@ -69,7 +69,7 @@ class _SubjectSelectionScreenState
       );
 
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      await repo.save(subject);
+      await repo.create(subject);
 
       if (mounted) {
         Navigator.pop(context, true);

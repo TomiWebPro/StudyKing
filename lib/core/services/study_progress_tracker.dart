@@ -1,18 +1,22 @@
-import '../data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import '../data/models/mastery_state_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import 'badge_service.dart';
+import 'localization_service.dart';
 
 class StudyProgressTracker {
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
+  final LocalizationService? _localizationService;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
+    LocalizationService? localizationService,
   })  : _attemptRepo = attemptRepo,
-        _masteryService = masteryService ?? MasteryGraphService();
+        _masteryService = masteryService ?? MasteryGraphService(),
+        _localizationService = localizationService;
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
     final attempts = await _attemptRepo.getByStudent(studentId);
@@ -129,19 +133,20 @@ class StudyProgressTracker {
 
     final recommendations = <Map<String, dynamic>>[];
 
+    final l10n = _localizationService;
     if ((stats['accuracy'] as int) < 60) {
       recommendations.add({
         'type': 'review',
         'priority': 'high',
-        'message': 'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.',
-        'action': 'Review basic topics before advancing',
+        'message': l10n?.recommendationAccuracyLow() ?? 'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.',
+        'action': l10n?.recommendationReviewBasics() ?? 'Review basic topics before advancing',
       });
     } else if ((stats['accuracy'] as int) > 85) {
       recommendations.add({
         'type': 'advanced',
         'priority': 'medium',
-        'message': 'Excellent progress! Ready for advanced topics.',
-        'action': 'Try challenging practice questions',
+        'message': l10n?.recommendationExcellentProgress() ?? 'Excellent progress! Ready for advanced topics.',
+        'action': l10n?.recommendationChallengingPractice() ?? 'Try challenging practice questions',
       });
     }
 
@@ -150,8 +155,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'engagement',
         'priority': 'medium',
-        'message': 'You studied less than 1 hour total. Consistency is key!',
-        'action': 'Set a daily study goal of 30 minutes',
+        'message': l10n?.recommendationLowHours() ?? 'You studied less than 1 hour total. Consistency is key!',
+        'action': l10n?.recommendationSetDailyGoal() ?? 'Set a daily study goal of 30 minutes',
       });
     }
 
@@ -159,8 +164,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'reminder',
         'priority': 'high',
-        'message': 'No study activity this week. Get back on track!',
-        'action': 'Start with a quick 15-minute review session',
+        'message': l10n?.recommendationNoActivity() ?? 'No study activity this week. Get back on track!',
+        'action': l10n?.recommendationQuickReview() ?? 'Start with a quick 15-minute review session',
       });
     }
 
@@ -171,9 +176,9 @@ class StudyProgressTracker {
         recommendations.add({
           'type': 'weakness',
           'priority': 'high',
-          'message':
+          'message': l10n?.recommendationWeakTopics(weakTopics.data!.length) ??
               'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
-          'action': 'Review weak topics with the AI tutor',
+          'action': l10n?.recommendationReviewWithTutor() ?? 'Review weak topics with the AI tutor',
         });
       }
     } catch (_) {}
@@ -187,10 +192,11 @@ class StudyProgressTracker {
         tracker: this,
       );
       final badges = await badgeService.getBadges(studentId);
+      final l10n = _localizationService;
       return badges.map((b) => {
         'id': b.id,
-        'name': b.name,
-        'description': b.description,
+        'name': l10n?.badgeName(b.id) ?? b.name,
+        'description': l10n?.badgeDescription(b.id) ?? b.description,
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
     } catch (_) {

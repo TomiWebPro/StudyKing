@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
-import 'package:studyking/core/data/repositories/conversation_repository.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
 
 class _FakeTopicRepository extends TopicRepository {

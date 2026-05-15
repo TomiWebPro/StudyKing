@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:uuid/uuid.dart';
 import '../../../core/data/models/conversation_message_model.dart';
 import '../../../core/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 
 enum ConversationPhase {
@@ -18,9 +18,8 @@ class ConversationManager {
   final LlmService _llmService;
   final String _modelId;
   final ConversationMemory _memory;
-  final List<ConversationMessage> _messages = [];
-  final Uuid _uuid = const Uuid();
   final String sessionId;
+  final ConversationRepository? _persistenceRepo;
 
   String _studentId = '';
   String _topicTitle = '';
@@ -31,33 +30,70 @@ class ConversationManager {
   int _correctCount = 0;
   int _consecutiveIncorrect = 0;
   double _adaptivePace = 1.0;
+  DateTime _sessionStartTime = DateTime.now();
 
   ConversationManager({
     required LlmService llmService,
     required String modelId,
     required this.sessionId,
+    ConversationRepository? persistenceRepo,
   })  : _llmService = llmService,
         _modelId = modelId,
-        _memory = ConversationMemory(maxTurns: 30);
+        _persistenceRepo = persistenceRepo,
+        _memory = ConversationMemory(
+          maxTurns: 30,
+          sessionId: sessionId,
+          repository: persistenceRepo,
+        );
 
-  List<ConversationMessage> get messages => List.unmodifiable(_messages);
+  List<ConversationMessage> get messages {
+    final history = _memory.getHistory();
+    final result = <ConversationMessage>[];
+    for (int i = 0; i < history.length; i++) {
+      final msg = history[i];
+      final role = msg['role'] == 'assistant'
+          ? MessageRole.tutor
+          : msg['role'] == 'system'
+              ? MessageRole.system
+              : MessageRole.student;
+      result.add(ConversationMessage(
+        id: '${sessionId}_msg_$i',
+        sessionId: sessionId,
+        role: role,
+        type: MessageType.text,
+        content: msg['content'] ?? '',
+        timestamp: _sessionStartTime.add(Duration(seconds: i)),
+      ));
+    }
+    return result;
+  }
+
   ConversationPhase get phase => _phase;
   int get exerciseCount => _exerciseCount;
   int get correctCount => _correctCount;
   double get adaptivePace => _adaptivePace;
   String get studentId => _studentId;
 
-  void initialize({
+  Future<void> initialize({
     required String studentId,
     required String topicTitle,
     required String subjectId,
     required String topicId,
-  }) {
+  }) async {
     _studentId = studentId;
     _topicTitle = topicTitle;
     _subjectId = subjectId;
     _topicId = topicId;
     _phase = ConversationPhase.greeting;
+    _sessionStartTime = DateTime.now();
+    await _loadPersistedMessages();
+  }
+
+  Future<void> _loadPersistedMessages() async {
+    if (_persistenceRepo == null) return;
+    try {
+      await _memory.loadFromRepository();
+    } catch (_) {}
   }
 
   Future<String> generateLessonPlan({
@@ -93,15 +129,6 @@ Return a JSON object with:
   }
 
   Stream<String> sendMessage(String content) async* {
-    final userMessage = ConversationMessage(
-      id: _uuid.v4(),
-      sessionId: sessionId,
-      role: MessageRole.student,
-      type: MessageType.text,
-      content: content,
-      timestamp: DateTime.now(),
-    );
-    _messages.add(userMessage);
     _memory.addUserMessage(content);
 
     if (_phase == ConversationPhase.greeting) {
@@ -117,18 +144,6 @@ Return a JSON object with:
     }
 
     final buffer = StringBuffer();
-    final tutorMessageId = _uuid.v4();
-    final placeholder = ConversationMessage(
-      id: tutorMessageId,
-      sessionId: sessionId,
-      role: MessageRole.tutor,
-      type: _getCurrentMessageType(),
-      content: '',
-      timestamp: DateTime.now(),
-      isStreaming: true,
-    );
-    _messages.add(placeholder);
-
     final tutorPrompt = _buildTutorPrompt();
 
     await for (final chunk in _llmService.chatStream(
@@ -141,20 +156,9 @@ Return a JSON object with:
       if (buffer.length > 2) {
         yield* _buildAdaptiveChunks(buffer.toString());
       }
-      final idx = _messages.length - 1;
-      _messages[idx] = _messages[idx].copyWith(
-        content: buffer.toString(),
-        isStreaming: true,
-      );
     }
 
     _memory.addAssistantMessage(buffer.toString());
-    final idx = _messages.length - 1;
-    _messages[idx] = _messages[idx].copyWith(
-      content: buffer.toString(),
-      isStreaming: false,
-      tokenCount: buffer.length ~/ 4,
-    );
 
     _detectExerciseRequest(content);
   }
@@ -170,21 +174,6 @@ Return a JSON object with:
       if (pace < 0.8) {
         await Future.delayed(const Duration(milliseconds: 15));
       }
-    }
-  }
-
-  MessageType _getCurrentMessageType() {
-    switch (_phase) {
-      case ConversationPhase.exercise:
-        return MessageType.exercise;
-      case ConversationPhase.adaptiveReview:
-        return MessageType.feedback;
-      case ConversationPhase.feedback:
-        return MessageType.feedback;
-      case ConversationPhase.closing:
-        return MessageType.system;
-      default:
-        return MessageType.text;
     }
   }
 
@@ -318,6 +307,7 @@ Keep it concise and constructive.
   }
 
   TutorSession toSession() {
+    final msgCount = _memory.getHistory().length;
     return TutorSession(
       id: sessionId,
       studentId: _studentId,
@@ -325,20 +315,18 @@ Keep it concise and constructive.
       topicId: _topicId,
       topicTitle: _topicTitle,
       status: SessionStatus.completed,
-      startTime: _messages.first.timestamp,
+      startTime: _sessionStartTime,
       endTime: DateTime.now(),
       questionsAsked: _exerciseCount,
       questionsCorrect: _correctCount,
       confidenceRating: (confidenceRating * 5).round(),
-      totalMessages: _messages.length,
+      totalMessages: msgCount,
       topicsCovered: [_topicTitle],
       tutorNotes: 'Adaptive pace: ${_adaptivePace.toStringAsFixed(1)}x',
     );
   }
 
   void clearMessages() {
-    _messages.clear();
     _memory.clear();
   }
 }
-

@@ -205,26 +205,29 @@ class SessionExportService {
 
   static Future<void> shareCSV(
     List<StudySession> sessions,
-    String filename,
-  ) async {
+    String filename, {
+    AppLocalizations? l10n,
+  }) async {
     final file = await writeCSVFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
+    await Share.shareXFiles([XFile(file.path)], text: l10n?.shareSessionsText ?? 'Study Sessions');
   }
 
   static Future<void> shareJSON(
     List<StudySession> sessions,
-    String filename,
-  ) async {
+    String filename, {
+    AppLocalizations? l10n,
+  }) async {
     final file = await writeJSONFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
+    await Share.shareXFiles([XFile(file.path)], text: l10n?.shareSessionsText ?? 'Study Sessions');
   }
 
   static Future<void> sharePDF(
     List<StudySession> sessions,
     String filename,
-    AppLocalizations l10n,
-  ) async {
+    AppLocalizations l10n, {
+    AppLocalizations? shareL10n,
+  }) async {
     final file = await writePDFFile(sessions, filename, l10n);
-    await Share.shareXFiles([XFile(file.path)], text: 'Study Sessions');
+    await Share.shareXFiles([XFile(file.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
   }
 }

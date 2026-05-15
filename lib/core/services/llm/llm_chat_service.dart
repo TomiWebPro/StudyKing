@@ -1,61 +1,13 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import '../../data/enums.dart';
-import '../../data/models/lesson_block_model.dart';
-import '../../data/models/question_model.dart';
-import '../../data/models/lesson_model.dart';
-import '../../data/models/markscheme_model.dart';
-import '../../data/models/conversation_message_model.dart';
-import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_constants.dart';
+import '../conversation_memory.dart';
+export '../conversation_memory.dart' show ConversationMemory;
+import '../llm_task_manager.dart';
+import '../llm_usage_meter.dart' show LlmUsageMeter;
 
 enum LlmProvider { openRouter, ollama, openAI }
-
-class ConversationMemory {
-  final List<Map<String, String>> messages;
-  final int maxTurns;
-
-  ConversationMemory({this.maxTurns = 20}) : messages = [];
-
-  void addMessage(String role, String content) {
-    messages.add({'role': role, 'content': content});
-    if (messages.length > maxTurns * 2) {
-      messages.removeRange(0, messages.length - maxTurns * 2);
-    }
-  }
-
-  void addUserMessage(String content) => addMessage('user', content);
-  void addAssistantMessage(String content) => addMessage('assistant', content);
-  void addSystemMessage(String content) => addMessage('system', content);
-
-  List<Map<String, String>> getHistory() => List.from(messages);
-
-  void clear() => messages.clear();
-
-  List<Map<String, String>> getRecent({int turns = 5}) {
-    final recent = messages.length > turns * 2
-        ? messages.sublist(messages.length - turns * 2)
-        : messages;
-    return List.from(recent);
-  }
-
-  static List<Map<String, String>> fromConversationMessages(
-    List<ConversationMessage> messages,
-  ) {
-    return messages
-        .where((m) => !m.isStreaming)
-        .map((m) => {
-              'role': m.role == MessageRole.tutor || m.role == MessageRole.mentor
-                  ? 'assistant'
-                  : m.role == MessageRole.system
-                      ? 'system'
-                      : 'user',
-              'content': m.content,
-            })
-        .toList();
-  }
-}
 
 class LlmConfiguration {
   final LlmProvider provider;
@@ -74,12 +26,17 @@ class LlmConfiguration {
 class LlmService {
   final LlmConfiguration config;
   final http.Client _httpClient;
-  final Logger _logger = const Logger('LlmService');
+  final LlmTaskManager? _taskManager;
+  final LlmUsageMeter? _usageMeter;
 
   LlmService({
     required this.config,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+    LlmTaskManager? taskManager,
+    LlmUsageMeter? usageMeter,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _taskManager = taskManager,
+       _usageMeter = usageMeter;
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
 
@@ -89,25 +46,21 @@ class LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
     if (config.apiKey.isEmpty) {
-      return _mockChatResponse(message);
+      return '';
     }
 
     final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing Quick Guide. Keep responses concise and educational.';
 
-    try {
-      switch (config.provider) {
-        case LlmProvider.openRouter:
-          return await _callOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
-        case LlmProvider.ollama:
-          return await _callOllama(message, modelId, memory: memory, history: history);
-        case LlmProvider.openAI:
-          return await _callOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
-      }
-    } catch (e) {
-      _logger.e('LLM Chat Error', e);
-      return _mockChatResponse(message);
+    switch (config.provider) {
+      case LlmProvider.openRouter:
+        return await _callOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
+      case LlmProvider.ollama:
+        return await _callOllama(message, modelId, memory: memory, history: history, feature: feature);
+      case LlmProvider.openAI:
+        return await _callOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
     }
   }
 
@@ -117,29 +70,24 @@ class LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
     if (config.apiKey.isEmpty) {
-      yield _mockChatResponse(message);
       return;
     }
 
     final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
 
-    try {
-      switch (config.provider) {
-        case LlmProvider.openRouter:
-          yield* _streamOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
-          break;
-        case LlmProvider.ollama:
-          yield* _streamOllama(message, modelId, memory: memory, history: history);
-          break;
-        case LlmProvider.openAI:
-          yield* _streamOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history);
-          break;
-      }
-    } catch (e) {
-      _logger.e('LLM Stream Error', e);
-      yield _mockChatResponse(message);
+    switch (config.provider) {
+      case LlmProvider.openRouter:
+        yield* _streamOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
+        break;
+      case LlmProvider.ollama:
+        yield* _streamOllama(message, modelId, memory: memory, history: history, feature: feature);
+        break;
+      case LlmProvider.openAI:
+        yield* _streamOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
+        break;
     }
   }
 
@@ -162,13 +110,34 @@ class LlmService {
     return messages;
   }
 
+  void _initTask(String taskId) {
+    if (taskId.isNotEmpty) {
+      _taskManager?.startTask(taskId);
+    }
+  }
+
+  void _completeTask(String taskId, {int tokensUsed = 0, double estimatedCost = 0.0}) {
+    if (taskId.isNotEmpty) {
+      _taskManager?.completeTask(taskId, tokensUsed: tokensUsed, estimatedCost: estimatedCost);
+    }
+  }
+
+  void _failTask(String taskId, String error) {
+    if (taskId.isNotEmpty) {
+      _taskManager?.failTask(taskId, error);
+    }
+  }
+
   Future<String> _callOpenRouter(
     String message,
     String modelId,
     String systemPrompt, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final url = _openRouterUrl;
     final messages = _buildMessages(
       message: message,
@@ -191,9 +160,11 @@ class LlmService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      _trackUsage(data, modelId);
-      return data['choices'][0]['message']['content'] as String;
+      final content = data['choices'][0]['message']['content'] as String;
+      _trackUsage(data, modelId, feature, taskId: taskId);
+      return content;
     }
+    _failTask(taskId, 'OpenRouter API Error: ${response.body}');
     throw Exception('OpenRouter API Error: ${response.body}');
   }
 
@@ -203,7 +174,10 @@ class LlmService {
     String systemPrompt, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final url = _openRouterUrl;
     final messages = _buildMessages(
       message: message,
@@ -224,27 +198,42 @@ class LlmService {
       'stream': true,
     });
 
-    final streamedResponse = await _httpClient.send(request);
-    final lines = streamedResponse.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
+    try {
+      final streamedResponse = await _httpClient.send(request);
+      final lines = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
-    await for (final line in lines) {
-      if (line.startsWith('data: ')) {
-        final dataStr = line.substring(6);
-        if (dataStr == '[DONE]') break;
-        try {
-          final data = jsonDecode(dataStr) as Map<String, dynamic>;
-          final choice = data['choices']?[0];
-          if (choice != null) {
-            final delta = choice['delta'] as Map<String, dynamic>?;
-            final content = delta?['content'] as String?;
-            if (content != null && content.isNotEmpty) {
-              yield content;
+      String fullContent = '';
+      await for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final dataStr = line.substring(6);
+          if (dataStr == '[DONE]') break;
+          try {
+            final data = jsonDecode(dataStr) as Map<String, dynamic>;
+            final choice = data['choices']?[0];
+            if (choice != null) {
+              final delta = choice['delta'] as Map<String, dynamic>?;
+              final content = delta?['content'] as String?;
+              if (content != null && content.isNotEmpty) {
+                fullContent += content;
+                yield content;
+              }
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
       }
+      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
+      _usageMeter?.recordUsage(
+        id: taskId,
+        feature: feature,
+        modelId: modelId,
+        inputTokens: _estimateInputTokens(message, systemPrompt),
+        outputTokens: fullContent.length ~/ 4,
+      );
+    } catch (e) {
+      _failTask(taskId, e.toString());
+      rethrow;
     }
   }
 
@@ -253,7 +242,10 @@ class LlmService {
     String modelId, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
@@ -274,8 +266,18 @@ class LlmService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return data['message']['content'] as String;
+      final content = data['message']['content'] as String;
+      _completeTask(taskId, tokensUsed: content.length ~/ 4);
+      _usageMeter?.recordUsage(
+        id: taskId,
+        feature: feature,
+        modelId: modelId,
+        inputTokens: _estimateInputTokens(message, ''),
+        outputTokens: content.length ~/ 4,
+      );
+      return content;
     }
+    _failTask(taskId, 'Ollama API Error: ${response.body}');
     throw Exception('Ollama API Error: ${response.body}');
   }
 
@@ -284,7 +286,10 @@ class LlmService {
     String modelId, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
@@ -302,22 +307,37 @@ class LlmService {
       'stream': true,
     });
 
-    final streamedResponse = await _httpClient.send(request);
-    final lines = streamedResponse.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
+    try {
+      final streamedResponse = await _httpClient.send(request);
+      final lines = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
-    await for (final line in lines) {
-      if (line.trim().isEmpty) continue;
-      try {
-        final data = jsonDecode(line) as Map<String, dynamic>;
-        final done = data['done'] as bool? ?? false;
-        final content = data['message']?['content'] as String?;
-        if (content != null && content.isNotEmpty) {
-          yield content;
-        }
-        if (done) break;
-      } catch (_) {}
+      String fullContent = '';
+      await for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        try {
+          final data = jsonDecode(line) as Map<String, dynamic>;
+          final done = data['done'] as bool? ?? false;
+          final content = data['message']?['content'] as String?;
+          if (content != null && content.isNotEmpty) {
+            fullContent += content;
+            yield content;
+          }
+          if (done) break;
+        } catch (_) {}
+      }
+      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
+      _usageMeter?.recordUsage(
+        id: taskId,
+        feature: feature,
+        modelId: modelId,
+        inputTokens: _estimateInputTokens(message, ''),
+        outputTokens: fullContent.length ~/ 4,
+      );
+    } catch (e) {
+      _failTask(taskId, e.toString());
+      rethrow;
     }
   }
 
@@ -327,7 +347,10 @@ class LlmService {
     String systemPrompt, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
     final messages = _buildMessages(
       message: message,
@@ -349,9 +372,11 @@ class LlmService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      _trackUsage(data, modelId);
-      return data['choices'][0]['message']['content'] as String;
+      final content = data['choices'][0]['message']['content'] as String;
+      _trackUsage(data, modelId, feature, taskId: taskId);
+      return content;
     }
+    _failTask(taskId, 'OpenAI API Error: ${response.body}');
     throw Exception('OpenAI API Error: ${response.body}');
   }
 
@@ -361,7 +386,10 @@ class LlmService {
     String systemPrompt, {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    _initTask(taskId);
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
     final messages = _buildMessages(
       message: message,
@@ -381,424 +409,70 @@ class LlmService {
       'stream': true,
     });
 
-    final streamedResponse = await _httpClient.send(request);
-    final lines = streamedResponse.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
+    try {
+      final streamedResponse = await _httpClient.send(request);
+      final lines = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
-    await for (final line in lines) {
-      if (line.startsWith('data: ')) {
-        final dataStr = line.substring(6);
-        if (dataStr == '[DONE]') break;
-        try {
-          final data = jsonDecode(dataStr) as Map<String, dynamic>;
-          final choice = data['choices']?[0];
-          if (choice != null) {
-            final delta = choice['delta'] as Map<String, dynamic>?;
-            final content = delta?['content'] as String?;
-            if (content != null && content.isNotEmpty) {
-              yield content;
+      String fullContent = '';
+      await for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final dataStr = line.substring(6);
+          if (dataStr == '[DONE]') break;
+          try {
+            final data = jsonDecode(dataStr) as Map<String, dynamic>;
+            final choice = data['choices']?[0];
+            if (choice != null) {
+              final delta = choice['delta'] as Map<String, dynamic>?;
+              final content = delta?['content'] as String?;
+              if (content != null && content.isNotEmpty) {
+                fullContent += content;
+                yield content;
+              }
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
       }
+      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
+      _usageMeter?.recordUsage(
+        id: taskId,
+        feature: feature,
+        modelId: modelId,
+        inputTokens: _estimateInputTokens(message, systemPrompt),
+        outputTokens: fullContent.length ~/ 4,
+      );
+    } catch (e) {
+      _failTask(taskId, e.toString());
+      rethrow;
     }
   }
 
-  void _trackUsage(Map<String, dynamic> responseData, String modelId) {
+  int _estimateInputTokens(String message, String systemPrompt) {
+    return (systemPrompt.length + message.length) ~/ 4;
+  }
+
+  void _trackUsage(Map<String, dynamic> responseData, String modelId, String feature, {String taskId = ''}) {
     final usage = responseData['usage'] as Map<String, dynamic>?;
     if (usage != null && config.onTokenUsage != null) {
       final inputTokens = usage['prompt_tokens'] as int? ?? 0;
       final outputTokens = usage['completion_tokens'] as int? ?? 0;
       config.onTokenUsage!(inputTokens, outputTokens, modelId);
     }
-  }
-
-  String _mockChatResponse(String message) {
-    if (message.toLowerCase().contains('explain')) {
-      return 'As an AI study assistant, I can help explain various concepts. Could you tell me which specific topic you\'d like me to explain?';
-    }
-    if (message.toLowerCase().contains('quiz') || message.toLowerCase().contains('question')) {
-      return 'I can quiz you on various subjects! What topic would you like to be quizzed on?';
-    }
-    if (message.toLowerCase().contains('math') || message.toLowerCase().contains('calculate')) {
-      return 'I\'m ready to help with math! Please share the specific problem or concept you\'re working on.';
-    }
-    return 'That\'s a great question! Let me help you understand it better. Could you provide more details about what you\'re studying?';
-  }
-
-  Future<List<Question>> generateQuestions({
-    required String topicTitle,
-    required String syllabus,
-    required String subjectId,
-    required int count,
-    required int difficulty,
-    required String modelId,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _getMockQuestions(topicTitle, count, difficulty, subjectId);
-    }
-
-    final prompt = '''
-Generate $count practice questions for the topic "$topicTitle" in subject ID: $subjectId.
-Syllabus: $syllabus
-Difficulty level: $difficulty/5
-
-Each question should have:
-1. A clear question text
-2. Multiple choice options (A, B, C, D)
-3. The correct answer
-4. A brief explanation
-
-Format as JSON array with subjectId field.
-''';
-
-    try {
-      final response = await chat(message: prompt, modelId: modelId, systemPrompt: 'You are a helpful AI tutor.');
-      return _parseQuestions(response, subjectId);
-    } catch (e) {
-      _logger.e('LLM Question Generation Error', e);
-      return _getMockQuestions(topicTitle, count, difficulty, subjectId);
-    }
-  }
-
-  Future<List<LessonBlock>> generateLessonBlocks({
-    required String topicTitle,
-    required String subjectId,
-    required String content,
-    required String modelId,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _getMockLessonBlocks(subjectId);
-    }
-
-    final prompt = '''
-Create structured lesson blocks for topic: $topicTitle
-
-Subject ID: $subjectId
-Content to explain: $content
-
-Generate blocks with type and content. Include subjectId in each block.
-''';
-
-    try {
-      final response = await chat(message: prompt, modelId: modelId);
-      return _parseLessonBlocks(response, subjectId);
-    } catch (e) {
-      _logger.e('LLM Lesson Generation Error', e);
-      return _getMockLessonBlocks(subjectId);
-    }
-  }
-
-  Future<Lesson> generateLesson({
-    required String title,
-    required String subjectId,
-    required String topicId,
-    required String content,
-    required String modelId,
-    int difficulty = 1,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _getMockLesson(title, subjectId, topicId, difficulty);
-    }
-
-    final prompt = '''
-Generate a complete lesson for:
-Title: $title
-Subject ID: $subjectId
-Topic ID: $topicId
-
-Content overview: $content
-
-Generate:
-1. Lesson title and structure
-2. Lesson blocks (text, examples, exercises)
-3. Difficulty level
-
-Respond with JSON containing lesson structure.
-''';
-
-    try {
-      final response = await chat(message: prompt, modelId: modelId);
-      return _parseLesson(response, title, subjectId, topicId, difficulty);
-    } catch (e) {
-      _logger.e('LLM Lesson Generation Error', e);
-      return _getMockLesson(title, subjectId, topicId, difficulty);
-    }
-  }
-
-  Future<String> validateAnswer({
-    required String questionText,
-    required String userAnswer,
-    required String correctAnswer,
-    required String subjectId,
-    String? topicId,
-    required String modelId,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _mockValidateAnswer(subjectId);
-    }
-
-    final context = topicId != null
-        ? 'Subject: $subjectId, Topic: $topicId'
-        : 'Subject: $subjectId';
-
-    final prompt = '''
-Evaluate if the user answer matches the correct answer.
-Context: $context
-
-Question: $questionText
-User Answer: $userAnswer
-Correct Answer: $correctAnswer
-
-Provide validation result with explanation.
-''';
-
-    try {
-      final response = await chat(message: prompt, modelId: modelId);
-      return response;
-    } catch (e) {
-      return _mockValidateAnswer(subjectId);
-    }
-  }
-
-  Future<Map<String, dynamic>> generateStudyPlan({
-    required String subjectId,
-    required String course,
-    required int days,
-    required int hoursPerDay,
-    required String modelId,
-  }) async {
-    if (config.apiKey.isEmpty) {
-      return _mockStudyPlan(subjectId, course, days, hoursPerDay);
-    }
-
-    final prompt = '''
-Generate a study plan for: $course (Subject ID: $subjectId)
-Duration: $days days
-Time per day: $hoursPerDay hours
-
-Include:
-1. Daily topics to cover
-2. Practice recommendations
-3. Milestone checkpoints
-
-Format as JSON with subject-specific recommendations.
-''';
-
-    try {
-      final response = await chat(message: prompt, modelId: modelId);
-      return _parseStudyPlan(response, subjectId);
-    } catch (e) {
-      return _mockStudyPlan(subjectId, course, days, hoursPerDay);
-    }
-  }
-
-  List<Question> _parseQuestions(String response, String subjectId) {
-    try {
-      final data = jsonDecode(response);
-      if (data is List) {
-        return data.map((json) {
-          return Question(
-            id: json['id'] ?? 'q_${subjectId}_mock_${DateTime.now().millisecondsSinceEpoch}',
-            text: json['text'] ?? json['question'] ?? 'Mock question',
-            type: _parseQuestionType(json['type']),
-            difficulty: json['difficulty'] ?? 1,
-            subjectId: subjectId,
-            topicId: json['topicId'] ?? 'topic_general',
-            variantIds: List<String>.from(json['variantIds'] ?? []),
-            sourceIds: List<String>.from(json['sourceIds'] ?? []),
-            allowedAnswerTypes: json['allowedAnswerTypes'] ?? '',
-            markscheme: json['markscheme'] ?? json['answer'] ?? '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-        }).toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  QuestionType _parseQuestionType(dynamic typeValue) {
-    if (typeValue is int && typeValue >= 0 && typeValue < QuestionType.values.length) {
-      return QuestionType.values[typeValue];
-    }
-    final typeStr = typeValue.toString().toLowerCase();
-    if (typeStr.contains('multiple')) return QuestionType.multiChoice;
-    if (typeStr.contains('short')) return QuestionType.typedAnswer;
-    if (typeStr.contains('essay')) return QuestionType.essay;
-    return QuestionType.singleChoice;
-  }
-
-  List<LessonBlock> _parseLessonBlocks(String response, String subjectId) {
-    try {
-      final data = jsonDecode(response);
-      if (data is List) {
-        return data.map((json) {
-          return LessonBlock(
-            id: json['id'] ?? 'block_${subjectId}_${DateTime.now().millisecondsSinceEpoch}_${json['order']}',
-            subjectId: subjectId,
-            lessonId: json['lessonId'] ?? 'lesson_general',
-            type: _parseLessonBlockType(json['type']),
-            content: json['content'] ?? '',
-            order: json['order'] ?? 0,
-          );
-        }).toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  LessonBlockType _parseLessonBlockType(dynamic typeValue) {
-    if (typeValue is int && typeValue >= 0 && typeValue < LessonBlockType.values.length) {
-      return LessonBlockType.values[typeValue];
-    }
-    final typeStr = typeValue.toString().toLowerCase();
-    if (typeStr.contains('text')) return LessonBlockType.text;
-    if (typeStr.contains('example')) return LessonBlockType.example;
-    if (typeStr.contains('exercise')) return LessonBlockType.exercise;
-    if (typeStr.contains('slide')) return LessonBlockType.slide;
-    if (typeStr.contains('quiz')) return LessonBlockType.quiz;
-    if (typeStr.contains('summary')) return LessonBlockType.summary;
-    return LessonBlockType.text;
-  }
-
-  Lesson _parseLesson(String response, String title, String subjectId, String topicId, int difficulty) {
-    try {
-      final data = jsonDecode(response);
-      if (data is Map<String, dynamic> && data.containsKey('blocks')) {
-        final blocks = (data['blocks'] as List)
-            .map((b) => _parseLessonBlocks(b.toString(), subjectId))
-            .expand((b) => b)
-            .toList();
-
-        return Lesson(
-          id: 'lesson_${subjectId}_${DateTime.now().millisecondsSinceEpoch}',
-          subjectId: subjectId,
-          title: title,
-          topicId: topicId,
-          blocks: blocks,
-          difficulty: difficulty,
-          generatedBy: GeneratedBy.ai,
-          createdAt: DateTime.now(),
-          markscheme: data['markscheme'],
-        );
-      }
-
-      final blocks = _parseLessonBlocks(response, subjectId);
-      return Lesson(
-        id: 'lesson_${subjectId}_${DateTime.now().millisecondsSinceEpoch}',
-        subjectId: subjectId,
-        title: title,
-        topicId: topicId,
-        blocks: blocks,
-        difficulty: difficulty,
-        generatedBy: GeneratedBy.ai,
-        createdAt: DateTime.now(),
+    if (usage != null) {
+      final inputTokens = usage['prompt_tokens'] as int? ?? 0;
+      final outputTokens = usage['completion_tokens'] as int? ?? 0;
+      _completeTask(taskId, tokensUsed: inputTokens + outputTokens);
+      _usageMeter?.recordUsage(
+        id: taskId.isNotEmpty ? taskId : 'usage_${DateTime.now().millisecondsSinceEpoch}',
+        feature: feature,
+        modelId: modelId,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
-    } catch (e) {
-      _logger.e('Error parsing lesson', e);
-      return _getMockLesson(title, subjectId, topicId, difficulty);
+    } else {
+      _completeTask(taskId);
     }
   }
 
-  Map<String, dynamic> _parseStudyPlan(String response, String subjectId) {
-    try {
-      final data = jsonDecode(response);
-      if (data is Map<String, dynamic>) {
-        data['subjectId'] = subjectId;
-        return data;
-      }
-      return {'subjectId': subjectId, 'content': response};
-    } catch (e) {
-      return {'subjectId': subjectId, 'content': response};
-    }
-  }
-
-  List<Question> _getMockQuestions(String topicTitle, int count, int difficulty, String subjectId) {
-    return List.generate(count, (i) {
-      return Question(
-        id: 'mock_q_${subjectId}_$i',
-        subjectId: subjectId,
-        topicId: 'topic_1',
-        text: 'Mock question about $topicTitle (Q$i) for subject $subjectId?',
-        type: _getMockQuestionType(i),
-        difficulty: difficulty,
-        markscheme: Markscheme(
-          questionId: 'mock_q_${subjectId}_$i',
-          correctAnswer: 'Mock answer for question $i',
-        ),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-    });
-  }
-
-  List<LessonBlock> _getMockLessonBlocks(String subjectId) {
-    return [
-      LessonBlock(
-        id: 'mock_block_${subjectId}_1',
-        subjectId: subjectId,
-        lessonId: 'lesson_mock',
-        type: LessonBlockType.text,
-        content: 'This is a mock explanation block for subject $subjectId.',
-        order: 0,
-      ),
-      LessonBlock(
-        id: 'mock_block_${subjectId}_2',
-        subjectId: subjectId,
-        lessonId: 'lesson_mock',
-        type: LessonBlockType.example,
-        content: 'Example for subject $subjectId: This demonstrates the concept.',
-        order: 1,
-      ),
-      LessonBlock(
-        id: 'mock_block_${subjectId}_3',
-        subjectId: subjectId,
-        lessonId: 'lesson_mock',
-        type: LessonBlockType.exercise,
-        content: 'Exercise for subject $subjectId: Practice applying what you learned.',
-        order: 2,
-      ),
-    ];
-  }
-
-  Lesson _getMockLesson(String title, String subjectId, String topicId, int difficulty) {
-    return Lesson(
-      id: 'mock_lesson_$subjectId',
-      subjectId: subjectId,
-      title: title,
-      topicId: topicId,
-      blocks: _getMockLessonBlocks(subjectId),
-      difficulty: difficulty,
-      generatedBy: GeneratedBy.ai,
-      createdAt: DateTime.now(),
-    );
-  }
-
-  String _mockValidateAnswer(String subjectId) {
-    return 'Answer validation mock result for subject $subjectId.';
-  }
-
-  Map<String, dynamic> _mockStudyPlan(String subjectId, String course, int days, int hoursPerDay) {
-    return {
-      'subjectId': subjectId,
-      'course': course,
-      'days': days,
-      'hoursPerDay': hoursPerDay,
-      'schedule': [
-        {'day': 1, 'topic': 'Introduction', 'hours': hoursPerDay},
-        {'day': 2, 'topic': 'Core Concepts', 'hours': hoursPerDay},
-      ],
-    };
-  }
-
-  QuestionType _getMockQuestionType(int index) {
-    final types = QuestionType.values;
-    return types[index % types.length];
-  }
 }

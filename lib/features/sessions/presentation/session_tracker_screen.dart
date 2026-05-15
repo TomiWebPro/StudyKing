@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -16,7 +16,7 @@ import '../../../../core/utils/logger.dart';
 import '../../../../core/services/student_id_service.dart';
 import '../../../../core/services/instrumentation_service.dart';
 import '../../../../core/services/mastery_graph_service.dart';
-import '../../../../core/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 
 class SessionTrackerScreen extends ConsumerStatefulWidget {
   final StudySessionRepository? sessionRepository;

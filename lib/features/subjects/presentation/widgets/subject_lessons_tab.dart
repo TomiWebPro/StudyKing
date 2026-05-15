@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

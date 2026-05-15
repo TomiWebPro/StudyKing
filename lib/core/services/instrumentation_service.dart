@@ -1,86 +1,11 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../errors/result.dart';
-import '../data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
 import '../data/models/mastery_state_model.dart';
-
-class PlanAdherenceMetric {
-  final DateTime date;
-  final String studentId;
-  final int plannedQuestions;
-  final int actualQuestions;
-  final int plannedMinutes;
-  final int actualMinutes;
-  final double adherenceScore;
-  final Map<String, dynamic>? metadata;
-
-  PlanAdherenceMetric({
-    required this.date,
-    required this.studentId,
-    required this.plannedQuestions,
-    required this.actualQuestions,
-    required this.plannedMinutes,
-    required this.actualMinutes,
-    required this.adherenceScore,
-    this.metadata,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'date': date.toIso8601String(),
-    'studentId': studentId,
-    'plannedQuestions': plannedQuestions,
-    'actualQuestions': actualQuestions,
-    'plannedMinutes': plannedMinutes,
-    'actualMinutes': actualMinutes,
-    'adherenceScore': adherenceScore,
-    'metadata': metadata,
-  };
-}
-
-class MasteryImprovementMetric {
-  final DateTime date;
-  final String studentId;
-  final String topicId;
-  final double previousAccuracy;
-  final double currentAccuracy;
-  final double accuracyDelta;
-  final double previousMasteryLevel;
-  final double currentMasteryLevel;
-  final MasteryLevel previousLevel;
-  final MasteryLevel currentLevel;
-  final Map<String, dynamic>? metadata;
-
-  MasteryImprovementMetric({
-    required this.date,
-    required this.studentId,
-    required this.topicId,
-    required this.previousAccuracy,
-    required this.currentAccuracy,
-    required this.accuracyDelta,
-    required this.previousMasteryLevel,
-    required this.currentMasteryLevel,
-    required this.previousLevel,
-    required this.currentLevel,
-    this.metadata,
-  });
-
-  bool get leveledUp => currentLevel.index > previousLevel.index;
-
-  Map<String, dynamic> toJson() => {
-    'date': date.toIso8601String(),
-    'studentId': studentId,
-    'topicId': topicId,
-    'previousAccuracy': previousAccuracy,
-    'currentAccuracy': currentAccuracy,
-    'accuracyDelta': accuracyDelta,
-    'previousMasteryLevel': previousMasteryLevel,
-    'currentMasteryLevel': currentMasteryLevel,
-    'previousLevel': previousLevel.index,
-    'currentLevel': currentLevel.index,
-    'leveledUp': leveledUp,
-    'metadata': metadata,
-  };
-}
+import '../data/models/plan_adherence_metric_model.dart';
+import '../data/models/mastery_improvement_metric_model.dart';
+import '../data/hive_box_names.dart';
 
 class PlanAdherenceTracker {
   List<PlanAdherenceMetric> _metrics = [];
@@ -89,7 +14,7 @@ class PlanAdherenceTracker {
 
   Future<void> init() async {
     if (_initialized) return;
-    _box = await Hive.openBox('plan_adherence_metrics');
+    _box = await Hive.openBox(HiveBoxNames.planAdherenceMetrics);
     _metrics = _box.values.cast<PlanAdherenceMetric>().toList();
     _initialized = true;
   }
@@ -185,7 +110,7 @@ class MasteryImprovementTracker {
 
   Future<void> init() async {
     if (_initialized) return;
-    _box = await Hive.openBox('mastery_improvement_metrics');
+    _box = await Hive.openBox(HiveBoxNames.masteryImprovementMetrics);
     _metrics = _box.values.cast<MasteryImprovementMetric>().toList();
     _initialized = true;
   }

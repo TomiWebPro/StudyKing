@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 class LessonBookingSheet extends StatefulWidget {
   final String topicId;
@@ -31,6 +32,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -55,7 +57,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Schedule Lesson',
+            l10n.scheduleLesson,
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 4),
@@ -68,7 +70,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
           const SizedBox(height: 24),
           ListTile(
             leading: const Icon(Icons.calendar_today),
-            title: const Text('Date'),
+            title: Text(l10n.date),
             subtitle: Text(
               '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'),
             trailing: TextButton(
@@ -83,12 +85,12 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                   setState(() => _selectedDate = picked);
                 }
               },
-              child: const Text('Change'),
+              child: Text(l10n.change),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.access_time),
-            title: const Text('Time'),
+            title: Text(l10n.time),
             subtitle: Text(_selectedTime.format(context)),
             trailing: TextButton(
               onPressed: () async {
@@ -100,13 +102,13 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                   setState(() => _selectedTime = picked);
                 }
               },
-              child: const Text('Change'),
+              child: Text(l10n.change),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.timer),
-            title: const Text('Duration'),
-            subtitle: Text('$_durationMinutes minutes'),
+            title: Text(l10n.duration),
+            subtitle: Text(l10n.minutesValue(_durationMinutes)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -137,7 +139,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check),
-              label: Text(_isScheduling ? 'Scheduling...' : 'Schedule Lesson'),
+              label: Text(_isScheduling ? l10n.scheduling : l10n.scheduleLesson),
             ),
           ),
           const SizedBox(height: 24),

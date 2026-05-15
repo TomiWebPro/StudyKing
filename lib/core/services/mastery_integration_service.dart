@@ -1,13 +1,12 @@
 import '../errors/result.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/question_mastery_state_model.dart';
-import '../data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'mastery_graph_service.dart';
 import 'adaptive_practice_engine.dart';
 
 class MasteryIntegrationService {
   final MasteryGraphService _masteryService;
-  final MasteryGraphRepository _repository;
   final AdaptivePracticeEngine _adaptiveEngine;
 
   MasteryGraphService get masteryService => _masteryService;
@@ -17,7 +16,6 @@ class MasteryIntegrationService {
     MasteryGraphRepository? repository,
     AdaptivePracticeEngine? adaptiveEngine,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
-        _repository = repository ?? MasteryGraphRepository(),
         _adaptiveEngine = adaptiveEngine ?? AdaptivePracticeEngine();
 
   Future<void> initialize() async {
@@ -33,7 +31,7 @@ class MasteryIntegrationService {
     required int timeSpentMs,
     String? subtopicId,
   }) async {
-    final result = await _masteryService.recordAttempt(
+    return _masteryService.recordAttempt(
       studentId: studentId,
       topicId: topicId,
       questionId: questionId,
@@ -42,20 +40,6 @@ class MasteryIntegrationService {
       timeSpentMs: timeSpentMs,
       subtopicId: subtopicId,
     );
-
-    _adaptiveEngine.updateQuestionState(
-      questionId: questionId,
-      isCorrect: isCorrect,
-      confidence: confidence,
-      timeSpentMs: timeSpentMs,
-    );
-
-    final masteryResult = await _masteryService.getQuestionMastery(studentId, questionId);
-    if (masteryResult.isSuccess && masteryResult.data != null) {
-      await _repository.updateQuestionMasteryState(masteryResult.data!);
-    }
-
-    return result;
   }
 
   Future<Result<Map<String, dynamic>>> getAdaptiveRecommendation({

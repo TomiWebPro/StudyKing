@@ -144,8 +144,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             const SizedBox(height: 12),
             TextField(
               decoration: InputDecoration(
-                labelText: 'Subject ID (optional)',
-                hintText: 'e.g. sub_physics',
+                labelText: l10n.studentIdOptional,
+                hintText: l10n.subjectIdHint,
                 border: const OutlineInputBorder(),
               ),
               onChanged: (v) => selectedSubjectId = v.trim(),
@@ -384,8 +384,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     final goals = state.plan!.syllabusGoals;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Subject Progress',
+          children: [
+        Text(l10n.subjectProgress,
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         ...goals.map((goal) {
@@ -403,11 +403,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   ? goal.subjectTitle
                   : goal.subjectId),
               subtitle: Text(
-                  '${goal.targetDays} days plan · $topicCount study days'),
+                  '${goal.targetDays} ${l10n.days.toLowerCase()} ${l10n.planSummary.toLowerCase()} · $topicCount ${l10n.topics.toLowerCase()}'),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('${goal.targetHoursPerDay}h/day',
+                  Text('${goal.targetHoursPerDay}h/${l10n.days.toLowerCase()}',
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -431,7 +431,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             Icon(Icons.notifications_active,
                 size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text('Pending Actions',
+            Text(l10n.pendingActions,
                 style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
@@ -485,7 +485,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                         .read(plannerProvider.notifier)
                         .regenerateFromAdherence(),
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Regenerate Plan'),
+                    label: Text(l10n.regeneratePlan),
                   ),
                 ],
               ],
@@ -506,7 +506,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             Icon(Icons.schedule,
                 size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text('Scheduled Lessons',
+            Text(l10n.scheduledLessons,
                 style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
@@ -529,8 +529,16 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         }),
         if (state.scheduledLessons.length > 3)
           TextButton(
-            onPressed: () {},
-            child: Text('${state.scheduledLessons.length - 3} more...'),
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.lessonList,
+                  arguments: LessonListArgs(
+                    topicId: state.scheduledLessons.first.topicId,
+                    topicTitle: l10n.scheduledLessons,
+                    subjectId: state.scheduledLessons.first.subjectId,
+                  ));
+            },
+            child: Text(l10n.moreLessonsCount(
+                state.scheduledLessons.length - 3)),
           ),
       ],
     );

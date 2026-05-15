@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/data/models/lesson_model.dart';
-import '../../../core/data/repositories/lesson_repository.dart';
-import '../../../core/data/repositories/tutor_session_repository.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/utils/responsive.dart';
-import '../../../core/providers/app_providers.dart' show database;
+import '../../../core/errors/handlers.dart';
+import '../../lessons/providers/lesson_providers.dart';
 import 'widgets/lesson_list_item.dart';
 
 class LessonListScreen extends ConsumerStatefulWidget {
   final LessonListArgs args;
-  final LessonRepository? lessonRepository;
-  final TutorSessionRepository? tutorSessionRepository;
 
   const LessonListScreen({
     super.key,
     required this.args,
-    this.lessonRepository,
-    this.tutorSessionRepository,
   });
 
   @override
@@ -40,7 +35,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
 
   Future<void> _loadLessons() async {
     try {
-      final repo = widget.lessonRepository ?? database.lessonRepository;
+      final repo = ref.read(lessonRepositoryProvider);
       final all = await repo.getAll();
       if (!mounted) return;
       setState(() {
@@ -48,14 +43,24 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
             all.where((l) => l.topicId == widget.args.topicId).toList();
         _isLoading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        AppErrorHandler.handleError(
+          context,
+          e,
+          'Lesson Load',
+          retry: true,
+          retryCallback: _retryLoadLessons,
+        );
+      }
     }
   }
 
+  Future<void> _retryLoadLessons() => _loadLessons();
+
   Future<void> _loadTutorSessionStatuses() async {
     try {
-      final repo = widget.tutorSessionRepository ?? database.tutorSessionRepository;
+      final repo = ref.read(tutorSessionRepositoryProvider);
       final sessions = await repo
           .getStudentSessions(StudentIdService().getStudentId());
       for (final session in sessions) {

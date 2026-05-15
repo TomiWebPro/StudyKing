@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/handlers.dart';
 import '../../../core/data/models/topic_model.dart';
-import '../../../core/data/repositories/topic_repository.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
-import '../../../core/providers/app_providers.dart' show database;
+import '../../subjects/providers/topic_repository_provider.dart';
 
 class TopicListScreen extends ConsumerStatefulWidget {
-  final TopicRepository? topicRepository;
-
-  const TopicListScreen({super.key, this.topicRepository});
+  const TopicListScreen({super.key});
 
   @override
   ConsumerState<TopicListScreen> createState() => _TopicListScreenState();
@@ -29,7 +26,7 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
 
   Future<void> _loadTopics() async {
     try {
-      final repo = widget.topicRepository ?? database.topicRepository;
+      final repo = ref.read(topicRepositoryProvider);
       final topics = await repo.getAll();
       if (!mounted) return;
       setState(() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';

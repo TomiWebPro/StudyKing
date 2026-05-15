@@ -3175,115 +3175,115 @@
   },
   "csvOverallStats": "OVERALL STATS",
   "@csvOverallStats": {
-    "description": "Auto-generated key for csvOverallStats"
+    "description": "CSV section header for overall statistics"
   },
   "csvTopicMastery": "TOPIC MASTERY",
   "@csvTopicMastery": {
-    "description": "Auto-generated key for csvTopicMastery"
+    "description": "CSV section header for topic mastery breakdown"
   },
   "csvAllAttempts": "ALL ATTEMPTS",
   "@csvAllAttempts": {
-    "description": "Auto-generated key for csvAllAttempts"
+    "description": "CSV section header for all question attempts"
   },
   "csvWeeklyTrend": "WEEKLY TREND",
   "@csvWeeklyTrend": {
-    "description": "Auto-generated key for csvWeeklyTrend"
+    "description": "CSV section header for weekly performance trend"
   },
   "csvBadges": "BADGES",
   "@csvBadges": {
-    "description": "Auto-generated key for csvBadges"
+    "description": "CSV section header for earned badges"
   },
   "csvColTotalAttempts": "Total Attempts",
   "@csvColTotalAttempts": {
-    "description": "Auto-generated key for csvColTotalAttempts"
+    "description": "CSV column: total number of attempts"
   },
   "csvColCorrect": "Correct",
   "@csvColCorrect": {
-    "description": "Auto-generated key for csvColCorrect"
+    "description": "CSV column: number of correct answers"
   },
   "csvColAccuracy": "Accuracy (%)",
   "@csvColAccuracy": {
-    "description": "Auto-generated key for csvColAccuracy"
+    "description": "CSV column: accuracy percentage"
   },
   "csvColAvgTime": "Avg Time (s)",
   "@csvColAvgTime": {
-    "description": "Auto-generated key for csvColAvgTime"
+    "description": "CSV column: average time per question in seconds"
   },
   "csvColTotalHours": "Total Hours",
   "@csvColTotalHours": {
-    "description": "Auto-generated key for csvColTotalHours"
+    "description": "CSV column: total study hours"
   },
   "csvColWeeklyActivity": "Weekly Activity",
   "@csvColWeeklyActivity": {
-    "description": "Auto-generated key for csvColWeeklyActivity"
+    "description": "CSV column: number of questions answered this week"
   },
   "csvColDailyActivity": "Daily Activity",
   "@csvColDailyActivity": {
-    "description": "Auto-generated key for csvColDailyActivity"
+    "description": "CSV column: number of questions answered today"
   },
   "csvColTopicsStudied": "Topics Studied",
   "@csvColTopicsStudied": {
-    "description": "Auto-generated key for csvColTopicsStudied"
+    "description": "CSV column: number of distinct topics studied"
   },
   "csvColTopicId": "Topic ID",
   "@csvColTopicId": {
-    "description": "Auto-generated key for csvColTopicId"
+    "description": "CSV column: topic identifier"
   },
   "csvColMasteryLevel": "Mastery Level",
   "@csvColMasteryLevel": {
-    "description": "Auto-generated key for csvColMasteryLevel"
+    "description": "CSV column: mastery level label for a topic"
   },
   "csvColLastPracticed": "Last Practiced",
   "@csvColLastPracticed": {
-    "description": "Auto-generated key for csvColLastPracticed"
+    "description": "CSV column: date when topic was last practiced"
   },
   "csvColReviewUrgency": "Review Urgency",
   "@csvColReviewUrgency": {
-    "description": "Auto-generated key for csvColReviewUrgency"
+    "description": "CSV column: review urgency score"
   },
   "csvColQuestionId": "Question ID",
   "@csvColQuestionId": {
-    "description": "Auto-generated key for csvColQuestionId"
+    "description": "CSV column: question identifier"
   },
   "csvColSubjectId": "Subject ID",
   "@csvColSubjectId": {
-    "description": "Auto-generated key for csvColSubjectId"
+    "description": "CSV column: subject identifier"
   },
   "csvColTime": "Time (s)",
   "@csvColTime": {
-    "description": "Auto-generated key for csvColTime"
+    "description": "CSV column: time in seconds"
   },
   "csvColTimestamp": "Timestamp",
   "@csvColTimestamp": {
-    "description": "Auto-generated key for csvColTimestamp"
+    "description": "CSV column: timestamp of the event"
   },
   "csvColWeek": "Week",
   "@csvColWeek": {
-    "description": "Auto-generated key for csvColWeek"
+    "description": "CSV column: week number/identifier"
   },
   "csvColAttempts": "Attempts",
   "@csvColAttempts": {
-    "description": "Auto-generated key for csvColAttempts"
+    "description": "CSV column: number of attempts"
   },
   "csvColImprovement": "Improvement",
   "@csvColImprovement": {
-    "description": "Auto-generated key for csvColImprovement"
+    "description": "CSV column: improvement percentage over previous period"
   },
   "csvColBadgeName": "Badge Name",
   "@csvColBadgeName": {
-    "description": "Auto-generated key for csvColBadgeName"
+    "description": "CSV column: name of the badge"
   },
   "csvColBadgeDescription": "Description",
   "@csvColBadgeDescription": {
-    "description": "Auto-generated key for csvColBadgeDescription"
+    "description": "CSV column: description of the badge"
   },
   "csvColDateUnlocked": "Date Unlocked",
   "@csvColDateUnlocked": {
-    "description": "Auto-generated key for csvColDateUnlocked"
+    "description": "CSV column: date when badge was unlocked"
   },
   "pdfProgressReport": "StudyKing Progress Report",
   "@pdfProgressReport": {
-    "description": "Auto-generated key for pdfProgressReport"
+    "description": "Title for the PDF progress report document"
   },
   "pdfGenerated": "Generated: {date}",
   "@pdfGenerated": {
@@ -3305,47 +3305,47 @@
   },
   "pdfOverallStatistics": "Overall Statistics",
   "@pdfOverallStatistics": {
-    "description": "Auto-generated key for pdfOverallStatistics"
+    "description": "Section heading for overall statistics in PDF"
   },
   "pdfMetric": "Metric",
   "@pdfMetric": {
-    "description": "Auto-generated key for pdfMetric"
+    "description": "Table column header for metric name in PDF"
   },
   "pdfValue": "Value",
   "@pdfValue": {
-    "description": "Auto-generated key for pdfValue"
+    "description": "Table column header for metric value in PDF"
   },
   "pdfTopicMasteryBreakdown": "Topic Mastery Breakdown",
   "@pdfTopicMasteryBreakdown": {
-    "description": "Auto-generated key for pdfTopicMasteryBreakdown"
+    "description": "Section heading for topic mastery breakdown in PDF"
   },
   "pdfTableAttempts": "Attempts",
   "@pdfTableAttempts": {
-    "description": "Auto-generated key for pdfTableAttempts"
+    "description": "Table column header for number of attempts in PDF"
   },
   "pdfTableLevel": "Level",
   "@pdfTableLevel": {
-    "description": "Auto-generated key for pdfTableLevel"
+    "description": "Table column header for mastery level in PDF"
   },
   "pdfTableTopic": "Topic",
   "@pdfTableTopic": {
-    "description": "Auto-generated key for pdfTableTopic"
+    "description": "Table column header for topic name in PDF"
   },
   "pdfBadgesEarned": "Badges Earned",
   "@pdfBadgesEarned": {
-    "description": "Auto-generated key for pdfBadgesEarned"
+    "description": "Section heading for badges earned in PDF"
   },
   "pdfRecentActivitySummary": "Recent Activity Summary",
   "@pdfRecentActivitySummary": {
-    "description": "Auto-generated key for pdfRecentActivitySummary"
+    "description": "Section heading for recent activity summary in PDF"
   },
   "pdfNoMasteryData": "No mastery data available yet.",
   "@pdfNoMasteryData": {
-    "description": "Auto-generated key for pdfNoMasteryData"
+    "description": "Empty state message when no mastery data is available in PDF"
   },
   "pdfNoBadges": "No badges earned yet. Keep studying!",
   "@pdfNoBadges": {
-    "description": "Auto-generated key for pdfNoBadges"
+    "description": "Empty state message when no badges have been earned in PDF"
   },
   "pdfTotalAttemptsRecorded": "Total attempts recorded: {count}",
   "@pdfTotalAttemptsRecorded": {
@@ -3431,5 +3431,872 @@
   "noOptionsAvailable": "No options available",
   "@noOptionsAvailable": {
     "description": "Message when a multiple choice question has no options"
+  },
+  "subjectProgress": "Subject Progress",
+  "@subjectProgress": {
+    "description": "Section title for subject progress in planner"
+  },
+  "pendingActions": "Pending Actions",
+  "@pendingActions": {
+    "description": "Section title for pending actions in planner"
+  },
+  "scheduledLessons": "Scheduled Lessons",
+  "@scheduledLessons": {
+    "description": "Section title for scheduled lessons in planner"
+  },
+  "regeneratePlan": "Regenerate Plan",
+  "@regeneratePlan": {
+    "description": "Button label to regenerate study plan"
+  },
+  "viewAllLessons": "View All Lessons",
+  "@viewAllLessons": {
+    "description": "Button to view all scheduled lessons"
+  },
+  "change": "Change",
+  "@change": {
+    "description": "Button label to change date/time"
+  },
+  "scheduling": "Scheduling...",
+  "@scheduling": {
+    "description": "Button label while scheduling a lesson"
+  },
+  "accept": "Accept",
+  "@accept": {
+    "description": "Tooltip for accept action"
+  },
+  "scheduleALesson": "Schedule a lesson",
+  "@scheduleALesson": {
+    "description": "Action title for scheduling a lesson"
+  },
+  "rescheduleLesson": "Reschedule lesson",
+  "@rescheduleLesson": {
+    "description": "Action title for rescheduling a lesson"
+  },
+  "planAdjustmentTitle": "Plan adjustment suggested",
+  "@planAdjustmentTitle": {
+    "description": "Action title for plan adjustment suggestion"
+  },
+  "actionNeeded": "Action needed",
+  "@actionNeeded": {
+    "description": "Fallback action title"
+  },
+  "somethingWentWrong": "Something went wrong",
+  "@somethingWentWrong": {
+    "description": "Error message when something goes wrong"
+  },
+  "openPlanner": "Open Planner",
+  "@openPlanner": {
+    "description": "Button to open the study planner"
+  },
+  "studyPlanOverview": "Study Plan Overview",
+  "@studyPlanOverview": {
+    "description": "Section title for study plan overview in dashboard"
+  },
+  "moreLessonsCount": "{count} more...",
+  "@moreLessonsCount": {
+    "description": "Label showing number of additional lessons",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeFirstStepName": "First Step",
+  "@badgeFirstStepName": {
+    "description": "Name for the 'first attempt' badge"
+  },
+  "badgeFirstStepDesc": "Answered your first question!",
+  "@badgeFirstStepDesc": {
+    "description": "Description for the 'first attempt' badge"
+  },
+  "badgeCenturyName": "Century Club",
+  "@badgeCenturyName": {
+    "description": "Name for the 'century' badge"
+  },
+  "badgeCenturyDesc": "Answered 100+ questions!",
+  "@badgeCenturyDesc": {
+    "description": "Description for the 'century' badge"
+  },
+  "badgeAccuracyGoldName": "Accuracy Gold",
+  "@badgeAccuracyGoldName": {
+    "description": "Name for the 'accuracy gold' badge"
+  },
+  "badgeAccuracyGoldDesc": "Achieved 90%+ accuracy!",
+  "@badgeAccuracyGoldDesc": {
+    "description": "Description for the 'accuracy gold' badge"
+  },
+  "badgeDailyScholarName": "Daily Scholar",
+  "@badgeDailyScholarName": {
+    "description": "Name for the 'daily streak' badge"
+  },
+  "badgeDailyScholarDesc": "Studied consistently today!",
+  "@badgeDailyScholarDesc": {
+    "description": "Description for the 'daily streak' badge"
+  },
+  "badgeDedicatedLearnerName": "Dedicated Learner",
+  "@badgeDedicatedLearnerName": {
+    "description": "Name for the 'ten hours' badge"
+  },
+  "badgeDedicatedLearnerDesc": "Studied 10+ hours total!",
+  "@badgeDedicatedLearnerDesc": {
+    "description": "Description for the 'ten hours' badge"
+  },
+  "badgeWeeklyWarriorName": "Weekly Warrior",
+  "@badgeWeeklyWarriorName": {
+    "description": "Name for the 'week streak' badge"
+  },
+  "badgeWeeklyWarriorDesc": "Active for a full week!",
+  "@badgeWeeklyWarriorDesc": {
+    "description": "Description for the 'week streak' badge"
+  },
+  "notifChannelGeneral": "StudyKing Notifications",
+  "@notifChannelGeneral": {
+    "description": "General notification channel name"
+  },
+  "notifChannelGeneralDesc": "General StudyKing notifications",
+  "@notifChannelGeneralDesc": {
+    "description": "General notification channel description"
+  },
+  "notifChannelRevision": "Revision Reminders",
+  "@notifChannelRevision": {
+    "description": "Revision reminder notification channel name"
+  },
+  "notifChannelWellbeing": "Wellbeing Alerts",
+  "@notifChannelWellbeing": {
+    "description": "Wellbeing notification channel name"
+  },
+  "notifChannelPlanning": "Planning Suggestions",
+  "@notifChannelPlanning": {
+    "description": "Planning suggestion notification channel name"
+  },
+  "notifChannelLessons": "Lesson Notifications",
+  "@notifChannelLessons": {
+    "description": "Lesson notification channel name"
+  },
+  "notifChannelMastery": "Mastery Alerts",
+  "@notifChannelMastery": {
+    "description": "Mastery alert notification channel name"
+  },
+  "notifChannelBadges": "Badge Notifications",
+  "@notifChannelBadges": {
+    "description": "Badge notification channel name"
+  },
+  "notifChannelDailyReminder": "Daily Study Reminders",
+  "@notifChannelDailyReminder": {
+    "description": "Daily study reminder channel name"
+  },
+  "notifChannelDailyReminderDesc": "Daily reminders to study",
+  "@notifChannelDailyReminderDesc": {
+    "description": "Daily study reminder channel description"
+  },
+  "notifTitleTimeToReview": "Time to Review!",
+  "@notifTitleTimeToReview": {
+    "description": "Title for revision reminder notification"
+  },
+  "notifBodyRevision": "It's been {days} days since you practiced \"{topicName}\".",
+  "@notifBodyRevision": {
+    "description": "Body for revision reminder notification",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "topicName": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTitleTakeBreak": "Take a Break",
+  "@notifTitleTakeBreak": {
+    "description": "Title for overwork warning notification"
+  },
+  "notifBodyOverwork": "You've studied {hours} hours today. Remember to rest!",
+  "@notifBodyOverwork": {
+    "description": "Body for overwork warning",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTitlePlanAdjustment": "Plan Adjustment",
+  "@notifTitlePlanAdjustment": {
+    "description": "Title for plan adjustment notification"
+  },
+  "notifBodyPlanAdjustment": "You've had {days} days of low adherence. Shall we adjust your plan?",
+  "@notifBodyPlanAdjustment": {
+    "description": "Body for plan adjustment suggestion",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notifTitleUpcomingLesson": "Upcoming Lesson",
+  "@notifTitleUpcomingLesson": {
+    "description": "Title for upcoming lesson notification"
+  },
+  "notifBodyLessonReminder": "Your lesson \"{lessonTitle}\" starts at {time}.",
+  "@notifBodyLessonReminder": {
+    "description": "Body for lesson reminder notification",
+    "placeholders": {
+      "lessonTitle": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTitleTopicsNeedAttention": "Topics Need Attention",
+  "@notifTitleTopicsNeedAttention": {
+    "description": "Title for low mastery warning notification"
+  },
+  "notifBodyLowMastery": "Low mastery detected in: {topics}",
+  "@notifBodyLowMastery": {
+    "description": "Body for low mastery warning",
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTitleBadgeUnlocked": "Badge Unlocked!",
+  "@notifTitleBadgeUnlocked": {
+    "description": "Title for badge unlock notification"
+  },
+  "notifBodyBadgeUnlocked": "You earned the \"{badgeName}\" badge: {badgeDescription}",
+  "@notifBodyBadgeUnlocked": {
+    "description": "Body for badge unlock notification",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "badgeDescription": {
+        "type": "String"
+      }
+    }
+  },
+  "recommendAccuracyBelow60": "Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.",
+  "@recommendAccuracyBelow60": {
+    "description": "Recommendation when accuracy is below 60%"
+  },
+  "recommendReviewBasics": "Review basic topics before advancing",
+  "@recommendReviewBasics": {
+    "description": "Action recommendation to review basics"
+  },
+  "recommendAccuracyExcellent": "Excellent progress! Ready for advanced topics.",
+  "@recommendAccuracyExcellent": {
+    "description": "Recommendation when accuracy is above 85%"
+  },
+  "recommendChallengingQuestions": "Try challenging practice questions",
+  "@recommendChallengingQuestions": {
+    "description": "Action recommendation for advanced practice"
+  },
+  "recommendConsistency": "You studied less than 1 hour total. Consistency is key!",
+  "@recommendConsistency": {
+    "description": "Recommendation when study time is low"
+  },
+  "recommendSetDailyGoal": "Set a daily study goal of 30 minutes",
+  "@recommendSetDailyGoal": {
+    "description": "Action recommendation to set daily goal"
+  },
+  "recommendNoActivity": "No study activity this week. Get back on track!",
+  "@recommendNoActivity": {
+    "description": "Recommendation when no weekly activity"
+  },
+  "recommendQuickReview": "Start with a quick 15-minute review session",
+  "@recommendQuickReview": {
+    "description": "Action recommendation for quick review"
+  },
+  "recommendWeakTopics": "You have {count} topic(s) that need improvement. Focus on strengthening these areas.",
+  "@recommendWeakTopics": {
+    "description": "Recommendation when weak topics exist",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendAiTutor": "Review weak topics with the AI tutor",
+  "@recommendAiTutor": {
+    "description": "Action recommendation for AI tutor review"
+  },
+  "nudgeOverwork": "You have studied {hours} hours today. Consider taking a break!",
+  "@nudgeOverwork": {
+    "description": "Overwork nudge message",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "nudgeRevision": "It has been {days} days since you practiced \"{topic}\". Time for a review!",
+  "@nudgeRevision": {
+    "description": "Revision nudge message",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "nudgePlanAdjustment": "You have had {days} days of low plan adherence. Would you like to adjust your study plan?",
+  "@nudgePlanAdjustment": {
+    "description": "Plan adjustment nudge message",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "planExplanationAccuracyBelow60": "Accuracy is below 60% — needs focused practice",
+  "@planExplanationAccuracyBelow60": {
+    "description": "Plan explanation when accuracy is low"
+  },
+  "planExplanationOverdueReview": "Review is overdue — forgetting risk is high",
+  "@planExplanationOverdueReview": {
+    "description": "Plan explanation when review is overdue"
+  },
+  "planExplanationLowStreak": "Streak is low — consistency needed",
+  "@planExplanationLowStreak": {
+    "description": "Plan explanation when streak is low"
+  },
+  "planExplanationPrerequisite": "Prerequisite for upcoming topics — must master first",
+  "@planExplanationPrerequisite": {
+    "description": "Plan explanation for prerequisite topics"
+  },
+  "planExplanationHighMastery": "High mastery — ready to advance",
+  "@planExplanationHighMastery": {
+    "description": "Plan explanation for high mastery"
+  },
+  "planExplanationGoodProgress": "Good progress — maintain consistency",
+  "@planExplanationGoodProgress": {
+    "description": "Plan explanation for good progress"
+  },
+  "planExplanationDeveloping": "Developing — needs more practice",
+  "@planExplanationDeveloping": {
+    "description": "Plan explanation for developing topics"
+  },
+  "planExplanationAtRisk": "At risk — review overdue",
+  "@planExplanationAtRisk": {
+    "description": "Plan explanation for at-risk topics"
+  },
+  "planExplanationNeedsAttention": "Needs attention — focus on fundamentals",
+  "@planExplanationNeedsAttention": {
+    "description": "Plan explanation for topics needing attention"
+  },
+  "planReasonRequiredDependent": "Required for dependent topics",
+  "@planReasonRequiredDependent": {
+    "description": "Reason for prerequisite topics"
+  },
+  "planReasonWeakPerformance": "Weak performance",
+  "@planReasonWeakPerformance": {
+    "description": "Reason for weak performance"
+  },
+  "planReasonHighForgettingRisk": "High forgetting risk",
+  "@planReasonHighForgettingRisk": {
+    "description": "Reason for high forgetting risk"
+  },
+  "planReasonNewSyllabusTopic": "New syllabus topic",
+  "@planReasonNewSyllabusTopic": {
+    "description": "Reason for new syllabus topic"
+  },
+  "planReasonPartOfGoal": "Part of syllabus goal",
+  "@planReasonPartOfGoal": {
+    "description": "Reason related to syllabus goal"
+  },
+  "planFocusGeneralReview": "General review",
+  "@planFocusGeneralReview": {
+    "description": "General review focus label"
+  },
+  "planFocusWeakAreas": "Focus on weak areas",
+  "@planFocusWeakAreas": {
+    "description": "Weak areas focus label"
+  },
+  "planFocusPracticeReview": "Practice and review",
+  "@planFocusPracticeReview": {
+    "description": "Practice and review focus label"
+  },
+  "planFocusRestAndReview": "Rest and review",
+  "@planFocusRestAndReview": {
+    "description": "Rest day focus label"
+  },
+  "adherenceLow7Days": "You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.",
+  "@adherenceLow7Days": {
+    "description": "Message when 7+ consecutive low adherence days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "adherenceLow3Days": "You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?",
+  "@adherenceLow3Days": {
+    "description": "Message when 3+ consecutive low adherence days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "adapSuggestionFundamentals": "Review basic concepts first",
+  "@adapSuggestionFundamentals": {
+    "description": "Suggestion to review fundamentals"
+  },
+  "adapSuggestionMorePractice": "More practice questions recommended",
+  "@adapSuggestionMorePractice": {
+    "description": "Suggestion for more practice"
+  },
+  "adapSuggestionAdvancedTopics": "Ready for advanced topics",
+  "@adapSuggestionAdvancedTopics": {
+    "description": "Suggestion for advanced topics"
+  },
+"badgeFirstStepName": "First Step",
+  "@badgeFirstStepName": {
+    "description": "Name of the badge earned for answering the first question"
+  },
+  "badgeFirstStepDesc": "Answered your first question!",
+  "@badgeFirstStepDesc": {
+    "description": "Description of the First Step badge"
+  },
+  "badgeCenturyClubName": "Century Club",
+  "@badgeCenturyClubName": {
+    "description": "Name of the badge earned for answering 100 questions"
+  },
+  "badgeCenturyClubDesc": "Answered 100+ questions!",
+  "@badgeCenturyClubDesc": {
+    "description": "Description of the Century Club badge"
+  },
+  "badgeAccuracyGoldName": "Accuracy Gold",
+  "@badgeAccuracyGoldName": {
+    "description": "Name of the badge earned for achieving 90 percent accuracy"
+  },
+  "badgeAccuracyGoldDesc": "Achieved 90%+ accuracy!",
+  "@badgeAccuracyGoldDesc": {
+    "description": "Description of the Accuracy Gold badge"
+  },
+  "badgeDailyScholarName": "Daily Scholar",
+  "@badgeDailyScholarName": {
+    "description": "Name of the badge earned for studying consistently today"
+  },
+  "badgeDailyScholarDesc": "Studied consistently today!",
+  "@badgeDailyScholarDesc": {
+    "description": "Description of the Daily Scholar badge"
+  },
+  "badgeDedicatedLearnerName": "Dedicated Learner",
+  "@badgeDedicatedLearnerName": {
+    "description": "Name of the badge earned for studying 10 plus hours total"
+  },
+  "badgeDedicatedLearnerDesc": "Studied 10+ hours total!",
+  "@badgeDedicatedLearnerDesc": {
+    "description": "Description of the Dedicated Learner badge"
+  },
+  "badgeWeeklyWarriorName": "Weekly Warrior",
+  "@badgeWeeklyWarriorName": {
+    "description": "Name of the badge earned for being active for a full week"
+  },
+  "badgeWeeklyWarriorDesc": "Active for a full week!",
+  "@badgeWeeklyWarriorDesc": {
+    "description": "Description of the Weekly Warrior badge"
+  },
+  "nudgeOverwork": "You have studied {hours} hours today. Consider taking a break!",
+  "@nudgeOverwork": {
+    "description": "Nudge message when student overworks, showing hours studied",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "nudgeRevision": "It has been {days} days since you practiced \"{topic}\". Time for a review!",
+  "@nudgeRevision": {
+    "description": "Nudge message to remind student to review a topic",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "nudgePlanAdjustment": "You have had {days} days of low plan adherence. Would you like to adjust your study plan?",
+  "@nudgePlanAdjustment": {
+    "description": "Nudge message suggesting plan adjustment due to low adherence",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "nudgeWeeklyDigest": "Weekly Digest: {weeklyActivity} questions answered, {accuracy}% accuracy, {totalHours} hours studied, {weakCount} weak areas, {badgeCount} badges earned.",
+  "@nudgeWeeklyDigest": {
+    "description": "Weekly digest message summarizing student activity",
+    "placeholders": {
+      "weeklyActivity": {
+        "type": "int"
+      },
+      "accuracy": {
+        "type": "int"
+      },
+      "totalHours": {
+        "type": "String"
+      },
+      "weakCount": {
+        "type": "int"
+      },
+      "badgeCount": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationTimeToReviewTitle": "Time to Review!",
+  "@notificationTimeToReviewTitle": {
+    "description": "Title of revision reminder notification"
+  },
+  "notificationTimeToReviewBody": "It's been {days} days since you practiced \"{topic}\".",
+  "@notificationTimeToReviewBody": {
+    "description": "Body of revision reminder notification",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationTakeABreakTitle": "Take a Break",
+  "@notificationTakeABreakTitle": {
+    "description": "Title of overwork warning notification"
+  },
+  "notificationTakeABreakBody": "You've studied {hours} hours today. Remember to rest!",
+  "@notificationTakeABreakBody": {
+    "description": "Body of overwork warning notification",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationPlanAdjustmentTitle": "Plan Adjustment",
+  "@notificationPlanAdjustmentTitle": {
+    "description": "Title of plan adjustment suggestion notification"
+  },
+  "notificationPlanAdjustmentBody": "You've had {days} days of low adherence. Shall we adjust your plan?",
+  "@notificationPlanAdjustmentBody": {
+    "description": "Body of plan adjustment suggestion notification",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationUpcomingLessonTitle": "Upcoming Lesson",
+  "@notificationUpcomingLessonTitle": {
+    "description": "Title of upcoming lesson reminder notification"
+  },
+  "notificationUpcomingLessonBody": "Your lesson \"{lesson}\" starts at {time}",
+  "@notificationUpcomingLessonBody": {
+    "description": "Body of upcoming lesson reminder notification",
+    "placeholders": {
+      "lesson": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationTopicsNeedAttentionTitle": "Topics Need Attention",
+  "@notificationTopicsNeedAttentionTitle": {
+    "description": "Title of low mastery warning notification"
+  },
+  "notificationTopicsNeedAttentionBody": "Low mastery detected in: {topics}",
+  "@notificationTopicsNeedAttentionBody": {
+    "description": "Body of low mastery warning notification",
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationBadgeUnlockedTitle": "Badge Unlocked!",
+  "@notificationBadgeUnlockedTitle": {
+    "description": "Title of badge unlocked notification"
+  },
+  "notificationBadgeUnlockedBody": "You earned the \"{badge}\" badge: {description}",
+  "@notificationBadgeUnlockedBody": {
+    "description": "Body of badge unlocked notification",
+    "placeholders": {
+      "badge": {
+        "type": "String"
+      },
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationChannelGeneralName": "StudyKing Notifications",
+  "@notificationChannelGeneralName": {
+    "description": "Name of the general notifications channel"
+  },
+  "notificationChannelGeneralDesc": "General StudyKing notifications",
+  "@notificationChannelGeneralDesc": {
+    "description": "Description of the general notifications channel"
+  },
+  "notificationChannelDailyReminderName": "Daily Study Reminders",
+  "@notificationChannelDailyReminderName": {
+    "description": "Name of the daily study reminders channel"
+  },
+  "notificationChannelDailyReminderDesc": "Daily reminders to study",
+  "@notificationChannelDailyReminderDesc": {
+    "description": "Description of the daily study reminders channel"
+  },
+  "notificationChannelRevisionName": "Revision Reminders",
+  "@notificationChannelRevisionName": {
+    "description": "Name of the revision reminders channel"
+  },
+  "notificationChannelRevisionDesc": "Reminders to review topics that need practice",
+  "@notificationChannelRevisionDesc": {
+    "description": "Description of the revision reminders channel"
+  },
+  "notificationChannelWellbeingName": "Wellbeing Alerts",
+  "@notificationChannelWellbeingName": {
+    "description": "Name of the wellbeing alerts channel"
+  },
+  "notificationChannelWellbeingDesc": "Alerts about study-life balance and overwork",
+  "@notificationChannelWellbeingDesc": {
+    "description": "Description of the wellbeing alerts channel"
+  },
+  "notificationChannelPlanningName": "Planning Suggestions",
+  "@notificationChannelPlanningName": {
+    "description": "Name of the planning suggestions channel"
+  },
+  "notificationChannelPlanningDesc": "Suggestions about study plan adjustments",
+  "@notificationChannelPlanningDesc": {
+    "description": "Description of the planning suggestions channel"
+  },
+  "notificationChannelLessonsName": "Lesson Notifications",
+  "@notificationChannelLessonsName": {
+    "description": "Name of the lesson notifications channel"
+  },
+  "notificationChannelLessonsDesc": "Notifications about upcoming lessons",
+  "@notificationChannelLessonsDesc": {
+    "description": "Description of the lesson notifications channel"
+  },
+  "notificationChannelMasteryName": "Mastery Alerts",
+  "@notificationChannelMasteryName": {
+    "description": "Name of the mastery alerts channel"
+  },
+  "notificationChannelMasteryDesc": "Alerts about low topic mastery and weak areas",
+  "@notificationChannelMasteryDesc": {
+    "description": "Description of the mastery alerts channel"
+  },
+  "notificationChannelBadgesName": "Badge Notifications",
+  "@notificationChannelBadgesName": {
+    "description": "Name of the badge notifications channel"
+  },
+  "notificationChannelBadgesDesc": "Notifications about earned badges and achievements",
+  "@notificationChannelBadgesDesc": {
+    "description": "Description of the badge notifications channel"
+  },
+  "planAccuracyLow": "Accuracy is below 60% — needs focused practice",
+  "@planAccuracyLow": {
+    "description": "Explanation when topic accuracy is below 60 percent"
+  },
+  "planReviewOverdue": "Review is overdue — forgetting risk is high",
+  "@planReviewOverdue": {
+    "description": "Explanation when review is overdue and forgetting risk is high"
+  },
+  "planStreakLow": "Streak is low — consistency needed",
+  "@planStreakLow": {
+    "description": "Explanation when current streak is low"
+  },
+  "planPrerequisite": "Prerequisite for upcoming topics — must master first",
+  "@planPrerequisite": {
+    "description": "Explanation when topic is a prerequisite for other topics"
+  },
+  "planBlocksDownstream": "Blocks {count} downstream topic(s)",
+  "@planBlocksDownstream": {
+    "description": "Explanation when topic blocks downstream topics",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planRequiredForDependent": "Required for dependent topics",
+  "@planRequiredForDependent": {
+    "description": "Reason label for prerequisite topics"
+  },
+  "planWeakPerformance": "Weak performance",
+  "@planWeakPerformance": {
+    "description": "Reason label for topics with weak performance"
+  },
+  "planHighForgettingRisk": "High forgetting risk",
+  "@planHighForgettingRisk": {
+    "description": "Reason label for topics with high forgetting risk"
+  },
+  "planNewSyllabusTopic": "New syllabus topic",
+  "@planNewSyllabusTopic": {
+    "description": "Reason label for new syllabus topics"
+  },
+  "planPartOfSyllabusGoal": "Part of syllabus goal",
+  "@planPartOfSyllabusGoal": {
+    "description": "Explanation for syllabus goal topic inclusion"
+  },
+  "planHighMastery": "High mastery — ready to advance",
+  "@planHighMastery": {
+    "description": "Recommendation reason for high mastery topics"
+  },
+  "planGoodProgress": "Good progress — maintain consistency",
+  "@planGoodProgress": {
+    "description": "Recommendation reason for topics with good progress"
+  },
+  "planDeveloping": "Developing — needs more practice",
+  "@planDeveloping": {
+    "description": "Recommendation reason for developing topics"
+  },
+  "planAtRisk": "At risk — review overdue",
+  "@planAtRisk": {
+    "description": "Recommendation reason for at-risk topics"
+  },
+  "planNeedsAttention": "Needs attention — focus on fundamentals",
+  "@planNeedsAttention": {
+    "description": "Recommendation reason for topics needing attention"
+  },
+  "planRestAndReview": "Rest and review",
+  "@planRestAndReview": {
+    "description": "Focus label for rest days"
+  },
+  "planGeneralReview": "General review",
+  "@planGeneralReview": {
+    "description": "Focus label when no priority topics are scheduled"
+  },
+  "planFocusWeakAreas": "Focus on weak areas",
+  "@planFocusWeakAreas": {
+    "description": "Focus label when most topics are weak areas"
+  },
+  "planPracticeAndReview": "Practice and review",
+  "@planPracticeAndReview": {
+    "description": "Default focus label for study plans"
+  },
+  "adherenceLowDaysAdjust": "You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.",
+  "@adherenceLowDaysAdjust": {
+    "description": "Message shown when adherence is low for many days, suggesting mentor consultation",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "adherenceLowDaysRegenerate": "You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?",
+  "@adherenceLowDaysRegenerate": {
+    "description": "Message shown when adherence is low, suggesting plan regeneration",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendationAccuracyLow": "Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.",
+  "@recommendationAccuracyLow": {
+    "description": "Recommendation when accuracy is below 60 percent"
+  },
+  "recommendationReviewBasics": "Review basic topics before advancing",
+  "@recommendationReviewBasics": {
+    "description": "Action suggestion for low accuracy"
+  },
+  "recommendationExcellentProgress": "Excellent progress! Ready for advanced topics.",
+  "@recommendationExcellentProgress": {
+    "description": "Recommendation when accuracy is above 85 percent"
+  },
+  "recommendationChallengingPractice": "Try challenging practice questions",
+  "@recommendationChallengingPractice": {
+    "description": "Action suggestion for high accuracy"
+  },
+  "recommendationLowHours": "You studied less than 1 hour total. Consistency is key!",
+  "@recommendationLowHours": {
+    "description": "Recommendation when study time is very low"
+  },
+  "recommendationSetDailyGoal": "Set a daily study goal of 30 minutes",
+  "@recommendationSetDailyGoal": {
+    "description": "Action suggestion for low study hours"
+  },
+  "recommendationNoActivity": "No study activity this week. Get back on track!",
+  "@recommendationNoActivity": {
+    "description": "Recommendation when no weekly activity detected"
+  },
+  "recommendationQuickReview": "Start with a quick 15-minute review session",
+  "@recommendationQuickReview": {
+    "description": "Action suggestion for no weekly activity"
+  },
+  "recommendationWeakTopics": "You have {count} topic(s) that need improvement. Focus on strengthening these areas.",
+  "@recommendationWeakTopics": {
+    "description": "Recommendation when there are weak topics needing improvement",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendationReviewWithTutor": "Review weak topics with the AI tutor",
+  "@recommendationReviewWithTutor": {
+    "description": "Action suggestion for weak topics"
+  },
+  "suggestionFundamentals": "Review basic concepts first",
+  "@suggestionFundamentals": {
+    "description": "Suggestion for topics with accuracy below 60 percent"
+  },
+  "suggestionPractice": "More practice questions recommended",
+  "@suggestionPractice": {
+    "description": "Suggestion for topics with accuracy between 60 and 80 percent"
+  },
+  "suggestionAdvanced": "Ready for advanced topics",
+  "@suggestionAdvanced": {
+    "description": "Suggestion for topics with accuracy above 80 percent"
+  },
+  "shareSessionsText": "Study Sessions",
+  "@shareSessionsText": {
+    "description": "Share text when sharing study session files"
+  },
+  "summary": "Summary",
+  "@summary": {
+    "description": "Section title for summary card on dashboard"
+  },
+  "noLimit": "No limit",
+  "@noLimit": {
+    "description": "Label when there is no daily cap set"
+  },
+  "focusTimerDescription": "Start a focused study session",
+  "@focusTimerDescription": {
+    "description": "Subtitle for focus timer settings tile"
+  },
+  "dailyStudyCap": "Daily Study Cap",
+  "@dailyStudyCap": {
+    "description": "Tile title for daily study cap setting"
+  },
+  "tokenUsageSummary": "Token Usage Summary",
+  "@tokenUsageSummary": {
+    "description": "Section title for token usage summary"
+  },
+  "totalTokens": "Total Tokens",
+  "@totalTokens": {
+    "description": "Label for total tokens stat"
+  },
+  "totalCost": "Total Cost",
+  "@totalCost": {
+    "description": "Label for total cost stat"
+  },
+  "failed": "Failed",
+  "@failed": {
+    "description": "Label for failed tasks count"
+  },
+  "subjectIdHint": "e.g. sub_physics",
+  "@subjectIdHint": {
+    "description": "Hint text for subject ID field in planner"
   }
 }

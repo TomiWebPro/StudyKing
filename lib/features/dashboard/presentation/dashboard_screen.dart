@@ -16,6 +16,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_car
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class DashboardScreen extends ConsumerWidget {
   final String studentId;
@@ -27,6 +28,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final allMasteryAsync = ref.watch(dashboardAllMasteryProvider(studentId));
     final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
     final overallStatsAsync = ref.watch(dashboardOverallStatsProvider(studentId));
@@ -73,6 +75,8 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             const DashboardHeader(),
             const SizedBox(height: 24),
+            _buildPlannerCard(context),
+            const SizedBox(height: 16),
             if (allEmpty && isLoading)
               const Center(child: CircularProgressIndicator())
             else if (allEmpty)
@@ -82,7 +86,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'summary',
                 asyncValue: overallStatsAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardOverallStatsProvider(studentId)); },
-                title: _cardTitle(context, Icons.summarize, 'Summary'),
+                title: _cardTitle(context, Icons.summarize, l10n.summary),
                 body: SummaryRow(overallStats: overallStatsData),
               ),
               const SizedBox(height: 16),
@@ -90,7 +94,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'focus',
                 asyncValue: focusStatsAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardFocusStatsProvider(studentId)); },
-                title: _cardTitle(context, Icons.timer, 'Focus Time'),
+                title: _cardTitle(context, Icons.timer, l10n.focusTime),
                 body: InkWell(
                   onTap: () => Navigator.pushNamed(context, AppRoutes.focusMode),
                   child: SessionSummaryCard(todayStats: focusStatsData != null ? {
@@ -107,7 +111,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'weekly_chart',
                 asyncValue: weeklyTrendAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardWeeklyTrendProvider(studentId)); },
-                title: _cardTitle(context, Icons.show_chart, 'Weekly Activity'),
+                title: _cardTitle(context, Icons.show_chart, l10n.weeklyActivity),
                 body: WeeklyChart(weeklyTrend: weeklyTrendData),
               ),
               const SizedBox(height: 16),
@@ -115,7 +119,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'adherence',
                 asyncValue: adherenceAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAdherenceDataProvider(studentId)); },
-                title: _cardTitle(context, Icons.event_note, 'Plan Adherence'),
+                title: _cardTitle(context, Icons.event_note, l10n.planAdherence),
                 body: PlanAdherenceCard(
                   averageAdherence: adherenceData.averageAdherence,
                   weeklyAdherence: adherenceData.weeklyAdherence,
@@ -126,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'mastery',
                 asyncValue: snapshotAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardMasterySnapshotProvider(studentId)); },
-                title: _cardTitle(context, Icons.analytics, 'Mastery Overview'),
+                title: _cardTitle(context, Icons.analytics, l10n.masteryOverview),
                 body: MasteryProgressCard(snapshot: snapshotData),
               ),
               const SizedBox(height: 16),
@@ -134,7 +138,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'weak_areas',
                 asyncValue: allMasteryAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
-                title: _cardTitle(context, Icons.warning_amber, 'Weak Areas'),
+                title: _cardTitle(context, Icons.warning_amber, l10n.weakAreas),
                 body: allMasteryData.isNotEmpty
                     ? WeakAreasCard(
                         allMastery: allMasteryData,
@@ -147,7 +151,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'topic_breakdown',
                 asyncValue: allMasteryAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
-                title: _cardTitle(context, Icons.pie_chart, 'Topic Performance'),
+                title: _cardTitle(context, Icons.pie_chart, l10n.topicPerformance),
                 body: TopicBreakdownCard(
                   allMastery: allMasteryData,
                   resolveTopicName: (id) => topicNamesData[id] ?? id,
@@ -158,7 +162,7 @@ class DashboardScreen extends ConsumerWidget {
                 cardId: 'badges',
                 asyncValue: badgesAsync,
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardBadgesProvider(studentId)); },
-                title: _cardTitle(context, Icons.emoji_events, 'Achievements'),
+                title: _cardTitle(context, Icons.emoji_events, l10n.achievements),
                 body: BadgesCard(badges: badgesData),
               ),
               const SizedBox(height: 16),
@@ -170,6 +174,40 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlannerCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_month,
+                  color: Theme.of(context).colorScheme.primary, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.studyPlanner,
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(l10n.studyPlanOverview,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );

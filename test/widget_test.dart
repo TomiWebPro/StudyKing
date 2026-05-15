@@ -5,7 +5,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/presentation/practice_session_screen.dart';

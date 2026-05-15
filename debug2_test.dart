@@ -4,8 +4,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/personal_learning_plan_service.dart';
 

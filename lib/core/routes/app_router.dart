@@ -18,7 +18,6 @@ import 'package:studyking/features/subjects/presentation/subject_detail_screen.d
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
-import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 
 class AppRoutes {
@@ -214,7 +213,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       return null;
     case AppRoutes.llmTasks:
       return _materialPageRoute(
-        LlmTaskManagerScreen(taskManager: LlmTaskManager()),
+        const LlmTaskManagerScreen(),
         routeSettings,
       );
     case AppRoutes.focusMode:

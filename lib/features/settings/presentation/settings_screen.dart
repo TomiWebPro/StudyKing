@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -155,11 +156,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                   Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes), order: 1),
             ]),
-            _section('Focus Mode', [
-              _tile('Focus Timer', 'Start a focused study session', Icons.timer_outlined,
+            _section(l10n.focusMode, [
+              _tile(l10n.focusTime, l10n.focusTimerDescription, Icons.timer_outlined,
                   () => Navigator.pushNamed(context, AppRoutes.focusMode), order: 1),
-              _tile('Daily Study Cap',
-                  _getDailyCapLabel(),
+              _tile(l10n.dailyStudyCap,
+                  _getDailyCapLabel(l10n),
                   Icons.access_time_filled,
                   () => _showDailyCapDialog(), order: 2),
             ]),
@@ -396,27 +397,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  String _getDailyCapLabel() {
+  String _getDailyCapLabel(AppLocalizations l10n) {
     try {
-      final box = Hive.box('settings');
+      final box = Hive.box(HiveBoxNames.settings);
       final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
-      return cap > 0 ? '$cap min/day' : 'No limit';
+      return cap > 0 ? l10n.minutesValue(cap) : l10n.noLimit;
     } catch (_) {
-      return 'No limit';
+      return l10n.noLimit;
     }
   }
 
   Future<void> _showDailyCapDialog() async {
     try {
-      final box = Hive.box('settings');
+      final box = Hive.box(HiveBoxNames.settings);
       final current = box.get('dailyCapMinutes', defaultValue: 0) as int;
       final options = [0, 30, 60, 90, 120, 180, 240];
+      final l10n = AppLocalizations.of(context)!;
       showModalBottomSheet(
         context: context,
         builder: (_) => ListView(
           children: options
               .map((m) => ListTile(
-                    title: Text(m == 0 ? 'No limit' : '$m minutes'),
+                    title: Text(m == 0 ? l10n.noLimit : l10n.minutesValue(m)),
                     trailing: m == current
                         ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                         : null,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class CollapsibleCard extends ConsumerWidget {
   final String cardId;
@@ -42,7 +43,7 @@ class CollapsibleCard extends ConsumerWidget {
                 Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 8),
                 Text(
-                  'Something went wrong',
+                  AppLocalizations.of(context)!.somethingWentWrong,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -52,7 +53,7 @@ class CollapsibleCard extends ConsumerWidget {
                   TextButton.icon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Retry'),
+                    label: Text(AppLocalizations.of(context)!.retry),
                   ),
               ],
             ),

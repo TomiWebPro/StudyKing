@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 
 class MockSubjectBox implements Box<Subject> {
@@ -105,7 +105,7 @@ Subject createTestSubject({
 }
 
 class MockSubjectRepository extends SubjectRepository {
-  MockSubjectRepository(MockSubjectBox subjectBox) : super(subjectBox: subjectBox);
+  MockSubjectRepository(MockSubjectBox subjectBox);
 
   @override
   Future<void> init() async {}
@@ -258,7 +258,7 @@ void main() {
         final repo = container.read(subjectsRepositoryProvider).value!;
         
         final newSubject = createTestSubject(id: 'new-subj', name: 'Biology');
-        await repo.save(newSubject);
+        await repo.create(newSubject);
 
         final retrieved = await repo.get('new-subj');
         expect(retrieved, isNotNull);

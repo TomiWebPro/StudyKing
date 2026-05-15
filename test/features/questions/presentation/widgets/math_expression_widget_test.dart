@@ -470,7 +470,82 @@ void main() {
     testWidgets('handles superscript and subscript combined expression', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'x^{2}_{ij}'));
 
-      expect(find.byType(RichText), findsOneWidget);
+      expect(find.byType(RichText), findsWidgets);
+    });
+
+    testWidgets('isSolution has container decoration', (tester) async {
+      await tester.pumpWidget(buildWidget(
+        expression: 'x = 5',
+        isSolution: true,
+      ));
+
+      expect(find.byType(Container), findsWidgets);
+    });
+
+    testWidgets('greater-than operator with blue color', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x>5'));
+
+      final spans = _getSpans(tester);
+      final gtSpan = spans.whereType<TextSpan>().where((s) => s.text == '>').toList();
+      expect(gtSpan, isNotEmpty);
+      expect(gtSpan.first.style?.color, Colors.blue.shade700);
+    });
+
+    testWidgets('comma and semicolon have fontSize 14', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'a,b;c'));
+
+      final spans = _getSpans(tester);
+      final commaSpan = spans.whereType<TextSpan>().where((s) => s.text == ',').toList();
+      final semiSpan = spans.whereType<TextSpan>().where((s) => s.text == ';').toList();
+      expect(commaSpan, isNotEmpty);
+      expect(commaSpan.first.style?.fontSize, 14);
+      expect(semiSpan, isNotEmpty);
+      expect(semiSpan.first.style?.fontSize, 14);
+    });
+
+    testWidgets('equals sign has bold font weight and blue color', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x=5'));
+
+      final spans = _getSpans(tester);
+      final eqSpan = spans.whereType<TextSpan>().where((s) => s.text == '=').toList();
+      expect(eqSpan, isNotEmpty);
+      expect(eqSpan.first.style?.fontWeight, FontWeight.bold);
+      expect(eqSpan.first.style?.color, Colors.blue);
+    });
+
+    testWidgets('isSolution with showPrefix renders both', (tester) async {
+      await tester.pumpWidget(buildWidget(
+        expression: 'x = 5',
+        isSolution: true,
+        showPrefix: true,
+      ));
+
+      final spans = _getSpans(tester);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == 'Expression: '), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '='), isTrue);
+    });
+
+    testWidgets('frac with whitespace between args', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: r'\frac{1} {2}'));
+
+      final spans = _getSpans(tester);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '/'), isTrue);
+    });
+
+    testWidgets('subscript text has teal color', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x_{n}'));
+
+      final spans = _getSpans(tester);
+      final widgetSpans = spans.whereType<WidgetSpan>().toList();
+      expect(widgetSpans, isNotEmpty);
+    });
+
+    testWidgets('superscript text has purple color', (tester) async {
+      await tester.pumpWidget(buildWidget(expression: 'x^{2}'));
+
+      final spans = _getSpans(tester);
+      final widgetSpans = spans.whereType<WidgetSpan>().toList();
+      expect(widgetSpans, isNotEmpty);
     });
   });
 }

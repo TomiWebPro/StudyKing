@@ -25,6 +25,7 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
     if (message.contains('Summarize what was covered')) {
       return summaryResponse;
@@ -39,6 +40,7 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
     yield streamResponse;
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -813,6 +813,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Dismissible), findsNWidgets(2));
+    });
+  });
+
+  group('SessionHistoryScreen - Comprehensive export', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('comprehensive export items are tappable without crash', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeStudySessionRepository(seed: [
+        StudySession(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          timeSpentMs: 1800000,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress CSV'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress PDF'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress JSON'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
   });
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/presentation/services/practice_session_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -95,6 +95,47 @@ void main() {
 
       test('elapsedTimeFormatted is initially null', () {
         expect(service.elapsedTimeFormatted, isNull);
+      });
+
+      test('sessionStartTime returns the start time', () {
+        final before = DateTime.now().subtract(const Duration(milliseconds: 1));
+        final startTime = service.sessionStartTime;
+        final after = DateTime.now().add(const Duration(milliseconds: 1));
+        expect(startTime.compareTo(before), greaterThanOrEqualTo(0));
+        expect(startTime.compareTo(after), lessThanOrEqualTo(0));
+      });
+
+      testWidgets('sessionStartTime is updated when startTimer is called', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const Text('test'),
+        ));
+
+        final beforeStart = DateTime.now().subtract(const Duration(milliseconds: 1));
+        service.startTimer(tester.binding.rootElement! as BuildContext);
+        final afterStart = DateTime.now().add(const Duration(milliseconds: 1));
+
+        expect(service.sessionStartTime.compareTo(beforeStart), greaterThanOrEqualTo(0));
+        expect(service.sessionStartTime.compareTo(afterStart), lessThanOrEqualTo(0));
+        service.cancelTimer();
+      });
+
+      testWidgets('elapsedTimeFormatted is set after timer ticks', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const Text('test'),
+        ));
+
+        service.startTimer(tester.binding.rootElement! as BuildContext);
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(service.elapsedTimeFormatted, isNotNull);
+        expect(service.elapsedTimeFormatted, isNotEmpty);
+        service.cancelTimer();
       });
     });
 

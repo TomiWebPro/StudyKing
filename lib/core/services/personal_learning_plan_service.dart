@@ -1,9 +1,9 @@
 import '../errors/result.dart';
-import '../data/repositories/mastery_graph_repository.dart';
-import '../data/repositories/topic_repository.dart';
-import '../data/repositories/plan_repository.dart';
-import '../data/repositories/plan_adherence_repository.dart';
-import '../data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../data/models/topic_dependency_model.dart';
 import '../data/models/mastery_state_model.dart';
 import '../data/models/topic_model.dart';
@@ -11,6 +11,7 @@ import '../data/models/personal_learning_plan_model.dart';
 import '../data/models/plan_adherence_model.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
+import 'localization_service.dart';
 
 
 class PlanGenerationConfig {
@@ -41,6 +42,7 @@ class PersonalLearningPlanService {
   final PlanAdherenceRepository _adherenceRepository;
   final QuestionRepository _questionRepository;
   PlanGenerationConfig config;
+  final LocalizationService? _localizationService;
 
   PersonalLearningPlanService({
     MasteryGraphService? masteryService,
@@ -50,13 +52,15 @@ class PersonalLearningPlanService {
     PlanAdherenceRepository? adherenceRepository,
     QuestionRepository? questionRepository,
     PlanGenerationConfig? config,
+    LocalizationService? localizationService,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _questionRepository = questionRepository ?? QuestionRepository(),
-        config = config ?? PlanGenerationConfig();
+        config = config ?? PlanGenerationConfig(),
+        _localizationService = localizationService;
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
     try {
@@ -99,20 +103,21 @@ class PersonalLearningPlanService {
           (1 - state.accuracy);
 
       final explanations = <String>[];
+      final l10n = _localizationService;
       if (state.accuracy < 0.6) {
-        explanations.add('Accuracy is below 60% — needs focused practice');
+        explanations.add(l10n?.planAccuracyLow() ?? 'Accuracy is below 60% — needs focused practice');
       }
       if (state.reviewUrgency > 0.7) {
-        explanations.add('Review is overdue — forgetting risk is high');
+        explanations.add(l10n?.planReviewOverdue() ?? 'Review is overdue — forgetting risk is high');
       }
       if (state.currentStreak < 3) {
-        explanations.add('Streak is low — consistency needed');
+        explanations.add(l10n?.planStreakLow() ?? 'Streak is low — consistency needed');
       }
       if (isPrereq) {
-        explanations.add('Prerequisite for upcoming topics — must master first');
+        explanations.add(l10n?.planPrerequisite() ?? 'Prerequisite for upcoming topics — must master first');
       }
       if (downstreamCount > 0) {
-        explanations.add('Blocks $downstreamCount downstream topic(s)');
+        explanations.add(l10n?.planBlocksDownstream(downstreamCount) ?? 'Blocks $downstreamCount downstream topic(s)');
       }
 
       recommendations.add(PlanRecommendation(
@@ -121,9 +126,9 @@ class PersonalLearningPlanService {
         recommendationType: _classifyRecommendation(state),
         priority: priority,
         explanations: explanations,
-        prerequisiteReason: isPrereq ? 'Required for dependent topics' : null,
-        weaknessReason: state.accuracy < 0.6 ? 'Weak performance' : null,
-        reviewReason: state.reviewUrgency > 0.7 ? 'High forgetting risk' : null,
+        prerequisiteReason: isPrereq ? (_localizationService?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
+        weaknessReason: state.accuracy < 0.6 ? (_localizationService?.planWeakPerformance() ?? 'Weak performance') : null,
+        reviewReason: state.reviewUrgency > 0.7 ? (_localizationService?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
       ));
     }
 
@@ -215,9 +220,9 @@ class PersonalLearningPlanService {
         recommendationType: _classifyRecommendation(state),
         priority: priority,
         explanations: [],
-        prerequisiteReason: isPrereq ? 'Required for dependent topics' : null,
-        weaknessReason: state.accuracy < 0.6 ? 'Weak performance' : null,
-        reviewReason: state.reviewUrgency > 0.7 ? 'High forgetting risk' : null,
+        prerequisiteReason: isPrereq ? (_localizationService?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
+        weaknessReason: state.accuracy < 0.6 ? (_localizationService?.planWeakPerformance() ?? 'Weak performance') : null,
+        reviewReason: state.reviewUrgency > 0.7 ? (_localizationService?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
       ));
     }
 
@@ -226,10 +231,10 @@ class PersonalLearningPlanService {
       if (!recommendations.any((r) => r.topicId == topicId)) {
         recommendations.add(PlanRecommendation(
           topicId: topicId,
-          reason: 'New syllabus topic',
+          reason: _localizationService?.planNewSyllabusTopic() ?? 'New syllabus topic',
           recommendationType: 'syllabus',
           priority: 1.0,
-          explanations: ['Part of syllabus goal'],
+          explanations: [_localizationService?.planPartOfSyllabusGoal() ?? 'Part of syllabus goal'],
         ));
       }
     }
@@ -275,10 +280,7 @@ class PersonalLearningPlanService {
   ) async {
     try {
       await _questionRepository.init();
-      final allQuestionsResult = await _questionRepository.getAll();
-      if (allQuestionsResult.isFailure) return dailyPlans;
-
-      final allQuestions = allQuestionsResult.data!;
+      final allQuestions = await _questionRepository.getAll();
       final now = DateTime.now();
 
       return dailyPlans.map((plan) {
@@ -362,7 +364,7 @@ class PersonalLearningPlanService {
         planId: planId ?? plan.studentId,
       );
 
-      await _adherenceRepository.save(model);
+      await _adherenceRepository.create(model);
     } catch (_) {}
   }
 
@@ -419,7 +421,7 @@ class PersonalLearningPlanService {
           stretchGoalQuestionIds: [],
           targetQuestions: 0,
           targetMinutes: 0,
-          focus: 'Rest and review',
+          focus: _localizationService?.planRestAndReview() ?? 'Rest and review',
           isRestDay: true,
         ));
         continue;
@@ -498,6 +500,10 @@ class PersonalLearningPlanService {
   }
 
   String _generateRecommendationReason(MasteryState state) {
+    final l10n = _localizationService;
+    if (l10n != null) {
+      return l10n.planRecommendationReason(state.accuracy, state.reviewUrgency);
+    }
     if (state.accuracy >= 0.9) return 'High mastery — ready to advance';
     if (state.accuracy >= 0.8) return 'Good progress — maintain consistency';
     if (state.accuracy >= 0.6) return 'Developing — needs more practice';
@@ -554,6 +560,12 @@ class PersonalLearningPlanService {
   String _getStudentId() => StudentIdService().getStudentId();
 
   String _generateFocus(List<PlannedTopic> topics) {
+    final l10n = _localizationService;
+    if (l10n != null) {
+      if (topics.isEmpty) return l10n.planFocusLabel(isEmpty: true, weakRatio: 0);
+      final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
+      return l10n.planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length);
+    }
     if (topics.isEmpty) return 'General review';
     final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
     if (weakCount > topics.length / 2) return 'Focus on weak areas';

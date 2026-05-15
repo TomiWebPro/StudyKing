@@ -54,14 +54,14 @@ class PendingActionCard extends StatelessWidget {
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(Icons.check_circle_outline,
-                  color: Colors.green.shade600),
-              tooltip: 'Accept',
+                  color: theme.colorScheme.primary),
+              tooltip: l10n.accept,
               onPressed: onAccept,
             ),
             IconButton(
               icon: Icon(Icons.cancel_outlined,
                   color: theme.colorScheme.error),
-              tooltip: 'Dismiss',
+              tooltip: l10n.dismiss,
               onPressed: onDismiss,
             ),
           ],
@@ -86,13 +86,13 @@ class PendingActionCard extends StatelessWidget {
   String _actionTitle(AppLocalizations l10n) {
     switch (action.actionType) {
       case 'schedule':
-        return 'Schedule a lesson';
+        return l10n.scheduleALesson;
       case 'reschedule':
-        return 'Reschedule lesson';
+        return l10n.rescheduleLesson;
       case 'planAdjustment':
-        return 'Plan adjustment suggested';
+        return l10n.planAdjustmentTitle;
       default:
-        return 'Action needed';
+        return l10n.actionNeeded;
     }
   }
 }

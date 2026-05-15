@@ -43,28 +43,12 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    if (widget.isActive && !widget.isPaused) {
-      final reduceMotion = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.reduceMotion;
-      if (!reduceMotion) {
-        _pulseController.repeat(reverse: true);
-      }
-    }
   }
 
   @override
   void didUpdateWidget(FocusTimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final wasRunning = oldWidget.isActive && !oldWidget.isPaused;
-    final isRunning = widget.isActive && !widget.isPaused;
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
-    if (isRunning && !wasRunning) {
-      if (!disableAnimations) {
-        _pulseController.repeat(reverse: true);
-      }
-    } else if (!isRunning && wasRunning) {
-      _pulseController.stop();
-      _pulseController.reset();
-    }
+    _syncPulseAnimation();
   }
 
   @override
@@ -76,6 +60,10 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _syncPulseAnimation();
+  }
+
+  void _syncPulseAnimation() {
     final isRunning = widget.isActive && !widget.isPaused;
     if (isRunning) {
       if (MediaQuery.disableAnimationsOf(context)) {

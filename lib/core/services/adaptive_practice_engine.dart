@@ -1,19 +1,13 @@
 import '../data/models/question_model.dart';
 import '../data/models/topic_progress_model.dart';
-import '../data/repositories/spaced_repetition_repository.dart';
+import 'localization_service.dart';
 
 class AdaptivePracticeEngine {
   final List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
-  final SpacedRepetitionRepository _spacedRepo;
-  final Map<String, _QuestionState> _questionStates = {};
+  final LocalizationService? _localizationService;
 
-  AdaptivePracticeEngine({
-    SpacedRepetitionRepository? spacedRepo,
-  }) : _spacedRepo = spacedRepo ?? SpacedRepetitionRepository();
-
-  Future<void> init() async {
-    await _spacedRepo.init();
-  }
+  AdaptivePracticeEngine({LocalizationService? localizationService})
+      : _localizationService = localizationService;
 
   Future<List<Question>> getNextPracticeQuestions({
     required List<Question> availableQuestions,
@@ -36,18 +30,7 @@ class AdaptivePracticeEngine {
       return weaknessB.compareTo(weaknessA);
     });
 
-    final practiced = _questionStates.values
-        .where((s) => s.lastPracticed.isBefore(DateTime.now().subtract(const Duration(hours: 24))))
-        .map((s) => s.questionId);
-
-    final unpracticed = sortedQuestions.where((q) => !practiced.contains(q.id));
-    final recentlyPracticed = sortedQuestions.where((q) => practiced.contains(q.id));
-
-    final result = <Question>[];
-    result.addAll(unpracticed.take(maxQuestions ~/ 2));
-    result.addAll(recentlyPracticed.take(maxQuestions - result.length));
-
-    return result.take(maxQuestions).toList();
+    return sortedQuestions.take(maxQuestions).toList();
   }
 
   double calculateReviewInterval({
@@ -65,38 +48,14 @@ class AdaptivePracticeEngine {
     return _intervalMultipliers[intervalIndex];
   }
 
-  Future<void> updateQuestionState({
+  void updateQuestionState({
     required String questionId,
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
-  }) async {
-    if (!_questionStates.containsKey(questionId)) {
-      _questionStates[questionId] = _QuestionState(questionId: questionId);
-    }
-
-    final state = _questionStates[questionId]!;
-    state.totalAttempts++;
-    
-    if (isCorrect) {
-      state.correctAttempts++;
-      state.streak++;
-      state.lastCorrect = DateTime.now();
-    } else {
-      state.streak = 0;
-      state.lastIncorrect = DateTime.now();
-    }
-
-    state.confidenceHistory.add(confidence);
-    if (state.confidenceHistory.length > 20) {
-      state.confidenceHistory.removeAt(0);
-    }
-
-    state.lastPracticed = DateTime.now();
-    state.timeSpentMs = timeSpentMs;
-
-    final masteryLevel = state.accuracy;
-    await _spacedRepo.updateNextReviewDate(questionId, masteryLevel);
+  }) {
+    // State tracking is delegated to MasteryGraphService.recordAttempt.
+    // This method is retained for backward compatibility.
   }
 
   int getRecommendedDifficulty({
@@ -122,15 +81,16 @@ class AdaptivePracticeEngine {
 
     final Map<String, dynamic> recommendations = {};
 
+    final l10n = _localizationService;
     if (accuracy < 0.6) {
       recommendations['focus'] = 'fundamentals';
-      recommendations['suggestion'] = 'Review basic concepts first';
+      recommendations['suggestion'] = l10n?.suggestionFundamentals() ?? 'Review basic concepts first';
     } else if (accuracy < 0.8) {
       recommendations['focus'] = 'practice';
-      recommendations['suggestion'] = 'More practice questions recommended';
+      recommendations['suggestion'] = l10n?.suggestionPractice() ?? 'More practice questions recommended';
     } else {
       recommendations['focus'] = 'mastery';
-      recommendations['suggestion'] = 'Ready for advanced topics';
+      recommendations['suggestion'] = l10n?.suggestionAdvanced() ?? 'Ready for advanced topics';
     }
 
     recommendations['timeToReview'] = calculateReviewInterval(
@@ -142,27 +102,5 @@ class AdaptivePracticeEngine {
     return recommendations;
   }
 
-  void clearCache() {
-    _questionStates.clear();
-  }
-}
-
-class _QuestionState {
-  final String questionId;
-  int totalAttempts = 0;
-  int correctAttempts = 0;
-  int streak = 0;
-  DateTime lastPracticed = DateTime.fromMillisecondsSinceEpoch(0);
-  DateTime? lastCorrect;
-  DateTime? lastIncorrect;
-  List<int> confidenceHistory = [];
-  int timeSpentMs = 0;
-
-  double get accuracy => totalAttempts == 0 ? 0.0 : correctAttempts / totalAttempts;
-
-  double get averageConfidence => confidenceHistory.isEmpty 
-      ? 3.0 
-      : confidenceHistory.reduce((a, b) => a + b) / confidenceHistory.length;
-
-  _QuestionState({required this.questionId});
+  void clearCache() {}
 }

@@ -28,8 +28,8 @@ class RoadmapCard extends StatelessWidget {
     final statusColor = roadmap.status == 'active'
         ? theme.colorScheme.primary
         : roadmap.status == 'completed'
-            ? Colors.green
-            : Colors.orange;
+            ? theme.colorScheme.primary
+            : theme.colorScheme.error;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
+import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeStudySessionRepository extends StudySessionRepository {
@@ -31,14 +34,20 @@ class _FakeStudySessionRepository extends StudySessionRepository {
   }
 }
 Widget _buildTestApp(_FakeStudySessionRepository repository) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: SessionTrackerScreen(sessionRepository: repository),
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: SessionTrackerScreen(sessionRepository: repository),
+    ),
   );
 }
 
 void main() {
+  setUpAll(() {
+    Hive.init('/tmp');
+  });
+
   group('SessionTrackerScreen', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -159,7 +168,10 @@ void main() {
       expect(repo._sessions.length, 1);
       expect(repo._sessions.single.questionsAnswered, 12);
       expect(repo._sessions.single.correctAnswers, 9);
-      expect(find.text('No Active Session'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(SessionAnalyticsWidget), findsOneWidget);
+      expect(find.byIcon(Icons.timer_off), findsOneWidget);
     });
 
     testWidgets('shows snackbar when save fails', (tester) async {
@@ -179,14 +191,16 @@ void main() {
 
     testWidgets('view all navigates to history screen', (tester) async {
       final repo = _FakeStudySessionRepository();
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: SessionTrackerScreen(sessionRepository: repo),
-        routes: {
-          '/session-history': (_) => const Scaffold(body: Center(child: Text('Session History'))),
-        },
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: SessionTrackerScreen(sessionRepository: repo),
+          routes: {
+            '/session-history': (_) => const Scaffold(body: Center(child: Text('Session History'))),
+          },
+        ),
       ));
       await tester.pumpAndSettle();
 
@@ -316,6 +330,8 @@ void main() {
       expect(repo._sessions.length, 1);
       expect(repo._sessions.single.questionsAnswered, 0);
       expect(repo._sessions.single.correctAnswers, 0);
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('No Active Session'), findsOneWidget);
     });
   });
@@ -398,7 +414,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repo._sessions.length, 1);
-      expect(find.text('No Active Session'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('Tap start to begin'), findsOneWidget);
+    });
+  });
+
+  group('SessionTrackerScreen - Invalid dialog input', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('non-numeric input defaults to 0 for stats', (tester) async {
+      final repo = _FakeStudySessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, 'Questions Answered'), 'abc');
+      await tester.enterText(find.widgetWithText(TextField, 'Correct Answers'), 'xyz');
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(repo._sessions.length, 1);
+      expect(repo._sessions.single.questionsAnswered, 0);
+      expect(repo._sessions.single.correctAnswers, 0);
+      await tester.pump();
+      expect(find.text('Tap start to begin'), findsOneWidget);
     });
   });
 }

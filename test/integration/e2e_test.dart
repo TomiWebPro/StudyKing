@@ -5,19 +5,20 @@ import 'package:studyking/core/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/models/lesson_model.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -108,6 +109,7 @@ class _IntegrationFakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
     yield 'This is an integration test response about ${message.split(" ").last}.';
   }
@@ -268,24 +270,37 @@ void main() {
 
     testWidgets('LessonListScreen integrates with LessonDetailScreen navigation', (tester) async {
       final now = DateTime.now();
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: LessonListScreen(
-          args: const LessonListArgs(topicId: 't1', topicTitle: 'Test Topic'),
-          lessonRepository: _FakeLessonRepository(lessons: [
-            Lesson(
-              id: 'l1', subjectId: 's1', title: 'Integration Lesson',
-              topicId: 't1',
-              blocks: [
-                LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1',
-                    type: LessonBlockType.text, content: 'Integration content', order: 0),
-              ],
-              createdAt: now,
-            ),
-          ]),
-          tutorSessionRepository: _FakeTutorSessionRepo(),
+      final lessonRepo = _FakeLessonRepository(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Integration Lesson',
+          topicId: 't1',
+          blocks: [
+            LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.text, content: 'Integration content', order: 0),
+          ],
+          createdAt: now,
+        ),
+      ]);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          lessonRepositoryProvider.overrideWithValue(lessonRepo),
+          tutorSessionRepositoryProvider.overrideWithValue(_FakeTutorSessionRepo()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: LessonListScreen(
+            args: const LessonListArgs(topicId: 't1', topicTitle: 'Test Topic'),
+          ),
+          onGenerateRoute: (settings) {
+            if (settings.name == '/lesson-detail') {
+              return MaterialPageRoute(
+                builder: (_) => const Scaffold(body: Text('Lesson Detail')),
+              );
+            }
+            return null;
+          },
         ),
       ));
       await tester.pumpAndSettle();

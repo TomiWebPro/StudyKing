@@ -2,16 +2,17 @@ import 'dart:convert';
 import '../utils/logger.dart';
 import '../../core/data/models/question_model.dart';
 import '../data/models/markscheme_model.dart';
-import '../../core/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../core/services/mastery_graph_service.dart';
 import '../../core/data/enums.dart';
-import '../services/llm_service.dart';
+import 'llm/llm_chat_service.dart';
 
 class QuestionGenerationService {
   final Logger _logger = const Logger('QuestionGenerationService');
   final QuestionRepository _questionRepo;
   final MasteryGraphService _masteryService;
   final LlmService _llmService;
+  final String _defaultModelId;
 
   static const int maxRetries = 3;
   static const Duration retryDelay = Duration(seconds: 2);
@@ -20,9 +21,11 @@ class QuestionGenerationService {
     QuestionRepository? questionRepo,
     MasteryGraphService? masteryService,
     required LlmService llmService,
+    required String defaultModelId,
   })  : _questionRepo = questionRepo ?? QuestionRepository(),
         _masteryService = masteryService ?? MasteryGraphService(),
-        _llmService = llmService;
+        _llmService = llmService,
+        _defaultModelId = defaultModelId;
 
   Future<GenerationResult> generateQuestions({
     required String topicId,
@@ -30,9 +33,11 @@ class QuestionGenerationService {
     required int count,
     int difficulty = 1,
     String? focusOnWeakAreas,
+    String? modelId,
   }) async {
     try {
       final questions = <Question>[];
+      final effectiveModelId = modelId ?? _defaultModelId;
 
       for (int i = 0; i < count; i++) {
         final result = await _generateSingleQuestion(
@@ -42,6 +47,7 @@ class QuestionGenerationService {
           questionIndex: i + 1,
           totalQuestions: count,
           focusOnWeakAreas: focusOnWeakAreas,
+          modelId: effectiveModelId,
         );
 
         if (result.isSuccess && result.data != null) {
@@ -69,6 +75,7 @@ class QuestionGenerationService {
     required int questionIndex,
     required int totalQuestions,
     String? focusOnWeakAreas,
+    required String modelId,
   }) async {
     String? lastError;
 
@@ -81,6 +88,7 @@ class QuestionGenerationService {
           questionIndex: questionIndex,
           totalQuestions: totalQuestions,
           focusOnWeakAreas: focusOnWeakAreas,
+          modelId: modelId,
         );
         return GenerationResult.success(question);
       } catch (e) {
@@ -103,8 +111,8 @@ class QuestionGenerationService {
     required int questionIndex,
     required int totalQuestions,
     String? focusOnWeakAreas,
+    required String modelId,
   }) async {
-    final model = _getModelForDifficulty(difficulty);
     final difficultyLabel = _getDifficultyLabel(difficulty);
 
     String prompt = _buildQuestionPrompt(
@@ -119,8 +127,9 @@ class QuestionGenerationService {
 
     final response = await _llmService.chat(
       message: prompt,
-      modelId: model,
+      modelId: modelId,
       systemPrompt: _systemPrompt,
+      feature: 'question_generation',
     );
 
     if (response.isEmpty) {
@@ -132,21 +141,8 @@ class QuestionGenerationService {
       topicId: topicId,
       subjectId: subjectId,
       difficulty: difficulty,
-      model: model,
+      model: modelId,
     );
-  }
-
-  String _getModelForDifficulty(int difficulty) {
-    switch (difficulty) {
-      case 1:
-        return 'google/gemini-2.5-flash-preview-05-20';
-      case 2:
-        return 'anthropic/claude-3.5-haiku';
-      case 3:
-        return 'anthropic/claude-3.5-sonnet';
-      default:
-        return 'google/gemini-2.5-flash-preview-05-20';
-    }
   }
 
   String _getDifficultyLabel(int difficulty) {
@@ -311,6 +307,7 @@ Return ONLY the JSON object, no markdown formatting.''';
     required String studentId,
     required String subjectId,
     int questionsPerTopic = 5,
+    String? modelId,
   }) async {
     try {
       final weakTopicsResult = await _masteryService.getWeakTopics(studentId);
@@ -331,6 +328,7 @@ Return ONLY the JSON object, no markdown formatting.''';
           focusOnWeakAreas: topic.weakSubtopics.isNotEmpty
               ? topic.weakSubtopics.join(', ')
               : null,
+          modelId: modelId,
         );
 
         if (result.isSuccess && result.data != null) {

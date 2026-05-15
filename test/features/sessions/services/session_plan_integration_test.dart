@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/plan_adherence_model.dart';
-import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/core/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/sessions/services/session_plan_integration_service.dart';
 
@@ -13,7 +13,7 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> save(PlanAdherenceModel model) async {
+  Future<void> create(PlanAdherenceModel model) async {
     _storage.add(model);
   }
 

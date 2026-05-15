@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
 import '../models/user_profile_model.dart';
@@ -31,8 +32,8 @@ class SettingsRepository {
   }
 
   Future<void> init() async {
-    _settingsBox = await Hive.openBox('settings');
-    _profileBox = await Hive.openBox('profile');
+    _settingsBox = await Hive.openBox(HiveBoxNames.settings);
+    _profileBox = await Hive.openBox(HiveBoxNames.profile);
   }
 
   /// Save API key with service identifier

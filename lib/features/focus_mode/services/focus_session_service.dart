@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
@@ -41,7 +42,7 @@ class FocusSessionService {
 
   Future<int> getDailyCapMinutes() async {
     try {
-      final box = Hive.box('settings');
+      final box = Hive.box(HiveBoxNames.settings);
       return box.get('dailyCapMinutes', defaultValue: 0);
     } catch (_) {
       return 0;

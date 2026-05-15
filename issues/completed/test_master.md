@@ -1,80 +1,139 @@
-# Repository Test Fragmentation in core/data/repositories
+# Test Quality and Coverage Gaps — Lessons Feature and Beyond
 
-## Context
+## Summary
 
-`test/core/data/repositories/` contains **23 test files** for 19 production repositories. Several repositories have their tests fragmented across multiple files with overlapping concerns, making maintenance harder and review slower.
+A comprehensive audit of the test suite reveals several high-value improvement opportunities: critical logic paths (error handling, navigation) go untested in lessons screen tests, the pattern for dependency injection in those tests is inconsistent with the rest of the project, a test is broken (no-op assertions), and a file is duplicated. Additionally, two model files in the `mentor` feature have zero test coverage.
 
-The worst offenders:
+---
 
-| Repository | Test Files | Total Tests | Total Lines |
-|---|---|---|---|
-| `subject_repository.dart` | 5 files | 163 | 1,969 |
-| `settings_repository.dart` | 2 files | 121 | ~2,200 |
-| All others | 1 file each | varies | varies |
+## Issue 1: Error-handling code paths are untested in all lessons screen tests
 
-Additionally, `repository_test.dart` is a 44-line file with trivial tests (filtering `[1,2,3,2,5,4,1]` by difficulty, checking `subjectNames.length == 4`) that do not test any repository — they test in-memory list operations.
+**Context:** Every `_Fake*Repository` in the lessons presentation tests defines a `shouldThrow` flag and a throw path in its overridden methods, yet **not a single test sets `shouldThrow = true` and asserts the resulting error UI**.
 
-## Affected Files
-
-### Subject Repository — 5-way fragmentation
-
-| File | Tests | Focus |
+| File | `shouldThrow` defined? | Error state tested? |
 |---|---|---|
-| `test/core/data/repositories/subject_repository_test.dart` | 54 | Core CRUD, `MockSubjectBox` based |
-| `test/core/data/repositories/subject_repository_comprehensive_test.dart` | 36 | Additional edge cases |
-| `test/core/data/repositories/subject_repository_extra_edge_cases_test.dart` | 33 | Yet more edge cases |
-| `test/core/data/repositories/subject_repository_error_test.dart` | 31 | Error paths |
-| `test/core/data/repositories/subject_repository_init_test.dart` | 9 | Hive `init()` |
+| `topic_list_screen_test.dart` | Yes | **Broken** — sets `shouldThrow = true`, then never asserts a snackbar, error text, or any error indicator. The test name promises `'shows error snackbar with retry when load fails'` but ends without a single `expect` call related to errors. |
+| `lesson_detail_screen_test.dart` | Yes | **Never** used in any test. |
+| `lesson_list_screen_test.dart` | Yes | **Never** used in any test. |
 
-These 5 files share the same test infrastructure, the same `Hive.init(testPath)` setup, and overlapping test scenarios (e.g., CRUD tests appear in 3 different files). There is no clear boundary between what goes in `_test.dart` vs `_comprehensive_test.dart` vs `_extra_edge_cases_test.dart`.
+**Rationale:** Error states are user-facing (snackbars, retry buttons, fallback UI). If repository throws, users see either a perpetual loading spinner or an unhandled exception. Neither is acceptable, and neither is tested.
 
-### Settings Repository — Near-total duplication
+**Affected files:**
+- `test/features/lessons/presentation/topic_list_screen_test.dart` (line 91-106)
+- `test/features/lessons/presentation/lesson_detail_screen_test.dart` (lines 11-31)
+- `test/features/lessons/presentation/lesson_list_screen_test.dart` (lines 13-36)
 
-| File | Tests | Approach |
+**Acceptance criteria:**
+- Each screen test file adds at least one test that sets `shouldThrow = true` and verifies the error UI (snackbar, error widget, or retry button) is displayed.
+- The existing broken error test in `topic_list_screen_test.dart` is fixed to actually assert error behavior.
+
+---
+
+## Issue 2: Navigation is never verified in lessons screen tests
+
+**Context:** `AGENTS.md` recommends using `NavigatorObserver` for verifying navigation. The practice feature follows this convention (`practice_test.dart`, `practice_session_screen_test.dart`). The lessons feature does not — screen tests tap items but never assert that a route was pushed.
+
+| File | Tap action | Navigation verified? |
 |---|---|---|
-| `test/features/settings/data/repositories/settings_repository_test.dart` | 59 | In-memory `FakeSettingsBox` |
-| `test/features/settings/data/repositories/settings_repository_hive_test.dart` | 62 | Real Hive box + adapter |
+| `topic_list_screen_test.dart` | Taps topic | No assert — just `pumpAndSettle` (line 118-119) |
+| `lesson_list_screen_test.dart` | Taps lesson | No assert — just `pumpAndSettle` (lines 240-241) |
+| `lesson_detail_screen_test.dart` | Teaching-mode buttons exist but are never tapped | No test for `_openTutorMode` navigation at all |
 
-These two files share near-identical test structures and assertions. The only difference is the backing box implementation. Every change to the repository interface must be applied twice — to both files.
+**Affected files:**
+- `test/features/lessons/presentation/topic_list_screen_test.dart`
+- `test/features/lessons/presentation/lesson_list_screen_test.dart`
+- `test/features/lessons/presentation/lesson_detail_screen_test.dart`
 
-### Trivial / Spurious — `repository_test.dart`
+**Acceptance criteria:**
+- Each screen test that triggers navigation injects a `NavigatorObserver` and asserts the correct route was pushed.
+- `lesson_detail_screen_test.dart` adds tests that tap the teaching-mode buttons (both AppBar and bottom bar) and verify navigation to the tutor route.
+
+---
+
+## Issue 3: Inconsistent dependency injection pattern in lessons presentation tests
+
+**Context:** Lessons screen tests inject dependencies via **constructor parameters** (e.g., `LessonDetailScreen(lessonRepository: _FakeLessonRepository(...))`), while the rest of the project — especially the practice feature — consistently uses `ProviderScope` with `overrides`. This creates two problems:
+1. New contributors must learn two patterns.
+2. The screens cannot be tested in a Riverpod-native way, meaning changes to provider wiring (e.g., refactoring a `Provider` into a `FutureProvider`) may not be caught.
+
+**Evidence:**
+- `test/features/lessons/presentation/lesson_detail_screen_test.dart` — constructor injection throughout
+- `test/features/lessons/presentation/lesson_list_screen_test.dart` — constructor injection throughout
+- `test/features/lessons/presentation/topic_list_screen_test.dart` — constructor injection throughout
+- `test/features/practice/presentation/practice_screen_test.dart` — `ProviderScope` with overrides (reference pattern)
+- `test/features/lessons/providers/lesson_providers_test.dart` — `ProviderContainer` with overrides (correct)
+
+**Affected files:**
+- `test/features/lessons/presentation/lesson_detail_screen_test.dart`
+- `test/features/lessons/presentation/lesson_list_screen_test.dart`
+- `test/features/lessons/presentation/topic_list_screen_test.dart`
+
+**Acceptance criteria:**
+- Lessons presentation tests are refactored to use `ProviderScope` with `overrides`, matching the convention established by the practice feature and `AGENTS.md`.
+
+---
+
+## Issue 4: No-op test in `topic_list_screen_test.dart`
+
+**Context:** The test `'uses default database repository when none injected'` (lines 122-124) pumps a widget with zero assertions. It provides no value.
 
 ```dart
-group('Subject Repository Operations', () {
-  test('Subject filtering logic', () {
-    final subjectNames = ['Math', 'Science', 'English', 'History'];
-    expect(subjectNames.length, equals(4));
-    expect(subjectNames.contains('Math'), isTrue);
-  });
+testWidgets('uses default database repository when none injected', (tester) async {
+  await tester.pumpWidget(_buildTestApp(const TopicListScreen()));
 });
 ```
 
-This tests `List.length` and `List.contains` — not the repository. Adds noise to the test suite.
+**Affected file:**
+- `test/features/lessons/presentation/topic_list_screen_test.dart`, lines 122-124
 
-## Rationale
+**Acceptance criteria:**
+- The test is either removed or converted into a meaningful assertion (e.g., verifying that the default repository does not throw during init and loading).
 
-| Problem | Impact |
-|---|---|
-| **5 files for one repo** | A developer searching for subject repo tests must open 5 files to see full coverage. CI output lists 5 separate files for one unit under test. |
-| **No organization convention** | The boundary between `_comprehensive_test`, `_extra_edge_cases_test`, and `_test` is undefined. Future contributors cannot determine where to add new tests. |
-| **Settings duplication** | The `_hive_test.dart` variant adds ~900 lines of near-identical assertions. A single parametrized test file (or a shared `group()` extracted to a helper) would eliminate the duplication while keeping both test configurations. |
-| **Trivial test file** | `repository_test.dart` has zero value. It tests standard library operations and should be removed. |
-| **Impacts relocation** | The open `code_refactor_master.md` plans to move these tests to `test/features/*/data/repositories/`. If moved as-is, the fragmentation is carried into the new structure, making the problem permanent. |
+---
 
-## Acceptance Criteria
+## Issue 5: Duplicate test file for `PracticeScreen`
 
-1. `test/core/data/repositories/subject_repository_comprehensive_test.dart`, `_extra_edge_cases_test.dart`, and `_error_test.dart` are merged into `subject_repository_test.dart` using `group()` blocks to organize by concern (e.g., `group('CRUD')`, `group('Error handling')`, `group('Edge cases')`).
+**Context:** Two files test the same `PracticeScreen` widget:
 
-2. `test/core/data/repositories/subject_repository_init_test.dart` is merged into `subject_repository_test.dart` as a `group('init')` block (this file uses real Hive; it can remain separate if Hive init proves too slow to run alongside 150+ mock-based tests, but this decision must be documented).
+| File | Lines | Description |
+|---|---|---|
+| `test/features/practice/presentation/practice_screen_test.dart` | 436 | Thorough, 18 tests, uses `ProviderScope` |
+| `test/features/practice/presentation/practice_test.dart` | 94 | 3 tests, older/overlapping |
 
-3. After consolidation, there is exactly **1 test file** for `subject_repository.dart` in the test directory.
+The second file tests loading, empty state, and FAB navigation — all covered (or should be covered) by the first. Maintaining two files risks drift and confusion.
 
-4. `test/features/settings/data/repositories/settings_repository_test.dart` and `_hive_test.dart` are refactored to eliminate duplication using one of:
-   - A shared `group()` function in a helper file that both test files import.
-   - A single parametrized test file.
+**Affected files:**
+- `test/features/practice/presentation/practice_test.dart`
+- `test/features/practice/presentation/practice_screen_test.dart`
 
-5. `test/core/data/repositories/repository_test.dart` is deleted (its contents are not tests).
+**Acceptance criteria:**
+- Tests in `practice_test.dart` are assessed for unique coverage (e.g., the `NavigatorObserver` FAB test). Any unique scenarios are merged into `practice_screen_test.dart`, then `practice_test.dart` is removed.
 
-6. All tests still pass after consolidation.
+---
 
-7. (Future-proofing) Any other repository test file in `test/core/data/repositories/` that demonstrates fragmentation should follow the same consolidation pattern if/when the `code_refactor_master` relocation occurs.
+## Issue 6: `lib/features/mentor/models/` has zero test coverage
+
+**Context:** Two model files in the mentor feature lack any test file:
+
+| Source file | Test file | Status |
+|---|---|---|
+| `lib/features/mentor/models/mentor_action.dart` | — | **Missing** |
+| `lib/features/mentor/models/progress_report.dart` | — | **Missing** |
+
+The convention (`AGENTS.md`) requires `lib/features/*/models/*.dart` → `test/features/*/models/*_test.dart`. The directory `test/features/mentor/models/` does not exist.
+
+**Affected files:**
+- `lib/features/mentor/models/mentor_action.dart`
+- `lib/features/mentor/models/progress_report.dart`
+
+**Acceptance criteria:**
+- Model tests are added for `mentor_action.dart` and `progress_report.dart`, placed in `test/features/mentor/models/`.
+- Tests cover serialization (`fromJson`/`toJson`), equality, and any computed properties.
+
+---
+
+## File structure
+
+```
+issues/open/test_master.md
+```

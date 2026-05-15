@@ -4,22 +4,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/pending_action_model.dart';
 import 'package:studyking/core/data/models/study_session_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
-import 'package:studyking/core/data/repositories/conversation_repository.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class FakeTutorSessionRepository extends TutorSessionRepository {
   final List<TutorSession> _sessions = [];
@@ -67,6 +69,9 @@ class FakeSubjectRepository extends SubjectRepository {
 }
 
 class FakeLlmService extends LlmService {
+  String? capturedMessage;
+  String? capturedSystemPrompt;
+
   FakeLlmService()
       : super(
           config: const LlmConfiguration(
@@ -82,8 +87,34 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
+    capturedMessage = message;
+    capturedSystemPrompt = systemPrompt;
     yield 'Mentor response';
+  }
+}
+
+class FakePendingActionRepository extends PendingActionRepository {
+  final List<PendingActionModel> _actions = [];
+
+  List<PendingActionModel> get createdActions =>
+      List.unmodifiable(_actions);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> create(PendingActionModel action) async {
+    _actions.add(action);
+  }
+
+  @override
+  Future<List<PendingActionModel>> getPending(String studentId) async {
+    return _actions
+        .where((a) => a.studentId == studentId && a.status == 'pending')
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 }
 
@@ -146,6 +177,7 @@ MentorService createMentorService({
   LlmService? llmService,
   MasteryGraphService? masteryService,
   StudyProgressTracker? progressTracker,
+  PendingActionRepository? pendingActionRepo,
   String modelId = 'test-model',
   String studentId = 'test-student',
 }) {
@@ -174,6 +206,7 @@ MentorService createMentorService({
     progressTracker: tracker,
     modelId: modelId,
     studentId: studentId,
+    pendingActionRepo: pendingActionRepo,
   );
 }
 
@@ -263,6 +296,7 @@ void main() {
           topicTitle: 'Algebra',
           startTime: DateTime.now(),
         ));
+        final fakePending = FakePendingActionRepository();
         final db = DatabaseService(
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
@@ -273,7 +307,10 @@ void main() {
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
         );
-        final service = createMentorService(database: db);
+        final service = createMentorService(
+          database: db,
+          pendingActionRepo: fakePending,
+        );
 
         await service.suggestReschedule('session-1');
         final chatResult = await service.chat('hello').toList();
@@ -407,6 +444,7 @@ void main() {
           topicTitle: 'Algebra',
           startTime: DateTime.now(),
         ));
+        final fakePending = FakePendingActionRepository();
         final db = DatabaseService(
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
@@ -417,7 +455,10 @@ void main() {
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
         );
-        final service = createMentorService(database: db);
+        final service = createMentorService(
+          database: db,
+          pendingActionRepo: fakePending,
+        );
 
         await service.suggestReschedule('session-1');
 
@@ -429,6 +470,7 @@ void main() {
 
       test('does nothing when session not found', () async {
         final tutorRepo = FakeTutorSessionRepository();
+        final fakePending = FakePendingActionRepository();
         final db = DatabaseService(
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
@@ -439,7 +481,10 @@ void main() {
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
         );
-        final service = createMentorService(database: db);
+        final service = createMentorService(
+          database: db,
+          pendingActionRepo: fakePending,
+        );
 
         await service.suggestReschedule('nonexistent');
         final history = service.memory.getHistory();
@@ -456,6 +501,7 @@ void main() {
           topicTitle: 'Algebra',
           startTime: DateTime.now(),
         ));
+        final fakePending = FakePendingActionRepository();
         final db = DatabaseService(
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
@@ -466,7 +512,10 @@ void main() {
           conversationRepository: ConversationRepository(),
           tutorSessionRepository: tutorRepo,
         );
-        final service = createMentorService(database: db);
+        final service = createMentorService(
+          database: db,
+          pendingActionRepo: fakePending,
+        );
 
         await service.suggestReschedule('session-1');
 
@@ -474,6 +523,338 @@ void main() {
         expect(history.any((m) =>
             m['role'] == 'system' &&
             m['content']!.contains('Algebra')), isTrue);
+      });
+
+      test('creates pending action with correct fields', () async {
+        final tutorRepo = FakeTutorSessionRepository();
+        tutorRepo.addSession(TutorSession(
+          id: 'session-1',
+          studentId: 'test-student',
+          subjectId: 'math',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+          startTime: DateTime.now(),
+        ));
+        final fakePending = FakePendingActionRepository();
+        final db = DatabaseService(
+          topicRepository: TopicRepository(),
+          questionRepository: QuestionRepository(),
+          attemptRepository: AttemptRepository(),
+          lessonRepository: LessonRepository(),
+          sessionRepository: FakeStudySessionRepository(),
+          subjectRepository: FakeSubjectRepository(),
+          conversationRepository: ConversationRepository(),
+          tutorSessionRepository: tutorRepo,
+        );
+        final service = createMentorService(
+          database: db,
+          pendingActionRepo: fakePending,
+        );
+
+        await service.suggestReschedule('session-1');
+
+        expect(fakePending.createdActions.length, equals(1));
+        final action = fakePending.createdActions.first;
+        expect(action.actionType, equals(PendingActionType.reschedule.name));
+        expect(action.topicTitle, equals('Algebra'));
+        expect(action.studentId, equals('test-student'));
+        expect(action.sessionId, equals('session-1'));
+      });
+    });
+
+    group('initialize', () {
+      test('completes successfully without conversation repo', () async {
+        final service = createMentorService();
+        await expectLater(service.initialize(), completes);
+      });
+
+      test('does not throw when memory has no repository', () async {
+        final service = createMentorService();
+        await service.initialize();
+        final history = service.memory.getHistory();
+        expect(history, isEmpty);
+      });
+    });
+
+    group('chat - planning intent', () {
+      late FakeLlmService llm;
+      late FakePendingActionRepository fakePending;
+
+      setUp(() {
+        llm = FakeLlmService();
+        fakePending = FakePendingActionRepository();
+      });
+
+      test('schedule keyword creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule a math lesson').toList();
+        expect(fakePending.createdActions.length, equals(1));
+        expect(
+          fakePending.createdActions.first.actionType,
+          equals(PendingActionType.schedule.name),
+        );
+      });
+
+      test('reschedule keyword creates reschedule type action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('reschedule my physics session').toList();
+        expect(fakePending.createdActions.length, equals(1));
+        expect(
+          fakePending.createdActions.first.actionType,
+          equals(PendingActionType.reschedule.name),
+        );
+      });
+
+      test('plan keyword creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('plan a study roadmap').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('roadmap keyword creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('create a roadmap for chemistry').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('programar keyword (Portuguese) creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('programar estudos de matematica').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('reprogramar keyword (Portuguese) creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('reprogramar sessoes').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('planificar keyword (Spanish) creates pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('planificar el estudio').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('does not create duplicate when existing pending exists',
+          () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule a lesson').toList();
+        await service.chat('schedule another lesson').toList();
+        expect(fakePending.createdActions.length, equals(1));
+      });
+
+      test('non-planning message does not create pending action', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('hello how are you').toList();
+        expect(fakePending.createdActions, isEmpty);
+      });
+
+      test('topic is extracted from schedule message', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule a lesson about calculus').toList();
+        expect(fakePending.createdActions.first.topicTitle, equals('calculus'));
+      });
+
+      test('topic with punctuation is trimmed', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule study linear algebra, please').toList();
+        expect(
+          fakePending.createdActions.first.topicTitle,
+          equals('linear algebra'),
+        );
+      });
+
+      test('topic after learn keyword is extracted', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule learn dart').toList();
+        expect(
+          fakePending.createdActions.first.topicTitle,
+          equals('dart'),
+        );
+      });
+
+      test('topic after topic keyword is extracted', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule topic world history').toList();
+        expect(
+          fakePending.createdActions.first.topicTitle,
+          equals('world history'),
+        );
+      });
+
+      test('fallback to general when no topic keyword found', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        await service.chat('schedule something').toList();
+        expect(
+          fakePending.createdActions.first.topicTitle,
+          equals('general'),
+        );
+      });
+
+      test('pending action includes original message in payload', () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        const originalMsg = 'schedule a review for tomorrow';
+        await service.chat(originalMsg).toList();
+        final payload =
+            fakePending.createdActions.first.payload;
+        expect(payload['originalMessage'], equals(originalMsg));
+      });
+
+      test('chat completes when LLM response triggers planning intent',
+          () async {
+        final service = createMentorService(
+          llmService: llm,
+          pendingActionRepo: fakePending,
+        );
+        final chunks = await service.chat('schedule math review').toList();
+        expect(chunks, isNotEmpty);
+      });
+    });
+
+    group('chat - context prompt', () {
+      test('includes student stats in LLM prompt', () async {
+        final llm = FakeLlmService();
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setStats({
+          'totalAttempts': 15,
+          'correctAttempts': 10,
+          'accuracy': 67,
+          'avgTimePerQuestion': 25,
+          'totalStudyTimeHours': '4.0',
+          'weeklyActivity': 6,
+          'dailyActivity': 2,
+          'topicsStudied': 4,
+        });
+        final service = createMentorService(
+          llmService: llm,
+          progressTracker: tracker,
+        );
+        await service.chat('hello').toList();
+        expect(llm.capturedMessage, contains('Total attempts: 15'));
+        expect(llm.capturedMessage, contains('Student: hello'));
+      });
+
+      test('includes accuracy and topics studied in prompt', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('hello').toList();
+        expect(llm.capturedMessage, contains('Accuracy'));
+        expect(llm.capturedMessage, contains('Topics studied'));
+      });
+
+      test('uses mentor system prompt', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('hello').toList();
+        expect(
+          llm.capturedSystemPrompt,
+          contains('encouraging AI mentor'),
+        );
+      });
+    });
+
+    group('getProgressReport - badges', () {
+      test('includes badges in progress report', () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setBadges([
+          {
+            'id': 'first_attempt',
+            'name': 'First Attempt',
+            'description': 'Completed your first attempt',
+            'unlockedAt': '2024-01-01T00:00:00.000',
+          },
+        ]);
+        tracker.setStats({
+          'totalAttempts': 10,
+          'correctAttempts': 7,
+          'accuracy': 70,
+          'avgTimePerQuestion': 30,
+          'totalStudyTimeHours': '2.5',
+          'weeklyActivity': 5,
+          'dailyActivity': 2,
+          'topicsStudied': 3,
+        });
+        final service = createMentorService(progressTracker: tracker);
+
+        final report = await service.getProgressReport();
+        expect(report.badges.length, equals(1));
+        expect(report.badges.first['id'], equals('first_attempt'));
+        expect(report.badges.first['name'], equals('First Attempt'));
+      });
+
+      test('includes recommendations in progress report', () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setRecommendations([
+          {
+            'type': 'review',
+            'priority': 'high',
+            'message': 'Review algebra fundamentals',
+            'action': 'Review',
+          },
+        ]);
+        tracker.setStats({
+          'totalAttempts': 10,
+          'correctAttempts': 7,
+          'accuracy': 70,
+          'avgTimePerQuestion': 30,
+          'totalStudyTimeHours': '2.5',
+          'weeklyActivity': 5,
+          'dailyActivity': 2,
+          'topicsStudied': 3,
+        });
+        final service = createMentorService(progressTracker: tracker);
+
+        final report = await service.getProgressReport();
+        expect(report.recommendations.length, equals(1));
+        expect(
+          report.recommendations.first['type'],
+          equals('review'),
+        );
       });
     });
   });

@@ -59,10 +59,10 @@ class MilestoneTimeline extends StatelessWidget {
                     final isPast = milestone.deadline.isBefore(now);
                     final isCompleted = milestone.isCompleted;
                     final color = isCompleted
-                        ? Colors.green
+                        ? Theme.of(context).colorScheme.primary
                         : isPast
-                            ? Colors.orange
-                            : Theme.of(context).colorScheme.primary;
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.tertiary;
 
                     return Positioned(
                       left: left - 6,
@@ -113,10 +113,10 @@ class MilestoneTimeline extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: ms.isCompleted
-                      ? Colors.green.withValues(alpha: 0.1)
+                      ? Theme.of(context).colorScheme.primaryContainer
                       : isPast
-                          ? Colors.orange.withValues(alpha: 0.1)
-                          : Theme.of(context).colorScheme.primaryContainer,
+                          ? Theme.of(context).colorScheme.errorContainer
+                          : Theme.of(context).colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -124,10 +124,10 @@ class MilestoneTimeline extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     color: ms.isCompleted
-                        ? Colors.green.shade700
+                        ? Theme.of(context).colorScheme.primary
                         : isPast
-                            ? Colors.orange.shade700
-                            : Theme.of(context).colorScheme.primary,
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.tertiary,
                   ),
                 ),
               ),

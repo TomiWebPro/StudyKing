@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -88,10 +89,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Future<void> _startTopicPractice(String topic) async {
     try {
-      final result = await _questionRepo.getAll();
-      if (result.isFailure || result.data == null) return;
+      final allQuestions = await _questionRepo.getAll();
       final topicQuestions =
-          result.data!.where((q) => q.topic == topic).toList();
+          allQuestions.where((q) => q.topic == topic).toList();
       if (topicQuestions.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -131,14 +131,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       }
       final weakTopicIds =
           weakTopicsResult.data!.map((s) => s.topicId).toSet();
-      final questionsResult = await _questionRepo.getAll();
-      if (questionsResult.isFailure || questionsResult.data == null) {
+      final allQuestions = await _questionRepo.getAll().catchError((_) => <Question>[]);
+      if (allQuestions.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(l10n.noQuestionsAvailable)));
         return;
       }
-      final weakQuestions = questionsResult.data!
+      final weakQuestions = allQuestions
           .where((q) => weakTopicIds.contains(q.topicId))
           .toList();
       if (weakQuestions.isEmpty) {

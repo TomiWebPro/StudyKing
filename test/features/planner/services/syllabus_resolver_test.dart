@@ -4,9 +4,9 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 
@@ -71,8 +71,8 @@ class _MockQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<List<Question>>> getAll() async {
-    return Result.success(_questions);
+  Future<List<Question>> getAll() async {
+    return _questions;
   }
 }
 

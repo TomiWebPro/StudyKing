@@ -1,4 +1,5 @@
 // Question Feature Exports
+export 'data/repositories/question_repository.dart';
 export 'package:studyking/core/data/models/markscheme_model.dart';
 export 'presentation/widgets/question_card_widget.dart';
 export 'presentation/widgets/single_answer_widget.dart';

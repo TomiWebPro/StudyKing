@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/providers/llm_providers.dart';
 import '../../../core/services/llm_task_manager.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
-class LlmTaskManagerScreen extends StatefulWidget {
-  final LlmTaskManager taskManager;
-
-  const LlmTaskManagerScreen({super.key, required this.taskManager});
+class LlmTaskManagerScreen extends ConsumerStatefulWidget {
+  const LlmTaskManagerScreen({super.key});
 
   @override
-  State<LlmTaskManagerScreen> createState() => _LlmTaskManagerScreenState();
+  ConsumerState<LlmTaskManagerScreen> createState() => _LlmTaskManagerScreenState();
 }
 
-class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
+class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
+  LlmTaskManager? _taskManager;
+
   @override
   void initState() {
     super.initState();
-    widget.taskManager.addListener(_onTasksChanged);
+    _taskManager = ref.read(llmTaskManagerProvider);
+    _taskManager!.addListener(_onTasksChanged);
   }
 
   @override
   void dispose() {
-    widget.taskManager.removeListener(_onTasksChanged);
+    _taskManager?.removeListener(_onTasksChanged);
     super.dispose();
   }
 
@@ -32,8 +35,9 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final tasks = widget.taskManager.tasks;
-    final activeTasks = widget.taskManager.activeTasks;
+    final taskManager = ref.watch(llmTaskManagerProvider);
+    final tasks = taskManager.tasks;
+    final activeTasks = taskManager.activeTasks;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,7 +76,7 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
                       final task = tasks[tasks.length - 1 - index];
-                      return _buildTaskCard(context, task, l10n);
+                      return _buildTaskCard(context, task, l10n, taskManager);
                     },
                   ),
                 ),
@@ -102,7 +106,7 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
                   size: 18, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Text(
-                'Token Usage Summary',
+                l10n.tokenUsageSummary,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -112,13 +116,13 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildUsageStat(context, 'Total Tokens', _formatTokens(totalTokens)),
+              _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens)),
               const SizedBox(width: 16),
-              _buildUsageStat(context, 'Total Cost', '\$${totalCost.toStringAsFixed(4)}'),
+              _buildUsageStat(context, l10n.totalCost, '\$${totalCost.toStringAsFixed(4)}'),
               const SizedBox(width: 16),
-              _buildUsageStat(context, 'Done', '$completedTasks'),
+              _buildUsageStat(context, l10n.done, '$completedTasks'),
               const SizedBox(width: 16),
-              _buildUsageStat(context, 'Failed', '$failedTasks'),
+              _buildUsageStat(context, l10n.failed, '$failedTasks'),
             ],
           ),
           if (totalTokens > 0) ...[
@@ -172,7 +176,7 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
     return tokens.toString();
   }
 
-  Widget _buildTaskCard(BuildContext context, LlmTask task, AppLocalizations l10n) {
+  Widget _buildTaskCard(BuildContext context, LlmTask task, AppLocalizations l10n, LlmTaskManager taskManager) {
     final statusColor = switch (task.status) {
       LlmTaskStatus.running => Colors.blue,
       LlmTaskStatus.done => Colors.green,
@@ -312,7 +316,7 @@ class _LlmTaskManagerScreenState extends State<LlmTaskManagerScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () => widget.taskManager.cancelTask(task.id),
+                  onPressed: () => taskManager.cancelTask(task.id),
                   icon: const Icon(Icons.cancel, size: 18),
                   label: Text(l10n.cancelTask),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),

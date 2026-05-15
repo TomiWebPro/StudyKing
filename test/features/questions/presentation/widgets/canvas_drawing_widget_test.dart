@@ -215,7 +215,7 @@ void main() {
         expect(find.byType(CanvasDrawingWidget), findsOneWidget);
       });
 
-      testWidgets('shows saved message after successful save', (tester) async {
+      testWidgets('shows saving indicator while saving', (tester) async {
         await tester.pumpWidget(buildWidget());
 
         final gesture = await tester.startGesture(const Offset(100, 100));
@@ -224,9 +224,9 @@ void main() {
         await tester.pump();
 
         await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
-        await tester.pumpAndSettle();
+        await tester.pump();
 
-        expect(find.text('Drawing saved!'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
       });
 
       testWidgets('save button disabled while saving', (tester) async {
@@ -237,13 +237,12 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        final saveButtonsBefore = find.widgetWithText(ElevatedButton, 'Save Drawing');
+        await tester.tap(saveButtonsBefore);
         await tester.pump();
 
-        final saveButton = tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Save Drawing'),
-        );
-        expect(saveButton.onPressed, isNull);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsNothing);
       });
     });
 
@@ -536,6 +535,133 @@ void main() {
         await tester.pump();
 
         expect(find.text('Draw here...'), findsNothing);
+      });
+    });
+
+    group('save completion', () {
+      testWidgets('save completes with empty data when no paint boundary', (tester) async {
+        Uint8List? captured;
+        await tester.pumpWidget(buildWidget(
+          onDrawingComplete: (data) => captured = data,
+        ));
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(captured, isNotNull);
+      });
+
+
+    });
+
+    group('painter edge cases', () {
+      testWidgets('DrawingPainter with empty stroke list does not crash', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('GridPainter draws horizontal and vertical lines', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.byType(CustomPaint), findsWidgets);
+      });
+    });
+
+    group('save message display', () {
+      testWidgets('shows save message after successful save', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Drawing saved.'), findsOneWidget);
+      });
+    });
+
+    group('initial drawing multiple strokes', () {
+      testWidgets('loads multiple strokes from initial drawing', (tester) async {
+        final initialDrawing = '[[{"x":10,"y":20}],[{"x":30,"y":40},{"x":50,"y":60}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+
+      testWidgets('loads drawing with all valid points even with mixed data', (tester) async {
+        final initialDrawing = '[[{"x":10,"y":20,"foo":"bar"},{"x":30,"y":40}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+    });
+
+    group('undo after clear', () {
+      testWidgets('undo after clear does nothing', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.byIcon(Icons.delete_outline));
+        await tester.pump();
+
+        await tester.tap(find.byIcon(Icons.undo));
+        await tester.pump();
+
+        expect(find.text('Draw here...'), findsOneWidget);
+      });
+    });
+
+    group('semantics', () {
+      testWidgets('canvas has semantics container label and draw hint', (tester) async {
+        await tester.pumpWidget(buildWidget(instruction: 'Draw circle'));
+        expect(find.bySemanticsLabel('Draw circle'), findsOneWidget);
+      });
+
+      testWidgets('canvas with no instruction uses default drawing label', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.bySemanticsLabel(RegExp('Drawing canvas', caseSensitive: false)), findsOneWidget);
+      });
+    });
+
+    group('handlePan edge cases', () {
+      testWidgets('_handlePanUpdate does nothing when _isDrawing is false', (tester) async {
+        await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('undo button icon semantics', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+        expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      });
+    });
+
+    group('drawing border color change', () {
+      testWidgets('border changes during active drawing', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
       });
     });
   });

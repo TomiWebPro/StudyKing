@@ -14,16 +14,6 @@ export 'data/models/lesson_block_model.dart';
 export 'data/models/lesson_model.dart';
 export 'data/models/study_session_model.dart';
 
-// Repositories
-export 'data/repositories/topic_repository.dart';
-export 'data/repositories/question_repository.dart';
-export 'data/repositories/attempt_repository.dart';
-export 'data/repositories/answer_repository.dart';
-export 'data/repositories/source_repository.dart';
-export 'data/repositories/progress_repository.dart';
-export 'data/repositories/lesson_repository.dart';
-
-
 // Extension for firstOrNull
 extension IterableExtension<T> on Iterable<T> {
   T? get firstOrNull {

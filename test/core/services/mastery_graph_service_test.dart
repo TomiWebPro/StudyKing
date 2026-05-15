@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
-class MockMasteryGraphRepository implements MasteryGraphRepository {
+class MockMasteryGraphRepository extends MasteryGraphRepository {
   final Map<String, MasteryState> _masteryStates = {};
   final Map<String, QuestionMasteryState> _questionMasteryStates = {};
   final Map<String, QuestionEvaluation> _evaluations = {};
@@ -277,32 +277,6 @@ void main() {
         expect(result.data, isNotNull);
         expect(result.data!['totalTopics'], equals(10));
         expect(result.data!['masteredTopics'], equals(5));
-      });
-    });
-
-    group('evaluateAnswer', () {
-      test('evaluates correct answer', () async {
-        mockRepo.addEvaluation(QuestionEvaluation(
-          questionId: 'q1',
-          correctAnswer: '42',
-          evaluationType: EvaluationType.exactMatch,
-        ));
-
-        final result = await service.evaluateAnswer('q1', '42');
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isNotNull);
-      });
-
-      test('evaluates incorrect answer', () async {
-        mockRepo.addEvaluation(QuestionEvaluation(
-          questionId: 'q1',
-          correctAnswer: '42',
-          evaluationType: EvaluationType.exactMatch,
-        ));
-
-        final result = await service.evaluateAnswer('q1', 'wrong');
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isNotNull);
       });
     });
 

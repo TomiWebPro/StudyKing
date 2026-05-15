@@ -1,3 +1,8 @@
+export 'data/repositories/engagement_nudge_repository.dart';
+export 'data/repositories/pending_action_repository.dart';
+export 'data/repositories/plan_adherence_repository.dart';
+export 'data/repositories/plan_repository.dart';
+export 'data/repositories/roadmap_repository.dart';
 export 'presentation/planner_screen.dart';
 export 'services/planner_service.dart';
 export 'providers/planner_providers.dart';

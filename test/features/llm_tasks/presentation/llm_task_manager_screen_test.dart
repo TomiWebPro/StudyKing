@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(LlmTaskManager manager) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: LlmTaskManagerScreen(taskManager: manager),
+  return ProviderScope(
+    overrides: [
+      llmTaskManagerProvider.overrideWithValue(manager),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const LlmTaskManagerScreen(),
+    ),
   );
 }
 void main() {

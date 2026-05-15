@@ -82,21 +82,29 @@ class DailyPlanCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (onScheduleLesson != null)
-                                IconButton(
-                                  icon: const Icon(Icons.event,
-                                      size: 20),
-                                  tooltip: 'Schedule Lesson',
-                                  onPressed: () => onScheduleLesson!(
-                                      topic.topicId,
-                                      topic.topicTitle,
-                                      topic.subjectId),
+                                Semantics(
+                                  button: true,
+                                  label: l10n.scheduleLesson,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.event,
+                                        size: 20),
+                                    tooltip: l10n.scheduleLesson,
+                                    onPressed: () => onScheduleLesson!(
+                                        topic.topicId,
+                                        topic.topicTitle,
+                                        topic.subjectId),
+                                  ),
                                 ),
-                              IconButton(
-                                icon: const Icon(Icons.smart_toy_outlined,
-                                    size: 20),
-                                tooltip: l10n.startTutoring,
-                                onPressed: () => onStartTutoring(
-                                    topic.topicId, topic.topicTitle, topic.subjectId),
+                              Semantics(
+                                button: true,
+                                label: l10n.startTutoring,
+                                child: IconButton(
+                                  icon: const Icon(Icons.smart_toy_outlined,
+                                      size: 20),
+                                  tooltip: l10n.startTutoring,
+                                  onPressed: () => onStartTutoring(
+                                      topic.topicId, topic.topicTitle, topic.subjectId),
+                                ),
                               ),
                             ],
                           )

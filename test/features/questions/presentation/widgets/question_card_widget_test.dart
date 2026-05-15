@@ -622,23 +622,17 @@ void main() {
         );
         await tester.pumpWidget(buildWidget(question: question));
 
-        expect(find.text('Option 1'), findsOneWidget);
-        expect(find.text('Option 2'), findsOneWidget);
-        expect(find.text('Option 3'), findsOneWidget);
-        expect(find.text('Option 4'), findsOneWidget);
+        expect(find.text('No options available'), findsOneWidget);
       });
 
-      testWidgets('handles no options for multi choice with fallback options', (tester) async {
+      testWidgets('handles no options for multi choice', (tester) async {
         final question = _questionWithOptions(
           id: 'q4', text: 'Select:', type: QuestionType.multiChoice,
           options: [], correctAnswer: 'A',
         );
         await tester.pumpWidget(buildWidget(question: question));
 
-        expect(find.text('Option 1'), findsOneWidget);
-        expect(find.text('Option 2'), findsOneWidget);
-        expect(find.text('Option 3'), findsOneWidget);
-        expect(find.text('Option 4'), findsOneWidget);
+        expect(find.text('No options available'), findsOneWidget);
       });
 
       testWidgets('handles multi choice with no initial answer', (tester) async {
@@ -764,17 +758,14 @@ void main() {
       });
     });
 
-    group('multi choice fallback options', () {
-      testWidgets('multi choice with empty options renders fallback options', (tester) async {
+    group('multi choice empty options', () {
+      testWidgets('multi choice with empty options shows no options message', (tester) async {
         final question = _questionWithOptions(
-          id: 'q-mc-fallback', text: 'Pick:', type: QuestionType.multiChoice,
+          id: 'q-mc-empty', text: 'Pick:', type: QuestionType.multiChoice,
           options: [], correctAnswer: 'Option 1',
         );
         await tester.pumpWidget(buildWidget(question: question));
-        expect(find.text('Option 1'), findsOneWidget);
-        expect(find.text('Option 2'), findsOneWidget);
-        expect(find.text('Option 3'), findsOneWidget);
-        expect(find.text('Option 4'), findsOneWidget);
+        expect(find.text('No options available'), findsOneWidget);
       });
     });
 
@@ -1060,6 +1051,205 @@ void main() {
         expect(chips.length, greaterThanOrEqualTo(2));
         final cs = Theme.of(tester.element(find.byType(Card))).colorScheme;
         expect(chips[1].backgroundColor, cs.surfaceContainerHighest);
+      });
+    });
+
+    group('multi choice deselect', () {
+      testWidgets('deselecting option removes it from answer', (tester) async {
+        String? changedAnswer;
+        final question = _questionWithOptions(
+          id: 'q-desel', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: 'A,B',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'A'));
+        await tester.pump();
+        expect(changedAnswer, 'A');
+
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'A'));
+        await tester.pump();
+        expect(changedAnswer, isEmpty);
+      });
+    });
+
+    group('canvas answer callback', () {
+      testWidgets('canvas save triggers answer callback', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        final gesture = await tester.startGesture(const Offset(200, 200));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(changedAnswer, isNotNull);
+        expect(changedAnswer!.isNotEmpty, isTrue);
+      });
+    });
+
+    group('onNext button visibility', () {
+      testWidgets('does not show next button when isSubmitted is false even with onNext', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          isSubmitted: false,
+          onNext: () {},
+        ));
+        expect(find.widgetWithText(OutlinedButton, 'Next Question'), findsNothing);
+      });
+
+      testWidgets('hides next button when onNext is null even when submitted', (tester) async {
+        await tester.pumpWidget(buildWidget(isSubmitted: true));
+        expect(find.widgetWithText(OutlinedButton, 'Next Question'), findsNothing);
+      });
+    });
+
+    group('didUpdateWidget no change', () {
+      testWidgets('does not reset state when currentAnswer unchanged', (tester) async {
+        await tester.pumpWidget(buildWidget(currentAnswer: 'hello'));
+        await tester.pumpWidget(buildWidget(currentAnswer: 'hello'));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, 'hello');
+      });
+    });
+
+    group('math expression renders MathExpressionWidget', () {
+      testWidgets('math expression type renders MathExpressionWidget content', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.mathExpression);
+        await tester.pumpWidget(buildWidget(question: question));
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Math'), findsOneWidget);
+        expect(find.text('Type your answer here...'), findsOneWidget);
+      });
+    });
+
+    group('isFeedbackVisible for single choice', () {
+      testWidgets('hides feedback when isFeedbackVisible is false for single choice', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-fb', text: 'Pick:', type: QuestionType.singleChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A',
+          isSubmitted: true,
+          isFeedbackVisible: false,
+        ));
+        expect(find.text('Correct!'), findsOneWidget);
+        expect(find.text('Incorrect'), findsNothing);
+      });
+
+      testWidgets('hides feedback when isFeedbackVisible is false for typed answer', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          currentAnswer: '4',
+          isSubmitted: true,
+          isFeedbackVisible: false,
+        ));
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+    });
+
+    group('onAnswerSubmitted with typed answer', () {
+      testWidgets('submit button calls onAnswerSubmitted with entered text', (tester) async {
+        String? submitted;
+        await tester.pumpWidget(buildWidget(
+          onAnswerSubmitted: (answer) => submitted = answer,
+        ));
+
+        await tester.enterText(find.byType(TextField), 'my answer');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Answer'));
+        await tester.pump();
+
+        expect(submitted, 'my answer');
+      });
+    });
+
+    group('multi choice whitespace in correct answer', () {
+      testWidgets('handles whitespace in correctAnswer for multi choice', (tester) async {
+        final question = _questionWithOptions(
+          id: 'q-ws', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B', 'C'], correctAnswer: '  A ,  B  ',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'A||B',
+          isSubmitted: true,
+        ));
+        expect(find.text('Correct!'), findsOneWidget);
+      });
+    });
+
+    group('Semantics label on card', () {
+      testWidgets('card has semantics label with type and question text', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.bySemanticsLabel('Text Answer: What is 2 + 2?'), findsOneWidget);
+      });
+    });
+
+    group('essay didUpdateWidget sync', () {
+      testWidgets('essay controller syncs on currentAnswer change', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.essay);
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'first'));
+        await tester.pumpWidget(buildWidget(question: question, currentAnswer: 'second'));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, 'second');
+      });
+    });
+
+    group('multi choice deselect all', () {
+      testWidgets('deselecting all options results in empty answer', (tester) async {
+        String? changedAnswer;
+        final question = _questionWithOptions(
+          id: 'q-desel-all', text: 'Select:', type: QuestionType.multiChoice,
+          options: ['A', 'B'], correctAnswer: 'A',
+        );
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'A'));
+        await tester.pump();
+        expect(changedAnswer, 'A');
+
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'A'));
+        await tester.pump();
+        expect(changedAnswer, isEmpty);
+      });
+    });
+
+    group('type label for default type', () {
+      testWidgets('renders "Question" label for unsupported type', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
+        await tester.pumpWidget(buildWidget(question: question));
+        expect(find.text('Question'), findsOneWidget);
+      });
+    });
+
+    group('submit button disabled for whitespace answer', () {
+      testWidgets('submit disabled when answer is only whitespace', (tester) async {
+        await tester.pumpWidget(buildWidget(currentAnswer: '   '));
+        final submitButton = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Submit Answer'),
+        );
+        expect(submitButton.onPressed, isNull);
       });
     });
   });

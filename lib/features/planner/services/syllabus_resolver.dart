@@ -1,8 +1,8 @@
 import '../../../core/errors/result.dart';
 import '../../../core/errors/exceptions.dart';
-import '../../../core/data/repositories/topic_repository.dart';
-import '../../../core/data/repositories/mastery_graph_repository.dart';
-import '../../../core/data/repositories/question_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../../core/data/models/topic_model.dart';
 import '../../../core/data/models/topic_dependency_model.dart';
 import '../../../core/data/models/question_model.dart';
@@ -129,9 +129,8 @@ class SyllabusResolver {
   Future<Result<List<Question>>> getQuestionsForTopic(String topicId) async {
     try {
       await _questionRepository.init();
-      final result = await _questionRepository.getAll();
-      if (result.isFailure) return Result.failure(result.error);
-      final questions = result.data!
+      final allQuestions = await _questionRepository.getAll();
+      final questions = allQuestions
           .where((q) => q.topicId == topicId)
           .toList();
       return Result.success(questions);
@@ -145,9 +144,7 @@ class SyllabusResolver {
   ) async {
     try {
       await _questionRepository.init();
-      final allResult = await _questionRepository.getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      final allQuestions = allResult.data!;
+      final allQuestions = await _questionRepository.getAll();
       final result = <String, List<Question>>{};
       for (final topicId in topicIds) {
         result[topicId] = allQuestions

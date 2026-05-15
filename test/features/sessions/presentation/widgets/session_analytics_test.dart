@@ -80,7 +80,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('0'), findsAtLeastNWidgets(7));
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
     });
   });
 
@@ -182,7 +182,7 @@ void main() {
       expect(find.byType(TweenAnimationBuilder<double>), findsWidgets);
     });
 
-    testWidgets('bar chart shows empty state bars with low opacity', (tester) async {
+    testWidgets('bar chart shows bars for all days even without sessions', (tester) async {
       await tester.pumpWidget(buildTestApp(
         const SessionAnalyticsWidget(
           sessions: [],
@@ -190,8 +190,7 @@ void main() {
         ),
       ));
 
-      final zeroCountBars = find.text('0');
-      expect(zeroCountBars, findsAtLeastNWidgets(7));
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
     });
   });
 
@@ -478,6 +477,49 @@ void main() {
       ));
 
       for (var i = 0; i < 3; i++) {
+        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
+      }
+    });
+  });
+
+  group('SessionAnalyticsWidget - reduceMotion', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('uses Container bars when reduceMotion is true', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+          reduceMotion: true,
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+    });
+
+    testWidgets('sessions outside daysToShow window are excluded from counts', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf.subtract(const Duration(days: 10))),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 1,
+          daysToShow: 7,
+          asOf: asOf,
+        ),
+      ));
+      await tester.pump();
+
+      for (var i = 0; i < 7; i++) {
         final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }

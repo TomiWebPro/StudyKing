@@ -2,17 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/conversation_message_model.dart';
 import 'package:studyking/core/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
-import 'package:studyking/core/data/repositories/conversation_repository.dart';
-import 'package:studyking/core/data/repositories/lesson_repository.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/study_session_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/study_session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 
 class FakeConversationRepository extends ConversationRepository {
@@ -79,6 +79,7 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async {
     return '{"goals":["Learn"],"sections":[{"title":"Intro","duration":10,"type":"explanation"}],"checkpoints":["ck"],"estimatedDifficulty":2}';
   }
@@ -90,6 +91,7 @@ class FakeLlmService extends LlmService {
     String? systemPrompt,
     ConversationMemory? memory,
     List<Map<String, String>>? history,
+    String feature = 'general',
   }) async* {
     yield 'Tutor response';
   }

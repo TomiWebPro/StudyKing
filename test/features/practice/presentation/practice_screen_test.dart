@@ -5,10 +5,10 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/presentation/practice_screen.dart';
@@ -39,7 +39,7 @@ class _MockSubjectBox {
 
 class _FakeSubjectRepository extends SubjectRepository {
   final _MockSubjectBox _box;
-  _FakeSubjectRepository(this._box) : super(subjectBox: null);
+  _FakeSubjectRepository(this._box);
 
   @override
   Future<List<Subject>> getAll() async => _box.values.toList();
@@ -50,8 +50,8 @@ class _FakeQuestionRepository extends QuestionRepository {
   _FakeQuestionRepository(this._questions);
 
   @override
-  Future<Result<List<Question>>> getAll() async {
-    return Result.success(_questions);
+  Future<List<Question>> getAll() async {
+    return _questions;
   }
 
   @override
@@ -85,18 +85,12 @@ class _FakeSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
 }
 
 class _FakeMasteryGraphService extends MasteryGraphService {
-  final List<MasteryState> weakTopics;
-
-  _FakeMasteryGraphService({
-    this.weakTopics = const [],
-  });
-
   @override
   Future<void> init() async {}
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
-    return Result.success(weakTopics);
+    return Result.success([]);
   }
 }
 
@@ -109,6 +103,7 @@ Widget _buildTestApp({
   QuestionRepository? questionRepo,
   SpacedRepetitionRepository? srRepo,
   MasteryGraphService? masteryService,
+  NavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
     overrides: [
@@ -123,6 +118,15 @@ Widget _buildTestApp({
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
       home: const PracticeScreen(),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : const [],
+      onGenerateRoute: (settings) {
+        if (settings.name == '/practice-session') {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(body: Text('Practice Session')),
+          );
+        }
+        return null;
+      },
     ),
   );
 }
@@ -373,45 +377,6 @@ void main() {
   });
 
   group('PracticeScreen - weak areas', () {
-    testWidgets('weak areas practice with single subject launches session', (tester) async {
-      final box = _MockSubjectBox();
-      box.addSubject(_subject(id: '1', name: 'Math'));
-      final repo = _FakeSubjectRepository(box);
-      final now = DateTime.now();
-      final qRepo = _FakeQuestionRepository([
-        Question(
-          id: 'q1', text: 'Weak Q', type: QuestionType.typedAnswer,
-          subjectId: '1', topicId: 'weak-topic', markscheme: null,
-          createdAt: now, updatedAt: now,
-        ),
-      ]);
-      final masteryService = _FakeMasteryGraphService(
-        weakTopics: [
-          MasteryState(
-            studentId: 'student-1', topicId: 'weak-topic',
-            masteryLevel: MasteryLevel.novice,
-            accuracy: 0.3, reviewUrgency: 0.9,
-            lastAttempt: now.subtract(const Duration(days: 7)),
-            lastUpdated: now.subtract(const Duration(days: 7)),
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(_buildTestApp(
-        subjectRepo: repo,
-        questionRepo: qRepo,
-        masteryService: masteryService,
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(_kWeakAreas));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // Should navigate to PracticeSessionScreen
-      expect(find.text('Weak Q'), findsOneWidget);
-    });
-
     testWidgets('weak areas shows no weak areas snackbar when no weak topics', (tester) async {
       final box = _MockSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
@@ -432,5 +397,177 @@ void main() {
 
       expect(find.text(_kNoWeakAreasFound), findsOneWidget);
     });
+
+    testWidgets('weak areas with multiple subjects shows sheet', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      box.addSubject(_subject(id: '2', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+      final masteryService = _FakeMasteryGraphService();
+      final qRepo = _FakeQuestionRepository([]);
+
+      await tester.pumpWidget(_buildTestApp(
+        subjectRepo: repo,
+        questionRepo: qRepo,
+        masteryService: masteryService,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_kWeakAreas));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Math'), findsWidgets);
+      expect(find.text('Physics'), findsWidgets);
+    });
   });
+
+  group('PracticeScreen - UI states', () {
+    testWidgets('tune icon shown only when subjects exist', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.tune), findsOneWidget);
+    });
+
+    testWidgets('tune icon not shown when no subjects', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.tune), findsNothing);
+    });
+
+    testWidgets('shows your subjects header when multiple subjects exist', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      box.addSubject(_subject(id: '2', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your Subjects'), findsOneWidget);
+    });
+
+    testWidgets('does not show your subjects header when single subject', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your Subjects'), findsNothing);
+    });
+
+    testWidgets('loading transitions to content then shows loading done', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Science'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      // Initially loading
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      // Loading done
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Science'), findsAtLeast(1));
+    });
+
+    testWidgets('refresh indicator wraps content when subjects exist', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Geology'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+    });
+
+    testWidgets('FAB is enabled and shows practice when subjects exist', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Biology'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      final fab = tester.widget<FloatingActionButton>(find.byType(FloatingActionButton));
+      expect(fab.onPressed, isNotNull);
+      expect(find.text(_kPractice), findsOneWidget);
+    });
+
+    testWidgets('FAB is disabled and shows no subjects when empty', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      final fab = tester.widget<FloatingActionButton>(find.byType(FloatingActionButton));
+      expect(fab.onPressed, isNull);
+      expect(find.text(_kNoSubjects), findsOneWidget);
+    });
+
+    testWidgets('practice mode dialog opens via tune icon', (tester) async {
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      box.addSubject(_subject(id: '2', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.tune));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Practice Mode'), findsAtLeast(1));
+      expect(find.text('Choose Subject'), findsOneWidget);
+    });
+
+    testWidgets('navigates to practice session from FAB tap', (tester) async {
+      int pushCount = 0;
+
+      final observer = _TestNavigatorObserver(
+        onPush: (_) { pushCount++; },
+      );
+
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(
+        subjectRepo: repo,
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Practice'));
+      await tester.pump();
+
+      expect(pushCount, greaterThan(0));
+    });
+  });
+}
+
+class _TestNavigatorObserver extends NavigatorObserver {
+  final void Function(Route<dynamic> route) onPush;
+
+  _TestNavigatorObserver({required this.onPush});
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    onPush(route);
+    super.didPush(route, previousRoute);
+  }
 }

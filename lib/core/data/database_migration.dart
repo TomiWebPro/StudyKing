@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/logger.dart';
+import 'hive_box_names.dart';
 
 /// Migration for StudyKing Hive database
 /// Handles schema updates and ensures robust data persistence
@@ -36,11 +37,11 @@ class DatabaseMigration {
 
     try {
       // Migrate questions that might be missing subjectId
-      final questionBox = Hive.box<Map<String, dynamic>>('questions');
+      final questionBox = Hive.box<Map<String, dynamic>>(HiveBoxNames.questions);
       await _migrateQuestionSubjectId(questionBox);
 
       // Migrate lessons that might be missing subjectId
-      final lessonBox = Hive.box<Map<String, dynamic>>('lessons');
+      final lessonBox = Hive.box<Map<String, dynamic>>(HiveBoxNames.lessons);
       await _migrateLessonSubjectId(lessonBox);
 
       _logger.i('Migration v1 completed successfully');
@@ -71,14 +72,14 @@ class DatabaseMigration {
     try {
       // Validate all required boxes exist
       final boxes = [
-        'topics',
-        'questions',
-        'answers',
-        'sources',
-        'attempts',
-        'lessonBlocks',
-        'lessons',
-        'sessions',
+        HiveBoxNames.topics,
+        HiveBoxNames.questions,
+        HiveBoxNames.answers,
+        HiveBoxNames.sources,
+        HiveBoxNames.attempts,
+        HiveBoxNames.lessonBlocks,
+        HiveBoxNames.lessons,
+        HiveBoxNames.sessions,
       ];
 
       final missingBoxes = <String>[];
