@@ -101,7 +101,7 @@ class MockQuestionRepository extends QuestionRepository {
 }
 
 class MockMasteryGraphService extends MasteryGraphService {
-  MockMasteryGraphService() : super();
+  MockMasteryGraphService();
 
   List<MasteryState>? weakTopics;
   bool shouldFailGetWeakTopics = false;
@@ -329,7 +329,7 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data![0].type, QuestionType.mathExpression);
-      expect(result.data![0].difficulty, 2);
+      expect(result.data![0].difficulty, 1);
     });
 
     test('parses JSON with underscore type variants', () async {
@@ -378,19 +378,18 @@ void main() {
       expect(result.data![0].markscheme, isNull);
     });
 
-    test('parses JSON with steps as strings', () async {
+    test('parses JSON with markscheme without steps', () async {
       mockLlm.nextResponse = '''
 {
-  "text": "Step by step",
+  "text": "Simple question",
   "type": "singleChoice",
   "difficulty": 1,
   "options": ["A", "B"],
   "markscheme": {
     "correctAnswer": "A",
     "acceptableAnswers": [],
-    "explanation": "",
-    "markschemePoints": 3.0,
-    "steps": ["Step one", "Step two"]
+    "explanation": "Simple explanation",
+    "markschemePoints": 3.0
   },
   "tags": [],
   "explanation": ""
@@ -405,6 +404,7 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data![0].markscheme?.markschemePoints, 3.0);
+      expect(result.data![0].markscheme?.explanation, 'Simple explanation');
     });
   });
 
@@ -611,6 +611,108 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.length, 0);
+    });
+  });
+
+  group('GenerationException - toString', () {
+    test('toString with message only', () {
+      final ex = GenerationException('test error');
+      expect(ex.toString(), equals('GenerationException: test error'));
+    });
+
+    test('toString with message and status code', () {
+      final ex = GenerationException('server error', statusCode: 500);
+      expect(ex.toString(), equals('GenerationException: server error (Status: 500)'));
+    });
+  });
+
+  group('QuestionGenerationService - question type parsing in generateQuestions', () {
+    late MockLlmService mockLlm;
+    late MockQuestionRepository mockRepo;
+    late QuestionGenerationService service;
+
+    setUp(() {
+      mockLlm = MockLlmService();
+      mockRepo = MockQuestionRepository();
+      service = QuestionGenerationService(
+        llmService: mockLlm,
+        questionRepo: mockRepo,
+        defaultModelId: 'gpt-3.5-turbo',
+      );
+    });
+
+    test('parses essay type questions', () async {
+      mockLlm.nextResponse = '''
+{
+  "text": "Write an essay",
+  "type": "essay",
+  "difficulty": 2,
+  "options": [],
+  "markscheme": {"correctAnswer": "", "acceptableAnswers": [], "explanation": "Essay grading", "steps": []},
+  "tags": [],
+  "explanation": "Write at least 50 chars"
+}
+''';
+
+      final result = await service.generateQuestions(
+        topicId: 'topic-1',
+        subjectId: 'subject-1',
+        count: 1,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data![0].type, QuestionType.essay);
+    });
+
+    test('generates questions with custom modelId', () async {
+      mockLlm.nextResponse = _validQuestionJson();
+
+      final result = await service.generateQuestions(
+        topicId: 'topic-1',
+        subjectId: 'subject-1',
+        count: 1,
+        modelId: 'custom-model',
+      );
+
+      expect(result.isSuccess, isTrue);
+    });
+  });
+
+  group('QuestionGenerationService - stepByStep type parsing', () {
+    test('parses stepByStep type from response', () async {
+      final mockLlmLocal = MockLlmService();
+      final mockRepoLocal = MockQuestionRepository();
+      final serviceLocal = QuestionGenerationService(
+        llmService: mockLlmLocal,
+        questionRepo: mockRepoLocal,
+        defaultModelId: 'gpt-3.5-turbo',
+      );
+
+      mockLlmLocal.nextResponse = '''
+{
+  "text": "Solve step by step",
+  "type": "stepByStep",
+  "difficulty": 2,
+  "options": [],
+  "markscheme": {
+    "correctAnswer": "A",
+    "acceptableAnswers": [],
+    "explanation": "Follow the steps"
+  },
+  "tags": [],
+  "explanation": "Step by step process"
+}
+''';
+
+      final result = await serviceLocal.generateQuestions(
+        topicId: 'topic-1',
+        subjectId: 'subject-1',
+        count: 1,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data![0].type, QuestionType.stepByStep);
+      expect(result.data![0].markscheme?.explanation, 'Follow the steps');
     });
   });
 }

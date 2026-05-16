@@ -729,6 +729,25 @@ void main() {
       });
     });
   });
+
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalGroup wrapping the settings list',
+        (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('renders interactive tiles that are keyboard-reachable',
+        (tester) async {
+      await tester.pumpWidget(buildSettingsScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ListTile), findsAtLeastNWidgets(1));
+      expect(find.byType(SwitchListTile), findsAtLeastNWidgets(1));
+    });
+  });
 }
 
 class _MockHttpOverride extends HttpOverrides {

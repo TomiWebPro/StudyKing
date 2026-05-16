@@ -49,6 +49,9 @@ dependencies:
   # Image picker
   image_picker: ^1.0.7
 
+  # File picker
+  file_picker: ^7.0.2
+
   # Calendar
   table_calendar: ^3.0.9
 

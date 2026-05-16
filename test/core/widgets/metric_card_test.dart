@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/widgets/gradient_container.dart';
-import 'package:studyking/core/widgets/metric_card.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 
 Widget wrapApp(Widget child) {
   return MaterialApp(
@@ -86,6 +85,35 @@ void main() {
       final style = valueText.style;
       expect(style?.color, equals(Colors.orange));
       expect(style?.fontWeight, equals(FontWeight.bold));
+    });
+
+    testWidgets('renders label text with style', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const MetricCard(
+          icon: Icons.star,
+          value: '5',
+          label: 'Rating',
+          accent: Colors.amber,
+        ),
+      ));
+
+      final labelText = tester.widget<Text>(find.text('Rating'));
+      expect(labelText.style, isNotNull);
+      expect(labelText.style!.fontSize, greaterThan(0));
+    });
+
+    testWidgets('renders within GradientContainer', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const MetricCard(
+          icon: Icons.check,
+          value: '1',
+          label: 'Test',
+          accent: Colors.green,
+        ),
+      ));
+
+      expect(find.byType(MetricCard), findsOneWidget);
+      expect(find.byType(GradientContainer), findsOneWidget);
     });
   });
 }

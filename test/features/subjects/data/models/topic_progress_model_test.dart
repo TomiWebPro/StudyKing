@@ -27,6 +27,14 @@ void main() {
         expect(progress.correctAnswers, 15);
         expect(progress.averageTimeMs, 45000.0);
       });
+
+      test('accepts zero or negative averageTimeMs', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          averageTimeMs: -1.0,
+        );
+        expect(progress.averageTimeMs, -1.0);
+      });
     });
 
     group('accuracy', () {
@@ -52,6 +60,14 @@ void main() {
         );
         expect(progress.accuracy, 1.0);
       });
+
+      test('returns 0 when more correct than answered (should not happen)', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          questionsAnswered: 5, correctAnswers: 10,
+        );
+        expect(progress.accuracy, 2.0);
+      });
     });
 
     group('toJson', () {
@@ -66,6 +82,17 @@ void main() {
         expect(json['questionsAnswered'], 10);
         expect(json['correctAnswers'], 8);
         expect(json['averageTimeMs'], 30000.0);
+        expect(json['lastUpdated'], lastUpdated.toIso8601String());
+      });
+
+      test('serializes default values', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final json = progress.toJson();
+        expect(json['questionsAnswered'], 0);
+        expect(json['correctAnswers'], 0);
+        expect(json['averageTimeMs'], 0.0);
         expect(json['lastUpdated'], lastUpdated.toIso8601String());
       });
     });
@@ -97,6 +124,30 @@ void main() {
         expect(progress.correctAnswers, 0);
         expect(progress.averageTimeMs, 0.0);
       });
+
+      test('handles null optional fields', () {
+        final json = {
+          'topicId': 't1',
+          'lastUpdated': lastUpdated.toIso8601String(),
+          'questionsAnswered': null,
+          'correctAnswers': null,
+          'averageTimeMs': null,
+        };
+        final progress = TopicProgress.fromJson(json);
+        expect(progress.questionsAnswered, 0);
+        expect(progress.correctAnswers, 0);
+        expect(progress.averageTimeMs, 0.0);
+      });
+
+      test('handles int averageTimeMs by converting to double', () {
+        final json = {
+          'topicId': 't1',
+          'lastUpdated': lastUpdated.toIso8601String(),
+          'averageTimeMs': 30000,
+        };
+        final progress = TopicProgress.fromJson(json);
+        expect(progress.averageTimeMs, 30000.0);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -111,6 +162,18 @@ void main() {
         expect(restored.questionsAnswered, original.questionsAnswered);
         expect(restored.correctAnswers, original.correctAnswers);
         expect(restored.averageTimeMs, original.averageTimeMs);
+        expect(restored.lastUpdated, original.lastUpdated);
+      });
+
+      test('preserves default values through roundtrip', () {
+        final original = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final restored = TopicProgress.fromJson(original.toJson());
+        expect(restored.questionsAnswered, 0);
+        expect(restored.correctAnswers, 0);
+        expect(restored.averageTimeMs, 0.0);
+        expect(restored.lastUpdated, original.lastUpdated);
       });
     });
 
@@ -121,6 +184,10 @@ void main() {
         );
         final copy = progress.copyWith();
         expect(copy.topicId, progress.topicId);
+        expect(copy.lastUpdated, progress.lastUpdated);
+        expect(copy.questionsAnswered, progress.questionsAnswered);
+        expect(copy.correctAnswers, progress.correctAnswers);
+        expect(copy.averageTimeMs, progress.averageTimeMs);
       });
 
       test('updates specified fields', () {
@@ -135,6 +202,44 @@ void main() {
         expect(copy.correctAnswers, 4);
         expect(copy.lastUpdated, later);
         expect(copy.topicId, 't1');
+      });
+
+      test('updates all fields at once', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final later = DateTime(2026, 6, 1);
+        final copy = progress.copyWith(
+          topicId: 't2',
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          averageTimeMs: 5000.0,
+          lastUpdated: later,
+        );
+        expect(copy.topicId, 't2');
+        expect(copy.questionsAnswered, 10);
+        expect(copy.correctAnswers, 8);
+        expect(copy.averageTimeMs, 5000.0);
+        expect(copy.lastUpdated, later);
+      });
+
+      test('original is not mutated by copyWith', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          questionsAnswered: 3, correctAnswers: 2,
+        );
+        progress.copyWith(questionsAnswered: 10);
+        expect(progress.questionsAnswered, 3);
+        expect(progress.correctAnswers, 2);
+      });
+
+      test('preserves averageTimeMs when not specified', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          averageTimeMs: 12345.0,
+        );
+        final copy = progress.copyWith(questionsAnswered: 1);
+        expect(copy.averageTimeMs, 12345.0);
       });
     });
 

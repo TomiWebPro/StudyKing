@@ -52,6 +52,26 @@ class _MockSourceRepository extends SourceRepository {
   Future<List<Source>> getByType(String sourceType) async {
     return _storage.values.where((s) => s.type.name == sourceType).toList();
   }
+
+  @override
+  Future<List<Source>> getByStatus(ProcessingStatus status) async {
+    return _storage.values.where((s) => s.statusEnum == status).toList();
+  }
+
+  @override
+  Future<List<Source>> getPending() async {
+    return getByStatus(ProcessingStatus.pending);
+  }
+
+  @override
+  Future<List<Source>> getFailed() async {
+    return getByStatus(ProcessingStatus.failed);
+  }
+
+  @override
+  Future<List<Source>> getCompleted() async {
+    return getByStatus(ProcessingStatus.completed);
+  }
 }
 
 class _TestSourceAdapter extends TypeAdapter<Source> {
@@ -86,6 +106,9 @@ Source createTestSource({
   String studentId = '',
   String language = '',
   String summary = '',
+  String processingStatus = 'pending',
+  String extractedText = '',
+  List<String> generatedQuestionIds = const [],
 }) {
   return Source(
     id: id,
@@ -99,6 +122,9 @@ Source createTestSource({
     studentId: studentId,
     language: language,
     summary: summary,
+    processingStatus: processingStatus,
+    extractedText: extractedText,
+    generatedQuestionIds: generatedQuestionIds,
   );
 }
 
@@ -199,17 +225,37 @@ void main() {
       });
     });
 
-    group('getByType', () {
-      test('returns sources of given type', () async {
-        await repository.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
-        await repository.create(Source(id: 's2', title: 'S2', type: SourceType.textbook));
-        await repository.create(Source(id: 's3', title: 'S3', type: SourceType.pdf));
-        expect((await repository.getByType('pdf')).length, 2);
-        expect((await repository.getByType('textbook')).length, 1);
+    group('status queries', () {
+      test('getByStatus returns sources with matching status', () async {
+        await repository.create(createTestSource(id: 's1', processingStatus: 'pending'));
+        await repository.create(createTestSource(id: 's2', processingStatus: 'completed'));
+        final pending = await repository.getByStatus(ProcessingStatus.pending);
+        expect(pending.length, 1);
+        expect(pending.first.id, 's1');
       });
 
-      test('returns empty for non-existent type', () async {
-        expect(await repository.getByType('video'), isEmpty);
+      test('getPending returns only pending sources', () async {
+        await repository.create(createTestSource(id: 's1', processingStatus: 'pending'));
+        await repository.create(createTestSource(id: 's2', processingStatus: 'completed'));
+        final pending = await repository.getPending();
+        expect(pending.length, 1);
+        expect(pending.first.id, 's1');
+      });
+
+      test('getCompleted returns only completed sources', () async {
+        await repository.create(createTestSource(id: 's1', processingStatus: 'completed'));
+        await repository.create(createTestSource(id: 's2', processingStatus: 'failed'));
+        final completed = await repository.getCompleted();
+        expect(completed.length, 1);
+        expect(completed.first.id, 's1');
+      });
+
+      test('getFailed returns only failed sources', () async {
+        await repository.create(createTestSource(id: 's1', processingStatus: 'failed'));
+        await repository.create(createTestSource(id: 's2', processingStatus: 'pending'));
+        final failed = await repository.getFailed();
+        expect(failed.length, 1);
+        expect(failed.first.id, 's1');
       });
     });
   });

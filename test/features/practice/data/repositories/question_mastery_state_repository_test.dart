@@ -74,7 +74,7 @@ class _MockQuestionMasteryStateRepository extends QuestionMasteryStateRepository
     if (state != null) {
       return Result.success(state);
     }
-    final newState = QuestionMasteryState.initial(
+    final newState = QuestionMasteryState.initial(now: DateTime.now(),
         studentId: studentId, questionId: questionId);
     await _fakeBox.put(key, newState);
     return Result.success(newState);

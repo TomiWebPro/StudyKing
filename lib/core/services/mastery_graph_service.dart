@@ -25,10 +25,10 @@ class MasteryGraphService {
     QuestionEvaluationRepository? questionEvaluationRepo,
     MasteryCalculationService? calculationService,
   })  : _repository = repository ?? MasteryGraphRepository(
-          masteryStateRepo: masteryStateRepo,
-          questionMasteryRepo: questionMasteryRepo,
-          topicDependencyRepo: topicDependencyRepo,
-          questionEvaluationRepo: questionEvaluationRepo,
+          masteryStateRepo: masteryStateRepo ?? MasteryStateRepository(),
+          questionMasteryRepo: questionMasteryRepo ?? QuestionMasteryStateRepository(),
+          topicDependencyRepo: topicDependencyRepo ?? TopicDependencyRepository(),
+          questionEvaluationRepo: questionEvaluationRepo ?? QuestionEvaluationRepository(),
         ),
         masteryStateRepo = masteryStateRepo ?? MasteryStateRepository(),
         questionMasteryRepo = questionMasteryRepo ?? QuestionMasteryStateRepository(),
@@ -75,13 +75,14 @@ class MasteryGraphService {
     }
 
     final questionMastery = questionMasteryResult.data!;
-    questionMastery.recordAttempt(
+    final updated = questionMastery.recordAttempt(
       isCorrect: isCorrect,
       confidence: confidence,
       timeSpentMs: timeSpentMs,
+      now: DateTime.now(),
     );
 
-    return questionMasteryRepo.updateQuestionMasteryState(questionMastery);
+    return questionMasteryRepo.updateQuestionMasteryState(updated);
   }
 
   Future<Result<MasteryState>> getTopicMastery(

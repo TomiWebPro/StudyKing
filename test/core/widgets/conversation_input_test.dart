@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
 
@@ -276,6 +277,80 @@ void main() {
       );
 
       expect(find.byType(ConversationInput), findsOneWidget);
+    });
+
+    testWidgets('Semantics wraps TextField when semanticsLabel provided', (tester) async {
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(wrapApp(
+        ConversationInput(
+          controller: controller,
+          hintText: 'Message',
+          sendTooltip: 'Send',
+          onSend: () {},
+          semanticsLabel: 'Chat input',
+        ),
+      ));
+
+      final semantics = find.ancestor(
+        of: find.byType(TextField),
+        matching: find.byWidgetPredicate((w) => w is Semantics),
+      );
+      expect(semantics, findsAtLeast(1));
+    });
+
+    testWidgets('send button has tooltip semantics', (tester) async {
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(wrapApp(
+        ConversationInput(
+          controller: controller,
+          hintText: 'Message',
+          sendTooltip: 'Send message',
+          onSend: () {},
+        ),
+      ));
+
+      expect(find.byTooltip('Send message'), findsOneWidget);
+    });
+
+    testWidgets('Ctrl+Enter keyboard shortcut triggers onSend', (tester) async {
+      final controller = TextEditingController();
+      bool sent = false;
+
+      await tester.pumpWidget(wrapApp(
+        ConversationInput(
+          controller: controller,
+          hintText: 'Message',
+          sendTooltip: 'Send',
+          onSend: () => sent = true,
+        ),
+      ));
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+
+      expect(sent, isTrue);
+    });
+
+    testWidgets('does not render CircularProgressIndicator when not loading', (tester) async {
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(wrapApp(
+        ConversationInput(
+          controller: controller,
+          hintText: 'Message',
+          sendTooltip: 'Send',
+          onSend: () {},
+        ),
+      ));
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
 }

@@ -158,6 +158,48 @@ class SettingsBox {
     );
   }
 
+  SettingsBox copyWith({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeModeEnum,
+    double? fontSize,
+    int? totalSessionCount,
+    int? totalStudyTimeMs,
+    int? totalQuestions,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
+  }) {
+    return SettingsBox(
+      apiKey: apiKey ?? this.apiKey,
+      apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
+      selectedModel: selectedModel ?? this.selectedModel,
+      themeMode: themeModeEnum?.index ?? themeMode,
+      fontSize: fontSize ?? this.fontSize,
+      totalSessionCount: totalSessionCount ?? this.totalSessionCount,
+      totalStudyTimeMs: totalStudyTimeMs ?? this.totalStudyTimeMs,
+      totalQuestions: totalQuestions ?? this.totalQuestions,
+      studyRemindersEnabled: studyRemindersEnabled ?? this.studyRemindersEnabled,
+      requestTimeoutSeconds: requestTimeoutSeconds ?? this.requestTimeoutSeconds,
+      sessionDurationMinutes: sessionDurationMinutes ?? this.sessionDurationMinutes,
+      highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
+      largeTouchTargets: largeTouchTargets ?? this.largeTouchTargets,
+      reduceMotion: reduceMotion ?? this.reduceMotion,
+      revisionRemindersEnabled: revisionRemindersEnabled ?? this.revisionRemindersEnabled,
+      lessonNotificationsEnabled: lessonNotificationsEnabled ?? this.lessonNotificationsEnabled,
+      overworkAlertsEnabled: overworkAlertsEnabled ?? this.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? this.planAdjustmentNotificationsEnabled,
+    );
+  }
+
   @override
   String toString() {
     return 'SettingsBox(apiKey: (hidden), themeMode: $themeModeEnum, fontSize: ${fontSize.round()}px, highContrast: $highContrastEnabled)';

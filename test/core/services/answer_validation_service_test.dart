@@ -297,7 +297,7 @@ void main() {
       final correctResult = service.validateAnswerForQuestion(question, 'answer');
       final wrongResult = service.validateAnswerForQuestion(question, 'wrong');
       expect(correctResult.explanation, 'Correct!');
-      expect(wrongResult.explanation, 'Incorrect');
+      expect(wrongResult.explanation, 'Incorrect.');
     });
 
     test('handles empty options list', () {
@@ -349,6 +349,295 @@ void main() {
       expect(service.validateAnswerForQuestion(questions[0], 'answer 1').isCorrect, isTrue);
       expect(service.validateAnswerForQuestion(questions[1], 'A').isCorrect, isTrue);
       expect(service.validateAnswerForQuestion(questions[2], 'A,B').isCorrect, isTrue);
+    });
+
+    test('validates step by step answer with steps', () {
+      final question = Question(
+        id: 'q-steps',
+        text: 'Steps',
+        type: QuestionType.stepByStep,
+        subjectId: 's1',
+        topicId: 't1',
+        markscheme: Markscheme(
+          questionId: 'q-steps',
+          correctAnswer: 'answer',
+          steps: [
+            MarkSchemeStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+          ],
+        ),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      final result = service.validateAnswerForQuestion(question, 'no steps here');
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateMCQAnswer multi-choice partial match returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'A,B,C');
+      final result = service.validateWithMarkscheme('A,B', QuestionType.multiChoice, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateMCQAnswer multi-choice exact match with different order', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'A,B');
+      final result = service.validateWithMarkscheme('B,A', QuestionType.multiChoice, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateMathExpression normalizes spaces', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'x=2');
+      final result = service.validateWithMarkscheme('x = 2', QuestionType.mathExpression, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateMathExpression ignores case differences', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'X*2=4');
+      final result = service.validateWithMarkscheme('x*2=4', QuestionType.mathExpression, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateMathExpression detects different expressions', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'x+2=4');
+      final result = service.validateWithMarkscheme('x*2=4', QuestionType.mathExpression, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateMathExpression returns incorrect for wrong answer', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'x=2');
+      final result = service.validateWithMarkscheme('x=3', QuestionType.mathExpression, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateMathExpression returns incorrect when markscheme is null', () {
+      final result = service.validateWithMarkscheme('x=2', QuestionType.mathExpression, null);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateEssayAnswer empty answer returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = service.validateWithMarkscheme('', QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateEssayAnswer answer between 10 and 50 chars returns incorrect but not empty', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = service.validateWithMarkscheme('Exactly 20 chars!!', QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateEssayAnswer answer exactly 10 chars returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final tenChars = 'A' * 10;
+      final result = service.validateWithMarkscheme(tenChars, QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateEssayAnswer answer just under 10 chars returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final nineChars = 'A' * 9;
+      final result = service.validateWithMarkscheme(nineChars, QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateCanvasDrawing with non-empty valid data returns correct', () {
+      final canvasData = [{'x': 10.0, 'y': 20.0}];
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateCanvasDrawing(canvasData, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateCanvasDrawing with empty data returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateCanvasDrawing([], markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateCanvasDrawing with empty map returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateCanvasDrawing([{}], markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateStepByStep with markscheme checks all steps', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '', steps: [
+        MarkSchemeStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+        MarkSchemeStep(stepNumber: '2', requiredAnswer: 'step2', points: 1.0),
+      ]);
+      final result = QuestionAnswerValidator.validateStepByStep('includes step1 and step2', markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateStepByStep with missing steps returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '', steps: [
+        MarkSchemeStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+        MarkSchemeStep(stepNumber: '2', requiredAnswer: 'step2', points: 1.0),
+      ]);
+      final result = QuestionAnswerValidator.validateStepByStep('only step1', markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateStepByStep with null markscheme returns incorrect', () {
+      final result = QuestionAnswerValidator.validateStepByStep('answer', null);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateWithEvaluation with correctLabel shows correct label', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: '42',
+      );
+      final result = service.validateWithEvaluation(evaluation, '42', correctLabel: 'Perfect!');
+      expect(result.feedback, 'Perfect!');
+    });
+
+    test('validateWithEvaluation with incorrectPrefix shows prefixed message', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+        explanation: 'Capital city',
+      );
+      final result = service.validateWithEvaluation(evaluation, 'London', incorrectPrefix: 'Wrong.');
+      expect(result.feedback, 'Wrong. Capital city');
+    });
+
+    test('validateWithEvaluation no explanation uses correctAnswerIs format', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+      );
+      final result = service.validateWithEvaluation(evaluation, 'London');
+      expect(result.feedback, contains('Paris'));
+    });
+
+    test('validateWithEvaluation stepBased with steps scores correctly', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'answer',
+        evaluationType: EvaluationType.stepBased,
+        steps: [
+          EvaluationStep(stepNumber: '1', requiredAnswer: 'step1', points: 1.0),
+          EvaluationStep(stepNumber: '2', requiredAnswer: 'step2', points: 2.0),
+        ],
+      );
+      final result = service.validateWithEvaluation(evaluation, 'has step2 but not step1');
+      expect(result.score, greaterThan(0.0));
+    });
+
+    test('validateWithEvaluation with acceptable answer match via acceptableAnswers', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Red',
+        acceptableAnswers: ['blue', 'green'],
+        evaluationType: EvaluationType.acceptableMatch,
+      );
+      final result = service.validateWithEvaluation(evaluation, 'blue');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithEvaluation fuzzy match similar answer', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'the quick brown fox',
+        evaluationType: EvaluationType.fuzzyMatch,
+      );
+      final result = service.validateWithEvaluation(evaluation, 'the quick brown fox jumps over');
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateWithEvaluation fuzzy match dissimilar answer', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'mitosis cell division',
+        evaluationType: EvaluationType.fuzzyMatch,
+      );
+      final result = service.validateWithEvaluation(evaluation, 'quantum physics');
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('graphDrawing question type returns special handling message', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('', QuestionType.graphDrawing, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('fileUpload question type returns special handling message', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('', QuestionType.fileUpload, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('audioRecording question type returns special handling message', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('', QuestionType.audioRecording, markscheme);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('validateWithMarkscheme multiChoice with null markscheme returns incorrect', () {
+      final result = service.validateWithMarkscheme('A', QuestionType.multiChoice, null);
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('custom messages used when provided', () {
+      final customMessages = ValidationMessages(
+        markschemeUnavailable: 'Custom MS unavailable',
+        pleaseProvideAnswer: 'Custom provide answer',
+        correct: 'Custom correct!',
+        incorrect: 'Custom incorrect.',
+        answerTooShort: 'Custom too short',
+        goodResponseLength: 'Custom good length',
+        answerTooShortForCredit: 'Custom too short for credit',
+        noDrawingDetected: 'Custom no drawing',
+        invalidDrawingData: 'Custom invalid drawing',
+        drawingDetected: 'Custom drawing detected',
+        allStepsIdentified: 'Custom all steps identified',
+        specialHandlingRequired: 'Custom special handling',
+      );
+      final serviceWithMessages = AnswerValidationService(messages: customMessages);
+      final question = _question(id: 'q-msgs', type: QuestionType.typedAnswer, correctAnswer: 'Answer');
+      final result = serviceWithMessages.validateAnswerForQuestion(question, 'wrong');
+      expect(result.explanation, 'Custom incorrect.');
+    });
+  });
+
+  group('ValidationMessages', () {
+    test('english defaults are pre-defined', () {
+      expect(ValidationMessages.english.correct, 'Correct!');
+      expect(ValidationMessages.english.incorrect, 'Incorrect.');
+      expect(ValidationMessages.english.markschemeUnavailable, 'No markscheme available');
+    });
+
+    test('someAnswersIncorrect with empty explanation returns fallback', () {
+      expect(ValidationMessages.english.someAnswersIncorrect(''), 'Some answers are incorrect');
+    });
+
+    test('someAnswersIncorrect with non-empty explanation returns explanation', () {
+      expect(ValidationMessages.english.someAnswersIncorrect('Custom msg'), 'Custom msg');
+    });
+
+    test('correctAnswerIs formats correctly', () {
+      expect(ValidationMessages.english.correctAnswerIs('42'), 'The correct answer is: 42');
+    });
+
+    test('allStepsFormat formats correctly', () {
+      expect(ValidationMessages.english.allStepsFormat(3), 'All 3 steps identified correctly!');
+    });
+
+    test('partialStepsFormat formats correctly', () {
+      expect(
+        ValidationMessages.english.partialStepsFormat(2, 5, 'step3, step4'),
+        'Identified 2 of 5 steps. Missing: step3, step4',
+      );
+    });
+
+    test('noStepsFormat formats correctly', () {
+      expect(
+        ValidationMessages.english.noStepsFormat('step1, step2'),
+        'No required steps found in your answer. Key steps to include: step1, step2',
+      );
+    });
+
+    test('allRequiredStepsMissing returns fallback', () {
+      expect(ValidationMessages.english.allRequiredStepsMissing(), 'Some required steps missing');
+    });
+
+    test('default constructor provides empty strings', () {
+      const msgs = ValidationMessages();
+      expect(msgs.correct, '');
+      expect(msgs.incorrect, '');
+      expect(msgs.markschemeUnavailable, '');
     });
   });
 }

@@ -1,146 +1,142 @@
-# Teaching Feature: Presentation-Layer Service Construction, Hardcoded Configuration, and Missing Provider Abstraction
+# [R] Refactor: Practice feature has mutable models, DI bypasses, hardcoded time dependencies, and inconsistent repository patterns
 
 ## Context
 
-The `teaching` feature (13 files, ~1700 lines) has significant architectural debt that undermines testability, configurability, and separation of concerns. Three interconnected problems exist: (1) the presentation layer (`tutor_screen.dart`) constructs heavyweight services inline with `new` and embeds a hardcoded model ID, (2) the feature completely lacks a `providers/` layer (the only feature among 8 that have one), forcing the UI screen to manage service lifecycle directly, and (3) `ConversationManager` embeds 100+ lines of LLM system prompts as raw multi-line strings inside business logic, making them untestable, unversionable, and impossible to tune without code changes.
+A deep audit of `lib/features/practice/` (40 source files, 43 test files) revealed several architectural and code-quality issues that degrade maintainability, testability, and correctness. Below is a consolidated issue covering the most impactful findings.
 
-## Affected Files
+---
 
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart` | 59–76 | `_initializeTutor()` constructs `MasteryGraphService()` inline via `new` and hardcodes `modelId: 'openai/gpt-4o-mini'` |
-| `lib/features/teaching/services/conversation_manager.dart` | 108–138, 189–223, 286–303 | Three LLM system prompts embedded as raw multi-line strings in `generateLessonPlan()`, `_buildTutorPrompt()`, and `generateSummary()` |
-| `lib/features/teaching/services/conversation_manager.dart` | 58–78 | `get messages` getter reconstructs `ConversationMessage` objects from raw `Map<String, dynamic>` instead of propagating typed objects through the memory layer |
-| `lib/features/teaching/services/tutor_service.dart` | 65 | `manager.initialize(...)` called without `await` — unawaited future means initialization may race with `generateLessonPlan()` on line 72 |
-| *(missing)* `lib/features/teaching/providers/` | — | Feature has no `providers/` directory; 8 of 14 features in the project have one |
+## Issue A: `QuestionMasteryState` has 13 mutable non-final fields — breaks immutability pattern
 
-## Detailed Findings
+**File:** `lib/features/practice/data/models/question_mastery_state_model.dart`
 
-### 1. Inline Service Construction in Presentation Layer
+**What:** Fields like `correctCount`, `currentStreak`, `masteryLevel`, `lastAttempt`, etc. are declared `non-final` and are mutated in-place by `recordAttempt()` (line 89).
 
-`lib/features/teaching/presentation/tutor_screen.dart:59-76`:
+**Rationale:**
+- Immutable models are the project convention elsewhere. Mutable models break Riverpod state-change detection (same object reference → no notification).
+- `recordAttempt()` calls `DateTime.now()` internally (lines 94, 101, 106, 131, 154) making the logic non-deterministic and untestable without controlling the clock.
+- Hive auto-saves every mutation to disk, which is unexpected for a model object.
 
-```dart
-void _initializeTutor() {
-  if (widget.tutorService != null) {
-    _tutorService = widget.tutorService!;
-  } else {
-    final llmService = ref.read(llmServiceProvider);
-    final masteryService = MasteryGraphService();    // ← `new` — no DI
-    final modelId = 'openai/gpt-4o-mini';            // ← hardcoded string
+**Affected:** `lib/features/practice/data/models/question_mastery_state_model.dart`
 
-    _tutorService = TutorService(
-      database: database,
-      llmService: llmService,
-      masteryService: masteryService,
-      modelId: modelId,
-    );
-  }
-  _startLesson();
-}
-```
+**Acceptance Criteria:**
+- [ ] All fields changed to `final`.
+- [ ] `QuestionMasteryState` becomes immutable (use `copyWith` or a sealed class for mutations).
+- [ ] `recordAttempt()` returns a new instance instead of mutating.
+- [ ] `DateTime` parameters injected instead of calling `DateTime.now()`.
 
-**Problems:**
-- **`MasteryGraphService()` called with `new` directly in the UI layer.** This service depends on Hive boxes and database initialization. The presentation layer should not know how to construct infrastructure services.
-- **Untestable.** Widget tests cannot stub `MasteryGraphService` because it is hard-constructed. The `widget.tutorService` parameter provides an escape hatch, but only if *every* caller passes it — currently no caller does, meaning production code always hits the `else` branch.
-- **Hardcoded model ID.** `'openai/gpt-4o-mini'` is embedded in presentation code. Changing the model (per user preference, per environment, per A/B test) requires editing source code. The settings feature already has an `LLMSettingsModel` for managing model selection — this hardcoded value bypasses that entirely.
+---
 
-### 2. Missing Provider Layer
+## Issue B: Dependency injection is bypassed in providers, screens, and services
 
-`lib/features/teaching/` has no `providers/` subdirectory. The `TutorScreen` is a `ConsumerStatefulWidget` but uses `ref.read` only for `llmServiceProvider` and `database` (both core/global providers). There is no Riverpod provider encapsulating:
+### B1. Direct `SubjectRepository()` instantiation
 
-- `TutorService` lifecycle (it is created and stored on `_TutorServiceState`)
-- `ConversationManager` state (stored as `_manager` on the state)
-- Lesson summary / stats (computed inline in `_buildSummaryStats`)
+**Files:**
+- `lib/features/practice/providers/practice_providers.dart` (line 29)
+- `lib/features/practice/presentation/practice_screen.dart` (line 52)
 
-This forces all business orchestration into the screen's state class, contributing to its 354-line size and making it impossible to test tutoring logic without widget tests.
+Both manually construct `SubjectRepository()` instead of receiving it through a Riverpod provider.
 
-### 3. Embedded LLM Prompts in ConversationManager
+**Rationale:** Creates a hidden coupling to Hive initialization. The provider test also must deal with a real Hive-backed instance.
 
-`lib/features/teaching/services/conversation_manager.dart` contains **three large prompt templates** as raw multi-line strings:
+### B2. `StudentIdService()` used as a service locator in 4 places
 
-| Method | Lines | Purpose |
-|---|---|---|
-| `generateLessonPlan()` | 108–138 | 31-line JSON-format lesson plan prompt |
-| `_buildTutorPrompt()` | 189–223 | 35-line tutor system prompt with phase/pace branching |
-| `generateSummary()` | 286–303 | 18-line lesson summary prompt |
+**Files:**
+- `lib/features/practice/presentation/practice_screen.dart` (line 127)
+- `lib/features/practice/presentation/practice_session_screen.dart` (line 229)
+- `lib/features/practice/services/practice_data_service.dart` (line 64)
+- `lib/features/practice/services/practice_session_service.dart` (line 71)
 
-**Problems:**
-- **Not testable.** Prompts cannot be unit-tested independently. Changing a prompt requires editing production code, and there is no way to verify prompt correctness without running the full LLM integration.
-- **Not configurable/versionable.** Prompts cannot be swapped per model, locale, or experiment. They are baked into the binary.
-- **Scattered control logic.** The `_buildTutorPrompt()` method contains branch logic (`switch (_adaptivePace)`, `switch (_phase)`) that mixes prompt engineering with conversation flow control. Changing the prompt structure requires understanding the surrounding state machine.
+All call `StudentIdService().getStudentId()` — a service locator anti-pattern.
 
-### 4. Raw Map Typing in Memory Layer
+**Rationale:** Hard to mock in tests, couples every layer to a global singleton.
 
-`conversation_manager.dart:58-78`:
+### B3. Default parameter concretes (`param ?? ConcreteClass()`)
 
-```dart
-List<ConversationMessage> get messages {
-  final history = _memory.getHistory();  // returns List<Map<String, String>>
-  final result = <ConversationMessage>[];
-  for (int i = 0; i < history.length; i++) {
-    final msg = history[i];
-    final role = msg['role'] == 'assistant'
-        ? MessageRole.tutor
-        : msg['role'] == 'system'
-            ? MessageRole.system
-            : MessageRole.student;
-    result.add(ConversationMessage(
-      id: '${sessionId}_msg_$i',
-      sessionId: sessionId,
-      role: role,
-      type: MessageType.text,
-      content: msg['content'] ?? '',
-      timestamp: _sessionStartTime.add(Duration(seconds: i)),
-    ));
-  }
-  return result;
-}
-```
+**Files:**
+- `lib/features/practice/services/spaced_repetition_service.dart` (lines 60–64)
+- `lib/features/practice/data/repositories/spaced_repetition_repository.dart` (lines 15–23)
+- `lib/features/practice/data/repositories/mastery_graph_repository.dart` (lines 24–32)
 
-The `ConversationMemory` class stores messages as `List<Map<String, String>>` instead of typed `ConversationMessage` objects. Each read requires manual reconstruction with string-based role parsing (`'assistant'`, `'system'`, `'student'`). This is error-prone (typo in `'assistant'`?), loses type safety, and duplicates the serialization logic already present in `ConversationMessageModel`.
+Pattern: `param ?? ConcreteClass()` — if the caller forgets to pass a dependency, a real Hive-backed object is silently created.
 
-### 5. Unawaited Future in `tutor_service.dart`
+**Rationale:** Silent fallback to real implementations can cause test pollution and mask missing DI wiring.
 
-`lib/features/teaching/services/tutor_service.dart:65`:
+### B4. `MasteryGraphRepository.test()` constructor creates fresh Hive-backed sub-repos
 
-```dart
-manager.initialize(       // ← no await
-  studentId: studentId,
-  topicTitle: topicTitle,
-  subjectId: subjectId,
-  topicId: topicId,
-);
+**File:** `lib/features/practice/data/repositories/mastery_graph_repository.dart` (lines 34–48)
 
-final lessonPlan = await manager.generateLessonPlan(...);  // line 72
-```
+The `.test()` named constructor accepts fake boxes but then creates fresh instances of `MasteryStateRepository()`, `QuestionMasteryStateRepository()`, etc. — which will try to open real Hive boxes.
 
-`initialize()` is a `Future<void>` method (defined at `conversation_manager.dart:86`), but `startLesson()` does not `await` it. If the async initialization in `_loadPersistedMessages()` takes longer than a microtask, `generateLessonPlan()` may execute before initialization completes, producing a race condition.
+**Rationale:** Defeats the purpose of a test constructor. Sub-repositories should be injected.
 
-## Rationale
+**Acceptance Criteria (for all of B):**
+- [ ] Introduce a `subjectRepositoryProvider` Riverpod provider and use it everywhere.
+- [ ] All `new SubjectRepository()` calls replaced with provider reads or constructor injection.
+- [ ] `StudentId` injected as a parameter or via a Riverpod provider instead of `StudentIdService().getStudentId()`.
+- [ ] All `param ?? ConcreteClass()` defaults removed; make parameters required.
+- [ ] `MasteryGraphRepository.test()` accepts pre-configured sub-repositories.
 
-1. **Testability.** The tutor screen cannot be unit-tested for tutoring logic — every test must be a widget integration test. Extracting providers allows pure-logic testing of the tutoring state machine.
+---
 
-2. **Configurability.** The hardcoded `'openai/gpt-4o-mini'` model ID prevents per-user model selection. The settings feature already manages model preferences; this bypasses that system entirely.
+## Issue C: Hardcoded time dependencies make services untestable
 
-3. **Prompt maintainability.** Embedding 84 lines of LLM prompts inside Dart business logic creates a tight coupling between prompt content and code structure. Prompts should be extractable to dedicated files or configuration, enabling independent iteration without touching service code.
+**Files:**
+- `lib/features/practice/services/practice_session_service.dart` (lines 31–37)
+- `lib/features/practice/presentation/practice_session_screen.dart` (lines 82)
 
-4. **Type safety.** Reconstructing typed `ConversationMessage` objects from `Map<String, dynamic>` on every read is fragile, duplicates serialization logic, and discards the compiler's ability to catch errors.
+Both use `Timer.periodic(const Duration(seconds: 1), ...)` and `DateTime.now()` directly.
 
-5. **Race condition.** The unawaited `initialize()` future in `tutor_service.dart` is a latent bug that may cause the first lesson prompt to execute before persisted messages are loaded.
+**Rationale:**
+- Cannot be mocked or injected → timer tests must run in real time.
+- `BuildContext` passed to the service for `formatDurationFromContext` couples it to Flutter's widget tree.
+- Two independent 1-second timers track the same elapsed time (service + screen), duplicating logic.
 
-## Acceptance Criteria
+**Affected:**
+- `lib/features/practice/services/practice_session_service.dart`
+- `lib/features/practice/presentation/practice_session_screen.dart`
 
-- [ ] **AC1 — Provider layer created:** Add `lib/features/teaching/providers/` with Riverpod providers for `TutorService` and `ConversationManager` lifecycle, so the screen uses `ref.watch`/`ref.read` instead of storing services on `State`.
+**Acceptance Criteria:**
+- [ ] `Timer` factory injected into `PracticeSessionService` (e.g., via an abstract `TimerFactory`).
+- [ ] `DateTime.now()` replaced with a `Clock` abstraction.
+- [ ] Screen timer removed; the service timer is the single source of truth.
+- [ ] `BuildContext` removed from the service; duration formatting pushed to the UI layer.
 
-- [ ] **AC2 — No `new MasteryGraphService()` in presentation:** Remove the inline `MasteryGraphService()` construction from `tutor_screen.dart:_initializeTutor()`. Pass it through the provider layer or as a constructor parameter. The screen should accept dependencies, not construct them.
+---
 
-- [ ] **AC3 — Model ID is configurable, not hardcoded:** Remove the hardcoded `'openai/gpt-4o-mini'` string from `tutor_screen.dart`. The model ID should come from settings (via `LLMSettingsModel`) or be injected via provider, not embedded in UI code.
+## Issue D: Repository pattern is inconsistent
 
-- [ ] **AC4 — LLM prompts extracted from ConversationManager:** Move the three embedded prompt strings (`generateLessonPlan`, `_buildTutorPrompt`, `generateSummary`) out of `conversation_manager.dart` into dedicated prompt files (e.g., `lib/features/teaching/services/prompts/`) or a configuration object. `ConversationManager` should receive prompts as injected dependencies.
+**Findings:**
+- Some repositories extend `core/data/repository.dart` → `Repository<T>`, others manage their own `Box<>` fields directly.
+- `SessionRepository` (in `sessions/`) uses `Box<String>` with JSON serialization — completely different pattern.
+- No abstract repository interfaces exist anywhere (no `lib/domain/` directory) → Clean Architecture violation.
+- File/class naming mismatch: `answer_repository.dart` contains `QuestionChoiceRepository`.
 
-- [ ] **AC5 — ConversationMemory uses typed messages:** Refactor `ConversationMemory.getHistory()` to return `List<ConversationMessage>` instead of `List<Map<String, String>>`, eliminating the manual map-to-object reconstruction in `ConversationManager.messages`.
+**Rationale:** Without a uniform contract, swapping storage backends or writing cross-cutting repository logic requires changes to each repository individually.
 
-- [ ] **AC6 — `initialize()` is awaited:** Add `await` before `manager.initialize(...)` in `tutor_service.dart:65` to eliminate the race condition.
+**Affected:**
+- `lib/features/practice/data/repositories/answer_repository.dart` (naming mismatch)
+- `lib/features/sessions/data/repositories/session_repository.dart` (different pattern)
+- All 8 repository files under `lib/features/practice/data/repositories/` (partial base-class usage)
 
-- [ ] **AC7 — Existing tests pass:** All existing tests in `test/features/teaching/` continue to pass after the refactor. No regressions.
+**Acceptance Criteria:**
+- [ ] Rename file to `question_choice_repository.dart` or class to `AnswerRepository` to resolve mismatch.
+- [ ] Define abstract repository interfaces in a `lib/domain/repositories/` directory.
+- [ ] All repositories consistently extend `Repository<T>` or implement the domain interface.
+
+---
+
+## Issue E: Provider tests only check type identity, no override coverage
+
+**File:** `test/features/practice/providers/practice_providers_test.dart`
+
+**What:** Uses `ProviderContainer` directly without any `overrides`. Tests only assert `isA<T>()`. The `practiceDataServiceProvider` test spins up a real `SubjectRepository()`.
+
+**Rationale:** Per `AGENTS.md`, provider tests should use `ProviderScope` with `overrides`. Current tests don't verify that overrides work or that provider chains resolve correctly.
+
+**Affected:** `test/features/practice/providers/practice_providers_test.dart`
+
+**Acceptance Criteria:**
+- [ ] Rewrite tests using `ProviderScope` with `overrides`.
+- [ ] Test that overridden providers are returned correctly.
+- [ ] Test provider dependency chains.

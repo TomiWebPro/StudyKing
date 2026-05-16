@@ -1,85 +1,131 @@
-# Structural Deficiencies in Test File Placement and Coverage Gaps Across Feature Model Tests
+# Test Coverage & Quality: `lib/core/` Has 19 Untested Files, Orphaned Tests, and Shallow Coverage Patterns
 
 ## Context
 
-The project defines strict test file placement conventions in `AGENTS.md` requiring every source file under `lib/features/*/` to have a corresponding test file at the mirrored path under `test/features/*/`. Audit of the lessons feature (and cross-feature analysis) reveals three structural categories of deficiencies: **misplaced tests**, **entirely untested models**, and **missing barrel/structural tests**.
+A comprehensive audit of all 63 source files in `lib/core/` and all ~307 test files across the project reveals that while `lib/features/` has near-perfect file-level test coverage (191/192 files mapped), the `lib/core/` layer — containing foundational services, data layer, utilities, and providers — has **19 source files with zero test coverage**. Additionally, several existing tests are orphaned, misplaced, or superficially shallow, and error-handler coverage is fragmented across 6 overlapping files totaling ~2,890 lines.
 
 ---
 
-## Issue 1: Misplaced Feature Model Tests in `test/core/`
+## Issue A: 19 Untested Source Files in `lib/core/` (Critical)
 
-**Problem:** `Lesson` and `LessonBlock` models live in `lib/features/lessons/data/models/` but their dedicated unit tests reside in `test/core/data/models/` instead of `test/features/lessons/data/models/`. This violates the AGENTS.md convention and creates a discoverability problem.
+### Services (6 files — highest business risk)
 
-**Affected files:**
-- `test/core/data/models/lesson_model_test.dart` — tests `lib/features/lessons/data/models/lesson_model.dart`
-- `test/core/data/models/lesson_block_model_test.dart` — tests `lib/features/lessons/data/models/lesson_block_model.dart`
+| Source | Lines | Key Logic Missing Tests |
+|---|---|---|
+| `lib/core/services/notification_service.dart` | ~120 | Singleton with `init()`, `showNotification()`, 7 notification-type methods (century, streak, accuracy, etc.), `cancel()`, `cancelAll()` |
+| `lib/core/services/localization_service.dart` | ~80 | Wraps all 40+ AppLocalizations getter methods; used across every screen |
+| `lib/core/services/conversation_memory.dart` | ~150 | In-memory conversation buffer with automatic persistence to repository, context-length trimming, load/sync from repo |
+| `lib/core/services/badge_service.dart` | ~100 | `getBadges()`, `checkAndUnlockBadges()` — business rules for century/streak/accuracy badge unlock logic |
+| `lib/core/services/progress_export_service.dart` | 351 | PDF/CSV/JSON export, file I/O, share integration — largest untested file in core |
+| `lib/core/services/llm_usage_meter.dart` | ~80 | `LlmUsageMeter` + `LlmUsageRecord` — token tracking across sessions |
 
-**Rationale:** The AGENTS.md table mandates `lib/features/*/models/*.dart` → `test/features/*/models/*_test.dart` (data models at `test/features/*/data/models/*_test.dart`). Placing feature-specific model tests under `test/core/` breaks the mirror convention, confuses developers, and is inconsistent with how every other feature places its tests.
+### Providers (2 files — state management over Hive)
 
----
-
-## Issue 2: Entirely Missing Dedicated Model Tests Across Five Features
-
-**Problem:** Twenty-two data model files across five features have zero dedicated unit tests. These models define core business objects with JSON serialization, Hive annotations, `copyWith`, and edge case handling — all untested in isolation. They are only exercised incidentally as dependencies of repository/service tests, meaning model-specific behaviors (null fallbacks, serialization roundtrips, edge cases) are not validated.
-
-**Affected files:**
-
-| Feature | Untested Model Files (source) |
+| Source | Key Logic Missing Tests |
 |---|---|
-| **planner** (8 models) | `engagement_nudge_model.dart`, `task_model.dart`, `student_availability_model.dart`, `roadmap_model.dart`, `plan_adherence_model.dart`, `pending_action_model.dart`, `plan_adherence_metric_model.dart`, `personal_learning_plan_model.dart` |
-| **questions** (2 models) | `markscheme_model.dart`, `question_evaluation_model.dart` |
-| **teaching** (2 models) | `conversation_message_model.dart`, `tutor_session_model.dart` |
-| **subjects** (2 models) | `topic_progress_model.dart`, `topic_dependency_model.dart` |
-| **ingestion** (1 model) | `source_model.dart` |
+| `lib/core/providers/app_providers.dart` | `SettingsController` (197 lines, 17 public methods) + 10+ Riverpod providers |
+| `lib/core/providers/llm_providers.dart` | 4 Riverpod providers for LLM state |
 
-**Rationale:** Each of these models has nontrivial fields, JSON serialization, Hive type adapters, `copyWith` methods, and nullable field fallbacks. Without dedicated unit tests:
-- Regressions in serialization format go undetected.
-- Null field / missing key edge cases are unchecked.
-- Hive adapter registration breaks silently.
-- `copyWith` field omissions or bugs are not caught.
+### Data Layer (2 files)
 
-Well-tested peer models (e.g. the practice feature's 6 model files with 6 dedicated test files at `test/features/practice/data/models/`) demonstrate the expected pattern.
+| Source | Key Logic Missing Tests |
+|---|---|
+| `lib/core/data/repository.dart` | Generic `Repository<T>` base class wrapping Hive CRUD operations |
+| `lib/core/data/hive_box_names.dart` | 33 Hive box name constants (trivial but useful for completeness) |
+
+### Config / Constants (4 files)
+
+| Source | Key Logic Missing Tests |
+|---|---|
+| `lib/core/config/locale_config.dart` | `AppLocale` enum + `resolveLocale()`, `buildDropdownItems()` |
+| `lib/core/constants/app_config.dart` | `AppConfig.bootstrap()`, `redactSensitiveValues()`, `AppConstants` singleton |
+| `lib/core/constants/token_pricing_config.dart` | `TokenPricingConfig` with `calculateTotalCost()` |
+| `lib/core/constants/bottom_sheet_constants.dart` | Single constant (low priority) |
+
+### Utilities (2 files)
+
+| Source | Key Logic Missing Tests |
+|---|---|
+| `lib/core/utils/logger.dart` | `Logger` class with 4 log levels |
+| `lib/core/utils/responsive.dart` | `ResponsiveUtils` (150+ lines), `ScreenBreakpoint` enum, `ResponsiveContext` extension |
+
+### Extensions (1 file)
+
+| Source | Key Logic Missing Tests |
+|---|---|
+| `lib/core/extensions/iterable_extensions.dart` | `IterableExtension.firstOrNull` |
+
+**Risk**: These 19 files represent the **shared foundation** of the app. Untested foundational code means bugs here cascade silently into all features without detection.
 
 ---
 
-## Issue 3: Missing Barrel / Structural Tests for 10 of 14 Features
+## Issue B: Existing Tests That Are Too Shallow or Superficial
 
-**Problem:** Only 4 of 14 features have a barrel test at the feature root (e.g. `test/features/dashboard/dashboard_barrel_test.dart`). The remaining 10 features lack any test verifying that their barrel export file loads without error.
+### B1 — `mastery_graph_service_test.dart` (332 lines)
+Every public method is tested, but **all assertions use only `isSuccess` / `isNotNull` / `isA<List>`** — never validating actual returned values, error propagation, or edge cases. The mock always returns valid data; failure paths are never exercised.
 
-**Features missing barrel tests:**
-`focus_mode`, `ingestion`, `lessons`, `llm_tasks`, `mentor`, `planner`, `sessions`, `settings`, `subjects`, `teaching`
+### B2 — `mastery_integration_service_test.dart` (281 lines)
+Same shallow pattern as B1. Checks only that methods return success — never verifies specific values, error cases, or boundary conditions.
 
-**Rationale:** A barrel test (typically named `<feature>_test.dart` or `<feature>_barrel_test.dart`) validates that all exports resolve, preventing accidental broken imports when refactoring. Features that already have one (`dashboard`, `practice`, `questions`, `quickguide`) show this is a lightweight, high-value practice.
+### B3 — `pdf_ingestion_service_test.dart` (54 lines)
+Only tests the guard clause ("returns failure when API key is empty"). The actual PDF text extraction / parsing logic is never tested. Tests exist in form only.
+
+### B4 — `hive_type_ids_test.dart` (13 lines)
+Single test that calls `validateHiveTypeIds()` and asserts no exception. Tests nothing meaningful about the type ID registry.
+
+### B5 — `database_service_test.dart` (163 lines)
+Only tests `HiveDatabaseService.init()` — verifies all repositories are registered. Never tests actual database operations (CRUD, migration rollback, error recovery).
 
 ---
 
-## Issue 4: Stale Deprecated Test File in Subjects
+## Issue C: Orphaned, Misplaced, and Fragmented Tests
 
-**Problem:** `test/features/subjects/models/subject_model_test.dart` contains only a deprecation notice ("moved to `test/core/data/models/subject_model_test.dart`") and has been left as dead code. This file should be removed.
+### C1 — Orphaned: `test/core/services/evaluation_adapter_service_test.dart`
+This file contains a single placeholder assertion (`expect(true, isTrue)`). The source class `EvaluationAdapterService` does not exist anywhere in `lib/`. This test is dead code — either remove it or replace it with a real test if the source was accidentally deleted.
 
-**Affected file:**
-- `test/features/subjects/models/subject_model_test.dart`
+### C2 — Misplaced: `test/core/routes/main_screen_test.dart`
+Tests `MainScreen` which is defined in `lib/main.dart`, not in `lib/core/routes/`. Per the project's own convention, this test should live at `test/main_screen_test.dart` (root test level).
 
-**Rationale:** Dead test files waste developer attention, produce misleading test counts, and can cause confusion about where tests actually live.
+### C3 — Fragmented: Error handler tests split across 6 files
+
+| File | Lines |
+|---|---|
+| `test/core/errors/handlers_test.dart` | 909 |
+| `test/core/errors/handlers_coverage_test.dart` | 279 |
+| `test/core/errors/handlers_missing_exception_types_test.dart` | 301 |
+| `test/core/errors/handlers_duration_and_edge_cases_test.dart` | 430 |
+| `test/core/errors/app_error_handler_comprehensive_test.dart` | 734 |
+| `test/core/errors/error_conversion_edge_cases_test.dart` | 237 |
+| **Total** | **~2,890** |
+
+These 6 files largely overlap, with some adding coverage for specific exception types (SyllabusException, PlanGenerationException, etc.) that were missing from the main test. They should be **consolidated into 2-3 focused files** — one for `Result<T>` and error conversion, one for `handleError`/`handleSyncError` UI behavior, and optionally one for edge-case exception types. The fragmentation makes it hard to know where to add new exception tests and creates maintenance debt.
+
+---
+
+## Issue D: Naming Convention Violation (Minor)
+
+`test/features/dashboard/dashboard_barrel_test.dart` uses a `_barrel` suffix that no other feature follows. Rename to `dashboard_test.dart` for consistency with `focus_mode_test.dart`, `lessons_test.dart`, `mentor_test.dart`, etc.
+
+---
+
+## Rationale
+
+- **`lib/core/` is the shared foundation.** Every feature depends on it. Untested core code is the highest-leverage testing debt in the project.
+- **Shallow tests create false confidence.** A test that passes but never asserts meaningful values or exercises failure paths is worse than no test — it wastes CI time and gives a false sense of coverage.
+- **Fragmented test files increase maintenance cost.** When a new exception type is added, developers must hunt through 6 files to find where to add coverage.
+- **Orphaned tests signal code rot.** A test for a deleted class means the test suite is not being pruned, and coverage metrics are inflated.
 
 ---
 
 ## Acceptance Criteria
 
-1. **Lesson model tests moved:** Create `test/features/lessons/data/models/lesson_model_test.dart` and `test/features/lessons/data/models/lesson_block_model_test.dart` (relocated from `test/core/data/models/`). The originals at `test/core/data/models/` may remain if they still test core models, but must not test feature models.
-
-2. **New model tests added:** For each of the 15 untested model files in planner (8), questions (2), teaching (2), subjects (2), and ingestion (1), add a dedicated unit test file at `test/features/<feature>/data/models/<model>_test.dart` covering at minimum:
-   - Constructor with required fields
-   - Constructor with all fields
-   - `toJson` serialization
-   - `fromJson` deserialization (including missing keys)
-   - Serialization roundtrip (`toJson` → `fromJson`)
-   - `copyWith` (identity and field updates)
-   - Null/missing field edge cases
-   - Equality / hashCode
-
-3. **Barrel tests added:** Create barrel test files (`test/features/<feature>/<feature>_test.dart` or `<feature>_barrel_test.dart`) for each of the 10 missing features, verifying all exports resolve without error.
-
-4. **Stale file removed:** Delete `test/features/subjects/models/subject_model_test.dart`.
-
-5. **Verification:** Run `flutter test` and confirm all existing tests continue to pass, and new tests execute successfully.
+- [ ] **AC1**: Tests added for all 19 untested `lib/core/` files, prioritized:
+  - Priority P0 (must-have): `notification_service.dart`, `localization_service.dart`, `conversation_memory.dart`, `badge_service.dart`, `progress_export_service.dart`, `llm_usage_meter.dart`, `app_providers.dart` (SettingsController)
+  - Priority P1 (should-have): `repository.dart`, `llm_providers.dart`, `logger.dart`, `responsive.dart`, `locale_config.dart`
+  - Priority P2 (nice-to-have): `app_config.dart`, `token_pricing_config.dart`, `iterable_extensions.dart`, `hive_box_names.dart`, `bottom_sheet_constants.dart`
+- [ ] **AC2**: Deepen `mastery_graph_service_test.dart` and `mastery_integration_service_test.dart` to assert specific returned values and exercise error/failure paths (not just `isSuccess` / `isNotNull`)
+- [ ] **AC3**: Expand `pdf_ingestion_service_test.dart` beyond the API-key guard to test actual ingestion logic (or document why it cannot be unit-tested)
+- [ ] **AC4**: Either remove or replace `test/core/services/evaluation_adapter_service_test.dart`
+- [ ] **AC5**: Move `test/core/routes/main_screen_test.dart` to `test/main_screen_test.dart`
+- [ ] **AC6**: Consolidate the 6 error-handler test files into at most 3 focused files, ensuring no coverage regression
+- [ ] **AC7**: Rename `test/features/dashboard/dashboard_barrel_test.dart` to `dashboard_test.dart`

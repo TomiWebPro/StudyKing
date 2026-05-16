@@ -70,7 +70,8 @@ class DashboardScreen extends ConsumerWidget {
       },
       child: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
-        child: Column(
+        child: FocusTraversalGroup(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const DashboardHeader(),
@@ -175,6 +176,7 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

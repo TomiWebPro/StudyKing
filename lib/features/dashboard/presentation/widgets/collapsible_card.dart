@@ -70,7 +70,6 @@ class CollapsibleCard extends ConsumerWidget {
       child: Column(
         children: [
           Semantics(
-            headingLevel: 2,
             button: true,
             expanded: !isCollapsed,
             child: InkWell(

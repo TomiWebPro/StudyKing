@@ -18,10 +18,9 @@ class SpacedRepetitionRepository {
     SpacedRepetitionService? service,
   })  : _questionRepo = questionRepo ?? QuestionRepository(),
         _service = service ?? SpacedRepetitionService(
-          questionRepo: questionRepo,
-          attemptRepo: attemptRepo,
+          questionRepo: questionRepo ?? QuestionRepository(),
+          attemptRepo: attemptRepo ?? AttemptRepository(),
         );
-
   Future<void> init() async {
     try {
       await _questionRepo.init();

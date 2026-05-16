@@ -386,4 +386,51 @@ void main() {
       expect(find.text('Explain gravity'), findsOneWidget);
     });
   });
+
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalGroup for keyboard navigation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: true),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(2));
+    });
+
+    testWidgets('suggested prompts are not focusable when hidden after interaction', (tester) async {
+      final llm = _FakeLlmService();
+      llm.chunks.add('Response');
+      await tester.pumpWidget(_buildTestApp(
+        screen: QuickGuideScreen(
+          llmService: llm,
+          showModeNavigation: false,
+        ),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
+
+      await tester.enterText(find.byType(TextField), 'Test');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ActionChip), findsNothing);
+    });
+
+    testWidgets('mode navigation has proper semantics', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: true),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('AI Tutor'), findsOneWidget);
+      expect(find.text('Mentor'), findsOneWidget);
+    });
+  });
 }

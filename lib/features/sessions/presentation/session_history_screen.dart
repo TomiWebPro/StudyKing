@@ -264,7 +264,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 tooltip: l10n.clearFilters,
               ),
             ),
-            PopupMenuButton<String>(
+            Semantics(
+              label: l10n.sessionHistoryExport,
+              button: true,
+              child: PopupMenuButton<String>(
             icon: const Icon(Icons.share),
             tooltip: l10n.sessionHistoryExport,
             onSelected: (value) => _handleExport(value),
@@ -319,12 +322,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 ),
               ),
             ],
-          ),
+              ),
+            ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
+          : FocusTraversalGroup(
+            child: Column(
               children: [
                 Container(
                   padding: ResponsiveUtils.screenPadding(context),
@@ -332,7 +337,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Wrap(
+                      FocusTraversalGroup(
+                        child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
                         children: [
@@ -366,6 +372,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                           ),
                         ],
                       ),
+                      ),
                     ],
                   ),
                 ),
@@ -398,7 +405,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 ),
               ],
             ),
-    );
+            ),
+        );
   }
 
   Widget _buildSummaryStat(BuildContext context, String label, String value, IconData icon) {
@@ -503,12 +511,27 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                     ),
                 ],
               ),
-              trailing: Text(
-                formatDurationFromContext(context, session.actualDuration),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formatDurationFromContext(context, session.actualDuration),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Semantics(
+                    label: l10n.deleteSession,
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                      tooltip: l10n.deleteSession,
+                      onPressed: () => _deleteSession(session),
+                    ),
+                  ),
+                ],
               ),
               isThreeLine: true,
             ),

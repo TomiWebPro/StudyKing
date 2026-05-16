@@ -32,7 +32,7 @@ class QuestionMasteryStateRepository {
         return Result.success(state);
       }
       final newState = QuestionMasteryState.initial(
-          studentId: studentId, questionId: questionId);
+          studentId: studentId, questionId: questionId, now: DateTime.now());
       await _box.put(key, newState);
       return Result.success(newState);
     } catch (e) {

@@ -291,7 +291,7 @@ void main() {
       });
 
       test('returns existing', () async {
-        final state = QuestionMasteryState.initial(studentId: 's1', questionId: 'q1');
+        final state = QuestionMasteryState.initial(studentId: 's1', questionId: 'q1', now: DateTime.now());
         await repository.updateQuestionMasteryState(state);
         final result = await repository.getQuestionMasteryState('s1', 'q1');
         expect(result.data?.questionId, 'q1');

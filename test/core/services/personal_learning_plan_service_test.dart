@@ -36,7 +36,7 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
-    return Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId));
+    return Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
   }
 
   @override
@@ -362,7 +362,7 @@ class _FailingMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async =>
-      Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId));
+      Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
 
   @override
   Future<Result<void>> updateQuestionMasteryState(QuestionMasteryState state) async => Result.success(null);

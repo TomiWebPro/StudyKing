@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/data/repositories/answer_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_choice_repository.dart';
 import 'package:studyking/features/practice/data/models/answer_model.dart';
 
 class _MockQuestionChoiceRepository extends QuestionChoiceRepository {

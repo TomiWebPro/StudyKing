@@ -874,4 +874,37 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('Keyboard accessibility', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('renders FocusTraversalGroup for keyboard navigation', (tester) async {
+      final repo = _FakeSessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('renders delete IconButton as keyboard alternative to Dismissible', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 600000,
+          type: SessionType.manual,
+        ),
+      ]);
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      expect(find.byType(Dismissible), findsOneWidget);
+    });
+  });
 }

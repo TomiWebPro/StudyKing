@@ -325,7 +325,8 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
+            FocusTraversalGroup(
+              child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: presets.map((m) {
@@ -336,6 +337,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
                   onSelected: (v) => setState(() => _selectedMinutes = m),
                 );
               }).toList(),
+            ),
             ),
             if (bp.isTablet) ...[
               const SizedBox(height: 8),

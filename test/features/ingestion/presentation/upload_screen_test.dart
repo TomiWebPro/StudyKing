@@ -1,21 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/pdf_ingestion_service.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+class _FakeLlmService extends LlmService {
+  _FakeLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
+
+  @override
+  Future<String> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    return '';
+  }
+}
+
 class _FakeContentPipeline extends ContentPipeline {
-  _FakeContentPipeline() : super(
-    ingestionService: PdfIngestionService(apiKey: 'test-key'),
-    sourceRepository: _FakeSourceRepo(),
-    topicRepository: _FakeTopicRepo(),
-  );
+  _FakeContentPipeline()
+      : super(
+          llmService: _FakeLlmService(),
+          sourceRepository: _FakeSourceRepo(),
+          topicRepository: _FakeTopicRepo(),
+          questionRepository: _FakeQuestionRepo(),
+        );
 
   bool processUploadCalled = false;
   String? lastTitle;
@@ -51,9 +70,16 @@ class _FakeSourceRepo extends SourceRepository {
   Future<void> init() async {}
   @override
   Future<void> create(Source source) async {}
+  @override
+  Future<void> save(String key, Source item) async {}
 }
 
 class _FakeTopicRepo extends TopicRepository {
+  @override
+  Future<void> init() async {}
+}
+
+class _FakeQuestionRepo extends QuestionRepository {
   @override
   Future<void> init() async {}
 }

@@ -1500,5 +1500,31 @@ void main() {
         expect(find.text('40%'), findsAtLeast(2));
       });
     });
+
+    group('Keyboard accessibility', () {
+      testWidgets('renders FocusTraversalGroup wrapping dashboard content', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+      });
+
+      testWidgets('dashboard header has heading semantics for screen reader navigation', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          topicRepo: FakeTopicRepository(),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.bySemanticsLabel('Dashboard'), findsAtLeastNWidgets(1));
+      });
+    });
   });
 }

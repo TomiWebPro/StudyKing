@@ -1,48 +1,70 @@
-# Broken Accessibility: Duplicate `NumericFocusOrder` Values Break Keyboard & Switch Navigation Across All Features
+# Systemic Hardcoded Color Values Break Dark Mode & Accessibility
 
 ## Context
 
-Every screen in StudyKing that uses `FocusTraversalOrder` with `NumericFocusOrder` assigns **duplicate order values** within the same `FocusTraversalGroup`. Because Flutter's focus traversal system uses `NumericFocusOrder` values as a strict ascending sequence (lower = earlier focus), duplicates cause **undefined, non-deterministic focus ordering**. This breaks keyboard tab navigation, screen reader scan mode, and switch-control sequential navigation — all core accessibility requirements.
+The codebase uses 30+ instances of hardcoded Material `Colors.*` constants instead of `Theme.of(context).colorScheme` or `AppTheme` helpers. In dark mode, these colors (e.g. `Colors.white` on `Colors.blue.shade50`, `Colors.black` strokes on dark canvases, `Colors.green` status badges) produce illegible contrast ratios and fail WCAG 2.1 AA compliance. This affects users with visual impairments, those using dark theme, and those relying on high-contrast mode.
 
-## Root Cause
-
-Developers copy-pasted `NumericFocusOrder(order: 1)` as the starting focus value in every `FocusTraversalGroup` without realizing that **each group must have globally unique order values across all children**. Instead of using `NumericFocusOrder`, most screens should simply rely on Flutter's **default lexical widget-order traversal** (which matches visual reading order) and use `FocusTraversalOrder` only when a non-lexical order is truly needed.
+The app already defines a theming system in `lib/core/theme/app_theme.dart` (with `lightTheme`, `darkTheme`, `highContrastLightTheme`, `highContrastDarkTheme`) and helper utilities like `AppTheme.progressColor()` — but many widgets bypass the theme entirely.
 
 ## Affected Files
 
-| File | Issue | Line(s) |
+| File | Issue | Lines |
 |---|---|---|
-| `lib/features/lessons/presentation/lesson_list_screen.dart` | Orders 1 used twice — once in the empty-state `FocusTraversalGroup` and once in the AppBar actions `FocusTraversalGroup`. In the populated-state ListView, the tutor button (AppBar action, order=1) competes with the first lesson item (order=2) even though they are in different `FocusTraversalGroup`s. Expected: no manual ordering needed at all — lexical order is correct. | 100–185 |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart` | `NumericFocusOrder(1)` used in both the AppBar actions (line 112) and the `BottomAppBar` row (line 151). The main-body lesson blocks start at order=1 as well (line 131). Three groups with order=1 causes focus to skip unpredictably. | 112, 131, 151 |
-| `lib/features/sessions/presentation/session_tracker_screen.dart` | No `FocusTraversalOrder` exists, but the screen uses `Semantics` on some InteractiveViewers without pairing with a `FocusTraversalGroup`. The `_buildRecentSessionsList` (line 420) wraps cards in `Semantics` with no focus ordering, causing tab navigation to skip entire card content areas. | 420–456 |
-| `lib/features/sessions/presentation/session_history_screen.dart` | No `FocusTraversalOrder` at all. The `Dismissible` items (line 452) are not keyboard-accessible — swipe-to-delete has no keyboard alternative. Filter buttons (date, subject) have no `FocusTraversalOrder`. The share menu `PopupMenuButton` (line 267) is not keyboard-navigable. | 267, 339, 452 |
-| `lib/features/planner/presentation/planner_screen.dart` | Heaviest offender. The `_buildStudyPlanTab` method applies `NumericFocusOrder` from 1–4 for course/days/hours/generate inputs (lines 273–369). But `_buildPendingActionsSection`, `_buildAdherenceBanner`, `_buildScheduledLessonsSection`, and `_buildDailyPlans` all render children **outside** any `FocusTraversalGroup`, making their interactive items unreachable or interleaved arbitrarily. `NumericFocusOrder(1)` is reused across multiple independent groups. | 253–396 |
-| `lib/features/settings/presentation/settings_screen.dart` | Every section resets order to 1: accessibility toggles start at 1, notification toggles start at 1, analytics tiles start at 1. Within the same `ListView`, focus hops erratically across the 6+ sections. The `_tile` helper method (line 217–228) skips `FocusTraversalOrder` when `order <= 0`, causing some tiles (e.g., about, sign-out) to receive no order at all, making them unfocusable by keyboard. | 39–197, 217–228 |
-| `lib/features/dashboard/presentation/dashboard_screen.dart` | No `FocusTraversalOrder` anywhere in the main scrollable body. All interactive cards (collapsible headers, InkWell for focus mode, planner card) rely on default widget-order traversal, which is fine — but the `CollapsibleCard` titles have `button: true` semantics (collapsible_card.dart:74) without integrating with focus traversal, causing screen readers to incorrectly announce collapsed content as interactive. | dashboad_screen.dart:78–174, collapsible_card.dart:72–93 |
+| `lib/features/questions/presentation/widgets/math_expression_widget.dart` | All colors hardcoded (`Colors.blue.shade50`, `Colors.blue[700]`, `Colors.teal[700]`, `Colors.deepOrange.shade700`, `Colors.green`, etc.) — completely unreadable in dark mode | 24, 26, 184, 189, 194, 223, 246, 260, 270, 285, 294, 315, 362-366 |
+| `lib/features/subjects/presentation/subject_detail_screen.dart` | `Colors.white` backgrounds and `Colors.red` buttons break in dark mode | 63, 91, 109, 117, 127, 235-236, 267 |
+| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | Status indicator colors hardcoded (`Colors.blue`, `Colors.green`, `Colors.red`, `Colors.orange`, `Colors.grey`) | 181-185, 265-267, 272, 276, 280, 284, 297, 302, 322 |
+| `lib/features/ingestion/presentation/upload_screen.dart` | SnackBar `backgroundColor: Colors.red` / `Colors.green` | 84, 117, 142, 151 |
+| `lib/features/settings/presentation/api_config_screen.dart` | Same SnackBar color pattern | 54, 78, 87, 104, 126, 133, 142 |
+| `lib/features/teaching/presentation/tutor_screen.dart` | `Colors.green` for correct count chip | 197 |
+| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | Hardcoded `Colors.green`/`Colors.orange`/`Colors.red` instead of `AppTheme.progressColor()` | 44-48 |
+| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | Stroke default `Colors.black` invisible on dark canvas | 290 |
+| `lib/core/widgets/metric_card.dart` | `Colors.grey` fallback instead of `colorScheme.onSurfaceVariant` | 46 |
+| `lib/core/widgets/animated_bar_chart.dart` | `Colors.blue` default accent | 18 |
 
 ## Rationale
 
-1. **WCAG 2.1 SC 2.4.3 (Focus Order)**: "If a Web page can be navigated sequentially and the navigation sequences affect meaning or operation, focusable components receive focus in an order that preserves meaning and operability." Duplicate `NumericFocusOrder` values violate this — focus jumps are unpredictable.
+The app already supports theme switching (light, dark, high-contrast variants) via `lib/core/theme/app_theme.dart`, and the settings feature includes a reduce-motion toggle. Hardcoded colors directly contradict the existing design system investment. Every new screen that uses raw `Colors.*` instead of `Theme.of(context).colorScheme.*` creates a regression point:
 
-2. **Platform compliance**: Both iOS and Android accessibility guidelines require predictable focus order. Flutter's `NumericFocusOrder` with duplicates creates a hard failure on automated a11y scanners (e.g., `flutter analyze --fatal-infrastructure` with `a11y` enabled, axe‑dev for web).
+1. **Dark mode becomes unusable** — light-on-light or dark-on-dark text is invisible.
+2. **High-contrast mode is defeated** — hardcoded colors bypass the contrastLevel parameter in `ColorScheme.fromSeed(contrastLevel: 1.0)`.
+3. **Maintenance burden** — fixing dark mode per-widget is more costly than a systematic sweep.
+4. **Accessibility non-compliance** — WCAG 2.1 AA requires a minimum 4.5:1 contrast ratio for normal text. Hardcoded light pastels on white backgrounds fail this.
 
-3. **Degraded experience for real users**: Students using switch-control, voice control (iOS Switch Control, Android Switch Access), or keyboard-only navigation (desktop web) cannot reliably navigate StudyKing. This includes students with motor disabilities who are a key demographic for an all-in-one study platform.
+## Proposed Fix Pattern
 
-4. **Copy-paste compounding**: The pattern of `NumericFocusOrder(order: 1)` was copied across features without understanding the semantics. Most screens don't need `NumericFocusOrder` at all — Flutter's default lexical ordering (based on widget tree position) is sufficient and correct.
+Replace each hardcoded color with the semantically equivalent theme value:
+
+| Hardcoded | Theme Replacement |
+|---|---|
+| `Colors.blue.shade50` / `Colors.grey[100]` (background tints) | `colorScheme.surfaceContainerHighest` or `colorScheme.surfaceVariant` |
+| `Colors.blue[700]`, `Colors.deepOrange.shade700`, etc. (foreground text/icons) | `colorScheme.primary`, `colorScheme.secondary`, `colorScheme.tertiary`, or `colorScheme.error` |
+| `Colors.red` / `Colors.green` (status/error) | `colorScheme.error` / `colorScheme.primary` or `colorScheme.tertiary` |
+| `Colors.white` (container backgrounds) | `colorScheme.surface` |
+| `Colors.black` (canvas stroke) | `colorScheme.onSurface` |
+| `Colors.grey` (fallback) | `colorScheme.onSurfaceVariant` |
+| `Colors.green` / `Colors.orange` / `Colors.red` (progress) | `AppTheme.progressColor(value, context)` |
+| Status colors (`Colors.blue`/`Colors.green`/`Colors.red`/`Colors.orange`/`Colors.grey`) | Add helper in `AppTheme` (e.g. `AppTheme.statusColor(status, context)`) mapping each status to the appropriate `colorScheme` role |
 
 ## Acceptance Criteria
 
-1. Remove all `NumericFocusOrder` annotations from `lesson_list_screen.dart`, `lesson_detail_screen.dart`, `session_tracker_screen.dart`, `session_history_screen.dart`, `planner_screen.dart`, and `settings_screen.dart` where the default widget-tree traversal order is already correct.
+1. **Math Expression Widget** (`math_expression_widget.dart`): Every `Colors.*` reference is replaced with `Theme.of(context).colorScheme.*` or a derived semantic color. Verify rendered output in both light and dark mode — all operators, subscripts, numbers, and solution containers must be legible with ≥4.5:1 contrast.
 
-2. Where `NumericFocusOrder` is genuinely needed (e.g., a floating action button should be reached before a bottom-app-bar item), ensure **every order value within a single `FocusTraversalGroup` is unique** and respects visual reading order.
+2. **Subject Detail Screen** (`subject_detail_screen.dart`): `Colors.white` and `Colors.red` are replaced. Verify the delete button, stats cards, and section backgrounds render correctly in dark mode.
 
-3. Add keyboard-action alternatives for touch-only interactions:
-   - `Dismissible` in `session_history_screen.dart` must have a keyboard-triggerable delete action (e.g., a `FocusTraversalOrder`-wrapped trailing IconButton that calls `_deleteSession`).
-   - `PopupMenuButton` export share menu must be keyboard-navigable without needing pointer hover.
-   - ChoiceChip duration selectors in `focus_timer_screen.dart` must be reachable by sequential keyboard navigation.
+3. **LLM Task Manager** (`llm_task_manager_screen.dart`): Status colors (`running`, `done`, `failed`, `cancelled`, `queued`) use a theme-aware helper. Verify each status chip is distinguishable in both light and dark mode.
 
-4. Add `FocusTraversalGroup` to the body of `session_tracker_screen.dart`, `session_history_screen.dart`, and `dashboard_screen.dart` with appropriate (non-conflicting) child ordering so that all interactive elements are keyboard-reachable.
+4. **SnackBars** (`upload_screen.dart`, `api_config_screen.dart`): All `backgroundColor: Colors.red` and `backgroundColor: Colors.green` replaced with `colorScheme.error` and `colorScheme.primary` respectively.
 
-5. Verify with `SemanticsDebugger` enabled (wrap `MaterialApp` with `showSemanticsDebugger: true` in debug mode) that every interactive element has a unique and readable semantic label and that tab-order flows left-to-right, top-to-bottom without jumps.
+5. **Tutor Screen** (`tutor_screen.dart`): `Colors.green` correct-count chip uses `colorScheme.primary` or `colorScheme.tertiary`.
 
-6. Existing unit/widget tests must continue to pass. Add a widget test for each affected screen verifying that keyboard tab navigation visits all interactive elements in the correct visual order.
+6. **Progress Overlay** (`progress_overlay_widget.dart`): Uses `AppTheme.progressColor()` instead of raw `Colors.green`/`Colors.orange`/`Colors.red`.
+
+7. **Canvas Drawing** (`canvas_drawing_widget.dart`): Default stroke color is `colorScheme.onSurface` instead of `Colors.black`. Verify drawn strokes are visible on dark canvas backgrounds.
+
+8. **Metric Card** (`metric_card.dart`): Fallback color uses `colorScheme.onSurfaceVariant`.
+
+9. **No regressions**: All existing unit tests and widget tests pass. Visual diff confirms light mode appearance is preserved (or improved with better semantic color alignment).
+
+## Effort Estimate
+
+Approximately 40-60 minutes per file for a total of ~4-6 hours, including verification in both light and dark mode across phone and tablet form factors.

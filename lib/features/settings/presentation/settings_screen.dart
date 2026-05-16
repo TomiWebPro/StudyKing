@@ -42,152 +42,122 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             _section(l10n.userManagement, [
               _tile(l10n.currentUser, l10n.manageYourProfile, Icons.account_circle,
-                  () => Navigator.pushNamed(context, AppRoutes.profile), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.profile)),
             ]),
             _section(l10n.quickAccess, [
               _tile(l10n.quickGuide, l10n.aiPoweredStudyAssistant, Icons.auto_awesome,
-                  () => Navigator.pushNamed(context, AppRoutes.quickGuide), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.quickGuide)),
             ]),
             _section(l10n.appearance, [
               _tile(l10n.theme, _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
-                  () => _showThemeDialog(settings.themeModeEnum), order: 1),
+                  () => _showThemeDialog(settings.themeModeEnum)),
               _tile(l10n.fontSize, _getFontSizeLabel(settings.fontSize), Icons.text_fields,
-                  () => _showFontSizeDialog(settings.fontSize), order: 2),
+                  () => _showFontSizeDialog(settings.fontSize)),
             ]),
             _section(l10n.accessibility, [
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.contrast),
-                  title: Text(l10n.highContrastMode),
-                  subtitle: Text(l10n.highContrastDescription),
-                  value: settings.highContrastEnabled,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateHighContrast(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.contrast),
+                title: Text(l10n.highContrastMode),
+                subtitle: Text(l10n.highContrastDescription),
+                value: settings.highContrastEnabled,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateHighContrast(value),
               ),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(2),
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.touch_app),
-                  title: Text(l10n.largeTouchTargets),
-                  subtitle: Text(l10n.largeTouchTargetsDescription),
-                  value: settings.largeTouchTargets,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateLargeTouchTargets(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.touch_app),
+                title: Text(l10n.largeTouchTargets),
+                subtitle: Text(l10n.largeTouchTargetsDescription),
+                value: settings.largeTouchTargets,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateLargeTouchTargets(value),
               ),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(3),
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.animation),
-                  title: Text(l10n.reduceMotion),
-                  subtitle: Text(l10n.reduceMotionDescription),
-                  value: settings.reduceMotion,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateReduceMotion(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.animation),
+                title: Text(l10n.reduceMotion),
+                subtitle: Text(l10n.reduceMotionDescription),
+                value: settings.reduceMotion,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateReduceMotion(value),
               ),
             ]),
             _section(l10n.aiConfiguration, [
               _tile(l10n.apiKeys, apiKey.isNotEmpty ? l10n.configured : l10n.notConfigured,
-                  Icons.key, () => Navigator.pushNamed(context, AppRoutes.apiConfig), order: 1),
+                  Icons.key, () => Navigator.pushNamed(context, AppRoutes.apiConfig)),
               _tile(l10n.aiModel, _getAiModelLabel(settings.selectedModel), Icons.chat,
-                  () => _showAiModelSelection(settings.selectedModel, apiKey), order: 2),
+                  () => _showAiModelSelection(settings.selectedModel, apiKey)),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
-                  Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds), order: 3),
+                  Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
             ]),
             _section(l10n.notificationPreferences, [
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.notifications_active),
-                  title: Text(l10n.enableNotifications),
-                  subtitle: Text(l10n.enableNotificationAlerts),
-                  value: settings.studyRemindersEnabled,
-                  onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateStudyReminders(value),
-                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_active),
+                title: Text(l10n.enableNotifications),
+                subtitle: Text(l10n.enableNotificationAlerts),
+                value: settings.studyRemindersEnabled,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateStudyReminders(value),
               ),
               if (settings.studyRemindersEnabled) ...[
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(2),
-                  child: SwitchListTile(
-                    secondary: const Icon(Icons.repeat),
-                    title: Text(l10n.revisionReminders),
-                    value: settings.revisionRemindersEnabled,
-                    onChanged: (value) =>
-                        ref.read(settingsProvider.notifier).updateRevisionReminders(value),
-                  ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.repeat),
+                  title: Text(l10n.revisionReminders),
+                  value: settings.revisionRemindersEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updateRevisionReminders(value),
                 ),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(3),
-                  child: SwitchListTile(
-                    secondary: const Icon(Icons.school),
-                    title: Text(l10n.notifChannelLessons),
-                    value: settings.lessonNotificationsEnabled,
-                    onChanged: (value) =>
-                        ref.read(settingsProvider.notifier).updateLessonNotifications(value),
-                  ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.school),
+                  title: Text(l10n.notifChannelLessons),
+                  value: settings.lessonNotificationsEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updateLessonNotifications(value),
                 ),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(4),
-                  child: SwitchListTile(
-                    secondary: const Icon(Icons.warning_amber),
-                    title: Text(l10n.overworkAlerts),
-                    value: settings.overworkAlertsEnabled,
-                    onChanged: (value) =>
-                        ref.read(settingsProvider.notifier).updateOverworkAlerts(value),
-                  ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.warning_amber),
+                  title: Text(l10n.overworkAlerts),
+                  value: settings.overworkAlertsEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updateOverworkAlerts(value),
                 ),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(5),
-                  child: SwitchListTile(
-                    secondary: const Icon(Icons.tune),
-                    title: Text(l10n.planAdjustmentNotifications),
-                    value: settings.planAdjustmentNotificationsEnabled,
-                    onChanged: (value) =>
-                        ref.read(settingsProvider.notifier).updatePlanAdjustmentNotifications(value),
-                  ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.tune),
+                  title: Text(l10n.planAdjustmentNotifications),
+                  value: settings.planAdjustmentNotificationsEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updatePlanAdjustmentNotifications(value),
                 ),
               ],
             ]),
             _section(l10n.studyPreferences, [
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
-                  Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes), order: 1),
+                  Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
             ]),
             _section(l10n.focusMode, [
               _tile(l10n.focusTime, l10n.focusTimerDescription, Icons.timer_outlined,
-                  () => Navigator.pushNamed(context, AppRoutes.focusMode), order: 1),
+                  () => Navigator.pushNamed(context, AppRoutes.focusMode)),
               _tile(l10n.dailyStudyCap,
                   _getDailyCapLabel(l10n),
                   Icons.access_time_filled,
-                  () => _showDailyCapDialog(), order: 2),
+                  () => _showDailyCapDialog()),
             ]),
             _section(l10n.studyAnalytics, [
               _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
-                  Icons.show_chart, () => _showAnalytics(settings), order: 1),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(2),
-                child: ListTile(
-                  leading: const Icon(Icons.access_time),
-                  title: Text(l10n.totalStudyTime),
-                  subtitle: Text(formatDuration(
-                      Duration(milliseconds: settings.totalStudyTimeMs),
-                      showDays: true)),
-                ),
+                  Icons.show_chart, () => _showAnalytics(settings)),
+              ListTile(
+                leading: const Icon(Icons.access_time),
+                title: Text(l10n.totalStudyTime),
+                subtitle: Text(formatDuration(
+                    Duration(milliseconds: settings.totalStudyTimeMs),
+                    showDays: true)),
               ),
             ]),
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
-                  () => _showAboutDialog(context), order: 1),
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(2),
-                child: ListTile(
-                  leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-                  title: Text(l10n.signOut, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                  onTap: _showSignOutDialog,
-                ),
+                  () => _showAboutDialog(context)),
+              ListTile(
+                leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+                title: Text(l10n.signOut, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                onTap: _showSignOutDialog,
               ),
             ]),
           ],
@@ -214,18 +184,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       );
 
-  Widget _tile(String title, String subtitle, IconData icon, VoidCallback onTap, {int order = 0}) {
-    final tile = ListTile(
+  Widget _tile(String title, String subtitle, IconData icon, VoidCallback onTap) {
+    return ListTile(
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.arrow_forward_ios),
       onTap: onTap,
     );
-    if (order > 0) {
-      return FocusTraversalOrder(order: NumericFocusOrder(order.toDouble()), child: tile);
-    }
-    return tile;
   }
 
   String _getThemeLabel(ThemeMode mode) {

@@ -254,7 +254,8 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: FocusTraversalGroup(
+          child: Column(
           children: [
             if (_showSuggestions && !_hasInteracted && widget.showModeNavigation)
               const ModeNavigationWidget(),
@@ -267,14 +268,16 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
                       reduceMotion: reduceMotion,
                     ),
             ),
-            AnimatedOpacity(
-              opacity: _showSuggestions && !_hasInteracted ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: SuggestedPromptsWidget(
-                prompts: _suggestedPrompts,
-                onSelectPrompt: _selectPrompt,
+            if (_showSuggestions && !_hasInteracted)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom + 8,
+                ),
+                child: SuggestedPromptsWidget(
+                  prompts: _suggestedPrompts,
+                  onSelectPrompt: _selectPrompt,
+                ),
               ),
-            ),
             ConversationInput(
               controller: _textController,
               focusNode: _inputFocusNode,
@@ -288,6 +291,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
             ),
           ],
         ),
+),
       ),
     );
   }

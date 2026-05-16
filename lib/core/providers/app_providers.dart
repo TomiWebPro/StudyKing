@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -15,6 +17,7 @@ import 'package:studyking/features/teaching/data/repositories/conversation_repos
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../data/database_service.dart';
+import 'llm_providers.dart';
 
 final database = DatabaseService(
   topicRepository: TopicRepository(),
@@ -35,6 +38,8 @@ class SettingsController extends StateNotifier<SettingsBox> {
   bool _hasLoadedOnce = false;
 
   SettingsController(this._repository) : super(SettingsBox());
+
+  SettingsBox get currentState => state;
 
   Future<void> _loadSettings() async {
     if (_hasLoadedOnce) return;
@@ -235,4 +240,21 @@ final localeProvider = StateProvider<Locale>((ref) {
     }
   } catch (_) {}
   return const Locale('en');
+});
+
+final sourceRepositoryProvider = Provider<SourceRepository>((ref) {
+  return SourceRepository();
+});
+
+final contentPipelineProvider = Provider<ContentPipeline>((ref) {
+  final llmService = ref.watch(llmServiceProvider);
+  final sourceRepository = ref.watch(sourceRepositoryProvider);
+  final topicRepository = database.topicRepository;
+  final questionRepository = database.questionRepository;
+  return ContentPipeline(
+    llmService: llmService,
+    sourceRepository: sourceRepository,
+    topicRepository: topicRepository,
+    questionRepository: questionRepository,
+  );
 });

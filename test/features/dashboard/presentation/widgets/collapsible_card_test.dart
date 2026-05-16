@@ -191,5 +191,25 @@ void main() {
 
       expect(find.byIcon(Icons.expand_more), findsOneWidget);
     });
+
+    testWidgets('toggle remains tappable after removing headingLevel', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        CollapsibleCard(
+          cardId: 'tap-test',
+          title: const Text('Toggle Header'),
+          body: const Text('Collapsible Body'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Collapsible Body'), findsOneWidget);
+      expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+      await tester.tap(find.text('Toggle Header'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Collapsible Body'), findsNothing);
+      expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    });
   });
 }

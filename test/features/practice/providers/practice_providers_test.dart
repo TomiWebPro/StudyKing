@@ -1,74 +1,131 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 
 void main() {
   group('PracticeProviders', () {
-    test('spacedRepetitionRepositoryProvider creates SpacedRepetitionRepository', () {
-      final container = ProviderContainer();
+    test('spacedRepetitionRepositoryProvider can be overridden', () {
+      final fakeRepo = FakeSpacedRepetitionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          spacedRepetitionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(spacedRepetitionRepositoryProvider),
-        isA<SpacedRepetitionRepository>(),
-      );
+      final result = container.read(spacedRepetitionRepositoryProvider);
+      expect(result, same(fakeRepo));
     });
 
-    test('spacedRepetitionServiceProvider creates SpacedRepetitionService', () {
-      final container = ProviderContainer();
+    test('spacedRepetitionServiceProvider can be overridden', () {
+      final fakeService = SpacedRepetitionService(
+        questionRepo: QuestionRepository(),
+        attemptRepo: FakeAttemptRepository(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          spacedRepetitionServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(spacedRepetitionServiceProvider),
-        isA<SpacedRepetitionService>(),
-      );
+      final result = container.read(spacedRepetitionServiceProvider);
+      expect(result, same(fakeService));
     });
 
-    test('questionRepositoryProvider creates QuestionRepository', () {
-      final container = ProviderContainer();
+    test('questionRepositoryProvider can be overridden', () {
+      final fakeRepo = QuestionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(questionRepositoryProvider),
-        isA<QuestionRepository>(),
-      );
+      final result = container.read(questionRepositoryProvider);
+      expect(result, same(fakeRepo));
     });
 
-    test('masteryGraphServiceProvider creates MasteryGraphService', () {
-      final container = ProviderContainer();
+    test('masteryGraphServiceProvider can be overridden', () {
+      final fakeService = FakeMasteryGraphService();
+      final container = ProviderContainer(
+        overrides: [
+          masteryGraphServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(masteryGraphServiceProvider),
-        isA<MasteryGraphService>(),
-      );
+      final result = container.read(masteryGraphServiceProvider);
+      expect(result, same(fakeService));
     });
 
-    test('practiceDataServiceProvider creates PracticeDataService', () {
-      final container = ProviderContainer();
+    test('practiceDataServiceProvider can be overridden', () {
+      final fakeService = PracticeDataService(
+        srService: SpacedRepetitionService(
+          questionRepo: QuestionRepository(),
+          attemptRepo: FakeAttemptRepository(),
+        ),
+        questionRepo: QuestionRepository(),
+        subjectRepo: SubjectRepository(),
+        studentIdService: StudentIdService(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          practiceDataServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(practiceDataServiceProvider),
-        isA<PracticeDataService>(),
-      );
+      final result = container.read(practiceDataServiceProvider);
+      expect(result, same(fakeService));
     });
 
-    test('sessionRepositoryProvider creates SessionRepository', () {
-      final container = ProviderContainer();
+    test('sessionRepositoryProvider can be overridden', () {
+      final fakeRepo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
-      expect(
-        container.read(sessionRepositoryProvider),
-        isA<SessionRepository>(),
+      final result = container.read(sessionRepositoryProvider);
+      expect(result, same(fakeRepo));
+    });
+
+    test('subjectRepositoryProvider can be overridden', () {
+      final fakeRepo = SubjectRepository();
+      final container = ProviderContainer(
+        overrides: [
+          subjectRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
       );
+      addTearDown(container.dispose);
+
+      final result = container.read(subjectRepositoryProvider);
+      expect(result, same(fakeRepo));
     });
   });
+}
+
+class FakeAttemptRepository extends AttemptRepository {
+  FakeAttemptRepository();
+}
+
+class FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
+  FakeSpacedRepetitionRepository();
+}
+
+class FakeMasteryGraphService extends MasteryGraphService {
+  FakeMasteryGraphService();
 }

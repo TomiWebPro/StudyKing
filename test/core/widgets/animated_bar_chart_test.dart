@@ -190,5 +190,73 @@ void main() {
 
       expect(find.text('Mon'), findsOneWidget);
     });
+
+    testWidgets('reduceMotion renders Container instead of TweenAnimationBuilder', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {'Mon': 10, 'Tue': 20},
+          accentColor: Colors.blue,
+          reduceMotion: true,
+        ),
+      ));
+
+      expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+      expect(find.text('Mon'), findsOneWidget);
+      expect(find.text('Tue'), findsOneWidget);
+    });
+
+    testWidgets('reduceMotion shows value tooltips still', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {'Mon': 10},
+          accentColor: Colors.blue,
+          reduceMotion: true,
+        ),
+      ));
+
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('Mon'), findsOneWidget);
+    });
+
+    testWidgets('reduceMotion handles empty data', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {},
+          accentColor: Colors.blue,
+          reduceMotion: true,
+        ),
+      ));
+
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
+      expect(find.byType(TweenAnimationBuilder), findsNothing);
+    });
+
+    testWidgets('reduceMotion renders bar container with correct decoration', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {'Mon': 10},
+          accentColor: Colors.red,
+          reduceMotion: true,
+        ),
+      ));
+
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      expect(containers.length, greaterThanOrEqualTo(2));
+    });
+
+    testWidgets('reduceMotion renders bars with zero values', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {'Mon': 0, 'Tue': 5},
+          accentColor: Colors.blue,
+          reduceMotion: true,
+        ),
+      ));
+
+      expect(find.text('Mon'), findsOneWidget);
+      expect(find.text('Tue'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.byType(TweenAnimationBuilder), findsNothing);
+    });
   });
 }

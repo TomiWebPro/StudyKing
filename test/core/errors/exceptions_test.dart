@@ -1,5 +1,27 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/exceptions.dart';
+import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+
+Future<BuildContext> captureContext(WidgetTester tester) async {
+  BuildContext? context;
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Builder(
+          builder: (c) {
+            context = c;
+            return const SizedBox();
+          },
+        ),
+      ),
+    ),
+  );
+  return context!;
+}
 
 class _TestAppException extends AppException {
   const _TestAppException({
@@ -441,6 +463,327 @@ void main() {
     test('AppException toString works correctly via class that extends AppException', () {
       const ex = _TestAppException(message: 'test message');
       expect(ex.toString(), equals('AppException: test message'));
+    });
+  });
+
+  group('AppErrorHandler - SyllabusException', () {
+    testWidgets('handleError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        SyllabusException(message: 'Syllabus format is invalid'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Syllabus format is invalid'), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        SyllabusException(message: 'Syllabus parsing failed'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Syllabus parsing failed'), findsOneWidget);
+    });
+
+    test('getRetryText returns Retry', () {
+      expect(
+        AppErrorHandler.getRetryText(SyllabusException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    testWidgets('handleError shows error_outline icon', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        SyllabusException(message: 'test'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError with retry shows retry button', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        SyllabusException(message: 'test'),
+        'test',
+        retry: true,
+        retryCallback: () {},
+      );
+      await tester.pump();
+      expect(find.text('Retry'), findsOneWidget);
+    });
+  });
+
+  group('AppErrorHandler - PlanGenerationException', () {
+    testWidgets('handleError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        PlanGenerationException(message: 'Plan generation timeout'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Plan generation timeout'), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        PlanGenerationException(message: 'No topics to plan'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('No topics to plan'), findsOneWidget);
+    });
+
+    test('getRetryText returns Retry', () {
+      expect(
+        AppErrorHandler.getRetryText(PlanGenerationException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    testWidgets('handleError shows error_outline icon', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        PlanGenerationException(message: 'test'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('handleError with retry shows refresh icon and retry button',
+        (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        PlanGenerationException(message: 'test'),
+        'test',
+        retry: true,
+        retryCallback: () {},
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError with retry retryCallback is called',
+        (tester) async {
+      final context = await captureContext(tester);
+      bool tapped = false;
+      AppErrorHandler.handleSyncError(
+        context,
+        PlanGenerationException(message: 'test'),
+        'test',
+        retry: true,
+        retryCallback: () {
+          tapped = true;
+        },
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Retry'), warnIfMissed: false);
+      expect(tapped, isTrue);
+    });
+  });
+
+  group('AppErrorHandler - SchedulingException', () {
+    testWidgets('handleError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        SchedulingException(message: 'Time slot unavailable'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Time slot unavailable'), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        SchedulingException(message: 'Schedule conflict detected'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Schedule conflict detected'), findsOneWidget);
+    });
+
+    test('getRetryText returns Retry', () {
+      expect(
+        AppErrorHandler.getRetryText(SchedulingException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    testWidgets('handleError shows error_outline icon', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        SchedulingException(message: 'test'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('handleError with retry callback is called', (tester) async {
+      final context = await captureContext(tester);
+      bool tapped = false;
+      await AppErrorHandler.handleError(
+        context,
+        SchedulingException(message: 'test'),
+        'test',
+        retry: true,
+        retryCallback: () {
+          tapped = true;
+        },
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Retry'), warnIfMissed: false);
+      expect(tapped, isTrue);
+    });
+  });
+
+  group('AppErrorHandler - AdherenceException', () {
+    testWidgets('handleError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        AdherenceException(message: 'Study adherence below threshold'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Study adherence below threshold'), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError displays exception.message', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        AdherenceException(message: 'Missed too many sessions'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Missed too many sessions'), findsOneWidget);
+    });
+
+    test('getRetryText returns Retry', () {
+      expect(
+        AppErrorHandler.getRetryText(AdherenceException(message: 'test')),
+        equals('Retry'),
+      );
+    });
+
+    testWidgets('handleError shows error_outline icon', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        AdherenceException(message: 'test'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('handleSyncError SnackBar has correct duration', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.handleSyncError(
+        context,
+        AdherenceException(message: 'test'),
+        'test',
+      );
+      await tester.pump();
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.duration, equals(const Duration(seconds: 3)));
+    });
+  });
+
+  group('AppErrorHandler.handleError - Icons', () {
+    testWidgets('shows wifi_tethering_off icon for ContentGenerationException via handleError', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ContentGenerationException(message: 'gen error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.wifi_tethering_off), findsOneWidget);
+    });
+
+    testWidgets('shows key_rounded icon for ApiKeyMissingException via handleError', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        ApiKeyMissingException(message: 'key missing'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.key_rounded), findsOneWidget);
+    });
+
+    testWidgets('shows key_rounded icon for InvalidApiKeyException via handleError', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        InvalidApiKeyException(message: 'invalid key'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.key_rounded), findsOneWidget);
+    });
+
+    testWidgets('shows error_outline icon for FileSystemException via handleError', (tester) async {
+      final context = await captureContext(tester);
+      await AppErrorHandler.handleError(
+        context,
+        FileSystemException(message: 'file error'),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+  });
+
+  group('AppErrorHandler - Private Method Coverage via Integration', () {
+    testWidgets('_getErrorIcon returns correct icons for all exception types via handleError',
+        (tester) async {
+      final context = await captureContext(tester);
+
+      final exceptions = [
+        (NetworkException(message: 'e'), Icons.network_check),
+        (ApiKeyMissingException(message: 'e'), Icons.key_rounded),
+        (InvalidApiKeyException(message: 'e'), Icons.key_rounded),
+        (ApiAuthException(message: 'e'), Icons.key_rounded),
+        (ApiRateLimitException(message: 'e'), Icons.pause_circle),
+        (ApiNotFoundException(message: 'e'), Icons.looks_one_outlined),
+        (ApiInternalServerError(message: 'e'), Icons.bug_report),
+        (DatabaseException(message: 'e'), Icons.storage),
+        (ValidationException(message: 'e'), Icons.info),
+        (PdfParseException(message: 'e'), Icons.picture_as_pdf),
+        (ContentGenerationException(message: 'e'), Icons.wifi_tethering_off),
+        (LlmException(message: 'e'), Icons.wifi_tethering_off),
+      ];
+
+      for (final (exception, expectedIcon) in exceptions) {
+        await AppErrorHandler.handleError(context, exception, 'test');
+        await tester.pump();
+        expect(find.byIcon(expectedIcon), findsOneWidget);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        await tester.pumpAndSettle();
+      }
     });
   });
 }

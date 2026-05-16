@@ -58,10 +58,10 @@ class SpacedRepetitionService {
   final AttemptRepository _attemptRepo;
 
   SpacedRepetitionService({
-    QuestionRepository? questionRepo,
-    AttemptRepository? attemptRepo,
-  })  : _questionRepo = questionRepo ?? QuestionRepository(),
-        _attemptRepo = attemptRepo ?? AttemptRepository();
+    required QuestionRepository questionRepo,
+    required AttemptRepository attemptRepo,
+  })  : _questionRepo = questionRepo,
+        _attemptRepo = attemptRepo;
 
   /// Get questions due for review based on next_review date
   List<Question> getQuestionsDueForReview({DateTime? asOf}) {

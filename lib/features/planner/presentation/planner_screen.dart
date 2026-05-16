@@ -270,15 +270,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             Text(l10n.createStudyPlan,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(1),
-              child: TextField(
-                controller: _courseController,
-                decoration: InputDecoration(
-                  labelText: l10n.courseSubject,
-                  hintText: l10n.courseHint,
-                  border: const OutlineInputBorder(),
-                ),
+            TextField(
+              controller: _courseController,
+              decoration: InputDecoration(
+                labelText: l10n.courseSubject,
+                hintText: l10n.courseHint,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -288,27 +285,21 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 if (narrow) {
                   return Column(
                     children: [
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(2),
-                        child: TextField(
-                          controller: _daysController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.days,
-                            border: const OutlineInputBorder(),
-                          ),
+                      TextField(
+                        controller: _daysController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.days,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(3),
-                        child: TextField(
-                          controller: _hoursController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.hoursPerDay,
-                            border: const OutlineInputBorder(),
-                          ),
+                      TextField(
+                        controller: _hoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.hoursPerDay,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ],
@@ -317,29 +308,23 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 return Row(
                   children: [
                     Expanded(
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(2),
-                        child: TextField(
-                          controller: _daysController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.days,
-                            border: const OutlineInputBorder(),
-                          ),
+                      child: TextField(
+                        controller: _daysController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.days,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(3),
-                        child: TextField(
-                          controller: _hoursController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.hoursPerDay,
-                            border: const OutlineInputBorder(),
-                          ),
+                      child: TextField(
+                        controller: _hoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.hoursPerDay,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ),
@@ -348,24 +333,21 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               },
             ),
             const SizedBox(height: 16),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(4),
-              child: Semantics(
-                button: true,
-                label: state.isGenerating ? l10n.generating : l10n.generatePlan,
-                child: ElevatedButton.icon(
-                  onPressed: state.isGenerating ? null : _generatePlan,
-                  icon: state.isGenerating
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.calendar_today),
-                  label: Text(state.isGenerating
-                      ? l10n.generating
-                      : l10n.generatePlan),
-                ),
+            Semantics(
+              button: true,
+              label: state.isGenerating ? l10n.generating : l10n.generatePlan,
+              child: ElevatedButton.icon(
+                onPressed: state.isGenerating ? null : _generatePlan,
+                icon: state.isGenerating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.calendar_today),
+                label: Text(state.isGenerating
+                    ? l10n.generating
+                    : l10n.generatePlan),
               ),
             ),
             const SizedBox(height: 16),
@@ -439,7 +421,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
   Widget _buildPendingActionsSection(
       AppLocalizations l10n, PlannerState state) {
-    return Column(
+    return FocusTraversalGroup(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -462,13 +445,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   .dismissPendingAction(action.id, l10n),
             )),
       ],
+    ),
     );
   }
 
   Widget _buildAdherenceBanner(AppLocalizations l10n, PlannerState state) {
     final deviation = state.adherenceDeviation!;
     final missedMinutes = state.plan?.targetMinutesPerDay.toInt() ?? 60;
-    return Container(
+    return FocusTraversalGroup(
+      child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: deviation.requiresEscalation
@@ -521,12 +506,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildScheduledLessonsSection(
       AppLocalizations l10n, PlannerState state) {
-    return Column(
+    return FocusTraversalGroup(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -568,11 +555,13 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 state.scheduledLessons.length - 3)),
           ),
       ],
+    ),
     );
   }
 
   Widget _buildDailyPlans(PlannerState state, AppLocalizations l10n) {
-    return Column(
+    return FocusTraversalGroup(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l10n.yourStudySchedule,
@@ -586,6 +575,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -630,15 +620,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: FocusTraversalOrder(
-              order: const NumericFocusOrder(1),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _showCreateRoadmapDialog,
-                  icon: const Icon(Icons.add_road),
-                  label: Text(l10n.createRoadmap),
-                ),
+            child:             SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showCreateRoadmapDialog,
+                icon: const Icon(Icons.add_road),
+                label: Text(l10n.createRoadmap),
               ),
             ),
           ),

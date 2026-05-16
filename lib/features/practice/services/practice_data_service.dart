@@ -10,14 +10,17 @@ class PracticeDataService {
   final SpacedRepetitionService _srService;
   final QuestionRepository _questionRepo;
   final SubjectRepository _subjectRepo;
+  final StudentIdService _studentIdService;
 
   PracticeDataService({
     required SpacedRepetitionService srService,
     required QuestionRepository questionRepo,
     required SubjectRepository subjectRepo,
+    required StudentIdService studentIdService,
   })  : _srService = srService,
         _questionRepo = questionRepo,
-        _subjectRepo = subjectRepo;
+        _subjectRepo = subjectRepo,
+        _studentIdService = studentIdService;
 
   Future<List<Subject>> fetchSubjects() async {
     return _subjectRepo.getAll();
@@ -61,7 +64,7 @@ class PracticeDataService {
 
   Future<List<Question>> loadWeakAreaQuestions(
       MasteryGraphService masteryService) async {
-    final studentId = StudentIdService().getStudentId();
+    final studentId = _studentIdService.getStudentId();
     final weakTopicsResult = await masteryService.getWeakTopics(studentId);
     if (weakTopicsResult.isFailure ||
         weakTopicsResult.data == null ||

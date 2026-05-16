@@ -243,6 +243,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         child: Padding(
           padding: ResponsiveUtils.screenPadding(context),
           child: SingleChildScrollView(
+            child: FocusTraversalGroup(
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -358,6 +359,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -406,7 +408,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
 
     final recentSessions = _sortedSessions.take(5).toList();
 
-    return ListView.builder(
+    return FocusTraversalGroup(
+      child: ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: recentSessions.length,
@@ -455,6 +458,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           ),
         );
       },
+    ),
     );
   }
 }

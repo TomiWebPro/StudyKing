@@ -13,7 +13,6 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_grid.dart';
 import 'package:studyking/features/practice/presentation/widgets/subject_practice_card.dart';
@@ -35,6 +34,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   late final PracticeDataService _dataService;
   late final SpacedRepetitionRepository _srRepo;
   late final QuestionRepository _questionRepo;
+  late final StudentIdService _studentIdService;
   List<Subject> _subjects = [];
   bool _isLoading = true;
   Map<String, int> _dueCounts = {};
@@ -46,10 +46,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     final srService = ref.read(spacedRepetitionServiceProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
     _questionRepo = ref.read(questionRepositoryProvider);
+    _studentIdService = ref.read(studentIdServiceProvider);
     _dataService = PracticeDataService(
       srService: srService,
       questionRepo: _questionRepo,
-      subjectRepo: SubjectRepository(),
+      subjectRepo: ref.read(subjectRepositoryProvider),
+      studentIdService: _studentIdService,
     );
     _loadSubjects();
   }
@@ -124,7 +126,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       MasteryGraphService masteryService, Subject subject) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final studentId = StudentIdService().getStudentId();
+      final studentId = _studentIdService.getStudentId();
       final weakTopicsResult =
           await masteryService.getWeakTopics(studentId);
       if (weakTopicsResult.isFailure ||

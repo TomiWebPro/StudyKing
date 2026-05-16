@@ -29,7 +29,8 @@ class ModeNavigationWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          FocusTraversalGroup(
+            child: Row(
             children: [
               Expanded(
                 child: _buildModeCard(
@@ -65,6 +66,7 @@ class ModeNavigationWidget extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
           const SizedBox(height: 12),
         ],

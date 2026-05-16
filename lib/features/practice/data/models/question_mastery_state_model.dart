@@ -9,43 +9,43 @@ class QuestionMasteryState extends HiveObject {
   final String questionId;
 
   @HiveField(2)
-  int correctCount;
+  final int correctCount;
 
   @HiveField(3)
-  int incorrectCount;
+  final int incorrectCount;
 
   @HiveField(4)
-  int currentStreak;
+  final int currentStreak;
 
   @HiveField(5)
-  int bestStreak;
+  final int bestStreak;
 
   @HiveField(6)
-  double averageTimeMs;
+  final double averageTimeMs;
 
   @HiveField(7)
-  List<int> confidenceHistory;
+  final List<int> confidenceHistory;
 
   @HiveField(8)
-  DateTime lastAttempt;
+  final DateTime lastAttempt;
 
   @HiveField(9)
-  DateTime? lastCorrect;
+  final DateTime? lastCorrect;
 
   @HiveField(10)
-  DateTime? lastIncorrect;
+  final DateTime? lastIncorrect;
 
   @HiveField(11)
-  DateTime? nextReview;
+  final DateTime? nextReview;
 
   @HiveField(12)
-  double masteryLevel;
+  final double masteryLevel;
 
   @HiveField(13)
-  double reviewUrgency;
+  final double reviewUrgency;
 
   @HiveField(14)
-  int totalTimeMs;
+  final int totalTimeMs;
 
   QuestionMasteryState({
     required this.studentId,
@@ -68,8 +68,8 @@ class QuestionMasteryState extends HiveObject {
   factory QuestionMasteryState.initial({
     required String studentId,
     required String questionId,
+    required DateTime now,
   }) {
-    final now = DateTime.now();
     return QuestionMasteryState(
       studentId: studentId,
       questionId: questionId,
@@ -86,49 +86,101 @@ class QuestionMasteryState extends HiveObject {
       ? 3.0
       : confidenceHistory.reduce((a, b) => a + b) / confidenceHistory.length;
 
-  void recordAttempt({
+  QuestionMasteryState recordAttempt({
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    required DateTime now,
   }) {
-    totalTimeMs += timeSpentMs;
-    lastAttempt = DateTime.now();
-    averageTimeMs = totalTimeMs / totalAttempts;
+    final newTotalTimeMs = totalTimeMs + timeSpentMs;
+    final newTotalAttempts = totalAttempts + 1;
+    final newAverageTimeMs = newTotalTimeMs / newTotalAttempts;
+
+    int newCorrectCount;
+    int newIncorrectCount;
+    int newCurrentStreak;
+    int newBestStreak;
+    DateTime? newLastCorrect;
+    DateTime? newLastIncorrect;
 
     if (isCorrect) {
-      correctCount++;
-      currentStreak++;
-      if (currentStreak > bestStreak) bestStreak = currentStreak;
-      lastCorrect = DateTime.now();
+      newCorrectCount = correctCount + 1;
+      newIncorrectCount = incorrectCount;
+      newCurrentStreak = currentStreak + 1;
+      newBestStreak = newCurrentStreak > bestStreak ? newCurrentStreak : bestStreak;
+      newLastCorrect = now;
+      newLastIncorrect = lastIncorrect;
     } else {
-      incorrectCount++;
-      currentStreak = 0;
-      lastIncorrect = DateTime.now();
+      newCorrectCount = correctCount;
+      newIncorrectCount = incorrectCount + 1;
+      newCurrentStreak = 0;
+      newBestStreak = bestStreak;
+      newLastCorrect = lastCorrect;
+      newLastIncorrect = now;
     }
 
-    confidenceHistory.add(confidence);
-    if (confidenceHistory.length > 20) confidenceHistory.removeAt(0);
+    final newConfidenceHistory = [...confidenceHistory, confidence];
+    if (newConfidenceHistory.length > 20) newConfidenceHistory.removeAt(0);
 
-    _updateMasteryLevel();
-    _updateReviewUrgency();
-    _calculateNextReview();
+    final newMasteryLevel = _updateMasteryLevel(
+      accuracy: newCorrectCount / newTotalAttempts,
+      currentStreak: newCurrentStreak,
+      lastAttempt: lastAttempt,
+      now: now,
+    );
+    final newReviewUrgency = _updateReviewUrgency(
+      masteryLevel: newMasteryLevel,
+      currentStreak: newCurrentStreak,
+      incorrectCount: newIncorrectCount,
+      correctCount: newCorrectCount,
+    );
+    final newNextReview = _calculateNextReview(
+      masteryLevel: newMasteryLevel,
+      now: now,
+    );
+
+    return QuestionMasteryState(
+      studentId: studentId,
+      questionId: questionId,
+      correctCount: newCorrectCount,
+      incorrectCount: newIncorrectCount,
+      currentStreak: newCurrentStreak,
+      bestStreak: newBestStreak,
+      averageTimeMs: newAverageTimeMs,
+      confidenceHistory: newConfidenceHistory,
+      lastAttempt: now,
+      lastCorrect: newLastCorrect,
+      lastIncorrect: newLastIncorrect,
+      nextReview: newNextReview,
+      masteryLevel: newMasteryLevel,
+      reviewUrgency: newReviewUrgency,
+      totalTimeMs: newTotalTimeMs,
+    );
   }
 
-  void _updateMasteryLevel() {
+  static double _updateMasteryLevel({
+    required double accuracy,
+    required int currentStreak,
+    required DateTime lastAttempt,
+    required DateTime now,
+  }) {
     final accuracyWeight = 0.6;
     final streakWeight = 0.2;
     final recencyWeight = 0.2;
 
     final streakNorm = (currentStreak / 5.0).clamp(0.0, 1.0);
-    final recencyScore = _recencyScore();
+    final recencyScore = _recencyScore(lastAttempt: lastAttempt, now: now);
 
-    masteryLevel = (accuracy * accuracyWeight) +
+    return (accuracy * accuracyWeight) +
         (streakNorm * streakWeight) +
         (recencyScore * recencyWeight);
   }
 
-  double _recencyScore() {
-    final hoursSince = DateTime.now().difference(lastAttempt).inHours;
+  static double _recencyScore({
+    required DateTime lastAttempt,
+    required DateTime now,
+  }) {
+    final hoursSince = now.difference(lastAttempt).inHours;
     if (hoursSince < 1) return 1.0;
     if (hoursSince < 24) return 0.9;
     if (hoursSince < 48) return 0.7;
@@ -136,25 +188,33 @@ class QuestionMasteryState extends HiveObject {
     return 0.3;
   }
 
-  void _updateReviewUrgency() {
+  static double _updateReviewUrgency({
+    required double masteryLevel,
+    required int currentStreak,
+    required int incorrectCount,
+    required int correctCount,
+  }) {
     final baseUrgency = 1 - masteryLevel;
 
     if (currentStreak >= 3) {
-      reviewUrgency = (baseUrgency * 0.5).clamp(0.0, 1.0);
+      return (baseUrgency * 0.5).clamp(0.0, 1.0);
     } else if (incorrectCount > correctCount) {
-      reviewUrgency = (baseUrgency * 1.2).clamp(0.0, 1.0);
+      return (baseUrgency * 1.2).clamp(0.0, 1.0);
     } else {
-      reviewUrgency = baseUrgency;
+      return baseUrgency;
     }
   }
 
-  void _calculateNextReview() {
-    final multiplier = _getIntervalMultiplier();
+  static DateTime? _calculateNextReview({
+    required double masteryLevel,
+    required DateTime now,
+  }) {
+    final multiplier = _getIntervalMultiplier(masteryLevel: masteryLevel);
     final hoursUntilNext = (multiplier * 24).round();
-    nextReview = DateTime.now().add(Duration(hours: hoursUntilNext));
+    return now.add(Duration(hours: hoursUntilNext));
   }
 
-  double _getIntervalMultiplier() {
+  static double _getIntervalMultiplier({required double masteryLevel}) {
     if (masteryLevel >= 0.9) return 7.0;
     if (masteryLevel >= 0.8) return 3.0;
     if (masteryLevel >= 0.7) return 2.0;

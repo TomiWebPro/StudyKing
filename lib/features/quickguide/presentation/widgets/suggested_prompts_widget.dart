@@ -34,7 +34,8 @@ class SuggestedPromptsWidget extends StatelessWidget {
               ),
             ),
           ),
-          Wrap(
+          FocusTraversalGroup(
+            child: Wrap(
             spacing: 8,
             runSpacing: 8,
             children: prompts.map((prompt) {
@@ -51,7 +52,8 @@ class SuggestedPromptsWidget extends StatelessWidget {
                   side: BorderSide.none,
                 ),
               );
-            }).toList(),
+            }            ).toList(),
+          ),
           ),
         ],
       ),

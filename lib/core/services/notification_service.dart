@@ -9,7 +9,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  @visibleForTesting
+  FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   Function(String?)? _onNotificationTap;
   LocalizationService? _localizationService;
@@ -35,7 +36,7 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _plugin.initialize(
+    await plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
@@ -75,7 +76,7 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _plugin.show(id, title, body, details, payload: payload);
+    await plugin.show(id, title, body, details, payload: payload);
   }
 
   Future<void> showDailyReminder({
@@ -115,7 +116,7 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    await _plugin.periodicallyShow(
+    await plugin.periodicallyShow(
       id,
       title,
       body,
@@ -230,10 +231,10 @@ class NotificationService {
   }
 
   Future<void> cancelNotification(int id) async {
-    await _plugin.cancel(id);
+    await plugin.cancel(id);
   }
 
   Future<void> cancelAll() async {
-    await _plugin.cancelAll();
+    await plugin.cancelAll();
   }
 }

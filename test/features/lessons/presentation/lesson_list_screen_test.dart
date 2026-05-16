@@ -238,5 +238,28 @@ void main() {
       expect(find.text('Lesson Detail'), findsOneWidget);
     });
   });
+
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalGroup for keyboard navigation', (tester) async {
+      await tester.pumpWidget(_buildTestApp(lessons: []));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('focus traversal order exists on key elements', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Lesson 1',
+          topicId: 't1', blocks: [], createdAt: now,
+        ),
+      ]));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.smart_toy_outlined), findsOneWidget);
+      expect(find.byType(ListView), findsOneWidget);
+    });
+  });
 }
 

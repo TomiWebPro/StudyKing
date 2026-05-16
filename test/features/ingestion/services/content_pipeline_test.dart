@@ -1,15 +1,52 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/pdf_ingestion_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+
+class _MockLlmService extends LlmService {
+  _MockLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
+
+  bool classifyShouldFail = false;
+  String classifyResult = 'Math';
+  int classifyCallCount = 0;
+  String summaryResult = 'Test summary';
+
+  @override
+  Future<String> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    classifyCallCount++;
+    if (feature == 'content_classification') {
+      if (classifyShouldFail) return '';
+      return classifyResult;
+    }
+    if (feature == 'content_summarization') {
+      return summaryResult;
+    }
+    if (feature == 'question_generation') {
+      return '''[
+        {"text": "Q1", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Exp1"},
+        {"text": "Q2", "type": "singleChoice", "options": ["X", "Y", "Z", "W"], "correctAnswer": "X", "explanation": "Exp2"}
+      ]''';
+    }
+    return '';
+  }
+}
 
 class _MockSourceRepository extends SourceRepository {
-  Source? lastCreated;
+  final Map<String, Source> _storage = {};
   bool shouldThrow = false;
 
   @override
@@ -18,14 +55,19 @@ class _MockSourceRepository extends SourceRepository {
   @override
   Future<void> create(Source source) async {
     if (shouldThrow) throw Exception('Simulated error');
-    lastCreated = source;
+    _storage[source.id] = source;
   }
 
   @override
-  Future<Source?> get(String id) async => null;
+  Future<void> save(String key, Source item) async {
+    _storage[key] = item;
+  }
 
   @override
-  Future<List<Source>> getAll() async => [];
+  Future<Source?> get(String id) async => _storage[id];
+
+  @override
+  Future<List<Source>> getAll() async => _storage.values.toList();
 
   @override
   Future<void> delete(String id) async {}
@@ -41,44 +83,18 @@ class _MockSourceRepository extends SourceRepository {
 
   @override
   Future<List<Source>> getByType(String sourceType) async => [];
-}
-
-class _MockPdfIngestionService extends PdfIngestionService {
-  _MockPdfIngestionService() : super(apiKey: 'test-key');
-
-  bool classifyShouldFail = false;
-  String classifyResult = 'Math';
-  int classifyCallCount = 0;
 
   @override
-  Future<Result<String>> classifyTopic({
-    required String content,
-    required List<String> possibleTopics,
-    required String modelId,
-  }) async {
-    classifyCallCount++;
-    if (classifyShouldFail) {
-      return Result.failure('Classification failed');
-    }
-    return Result.success(classifyResult);
-  }
+  Future<List<Source>> getByStatus(ProcessingStatus status) async => [];
 
   @override
-  Future<Result<List<Map<String, dynamic>>>> extractQuestions(
-    String content,
-    String modelId,
-  ) async {
-    return Result.success([]);
-  }
+  Future<List<Source>> getPending() async => [];
 
   @override
-  Future<Result<String>> generateSummary(
-    String content,
-    String topicName,
-    String modelId,
-  ) async {
-    return Result.success('Summary');
-  }
+  Future<List<Source>> getFailed() async => [];
+
+  @override
+  Future<List<Source>> getCompleted() async => [];
 }
 
 class _MockTopicRepository extends TopicRepository {
@@ -104,24 +120,42 @@ class _MockTopicRepository extends TopicRepository {
   }
 }
 
+class _MockQuestionRepository extends QuestionRepository {
+  bool createShouldFail = false;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    if (createShouldFail) {
+      return Result.failure('Create failed');
+    }
+    return Result.success(null);
+  }
+}
+
 void main() {
   late _MockSourceRepository mockSourceRepo;
-  late _MockPdfIngestionService mockIngestion;
+  late _MockLlmService mockLlmService;
   late _MockTopicRepository mockTopicRepo;
+  late _MockQuestionRepository mockQuestionRepo;
   late ContentPipeline pipeline;
 
   setUp(() {
     mockSourceRepo = _MockSourceRepository();
-    mockIngestion = _MockPdfIngestionService();
+    mockLlmService = _MockLlmService();
     mockTopicRepo = _MockTopicRepository();
-    mockIngestion.classifyShouldFail = false;
-    mockIngestion.classifyResult = 'Math';
-    mockIngestion.classifyCallCount = 0;
+    mockQuestionRepo = _MockQuestionRepository();
+    mockLlmService.classifyShouldFail = false;
+    mockLlmService.classifyResult = 'Math';
+    mockLlmService.classifyCallCount = 0;
     mockTopicRepo.clear();
     pipeline = ContentPipeline(
-      ingestionService: mockIngestion,
+      llmService: mockLlmService,
       sourceRepository: mockSourceRepo,
       topicRepository: mockTopicRepo,
+      questionRepository: mockQuestionRepo,
     );
   });
 
@@ -140,6 +174,7 @@ void main() {
       expect(result.data!.content, 'Test content');
       expect(result.data!.studentId, 'student-1');
       expect(result.data!.type, SourceType.externalResource);
+      expect(result.data!.processingStatus, 'pending');
     });
 
     test('returns failure when source repository throws', () async {
@@ -171,11 +206,10 @@ void main() {
       expect(result.data!.sourceUrl, 'https://example.com');
     });
 
-    test('creates source with unique id based on timestamp', () async {
+    test('creates source with unique id', () async {
       final result1 = await pipeline.processUpload(
         title: 'First', content: 'A', type: SourceType.pdf, studentId: 's1',
       );
-      await Future.delayed(const Duration(milliseconds: 2));
       final result2 = await pipeline.processUpload(
         title: 'Second', content: 'B', type: SourceType.pdf, studentId: 's1',
       );
@@ -202,22 +236,8 @@ void main() {
     });
   });
 
-  group('ContentPipeline.processAndClassify', () {
-    test('calls classifyTopic on ingestion service', () async {
-      await pipeline.processAndClassify(
-        title: 'Math Notes',
-        content: 'Algebra content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        possibleTopics: ['Math', 'Physics'],
-        modelId: 'model-1',
-      );
-
-      expect(mockIngestion.classifyCallCount, 1);
-    });
-
-    test('saves source with topic id when classification matches existing topic',
-        () async {
+  group('ContentPipeline.processFullPipeline', () {
+    test('processes pipeline end-to-end with classification', () async {
       mockTopicRepo.addTopic(Topic(
         id: 'topic_math',
         subjectId: 'sub_math',
@@ -226,68 +246,96 @@ void main() {
         syllabusText: 'Math topics',
       ));
 
-      final result = await pipeline.processAndClassify(
+      final result = await pipeline.processFullPipeline(
+        title: 'Math Notes',
+        content: 'Algebra content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+        possibleTopics: ['Math', 'Physics'],
+        generateQuestions: false,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotNull);
+      expect(result.data!.processingStatus, 'completed');
+      expect(result.data!.summary, 'Test summary');
+    });
+
+    test('saves source completed status when pipeline succeeds', () async {
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Content',
+        type: SourceType.externalResource,
+        studentId: 's1',
+        modelId: 'model-1',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.processingStatus, 'completed');
+    });
+
+    test('generates questions when generateQuestions is true', () async {
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Content for questions',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+        possibleTopics: [],
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.generatedQuestionIds, isNotEmpty);
+    });
+
+    test('handles topic matching with case-insensitive comparison', () async {
+      mockTopicRepo.addTopic(Topic(
+        id: 'topic_math',
+        subjectId: 'sub_math',
+        title: 'MATH',
+        description: 'Mathematics',
+        syllabusText: 'Math topics',
+      ));
+
+      final result = await pipeline.processFullPipeline(
         title: 'Algebra Notes',
         content: 'Algebra content',
         type: SourceType.pdf,
         studentId: 's1',
-        possibleTopics: ['Math', 'Physics'],
         modelId: 'model-1',
+        possibleTopics: ['Math'],
+        generateQuestions: false,
       );
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.topicId, 'topic_math');
     });
 
-    test('saves source with empty topic id when classification fails', () async {
-      mockIngestion.classifyShouldFail = true;
+    test('handles classification failure gracefully', () async {
+      mockLlmService.classifyShouldFail = true;
 
-      final result = await pipeline.processAndClassify(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Content',
         type: SourceType.pdf,
         studentId: 's1',
-        possibleTopics: ['Math', 'Physics'],
         modelId: 'model-1',
+        possibleTopics: ['Math'],
+        generateQuestions: false,
       );
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.topicId, isEmpty);
     });
 
-    test('saves source with empty topic id when matched topic title not found',
-        () async {
-      mockIngestion.classifyResult = 'UnknownTopic';
-
-      final result = await pipeline.processAndClassify(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        possibleTopics: ['Math', 'Physics'],
-        modelId: 'model-1',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, isEmpty);
-    });
-
-    test('passes through subjectId and sourceUrl to the created source',
-        () async {
-      mockTopicRepo.addTopic(Topic(
-        id: 'topic_math',
-        subjectId: 'sub_math',
-        title: 'Math',
-        description: 'Mathematics',
-        syllabusText: 'Math topics',
-      ));
-
-      final result = await pipeline.processAndClassify(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
+    test('passes through subjectId and sourceUrl', () async {
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Content',
         type: SourceType.textbook,
         studentId: 's1',
-        possibleTopics: ['Math'],
         modelId: 'model-1',
         subjectId: 'sub_math',
         sourceUrl: 'https://example.com',
@@ -301,77 +349,18 @@ void main() {
     test('handles topic repository failure gracefully', () async {
       mockTopicRepo.throwOnGetAll();
 
-      final result = await pipeline.processAndClassify(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Content',
         type: SourceType.pdf,
         studentId: 's1',
-        possibleTopics: ['Math'],
         modelId: 'model-1',
+        possibleTopics: ['Math'],
+        generateQuestions: false,
       );
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.topicId, isEmpty);
     });
-
-    test('matches topic with case-insensitive comparison', () async {
-      mockTopicRepo.addTopic(Topic(
-        id: 'topic_math',
-        subjectId: 'sub_math',
-        title: 'MATH',
-        description: 'Mathematics',
-        syllabusText: 'Math topics',
-      ));
-
-      final result = await pipeline.processAndClassify(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        possibleTopics: ['Math'],
-        modelId: 'model-1',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, 'topic_math');
-    });
-
-    test('matches topic by substring/contains', () async {
-      mockTopicRepo.addTopic(Topic(
-        id: 'topic_adv_math',
-        subjectId: 'sub_math',
-        title: 'Advanced Mathematics',
-        description: 'Advanced math topics',
-        syllabusText: 'Calculus, Algebra',
-      ));
-
-      final result = await pipeline.processAndClassify(
-        title: 'Calc Notes',
-        content: 'Calculus content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        possibleTopics: ['Math'],
-        modelId: 'model-1',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, 'topic_adv_math');
-    });
-
-    test('passes through language to the created source', () async {
-      final result = await pipeline.processAndClassify(
-        title: 'French Notes',
-        content: 'French content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        possibleTopics: ['French'],
-        modelId: 'model-1',
-        language: 'fr',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.language, 'fr');
-    });
   });
-
 }

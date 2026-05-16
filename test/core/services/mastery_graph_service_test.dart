@@ -8,9 +8,14 @@ import 'package:studyking/features/subjects/data/models/topic_dependency_model.d
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
 class MockMasteryGraphRepository extends MasteryGraphRepository {
+  MockMasteryGraphRepository();
   final Map<String, MasteryState> _masteryStates = {};
   final Map<String, QuestionMasteryState> _questionMasteryStates = {};
   final Map<String, QuestionEvaluation> _evaluations = {};
+  bool failOnGetMasteryState = false;
+  bool failOnUpdateMasteryState = false;
+  bool failOnGetQuestionMasteryState = false;
+  String? failureMessage;
 
   @override
   Future<void> init() async {}
@@ -29,6 +34,9 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    if (failOnGetMasteryState) {
+      return Result.failure(failureMessage ?? 'getMasteryState failed');
+    }
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
       return Result.success(_masteryStates[key]!);
@@ -40,6 +48,9 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<void>> updateMasteryState(MasteryState state) async {
+    if (failOnUpdateMasteryState) {
+      return Result.failure(failureMessage ?? 'updateMasteryState failed');
+    }
     final key = '${state.studentId}_${state.topicId}';
     _masteryStates[key] = state;
     return Result.success(null);
@@ -55,11 +66,14 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
+    if (failOnGetQuestionMasteryState) {
+      return Result.failure(failureMessage ?? 'getQuestionMasteryState failed');
+    }
     final key = '${studentId}_$questionId';
     if (_questionMasteryStates.containsKey(key)) {
       return Result.success(_questionMasteryStates[key]!);
     }
-    final newState = QuestionMasteryState.initial(studentId: studentId, questionId: questionId);
+    final newState = QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now());
     _questionMasteryStates[key] = newState;
     return Result.success(newState);
   }
@@ -326,6 +340,152 @@ void main() {
         final result = await service.getReviewUrgency('student1', 'topic1');
         expect(result.isSuccess, isTrue);
         expect(result.data, isA<double>());
+      });
+
+      test('returns failure when repo fails', () async {
+        mockRepo.failOnGetMasteryState = true;
+        final result = await service.getReviewUrgency('student1', 'topic1');
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('error propagation', () {
+      test('recordAttempt returns failure when getMasteryState fails', () async {
+        mockRepo.failOnGetMasteryState = true;
+        final result = await service.recordAttempt(
+          studentId: 's1',
+          topicId: 't1',
+          questionId: 'q1',
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 5000,
+        );
+        expect(result.isFailure, isTrue);
+      });
+
+      test('recordAttempt returns failure when updateMasteryState fails', () async {
+        mockRepo.failOnUpdateMasteryState = true;
+        final result = await service.recordAttempt(
+          studentId: 's1',
+          topicId: 't1',
+          questionId: 'q1',
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 5000,
+        );
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getReadinessScore returns failure when repo fails', () async {
+        mockRepo.failOnGetMasteryState = true;
+        final result = await service.getReadinessScore('s1', 't1');
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('value assertions', () {
+      test('getTopicMastery returns initial state with expected values', () async {
+        final result = await service.getTopicMastery('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        final state = result.data!;
+        expect(state.accuracy, equals(0.0));
+        expect(state.totalAttempts, equals(0));
+        expect(state.correctAttempts, equals(0));
+        expect(state.masteryLevel, equals(MasteryLevel.novice));
+      });
+
+      test('getTopicMastery returns pre-set state values', () async {
+        mockRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
+            accuracy: 0.85,
+            totalAttempts: 20,
+            correctAttempts: 17,
+            currentStreak: 8,
+            masteryLevel: MasteryLevel.proficient,
+          ),
+        );
+        final result = await service.getTopicMastery('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        final state = result.data!;
+        expect(state.accuracy, equals(0.85));
+        expect(state.totalAttempts, equals(20));
+        expect(state.correctAttempts, equals(17));
+        expect(state.currentStreak, equals(8));
+        expect(state.masteryLevel, equals(MasteryLevel.proficient));
+      });
+
+      test('getAllTopicMastery returns correct count', () async {
+        mockRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't1'),
+        );
+        mockRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't2'),
+        );
+        final result = await service.getAllTopicMastery('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, equals(2));
+      });
+
+      test('recordAttempt updates accuracy after correct attempt', () async {
+        await service.recordAttempt(
+          studentId: 's1',
+          topicId: 't1',
+          questionId: 'q1',
+          isCorrect: true,
+          confidence: 5,
+          timeSpentMs: 10000,
+        );
+        final result = await service.getTopicMastery('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.accuracy, greaterThan(0.0));
+        expect(result.data!.totalAttempts, equals(1));
+        expect(result.data!.correctAttempts, equals(1));
+      });
+
+      test('recordAttempt updates accuracy after incorrect attempt', () async {
+        await service.recordAttempt(
+          studentId: 's1',
+          topicId: 't1',
+          questionId: 'q1',
+          isCorrect: false,
+          confidence: 2,
+          timeSpentMs: 5000,
+        );
+        final result = await service.getTopicMastery('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.accuracy, equals(0.0));
+        expect(result.data!.totalAttempts, equals(1));
+        expect(result.data!.correctAttempts, equals(0));
+      });
+
+      test('getReadinessScore returns correct value', () async {
+        mockRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
+            accuracy: 0.9,
+            currentStreak: 10,
+          ),
+        );
+        final result = await service.getReadinessScore('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!, greaterThan(0.0));
+      });
+
+      test('getReviewUrgency returns correct value', () async {
+        mockRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
+            reviewUrgency: 0.8,
+          ),
+        );
+        final result = await service.getReviewUrgency('s1', 't1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!, equals(0.8));
+      });
+
+      test('getMasterySnapshot returns specific values', () async {
+        final result = await service.getMasterySnapshot('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['totalTopics'], equals(10));
+        expect(result.data!['masteredTopics'], equals(5));
       });
     });
   });

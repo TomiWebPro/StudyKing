@@ -7,6 +7,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
@@ -16,7 +17,6 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/presentation/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
@@ -41,6 +41,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late SpacedRepetitionRepository _srRepo;
   late PracticeSessionService _sessionService;
   late final AnswerValidationService _validationService;
+  late final StudentIdService _studentIdService;
   List<Question> _questions = [];
   int _currentIndex = 0;
   String? _currentAnswer;
@@ -49,7 +50,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   bool _isSessionComplete = false;
   bool _sessionAutoSaved = false;
   int _correctAnswers = 0;
-  Timer? _displayTimer;
   String? _elapsedTimeFormatted;
   final List<PracticeAnswerRecord> _answerRecords = [];
   bool _isCorrect = false;
@@ -59,14 +59,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    _studentIdService = ref.read(studentIdServiceProvider);
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
       srRepo: _srRepo,
+      studentIdService: _studentIdService,
       subjectId: widget.args.subjectId,
     );
     _loadQuestions();
-    _startDisplayTimer();
+    _sessionService.startTimer();
+    _sessionService.elapsedNotifier.addListener(_onElapsedChanged);
   }
 
   @override
@@ -77,14 +80,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     );
   }
 
-  void _startDisplayTimer() {
-    _displayTimer?.cancel();
-    _displayTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-      setState(() {
-        final elapsed = DateTime.now().difference(_sessionService.sessionStartTime);
-        _elapsedTimeFormatted = formatDurationFromContext(context, elapsed);
-      });
+  void _onElapsedChanged() {
+    if (!mounted) return;
+    setState(() {
+      _elapsedTimeFormatted = formatDurationFromContext(context, _sessionService.elapsedNotifier.value);
     });
   }
 
@@ -199,7 +198,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _completeSession() async {
-    _displayTimer?.cancel();
+    _sessionService.cancelTimer();
     if (!_sessionAutoSaved) {
       _sessionAutoSaved = true;
       await _sessionService.autoSaveSession(
@@ -226,7 +225,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         .inMinutes;
     final planAdapter = PlanAdapter();
     await planAdapter.recordFromPracticeSession(
-      studentId: StudentIdService().getStudentId(),
+      studentId: _studentIdService.getStudentId(),
       actualQuestions: _questions.length,
       actualMinutes: elapsedMinutes.clamp(1, 480),
     );
@@ -243,12 +242,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _isFeedbackVisible = false;
     });
     _loadQuestions();
-    _startDisplayTimer();
+    _sessionService.startTimer();
   }
 
   @override
   void dispose() {
-    _displayTimer?.cancel();
+    _sessionService.elapsedNotifier.removeListener(_onElapsedChanged);
+    _sessionService.dispose();
     super.dispose();
   }
 
@@ -316,7 +316,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                       const SizedBox(height: 24),
                       if (!_isSubmitted)
                         FocusTraversalOrder(
-                          order: const NumericFocusOrder(4),
+                          order: const NumericFocusOrder(3),
                           child: Semantics(
                             label: AppLocalizations.of(context)!.submitAnswer,
                             child: FilledButton(

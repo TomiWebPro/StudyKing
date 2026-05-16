@@ -112,7 +112,7 @@ class FakePlanAdapter extends PlanAdapter {
 class FakeMasteryGraphService extends MasteryGraphService {
   final List<Map<String, dynamic>> recordedAttempts = [];
 
-  FakeMasteryGraphService() : super();
+  FakeMasteryGraphService();
 
   @override
   Future<Result<void>> recordAttempt({

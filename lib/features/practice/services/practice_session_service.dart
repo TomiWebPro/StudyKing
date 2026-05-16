@@ -1,43 +1,45 @@
 import 'dart:async';
-import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/core/utils/time_utils.dart';
 
 class PracticeSessionService {
   final Logger _logger = const Logger('PracticeSessionService');
   final SessionRepository _sessionRepo;
   final SpacedRepetitionRepository _srRepo;
+  final StudentIdService _studentIdService;
+  final Clock _clock;
   final String subjectId;
   Timer? _timer;
   DateTime _sessionStartTime = DateTime.now();
-  String? _elapsedTimeFormatted;
+  final ValueNotifier<Duration> elapsedNotifier = ValueNotifier(Duration.zero);
 
   PracticeSessionService({
     required SessionRepository sessionRepo,
     required SpacedRepetitionRepository srRepo,
+    required StudentIdService studentIdService,
+    Clock? clock,
     required this.subjectId,
   })  : _sessionRepo = sessionRepo,
-        _srRepo = srRepo;
+        _srRepo = srRepo,
+        _studentIdService = studentIdService,
+        _clock = clock ?? SystemClock();
 
   DateTime get sessionStartTime => _sessionStartTime;
-  Timer? get timer => _timer;
 
-  void startTimer(BuildContext context) {
+  void startTimer() {
     _timer?.cancel();
-    _sessionStartTime = DateTime.now();
+    _sessionStartTime = _clock.now();
+    elapsedNotifier.value = Duration.zero;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      final elapsed = DateTime.now().difference(_sessionStartTime);
-      _elapsedTimeFormatted = formatDurationFromContext(context, elapsed);
+      elapsedNotifier.value = _clock.now().difference(_sessionStartTime);
     });
   }
-
-  String? get elapsedTimeFormatted => _elapsedTimeFormatted;
 
   void cancelTimer() {
     _timer?.cancel();
@@ -57,9 +59,9 @@ class PracticeSessionService {
     required int correctAnswers,
   }) async {
     try {
-      final endTime = DateTime.now();
+      final endTime = _clock.now();
       final duration = endTime.difference(_sessionStartTime).inMilliseconds;
-      final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+      final id = '${endTime.millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch % 99999}';
 
       await _sessionRepo.save(Session(
         id: id,
@@ -68,12 +70,17 @@ class PracticeSessionService {
         actualDurationMs: duration,
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
-        studentId: StudentIdService().getStudentId(),
+        studentId: _studentIdService.getStudentId(),
         subjectId: subjectId,
         type: SessionType.practice,
       ));
     } catch (e) {
       _logger.e('Failed to auto-save session', e);
     }
+  }
+
+  void dispose() {
+    cancelTimer();
+    elapsedNotifier.dispose();
   }
 }

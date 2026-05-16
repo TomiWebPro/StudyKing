@@ -349,5 +349,40 @@ void main() {
       expect(find.text('Tutor'), findsOneWidget);
     });
   });
+
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalGroup in body and bottom bar', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra'),
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Algebra',
+            topicId: 't1', blocks: [], createdAt: now,
+          ),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsNWidgets(2));
+    });
+
+    testWidgets('interactive elements are present for keyboard focus', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra'),
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Algebra',
+            topicId: 't1', blocks: [], createdAt: now,
+          ),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.smart_toy_outlined), findsOneWidget);
+      expect(find.byType(ElevatedButton), findsOneWidget);
+    });
+  });
 }
 

@@ -945,6 +945,43 @@ void main() {
     });
   });
 
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalOrder with sequential values', (tester) async {
+      await tester.pumpWidget(sessionApp(
+        result: Result.success([
+          question(
+            id: 'q1', text: 'What is 2+2?',
+            type: QuestionType.singleChoice,
+            markschemeText: '4',
+            options: ['3', '4', '5'],
+          ),
+        ]),
+      ));
+      await tester.tap(find.text('Open Session'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalOrder), findsAtLeastNWidgets(2));
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('renders FocusTraversalGroup wrapping question content', (tester) async {
+      await tester.pumpWidget(sessionApp(
+        result: Result.success([
+          question(
+            id: 'q1', text: 'What is 2+2?',
+            type: QuestionType.singleChoice,
+            markschemeText: '4',
+            options: ['3', '4', '5'],
+          ),
+        ]),
+      ));
+      await tester.tap(find.text('Open Session'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+  });
+
   group('PracticeAnswerRecord', () {
     test('stores session answer details', () {
       final record = PracticeAnswerRecord(

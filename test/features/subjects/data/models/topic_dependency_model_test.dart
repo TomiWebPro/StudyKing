@@ -84,6 +84,38 @@ void main() {
         );
         expect(dep.isReady([prereqId], 0.8), isTrue);
       });
+
+      test('returns true when readiness exceeds threshold', () {
+        final dep = TopicDependency(
+          topicId: topicId, prerequisites: [prereqId],
+          masteryThreshold: 0.8,
+        );
+        expect(dep.isReady([prereqId], 0.95), isTrue);
+      });
+
+      test('returns false when only some prerequisites met', () {
+        final dep = TopicDependency(
+          topicId: topicId, prerequisites: [prereqId, 't2'],
+        );
+        expect(dep.isReady([prereqId], null), isFalse);
+      });
+
+      test('returns true when all multiple prerequisites met', () {
+        final dep = TopicDependency(
+          topicId: topicId, prerequisites: [prereqId, 't2'],
+        );
+        expect(dep.isReady([prereqId, 't2'], null), isTrue);
+      });
+
+      test('returns true with no prerequisites and null readinessScore', () {
+        final dep = TopicDependency(topicId: topicId);
+        expect(dep.isReady([], null), isTrue);
+      });
+
+      test('returns true with no prerequisites and any readinessScore', () {
+        final dep = TopicDependency(topicId: topicId);
+        expect(dep.isReady([], 0.0), isTrue);
+      });
     });
 
     group('calculatePriority', () {
@@ -126,6 +158,61 @@ void main() {
         );
         expect(priority, 10.0);
       });
+
+      test('applies all factors combined', () {
+        final dep = TopicDependency(
+          topicId: topicId, syllabusWeight: 2.0, masteryThreshold: 0.8,
+        );
+        final priority = dep.calculatePriority(
+          masteryState: 0.5, isPrerequisite: true, downstreamCount: 3,
+        );
+        // base 2.0 * (1 + (0.8-0.5)) = 2.0 * 1.3 = 2.6
+        // * 1.5 (prereq) = 3.9
+        // * (1 + 3*0.1) = 3.9 * 1.3 = 5.07
+        expect(priority, closeTo(5.07, 0.01));
+      });
+
+      test('masteryState at threshold does not increase priority', () {
+        final dep = TopicDependency(
+          topicId: topicId, syllabusWeight: 2.0, masteryThreshold: 0.8,
+        );
+        final priority = dep.calculatePriority(
+          masteryState: 0.8, isPrerequisite: false, downstreamCount: 0,
+        );
+        expect(priority, 2.0);
+      });
+
+      test('masteryState of 0.0 applies full threshold gap', () {
+        final dep = TopicDependency(
+          topicId: topicId, masteryThreshold: 0.8,
+        );
+        final priority = dep.calculatePriority(
+          masteryState: 0.0, isPrerequisite: false, downstreamCount: 0,
+        );
+        // 1.0 * (1 + 0.8) = 1.8
+        expect(priority, closeTo(1.8, 0.01));
+      });
+
+      test('clamps to 0.0 when priority is negative', () {
+        final dep = TopicDependency(
+          topicId: topicId, syllabusWeight: -5.0, masteryThreshold: 0.8,
+        );
+        final priority = dep.calculatePriority(
+          masteryState: 0.0, isPrerequisite: true, downstreamCount: 5,
+        );
+        expect(priority, 0.0);
+      });
+
+      test('downstreamCount of 0 adds no multiplier', () {
+        final dep = TopicDependency(
+          topicId: topicId, syllabusWeight: 1.0, masteryThreshold: 0.8,
+        );
+        final priority = dep.calculatePriority(
+          masteryState: 0.0, isPrerequisite: true, downstreamCount: 0,
+        );
+        // 1.0 * (1 + 0.8) = 1.8 * 1.5 = 2.7
+        expect(priority, closeTo(2.7, 0.01));
+      });
     });
 
     group('toJson', () {
@@ -141,10 +228,21 @@ void main() {
         final json = dep.toJson();
         expect(json['topicId'], topicId);
         expect(json['prerequisites'], [prereqId]);
+        expect(json['downstreamTopics'], ['t2']);
         expect(json['syllabusWeight'], 1.5);
+        expect(json['dependencyWeights'], {prereqId: 0.3});
+        expect(json['estimatedQuestions'], 15);
+        expect(json['estimatedMinutes'], 45);
         expect(json['masteryThreshold'], 0.85);
         expect(json['isRequired'], isFalse);
+        expect(json['parentTopicId'], 'p1');
         expect(json['sortOrder'], 2);
+      });
+
+      test('serializes null parentTopicId', () {
+        final dep = TopicDependency(topicId: topicId);
+        final json = dep.toJson();
+        expect(json['parentTopicId'], isNull);
       });
     });
 
@@ -164,10 +262,16 @@ void main() {
           'sortOrder': 5,
         };
         final dep = TopicDependency.fromJson(json);
+        expect(dep.topicId, topicId);
         expect(dep.prerequisites, [prereqId]);
+        expect(dep.downstreamTopics, ['t2']);
         expect(dep.syllabusWeight, 2.0);
+        expect(dep.dependencyWeights, {prereqId: 0.5});
+        expect(dep.estimatedQuestions, 20);
+        expect(dep.estimatedMinutes, 60);
         expect(dep.masteryThreshold, 0.9);
         expect(dep.isRequired, isFalse);
+        expect(dep.parentTopicId, 'p1');
         expect(dep.sortOrder, 5);
       });
 
@@ -194,6 +298,26 @@ void main() {
         final dep = TopicDependency.fromJson(json);
         expect(dep.dependencyWeights, {});
       });
+
+      test('handles null parentTopicId', () {
+        final json = {
+          'topicId': topicId,
+          'parentTopicId': null,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.parentTopicId, isNull);
+      });
+
+      test('handles integer values for double fields', () {
+        final json = {
+          'topicId': topicId,
+          'syllabusWeight': 2,
+          'masteryThreshold': 1,
+        };
+        final dep = TopicDependency.fromJson(json);
+        expect(dep.syllabusWeight, 2.0);
+        expect(dep.masteryThreshold, 1.0);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -201,13 +325,37 @@ void main() {
         final original = TopicDependency(
           topicId: topicId, prerequisites: [prereqId],
           downstreamTopics: ['t2'], syllabusWeight: 1.5,
-          masteryThreshold: 0.85, sortOrder: 3,
+          dependencyWeights: {prereqId: 0.3},
+          estimatedQuestions: 15, estimatedMinutes: 45,
+          masteryThreshold: 0.85, isRequired: false,
+          parentTopicId: 'p1', sortOrder: 3,
         );
         final restored = TopicDependency.fromJson(original.toJson());
         expect(restored.topicId, original.topicId);
         expect(restored.prerequisites, original.prerequisites);
+        expect(restored.downstreamTopics, original.downstreamTopics);
         expect(restored.syllabusWeight, original.syllabusWeight);
+        expect(restored.dependencyWeights, original.dependencyWeights);
+        expect(restored.estimatedQuestions, original.estimatedQuestions);
+        expect(restored.estimatedMinutes, original.estimatedMinutes);
+        expect(restored.masteryThreshold, original.masteryThreshold);
+        expect(restored.isRequired, original.isRequired);
+        expect(restored.parentTopicId, original.parentTopicId);
         expect(restored.sortOrder, original.sortOrder);
+      });
+
+      test('preserves null parentTopicId through roundtrip', () {
+        final original = TopicDependency(topicId: topicId);
+        final restored = TopicDependency.fromJson(original.toJson());
+        expect(restored.parentTopicId, isNull);
+      });
+
+      test('preserves defaults through roundtrip', () {
+        final original = TopicDependency(topicId: topicId);
+        final restored = TopicDependency.fromJson(original.toJson());
+        expect(restored.prerequisites, []);
+        expect(restored.syllabusWeight, 1.0);
+        expect(restored.sortOrder, 0);
       });
     });
 
@@ -216,6 +364,8 @@ void main() {
         final dep = TopicDependency(topicId: topicId);
         final copy = dep.copyWith();
         expect(copy.topicId, dep.topicId);
+        expect(copy.prerequisites, dep.prerequisites);
+        expect(copy.sortOrder, dep.sortOrder);
       });
 
       test('updates specified fields', () {
@@ -226,6 +376,55 @@ void main() {
         expect(copy.isRequired, isFalse);
         expect(copy.sortOrder, 10);
         expect(copy.masteryThreshold, 0.95);
+        expect(copy.topicId, topicId);
+      });
+
+      test('updates all fields at once', () {
+        final dep = TopicDependency(topicId: topicId);
+        final copy = dep.copyWith(
+          topicId: 't2',
+          prerequisites: ['p1'],
+          downstreamTopics: ['d1'],
+          syllabusWeight: 3.0,
+          dependencyWeights: {'p1': 0.7},
+          estimatedQuestions: 25,
+          estimatedMinutes: 50,
+          masteryThreshold: 0.75,
+          isRequired: false,
+          parentTopicId: 'parent-2',
+          sortOrder: 7,
+        );
+        expect(copy.topicId, 't2');
+        expect(copy.prerequisites, ['p1']);
+        expect(copy.downstreamTopics, ['d1']);
+        expect(copy.syllabusWeight, 3.0);
+        expect(copy.dependencyWeights, {'p1': 0.7});
+        expect(copy.estimatedQuestions, 25);
+        expect(copy.estimatedMinutes, 50);
+        expect(copy.masteryThreshold, 0.75);
+        expect(copy.isRequired, isFalse);
+        expect(copy.parentTopicId, 'parent-2');
+        expect(copy.sortOrder, 7);
+      });
+
+      test('original is not mutated by copyWith', () {
+        final dep = TopicDependency(
+          topicId: topicId, isRequired: true, sortOrder: 0,
+        );
+        dep.copyWith(isRequired: false, sortOrder: 99);
+        expect(dep.isRequired, isTrue);
+        expect(dep.sortOrder, 0);
+      });
+
+      test('preserves fields not specified in copyWith', () {
+        final dep = TopicDependency(
+          topicId: topicId, prerequisites: [prereqId],
+          sortOrder: 5, masteryThreshold: 0.9,
+        );
+        final copy = dep.copyWith(isRequired: false);
+        expect(copy.prerequisites, [prereqId]);
+        expect(copy.sortOrder, 5);
+        expect(copy.masteryThreshold, 0.9);
         expect(copy.topicId, topicId);
       });
     });
@@ -251,6 +450,16 @@ void main() {
         );
         expect(dep.parentTopicId, isNull);
         expect(dep.sortOrder, 0);
+      });
+
+      test('creates with empty childTopicIds', () {
+        final dep = TopicDependency.fromTopic(
+          topicId: topicId,
+          childTopicIds: [],
+          parentId: 'root',
+        );
+        expect(dep.downstreamTopics, []);
+        expect(dep.parentTopicId, 'root');
       });
     });
   });

@@ -3,24 +3,30 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/mastery_integration_service.dart';
 import 'package:studyking/core/services/adaptive_practice_engine.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 
 class MockMasteryGraphRepository extends MasteryGraphRepository {
+  MockMasteryGraphRepository();
+  bool failGetMasteryState = false;
+
   @override
   Future<void> init() async {}
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    if (failGetMasteryState) {
+      return Result.failure('mock failure');
+    }
     final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
-      accuracy: 0.8,
-      currentStreak: 5,
-      masteryLevel: MasteryLevel.proficient,
-      readinessScore: 0.8,
-      reviewUrgency: 0.3,
+      accuracy: topicId == 'topic1' ? 0.8 : 0.4,
+      currentStreak: topicId == 'topic1' ? 5 : 1,
+      masteryLevel: topicId == 'topic1' ? MasteryLevel.proficient : MasteryLevel.browsing,
+      readinessScore: topicId == 'topic1' ? 0.8 : 0.3,
+      reviewUrgency: topicId == 'topic1' ? 0.3 : 0.8,
     );
     return Result.success(state);
   }
@@ -33,11 +39,13 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
-    final state = QuestionMasteryState.initial(studentId: studentId, questionId: questionId);
-    state.correctCount = 3;
-    state.incorrectCount = 1;
-    state.confidenceHistory.add(4);
-    return Result.success(state);
+    final state = QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now());
+    final updated = state.copyWith(
+      correctCount: 3,
+      incorrectCount: 1,
+      confidenceHistory: [4],
+    );
+    return Result.success(updated);
   }
 
   @override
@@ -169,14 +177,32 @@ void main() {
         expect(result.data!['suggestedFocus'], isA<String>());
       });
 
-      test('returns review focus for low accuracy', () async {
+      test('returns expected mastery level and readiness score', () async {
         final result = await service.getAdaptiveRecommendation(
           studentId: 'student1',
           topicId: 'topic1',
         );
         expect(result.isSuccess, isTrue);
-        final focus = result.data!['suggestedFocus'] as String;
-        expect(['Review fundamentals', 'Review at-risk topics', 'Build consistency', 'Challenge advanced problems', 'Practice and reinforce'], contains(focus));
+        expect(result.data!['masteryLevel'], equals(MasteryLevel.proficient));
+        expect(result.data!['readinessScore'], equals(0.8));
+      });
+
+      test('returns challenge advanced problems for high readiness', () async {
+        final result = await service.getAdaptiveRecommendation(
+          studentId: 'student1',
+          topicId: 'topic1',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['suggestedFocus'], equals('Challenge advanced problems'));
+      });
+
+      test('returns review fundamentals for low accuracy', () async {
+        final result = await service.getAdaptiveRecommendation(
+          studentId: 'student1',
+          topicId: 'topic2',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['suggestedFocus'], equals('Review fundamentals'));
       });
 
       test('respects maxQuestions parameter', () async {
@@ -186,6 +212,15 @@ void main() {
           maxQuestions: 5,
         );
         expect(result.isSuccess, isTrue);
+      });
+
+      test('returns failure when mastery retrieval fails', () async {
+        mockRepo.failGetMasteryState = true;
+        final result = await service.getAdaptiveRecommendation(
+          studentId: 'student1',
+          topicId: 'topic1',
+        );
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -197,6 +232,16 @@ void main() {
         );
         expect(result.isSuccess, isTrue);
         expect(result.data, isA<double>());
+        expect(result.data!, greaterThan(0));
+      });
+
+      test('returns failure when question mastery fails', () async {
+        mockRepo.failGetMasteryState = true;
+        final result = await service.calculateSpacedRepetitionInterval(
+          studentId: 'student1',
+          questionId: 'q1',
+        );
+        expect(result.isFailure, isTrue);
       });
     });
 

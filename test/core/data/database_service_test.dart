@@ -82,6 +82,13 @@ class _FailingRepo extends TopicRepository {
   }
 }
 
+class _FailingQuestionRepo extends QuestionRepository {
+  @override
+  Future<void> init() async {
+    throw Exception('question init failed');
+  }
+}
+
 void main() {
   group('DatabaseService', () {
     late _FakeTopicRepository topicRepo;
@@ -158,6 +165,28 @@ void main() {
         tutorSessionRepository: tutorSessionRepo,
       );
       expect(service.init(), throwsA(isA<Exception>()));
+    });
+
+    test('init stops at first failure and does not init remaining repos', () async {
+      final service = DatabaseService(
+        topicRepository: topicRepo,
+        questionRepository: _FailingQuestionRepo(),
+        attemptRepository: attemptRepo,
+        lessonRepository: lessonRepo,
+        sessionRepository: sessionRepo,
+        subjectRepository: subjectRepo,
+        conversationRepository: conversationRepo,
+        tutorSessionRepository: tutorSessionRepo,
+      );
+      try {
+        await service.init();
+      } catch (_) {}
+      expect(topicRepo.initCallCount, 1);
+      expect(attemptRepo.initCallCount, 0);
+      expect(lessonRepo.initCallCount, 0);
+      expect(subjectRepo.initCallCount, 0);
+      expect(conversationRepo.initCallCount, 0);
+      expect(tutorSessionRepo.initCallCount, 0);
     });
   });
 }

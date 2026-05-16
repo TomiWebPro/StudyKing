@@ -36,6 +36,15 @@ class Source extends HiveObject {
   @HiveField(10, defaultValue: '')
   final String summary;
 
+  @HiveField(11, defaultValue: 'pending')
+  final String processingStatus;
+
+  @HiveField(12, defaultValue: '')
+  final String extractedText;
+
+  @HiveField(13, defaultValue: [])
+  final List<String> generatedQuestionIds;
+
   Source({
     required this.id,
     required this.title,
@@ -48,7 +57,15 @@ class Source extends HiveObject {
     this.studentId = '',
     this.language = '',
     this.summary = '',
+    this.processingStatus = 'pending',
+    this.extractedText = '',
+    this.generatedQuestionIds = const [],
   });
+
+  ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
+    (e) => e.name == processingStatus,
+    orElse: () => ProcessingStatus.pending,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -62,6 +79,9 @@ class Source extends HiveObject {
     'studentId': studentId,
     'language': language,
     'summary': summary,
+    'processingStatus': processingStatus,
+    'extractedText': extractedText,
+    'generatedQuestionIds': generatedQuestionIds,
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -79,6 +99,12 @@ class Source extends HiveObject {
     studentId: json['studentId'] as String? ?? '',
     language: json['language'] as String? ?? '',
     summary: json['summary'] as String? ?? '',
+    processingStatus: json['processingStatus'] as String? ?? 'pending',
+    extractedText: json['extractedText'] as String? ?? '',
+    generatedQuestionIds: (json['generatedQuestionIds'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        [],
   );
 
   Source copyWith({
@@ -93,6 +119,9 @@ class Source extends HiveObject {
     String? studentId,
     String? language,
     String? summary,
+    String? processingStatus,
+    String? extractedText,
+    List<String>? generatedQuestionIds,
   }) {
     return Source(
       id: id ?? this.id,
@@ -106,6 +135,9 @@ class Source extends HiveObject {
       studentId: studentId ?? this.studentId,
       language: language ?? this.language,
       summary: summary ?? this.summary,
+      processingStatus: processingStatus ?? this.processingStatus,
+      extractedText: extractedText ?? this.extractedText,
+      generatedQuestionIds: generatedQuestionIds ?? this.generatedQuestionIds,
     );
   }
 }

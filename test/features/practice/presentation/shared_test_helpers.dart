@@ -37,6 +37,7 @@ class FakeSessionRepository extends SessionRepository {
 }
 
 class FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
+  FakeSpacedRepetitionRepository();
   final updateCalls = <UpdateNextReviewCall>[];
 
   @override

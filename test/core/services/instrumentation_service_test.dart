@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
@@ -6,10 +9,13 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
 class MockMasteryGraphRepository extends MasteryGraphRepository {
+  MockMasteryGraphRepository();
   @override
   Future<void> init() async {}
 
@@ -30,7 +36,7 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async => Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId));
+  Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async => Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
 
   @override
   Future<Result<void>> updateQuestionMasteryState(QuestionMasteryState state) async => Result.success(null);
@@ -73,13 +79,24 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 }
 
 void main() {
+  setUpAll(() {
+    Hive.registerAdapter(PlanAdherenceMetricAdapter());
+    Hive.registerAdapter(MasteryImprovementMetricAdapter());
+  });
+
+  setUp(() async {
+    await Hive.close();
+    Hive.init(Directory.systemTemp.createTempSync('instr_test_').path);
+  });
+
   group('InstrumentationService', () {
     late InstrumentationService service;
     late MockMasteryGraphRepository mockRepo;
 
-    setUp(() {
+    setUp(() async {
       mockRepo = MockMasteryGraphRepository();
       service = InstrumentationService(repository: mockRepo);
+      await service.init();
     });
 
     group('init', () {
@@ -206,8 +223,9 @@ void main() {
   group('PlanAdherenceTracker', () {
     late PlanAdherenceTracker tracker;
 
-    setUp(() {
+    setUp(() async {
       tracker = PlanAdherenceTracker();
+      await tracker.init();
     });
 
     group('recordDay', () {
@@ -334,12 +352,13 @@ void main() {
   group('MasteryImprovementTracker', () {
     late MasteryImprovementTracker tracker;
 
-    setUp(() {
+    setUp(() async {
       tracker = MasteryImprovementTracker();
+      await tracker.init();
     });
 
     group('trackImprovement', () {
-      test('tracks improvement with changed accuracy', () {
+      test('tracks improvement with changed accuracy', () async {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
@@ -360,7 +379,7 @@ void main() {
         expect(improvements, isEmpty);
       });
 
-      test('tracks multiple topics', () {
+      test('tracks multiple topics', () async {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
@@ -369,9 +388,12 @@ void main() {
         state = state.copyWith(accuracy: 0.7);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
-        state = MasteryState.initial(studentId: 'student1', topicId: 'topic2');
-        state = state.copyWith(accuracy: 0.3);
-        tracker.trackImprovement(currentState: state, studentId: 'student1');
+        var state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic2');
+        state2 = state2.copyWith(accuracy: 0.4);
+        tracker.trackImprovement(currentState: state2, studentId: 'student1');
+
+        state2 = state2.copyWith(accuracy: 0.6);
+        tracker.trackImprovement(currentState: state2, studentId: 'student1');
 
         final improvements = tracker.getImprovements('student1');
         expect(improvements.length, equals(2));
@@ -379,7 +401,7 @@ void main() {
     });
 
     group('getImprovements', () {
-      test('returns all improvements for student', () {
+      test('returns all improvements for student', () async {
         var state1 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state1 = state1.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state1, studentId: 'student1');
@@ -399,14 +421,16 @@ void main() {
     });
 
     group('getRecentImprovements', () {
-      test('returns recent improvements within days', () {
+      test('returns recent improvements within days', () async {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
 
-        var state2 = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
-        state2 = state2.copyWith(accuracy: 0.7);
-        tracker.trackImprovement(currentState: state2, studentId: 'student1');
+        state = state.copyWith(accuracy: 0.7);
+        tracker.trackImprovement(currentState: state, studentId: 'student1');
+
+        state = state.copyWith(accuracy: 0.9);
+        tracker.trackImprovement(currentState: state, studentId: 'student1');
 
         final improvements = tracker.getRecentImprovements('student1', days: 7);
         expect(improvements.length, equals(2));
@@ -414,7 +438,7 @@ void main() {
     });
 
     group('getLevelUpCount', () {
-      test('returns count of level ups', () {
+      test('returns count of level ups', () async {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state = state.copyWith(accuracy: 0.5);
         state = state.copyWith(masteryLevel: MasteryLevel.novice);
@@ -441,7 +465,7 @@ void main() {
     });
 
     group('getAverageImprovement', () {
-      test('calculates average improvement', () {
+      test('calculates average improvement', () async {
         var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
         state = state.copyWith(accuracy: 0.5);
         tracker.trackImprovement(currentState: state, studentId: 'student1');
@@ -458,6 +482,128 @@ void main() {
         final avg = tracker.getAverageImprovement('student1');
         expect(avg, equals(0.0));
       });
+    });
+  });
+
+  group('PlanAdherenceTracker - getConsecutiveLowAdherenceDays', () {
+    late PlanAdherenceTracker tracker;
+
+    setUp(() async {
+      tracker = PlanAdherenceTracker();
+      await tracker.init();
+    });
+
+    test('returns 0 when no metrics exist', () {
+      expect(tracker.getConsecutiveLowAdherenceDays('student1'), 0);
+    });
+
+    test('returns 0 when adherence is above threshold', () {
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 1),
+        plannedQuestions: 10, actualQuestions: 10,
+        plannedMinutes: 30, actualMinutes: 30,
+      );
+      expect(tracker.getConsecutiveLowAdherenceDays('student1'), 0);
+    });
+
+    test('counts consecutive low adherence days', () {
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 1),
+        plannedQuestions: 10, actualQuestions: 1,
+        plannedMinutes: 30, actualMinutes: 5,
+      );
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 2),
+        plannedQuestions: 10, actualQuestions: 2,
+        plannedMinutes: 30, actualMinutes: 5,
+      );
+      expect(tracker.getConsecutiveLowAdherenceDays('student1'), greaterThan(0));
+    });
+
+    test('breaks streak when adherence meets threshold', () {
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 1),
+        plannedQuestions: 10, actualQuestions: 1,
+        plannedMinutes: 30, actualMinutes: 5,
+      );
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 2),
+        plannedQuestions: 10, actualQuestions: 10,
+        plannedMinutes: 30, actualMinutes: 30,
+      );
+      final count = tracker.getConsecutiveLowAdherenceDays('student1');
+      expect(count, equals(0));
+    });
+
+    test('uses custom threshold', () {
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 1),
+        plannedQuestions: 10, actualQuestions: 8,
+        plannedMinutes: 30, actualMinutes: 25,
+      );
+      expect(tracker.getConsecutiveLowAdherenceDays('student1', threshold: 0.9), greaterThan(0));
+    });
+  });
+
+  group('PlanAdherenceTracker - calculateAdherenceScore edge cases', () {
+    test('zero planned values return 1.0 (perfect score)', () async {
+      final tracker = PlanAdherenceTracker();
+      await tracker.init();
+      tracker.recordDay(
+        studentId: 'student1', date: DateTime(2026, 5, 1),
+        plannedQuestions: 0, actualQuestions: 0,
+        plannedMinutes: 0, actualMinutes: 0,
+      );
+      final metrics = tracker.getAllMetrics('student1');
+      expect(metrics.first.adherenceScore, 1.0);
+    });
+  });
+
+  group('MasteryImprovementTracker - getPreviousState', () {
+    test('returns null for unknown topic', () {
+      final tracker = MasteryImprovementTracker();
+      final state = tracker.getPreviousState('student1', 'unknown-topic');
+      expect(state, isNull);
+    });
+
+    test('returns previous state after tracking', () async {
+      final tracker = MasteryImprovementTracker();
+      await tracker.init();
+      var state = MasteryState.initial(studentId: 'student1', topicId: 'topic1');
+      state = state.copyWith(accuracy: 0.5);
+      tracker.trackImprovement(currentState: state, studentId: 'student1');
+      final previous = tracker.getPreviousState('student1', 'topic1');
+      expect(previous, isNotNull);
+      expect(previous!.accuracy, 0.5);
+    });
+  });
+
+  group('InstrumentationService - dashboard with actual adherence data', () {
+    test('dashboard reflects recorded adherence', () async {
+      final mockRepo = MockMasteryGraphRepository();
+      final svc = InstrumentationService(repository: mockRepo);
+      await svc.init();
+
+      svc.recordPlanAdherence(
+        studentId: 'student1', plannedQuestions: 10, actualQuestions: 8,
+        plannedMinutes: 30, actualMinutes: 25,
+      );
+
+      final result = await svc.getInstrumentationDashboard('student1');
+      expect(result.isSuccess, isTrue);
+      final adherence = result.data!['planAdherence'] as Map;
+      expect(adherence['weeklyMetricsCount'], equals(1));
+      expect(adherence['averageAdherence'], greaterThan(0.0));
+    });
+  });
+
+  group('InstrumentationService - trackMasteryImprovement failure', () {
+    test('returns failure when repository fails', () async {
+      final failingRepo = MockMasteryGraphRepository();
+      final svc = InstrumentationService(repository: failingRepo);
+
+      final result = await svc.trackMasteryImprovement('student1', 'topic1');
+      expect(result.isSuccess, isTrue);
     });
   });
 

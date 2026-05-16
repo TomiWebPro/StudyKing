@@ -1,4 +1,4 @@
-export 'data/repositories/answer_repository.dart';
+export 'data/repositories/question_choice_repository.dart';
 export 'data/repositories/attempt_repository.dart';
 export 'data/repositories/mastery_graph_repository.dart';
 export 'data/repositories/mastery_state_repository.dart';

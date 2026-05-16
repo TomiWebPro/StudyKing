@@ -1,3 +1,4 @@
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/core/data/repository.dart';
@@ -25,5 +26,21 @@ class SourceRepository extends Repository<Source> {
 
   Future<List<Source>> getByType(String sourceType) async {
     return box.values.where((s) => s.type.name == sourceType).toList();
+  }
+
+  Future<List<Source>> getByStatus(ProcessingStatus status) async {
+    return box.values.where((s) => s.statusEnum == status).toList();
+  }
+
+  Future<List<Source>> getPending() async {
+    return getByStatus(ProcessingStatus.pending);
+  }
+
+  Future<List<Source>> getFailed() async {
+    return getByStatus(ProcessingStatus.failed);
+  }
+
+  Future<List<Source>> getCompleted() async {
+    return getByStatus(ProcessingStatus.completed);
   }
 }

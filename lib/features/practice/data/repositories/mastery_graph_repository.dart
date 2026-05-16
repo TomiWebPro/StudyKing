@@ -36,15 +36,19 @@ class MasteryGraphRepository extends Repository<MasteryState> {
     required Box<QuestionMasteryState> questionMasteryBox,
     required Box<TopicDependency> dependencyBox,
     required Box<QuestionEvaluation> evaluationBox,
-  })  : masteryStateRepo = MasteryStateRepository(),
-        questionMasteryRepo = QuestionMasteryStateRepository(),
-        topicDependencyRepo = TopicDependencyRepository(),
-        questionEvaluationRepo = QuestionEvaluationRepository() {
+    MasteryStateRepository? masteryStateRepo,
+    QuestionMasteryStateRepository? questionMasteryRepo,
+    TopicDependencyRepository? topicDependencyRepo,
+    QuestionEvaluationRepository? questionEvaluationRepo,
+  })  : masteryStateRepo = masteryStateRepo ?? MasteryStateRepository(),
+        questionMasteryRepo = questionMasteryRepo ?? QuestionMasteryStateRepository(),
+        topicDependencyRepo = topicDependencyRepo ?? TopicDependencyRepository(),
+        questionEvaluationRepo = questionEvaluationRepo ?? QuestionEvaluationRepository() {
     attachBox(masteryBox);
-    masteryStateRepo.attachBox(masteryBox);
-    questionMasteryRepo.attachBox(questionMasteryBox);
-    topicDependencyRepo.attachBox(dependencyBox);
-    questionEvaluationRepo.attachBox(evaluationBox);
+    this.masteryStateRepo.attachBox(masteryBox);
+    this.questionMasteryRepo.attachBox(questionMasteryBox);
+    this.topicDependencyRepo.attachBox(dependencyBox);
+    this.questionEvaluationRepo.attachBox(evaluationBox);
   }
 
   @override

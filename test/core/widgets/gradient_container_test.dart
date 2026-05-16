@@ -133,5 +133,17 @@ void main() {
 
       expect(gradient.colors[0].toARGB32(), equals(Colors.blue.withValues(alpha: 0.3).toARGB32()));
     });
+
+    testWidgets('has null padding when no padding provided', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const GradientContainer(
+          accent: Colors.blue,
+          child: Text('No padding'),
+        ),
+      ));
+
+      final container = tester.widget<Container>(find.byType(Container).first);
+      expect(container.padding, isNull);
+    });
   });
 }

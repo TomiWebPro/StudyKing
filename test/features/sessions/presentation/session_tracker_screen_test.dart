@@ -431,4 +431,24 @@ void main() {
       expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });
   });
+
+  group('Keyboard accessibility', () {
+    testWidgets('renders FocusTraversalGroup for keyboard navigation', (tester) async {
+      final repo = _FakeSessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('all interactive elements are reachable', (tester) async {
+      final repo = _FakeSessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'View All'), findsOneWidget);
+      expect(find.byType(SessionAnalyticsWidget), findsOneWidget);
+    });
+  });
 }

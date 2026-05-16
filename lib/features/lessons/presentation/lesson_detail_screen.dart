@@ -108,16 +108,13 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       appBar: AppBar(
         title: Text(lesson.title),
         actions: [
-          FocusTraversalOrder(
-            order: const NumericFocusOrder(1),
-            child: Semantics(
-              button: true,
-              label: l10n.aiTutor,
-              child: IconButton(
-                icon: const Icon(Icons.smart_toy_outlined),
-                tooltip: l10n.aiTutor,
-                onPressed: _openTutorMode,
-              ),
+          Semantics(
+            button: true,
+            label: l10n.aiTutor,
+            child: IconButton(
+              icon: const Icon(Icons.smart_toy_outlined),
+              tooltip: l10n.aiTutor,
+              onPressed: _openTutorMode,
             ),
           ),
         ],
@@ -127,12 +124,9 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
           padding: ResponsiveUtils.listPadding(context),
           itemCount: lesson.blocks.length,
           itemBuilder: (context, i) {
-            return FocusTraversalOrder(
-              order: NumericFocusOrder(i.toDouble() + 1),
-              child: Semantics(
-                label: lesson.blocks[i].content,
-                child: LessonBlockCard(block: lesson.blocks[i]),
-              ),
+            return Semantics(
+              label: lesson.blocks[i].content,
+              child: LessonBlockCard(block: lesson.blocks[i]),
             );
           },
         ),
@@ -147,16 +141,13 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                   '${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}',
                 ),
                 const Spacer(),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(1),
-                  child: Semantics(
-                    button: true,
-                    label: l10n.aiTutor,
-                    child: ElevatedButton.icon(
-                      onPressed: _openTutorMode,
-                      icon: const Icon(Icons.smart_toy, size: 18),
-                      label: Text(l10n.aiTutor),
-                    ),
+                Semantics(
+                  button: true,
+                  label: l10n.aiTutor,
+                  child: ElevatedButton.icon(
+                    onPressed: _openTutorMode,
+                    icon: const Icon(Icons.smart_toy, size: 18),
+                    label: Text(l10n.aiTutor),
                   ),
                 ),
               ],

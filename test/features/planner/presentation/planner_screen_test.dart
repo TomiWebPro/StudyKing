@@ -1489,5 +1489,26 @@ void main() {
         expect(find.text('Pending Actions'), findsNothing);
       });
     });
+
+    group('Keyboard accessibility', () {
+      testWidgets('renders FocusTraversalGroup for keyboard navigation', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+      });
+
+      testWidgets('interactive elements have proper semantics for keyboard focus', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsNWidgets(3));
+        expect(find.byType(ElevatedButton), findsOneWidget);
+      });
+    });
   });
 }

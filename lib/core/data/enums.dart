@@ -20,6 +20,19 @@ enum SourceType {
   video,
   lectureNotes,
   externalResource,
+  image,
+  webPage,
+  audio,
+  document,
+}
+
+enum ProcessingStatus {
+  pending,
+  extracting,
+  classifying,
+  generatingQuestions,
+  completed,
+  failed,
 }
 
 enum LessonBlockType {

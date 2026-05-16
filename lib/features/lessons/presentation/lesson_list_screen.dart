@@ -114,16 +114,13 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(1),
-                  child: Semantics(
-                    button: true,
-                    label: l10n.startAiTutoring,
-                    child: ElevatedButton.icon(
-                      onPressed: _openTutorMode,
-                      icon: const Icon(Icons.smart_toy),
-                      label: Text(l10n.startAiTutoring),
-                    ),
+                Semantics(
+                  button: true,
+                  label: l10n.startAiTutoring,
+                  child: ElevatedButton.icon(
+                    onPressed: _openTutorMode,
+                    icon: const Icon(Icons.smart_toy),
+                    label: Text(l10n.startAiTutoring),
                   ),
                 ),
               ],
@@ -136,16 +133,13 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
       appBar: AppBar(
         title: Text(widget.args.topicTitle),
         actions: [
-          FocusTraversalOrder(
-            order: const NumericFocusOrder(1),
-            child: Semantics(
-              button: true,
-              label: l10n.startAiTutoring,
-              child: IconButton(
-                icon: const Icon(Icons.smart_toy_outlined),
-                tooltip: l10n.startAiTutoring,
-                onPressed: _openTutorMode,
-              ),
+          Semantics(
+            button: true,
+            label: l10n.startAiTutoring,
+            child: IconButton(
+              icon: const Icon(Icons.smart_toy_outlined),
+              tooltip: l10n.startAiTutoring,
+              onPressed: _openTutorMode,
             ),
           ),
         ],
@@ -157,25 +151,22 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
           itemBuilder: (context, index) {
             final l = _lessons[index];
             final status = _statusCache[l.id];
-            return FocusTraversalOrder(
-              order: NumericFocusOrder((index + 2).toDouble()),
-              child: Semantics(
-                label: l.title,
-                child: LessonListItem(
-                  lesson: l,
-                  topicTitle: widget.args.topicTitle,
-                  subjectId: widget.args.subjectId,
-                  topicId: widget.args.topicId,
-                  status: status,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.lessonDetail,
-                    arguments: LessonDetailArgs(
-                      lessonId: l.id,
-                      topicId: widget.args.topicId,
-                      topicTitle: widget.args.topicTitle,
-                      subjectId: widget.args.subjectId,
-                    ),
+            return Semantics(
+              label: l.title,
+              child: LessonListItem(
+                lesson: l,
+                topicTitle: widget.args.topicTitle,
+                subjectId: widget.args.subjectId,
+                topicId: widget.args.topicId,
+                status: status,
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.lessonDetail,
+                  arguments: LessonDetailArgs(
+                    lessonId: l.id,
+                    topicId: widget.args.topicId,
+                    topicTitle: widget.args.topicTitle,
+                    subjectId: widget.args.subjectId,
                   ),
                 ),
               ),
