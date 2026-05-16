@@ -66,13 +66,14 @@ void main() {
       expect(spans.whereType<TextSpan>().any((s) => s.text == '\u2260'), isTrue);
     });
 
-    testWidgets('renders integer numbers with deep orange color', (tester) async {
+    testWidgets('renders integer numbers with secondary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: '42'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
       final intSpan = spans.whereType<TextSpan>().where((s) => s.text == '42').toList();
       expect(intSpan, isNotEmpty);
-      expect(intSpan.first.style?.color, Colors.deepOrange.shade700);
+      expect(intSpan.first.style?.color, cs.secondary);
     });
 
     testWidgets('renders variables in italic', (tester) async {
@@ -93,11 +94,12 @@ void main() {
 
     testWidgets('renders operators with correct color for plus', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'a + b'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
       final opSpan = spans.whereType<TextSpan>().where((s) => s.text == '+').toList();
       expect(opSpan, isNotEmpty);
-      expect(opSpan.first.style?.color, Colors.green.shade700);
+      expect(opSpan.first.style?.color, cs.tertiary);
     });
 
     testWidgets('renders isSolution with container wrapping', (tester) async {
@@ -186,25 +188,28 @@ void main() {
       expect(find.byType(RichText), findsOneWidget);
     });
 
-    testWidgets('renders integer numbers part of decimal with deep orange', (tester) async {
+    testWidgets('renders integer numbers part of decimal with secondary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: '3.14'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '3' && s.style?.color == Colors.deepOrange.shade700), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '3' && s.style?.color == cs.secondary), isTrue);
     });
 
     testWidgets('parses percent sign', (tester) async {
       await tester.pumpWidget(buildWidget(expression: '50%'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '%' && s.style?.color == Colors.green), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '%' && s.style?.color == cs.tertiary), isTrue);
     });
 
-    testWidgets('parses equals sign with blue color', (tester) async {
+    testWidgets('parses equals sign with primary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'x=5'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '=' && s.style?.color == Colors.blue), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '=' && s.style?.color == cs.primary), isTrue);
     });
 
     testWidgets('parses comma and semicolon', (tester) async {
@@ -215,20 +220,22 @@ void main() {
       expect(spans.whereType<TextSpan>().any((s) => s.text == ';'), isTrue);
     });
 
-    testWidgets('parses parentheses with brown color', (tester) async {
+    testWidgets('parses parentheses with onSurfaceVariant color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: '(x)'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '(' && s.style?.color == Colors.brown.shade600), isTrue);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == ')' && s.style?.color == Colors.brown.shade600), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '(' && s.style?.color == cs.onSurfaceVariant), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == ')' && s.style?.color == cs.onSurfaceVariant), isTrue);
     });
 
-    testWidgets('parses square brackets with brown color', (tester) async {
+    testWidgets('parses square brackets with onSurfaceVariant color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: '[x]'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '[' && s.style?.color == Colors.brown.shade600), isTrue);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == ']' && s.style?.color == Colors.brown.shade600), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '[' && s.style?.color == cs.onSurfaceVariant), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == ']' && s.style?.color == cs.onSurfaceVariant), isTrue);
     });
 
     testWidgets('parses > operator', (tester) async {
@@ -238,25 +245,28 @@ void main() {
       expect(spans.whereType<TextSpan>().any((s) => s.text == '>'), isTrue);
     });
 
-    testWidgets('parses minus operator with green color', (tester) async {
+    testWidgets('parses minus operator with tertiary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'a - b'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '-' && s.style?.color == Colors.green.shade700), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '-' && s.style?.color == cs.tertiary), isTrue);
     });
 
     testWidgets('parses multiply operator converted to times symbol', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'a * b'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '\u00D7' && s.style?.color == Colors.orange.shade700), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '\u00D7' && s.style?.color == cs.secondary), isTrue);
     });
 
     testWidgets('parses division operator', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'a / b'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
-      expect(spans.whereType<TextSpan>().any((s) => s.text == '/' && s.style?.color == Colors.orange.shade700), isTrue);
+      expect(spans.whereType<TextSpan>().any((s) => s.text == '/' && s.style?.color == cs.secondary), isTrue);
     });
 
     testWidgets('parses backslash delimiters for brackets', (tester) async {
@@ -482,13 +492,14 @@ void main() {
       expect(find.byType(Container), findsWidgets);
     });
 
-    testWidgets('greater-than operator with blue color', (tester) async {
+    testWidgets('greater-than operator with primary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'x>5'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
       final gtSpan = spans.whereType<TextSpan>().where((s) => s.text == '>').toList();
       expect(gtSpan, isNotEmpty);
-      expect(gtSpan.first.style?.color, Colors.blue.shade700);
+      expect(gtSpan.first.style?.color, cs.primary);
     });
 
     testWidgets('comma and semicolon have fontSize 14', (tester) async {
@@ -503,14 +514,15 @@ void main() {
       expect(semiSpan.first.style?.fontSize, 14);
     });
 
-    testWidgets('equals sign has bold font weight and blue color', (tester) async {
+    testWidgets('equals sign has bold font weight and primary color', (tester) async {
       await tester.pumpWidget(buildWidget(expression: 'x=5'));
+      final cs = Theme.of(tester.element(find.byType(MathExpressionWidget))).colorScheme;
 
       final spans = _getSpans(tester);
       final eqSpan = spans.whereType<TextSpan>().where((s) => s.text == '=').toList();
       expect(eqSpan, isNotEmpty);
       expect(eqSpan.first.style?.fontWeight, FontWeight.bold);
-      expect(eqSpan.first.style?.color, Colors.blue);
+      expect(eqSpan.first.style?.color, cs.primary);
     });
 
     testWidgets('isSolution with showPrefix renders both', (tester) async {

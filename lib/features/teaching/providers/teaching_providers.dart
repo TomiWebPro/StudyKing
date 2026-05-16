@@ -1,8 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database, defaultModelForProvider, llmProviderProvider, selectedModelProvider;
+import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, defaultModelForProvider, llmProviderProvider, selectedModelProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
+import 'package:studyking/features/teaching/services/voice_controller.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import '../models/lesson_plan_model.dart';
 import '../services/prompts/prompts.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
@@ -12,15 +16,38 @@ final teachingModelIdProvider = Provider<String>((ref) {
   return defaultModelForProvider(provider);
 });
 
-final tutorServiceProvider = Provider<TutorService>((ref) {
-  return TutorService(
-    database: database,
+final clockProvider = Provider<Clock>((ref) => SystemClock());
+
+final exerciseEvaluatorProvider = Provider<ExerciseEvaluator>((ref) {
+  return ExerciseEvaluator(
     llmService: ref.watch(llmServiceProvider),
-    masteryService: ref.watch(masteryGraphServiceProvider),
     modelId: ref.watch(teachingModelIdProvider),
   );
 });
 
-final promptTemplatesProvider = Provider<PromptTemplates>((ref) {
-  return PromptTemplates.defaultTemplates;
+final voiceControllerProvider = Provider<VoiceController>((ref) {
+  return VoiceController();
+});
+
+final tutorServiceProvider = Provider<TutorService>((ref) {
+  return TutorService(
+    database: ref.watch(databaseProvider),
+    llmService: ref.watch(llmServiceProvider),
+    masteryService: ref.watch(masteryGraphServiceProvider),
+    modelId: ref.watch(teachingModelIdProvider),
+    exerciseEvaluator: ref.watch(exerciseEvaluatorProvider),
+    clock: ref.watch(clockProvider),
+  );
+});
+
+final promptsProvider = Provider<ConversationPromptSet>((ref) {
+  return const ConversationPromptSet();
+});
+
+final lessonPlanProvider = Provider<LessonPlan?>((ref) {
+  return null;
+});
+
+final promptTemplatesProvider = Provider<ConversationPromptSet>((ref) {
+  return const ConversationPromptSet();
 });

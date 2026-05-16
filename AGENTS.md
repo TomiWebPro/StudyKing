@@ -26,3 +26,17 @@ Every source file in `lib/features/*/` must have a corresponding test file follo
 - Prefer `fixedStudentId` over `StudentIdService` singleton in widget tests to avoid Hive I/O dependencies.
 - Use `pumpAndSettle` for widget tests that involve async operations.
 - Use `NavigatorObserver` for verifying navigation behavior.
+
+## i18n / Number Formatting Conventions
+
+- **Never use `toStringAsFixed()` for user-facing numeric displays.** It always produces a period decimal separator (e.g. `"85.5%"`), which is incorrect for comma-decimal locales (Spanish `es`, French, German, etc.).
+- Instead, use the locale-aware helpers in `lib/core/utils/number_format_utils.dart`:
+  - `formatDecimal(value, localeName, ...)` — plain decimals
+  - `formatPercent(value, localeName, ...)` — percentages (takes 0–100 range)
+  - `formatCompactNumber(value, localeName)` — compact token counts (1.5K, 2.3M)
+  - `formatHours(totalSeconds, localeName)` — hours from seconds
+  - `formatCurrency(value, localeName, ...)` — dollar amounts
+- All helpers accept `localeName` (from `AppLocalizations.of(context)!.localeName`) so they render correctly for every locale.
+- **CSV exports** should remain in invariant `en` format (CSV is data, not display).
+- **PDF exports** should use the user's locale (they are user-facing documents).
+- **LLM-facing** strings (prompts, tutor notes) can stay in `en` invariant format.

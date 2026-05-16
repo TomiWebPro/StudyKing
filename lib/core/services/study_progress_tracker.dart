@@ -1,3 +1,4 @@
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'mastery_graph_service.dart';
@@ -6,6 +7,7 @@ import 'badge_service.dart';
 import 'localization_service.dart';
 
 class StudyProgressTracker {
+  final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
   final LocalizationService? _localizationService;
@@ -125,7 +127,8 @@ class StudyProgressTracker {
         : currentWeek.where((a) => a.isCorrect).length / currentWeek.length;
 
     final previousAccuracy = (previousWeek['accuracy'] as num).toDouble();
-    return ((currentAccuracy - previousAccuracy / 100.0) * 100).roundToDouble();
+    final previousRatio = previousAccuracy / 100.0;
+    return ((currentAccuracy - previousRatio) * 100).roundToDouble();
   }
 
   Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
@@ -181,7 +184,9 @@ class StudyProgressTracker {
           'action': l10n?.recommendationReviewWithTutor() ?? 'Review weak topics with the AI tutor',
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to get weak topics for recommendations: $e');
+    }
 
     return recommendations;
   }
@@ -199,7 +204,8 @@ class StudyProgressTracker {
         'description': l10n?.badgeDescription(b.id) ?? b.description,
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to get badges: $e');
       return [];
     }
   }
@@ -218,7 +224,9 @@ class StudyProgressTracker {
           MasteryLevel.expert => 'Expert',
         };
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to get topic mastery level from service: $e');
+    }
 
     try {
       final stats = await getTopicProgress(studentId, topicId);
@@ -229,7 +237,9 @@ class StudyProgressTracker {
       if (accuracy >= 0.8 && attempts >= 5) return 'Proficient';
       if (accuracy >= 0.6 && attempts >= 3) return 'Developing';
       if (attempts >= 1) return 'Browsing';
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to get topic progress for mastery level: $e');
+    }
 
     return 'Novice';
   }
@@ -243,17 +253,17 @@ class StudyProgressTracker {
 
     csvLines.add('"Date","Metric","Value"');
 
-    csvLines.add('"$studentId","totalAttempts","${stats['totalAttempts']}")');
-    csvLines.add('"$studentId","correctAttempts","${stats['correctAttempts']}")');
+    csvLines.add('"$studentId","totalAttempts","${stats['totalAttempts']}"');
+    csvLines.add('"$studentId","correctAttempts","${stats['correctAttempts']}"');
     csvLines.add('"$studentId","accuracy","${stats['accuracy']}%"');
-    csvLines.add('"$studentId","avgTimePerQuestion","${stats['avgTimePerQuestion']}")');
-    csvLines.add('"$studentId","totalStudyTimeHours","${stats['totalStudyTimeHours']}")');
-    csvLines.add('"$studentId","weeklyActivity","${stats['weeklyActivity']}")');
-    csvLines.add('"$studentId","dailyActivity","${stats['dailyActivity']}")');
+    csvLines.add('"$studentId","avgTimePerQuestion","${stats['avgTimePerQuestion']}"');
+    csvLines.add('"$studentId","totalStudyTimeHours","${stats['totalStudyTimeHours']}"');
+    csvLines.add('"$studentId","weeklyActivity","${stats['weeklyActivity']}"');
+    csvLines.add('"$studentId","dailyActivity","${stats['dailyActivity']}"');
 
     csvLines.add('"Weekly Trend","Week","Attempts","Accuracy"');
     for (var item in trend) {
-      csvLines.add('"$studentId",${item['week']}-W${item['month']},"${item['attempts']}" ,"${item['accuracy']}%")');
+      csvLines.add('"$studentId",${item['week']}-W${item['month']},"${item['attempts']}" ,"${item['accuracy']}%"');
     }
 
     csvLines.add('"Badges","Badge Name","Date Unlocked"');

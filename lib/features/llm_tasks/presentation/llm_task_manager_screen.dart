@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/providers/llm_providers.dart';
 import '../../../core/services/llm_task_manager.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class LlmTaskManagerScreen extends ConsumerStatefulWidget {
@@ -116,9 +118,9 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens)),
+              _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
               const SizedBox(width: 16),
-              _buildUsageStat(context, l10n.totalCost, '\$${totalCost.toStringAsFixed(4)}'),
+              _buildUsageStat(context, l10n.totalCost, '\$${formatDecimal(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)}'),
               const SizedBox(width: 16),
               _buildUsageStat(context, l10n.done, '$completedTasks'),
               const SizedBox(width: 16),
@@ -166,24 +168,13 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     );
   }
 
-  String _formatTokens(int tokens) {
-    if (tokens >= 1000000) {
-      return '${(tokens / 1000000).toStringAsFixed(1)}M';
-    }
-    if (tokens >= 1000) {
-      return '${(tokens / 1000).toStringAsFixed(1)}K';
-    }
-    return tokens.toString();
+  String _formatTokens(int tokens, String localeName) {
+    return formatCompactNumber(tokens, localeName);
   }
 
   Widget _buildTaskCard(BuildContext context, LlmTask task, AppLocalizations l10n, LlmTaskManager taskManager) {
-    final statusColor = switch (task.status) {
-      LlmTaskStatus.running => Colors.blue,
-      LlmTaskStatus.done => Colors.green,
-      LlmTaskStatus.failed => Colors.red,
-      LlmTaskStatus.cancelled => Colors.orange,
-      LlmTaskStatus.queued => Colors.grey,
-    };
+    final cs = Theme.of(context).colorScheme;
+    final statusColor = AppTheme.statusColor(task.status, context);
 
     final statusIcon = switch (task.status) {
       LlmTaskStatus.running => Icons.sync,
@@ -262,26 +253,26 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: cs.primaryContainer.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.token, size: 14, color: Colors.blue.shade600),
+                    Icon(Icons.token, size: 14, color: cs.primary),
                     const SizedBox(width: 4),
                     Text(
-                      '${_formatTokens(task.tokensUsed)} tokens',
-                      style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                      '${_formatTokens(task.tokensUsed, l10n.localeName)} tokens',
+                      style: TextStyle(fontSize: 11, color: cs.primary),
                     ),
                     if (task.estimatedCost > 0) ...[
                       const SizedBox(width: 12),
-                      Icon(Icons.attach_money, size: 14, color: Colors.green.shade600),
+                      Icon(Icons.attach_money, size: 14, color: cs.tertiary),
                       const SizedBox(width: 4),
                       Text(
-                        '\$${task.estimatedCost.toStringAsFixed(4)}',
-                        style: TextStyle(fontSize: 11, color: Colors.green.shade700),
+                        '\$${formatDecimal(task.estimatedCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)}',
+                        style: TextStyle(fontSize: 11, color: cs.tertiary),
                       ),
                     ],
                   ],
@@ -294,12 +285,12 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.05),
+                    color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, size: 14, color: Colors.red.shade400),
+                      Icon(Icons.error_outline, size: 14, color: Theme.of(context).colorScheme.error),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(task.error!,
@@ -319,7 +310,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                   onPressed: () => taskManager.cancelTask(task.id),
                   icon: const Icon(Icons.cancel, size: 18),
                   label: Text(l10n.cancelTask),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                 ),
               ),
           ],

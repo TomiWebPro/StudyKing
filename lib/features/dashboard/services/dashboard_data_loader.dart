@@ -1,4 +1,5 @@
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -32,6 +33,7 @@ class DashboardData {
 }
 
 class DashboardDataLoader {
+  final Logger _logger = const Logger('DashboardDataLoader');
   final MasteryGraphService masteryService;
   final StudyProgressTracker tracker;
   final InstrumentationService instrumentation;
@@ -68,10 +70,11 @@ class DashboardDataLoader {
           'completedSessions': focusToday.where((s) => s.completed).length,
           'totalSessions': focusToday.length,
           'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
-          'hours': (totalMs / 3600000).toStringAsFixed(1),
         };
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to load today focus stats: $e');
+    }
 
     List<MasteryState> allMastery = [];
     final masteryResult = await masteryService.getAllTopicMastery(studentId);
@@ -101,7 +104,8 @@ class DashboardDataLoader {
         try {
           final topic = await topicRepo.get(state.topicId);
           topicNameCache[state.topicId] = topic?.title ?? state.topicId;
-        } catch (_) {
+        } catch (e) {
+          _logger.w('Failed to load topic name for ${state.topicId}: $e');
           topicNameCache[state.topicId] = state.topicId;
         }
       }

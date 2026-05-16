@@ -24,6 +24,8 @@ class LlmConfiguration {
 }
 
 class LlmService {
+  static const String defaultSystemPrompt = 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+
   final LlmConfiguration config;
   final http.Client _httpClient;
   final LlmTaskManager? _taskManager;
@@ -52,7 +54,7 @@ class LlmService {
       return '';
     }
 
-    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing Quick Guide. Keep responses concise and educational.';
+    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPrompt;
 
     switch (config.provider) {
       case LlmProvider.openRouter:
@@ -76,7 +78,7 @@ class LlmService {
       return;
     }
 
-    final effectiveSystemPrompt = systemPrompt ?? 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPrompt;
 
     switch (config.provider) {
       case LlmProvider.openRouter:
@@ -246,7 +248,7 @@ class LlmService {
   }) async {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
-    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
       ollamaMessages.addAll(ConversationMemory.fromConversationMessages(memory.getHistory()));
@@ -290,7 +292,7 @@ class LlmService {
   }) async* {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
-    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
       ollamaMessages.addAll(ConversationMemory.fromConversationMessages(memory.getHistory()));
@@ -351,7 +353,7 @@ class LlmService {
   }) async {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
-    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
     final messages = _buildMessages(
       message: message,
       systemPrompt: systemPrompt,
@@ -390,7 +392,7 @@ class LlmService {
   }) async* {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
-    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'https://api.openai.com/v1';
+    final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
     final messages = _buildMessages(
       message: message,
       systemPrompt: systemPrompt,

@@ -2296,7 +2296,7 @@
   "@suggestedPromptQuiz": {
     "description": "Suggested prompt for quiz"
   },
-  "suggestedPromptMath": "Ayuda con problemas de mates",
+  "suggestedPromptMath": "Ayuda con problemas de matemáticas",
   "@suggestedPromptMath": {
     "description": "Suggested prompt for math help"
   },

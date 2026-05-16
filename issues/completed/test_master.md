@@ -1,131 +1,104 @@
-# Test Coverage & Quality: `lib/core/` Has 19 Untested Files, Orphaned Tests, and Shallow Coverage Patterns
+# Test Coverage Gaps & Structural Disorganization
 
 ## Context
 
-A comprehensive audit of all 63 source files in `lib/core/` and all ~307 test files across the project reveals that while `lib/features/` has near-perfect file-level test coverage (191/192 files mapped), the `lib/core/` layer — containing foundational services, data layer, utilities, and providers — has **19 source files with zero test coverage**. Additionally, several existing tests are orphaned, misplaced, or superficially shallow, and error-handler coverage is fragmented across 6 overlapping files totaling ~2,890 lines.
+The codebase has strong overall test coverage (~97% of source files have a matching test), but several areas fall short of the quality and convention standards set by the `subjects` feature — the gold standard reference. Three categories of issues exist: **missing test coverage** for critical service files, **orphan/duplicate test files** that violate the one-source-file convention, and **overly thin provider tests** that only verify creation.
 
----
+### Category 1: Missing Test Coverage (CRITICAL)
 
-## Issue A: 19 Untested Source Files in `lib/core/` (Critical)
+Four source files have zero test coverage:
 
-### Services (6 files — highest business risk)
+| Source File | Lines | Risk Level | Reason |
+|---|---|---|---|
+| `lib/features/ingestion/services/web_scraper.dart` | 96 | **CRITICAL** | Network I/O, HTTP error handling (5xx, 4xx), URL validation, HTML stripping with `<script>`/`<style>` removal, empty content detection. Non-trivial branching logic in `_extractMainText` and `_stripTags`. |
+| `lib/features/teaching/services/prompts/prompts.dart` | 133 | **HIGH** | Prompt generation logic with `switch` on `ConversationPhase` (6 branches), `adaptivePace` threshold logic (3 branches), string interpolation with `durationMinutes`, `confidenceRating`. Template strings can silently produce malformed output. |
+| `lib/features/ingestion/services/document_extractor.dart` | 29 | **MEDIUM** | `estimateChunkCount` has edge case at `text.isEmpty` (returns 0) and division/`ceil` boundary at `chunkSize` multiples. `extractText` has branching per `SourceType`. |
+| `lib/features/teaching/providers/teaching_providers.dart` | 26 | **MEDIUM** | Provides `tutorServiceProvider`, `teachingModelIdProvider`, `promptTemplatesProvider`. Every other feature tests its providers — this is a consistency gap. `teachingModelIdProvider` has fallback logic (use `selectedModelProvider`, then `defaultModelForProvider`). |
 
-| Source | Lines | Key Logic Missing Tests |
+### Category 2: Structural Disorganization — Settings Data Models (HIGH)
+
+The `settings/data/models/` directory has 8 source files but its 6 test files include 2 orphans that don't map to a single source, plus significant **test duplication**:
+
+| Test File | Lines | Issue |
 |---|---|---|
-| `lib/core/services/notification_service.dart` | ~120 | Singleton with `init()`, `showNotification()`, 7 notification-type methods (century, streak, accuracy, etc.), `cancel()`, `cancelAll()` |
-| `lib/core/services/localization_service.dart` | ~80 | Wraps all 40+ AppLocalizations getter methods; used across every screen |
-| `lib/core/services/conversation_memory.dart` | ~150 | In-memory conversation buffer with automatic persistence to repository, context-length trimming, load/sync from repo |
-| `lib/core/services/badge_service.dart` | ~100 | `getBadges()`, `checkAndUnlockBadges()` — business rules for century/streak/accuracy badge unlock logic |
-| `lib/core/services/progress_export_service.dart` | 351 | PDF/CSV/JSON export, file I/O, share integration — largest untested file in core |
-| `lib/core/services/llm_usage_meter.dart` | ~80 | `LlmUsageMeter` + `LlmUsageRecord` — token tracking across sessions |
+| `models_test.dart` | 268 | **Duplicate + orphan.** Tests `SettingsBox` (duplicating `settings_box_test.dart`), `UserProfile` (duplicating `user_profile_model_test.dart`), `SettingsBoxAdapter`, and `UserProfileAdapter`. Tests are also mixed: includes a `testWidgets` call (line 252) for a ThemeMode widget check that belongs in a widget test file. |
+| `model_edge_cases_test.dart` | 324 | **Orphan.** Tests `SettingsBox.fromJson` type coercion and Hive adapter binary I/O edge cases. Should be split into `settings_box_test.dart`, `accessibility_preferences_test.dart`, and adapter-specific test files. Despite the volume, edge cases for `SettingsAPIKey`, `UsageRecord`, `LLMSettingsModel`, and `DynamicModel` are absent. |
 
-### Providers (2 files — state management over Hive)
+**Duplication overlap**: `settings_box_test.dart` (170 lines) and `models_test.dart` (268 lines) both test `SettingsBox` constructor defaults, JSON round-trip, theme mode, `toString`. `user_profile_model_test.dart` (187 lines) and `models_test.dart` both test `UserProfile` JSON and `copyWith`. This creates maintenance burden — updating model fields requires touching multiple files.
 
-| Source | Key Logic Missing Tests |
-|---|---|
-| `lib/core/providers/app_providers.dart` | `SettingsController` (197 lines, 17 public methods) + 10+ Riverpod providers |
-| `lib/core/providers/llm_providers.dart` | 4 Riverpod providers for LLM state |
+**Additional structural violations**:
+- `test/features/settings/presentation/provider_wiring_test.dart` (81 lines) tests `core/providers/llm_providers.dart` and `core/providers/app_providers.dart` — it is literally in the wrong feature directory.
+- `test/features/settings/data/repositories/settings_repository_hive_test.dart` (251 lines) is a Hive integration test companion to `settings_repository_test.dart`. While it adds value, it should be merged into the main test file via shared helpers (which already exist: `settings_repository_test_helper.dart`).
 
-### Data Layer (2 files)
+### Category 3: Overly Thin Provider Tests (MEDIUM)
 
-| Source | Key Logic Missing Tests |
-|---|---|
-| `lib/core/data/repository.dart` | Generic `Repository<T>` base class wrapping Hive CRUD operations |
-| `lib/core/data/hive_box_names.dart` | 33 Hive box name constants (trivial but useful for completeness) |
+Several provider test files only verify creation (that the provider returns the correct type) and do not test any behavioral/logic scenarios:
 
-### Config / Constants (4 files)
+| Test File | Lines | What's Missing |
+|---|---|---|
+| `test/features/subjects/providers/topic_repository_provider_test.dart` | 23 | Only checks `TopicRepository` type and singleton identity. No overrides, no error injection, no interaction with dependent providers. |
+| `test/features/dashboard/providers/dashboard_providers_test.dart` | 65 | Only checks creation of 5 providers. No tests for override propagation, error states, or provider family parameterization. |
+| `test/features/practice/providers/practice_providers_test.dart` | 74 | Only checks creation of 6 providers. No tests for `practiceDataServiceProvider` depending on both `spacedRepetitionServiceProvider` and `sessionRepositoryProvider`. |
+| `test/features/sessions/providers/session_providers_test.dart` | 48 | Only checks creation of 2 providers. No tests for provider interactions or state changes. |
+| `test/features/mentor/providers/mentor_providers_test.dart` | 46 | Only checks creation of 1 provider. |
 
-| Source | Key Logic Missing Tests |
-|---|---|
-| `lib/core/config/locale_config.dart` | `AppLocale` enum + `resolveLocale()`, `buildDropdownItems()` |
-| `lib/core/constants/app_config.dart` | `AppConfig.bootstrap()`, `redactSensitiveValues()`, `AppConstants` singleton |
-| `lib/core/constants/token_pricing_config.dart` | `TokenPricingConfig` with `calculateTotalCost()` |
-| `lib/core/constants/bottom_sheet_constants.dart` | Single constant (low priority) |
+Compare to the gold standard: `test/features/lessons/providers/lesson_providers_test.dart` (437 lines) tests error propagation, all provider family scenarios, and override behavior.
 
-### Utilities (2 files)
+## Affected Files
 
-| Source | Key Logic Missing Tests |
-|---|---|
-| `lib/core/utils/logger.dart` | `Logger` class with 4 log levels |
-| `lib/core/utils/responsive.dart` | `ResponsiveUtils` (150+ lines), `ScreenBreakpoint` enum, `ResponsiveContext` extension |
+### Missing tests (need NEW test files):
+- `lib/features/ingestion/services/web_scraper.dart` → `test/features/ingestion/services/web_scraper_test.dart`
+- `lib/features/ingestion/services/document_extractor.dart` → `test/features/ingestion/services/document_extractor_test.dart`
+- `lib/features/teaching/services/prompts/prompts.dart` → `test/features/teaching/services/prompts/prompts_test.dart`
+- `lib/features/teaching/providers/teaching_providers.dart` → `test/features/teaching/providers/teaching_providers_test.dart`
 
-### Extensions (1 file)
+### Structural rework needed (settings):
+- `test/features/settings/data/models/models_test.dart` — delete once duplicated scenarios are consolidated into dedicated test files
+- `test/features/settings/data/models/model_edge_cases_test.dart` — absorb into `settings_box_test.dart`, `accessibility_preferences_test.dart`, and new adapter test files
+- `test/features/settings/presentation/provider_wiring_test.dart` — move to `test/core/providers/` (or delete and absorb into a new core provider test)
+- `test/features/settings/data/repositories/settings_repository_hive_test.dart` — merge into `settings_repository_test.dart`
+- New file: `test/features/settings/data/models/llm_models_edge_cases_test.dart` — currently no test covers `DynamicModel.getBestPrice` with empty vs single vs multiple prices, `calculateCost` with zero tokens, or `OpenRouterRequest.toJson` serialization defaults for temperature/maxTokens/topP.
 
-| Source | Key Logic Missing Tests |
-|---|---|
-| `lib/core/extensions/iterable_extensions.dart` | `IterableExtension.firstOrNull` |
-
-**Risk**: These 19 files represent the **shared foundation** of the app. Untested foundational code means bugs here cascade silently into all features without detection.
-
----
-
-## Issue B: Existing Tests That Are Too Shallow or Superficial
-
-### B1 — `mastery_graph_service_test.dart` (332 lines)
-Every public method is tested, but **all assertions use only `isSuccess` / `isNotNull` / `isA<List>`** — never validating actual returned values, error propagation, or edge cases. The mock always returns valid data; failure paths are never exercised.
-
-### B2 — `mastery_integration_service_test.dart` (281 lines)
-Same shallow pattern as B1. Checks only that methods return success — never verifies specific values, error cases, or boundary conditions.
-
-### B3 — `pdf_ingestion_service_test.dart` (54 lines)
-Only tests the guard clause ("returns failure when API key is empty"). The actual PDF text extraction / parsing logic is never tested. Tests exist in form only.
-
-### B4 — `hive_type_ids_test.dart` (13 lines)
-Single test that calls `validateHiveTypeIds()` and asserts no exception. Tests nothing meaningful about the type ID registry.
-
-### B5 — `database_service_test.dart` (163 lines)
-Only tests `HiveDatabaseService.init()` — verifies all repositories are registered. Never tests actual database operations (CRUD, migration rollback, error recovery).
-
----
-
-## Issue C: Orphaned, Misplaced, and Fragmented Tests
-
-### C1 — Orphaned: `test/core/services/evaluation_adapter_service_test.dart`
-This file contains a single placeholder assertion (`expect(true, isTrue)`). The source class `EvaluationAdapterService` does not exist anywhere in `lib/`. This test is dead code — either remove it or replace it with a real test if the source was accidentally deleted.
-
-### C2 — Misplaced: `test/core/routes/main_screen_test.dart`
-Tests `MainScreen` which is defined in `lib/main.dart`, not in `lib/core/routes/`. Per the project's own convention, this test should live at `test/main_screen_test.dart` (root test level).
-
-### C3 — Fragmented: Error handler tests split across 6 files
-
-| File | Lines |
-|---|---|
-| `test/core/errors/handlers_test.dart` | 909 |
-| `test/core/errors/handlers_coverage_test.dart` | 279 |
-| `test/core/errors/handlers_missing_exception_types_test.dart` | 301 |
-| `test/core/errors/handlers_duration_and_edge_cases_test.dart` | 430 |
-| `test/core/errors/app_error_handler_comprehensive_test.dart` | 734 |
-| `test/core/errors/error_conversion_edge_cases_test.dart` | 237 |
-| **Total** | **~2,890** |
-
-These 6 files largely overlap, with some adding coverage for specific exception types (SyllabusException, PlanGenerationException, etc.) that were missing from the main test. They should be **consolidated into 2-3 focused files** — one for `Result<T>` and error conversion, one for `handleError`/`handleSyncError` UI behavior, and optionally one for edge-case exception types. The fragmentation makes it hard to know where to add new exception tests and creates maintenance debt.
-
----
-
-## Issue D: Naming Convention Violation (Minor)
-
-`test/features/dashboard/dashboard_barrel_test.dart` uses a `_barrel` suffix that no other feature follows. Rename to `dashboard_test.dart` for consistency with `focus_mode_test.dart`, `lessons_test.dart`, `mentor_test.dart`, etc.
-
----
+### Expand existing tests:
+- `test/features/subjects/providers/topic_repository_provider_test.dart` — add error handling, override tests
+- `test/features/dashboard/providers/dashboard_providers_test.dart` — add override propagation and interaction tests
+- `test/features/practice/providers/practice_providers_test.dart` — add dependency wiring tests between services
+- `test/features/subjects/data/repositories/progress_repository_test.dart` — add edge cases: zero-time `recordAttempt`, negative `timeSpentMs`, division by zero in `averageTimeMs` calculation on first attempt, concurrent `recordAttempt` calls
 
 ## Rationale
 
-- **`lib/core/` is the shared foundation.** Every feature depends on it. Untested core code is the highest-leverage testing debt in the project.
-- **Shallow tests create false confidence.** A test that passes but never asserts meaningful values or exercises failure paths is worse than no test — it wastes CI time and gives a false sense of coverage.
-- **Fragmented test files increase maintenance cost.** When a new exception type is added, developers must hunt through 6 files to find where to add coverage.
-- **Orphaned tests signal code rot.** A test for a deleted class means the test suite is not being pruned, and coverage metrics are inflated.
+1. **`web_scraper.dart`** involves real network I/O and has 5+ distinct failure paths (invalid URL, HTTP 4xx/5xx, empty body, unparseable HTML, exception during fetch). Without tests, regressions in error handling will go undetected. The `_extractMainText` method has a state machine for script/style tag removal that is non-trivial.
 
----
+2. **`prompts/prompts.dart`** is the teaching feature's prompt generation engine. A malformed prompt string (e.g., mismatched braces, missing interpolations) silently produces bad LLM output, wasting tokens and confusing students. The `_defaultTutorPrompt` function has a `switch` on `ConversationPhase` with 7 branches and a `switch` on `adaptivePace` with 3 branches — each should be tested independently.
+
+3. **Settings model tests** have the worst structural health in the project. `models_test.dart` duplicates `settings_box_test.dart` and `user_profile_model_test.dart` for no reason — these were likely created before the convention solidified and never cleaned up. The `model_edge_cases_test.dart` file is well-written but placed in the wrong files. Fixing this reduces maintenance surface and aligns with AGENTS.md.
+
+4. **Thin provider tests** create a false sense of security. A test that only checks `container.read(provider) isA<Foo>()` passes even if the provider is completely miswired, as long as the type is correct. The `lessons/providers/lesson_providers_test.dart` shows what proper provider tests look like — testing override propagation, error states, and parameterization.
+
+5. **`progress_repository_test.dart`** (93 lines) is the thinnest repository test in the subjects area. The `averageTimeMs` calculation has an integer arithmetic edge case on the first record: `(averageTimeMs * 0 + timeSpentMs) / 1` happens to work, but if `questionsAnswered` starts at 0 instead of 1, a division-by-zero crash occurs. This should be explicitly tested.
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: Tests added for all 19 untested `lib/core/` files, prioritized:
-  - Priority P0 (must-have): `notification_service.dart`, `localization_service.dart`, `conversation_memory.dart`, `badge_service.dart`, `progress_export_service.dart`, `llm_usage_meter.dart`, `app_providers.dart` (SettingsController)
-  - Priority P1 (should-have): `repository.dart`, `llm_providers.dart`, `logger.dart`, `responsive.dart`, `locale_config.dart`
-  - Priority P2 (nice-to-have): `app_config.dart`, `token_pricing_config.dart`, `iterable_extensions.dart`, `hive_box_names.dart`, `bottom_sheet_constants.dart`
-- [ ] **AC2**: Deepen `mastery_graph_service_test.dart` and `mastery_integration_service_test.dart` to assert specific returned values and exercise error/failure paths (not just `isSuccess` / `isNotNull`)
-- [ ] **AC3**: Expand `pdf_ingestion_service_test.dart` beyond the API-key guard to test actual ingestion logic (or document why it cannot be unit-tested)
-- [ ] **AC4**: Either remove or replace `test/core/services/evaluation_adapter_service_test.dart`
-- [ ] **AC5**: Move `test/core/routes/main_screen_test.dart` to `test/main_screen_test.dart`
-- [ ] **AC6**: Consolidate the 6 error-handler test files into at most 3 focused files, ensuring no coverage regression
-- [ ] **AC7**: Rename `test/features/dashboard/dashboard_barrel_test.dart` to `dashboard_test.dart`
+1. **New test files exist for**:
+   - `web_scraper_test.dart` covering: URL validation (no scheme, bad URL), all HTTP status code paths (200, 4xx, 5xx), empty body, HTML with script/style tags, HTML without content lines >20 chars, exception during fetch, `dispose` closes client.
+   - `document_extractor_test.dart` covering: each `SourceType` branch in `extractText`, `estimateChunkCount` with empty string, exact chunk boundary, partial chunk, single character.
+   - `prompts/prompts_test.dart` covering: each `ConversationPhase` in `_defaultTutorPrompt`, each `adaptivePace` threshold (<0.8, >1.2, in-between), all interpolation parameters rendered correctly in `_defaultLessonPlanPrompt`, `_defaultSummaryPrompt`, `_defaultTutorPrompt`.
+   - `teaching_providers_test.dart` covering: `teachingModelIdProvider` fallback chain, `tutorServiceProvider` creation with proper dependencies, `promptTemplatesProvider` returns default templates.
+
+2. **Settings model test files are reorganized**:
+   - `models_test.dart` and `model_edge_cases_test.dart` are removed.
+   - Their unique test scenarios (not duplicated in dedicated test files) are absorbed into `settings_box_test.dart`, `accessibility_preferences_test.dart`, `user_profile_model_test.dart`, `llm_models_test.dart`, and `settings_model_test.dart`.
+   - The Hive adapter tests from `models_test.dart` are moved to a new `test/features/settings/data/adapters/settings_box_adapter_test.dart` and `test/features/settings/data/adapters/user_profile_adapter_test.dart`, following the convention used by `subjects/data/adapters/topic_dependency_adapter_test.dart` (658 lines, excellent coverage).
+   - `model_edge_cases_test.dart`'s `SettingsBox.fromJson` type coercion tests go into `settings_box_test.dart`; its Hive binary I/O edge cases go into the new adapter test files.
+   - `provider_wiring_test.dart` is moved to `test/core/providers/llm_providers_test.dart` or the test scenarios are integrated into the existing `test/core/providers/` area.
+   - `settings_repository_hive_test.dart` is merged into `settings_repository_test.dart` using the existing `settings_repository_test_helper.dart` (which already provides `sharedSettingsRepositoryTests`), removing the need for a separate Hive integration file.
+
+3. **Thin provider tests are expanded**:
+   - `topic_repository_provider_test.dart` gains at minimum: override test (inject fake box, verify reads work), error propagation test (verify provider throws on closed box).
+   - `dashboard_providers_test.dart` gains at minimum: override propagation test for at least 2 providers, error state test.
+   - `practice_providers_test.dart` gains at minimum: dependency wiring test verifying `practiceDataServiceProvider` depends on both `spacedRepetitionServiceProvider` and `sessionRepositoryProvider`.
+
+4. **`progress_repository_test.dart` gains edge case coverage**:
+   - `recordAttempt` with `timeSpentMs: 0` and `timeSpentMs: -1` (boundary/negative values).
+   - `averageTimeMs` calculation verified on first, second, and third sequential attempts.
+   - Concurrent `recordAttempt` calls (two `await` in parallel via `Future.wait`) do not corrupt `questionsAnswered` or `averageTimeMs`.

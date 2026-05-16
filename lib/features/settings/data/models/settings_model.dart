@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/token_pricing_config.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/settings/data/models/llm_models.dart';
 
 @immutable
@@ -110,11 +111,15 @@ class UsageRecord {
     return pricingConfig.calculateTotalCost(inputTokens, outputTokens, cachedTokensCost);
   }
 
-  String get priceDisplay => '\$${totalCost.toStringAsFixed(4)}';
+  String priceDisplayWithLocale(String localeName) => '\$${formatDecimal(totalCost, localeName, minFractionDigits: 4, maxFractionDigits: 4)}';
+
+  String get priceDisplay => '\$${formatDecimal(totalCost, 'en', minFractionDigits: 4, maxFractionDigits: 4)}';
 
   String get tokenDisplay => '($inputTokens in / $outputTokens out)';
 
-  String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${(totalCost / totalTokens).toStringAsFixed(10)}';
+  String formattedTextWithLocale(String localeName) => '${timestamp.toIso8601String().split(' ')[0]}: ${priceDisplayWithLocale(localeName)}, cost/tk: ${formatDecimal(totalCost / totalTokens, localeName, minFractionDigits: 10, maxFractionDigits: 10)}';
+
+  String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${formatDecimal(totalCost / totalTokens, 'en', minFractionDigits: 10, maxFractionDigits: 10)}';
 
   @override
   String toString() => 'UsageRecord(\$: $formattedText)';
@@ -176,10 +181,10 @@ class LLMSettingsModel extends ChangeNotifier {
     return (getTotalCost() / _usageHistory.length * 30);
   }
 
-  String formatUsageSummary() {
+  String formatUsageSummary([String localeName = 'en']) {
     final totalTokens = getTotalTokens();
     final totalCost = getTotalCost();
 
-    return 'Usage: \$${totalCost.toStringAsFixed(2)} over $totalTokens tokens, avg: \$${avgCostPer1000Tokens.toStringAsFixed(2)} per 1k tokens';
+    return 'Usage: \$${formatDecimal(totalCost, localeName, minFractionDigits: 2, maxFractionDigits: 2)} over $totalTokens tokens, avg: \$${formatDecimal(avgCostPer1000Tokens, localeName, minFractionDigits: 2, maxFractionDigits: 2)} per 1k tokens';
   }
 }

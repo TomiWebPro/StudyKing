@@ -66,7 +66,6 @@ final dashboardFocusStatsProvider =
       'completedSessions': focusToday.where((s) => s.completed).length,
       'totalSessions': focusToday.length,
       'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
-      'hours': (totalMs / 3600000).toStringAsFixed(1),
     });
   } catch (_) {
     return null;

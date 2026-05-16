@@ -238,7 +238,6 @@ class SessionRepository {
         'completedSessions': completed,
         'totalSessions': sessions.length,
         'plannedMinutes': plannedMinutes,
-        'hours': ((totalMs / 3600000)).toStringAsFixed(1),
       });
     } catch (e) {
       _logger.w('Error getting today stats', e);

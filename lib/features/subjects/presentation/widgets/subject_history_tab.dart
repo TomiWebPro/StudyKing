@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -96,7 +97,7 @@ class SubjectHistoryTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${score.toStringAsFixed(0)}%',
+                      formatPercent(score, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: _scoreColor(context, score),

@@ -1,4 +1,5 @@
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -7,6 +8,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class PracticeDataService {
+  final Logger _logger = const Logger('PracticeDataService');
   final SpacedRepetitionService _srService;
   final QuestionRepository _questionRepo;
   final SubjectRepository _subjectRepo;
@@ -48,7 +50,8 @@ class PracticeDataService {
           .map((q) => q.topic!)
           .toSet()
           .toList();
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to load topics: $e');
       return [];
     }
   }
@@ -57,7 +60,8 @@ class PracticeDataService {
     try {
       final questions = await _questionRepo.getAll();
       return questions.where((q) => q.topic == topic).toList();
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to load topic questions: $e');
       return [];
     }
   }
@@ -78,7 +82,8 @@ class PracticeDataService {
       return allQuestions
           .where((q) => weakTopicIds.contains(q.topicId))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to load weak area questions: $e');
       return [];
     }
   }

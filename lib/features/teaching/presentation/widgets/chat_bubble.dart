@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -102,6 +103,10 @@ class ChatBubble extends StatelessWidget {
       return _TypingIndicator(reduceMotion: reduceMotion);
     }
 
+    if (message.type == MessageType.feedback || _isEvaluationMessage(content)) {
+      return _buildEvaluationContent(context, content);
+    }
+
     return Text(
       content,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -110,6 +115,81 @@ class ChatBubble extends StatelessWidget {
                 : Theme.of(context).colorScheme.onSurface,
           ),
     );
+  }
+
+  bool _isEvaluationMessage(String content) {
+    try {
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      return data['type'] == 'evaluation';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget _buildEvaluationContent(BuildContext context, String content) {
+    try {
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final score = (data['score'] as num).toDouble();
+      final explanation = data['explanation'] as String? ?? '';
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                score >= 0.7 ? Icons.check_circle : (score <= 0.3 ? Icons.cancel : Icons.info),
+                size: 18,
+                color: score >= 0.7
+                    ? Colors.green
+                    : score <= 0.3
+                        ? Colors.red
+                        : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${(score * 100).round()}%',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: score >= 0.7
+                          ? Colors.green
+                          : score <= 0.3
+                              ? Colors.red
+                              : Colors.orange,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: score,
+              minHeight: 6,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                score >= 0.7
+                    ? Colors.green
+                    : score <= 0.3
+                        ? Colors.red
+                        : Colors.orange,
+              ),
+            ),
+          ),
+          if (explanation.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              explanation,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ],
+      );
+    } catch (_) {
+      return Text(content);
+    }
   }
 }
 

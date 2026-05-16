@@ -47,11 +47,13 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
   Future<void> _saveKeys() async {
     final l10n = AppLocalizations.of(context)!;
+    final errorColor = Theme.of(context).colorScheme.error;
+    final successColor = Theme.of(context).colorScheme.primary;
     if (_apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.apiKeyCannotBeEmpty),
-          backgroundColor: Colors.red,
+          backgroundColor: errorColor,
         ),
       );
       return;
@@ -75,7 +77,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.apiKeysSavedSuccessfully),
-          backgroundColor: Colors.green,
+          backgroundColor: successColor,
         ),
       );
       Navigator.pop(context);
@@ -84,7 +86,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.unableToSaveApiConfig),
-          backgroundColor: Colors.red,
+          backgroundColor: errorColor,
         ),
       );
     } finally {
@@ -96,12 +98,14 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
   Future<void> _testConnection() async {
     final l10n = AppLocalizations.of(context)!;
+    final errorColor = Theme.of(context).colorScheme.error;
+    final successColor = Theme.of(context).colorScheme.primary;
     final apiKey = _apiKeyController.text.trim();
     final baseUrl = _baseUrlController.text.trim();
 
     if (apiKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.apiKeyCannotBeEmpty), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.apiKeyCannotBeEmpty), backgroundColor: errorColor),
       );
       return;
     }
@@ -123,14 +127,14 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.connectionSuccessful(stopwatch.elapsedMilliseconds)),
-            backgroundColor: Colors.green,
+            backgroundColor: successColor,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.connectionFailed('HTTP ${response.statusCode}')),
-            backgroundColor: Colors.red,
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -139,7 +143,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.connectionFailed(e.toString())),
-          backgroundColor: Colors.red,
+          backgroundColor: errorColor,
         ),
       );
     } finally {

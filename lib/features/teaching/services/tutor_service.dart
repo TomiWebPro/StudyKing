@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'package:uuid/uuid.dart';
 import '../../../core/data/database_service.dart';
+import '../../../core/data/enums.dart';
+import '../../../core/data/models/question_model.dart';
+import '../../../core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
 import 'conversation_manager.dart';
+import 'exercise_evaluator.dart';
 
 class TutorService {
   final DatabaseService _database;
@@ -13,6 +18,8 @@ class TutorService {
   final MasteryGraphService _masteryService;
   final String _modelId;
   final PlanAdapter _planAdapter;
+  final ExerciseEvaluator _exerciseEvaluator;
+  final Clock _clock;
   ConversationManager? _currentManager;
 
   TutorService({
@@ -20,12 +27,16 @@ class TutorService {
     required LlmService llmService,
     required MasteryGraphService masteryService,
     required String modelId,
+    required ExerciseEvaluator exerciseEvaluator,
     PlanAdapter? planAdapter,
+    Clock? clock,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
         _modelId = modelId,
-        _planAdapter = planAdapter ?? PlanAdapter();
+        _exerciseEvaluator = exerciseEvaluator,
+        _planAdapter = planAdapter ?? PlanAdapter(),
+        _clock = clock ?? SystemClock();
 
   ConversationManager? get currentManager => _currentManager;
 
@@ -34,12 +45,9 @@ class TutorService {
     required String subjectId,
     required String topicId,
     required String topicTitle,
-    required List<String> correctKeywords,
-    required List<String> incorrectKeywords,
-    required List<String> exerciseKeywords,
     int durationMinutes = 45,
   }) async {
-    final sessionId = 'tutor_${DateTime.now().millisecondsSinceEpoch}';
+    final sessionId = 'tutor_${_clock.now().millisecondsSinceEpoch}';
 
     final session = TutorSession(
       id: sessionId,
@@ -48,7 +56,7 @@ class TutorService {
       topicId: topicId,
       topicTitle: topicTitle,
       status: SessionStatus.inProgress,
-      startTime: DateTime.now(),
+      startTime: _clock.now(),
       plannedDurationMinutes: durationMinutes,
     );
     await _database.tutorSessionRepository.saveSession(session);
@@ -57,26 +65,22 @@ class TutorService {
       llmService: _llmService,
       modelId: _modelId,
       sessionId: sessionId,
-      correctKeywords: correctKeywords,
-      incorrectKeywords: incorrectKeywords,
-      exerciseKeywords: exerciseKeywords,
-    );
-
-    await manager.initialize(
       studentId: studentId,
       topicTitle: topicTitle,
       subjectId: subjectId,
       topicId: topicId,
+      exerciseEvaluator: _exerciseEvaluator,
+      clock: _clock,
     );
 
+    await manager.initialize();
+
     final lessonPlan = await manager.generateLessonPlan(
-      topicTitle: topicTitle,
-      subjectId: subjectId,
       durationMinutes: durationMinutes,
     );
 
     await _database.tutorSessionRepository.saveSession(
-      session.copyWith(lessonPlanJson: lessonPlan),
+      session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
     );
 
     _currentManager = manager;
@@ -102,25 +106,57 @@ class TutorService {
         questionId: 'tutor_${session.id}',
         isCorrect: session.accuracy > 0.5,
         confidence: (session.confidenceRating * 20).clamp(0, 5).round(),
-        timeSpentMs: session.elapsedMinutes * 60000,
+        timeSpentMs: _elapsedMinutes(session) * 60000,
       );
     }
+
+    await _persistExercisesAsQuestions(session);
 
     try {
       await _planAdapter.recordFromTutorSession(
         studentId: session.studentId,
-        actualMinutes: session.elapsedMinutes.clamp(1, 480),
+        actualMinutes: _elapsedMinutes(session).clamp(1, 480),
       );
     } catch (_) {}
 
     _currentManager = null;
   }
 
+  int _elapsedMinutes(TutorSession session) {
+    final end = session.endTime ?? _clock.now();
+    return end.difference(session.startTime).inMinutes;
+  }
+
+  Future<void> _persistExercisesAsQuestions(TutorSession session) async {
+    final manager = _currentManager;
+    if (manager == null || manager.exerciseCount == 0) return;
+
+    final evalResult = manager.lastEvaluationResult;
+    if (evalResult == null) return;
+
+    final now = _clock.now();
+    final question = Question(
+      id: const Uuid().v4(),
+      text: 'Tutor exercise: ${session.topicTitle}',
+      type: QuestionType.typedAnswer,
+      difficulty: (evalResult.score * 5).round().clamp(1, 5),
+      subjectId: session.subjectId,
+      topicId: session.topicId,
+      sourceIds: ['tutor_${session.id}'],
+      createdAt: now,
+      updatedAt: now,
+      explanation: evalResult.explanation,
+    );
+
+    await _database.questionRepository.create(question);
+  }
+
   Future<List<TutorSession>> getLessonHistory(String studentId) async {
     return _database.tutorSessionRepository.getStudentSessions(studentId);
   }
 
-  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
+  Future<List<ConversationMessage>> getSessionMessages(
+      String sessionId) async {
     return _database.conversationRepository.getSessionMessages(sessionId);
   }
 
@@ -133,7 +169,8 @@ class TutorService {
   }
 
   Future<TutorSession?> getActiveSession() async {
-    final sessions = await _database.tutorSessionRepository.getActiveSessions();
+    final sessions =
+        await _database.tutorSessionRepository.getActiveSessions();
     return sessions.isNotEmpty ? sessions.first : null;
   }
 }

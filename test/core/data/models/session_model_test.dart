@@ -109,6 +109,15 @@ void main() {
         );
         expect(session.isActive, isFalse);
       });
+
+      test('returns false when both completed and endTime are set', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          completed: true,
+          endTime: now,
+        );
+        expect(session.isActive, isFalse);
+      });
     });
 
     group('actualDuration', () {
@@ -300,6 +309,93 @@ void main() {
         expect(session.createdAt.isAfter(before), isTrue);
         expect(session.createdAt.isBefore(after), isTrue);
       });
+
+      test('handles empty tags in JSON', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'tags': [],
+        };
+        final session = Session.fromJson(json);
+        expect(session.tags, isEmpty);
+      });
+
+      test('handles missing tags key defaults to empty list', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+        };
+        final session = Session.fromJson(json);
+        expect(session.tags, isEmpty);
+      });
+
+      test('handles missing studentId defaults to empty string', () {
+        final json = {
+          'id': 's1',
+          'startTime': now.toIso8601String(),
+        };
+        final session = Session.fromJson(json);
+        expect(session.studentId, '');
+      });
+
+      test('deserializes all SessionType values by name', () {
+        for (final type in SessionType.values) {
+          final json = {
+            'id': 's1',
+            'studentId': 's1',
+            'startTime': now.toIso8601String(),
+            'type': type.name,
+          };
+          final session = Session.fromJson(json);
+          expect(session.type, type);
+        }
+      });
+
+      test('handles null actualDurationMs', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'actualDurationMs': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.actualDurationMs, 0);
+      });
+
+      test('handles null questionsAnswered', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'questionsAnswered': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.questionsAnswered, 0);
+      });
+
+      test('handles null correctAnswers', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'correctAnswers': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.correctAnswers, 0);
+      });
+
+      test('handles null completed', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'completed': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.completed, isFalse);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -373,6 +469,41 @@ void main() {
         expect(copy.id, 's1');
       });
 
+      test('updates type and startTime', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final later = now.add(const Duration(hours: 2));
+        final copy = session.copyWith(
+          type: SessionType.focus,
+          startTime: later,
+        );
+        expect(copy.type, SessionType.focus);
+        expect(copy.startTime, later);
+      });
+
+      test('updates endTime without clear flag', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final end = now.add(const Duration(hours: 1));
+        final copy = session.copyWith(endTime: end);
+        expect(copy.endTime, end);
+      });
+
+      test('updates actualDurationMs and tags', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final copy = session.copyWith(
+          actualDurationMs: 5000,
+          tags: ['a', 'b'],
+        );
+        expect(copy.actualDurationMs, 5000);
+        expect(copy.tags, ['a', 'b']);
+      });
+
+      test('updates createdAt', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final later = DateTime(2026, 6, 1);
+        final copy = session.copyWith(createdAt: later);
+        expect(copy.createdAt, later);
+      });
+
       test('clearEndTime sets endTime to null', () {
         final session = Session(
           id: 's1', studentId: 's1', startTime: now,
@@ -416,6 +547,51 @@ void main() {
         );
         final copy = session.copyWith(clearPlannedDuration: true);
         expect(copy.plannedDurationMinutes, isNull);
+      });
+
+      test('preserves subjectId when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          subjectId: 'sub',
+        );
+        final copy = session.copyWith(subjectId: null);
+        expect(copy.subjectId, 'sub');
+      });
+
+      test('preserves topicId when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          topicId: 'topic',
+        );
+        final copy = session.copyWith(topicId: null);
+        expect(copy.topicId, 'topic');
+      });
+
+      test('preserves sourceId when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          sourceId: 'src',
+        );
+        final copy = session.copyWith(sourceId: null);
+        expect(copy.sourceId, 'src');
+      });
+
+      test('preserves plannedDurationMinutes when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          plannedDurationMinutes: 45,
+        );
+        final copy = session.copyWith(plannedDurationMinutes: null);
+        expect(copy.plannedDurationMinutes, 45);
+      });
+
+      test('preserves endTime when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          endTime: now,
+        );
+        final copy = session.copyWith(endTime: null);
+        expect(copy.endTime, now);
       });
     });
 

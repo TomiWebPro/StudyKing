@@ -277,7 +277,7 @@ class InstrumentationService {
         'improvementMetrics': improvements.map((m) => m.toJson()).toList(),
       };
 
-      _logger.i('Instrumentation data exported: ${data.keys.length} categories');
+      _logger.d('Instrumentation data exported: ${data.keys.length} categories');
       return Result.success(null);
     } catch (e) {
       return Result.failure(e.toString());

@@ -28,19 +28,24 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   final Map<String, dynamic>? _snapshot;
   final bool _failAllMastery;
   final bool _failSnapshot;
+  final bool _failInit;
 
   _FakeMasteryGraphService({
     List<MasteryState>? allMastery,
     Map<String, dynamic>? snapshot,
     bool failAllMastery = false,
     bool failSnapshot = false,
+    bool failInit = false,
   })  : _allMastery = allMastery,
         _snapshot = snapshot,
         _failAllMastery = failAllMastery,
-        _failSnapshot = failSnapshot;
+        _failSnapshot = failSnapshot,
+        _failInit = failInit;
 
   @override
-  Future<void> init() async {}
+  Future<void> init() async {
+    if (_failInit) throw Exception('init failed');
+  }
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
@@ -147,11 +152,15 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
 
 class _FakeSessionRepo extends SessionRepository {
   final List<Session> _sessions;
+  final bool _throwOnGetByDate;
 
-  _FakeSessionRepo({List<Session> sessions = const []}) : _sessions = sessions;
+  _FakeSessionRepo({List<Session> sessions = const [], bool throwOnGetByDate = false})
+      : _sessions = sessions,
+        _throwOnGetByDate = throwOnGetByDate;
 
   @override
   Future<Result<List<Session>>> getByDate(DateTime date) async {
+    if (_throwOnGetByDate) throw Exception('getByDate error');
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     return Result.success(_sessions.where((s) =>
@@ -405,16 +414,6 @@ void main() {
     });
   });
 
-  group('dashboardInitProvider', () {
-    test('completes successfully when all services initialize', () async {
-      final container = _createContainer();
-      addTearDown(container.dispose);
-
-      await container.read(dashboardInitProvider.future);
-      expect(container.read(dashboardInitProvider).hasValue, isTrue);
-    });
-  });
-
   group('dashboardAllMasteryProvider', () {
     test('returns list of MasteryState on success', () async {
       final now = DateTime.now();
@@ -575,12 +574,101 @@ void main() {
     });
 
     test('handles session repository error gracefully', () async {
-      final sessionRepo = _FakeSessionRepo(sessions: []);
+      final sessionRepo = _FakeSessionRepo(throwOnGetByDate: true);
       final container = _createContainer(sessionRepo: sessionRepo);
       addTearDown(container.dispose);
 
       final result = await container.read(dashboardFocusStatsProvider('s1').future);
       expect(result, isNull);
+    });
+
+    test('computes totalMs and totalSeconds correctly', () async {
+      final now = DateTime.now();
+      final sessionRepo = _FakeSessionRepo(sessions: [
+        Session(
+          id: 's1',
+          studentId: 's1',
+          type: SessionType.focus,
+          startTime: now,
+          actualDurationMs: 3600000,
+          completed: true,
+          plannedDurationMinutes: 60,
+        ),
+      ]);
+      final container = _createContainer(sessionRepo: sessionRepo);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardFocusStatsProvider('s1').future);
+      expect(result!.totalSeconds, 3600);
+      expect(result.totalSessions, 1);
+      expect(result.completedSessions, 1);
+      expect(result.plannedMinutes, 60);
+    });
+  });
+
+  group('dashboardInitProvider', () {
+    test('enters error state when a service init fails', () async {
+      final masteryService = _FakeMasteryGraphService(failInit: true);
+      final container = _createContainer(masteryService: masteryService);
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(dashboardInitProvider.future),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(dashboardInitProvider).hasError, isTrue);
+    });
+  });
+
+  group('dashboardWeeklyTrendProvider', () {
+    test('returns empty list when no weekly trend data', () async {
+      final tracker = _FakeProgressTracker(weeklyTrend: []);
+      final container = _createContainer(tracker: tracker);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardWeeklyTrendProvider('s1').future);
+      expect(result, isEmpty);
+    });
+  });
+
+  group('dashboardOverallStatsProvider', () {
+    test('returns OverallStats with default values when stats are empty', () async {
+      final tracker = _FakeProgressTracker(
+        overallStats: {
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'avgTimePerQuestion': 0,
+          'totalStudyTimeHours': '0',
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        },
+      );
+      final container = _createContainer(tracker: tracker);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardOverallStatsProvider('s1').future);
+      expect(result!.totalAttempts, 0);
+      expect(result.accuracy, 0);
+      expect(result.topicsStudied, 0);
+      expect(result.isEmpty, isTrue);
+    });
+
+    test('returns OverallStats with partial stats map', () async {
+      final tracker = _FakeProgressTracker(
+        overallStats: {
+          'totalAttempts': 10,
+        },
+      );
+      final container = _createContainer(tracker: tracker);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardOverallStatsProvider('s1').future);
+      expect(result!.totalAttempts, 10);
+      expect(result.correctAttempts, 0);
+      expect(result.accuracy, 0);
+      expect(result.totalStudyTimeHours, '0');
     });
   });
 

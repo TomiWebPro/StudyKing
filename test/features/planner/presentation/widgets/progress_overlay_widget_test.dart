@@ -34,15 +34,16 @@ void main() {
       expect(find.textContaining('50%'), findsOneWidget);
     });
 
-    testWidgets('displays green color for 100% progress', (tester) async {
+    testWidgets('displays primary color for 100% progress', (tester) async {
       await tester.pumpWidget(buildApp(
         ProgressOverlayWidget(
           data: const PlanProgressData(todayProgress: 1.0),
         ),
       ));
+      final cs = Theme.of(tester.element(find.byType(ProgressOverlayWidget))).colorScheme;
 
       final textWidget = tester.widget<Text>(find.text('100%'));
-      expect(textWidget.style?.color, Colors.green);
+      expect(textWidget.style?.color, cs.primary);
 
       final indicator = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
@@ -51,15 +52,16 @@ void main() {
       expect(animation, isA<Animation<Color?>>());
     });
 
-    testWidgets('displays orange color for 50-99% progress', (tester) async {
+    testWidgets('displays error color for 50% progress', (tester) async {
       await tester.pumpWidget(buildApp(
         ProgressOverlayWidget(
           data: const PlanProgressData(todayProgress: 0.5),
         ),
       ));
+      final cs = Theme.of(tester.element(find.byType(ProgressOverlayWidget))).colorScheme;
 
       final textWidget = tester.widget<Text>(find.text('50%'));
-      expect(textWidget.style?.color, Colors.orange);
+      expect(textWidget.style?.color, cs.error);
 
       final indicator = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
@@ -68,15 +70,16 @@ void main() {
       expect(animation, isA<Animation<Color?>>());
     });
 
-    testWidgets('displays red color for below 50% progress', (tester) async {
+    testWidgets('displays error color for below 50% progress', (tester) async {
       await tester.pumpWidget(buildApp(
         ProgressOverlayWidget(
           data: const PlanProgressData(todayProgress: 0.3),
         ),
       ));
+      final cs = Theme.of(tester.element(find.byType(ProgressOverlayWidget))).colorScheme;
 
       final textWidget = tester.widget<Text>(find.text('30%'));
-      expect(textWidget.style?.color, Colors.red);
+      expect(textWidget.style?.color, cs.error);
 
       final indicator = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,

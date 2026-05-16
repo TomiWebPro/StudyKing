@@ -88,6 +88,63 @@ void main() {
         expect((await repository.get('t1'))?.questionsAnswered, 1);
         expect((await repository.get('t2'))?.questionsAnswered, 1);
       });
+
+      test('recordAttempt with timeSpentMs: 0 does not cause division issues', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 0);
+        final progress = await repository.get('t1');
+        expect(progress?.averageTimeMs, 0);
+        expect(progress?.questionsAnswered, 1);
+        expect(progress?.correctAnswers, 1);
+      });
+
+      test('recordAttempt with negative timeSpentMs is stored as-is', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: -1);
+        final progress = await repository.get('t1');
+        expect(progress?.averageTimeMs, -1);
+        expect(progress?.questionsAnswered, 1);
+      });
+
+      test('averageTimeMs calculation on first attempt uses correct formula', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
+        final progress = await repository.get('t1');
+        expect(progress?.averageTimeMs, 5000);
+      });
+
+      test('averageTimeMs calculation on second attempt', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 4000);
+        final progress = await repository.get('t1');
+        expect(progress?.averageTimeMs, 3000);
+      });
+
+      test('averageTimeMs calculation on third attempt', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 3000);
+        final progress = await repository.get('t1');
+        expect(progress?.averageTimeMs, 2000);
+      });
+
+      test('concurrent recordAttempt calls do not corrupt state', () async {
+        await Future.wait([
+          repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000),
+          repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 2000),
+        ]);
+        final progress = await repository.get('t1');
+        expect(progress?.questionsAnswered, 2);
+        expect(progress?.correctAnswers, 1);
+      });
+
+      test('concurrent recordAttempt calls on different topics are isolated', () async {
+        await Future.wait([
+          repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000),
+          repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000),
+          repository.recordAttempt(topicId: 't3', isCorrect: true, timeSpentMs: 3000),
+        ]);
+        expect((await repository.get('t1'))?.questionsAnswered, 1);
+        expect((await repository.get('t2'))?.questionsAnswered, 1);
+        expect((await repository.get('t3'))?.questionsAnswered, 1);
+      });
     });
   });
 }

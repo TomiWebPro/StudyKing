@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/llm_task_manager.dart';
 
 class AppTheme {
   static TextTheme createTextTheme(double fontSize) {
@@ -158,6 +159,17 @@ class AppTheme {
 
   static Color badgeColor(BuildContext context) {
     return Theme.of(context).colorScheme.primary;
+  }
+
+  static Color statusColor(LlmTaskStatus status, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (status) {
+      LlmTaskStatus.running => cs.primary,
+      LlmTaskStatus.done => cs.primary,
+      LlmTaskStatus.failed => cs.error,
+      LlmTaskStatus.cancelled => cs.tertiary,
+      LlmTaskStatus.queued => cs.onSurfaceVariant,
+    };
   }
 
   static ThemeData highContrastDarkTheme({double fontSize = 16}) {

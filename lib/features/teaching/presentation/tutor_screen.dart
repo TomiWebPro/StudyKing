@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/student_id_service.dart';
-import '../../../core/widgets/conversation_input.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider;
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider, voiceControllerProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
 import '../services/tutor_service.dart';
+import '../models/lesson_plan_model.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/lesson_progress_bar.dart';
+import 'widgets/voice_bar.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
@@ -40,9 +42,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   ConversationManager? _manager;
   bool _isInitialized = false;
   bool _isSending = false;
-  bool _isVoiceListening = false;
   Timer? _timer;
   int _elapsedMinutes = 0;
+  LessonPlan? _lessonPlan;
 
   @override
   void initState() {
@@ -66,18 +68,16 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   }
 
   Future<void> _startLesson() async {
-    final studentId = StudentIdService().getStudentId();
-    final l10n = AppLocalizations.of(context)!;
+    final studentId = ref.read(studentIdValueProvider);
     final manager = await _tutorService.startLesson(
       studentId: studentId,
       subjectId: widget.subjectId,
       topicId: widget.topicId,
       topicTitle: widget.topicTitle,
       durationMinutes: widget.durationMinutes,
-      correctKeywords: l10n.correctAnswerKeywords.split(',').map((s) => s.trim()).toList(),
-      incorrectKeywords: l10n.incorrectAnswerKeywords.split(',').map((s) => s.trim()).toList(),
-      exerciseKeywords: l10n.exerciseKeywords.split(',').map((s) => s.trim()).toList(),
     );
+
+    _lessonPlan = manager.lessonPlan;
 
     _timer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() => _elapsedMinutes++);
@@ -130,17 +130,15 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     _inputFocusNode.requestFocus();
   }
 
-  void _toggleVoiceInput() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
-    );
-    setState(() => _isVoiceListening = !_isVoiceListening);
-  }
-
   Future<void> _pickImage() async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
     );
+  }
+
+  void _onTranscriptionSubmitted(String text) {
+    _textController.text = text;
+    _sendMessage();
   }
 
   Future<void> _endLesson() async {
@@ -194,7 +192,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             children: [
               _statChip(context, Icons.quiz_outlined, l10n.questionsCountLabel(manager.exerciseCount)),
               const SizedBox(width: 8),
-              _statChip(context, Icons.check_circle_outline, l10n.correctCount(manager.correctCount), color: Colors.green),
+              _statChip(context, Icons.check_circle_outline, l10n.correctCount(manager.correctCount), color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               _statChip(context, Icons.speed, l10n.paceLabel((manager.adaptivePace * 100).round())),
             ],
@@ -250,6 +248,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     final l10n = AppLocalizations.of(context)!;
     final remaining = widget.durationMinutes - _elapsedMinutes;
     final isEnding = remaining <= 0;
+    final voiceController = ref.watch(voiceControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -272,6 +271,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
               exerciseCount: _manager!.exerciseCount,
               correctCount: _manager!.correctCount,
               topicTitle: widget.topicTitle,
+              lessonPlan: _lessonPlan,
             ),
           Expanded(
             child: _isInitialized && _manager != null
@@ -289,13 +289,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             leading: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: Icon(
-                    _isVoiceListening ? Icons.mic : Icons.mic_none,
-                    color: _isVoiceListening ? Theme.of(context).colorScheme.error : null,
-                  ),
-                  onPressed: _isInitialized && !_isSending ? _toggleVoiceInput : null,
-                  tooltip: l10n.voiceInput,
+                VoiceBar(
+                  controller: voiceController,
+                  onTranscriptionSubmitted: _onTranscriptionSubmitted,
+                  isEnabled: _isInitialized && !_isSending,
                 ),
                 IconButton(
                   icon: const Icon(Icons.image_outlined),

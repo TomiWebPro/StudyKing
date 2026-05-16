@@ -19,12 +19,28 @@ void main() {
       expect(TutorSessionRepository, isA<Type>());
     });
 
+    test('exports EvaluationResult', () {
+      expect(EvaluationResult, isA<Type>());
+    });
+
+    test('exports LessonPlan', () {
+      expect(LessonPlan, isA<Type>());
+    });
+
     test('exports ConversationManager', () {
       expect(ConversationManager, isA<Type>());
     });
 
+    test('exports ExerciseEvaluator', () {
+      expect(ExerciseEvaluator, isA<Type>());
+    });
+
     test('exports TutorService', () {
       expect(TutorService, isA<Type>());
+    });
+
+    test('exports VoiceController', () {
+      expect(VoiceController, isA<Type>());
     });
 
     test('exports ChatBubble', () {
@@ -35,8 +51,20 @@ void main() {
       expect(LessonProgressBar, isA<Type>());
     });
 
+    test('exports VoiceBar', () {
+      expect(VoiceBar, isA<Type>());
+    });
+
     test('exports TutorScreen', () {
       expect(TutorScreen, isA<Type>());
+    });
+
+    test('exports ConversationPromptSet', () {
+      expect(ConversationPromptSet, isA<Type>());
+    });
+
+    test('exports PromptEntry', () {
+      expect(PromptEntry, isA<Type>());
     });
   });
 }

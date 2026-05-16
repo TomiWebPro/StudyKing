@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/badges_card.dart';
@@ -103,7 +104,7 @@ class DashboardScreen extends ConsumerWidget {
                     'completedSessions': focusStatsData.completedSessions,
                     'totalSessions': focusStatsData.totalSessions,
                     'plannedMinutes': focusStatsData.plannedMinutes,
-                    'hours': focusStatsData.hours,
+                    'hours': formatHours(focusStatsData.totalSeconds.toDouble(), l10n.localeName),
                   } : null),
                 ),
               ),

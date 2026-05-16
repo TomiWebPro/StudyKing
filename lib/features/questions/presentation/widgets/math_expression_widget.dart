@@ -14,16 +14,17 @@ class MathExpressionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final styledExpression = _parseExpression(expression);
+    final cs = Theme.of(context).colorScheme;
+    final styledExpression = _parseExpression(expression, cs);
 
     if (isSolution) {
       return Container(
         margin: const EdgeInsets.all(8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blue.shade50,
+          color: cs.primaryContainer.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.shade200),
+          border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
         ),
         child: _buildStyledText(context, styledExpression),
       );
@@ -70,7 +71,7 @@ class MathExpressionWidget extends StatelessWidget {
     'Omega': '\u03A9',
   };
 
-  List<InlineSpan> _parseExpression(String expr) {
+  List<InlineSpan> _parseExpression(String expr, ColorScheme cs) {
     final spans = <InlineSpan>[];
     int i = 0;
 
@@ -181,17 +182,17 @@ class MathExpressionWidget extends StatelessWidget {
         } else if (command == 'ge') {
           spans.add(TextSpan(
             text: '\u2265',
-            style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold),
+            style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
           ));
         } else if (command == 'le') {
           spans.add(TextSpan(
             text: '\u2264',
-            style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold),
+            style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
           ));
         } else if (command == 'neq') {
           spans.add(TextSpan(
             text: '\u2260',
-            style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold),
+            style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
           ));
         } else {
           spans.add(TextSpan(text: expr.substring(start, i)));
@@ -220,7 +221,7 @@ class MathExpressionWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontStyle: FontStyle.italic,
-              color: Colors.purple[700],
+              color: cs.tertiary,
             ),
             textScaler: const TextScaler.linear(0.75),
           ),
@@ -243,13 +244,13 @@ class MathExpressionWidget extends StatelessWidget {
             subContent,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.teal[700],
+              color: cs.secondary,
             ),
             textScaler: const TextScaler.linear(0.75),
           ),
         ));
       } else if (_isOperator(expr[i])) {
-        spans.add(_buildOperatorSpan(expr[i]));
+        spans.add(_buildOperatorSpan(expr[i], cs));
         i++;
       } else if (expr[i] == '{' || expr[i] == '}') {
         i++;
@@ -257,7 +258,7 @@ class MathExpressionWidget extends StatelessWidget {
         spans.add(TextSpan(
           text: expr[i],
           style: TextStyle(
-            color: Colors.brown.shade600,
+            color: cs.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -267,7 +268,7 @@ class MathExpressionWidget extends StatelessWidget {
         spans.add(TextSpan(
           text: expr[i],
           style: TextStyle(
-            color: Colors.brown.shade600,
+            color: cs.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -280,18 +281,18 @@ class MathExpressionWidget extends StatelessWidget {
         ));
         i++;
       } else if (expr[i] == '%') {
-        spans.add(const TextSpan(
+        spans.add(TextSpan(
           text: '%',
-          style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+          style: TextStyle(color: cs.tertiary, fontWeight: FontWeight.w600),
         ));
         i++;
       } else if (expr[i] == '=') {
-        spans.add(const TextSpan(
+        spans.add(TextSpan(
           text: '=',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.blue,
+            color: cs.primary,
           ),
         ));
         i++;
@@ -312,7 +313,7 @@ class MathExpressionWidget extends StatelessWidget {
           if (RegExp(r'^\d+\.?\d*$').hasMatch(word)) {
             spans.add(TextSpan(
               text: word,
-              style: TextStyle(color: Colors.deepOrange.shade700),
+              style: TextStyle(color: cs.secondary),
             ));
           } else {
             spans.add(TextSpan(
@@ -358,12 +359,12 @@ class MathExpressionWidget extends StatelessWidget {
     return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '>';
   }
 
-  TextSpan _buildOperatorSpan(String op) {
+  TextSpan _buildOperatorSpan(String op, ColorScheme cs) {
     final color = op == '+' || op == '-'
-        ? Colors.green.shade700
+        ? cs.tertiary
         : op == '*' || op == '/'
-            ? Colors.orange.shade700
-            : Colors.blue.shade700;
+            ? cs.secondary
+            : cs.primary;
     return TextSpan(
       text: op == '*' ? '\u00D7' : op,
       style: TextStyle(

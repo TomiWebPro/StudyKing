@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -122,7 +123,7 @@ class ProgressExportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            l10n.pdfGenerated(DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())),
+            l10n.pdfGenerated(DateFormat.yMd(l10n.localeName).add_Hm().format(DateTime.now())),
             style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 8),
@@ -144,7 +145,7 @@ class ProgressExportService {
               [l10n.correctAnswers, '${overallStats['correctAttempts']}'],
               [l10n.accuracy, '${overallStats['accuracy']}%'],
               [l10n.avgTime, '${overallStats['avgTimePerQuestion']}s'],
-              [l10n.totalStudyTime, '${overallStats['totalStudyTimeHours']}h'],
+              [l10n.totalStudyTime, '${formatDecimal(double.tryParse(overallStats['totalStudyTimeHours'] as String? ?? '0') ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h'],
               [l10n.csvColWeeklyActivity, '${overallStats['weeklyActivity']}'],
               [l10n.csvColDailyActivity, '${overallStats['dailyActivity']}'],
               [l10n.csvColTopicsStudied, '${overallStats['topicsStudied']}'],
@@ -187,9 +188,9 @@ class ProgressExportService {
                   ms.topicId,
                   '${ms.totalAttempts}',
                   '${ms.correctAttempts}',
-                  '${(ms.accuracy * 100).toStringAsFixed(1)}%',
+                  '${formatDecimal(ms.accuracy * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}%',
                   level,
-                  '${(ms.reviewUrgency * 100).toStringAsFixed(0)}%',
+                  '${formatDecimal(ms.reviewUrgency * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}%',
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(

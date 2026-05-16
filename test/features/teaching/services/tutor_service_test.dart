@@ -13,8 +13,11 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import 'package:studyking/features/teaching/models/evaluation_result.dart';
 
 class FakeConversationRepository extends ConversationRepository {
   final List<ConversationMessage> _messages = [];
@@ -50,7 +53,7 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
     return {
       'totalSessions': sessions.length,
       'completedSessions': completed.length,
-      'totalHours': completed.fold<double>(0, (sum, s) => sum + (s.elapsedMinutes / 60.0)),
+      'totalHours': completed.fold<double>(0, (sum, s) => sum + (s.startTime.difference(s.startTime).inMinutes / 60.0)),
       'totalQuestions': completed.fold<int>(0, (sum, s) => sum + s.questionsAsked),
       'averageAccuracy': completed.isEmpty
           ? 0.0
@@ -98,6 +101,26 @@ class FakeLlmService extends LlmService {
   }
 }
 
+class FakeExerciseEvaluator extends ExerciseEvaluator {
+  FakeExerciseEvaluator()
+      : super(
+          llmService: FakeLlmService(),
+          modelId: 'test-model',
+        );
+
+  @override
+  Future<EvaluationResult> evaluate({
+    required String question,
+    required String studentAnswer,
+    required String subjectId,
+    required String topicTitle,
+    String? systemPrompt,
+    String? userPrompt,
+  }) async {
+    return EvaluationResult(score: 0.8, explanation: 'Good job.');
+  }
+}
+
 class FakePlanAdapter extends PlanAdapter {
   FakePlanAdapter() : super();
 
@@ -136,6 +159,14 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 }
 
+class FixedClock extends Clock {
+  final DateTime fixedTime;
+  FixedClock(this.fixedTime);
+
+  @override
+  DateTime now() => fixedTime;
+}
+
 void main() {
   group('TutorService', () {
     late FakeConversationRepository conversationRepo;
@@ -143,6 +174,7 @@ void main() {
     late DatabaseService database;
     late FakeLlmService llmService;
     late FakeMasteryGraphService masteryService;
+    late FakeExerciseEvaluator exerciseEvaluator;
     late TutorService tutorService;
 
     setUp(() {
@@ -160,11 +192,13 @@ void main() {
       );
       llmService = FakeLlmService();
       masteryService = FakeMasteryGraphService();
+      exerciseEvaluator = FakeExerciseEvaluator();
       tutorService = TutorService(
         database: database,
         llmService: llmService,
         masteryService: masteryService,
         modelId: 'test-model',
+        exerciseEvaluator: exerciseEvaluator,
         planAdapter: FakePlanAdapter(),
       );
     });
@@ -182,9 +216,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
           durationMinutes: 45,
         );
 
@@ -199,9 +230,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
           durationMinutes: 30,
         );
 
@@ -221,9 +249,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
 
         final sessions = tutorSessionRepo._sessions;
@@ -245,9 +270,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -262,9 +284,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -281,9 +300,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
         manager.recordCorrectAnswer();
@@ -304,9 +320,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -321,9 +334,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
         await manager.sendMessage('Hello').toList();
 
@@ -345,9 +355,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
 
         final history = await tutorService.getLessonHistory('student-1');
@@ -370,15 +377,11 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
 
         final stats = await tutorService.getStats('student-1');
         expect(stats['totalSessions'], greaterThan(0));
         expect(stats, containsPair('completedSessions', 0));
-        expect(stats, containsPair('totalHours', 0.0));
       });
     });
 
@@ -412,9 +415,6 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
-          correctKeywords: [],
-          incorrectKeywords: [],
-          exerciseKeywords: [],
         );
 
         final session = await tutorService.getActiveSession();

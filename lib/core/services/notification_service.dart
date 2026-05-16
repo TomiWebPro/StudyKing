@@ -2,12 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../utils/number_format_utils.dart';
 import 'localization_service.dart';
 
 class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
+  NotificationService();
 
   @visibleForTesting
   FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
@@ -148,7 +147,7 @@ class NotificationService {
     required double hoursStudied,
   }) async {
     final l10n = _l10n;
-    final hoursStr = hoursStudied.toStringAsFixed(1);
+    final hoursStr = formatDecimal(hoursStudied, _l10n?.localeName ?? 'en', minFractionDigits: 1, maxFractionDigits: 1);
     await showNotification(
       id: id,
       title: l10n?.notifTitleTakeBreak ?? 'Take a Break',

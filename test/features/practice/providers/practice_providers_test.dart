@@ -115,6 +115,48 @@ void main() {
       final result = container.read(subjectRepositoryProvider);
       expect(result, same(fakeRepo));
     });
+
+    test('practiceDataServiceProvider depends on spacedRepetitionServiceProvider', () {
+      final fakeService = SpacedRepetitionService(
+        questionRepo: QuestionRepository(),
+        attemptRepo: FakeAttemptRepository(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          spacedRepetitionServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final dataService = container.read(practiceDataServiceProvider);
+      expect(dataService, isA<PracticeDataService>());
+    });
+
+    test('practiceDataServiceProvider depends on sessionRepositoryProvider', () {
+      final fakeRepo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final dataService = container.read(practiceDataServiceProvider);
+      expect(dataService, isA<PracticeDataService>());
+    });
+
+    test('practiceDataServiceProvider depends on subjectRepositoryProvider', () {
+      final fakeRepo = SubjectRepository();
+      final container = ProviderContainer(
+        overrides: [
+          subjectRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final dataService = container.read(practiceDataServiceProvider);
+      expect(dataService, isA<PracticeDataService>());
+    });
   });
 }
 

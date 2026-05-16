@@ -1,9 +1,11 @@
 import 'dart:async';
+import '../utils/logger.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
 import '../services/plan_adapter.dart';
 import '../services/localization_service.dart';
+import '../utils/number_format_utils.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -30,6 +32,7 @@ class EngagementSchedulerConfig {
 }
 
 class EngagementScheduler {
+  final Logger _logger = const Logger('EngagementScheduler');
   final StudyProgressTracker _tracker;
   final MasteryGraphService _masteryService;
   final NotificationService _notificationService;
@@ -103,7 +106,9 @@ class EngagementScheduler {
               0,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to send overwork nudge: $e');
+    }
 
     try {
       final revisionNudges = await getRevisionNudges(studentId);
@@ -127,7 +132,9 @@ class EngagementScheduler {
           );
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to send revision nudge: $e');
+    }
 
     try {
       final planNudges = await getPlanAdjustmentNudge(studentId);
@@ -147,7 +154,9 @@ class EngagementScheduler {
           consecutiveLowDays: days,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to send plan adjustment nudge: $e');
+    }
 
     try {
       final weakResult = await _masteryService.getWeakTopics(studentId);
@@ -157,7 +166,9 @@ class EngagementScheduler {
           weakTopics: weakResult.data!.map((s) => s.topicId).toList(),
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to check weak topics for nudge: $e');
+    }
 
     if (_planAdapter != null) {
       try {
@@ -174,7 +185,9 @@ class EngagementScheduler {
           );
           await _nudgeRepository.create(model);
         }
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to check plan adherence: $e');
+      }
     }
   }
 
@@ -183,7 +196,9 @@ class EngagementScheduler {
     try {
       final stats = await _tracker.getOverallStats(studentId);
       totalHours = double.tryParse(stats['totalStudyTimeHours'] as String? ?? '0') ?? 0;
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to get overall stats for overwork nudge: $e');
+    }
 
     if (_sessionRepository != null) {
       try {
@@ -194,11 +209,14 @@ class EngagementScheduler {
         if (sessionHours > totalHours) {
           totalHours = sessionHours;
         }
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to get today sessions for overwork nudge: $e');
+      }
     }
 
     if (totalHours > 4) {
-      final hoursStr = totalHours.toStringAsFixed(1);
+      final localeName = _localizationService?.l10n.localeName ?? 'en';
+      final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
       return [EngagementNudge(
         type: NudgeType.overwork,
         message: _localizationService?.nudgeOverwork(hoursStr)
@@ -242,7 +260,9 @@ class EngagementScheduler {
           severity: NudgeSeverity.medium,
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to get plan adjustment nudge: $e');
+    }
     return nudges;
   }
 

@@ -176,6 +176,10 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
 
   String _fallbackResponse(String text) {
     final l10n = AppLocalizations.of(context)!;
+    final lower = text.toLowerCase();
+    if (lower.contains('explain')) return l10n.fallbackExplainResponse;
+    if (lower.contains('quiz') || lower.contains('question')) return l10n.fallbackQuizResponse;
+    if (lower.contains('math') || lower.contains('calculate')) return l10n.fallbackMathResponse;
     return l10n.fallbackGeneralResponse;
   }
 

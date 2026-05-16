@@ -179,7 +179,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     final point = box.globalToLocal(details.globalPosition);
     setState(() {
       _isDrawing = true;
-      _strokes.add(Stroke(points: <DrawingPoint>[DrawingPoint(point: point)]));
+      _strokes.add(Stroke(points: <DrawingPoint>[DrawingPoint(point: point)], color: Theme.of(context).colorScheme.onSurface));
     });
   }
 

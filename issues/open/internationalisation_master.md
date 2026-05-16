@@ -1,102 +1,101 @@
-# Locale-Unaware Number Formatting Blocks Proper Spanish Localisation
+# Spanish Localization Gaps: Hardcoded English Strings and Locale-Unaware Formatting
 
 ## Context
 
-The app currently supports English (`en`) and Spanish (`es`, LatAm formal register). The ARB-based string localisation (2193 keys, 100% parity) and presentation-layer `AppLocalizations.of(context)` usage are well-implemented. However, a systematic gap exists in **numeric value formatting**: the app uses Dart's `toStringAsFixed()` instead of `intl`'s locale-aware `NumberFormat` everywhere.  For any locale that uses comma as decimal separator—including Spanish (`85,5%`), French, German, Italian, Portuguese, and many others—every percentage, score, hours, and cost value renders with the wrong separator.
+The codebase has 100% ARB key parity and strong i18n infrastructure (`locale_config.dart`, `number_format_utils.dart`, `time_utils.dart`, CI coverage checks). However, several UI surfaces still bypass the translation system with hardcoded English strings or locale-unaware formatting. These gaps mean Spanish (and future) users see English fragments mixed into their localized UI.
 
-## Problem
+## Affected Files
 
-`toStringAsFixed()` always produces a period decimal separator (e.g. `"85.5%"`), but **Spanish locale (`es`) expects a comma separator** (`"85,5%"`).  This affects every user-facing numeric display in the app.
-
-### Affected files (user-facing display — 15+ locations)
-
-| File | Line(s) | Expression | Renders in Spanish |
-|---|---|---|---|
-| `lib/features/subjects/presentation/widgets/subject_stats_tab.dart` | 63, 108 | `avgScore.toStringAsFixed(1)` | `"85.5%"` → should be `"85,5%"` |
-| `lib/features/practice/presentation/practice_results_screen.dart` | 41 | `accuracy.toStringAsFixed(0)` | OK (no decimals), but pattern breaks when precision changes |
-| `lib/features/practice/presentation/widgets/practice_session_stats_bar.dart` | 42 | `toStringAsFixed(0)` | OK (no decimals) but inconsistent pattern |
-| `lib/features/sessions/presentation/widgets/session_analytics.dart` | 62 | `DateFormat('E', localeName)` | Hardcoded pattern should be skeleton-based for locale flexibility |
-| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | 121, 283 | `totalCost.toStringAsFixed(4)` | `$0.0025` → should be `$0,0025` |
-| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | 171, 174 | Token formatting | `"1.5K"`, `"2.3M"` → locale-unaware number grouping |
-| `lib/features/settings/data/models/settings_model.dart` | 113, 117, 183 | Cost/token display | Same decimal-separator problem |
-| `lib/core/services/notification_service.dart` | 150 | `hoursStr = hoursStudied.toStringAsFixed(1)` | Notification body content — user sees `"3.5 hours"` instead of `"3,5 horas"` |
-| `lib/core/services/engagement_scheduler.dart` | 201 | `totalHours.toStringAsFixed(1)` | Nudge content — same problem |
-| `lib/features/dashboard/data/models/dashboard_models.dart` | 128 | `(totalSeconds / 3600).toStringAsFixed(1)` | Dashboard hours display |
-| `lib/features/dashboard/providers/dashboard_data_providers.dart` | 69 | Same pattern | Dashboard data layer |
-| `lib/features/dashboard/services/dashboard_data_loader.dart` | 71 | Same pattern | Dashboard data layer |
-
-### Additional non-display uses (lower priority, for completeness)
-
-These are data-storage or export paths where locale formatting is less critical but should be consistent:
-
-| File | Lines | Context |
+| File | Lines | Issue |
 |---|---|---|
-| `lib/core/services/study_progress_tracker.dart` | 48, 301 | JSON/CSV export |
-| `lib/core/services/progress_export_service.dart` | 62, 125, 190, 192 | PDF generation + hardcoded `DateFormat('yyyy-MM-dd HH:mm')` (also locale-unaware) |
-| `lib/features/sessions/data/repositories/session_repository.dart` | 241 | Data storage (Hive) |
-| `lib/features/sessions/services/session_export_service.dart` | 29, 31, 101 | CSV export |
-| `lib/features/teaching/services/prompts/prompts.dart` | 126 | AI prompt context (LLM-facing) |
+| `lib/features/ingestion/presentation/upload_screen.dart` | 83, 136, 141, 150, 363, 428 | Hardcoded English SnackBar/chip/button strings |
+| `lib/features/dashboard/presentation/widgets/summary_row.dart` | 43, 52 | `'$accuracy%'` and `'...h'` bypass locale-aware formatting |
+| `lib/features/planner/presentation/planner_screen.dart` | 408 | `'${goal.targetHoursPerDay}h/${l10n.days}'` — hardcoded `h` |
+| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | 122, 270, 278 | Hardcoded `$` symbol and `tokens` label |
+| `lib/features/lessons/presentation/lesson_detail_screen.dart` | 141 | Timer format `m:ss` — hardcoded `:` separator |
+| `lib/features/settings/data/models/settings_model.dart` | 114–188 | `formattedText`, `formatUsageSummary` produce English-only sentences |
+| `lib/features/sessions/services/session_export_service.dart` | 158–169 | PDF duration format uses `'h'` / `'m'` instead of locale-aware `l10n.durationHours` |
+| `lib/l10n/app_en.arb` / `app_es.arb` | missing keys | Missing ARB keys for URL/file fetch messages, `tokens` label, `currencySymbol` |
 
-### Bonus: Regional inconsistency in Spanish ARB
+## Issues
 
-`lib/l10n/app_es.arb:2299` — `"Ayuda con problemas de mates"` uses **"mates"** (distinctly Peninsular Spanish slang) while the rest of the translation targets **neutral Latin American Spanish** as documented in `l10n.yaml:10`.  This should be `"Ayuda con problemas de matemáticas"` for consistency.
+### P0 — Missing ARB keys (6 strings never reach translations)
 
-## Rationale
+Six user-facing strings in `upload_screen.dart` are hardcoded in English. They never pass through `AppLocalizations`, so Spanish users always see English messages.
 
-1. **Spanish is a comma-decimal locale.**  Every user-facing percentage, score, hours figure, and cost renders incorrectly for Spanish users. This is not a cosmetic issue—in many Spanish-speaking countries, `"85.5%"` is ambiguous or confusing.
+- **Line 83**: `Text('File picker error: $e')`
+- **Line 136**: `Text('URL content fetched successfully')`
+- **Line 141**: `Text('Failed to fetch URL: ${result.error}')`
+- **Line 150**: `Text('URL fetch error: $e')`
+- **Line 363**: `label: const Text('File')`
+- **Line 428**: `label: const Text('Fetch & Scrape')`
 
-2. **The pattern compounds with every new locale.** French, German, Italian, Portuguese—all use comma as decimal separator.  Fixing `toStringAsFixed()` → `NumberFormat` once establishes the correct pattern for all future locales.
+The existing keys `uploadFailed` and `contentUploadedSuccessfully` are for *submission* errors — these are *content ingestion* errors and need separate keys.
 
-3. **The `intl` dependency is already declared** (`intl: ^0.20.2` in `pubspec.yaml`). `NumberFormat` is available. No new dependency needed.
+**Fix**: Add ARB keys in both `app_en.arb` and `app_es.arb`:
+- `filePickerError` → `"File picker error: {error}"` / `"Error del selector de archivos: {error}"`
+- `urlFetchSuccess` → `"URL content fetched successfully"` / `"Contenido de URL obtenido exitosamente"`
+- `urlFetchFailed` → `"Failed to fetch URL: {error}"` / `"Error al obtener URL: {error}"`
+- `urlFetchError` → `"URL fetch error: {error}"` / `"Error de obtención de URL: {error}"`
+- `file` → `"File"` / `"Archivo"`
+- `fetchAndScrape` → `"Fetch & Scrape"` / `"Obtener y extraer"`
 
-4. **The ARB system works well** for strings; this is the one systematic gap in the i18n architecture.
+### P1 — Locale-unaware unit abbreviations
 
-## Proposed Solution
+Three files render unit abbreviations (`%`, `h`, `$`) by concatenation, which is invisible to the ARB system and unbreakable for comma-decimal locales.
 
-Replace `toStringAsFixed(n)` with locale-aware `NumberFormat` from the `intl` package for **all user-facing numeric displays**:
+- **`summary_row.dart:43`**: `'$accuracy%'` — should use `formatPercent(accuracy / 100, l10n.localeName)` (note: `formatPercent` takes 0–100 range internally and handles division)
 
-```dart
-// Before (wrong for Spanish):
-'${accuracy.toStringAsFixed(1)}%'
+- **`summary_row.dart:52`**: `'${formatDecimal(...)}h'` — the `h` suffix should use `l10n.hoursAbbreviation` or be wrapped in an ARB template. Same pattern in **`planner_screen.dart:408`** (`'...h/${l10n.days}'`).
 
-// After (correct for all locales):
-final numberFormat = NumberFormat.percentPattern(l10n.localeName)
-  ..minimumFractionDigits = 1
-  ..maximumFractionDigits = 1;
-numberFormat.format(accuracy / 100); // percentPattern expects 0-1 range
-```
+- **`llm_task_manager_screen.dart:122`**: `'\$${formatDecimal(...)}'` — hardcodes `$`. Should use `NumberFormat.currency(...)` with locale or an ARB `currencySymbol` key. Same pattern in **`settings_model.dart:114,120,188`**.
 
-Or for plain decimals:
+- **`llm_task_manager_screen.dart:270`**: `'${_formatTokens(task.tokensUsed, l10n.localeName)} tokens'` — hardcodes `tokens`. Should use ARB key `tokensLabel: "{count} tokens"` / `"{count} tokens"` or `l10n.tokensAndCost`.
 
-```dart
-final decimalFormat = NumberFormat('#,##0.#', l10n.localeName);
-'${decimalFormat.format(accuracy)}%'
-```
+### P1 — English-only user-facing model strings
 
-### Specific fix per tier
+`settings_model.dart` has three methods that produce fully English strings:
 
-1. **Presentation widgets** (subject_stats_tab, practice_results_screen, practice_session_stats_bar, llm_task_manager_screen): Inject `NumberFormat` via `l10n.localeName`. These have direct access to `AppLocalizations.of(context)`.
+- **`formattedText`/`formattedTextWithLocale`** (lines 118–122): Produces strings like `"2025-01-15: $0.1234, cost/tk: 0.0000001234"` — the labels `cost/tk` are English.
+- **`formatUsageSummary`** (line 184–189): Produces `"Usage: $X.XX over Y tokens, avg: $Z.ZZ per 1k tokens"` — a whole English sentence.
 
-2. **Dashboard models/providers** (dashboard_models, dashboard_data_providers, dashboard_data_loader): Pass `localeName` as parameter or use `NumberFormat` at the display boundary.
+These are used in `settings_screen.dart` (a user-facing screen). The text should be assembled from ARB template keys with placeholders, or the methods should accept `AppLocalizations`.
 
-3. **Notification/nudge services** (notification_service, engagement_scheduler): These already receive `AppLocalizations? l10n` via `LocalizationService` — use `l10n.localeName` to create the `NumberFormat`.
+**Fix**: Create ARB keys:
+- `usageRecordFormat` → `"{date}: {cost}, cost/tk: {costPerToken}"` (ES: `"{date}: {cost}, costo/token: {costPerToken}"`)
+- `usageSummary` → `"Usage: {totalCost} over {totalTokens} tokens, avg: {avgCost} per 1k tokens"` (ES: `"Uso: {totalCost} sobre {totalTokens} tokens, promedio: {avgCost} por cada 1k tokens"`)
 
-4. **Settings model** (settings_model): This is a data model; move formatting to the presentation layer or inject `localeName`.
+### P2 — PDF duration format bypasses locale
 
-5. **Export services** (progress_export_service, study_progress_tracker, session_export_service): For CSV — locale-agnostic `en` format is acceptable (CSV is data, not display). For PDF — use the user's locale.
+`session_export_service.dart` lines 158–169 format durations in PDF output using hardcoded `'h'`, `'m'`, `'s'` suffixes. Per AGENTS.md, "PDF exports should use the user's locale." The ARB already has `durationHours`, `durationMinutes`, `durationSeconds` keys with proper pluralization.
 
-6. **Spanish ARB fix**: Change `app_es.arb:2299` from `"Ayuda con problemas de mates"` to `"Ayuda con problemas de matemáticas"`.
+**Fix**: Replace `_formatTotalDuration` and `_formatDuration` to accept `AppLocalizations` (or `l10n.localeName`) and use `l10n.durationHours(count)`, `l10n.durationMinutes(count)`, etc.
 
-7. **Hardcoded DateFormat**: Change `lib/core/services/progress_export_service.dart:125` `DateFormat('yyyy-MM-dd HH:mm')` to `DateFormat.yMd(l10n.localeName).add_Hm()`.
+### P2 — Lesson detail timer separator
+
+`lesson_detail_screen.dart:141`: `'${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'` — the `:` separator is hardcoded. Consider whether this timer is always 7-segment digital (in which case `:` is acceptable as a non-linguistic separator) or should be localized. Minor issue, flagged for awareness.
 
 ## Acceptance Criteria
 
-1. [ ] A Spanish user sees `"85,5%"` instead of `"85.5%"` on subject stats, practice results, practice stats bar, and dashboard.
-2. [ ] A Spanish user sees `"$0,0025"` instead of `"$0.0025"` in LLM task manager cost displays.
-3. [ ] Nudge/notification text for Spanish locale uses comma as decimal separator in hour/session values.
-4. [ ] A centralised `NumberFormat` helper or utility is created (e.g. `lib/core/utils/number_format_utils.dart`) to avoid repeated `NumberFormat('#,##0.#', localeName)` boilerplate.
-5. [ ] `formattedDate` in `progress_export_service.dart` is locale-aware (skeleton-based, not hardcoded pattern).
-6. [ ] `"mates"` → `"matemáticas"` in `app_es.arb`.
-7. [ ] All CSV exports remain in invariant `en` format (data, not display).
-8. [ ] All existing tests pass; new tests verify `NumberFormat` usage for `es` locale produces comma separators.
-9. [ ] The fix pattern is documented in `AGENTS.md` under i18n conventions so new contributors use `NumberFormat` by default.
+1. **New ARB keys** added to both `app_en.arb` and `app_es.arb`:
+   - `filePickerError` (with `{error}` placeholder)
+   - `urlFetchSuccess` (no placeholder)
+   - `urlFetchFailed` (with `{error}` placeholder)
+   - `urlFetchError` (with `{error}` placeholder)
+   - `file` (no placeholder)
+   - `fetchAndScrape` (no placeholder)
+   - `hoursAbbreviation` (e.g., `"{count}h"` → ES: `"{count}h"`)
+   - `tokensLabel` (e.g., `"{count} tokens"` → ES: `"{count} tokens"`)
+   - `usageRecordFormat` / `usageSummary` (templated with placeholders)
+2. **All 6 hardcoded strings in `upload_screen.dart`** replaced with `l10n.*` calls.
+3. **`summary_row.dart:43`** uses `formatPercent()` instead of `'$accuracy%'`.
+4. **No hardcoded `$` currency signs remain** in user-facing UI code (use `NumberFormat.currency` or ARB key).
+5. **No hardcoded `h` suffixes remain** in user-facing widgets (use `l10n.hoursAbbreviation` or `l10n.durationHours`).
+6. **`settings_model.dart`** `formattedText`/`formatUsageSummary` methods accept `AppLocalizations` or use templated ARB keys.
+7. **PDF export** in `session_export_service.dart` uses locale-aware durations instead of `'h'`/`'m'`/`'s'`.
+8. **Coverage tests** pass (existing `check_i18n_coverage.sh` and test suite).
+9. **`check_i18n_coverage.sh`** updated if needed to validate the new keys.
+
+## Rationale
+
+Spanish was chosen as the first non-English locale because it is the second most spoken language globally and follows Latin American conventions. Fixing these gaps now ensures that adding new locales (fr, de, pt, etc.) is purely additive (new ARB file + new `AppLocale` entry) with zero code changes. Every hardcoded English string is a barrier to adding the next language.

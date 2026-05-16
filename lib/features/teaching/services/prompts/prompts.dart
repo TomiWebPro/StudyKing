@@ -1,48 +1,92 @@
 import '../conversation_phase.dart';
 
-class PromptTemplates {
-  final String Function({
+class PromptEntry {
+  final String systemPrompt;
+  final String userPrompt;
+
+  const PromptEntry({
+    required this.systemPrompt,
+    required this.userPrompt,
+  });
+}
+
+class ConversationPromptSet {
+  final int version;
+
+  const ConversationPromptSet({this.version = 1});
+
+  static const ConversationPromptSet defaultTemplates = ConversationPromptSet();
+
+  PromptEntry lessonPlan({
     required String subjectId,
     required String topicTitle,
     required int durationMinutes,
-  }) buildLessonPlanPrompt;
+  }) {
+    return PromptEntry(
+      systemPrompt: lessonPlanSystemPrompt,
+      userPrompt: _buildLessonPlanPrompt(
+        subjectId: subjectId,
+        topicTitle: topicTitle,
+        durationMinutes: durationMinutes,
+      ),
+    );
+  }
 
-  final String Function({
+  PromptEntry tutorMessage({
     required String subjectId,
     required String topicTitle,
     required double adaptivePace,
     required ConversationPhase phase,
-  }) buildTutorPrompt;
+  }) {
+    return PromptEntry(
+      systemPrompt: _buildTutorSystemPrompt(subjectId, topicTitle),
+      userPrompt: _buildTutorPrompt(
+        subjectId: subjectId,
+        topicTitle: topicTitle,
+        adaptivePace: adaptivePace,
+        phase: phase,
+      ),
+    );
+  }
 
-  final String Function({
+  PromptEntry summary({
     required String topicTitle,
     required int exerciseCount,
     required int correctCount,
     required double confidenceRating,
     required double adaptivePace,
-  }) buildSummaryPrompt;
+  }) {
+    return PromptEntry(
+      systemPrompt: summarySystemPrompt,
+      userPrompt: _buildSummaryPrompt(
+        topicTitle: topicTitle,
+        exerciseCount: exerciseCount,
+        correctCount: correctCount,
+        confidenceRating: confidenceRating,
+        adaptivePace: adaptivePace,
+      ),
+    );
+  }
 
-  final String lessonPlanSystemPrompt;
-  final String summarySystemPrompt;
-
-  const PromptTemplates({
-    required this.buildLessonPlanPrompt,
-    required this.buildTutorPrompt,
-    required this.buildSummaryPrompt,
-    required this.lessonPlanSystemPrompt,
-    required this.summarySystemPrompt,
-  });
-
-  static const PromptTemplates defaultTemplates = PromptTemplates(
-    buildLessonPlanPrompt: _defaultLessonPlanPrompt,
-    buildTutorPrompt: _defaultTutorPrompt,
-    buildSummaryPrompt: _defaultSummaryPrompt,
-    lessonPlanSystemPrompt: _defaultLessonPlanSystemPrompt,
-    summarySystemPrompt: _defaultSummarySystemPrompt,
-  );
+  PromptEntry evaluateExercise({
+    required String question,
+    required String studentAnswer,
+    required String subjectId,
+    required String topicTitle,
+  }) {
+    return PromptEntry(
+      systemPrompt: evaluationSystemPrompt,
+      userPrompt: _buildEvaluationPrompt(
+        question: question,
+        studentAnswer: studentAnswer,
+        subjectId: subjectId,
+        topicTitle: topicTitle,
+      ),
+    );
+  }
 }
 
-String _defaultLessonPlanPrompt({
+String _buildLessonPlanPrompt({
   required String subjectId,
   required String topicTitle,
   required int durationMinutes,
@@ -56,7 +100,7 @@ Return a JSON object with:
 {
   "goals": ["goal1", "goal2", "goal3"],
   "sections": [
-    {"title": "section title", "duration": 10, "type": "explanation|exercise|review"},
+    {"title": "section title", "duration": 10, "type": "explanation|exercise|review|summary|quiz"},
     ...
   ],
   "checkpoints": ["checkpoint1", "checkpoint2"],
@@ -65,10 +109,14 @@ Return a JSON object with:
 ''';
 }
 
-const String _defaultLessonPlanSystemPrompt =
+const String lessonPlanSystemPrompt =
     'You are a curriculum designer creating lesson plans. Respond only with valid JSON.';
 
-String _defaultTutorPrompt({
+String _buildTutorSystemPrompt(String subjectId, String topicTitle) {
+  return 'You are an AI tutor for $subjectId teaching "$topicTitle". Be conversational, warm, and educational.';
+}
+
+String _buildTutorPrompt({
   required String subjectId,
   required String topicTitle,
   required double adaptivePace,
@@ -90,8 +138,6 @@ String _defaultTutorPrompt({
   };
 
   return '''
-You are an AI tutor for $subjectId teaching "$topicTitle".
-
 Guidelines:
 - $timeContext
 - $paceContext
@@ -105,12 +151,10 @@ Guidelines:
 - Insert inline exercises naturally into the conversation
 - Celebrate correct answers with specific praise
 - For wrong answers, explain why and guide toward the correct reasoning
-
-Be conversational, warm, and educational.
 ''';
 }
 
-String _defaultSummaryPrompt({
+String _buildSummaryPrompt({
   required String topicTitle,
   required int exerciseCount,
   required int correctCount,
@@ -130,4 +174,33 @@ Keep it concise and constructive.
 ''';
 }
 
-const String _defaultSummarySystemPrompt = 'You are a tutor writing lesson notes.';
+const String summarySystemPrompt = 'You are a tutor writing lesson notes.';
+
+String _buildEvaluationPrompt({
+  required String question,
+  required String studentAnswer,
+  required String subjectId,
+  required String topicTitle,
+}) {
+  return '''
+Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".
+
+Question: $question
+
+Student Answer: $studentAnswer
+
+Return a JSON object with:
+{
+  "score": <0.0 to 1.0>,
+  "explanation": "<detailed feedback>",
+  "partialCredit": <optional 0.0-1.0>,
+  "conceptBreakdown": {<optional map of concept name to mastery score 0.0-1.0>}
+}
+''';
+}
+
+const String evaluationSystemPrompt =
+    'You are an expert academic evaluator. Return only valid JSON.';
+
+/// Backward-compatible alias for existing references.
+typedef PromptTemplates = ConversationPromptSet;

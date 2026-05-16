@@ -3,7 +3,7 @@ import 'package:studyking/core/utils/responsive.dart';
 
 class AnimatedBarChart extends StatefulWidget {
   final Map<String, int> data;
-  final Color accentColor;
+  final Color? accentColor;
   final double minBarHeight;
   final double maxBarHeight;
   final double? barWidth;
@@ -15,7 +15,7 @@ class AnimatedBarChart extends StatefulWidget {
   const AnimatedBarChart({
     super.key,
     required this.data,
-    this.accentColor = Colors.blue,
+    this.accentColor,
     this.minBarHeight = 40,
     this.maxBarHeight = 120,
     this.barWidth,
@@ -42,14 +42,14 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
     return computed.clamp(AnimatedBarChart.minBarWidth, double.infinity);
   }
 
-  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme, double barWidth) {
+  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme, double barWidth, Color accentColor) {
     if (widget.reduceMotion) {
       return Container(
         width: barWidth,
         height: height,
         decoration: BoxDecoration(
           color: count > 0
-              ? widget.accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+              ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
               : theme.disabledColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(widget.borderRadius),
         ),
@@ -68,7 +68,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
           height: value,
           decoration: BoxDecoration(
             color: count > 0
-                ? widget.accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+                ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
                 : theme.disabledColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
@@ -88,6 +88,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accentColor = widget.accentColor ?? theme.colorScheme.primary;
     final rawMax = widget.data.values.isNotEmpty
         ? widget.data.values.reduce((a, b) => a > b ? a : b)
         : 0;
@@ -140,13 +141,13 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: count > 0
-                                    ? widget.accentColor
-                                    : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
+                                ? accentColor
+                                : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
                               ),
                             ),
                           ),
                         const SizedBox(height: 4),
-                        _buildBar(context, height, count, maxCount, theme, barWidth),
+                        _buildBar(context, height, count, maxCount, theme, barWidth, accentColor),
                         const SizedBox(height: 6),
                         Text(
                           day,

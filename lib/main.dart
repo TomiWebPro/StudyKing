@@ -15,6 +15,14 @@ import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
 import 'core/routes/app_router.dart';
 import 'core/routes/tab_navigator.dart';
@@ -48,7 +56,17 @@ void main() async {
     await HiveInitializer.initialize();
     
     // Initialize all repositories through DatabaseService
-    await database.init();
+    final mainDb = DatabaseService(
+      topicRepository: TopicRepository(),
+      questionRepository: QuestionRepository(),
+      attemptRepository: AttemptRepository(),
+      lessonRepository: LessonRepository(),
+      sessionRepository: SessionRepository(),
+      subjectRepository: SubjectRepository(),
+      conversationRepository: ConversationRepository(),
+      tutorSessionRepository: TutorSessionRepository(),
+    );
+    await mainDb.init();
     
     // Initialize settings repository
     await settingsRepository.init();

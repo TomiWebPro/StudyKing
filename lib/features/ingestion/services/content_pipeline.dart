@@ -64,7 +64,7 @@ class ContentPipeline {
       );
 
       await _sourceRepository.create(source);
-      _logger.i('Source saved: ${source.id}');
+      _logger.d('Source saved: ${source.id}');
       return Result.success(source);
     } catch (e) {
       _logger.e('Failed to save source', e);
@@ -102,7 +102,7 @@ class ContentPipeline {
         processingStatus: ProcessingStatus.pending.name,
       );
       await _sourceRepository.create(source);
-      _logger.i('Source created: ${source.id}');
+      _logger.d('Source created: ${source.id}');
 
       Source updated = source;
 
@@ -113,7 +113,7 @@ class ContentPipeline {
       );
       updated = updated.copyWith(extractedText: extracted);
       await _sourceRepository.save(updated.id, updated);
-      _logger.i('Stage 1 complete: text extracted (${extracted.length} chars)');
+      _logger.d('Stage 1 complete: text extracted (${extracted.length} chars)');
 
       final textToClassify = extracted.isNotEmpty ? extracted : content;
 
@@ -128,7 +128,7 @@ class ContentPipeline {
           updated = updated.copyWith(topicId: matchedTopicId);
           await _sourceRepository.save(updated.id, updated);
         }
-        _logger.i('Stage 2 complete: topic classified');
+        _logger.d('Stage 2 complete: topic classified');
       }
 
       updated = _updateStatus(updated, ProcessingStatus.classifying);
@@ -137,7 +137,7 @@ class ContentPipeline {
         updated = updated.copyWith(summary: summary);
         await _sourceRepository.save(updated.id, updated);
       }
-      _logger.i('Stage 3 complete: summary generated');
+      _logger.d('Stage 3 complete: summary generated');
 
       if (generateQuestions) {
         updated = _updateStatus(updated, ProcessingStatus.generatingQuestions);
@@ -155,14 +155,14 @@ class ContentPipeline {
           );
           await _sourceRepository.save(updated.id, updated);
         }
-        _logger.i(
+        _logger.d(
           'Stage 4 complete: ${questionIds.length} questions generated',
         );
       }
 
       updated = _updateStatus(updated, ProcessingStatus.completed);
       await _sourceRepository.save(updated.id, updated);
-      _logger.i('Pipeline complete for source: ${updated.id}');
+      _logger.d('Pipeline complete for source: ${updated.id}');
 
       return Result.success(updated);
     } catch (e) {
@@ -183,7 +183,8 @@ class ContentPipeline {
         );
         await _sourceRepository.create(failed);
         return Result.success(failed);
-      } catch (_) {
+      } catch (e2) {
+        _logger.e('Failed to save failed source', e2);
         return Result.failure(e.toString());
       }
     }
@@ -341,7 +342,9 @@ $content''';
       if (decoded is Map && decoded['questions'] is List) {
         return List<Map<String, dynamic>>.from(decoded['questions']);
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to parse question response', e);
+    }
     return [];
   }
 

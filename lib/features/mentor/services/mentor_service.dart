@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
@@ -10,6 +11,11 @@ import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 
 class MentorService {
+  final Logger _logger = const Logger('MentorService');
+  static const String _mentorSystemPromptText = 'You are a knowledgeable and encouraging AI mentor for a student. '
+      'Your role is to guide their learning journey, provide motivation, '
+      'and help them develop effective study habits. '
+      'Keep responses concise, supportive, and actionable.';
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
@@ -129,7 +135,9 @@ class MentorService {
         payload: payload,
       );
       await _pendingActionRepo.create(action);
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to handle planning intent: $e');
+    }
   }
 
   Future<String> _buildContextPrompt() async {
@@ -146,10 +154,7 @@ Current student context:
   }
 
   String _mentorSystemPrompt() {
-    return 'You are a knowledgeable and encouraging AI mentor for a student. '
-        'Your role is to guide their learning journey, provide motivation, '
-        'and help them develop effective study habits. '
-        'Keep responses concise, supportive, and actionable.';
+    return _mentorSystemPromptText;
   }
 
   String _extractTopic(String message) {

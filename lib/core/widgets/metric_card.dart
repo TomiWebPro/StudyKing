@@ -43,7 +43,7 @@ class MetricCard extends StatelessWidget {
               Text(
                 label,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.textTheme.bodySmall?.color ?? Colors.grey,
+                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],

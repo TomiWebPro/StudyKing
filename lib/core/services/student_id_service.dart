@@ -3,9 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 class StudentIdService {
-  static final StudentIdService _instance = StudentIdService._internal();
-  factory StudentIdService() => _instance;
-  StudentIdService._internal();
+  StudentIdService();
 
   static const _boxName = 'student_id';
   static const _key = 'id';

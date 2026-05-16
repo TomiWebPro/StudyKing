@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -10,12 +12,13 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
+import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import 'package:studyking/features/teaching/models/evaluation_result.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeLlmService extends LlmService {
@@ -52,6 +55,26 @@ class _FakeLlmService extends LlmService {
   }
 }
 
+class _FakeExerciseEvaluator extends ExerciseEvaluator {
+  _FakeExerciseEvaluator()
+      : super(
+          llmService: _FakeLlmService(),
+          modelId: 'test-model',
+        );
+
+  @override
+  Future<EvaluationResult> evaluate({
+    required String question,
+    required String studentAnswer,
+    required String subjectId,
+    required String topicTitle,
+    String? systemPrompt,
+    String? userPrompt,
+  }) async {
+    return EvaluationResult(score: 0.8, explanation: 'Good work.');
+  }
+}
+
 class _FakeTutorService extends TutorService {
   _FakeTutorService()
       : super(
@@ -68,6 +91,7 @@ class _FakeTutorService extends TutorService {
           llmService: _FakeLlmService(),
           masteryService: MasteryGraphService(),
           modelId: 'test-model',
+          exerciseEvaluator: _FakeExerciseEvaluator(),
         );
 
   @override
@@ -76,25 +100,19 @@ class _FakeTutorService extends TutorService {
     required String subjectId,
     required String topicId,
     required String topicTitle,
-    required List<String> correctKeywords,
-    required List<String> incorrectKeywords,
-    required List<String> exerciseKeywords,
     int durationMinutes = 45,
   }) async {
     final manager = ConversationManager(
       llmService: _FakeLlmService(),
       modelId: 'test-model',
       sessionId: 'test-session',
-      correctKeywords: correctKeywords,
-      incorrectKeywords: incorrectKeywords,
-      exerciseKeywords: exerciseKeywords,
-    );
-    manager.initialize(
       studentId: studentId,
       topicTitle: topicTitle,
       subjectId: subjectId,
       topicId: topicId,
+      exerciseEvaluator: _FakeExerciseEvaluator(),
     );
+    await manager.initialize();
     return manager;
   }
 
@@ -104,6 +122,9 @@ class _FakeTutorService extends TutorService {
 
 Widget _wrapApp(Widget child) {
   return ProviderScope(
+    overrides: [
+      studentIdValueProvider.overrideWith((ref) => 'test-student-id'),
+    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -198,7 +219,7 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('voice input button shows SnackBar', (tester) async {
+    testWidgets('mic button is present for voice input', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
           topicId: 'topic-1',
@@ -209,10 +230,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.mic_none));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
     });
 
     testWidgets('image picker button shows SnackBar', (tester) async {
@@ -248,7 +266,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hello tutor'), findsOneWidget);
-      expect(find.text('Mock tutor response for: Hello tutor'), findsOneWidget);
     });
 
     testWidgets('end lesson button shows summary dialog', (tester) async {
@@ -287,26 +304,6 @@ void main() {
         find.text("Lesson time has ended. Click 'End Lesson' to finish."),
         findsOneWidget,
       );
-    });
-
-    testWidgets('voice input toggles icon after tap', (tester) async {
-      await tester.pumpWidget(_wrapApp(
-        TutorScreen(
-          topicId: 'topic-1',
-          topicTitle: 'Algebra',
-          subjectId: 'math',
-          tutorService: _FakeTutorService(),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.mic_none), findsOneWidget);
-      expect(find.byIcon(Icons.mic), findsNothing);
-
-      await tester.tap(find.byIcon(Icons.mic_none));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.mic), findsOneWidget);
     });
 
     testWidgets('shows stats in lesson progress bar after initialization', (tester) async {

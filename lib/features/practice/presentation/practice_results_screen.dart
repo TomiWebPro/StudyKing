@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -38,7 +39,7 @@ class PracticeResultsScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildStatRow(context, l10n.correctAnswers, '$correctAnswers/$totalQuestions'),
               const SizedBox(height: 12),
-              _buildStatRow(context, l10n.accuracy, '${accuracy.toStringAsFixed(0)}%'),
+              _buildStatRow(context, l10n.accuracy, formatPercent(accuracy, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
               const SizedBox(height: 24),
               Center(
                 child: FocusTraversalOrder(

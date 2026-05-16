@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/data/models/session_model.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class SessionExportService {
@@ -98,7 +99,7 @@ class SessionExportService {
                     '${s.startTime.day}/${s.startTime.month}/${s.startTime.year}';
                 final dur = _formatDuration(s.actualDurationMs);
                 final accuracy = s.questionsAnswered > 0
-                    ? '${((s.correctAnswers / s.questionsAnswered) * 100).toStringAsFixed(1)}%'
+                    ? '${formatDecimal((s.correctAnswers / s.questionsAnswered) * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}%'
                     : '-';
                 return [
                   '$i',

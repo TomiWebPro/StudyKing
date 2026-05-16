@@ -54,6 +54,8 @@ class ApiConfig {
   });
 
   static const String openRouterBaseUrlString = 'https://openrouter.ai/api/v1';
+  static const String ollamaDefaultUrl = 'http://localhost:11434';
+  static const String openAIDefaultUrl = 'https://api.openai.com/v1';
 
   final Uri openRouterBaseUrl;
   final Duration openRouterRequestTimeout;

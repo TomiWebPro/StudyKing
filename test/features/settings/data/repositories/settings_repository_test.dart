@@ -280,6 +280,175 @@ void main() {
         final result = await repo.getProfileData();
         expect(result, isNull);
       });
+
+      test('fallback profile when current_profile key has non-UserProfile value', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._profile['current_profile'] = 'some_key';
+        repo._profile['some_key'] = 'not a profile';
+        final profile = UserProfile(id: 'scanned', name: 'Found by scan');
+        repo._profile['scanned'] = profile;
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('scanned'));
+      });
+
+      test('fallback profile when current_profile key does not exist', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._profile['current_profile'] = 'nonexistent_key';
+        final profile = UserProfile(id: 'scanned', name: 'Fallback');
+        repo._profile['scanned'] = profile;
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('scanned'));
+      });
+    });
+
+    group('settings persistence across operations', () {
+      test('preserves all settings after multiple updates', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.updateSettings(apiKey: 'key1', fontSize: 18.0);
+        await repo.updateSettings(apiBaseUrl: 'https://url2.com', themeMode: ThemeMode.dark);
+        await repo.updateSettings(selectedModel: 'model3', studyRemindersEnabled: false);
+        final settings = await repo.getSettings();
+        expect(settings.apiKey, equals('key1'));
+        expect(settings.apiBaseUrl, equals('https://url2.com'));
+        expect(settings.selectedModel, equals('model3'));
+        expect(settings.themeMode, equals(ThemeMode.dark.index));
+        expect(settings.fontSize, equals(18.0));
+        expect(settings.studyRemindersEnabled, isFalse);
+      });
+
+      test('stats persist after updateSettings call', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.updateStats(sessionCount: 10, studyTimeMs: 5000, questions: 50);
+        await repo.updateSettings(fontSize: 20.0);
+        final settings = await repo.getSettings();
+        expect(settings.totalSessionCount, equals(10));
+        expect(settings.totalStudyTimeMs, equals(5000));
+        expect(settings.totalQuestions, equals(50));
+        expect(settings.fontSize, equals(20.0));
+      });
+    });
+
+    group('clear operations idempotency', () {
+      test('clearProfile on already empty box does not throw', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.clearProfile();
+        await repo.clearProfile();
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+      });
+
+      test('clearSettings on already empty box does not throw', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.clearSettings();
+        await repo.clearSettings();
+        final settings = await repo.getSettings();
+        expect(settings.apiKey, equals(''));
+        expect(settings.fontSize, equals(16.0));
+      });
+    });
+
+    group('settings and profile box independence', () {
+      test('clearing settings does not affect profile data', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.saveApiKey(service: 'default', key: 'sk-settings-key');
+        await repo.saveProfileData(UserProfile(id: 'prof1', name: 'Profile User'));
+
+        final settings = await repo.getSettings();
+        expect(settings.apiKey, equals('sk-settings-key'));
+
+        final profile = await repo.getProfileData();
+        expect(profile!.name, equals('Profile User'));
+
+        await repo.clearSettings();
+
+        final settingsAfterClear = await repo.getSettings();
+        expect(settingsAfterClear.apiKey, equals(''));
+
+        final profileAfterClear = await repo.getProfileData();
+        expect(profileAfterClear!.name, equals('Profile User'));
+      });
+
+      test('clearing profile does not affect settings data', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.updateSettings(apiKey: 'sk-profile-test', fontSize: 20.0);
+        await repo.saveProfileData(UserProfile(id: 'prof2', name: 'Profile Two'));
+
+        await repo.clearProfile();
+
+        final settingsAfterClear = await repo.getSettings();
+        expect(settingsAfterClear.apiKey, equals('sk-profile-test'));
+        expect(settingsAfterClear.fontSize, equals(20.0));
+
+        final result = await repo.getProfileData();
+        expect(result, isNotNull);
+        expect(result!.id, equals('default_profile'));
+      });
+    });
+
+    group('saveApiKey edge cases', () {
+      test('saves and retrieves default key', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.saveApiKey(service: 'default', key: 'sk-default-only');
+        expect(await repo.getApiKey(service: 'default'), equals('sk-default-only'));
+        expect(await repo.getApiKey(service: 'other'), isNull);
+      });
+
+      test('default key is updated when custom service key is saved', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.saveApiKey(service: 'default', key: 'sk-default');
+        await repo.saveApiKey(service: 'custom', key: 'sk-custom');
+        expect(await repo.getApiKey(service: 'default'), equals('sk-custom'));
+        expect(await repo.getApiKey(service: 'custom'), equals('sk-custom'));
+      });
+
+      test('empty string key can be saved', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.saveApiKey(service: 'default', key: '');
+        expect(await repo.getApiKey(service: 'default'), equals(''));
+      });
+    });
+
+    group('updateStats with nulls', () {
+      test('updateStats with all null preserves existing values', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.updateStats(sessionCount: 10, studyTimeMs: 5000, questions: 50);
+        await repo.updateStats();
+        final settings = await repo.getSettings();
+        expect(settings.totalSessionCount, equals(10));
+        expect(settings.totalStudyTimeMs, equals(5000));
+        expect(settings.totalQuestions, equals(50));
+      });
+    });
+
+    group('updateSettings with nulls', () {
+      test('updateSettings with all null preserves existing values', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.updateSettings(
+          apiKey: 'sk-existing',
+          fontSize: 18.0,
+          themeMode: ThemeMode.dark,
+        );
+        await repo.updateSettings();
+        final settings = await repo.getSettings();
+        expect(settings.apiKey, equals('sk-existing'));
+        expect(settings.fontSize, equals(18.0));
+        expect(settings.themeMode, equals(ThemeMode.dark.index));
+      });
     });
 
   });

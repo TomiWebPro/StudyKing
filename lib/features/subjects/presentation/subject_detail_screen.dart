@@ -88,7 +88,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                               children: [
                                 CircleAvatar(
                                   radius: 24,
-                                  backgroundColor: Colors.white,
+                                  backgroundColor: theme.colorScheme.surface,
                                   child: Text(
                                     widget.args.subjectName[0].toUpperCase(),
                                     style: TextStyle(
@@ -232,8 +232,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             Semantics(
               label: l10n.deleteSubject,
               child: ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: Text(l10n.deleteSubject, style: const TextStyle(color: Colors.red)),
+                leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                title: Text(l10n.deleteSubject, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 onTap: () {
                   Navigator.pop(context);
                   _confirmDelete();
@@ -264,7 +264,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),
           ),
         ],

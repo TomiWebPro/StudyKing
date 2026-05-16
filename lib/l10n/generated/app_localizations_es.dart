@@ -1713,7 +1713,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get suggestedPromptQuiz => 'Examíname de historia';
 
   @override
-  String get suggestedPromptMath => 'Ayuda con problemas de mates';
+  String get suggestedPromptMath => 'Ayuda con problemas de matemáticas';
 
   @override
   String get quickGuideHelpContent =>

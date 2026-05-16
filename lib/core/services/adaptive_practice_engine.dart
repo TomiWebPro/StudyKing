@@ -2,12 +2,41 @@ import '../data/models/question_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 import 'localization_service.dart';
 
+class _QuestionState {
+  int correctCount = 0;
+  int incorrectCount = 0;
+  int streak = 0;
+  int totalTimeSpentMs = 0;
+  double averageConfidence = 0.0;
+  int attemptCount = 0;
+}
+
 class AdaptivePracticeEngine {
   final List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
   final LocalizationService? _localizationService;
+  final Map<String, _QuestionState> _questionStates = {};
 
   AdaptivePracticeEngine({LocalizationService? localizationService})
       : _localizationService = localizationService;
+
+  void updateQuestionState({
+    required String questionId,
+    required bool isCorrect,
+    required int confidence,
+    required int timeSpentMs,
+  }) {
+    final state = _questionStates.putIfAbsent(questionId, () => _QuestionState());
+    if (isCorrect) {
+      state.correctCount++;
+      state.streak++;
+    } else {
+      state.incorrectCount++;
+      state.streak = 0;
+    }
+    state.averageConfidence = ((state.averageConfidence * state.attemptCount) + confidence) / (state.attemptCount + 1);
+    state.attemptCount++;
+    state.totalTimeSpentMs += timeSpentMs;
+  }
 
   Future<List<Question>> getNextPracticeQuestions({
     required List<Question> availableQuestions,
@@ -47,17 +76,6 @@ class AdaptivePracticeEngine {
     final intervalIndex = (strength.clamp(0.0, 1.0) * (_intervalMultipliers.length - 1)).ceil().clamp(0, _intervalMultipliers.length - 1);
     return _intervalMultipliers[intervalIndex];
   }
-
-  void updateQuestionState({
-    required String questionId,
-    required bool isCorrect,
-    required int confidence,
-    required int timeSpentMs,
-  }) {
-    // State tracking is delegated to MasteryGraphService.recordAttempt.
-    // This method is retained for backward compatibility.
-  }
-
   int getRecommendedDifficulty({
     required String topicId,
     required double currentAccuracy,
@@ -101,6 +119,4 @@ class AdaptivePracticeEngine {
 
     return recommendations;
   }
-
-  void clearCache() {}
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
@@ -60,7 +61,7 @@ class SubjectStatsTab extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     l10n.accuracy,
-                    '${avgScore.toStringAsFixed(1)}%',
+                    formatPercent(avgScore, l10n.localeName),
                     Icons.star,
                     _scoreColor(context, avgScore),
                   ),
@@ -105,7 +106,7 @@ class SubjectStatsTab extends StatelessWidget {
                       children: [
                         Text(l10n.overallScore),
                         Text(
-                          '${avgScore.toStringAsFixed(1)}%',
+                          formatPercent(avgScore, l10n.localeName),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: _scoreColor(context, avgScore),

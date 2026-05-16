@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../providers/planner_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
@@ -29,7 +30,7 @@ class ProgressOverlayWidget extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildTodayProgress(theme, l10n),
+            _buildTodayProgress(context, theme, l10n),
             const SizedBox(height: 16),
             _buildWeeklyChart(theme, l10n),
             const SizedBox(height: 16),
@@ -40,12 +41,8 @@ class ProgressOverlayWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTodayProgress(ThemeData theme, AppLocalizations l10n) {
-    final progressColor = data.todayProgress >= 1.0
-        ? Colors.green
-        : data.todayProgress >= 0.5
-            ? Colors.orange
-            : Colors.red;
+  Widget _buildTodayProgress(BuildContext context, ThemeData theme, AppLocalizations l10n) {
+    final progressColor = AppTheme.progressColor(data.todayProgress, context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

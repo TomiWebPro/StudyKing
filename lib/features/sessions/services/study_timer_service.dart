@@ -93,7 +93,7 @@ class StudyTimerService {
     _startTimer();
 
     await _repository.save(_currentSession!);
-    _logger.i('Session started: ${_currentSession!.id} type: ${type.name}');
+    _logger.d('Session started: ${_currentSession!.id} type: ${type.name}');
     return _currentSession!;
   }
 
@@ -117,13 +117,13 @@ class StudyTimerService {
   void pauseSession() {
     if (_currentSession == null) return;
     _isPaused = true;
-    _logger.i('Session paused');
+    _logger.d('Session paused');
   }
 
   void resumeSession() {
     if (_currentSession == null) return;
     _isPaused = false;
-    _logger.i('Session resumed');
+    _logger.d('Session resumed');
   }
 
   Future<Session> completeSession() async {
@@ -149,7 +149,7 @@ class StudyTimerService {
       cb(completed);
     }
 
-    _logger.i('Session completed: ${completed.id}');
+    _logger.d('Session completed: ${completed.id}');
     return completed;
   }
 
@@ -172,7 +172,7 @@ class StudyTimerService {
     _elapsedMs = 0;
     _isPaused = false;
 
-    _logger.i('Session cancelled: ${cancelled.id}');
+    _logger.d('Session cancelled: ${cancelled.id}');
     return cancelled;
   }
 

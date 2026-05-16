@@ -142,7 +142,7 @@ void main() {
       expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('suggested prompts container has zero opacity after sending a message',
+    testWidgets('suggested prompts chips disappear after sending a message',
         (tester) async {
       final llm = _FakeLlmService();
       llm.chunks.add('Response');
@@ -153,19 +153,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
+
       await tester.enterText(find.byType(TextField), 'Test message');
       await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
-      final zeroOpacityAnimated = find.byWidgetPredicate(
-        (w) => w is AnimatedOpacity && w.opacity == 0.0,
-      );
-      expect(zeroOpacityAnimated, findsAtLeastNWidgets(1));
+      expect(find.byType(ActionChip), findsNothing);
     });
 
-    testWidgets('suggested prompts container has full opacity after clearing conversation',
+    testWidgets('suggested prompts chips reappear after clearing conversation',
         (tester) async {
       final llm = _FakeLlmService();
       llm.chunks.add('Response');
@@ -182,14 +181,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
+      expect(find.byType(ActionChip), findsNothing);
+
       await tester.tap(find.byIcon(Icons.refresh));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      final fullOpacityAnimated = find.byWidgetPredicate(
-        (w) => w is AnimatedOpacity && w.opacity == 1.0,
-      );
-      expect(fullOpacityAnimated, findsAtLeastNWidgets(1));
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
     });
   });
 

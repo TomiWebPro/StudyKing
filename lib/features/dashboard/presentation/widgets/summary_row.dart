@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
@@ -48,7 +49,7 @@ class SummaryRow extends StatelessWidget {
               width: itemWidth,
               child: MetricCard(
                 icon: Icons.timer,
-                value: '${totalHours}h',
+                value: '${formatDecimal(double.tryParse(totalHours) ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h',
                 label: l10n.studyTime,
                 accent: Theme.of(context).colorScheme.primary,
               ),

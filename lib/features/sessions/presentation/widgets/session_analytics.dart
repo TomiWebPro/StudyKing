@@ -59,7 +59,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
 
     for (var i = 0; i < daysToShow; i++) {
       final date = now.subtract(Duration(days: i));
-      final dayName = DateFormat('E', localeName).format(date);
+      final dayName = DateFormat.E(localeName).format(date);
 
       counts[dayName] = sessions
           .where((s) => s.startTime.isSameDay(date))

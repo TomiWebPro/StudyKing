@@ -237,6 +237,69 @@ void main() {
         final copy = topic.copyWith(parentId: null);
         expect(copy.parentId, 'parent-1');
       });
+
+      test('updates subjectId', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+        );
+        final copy = topic.copyWith(subjectId: 's2');
+        expect(copy.subjectId, 's2');
+        expect(copy.id, 'topic-1');
+      });
+
+      test('updates description', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+        );
+        final copy = topic.copyWith(description: 'New description');
+        expect(copy.description, 'New description');
+      });
+
+      test('updates syllabusText', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+        );
+        final copy = topic.copyWith(syllabusText: 'New syllabus');
+        expect(copy.syllabusText, 'New syllabus');
+      });
+
+      test('updates childTopicIds', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+          childTopicIds: ['c1'],
+        );
+        final copy = topic.copyWith(childTopicIds: ['c1', 'c2', 'c3']);
+        expect(copy.childTopicIds, ['c1', 'c2', 'c3']);
+      });
+
+      test('preserves childTopicIds when null is passed', () {
+        final topic = Topic(
+          id: 'topic-1',
+          subjectId: 's1',
+          title: 'Title',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+          childTopicIds: ['c1', 'c2'],
+        );
+        final copy = topic.copyWith(childTopicIds: null);
+        expect(copy.childTopicIds, ['c1', 'c2']);
+      });
     });
 
     group('equality', () {

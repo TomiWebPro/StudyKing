@@ -125,7 +125,7 @@ class FocusTodayStats {
     );
   }
 
-  String get hours => (totalSeconds / 3600).toStringAsFixed(1);
+  double get hours => totalSeconds / 3600;
 
   bool get isEmpty => totalSeconds == 0 && totalSessions == 0;
 }

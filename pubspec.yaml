@@ -61,6 +61,10 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.2.1
 
+  # Voice
+  speech_to_text: ^6.6.2
+  flutter_tts: ^4.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -471,6 +471,70 @@ void main() {
 
         expect(identical(original, copy), isFalse);
       });
+
+      test('preserves description when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          description: 'IB Physics',
+        );
+        final copy = original.copyWith(description: null);
+        expect(copy.description, 'IB Physics');
+      });
+
+      test('preserves syllabus when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          syllabus: 'Full syllabus',
+        );
+        final copy = original.copyWith(syllabus: null);
+        expect(copy.syllabus, 'Full syllabus');
+      });
+
+      test('preserves code when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          code: 'IB-PHYS',
+        );
+        final copy = original.copyWith(code: null);
+        expect(copy.code, 'IB-PHYS');
+      });
+
+      test('preserves teacher when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          teacher: 'Dr. Smith',
+        );
+        final copy = original.copyWith(teacher: null);
+        expect(copy.teacher, 'Dr. Smith');
+      });
+
+      test('preserves topicIds when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          topicIds: ['t1', 't2'],
+        );
+        final copy = original.copyWith(topicIds: null);
+        expect(copy.topicIds, ['t1', 't2']);
+      });
+
+      test('preserves color when null is passed', () {
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          color: '#FF0000',
+        );
+        final copy = original.copyWith(color: null);
+        expect(copy.color, '#FF0000');
+      });
+
+      test('preserves createdAt when null is passed', () {
+        final date = DateTime(2024, 1, 15);
+        final original = Subject(
+          id: 's1', name: 'Physics',
+          createdAt: date,
+        );
+        final copy = original.copyWith(createdAt: null);
+        expect(copy.createdAt, date);
+      });
     });
 
     group('JSON round-trip', () {

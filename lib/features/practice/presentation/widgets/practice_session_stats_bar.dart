@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
@@ -39,7 +40,7 @@ class PracticeSessionStatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scoreValue = currentIndex > 0 ? (correctAnswers / (currentIndex + 1) * 100).toStringAsFixed(0) : '0';
+    final scoreValue = currentIndex > 0 ? formatPercent(correctAnswers / (currentIndex + 1) * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0) : '0';
     return Container(
       padding: ResponsiveUtils.cardPadding(context),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,

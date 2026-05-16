@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
+import '../../../core/utils/clock.dart';
+import '../models/evaluation_result.dart';
+import '../models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
 export 'conversation_phase.dart';
+import 'exercise_evaluator.dart';
 import 'prompts/prompts.dart';
 
 class ConversationManager {
@@ -14,38 +19,43 @@ class ConversationManager {
   final ConversationMemory _memory;
   final String sessionId;
   final ConversationRepository? _persistenceRepo;
-  final List<String> _correctKeywords;
-  final List<String> _incorrectKeywords;
-  final List<String> _exerciseKeywords;
-  final PromptTemplates _prompts;
+  final ExerciseEvaluator _exerciseEvaluator;
+  final ConversationPromptSet _prompts;
+  final Clock _clock;
 
-  String _studentId = '';
-  String _topicTitle = '';
-  String _subjectId = '';
-  String _topicId = '';
-  ConversationPhase _phase = ConversationPhase.greeting;
-  int _exerciseCount = 0;
-  int _correctCount = 0;
+  final String studentId;
+  final String topicTitle;
+  final String subjectId;
+  final String topicId;
+  final DateTime sessionStartTime;
+
+  ConversationPhase phase = ConversationPhase.greeting;
+  int exerciseCount = 0;
+  int correctCount = 0;
   int _consecutiveIncorrect = 0;
-  double _adaptivePace = 1.0;
-  DateTime _sessionStartTime = DateTime.now();
+  double adaptivePace = 1.0;
+  LessonPlan? lessonPlan;
+  EvaluationResult? lastEvaluationResult;
 
   ConversationManager({
     required LlmService llmService,
     required String modelId,
     required this.sessionId,
-    required List<String> correctKeywords,
-    required List<String> incorrectKeywords,
-    required List<String> exerciseKeywords,
+    required this.studentId,
+    required this.topicTitle,
+    required this.subjectId,
+    required this.topicId,
+    required ExerciseEvaluator exerciseEvaluator,
     ConversationRepository? persistenceRepo,
-    PromptTemplates? prompts,
+    ConversationPromptSet? prompts,
+    Clock? clock,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
-        _correctKeywords = correctKeywords,
-        _incorrectKeywords = incorrectKeywords,
-        _exerciseKeywords = exerciseKeywords,
-        _prompts = prompts ?? PromptTemplates.defaultTemplates,
+        _exerciseEvaluator = exerciseEvaluator,
+        _prompts = prompts ?? const ConversationPromptSet(),
+        _clock = clock ?? SystemClock(),
+        sessionStartTime = (clock ?? SystemClock()).now(),
         _memory = ConversationMemory(
           maxTurns: 30,
           sessionId: sessionId,
@@ -54,24 +64,8 @@ class ConversationManager {
 
   List<ConversationMessage> get messages => _memory.getHistory();
 
-  ConversationPhase get phase => _phase;
-  int get exerciseCount => _exerciseCount;
-  int get correctCount => _correctCount;
-  double get adaptivePace => _adaptivePace;
-  String get studentId => _studentId;
-
-  Future<void> initialize({
-    required String studentId,
-    required String topicTitle,
-    required String subjectId,
-    required String topicId,
-  }) async {
-    _studentId = studentId;
-    _topicTitle = topicTitle;
-    _subjectId = subjectId;
-    _topicId = topicId;
-    _phase = ConversationPhase.greeting;
-    _sessionStartTime = DateTime.now();
+  Future<void> initialize() async {
+    phase = ConversationPhase.greeting;
     await _loadPersistedMessages();
   }
 
@@ -82,54 +76,71 @@ class ConversationManager {
     } catch (_) {}
   }
 
-  Future<String> generateLessonPlan({
-    required String topicTitle,
-    required String subjectId,
+  Future<LessonPlan> generateLessonPlan({
     required int durationMinutes,
   }) async {
-    final prompt = _prompts.buildLessonPlanPrompt(
+    final entry = _prompts.lessonPlan(
       subjectId: subjectId,
       topicTitle: topicTitle,
       durationMinutes: durationMinutes,
     );
 
     final response = await _llmService.chat(
-      message: prompt,
+      message: entry.userPrompt,
       modelId: _modelId,
-      systemPrompt: _prompts.lessonPlanSystemPrompt,
+      systemPrompt: entry.systemPrompt,
+      feature: 'teaching_lesson_plan',
     );
 
-    return response;
+    final plan = LessonPlan.fromJson(response);
+    if (plan != null) {
+      lessonPlan = plan;
+      return plan;
+    }
+    final defaultPlan = LessonPlan.defaultPlan(durationMinutes);
+    lessonPlan = defaultPlan;
+    return defaultPlan;
   }
 
   Stream<String> sendMessage(String content) async* {
     _memory.addUserMessage(content);
 
-    if (_phase == ConversationPhase.greeting) {
-      _phase = ConversationPhase.teaching;
-    } else if (_phase == ConversationPhase.exercise) {
-      _evaluateExerciseResponse(content);
-    } else if (_phase == ConversationPhase.feedback) {
+    if (phase == ConversationPhase.greeting) {
+      phase = ConversationPhase.teaching;
+    } else if (phase == ConversationPhase.exercise) {
+      final result = await _evaluateExerciseResponse(content);
+      _memory.addSystemMessage(
+        jsonEncode({
+          'type': 'evaluation',
+          'score': result.score,
+          'explanation': result.explanation,
+          if (result.partialCredit != null)
+            'partialCredit': result.partialCredit,
+          if (result.conceptBreakdown != null)
+            'conceptBreakdown': result.conceptBreakdown,
+        }),
+      );
+    } else if (phase == ConversationPhase.feedback) {
       if (_consecutiveIncorrect >= 2) {
-        _phase = ConversationPhase.adaptiveReview;
+        phase = ConversationPhase.adaptiveReview;
       } else {
-        _phase = ConversationPhase.teaching;
+        phase = ConversationPhase.teaching;
       }
     }
 
     final buffer = StringBuffer();
-    final tutorPrompt = _prompts.buildTutorPrompt(
-      subjectId: _subjectId,
-      topicTitle: _topicTitle,
-      adaptivePace: _adaptivePace,
-      phase: _phase,
+    final entry = _prompts.tutorMessage(
+      subjectId: subjectId,
+      topicTitle: topicTitle,
+      adaptivePace: adaptivePace,
+      phase: phase,
     );
 
     await for (final chunk in _llmService.chatStream(
       message: content,
       modelId: _modelId,
       memory: _memory,
-      systemPrompt: tutorPrompt,
+      systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
     )) {
       buffer.write(chunk);
       if (buffer.length > 2) {
@@ -143,7 +154,7 @@ class ConversationManager {
   }
 
   Stream<String> _buildAdaptiveChunks(String fullContent) async* {
-    final pace = _adaptivePace;
+    final pace = adaptivePace;
     final chunkSize = (pace > 1.2) ? 10 : (pace < 0.8 ? 3 : 5);
     int i = 0;
     while (i < fullContent.length) {
@@ -156,79 +167,88 @@ class ConversationManager {
     }
   }
 
-  void _evaluateExerciseResponse(String content) {
-    _exerciseCount++;
-    final lower = content.toLowerCase();
+  Future<EvaluationResult> _evaluateExerciseResponse(String content) async {
+    exerciseCount++;
 
-    final isCorrect = _correctKeywords.any((k) => lower.contains(k));
-    final isIncorrect = _incorrectKeywords.any((k) => lower.contains(k));
+    final result = await _exerciseEvaluator.evaluate(
+      question: '',
+      studentAnswer: content,
+      subjectId: subjectId,
+      topicTitle: topicTitle,
+    );
 
-    if (isCorrect && !isIncorrect) {
-      _correctCount++;
+    lastEvaluationResult = result;
+
+    if (result.score >= 0.7) {
+      correctCount++;
       _consecutiveIncorrect = 0;
-      _adaptivePace = min(_adaptivePace + 0.15, 1.5);
-    } else if (isIncorrect) {
+      adaptivePace = min(adaptivePace + 0.15, 1.5);
+    } else if (result.score <= 0.3) {
       _consecutiveIncorrect++;
-      _adaptivePace = max(_adaptivePace - 0.15, 0.5);
+      adaptivePace = max(adaptivePace - 0.15, 0.5);
     } else {
       _consecutiveIncorrect = 0;
     }
 
-    _phase = ConversationPhase.feedback;
+    phase = ConversationPhase.feedback;
+
+    return result;
   }
 
   void _detectExerciseRequest(String content) {
     final lower = content.toLowerCase();
-    if (_exerciseKeywords.any((k) => lower.contains(k))) {
-      _phase = ConversationPhase.exercise;
+    final exerciseKeywords = ['exercise', 'practice', 'quiz'];
+    if (exerciseKeywords.any((k) => lower.contains(k))) {
+      phase = ConversationPhase.exercise;
       return;
     }
 
-    if (_phase == ConversationPhase.adaptiveReview) {
-      _phase = ConversationPhase.teaching;
+    if (phase == ConversationPhase.adaptiveReview) {
+      phase = ConversationPhase.teaching;
     }
   }
 
   void transitionToExercise() {
-    _phase = ConversationPhase.exercise;
+    phase = ConversationPhase.exercise;
   }
 
   void transitionToClosing() {
-    _phase = ConversationPhase.closing;
+    phase = ConversationPhase.closing;
   }
 
   void recordCorrectAnswer() {
-    _correctCount++;
-    _exerciseCount++;
+    correctCount++;
+    exerciseCount++;
     _consecutiveIncorrect = 0;
-    _adaptivePace = min(_adaptivePace + 0.15, 1.5);
+    adaptivePace = min(adaptivePace + 0.15, 1.5);
   }
 
   void recordIncorrectAnswer() {
-    _exerciseCount++;
+    exerciseCount++;
     _consecutiveIncorrect++;
-    _adaptivePace = max(_adaptivePace - 0.15, 0.5);
+    adaptivePace = max(adaptivePace - 0.15, 0.5);
   }
 
   double get confidenceRating {
-    if (_exerciseCount == 0) return 0.5;
-    final raw = _correctCount / _exerciseCount;
-    return (raw * _adaptivePace).clamp(0.0, 1.0);
+    if (exerciseCount == 0) return 0.5;
+    final raw = correctCount / exerciseCount;
+    return (raw * adaptivePace).clamp(0.0, 1.0);
   }
 
   Future<String> generateSummary() async {
-    final prompt = _prompts.buildSummaryPrompt(
-      topicTitle: _topicTitle,
-      exerciseCount: _exerciseCount,
-      correctCount: _correctCount,
+    final entry = _prompts.summary(
+      topicTitle: topicTitle,
+      exerciseCount: exerciseCount,
+      correctCount: correctCount,
       confidenceRating: confidenceRating,
-      adaptivePace: _adaptivePace,
+      adaptivePace: adaptivePace,
     );
 
     return await _llmService.chat(
-      message: prompt,
+      message: entry.userPrompt,
       modelId: _modelId,
-      systemPrompt: _prompts.summarySystemPrompt,
+      systemPrompt: entry.systemPrompt,
+      feature: 'teaching_summary',
     );
   }
 
@@ -236,19 +256,20 @@ class ConversationManager {
     final msgCount = _memory.getHistory().length;
     return TutorSession(
       id: sessionId,
-      studentId: _studentId,
-      subjectId: _subjectId,
-      topicId: _topicId,
-      topicTitle: _topicTitle,
+      studentId: studentId,
+      subjectId: subjectId,
+      topicId: topicId,
+      topicTitle: topicTitle,
       status: SessionStatus.completed,
-      startTime: _sessionStartTime,
-      endTime: DateTime.now(),
-      questionsAsked: _exerciseCount,
-      questionsCorrect: _correctCount,
+      startTime: sessionStartTime,
+      endTime: _clock.now(),
+      questionsAsked: exerciseCount,
+      questionsCorrect: correctCount,
       confidenceRating: (confidenceRating * 5).round(),
       totalMessages: msgCount,
-      topicsCovered: [_topicTitle],
-      tutorNotes: 'Adaptive pace: ${_adaptivePace.toStringAsFixed(1)}x',
+      topicsCovered: [topicTitle],
+      tutorNotes: 'Adaptive pace: ${adaptivePace.toStringAsFixed(1)}x',
+      lessonPlanJson: lessonPlan?.toJsonString() ?? '{}',
     );
   }
 

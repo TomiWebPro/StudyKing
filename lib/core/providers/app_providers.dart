@@ -19,16 +19,18 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../data/database_service.dart';
 import 'llm_providers.dart';
 
-final database = DatabaseService(
-  topicRepository: TopicRepository(),
-  questionRepository: QuestionRepository(),
-  attemptRepository: AttemptRepository(),
-  lessonRepository: LessonRepository(),
-  sessionRepository: SessionRepository(),
-  subjectRepository: SubjectRepository(),
-  conversationRepository: ConversationRepository(),
-  tutorSessionRepository: TutorSessionRepository(),
-);
+final databaseProvider = Provider<DatabaseService>((ref) {
+  return DatabaseService(
+    topicRepository: TopicRepository(),
+    questionRepository: QuestionRepository(),
+    attemptRepository: AttemptRepository(),
+    lessonRepository: LessonRepository(),
+    sessionRepository: SessionRepository(),
+    subjectRepository: SubjectRepository(),
+    conversationRepository: ConversationRepository(),
+    tutorSessionRepository: TutorSessionRepository(),
+  );
+});
 
 final settingsRepository = SettingsRepository();
 
@@ -249,12 +251,11 @@ final sourceRepositoryProvider = Provider<SourceRepository>((ref) {
 final contentPipelineProvider = Provider<ContentPipeline>((ref) {
   final llmService = ref.watch(llmServiceProvider);
   final sourceRepository = ref.watch(sourceRepositoryProvider);
-  final topicRepository = database.topicRepository;
-  final questionRepository = database.questionRepository;
+  final db = ref.watch(databaseProvider);
   return ContentPipeline(
     llmService: llmService,
     sourceRepository: sourceRepository,
-    topicRepository: topicRepository,
-    questionRepository: questionRepository,
+    topicRepository: db.topicRepository,
+    questionRepository: db.questionRepository,
   );
 });

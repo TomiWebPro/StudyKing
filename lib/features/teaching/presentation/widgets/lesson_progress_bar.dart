@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../models/lesson_plan_model.dart';
 
 class LessonProgressBar extends StatelessWidget {
   final int elapsedMinutes;
@@ -8,6 +9,7 @@ class LessonProgressBar extends StatelessWidget {
   final int exerciseCount;
   final int correctCount;
   final String topicTitle;
+  final LessonPlan? lessonPlan;
 
   const LessonProgressBar({
     super.key,
@@ -16,6 +18,7 @@ class LessonProgressBar extends StatelessWidget {
     required this.exerciseCount,
     required this.correctCount,
     required this.topicTitle,
+    this.lessonPlan,
   });
 
   @override
@@ -83,6 +86,10 @@ class LessonProgressBar extends StatelessWidget {
               ),
             ),
           ),
+          if (lessonPlan != null && lessonPlan!.sections.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildSectionTimeline(context),
+          ],
           const SizedBox(height: 8),
           Row(
             children: [
@@ -107,6 +114,65 @@ class LessonProgressBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionTimeline(BuildContext context) {
+    final plan = lessonPlan!;
+    int cumulative = 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...plan.sections.map((section) {
+          final sectionStart = cumulative;
+          cumulative += section.durationMinutes;
+          final sectionEnd = cumulative;
+          final isCurrentSection =
+              elapsedMinutes >= sectionStart && elapsedMinutes < sectionEnd;
+          final isCompleted = elapsedMinutes >= sectionEnd;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Icon(
+                  isCompleted
+                      ? Icons.check_circle
+                      : isCurrentSection
+                          ? Icons.play_circle_filled
+                          : Icons.circle_outlined,
+                  size: 14,
+                  color: isCompleted
+                      ? Theme.of(context).colorScheme.primary
+                      : isCurrentSection
+                          ? Theme.of(context).colorScheme.tertiary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  section.title,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: isCurrentSection ? FontWeight.w600 : null,
+                        color: isCompleted
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
+                            : isCurrentSection
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const Spacer(),
+                Text(
+                  '${section.durationMinutes}min',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 

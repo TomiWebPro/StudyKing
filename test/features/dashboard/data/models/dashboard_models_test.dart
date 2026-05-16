@@ -338,38 +338,38 @@ void main() {
 
     group('hours', () {
       test('returns 0.0 for 0 seconds', () {
-        expect(FocusTodayStats(totalSeconds: 0).hours, '0.0');
+        expect(FocusTodayStats(totalSeconds: 0).hours, closeTo(0.0, 0.01));
       });
 
       test('returns 1.0 for 3600 seconds', () {
-        expect(FocusTodayStats(totalSeconds: 3600).hours, '1.0');
+        expect(FocusTodayStats(totalSeconds: 3600).hours, closeTo(1.0, 0.01));
       });
 
-      test('returns 1.0 for 3599 seconds (rounding down)', () {
-        expect(FocusTodayStats(totalSeconds: 3599).hours, '1.0');
+      test('returns ~1.0 for 3599 seconds', () {
+        expect(FocusTodayStats(totalSeconds: 3599).hours, closeTo(1.0, 0.01));
       });
 
       test('returns 0.5 for 1800 seconds', () {
-        expect(FocusTodayStats(totalSeconds: 1800).hours, '0.5');
+        expect(FocusTodayStats(totalSeconds: 1800).hours, closeTo(0.5, 0.01));
       });
 
       test('returns 2.5 for 9000 seconds', () {
-        expect(FocusTodayStats(totalSeconds: 9000).hours, '2.5');
+        expect(FocusTodayStats(totalSeconds: 9000).hours, closeTo(2.5, 0.01));
       });
 
       test('handles large values', () {
-        expect(FocusTodayStats(totalSeconds: 86400).hours, '24.0');
+        expect(FocusTodayStats(totalSeconds: 86400).hours, closeTo(24.0, 0.01));
       });
 
-      test('returns 0.0 for seconds less than 3600', () {
-        expect(FocusTodayStats(totalSeconds: 1).hours, '0.0');
-        expect(FocusTodayStats(totalSeconds: 1799).hours, '0.5');
+      test('returns expected values for seconds less than 3600', () {
+        expect(FocusTodayStats(totalSeconds: 1).hours, closeTo(0.0, 0.01));
+        expect(FocusTodayStats(totalSeconds: 1799).hours, closeTo(0.5, 0.01));
       });
 
-      test('returns correct rounding for fractional hours', () {
-        expect(FocusTodayStats(totalSeconds: 3660).hours, '1.0');
-        expect(FocusTodayStats(totalSeconds: 3720).hours, '1.0');
-        expect(FocusTodayStats(totalSeconds: 60).hours, '0.0');
+      test('returns correct fractional hours', () {
+        expect(FocusTodayStats(totalSeconds: 3660).hours, closeTo(1.017, 0.01));
+        expect(FocusTodayStats(totalSeconds: 3720).hours, closeTo(1.033, 0.01));
+        expect(FocusTodayStats(totalSeconds: 60).hours, closeTo(0.017, 0.01));
       });
     });
 

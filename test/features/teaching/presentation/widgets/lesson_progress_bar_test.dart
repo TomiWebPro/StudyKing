@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/teaching/models/lesson_plan_model.dart';
 import 'package:studyking/features/teaching/presentation/widgets/lesson_progress_bar.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -100,64 +101,100 @@ void main() {
       expect(find.text('25%'), findsOneWidget);
     });
 
-    testWidgets('shows 0% when elapsed is 0', (tester) async {
+    testWidgets('shows section timeline when lessonPlan is provided', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 10, type: LessonSectionType.explanation),
+          LessonSection(title: 'Practice', durationMinutes: 20, type: LessonSectionType.exercise),
+        ],
+        checkpoints: ['CP1'],
+        estimatedDifficulty: 2,
+      );
+
       await tester.pumpWidget(wrapApp(
-        const LessonProgressBar(
-          elapsedMinutes: 0,
+        LessonProgressBar(
+          elapsedMinutes: 5,
           plannedDurationMinutes: 45,
           exerciseCount: 0,
           correctCount: 0,
           topicTitle: 'Math',
+          lessonPlan: plan,
         ),
       ));
 
-      expect(find.text('0%'), findsOneWidget);
+      expect(find.text('Intro'), findsOneWidget);
+      expect(find.text('Practice'), findsOneWidget);
+      expect(find.text('10min'), findsOneWidget);
+      expect(find.text('20min'), findsOneWidget);
     });
 
-    testWidgets('shows 100% when exceeding planned duration', (tester) async {
-      await tester.pumpWidget(wrapApp(
-        const LessonProgressBar(
-          elapsedMinutes: 60,
-          plannedDurationMinutes: 45,
-          exerciseCount: 0,
-          correctCount: 0,
-          topicTitle: 'Math',
-        ),
-      ));
+    testWidgets('highlights current section in timeline', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Main', durationMinutes: 20, type: LessonSectionType.explanation),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
 
-      expect(find.text('100%'), findsOneWidget);
-    });
-
-    testWidgets('displays correct stat with icon', (tester) async {
       await tester.pumpWidget(wrapApp(
-        const LessonProgressBar(
+        LessonProgressBar(
           elapsedMinutes: 10,
           plannedDurationMinutes: 45,
-          exerciseCount: 4,
-          correctCount: 4,
-          topicTitle: 'Physics',
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
         ),
       ));
 
-      expect(find.byIcon(Icons.quiz_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.text('Main'), findsOneWidget);
+      expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
     });
 
-    testWidgets('displays linear progress indicator', (tester) async {
+    testWidgets('marks completed sections with check icon', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Main', durationMinutes: 20, type: LessonSectionType.explanation),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('shows warning color when remaining 5 min or less', (tester) async {
       await tester.pumpWidget(wrapApp(
         const LessonProgressBar(
-          elapsedMinutes: 20,
-          plannedDurationMinutes: 40,
+          elapsedMinutes: 40,
+          plannedDurationMinutes: 45,
           exerciseCount: 0,
           correctCount: 0,
           topicTitle: 'Math',
         ),
       ));
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('5 min remaining'), findsOneWidget);
     });
 
-    testWidgets('shows remaining 1 min when one minute left', (tester) async {
+    testWidgets('shows 1 min remaining for exactly 1 minute left', (tester) async {
       await tester.pumpWidget(wrapApp(
         const LessonProgressBar(
           elapsedMinutes: 44,
@@ -171,37 +208,30 @@ void main() {
       expect(find.text('1 min remaining'), findsOneWidget);
     });
 
-    testWidgets('shows error color and overtime text when exceeding duration', (tester) async {
+    testWidgets('lesson plan with empty sections does not show timeline', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
       await tester.pumpWidget(wrapApp(
-        const LessonProgressBar(
-          elapsedMinutes: 50,
+        LessonProgressBar(
+          elapsedMinutes: 5,
           plannedDurationMinutes: 45,
           exerciseCount: 0,
           correctCount: 0,
           topicTitle: 'Math',
+          lessonPlan: plan,
         ),
       ));
 
-      expect(find.text('+5m'), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsNothing);
+      expect(find.byIcon(Icons.play_circle_filled), findsNothing);
     });
 
-    testWidgets('shows correct stat when count > 0', (tester) async {
-      await tester.pumpWidget(wrapApp(
-        const LessonProgressBar(
-          elapsedMinutes: 5,
-          plannedDurationMinutes: 45,
-          exerciseCount: 2,
-          correctCount: 1,
-          topicTitle: 'Math',
-        ),
-      ));
-
-      expect(find.text('1 correct'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
-    });
-
-    testWidgets('shows zero questions label', (tester) async {
+    testWidgets('lesson plan being null does not crash and shows no timeline', (tester) async {
       await tester.pumpWidget(wrapApp(
         const LessonProgressBar(
           elapsedMinutes: 5,
@@ -212,7 +242,38 @@ void main() {
         ),
       ));
 
-      expect(find.text('0 questions'), findsOneWidget);
+      expect(find.text('Intro'), findsNothing);
+      expect(find.text('Practice'), findsNothing);
+    });
+
+    testWidgets('displays zero progress when elapsed is zero', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 0,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('0%'), findsOneWidget);
+      expect(find.text('45 min remaining'), findsOneWidget);
+    });
+
+    testWidgets('correctCount > 0 applies color to stat chip', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 5,
+          correctCount: 3,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('3 correct'), findsOneWidget);
+      expect(find.text('5 questions'), findsOneWidget);
     });
   });
 }
