@@ -78,21 +78,4 @@ void main() {
       expect(prompts, isA<ConversationPromptSet>());
     });
   });
-
-  group('lessonPlanProvider', () {
-    test('returns null initially', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      expect(container.read(lessonPlanProvider), isNull);
-    });
-  });
-
-  group('promptTemplatesProvider (backward compat)', () {
-    test('returns a ConversationPromptSet', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final templates = container.read(promptTemplatesProvider);
-      expect(templates, isA<ConversationPromptSet>());
-    });
-  });
 }

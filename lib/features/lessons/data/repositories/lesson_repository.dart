@@ -1,19 +1,16 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class LessonRepository extends Repository<Lesson> {
   final Logger _logger = const Logger('LessonRepository');
-  late Box<LessonBlock> _blockBox;
 
   Future<void> init() async {
     try {
       await openBox(HiveBoxNames.lessons);
-      _blockBox = await Hive.openBox<LessonBlock>(HiveBoxNames.lessonBlocks);
     } catch (e) {
       _logger.e('Error initializing lesson repository', e);
       rethrow;
@@ -61,18 +58,26 @@ class LessonRepository extends Repository<Lesson> {
 
   Future<Result<void>> addBlock(LessonBlock block) async {
     try {
-      await _blockBox.put(block.id, block);
+      final lesson = await get(block.lessonId);
+      if (lesson == null) {
+        return Result.failure('Lesson not found: ${block.lessonId}');
+      }
+      final updated = lesson.copyWith(blocks: [...lesson.blocks, block]);
+      await save(lesson.id, updated);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error adding lesson block', e);
-      return Result.failure('Failed to add lesson block: ${e.toString()}');
+      _logger.e('Error adding block to lesson', e);
+      return Result.failure('Failed to add block: ${e.toString()}');
     }
   }
 
   Future<Result<List<LessonBlock>>> getBlocksForLesson(String lessonId) async {
     try {
-      final all = _blockBox.values.toList();
-      return Result.success(all.where((b) => b.lessonId == lessonId).toList());
+      final lesson = await get(lessonId);
+      if (lesson == null) {
+        return Result.success([]);
+      }
+      return Result.success(lesson.blocks);
     } catch (e) {
       _logger.e('Error getting blocks for lesson', e);
       return Result.failure('Failed to get blocks: ${e.toString()}');
@@ -81,8 +86,12 @@ class LessonRepository extends Repository<Lesson> {
 
   Future<Result<List<LessonBlock>>> getBlocksBySubject(String subjectId) async {
     try {
-      final all = _blockBox.values.toList();
-      return Result.success(all.where((b) => b.subjectId == subjectId).toList());
+      final lessons = await getAll();
+      final blocks = lessons
+          .expand((l) => l.blocks)
+          .where((b) => b.subjectId == subjectId)
+          .toList();
+      return Result.success(blocks);
     } catch (e) {
       _logger.e('Error getting blocks by subject', e);
       return Result.failure('Failed to get blocks: ${e.toString()}');

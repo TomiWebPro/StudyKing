@@ -501,5 +501,34 @@ void main() {
 
       expect(find.text('Session Details'), findsNothing);
     });
+
+    testWidgets('session details dialog handles zero correct answers', (tester) async {
+      final repo = _FakeSessionRepository([
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          subjectId: 'test-id',
+          type: SessionType.practice,
+          startTime: DateTime(2024, 6, 15, 10, 30),
+          actualDurationMs: 3600000,
+          questionsAnswered: 10,
+          correctAnswers: 0,
+        ),
+      ]);
+      await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Session 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Details'), findsOneWidget);
+      expect(find.text('Date'), findsOneWidget);
+      expect(find.text('Duration'), findsOneWidget);
+      expect(find.text('Questions'), findsOneWidget);
+    });
   });
 }

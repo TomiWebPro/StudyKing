@@ -291,5 +291,35 @@ void main() {
       final headerFinder = find.text('Practice Progress');
       expect(headerFinder, findsOneWidget);
     });
+
+    testWidgets('shows 50.0% accuracy for medium score', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 5, questionsAnswered: 10),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectStatsTab(
+          subjectId: testSubjectId,
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('50.0%'), findsAtLeast(1));
+    });
+
+    testWidgets('shows 25.0% accuracy for low score', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 25, questionsAnswered: 100),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectStatsTab(
+          subjectId: testSubjectId,
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('25.0%'), findsAtLeast(1));
+    });
   });
 }

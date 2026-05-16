@@ -83,7 +83,7 @@ class MilestoneTimeline extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'M${milestone.order}',
+                            l10n.milestoneShort(milestone.order),
                             style: TextStyle(
                               fontSize: 9,
                               color: color,

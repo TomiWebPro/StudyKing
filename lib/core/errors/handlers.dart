@@ -12,7 +12,14 @@ import '../utils/logger.dart';
 /// - Analytics logging
 /// - Proper error UI feedback
 class AppErrorHandler {
-  static final Logger _logger = const Logger('AppErrorHandler');
+  @visibleForTesting
+  static Logger logger = const Logger('AppErrorHandler');
+
+  @visibleForTesting
+  static void logError(Object error, String context) {
+    _logError(error, context);
+  }
+
   static AppLocalizations get _defaultL10n => AppLocalizationsEn();
 
   /// Handles an error and displays appropriate feedback
@@ -24,7 +31,7 @@ class AppErrorHandler {
     void Function()? retryCallback,
   }) async {
     _logError(error, contextName);
-    final exception = _convertToAppException(error);
+    final exception = convertToAppException(error);
     _showErrorUI(context, exception, retry: retry, retryCallback: retryCallback);
   }
   
@@ -188,11 +195,12 @@ class AppErrorHandler {
   }
   
   static void _logError(Object error, String context) {
-    _logger.e('[$context] Error: $error');
+    logger.e('[$context] Error: $error');
   }
   
   
-  static AppException _convertToAppException(Object error, [AppLocalizations? l10n]) {
+  @visibleForTesting
+  static AppException convertToAppException(Object error, [AppLocalizations? l10n]) {
     l10n ??= _defaultL10n;
     if (error is AppException) {
       return error;

@@ -906,5 +906,29 @@ void main() {
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
       expect(find.byType(Dismissible), findsOneWidget);
     });
+
+    testWidgets('Dismissible has swipeToDelete accessibility hint', (tester) async {
+      final List<Session> sessions = [
+        Session(
+          id: 'sess_1',
+          startTime: DateTime(2025, 1, 10, 10, 0),
+          endTime: DateTime(2025, 1, 10, 11, 0),
+          actualDurationMs: 3600000,
+          questionsAnswered: 5,
+          correctAnswers: 3,
+          studentId: 'student1',
+          subjectId: 'sub_math',
+          type: SessionType.practice,
+        ),
+      ];
+      final repo = _FakeSessionRepository(seed: sessions);
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      final hasSemanticsWithHint = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.hint != null,
+      );
+      expect(hasSemanticsWithHint, findsAtLeast(1));
+    });
   });
 }

@@ -299,5 +299,44 @@ void main() {
 
       expect(find.byType(TextFormField), findsNWidgets(5));
     });
+
+    testWidgets('saves subject with selected color', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Physics');
+
+      await tester.tap(find.text('Green'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final subjects = await repo.getAll();
+      expect(subjects, hasLength(1));
+      expect(subjects.first.name, 'Physics');
+      expect(subjects.first.color, '#4CAF50');
+    });
+
+    testWidgets('saves subject with default color when no color selected', (tester) async {
+      final box = _MockSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Chemistry');
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final subjects = await repo.getAll();
+      expect(subjects, hasLength(1));
+      expect(subjects.first.name, 'Chemistry');
+      expect(subjects.first.color, '#2196F3');
+    });
   });
 }

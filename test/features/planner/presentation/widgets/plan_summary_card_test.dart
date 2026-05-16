@@ -47,7 +47,7 @@ void main() {
       ));
 
       expect(find.text('100Q'), findsOneWidget);
-      expect(find.text('600min'), findsOneWidget);
+      expect(find.text('600 min'), findsOneWidget);
     });
 
     testWidgets('shows new and review topic counts', (tester) async {
@@ -136,6 +136,35 @@ void main() {
       ));
 
       expect(find.byType(Wrap), findsOneWidget);
+    });
+  });
+
+  group('PlanSummaryCard Spanish locale', () {
+    Widget buildSpanishApp(Widget widget) {
+      return MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+        home: Scaffold(body: widget),
+      );
+    }
+
+    testWidgets('shows localized question abbreviation and percentage', (tester) async {
+      await tester.pumpWidget(buildSpanishApp(
+        PlanSummaryCard(
+          summary: PlanSummary(
+            totalQuestions: 100,
+            totalMinutes: 600,
+            newTopics: 10,
+            reviewTopics: 5,
+            estimatedCoverage: 0.85,
+            focusAreas: [],
+          ),
+        ),
+      ));
+
+      expect(find.text('100P'), findsOneWidget);
+      expect(find.textContaining('85'), findsOneWidget);
     });
   });
 }

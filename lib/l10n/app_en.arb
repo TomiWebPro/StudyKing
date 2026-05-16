@@ -345,6 +345,63 @@
   "@accuracy": {
     "description": "Label for accuracy stat"
   },
+  "examConfiguration": "Exam Configuration",
+  "@examConfiguration": {
+    "description": "Heading for exam configuration screen"
+  },
+  "startExam": "Start Exam",
+  "@startExam": {
+    "description": "Button label to start an exam"
+  },
+  "examDuration": "Exam Duration",
+  "@examDuration": {
+    "description": "Label for exam duration selector"
+  },
+  "numberOfQuestions": "Number of Questions",
+  "@numberOfQuestions": {
+    "description": "Label for number of questions selector"
+  },
+  "incorrectLabel": "Incorrect",
+  "@incorrectLabel": {
+    "description": "Label for number of incorrect answers in results"
+  },
+  "skippedLabel": "Skipped",
+  "@skippedLabel": {
+    "description": "Label for number of skipped questions in results"
+  },
+  "examAutoSubmitted": "Exam was auto-submitted when time ran out.",
+  "@examAutoSubmitted": {
+    "description": "Message shown when exam is auto-submitted due to time"
+  },
+  "topicBreakdown": "Topic Breakdown",
+  "@topicBreakdown": {
+    "description": "Heading for topic breakdown section in results"
+  },
+  "startingPractice": "Starting {mode}...",
+  "@startingPractice": {
+    "description": "Dialog text shown when starting practice",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "backToPractice": "Back to Practice",
+  "@backToPractice": {
+    "description": "Button label to navigate back to practice"
+  },
+  "swipeToDelete": "Swipe to delete",
+  "@swipeToDelete": {
+    "description": "Semantic hint for swipe to delete gesture"
+  },
+  "valueMustBePositive": "Value must be positive",
+  "@valueMustBePositive": {
+    "description": "Validation error for non-positive numeric input"
+  },
+  "correctExceedsQuestions": "Correct answers cannot exceed total questions",
+  "@correctExceedsQuestions": {
+    "description": "Validation error when correct answers exceed total questions"
+  },
   "practiceAgain": "Practice Again",
   "@practiceAgain": {
     "description": "Button label to restart practice"
@@ -2289,6 +2346,15 @@
       }
     }
   },
+  "questionsAbbreviation": "{count}Q",
+  "@questionsAbbreviation": {
+    "description": "Abbreviated question count (e.g., 5Q)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "minutesCountMetric": "{count} min",
   "@minutesCountMetric": {
     "description": "Metric label for minutes",
@@ -2957,6 +3023,15 @@
   "milestone": "Milestone",
   "@milestone": {
     "description": "A single milestone"
+  },
+  "milestoneShort": "M{order}",
+  "@milestoneShort": {
+    "description": "Short milestone label in timeline",
+    "placeholders": {
+      "order": {
+        "type": "int"
+      }
+    }
   },
   "targetCompletion": "Target Completion",
   "@targetCompletion": {

@@ -1,6 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-@HiveType(typeId: 31)
+@HiveType(typeId: 8)
 class BadgeModel extends HiveObject {
   @HiveField(0)
   final String id;

@@ -4,11 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviation;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -16,6 +22,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -125,14 +132,84 @@ class FakePendingActionRepository extends PendingActionRepository {
 
 class FakeMasteryGraphService extends MasteryGraphService {
   Result<List<MasteryState>>? _weakTopicsResult;
+  Result<List<QuestionMasteryState>>? _atRiskResult;
 
   void setWeakTopicsResult(Result<List<MasteryState>> result) {
     _weakTopicsResult = result;
   }
 
+  void setAtRiskResult(Result<List<QuestionMasteryState>> result) {
+    _atRiskResult = result;
+  }
+
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
     return _weakTopicsResult ?? Result.success([]);
+  }
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
+    String studentId, {
+    double threshold = 0.5,
+  }) async {
+    return _atRiskResult ?? Result.success([]);
+  }
+}
+
+class FakePlannerService extends PlannerService {
+  PersonalLearningPlan? _plan;
+  List<RoadmapModel> _roadmaps = [];
+  List<PendingActionModel> _pendingActions = [];
+  List<TutorSession> _scheduledLessons = [];
+  AdherenceDeviation? _deviation;
+  bool _hasConflict = false;
+  bool _scheduleResult = true;
+  int scheduleCallCount = 0;
+  String? lastScheduledTopicTitle;
+  String? lastScheduledTopicId;
+
+  void setPlan(PersonalLearningPlan? plan) => _plan = plan;
+  void setRoadmaps(List<RoadmapModel> roadmaps) => _roadmaps = roadmaps;
+  void setPendingActions(List<PendingActionModel> actions) => _pendingActions = actions;
+  void setScheduledLessons(List<TutorSession> lessons) => _scheduledLessons = lessons;
+  void setAdherenceDeviation(AdherenceDeviation? d) => _deviation = d;
+  void setHasConflict(bool v) => _hasConflict = v;
+  void setScheduleResult(bool v) => _scheduleResult = v;
+
+  @override
+  Future<PersonalLearningPlan?> loadExistingPlan() async => _plan;
+
+  @override
+  Future<List<RoadmapModel>> loadRoadmaps() async => _roadmaps;
+
+  @override
+  Future<List<PendingActionModel>> loadPendingActions() async => _pendingActions;
+
+  @override
+  Future<List<TutorSession>> getScheduledLessons() async => _scheduledLessons;
+
+  @override
+  Future<AdherenceDeviation?> checkAdherence() async => _deviation;
+
+  @override
+  Future<bool> hasSchedulingConflict({
+    required DateTime startTime,
+    required int durationMinutes,
+    String? excludeSessionId,
+  }) async => _hasConflict;
+
+  @override
+  Future<bool> scheduleLesson({
+    required String topicId,
+    required String topicTitle,
+    required String subjectId,
+    required DateTime scheduledTime,
+    int durationMinutes = 30,
+  }) async {
+    scheduleCallCount++;
+    lastScheduledTopicTitle = topicTitle;
+    lastScheduledTopicId = topicId;
+    return _scheduleResult;
   }
 }
 
@@ -183,6 +260,9 @@ MentorService createMentorService({
   MasteryGraphService? masteryService,
   StudyProgressTracker? progressTracker,
   PendingActionRepository? pendingActionRepo,
+  PlannerService? plannerService,
+  EngagementNudgeRepository? nudgeRepo,
+  SessionRepository? sessionRepository,
   String modelId = 'test-model',
   String studentId = 'test-student',
 }) {
@@ -209,10 +289,50 @@ MentorService createMentorService({
     llmService: llm,
     masteryService: mastery,
     progressTracker: tracker,
+    plannerService: plannerService ?? FakePlannerService(),
+    nudgeRepo: nudgeRepo ?? _FakeNudgeRepo(),
+    sessionRepository: sessionRepository ?? _FakeSessionRepo(),
     modelId: modelId,
     studentId: studentId,
     pendingActionRepo: pendingActionRepo,
   );
+}
+
+class _FakeNudgeRepo extends EngagementNudgeRepository {
+  final List<EngagementNudgeModel> _nudges = [];
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> create(EngagementNudgeModel nudge) async {
+    _nudges.add(nudge);
+  }
+
+  @override
+  Future<List<EngagementNudgeModel>> getRecentByStudent(
+      String studentId, {int limit = 10}) async {
+    return _nudges.where((n) => n.studentId == studentId).take(limit).toList();
+  }
+
+  @override
+  Future<int> getTodayCount(String studentId) async {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    return _nudges.where((n) =>
+        n.studentId == studentId && n.sentAt.isAfter(startOfDay)).length;
+  }
+}
+
+class _FakeSessionRepo extends SessionRepository {
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
 }
 
 void main() {
@@ -282,7 +402,7 @@ void main() {
 
       test('adds user and assistant messages to memory', () async {
         final service = createMentorService();
-        await service.chat('schedule a lesson').toList();
+        await service.chat('hello').toList();
         final history = service.memory.getHistory();
         expect(history.length, equals(2));
         expect(history[0].role, equals(MessageRole.student));
@@ -583,194 +703,148 @@ void main() {
 
     group('chat - planning intent', () {
       late FakeLlmService llm;
-      late FakePendingActionRepository fakePending;
+      late FakePlannerService fakePlanner;
 
       setUp(() {
         llm = FakeLlmService();
-        fakePending = FakePendingActionRepository();
+        fakePlanner = FakePlannerService();
       });
 
-      test('schedule keyword creates pending action', () async {
+      test('schedule keyword directly schedules a lesson', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule a math lesson').toList();
-        expect(fakePending.createdActions.length, equals(1));
-        expect(
-          fakePending.createdActions.first.actionType,
-          equals(PendingActionType.schedule.name),
-        );
+        expect(fakePlanner.scheduleCallCount, greaterThan(0));
       });
 
-      test('reschedule keyword creates reschedule type action', () async {
+      test('plan keyword adds system message about planning', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
-        );
-        await service.chat('reschedule my physics session').toList();
-        expect(fakePending.createdActions.length, equals(1));
-        expect(
-          fakePending.createdActions.first.actionType,
-          equals(PendingActionType.reschedule.name),
-        );
-      });
-
-      test('plan keyword creates pending action', () async {
-        final service = createMentorService(
-          llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('plan a study roadmap').toList();
-        expect(fakePending.createdActions.length, equals(1));
+        final history = service.memory.getHistory();
+        expect(history.any((m) =>
+            m.role == MessageRole.system &&
+            m.content.contains('study plan')), isTrue);
       });
 
-      test('roadmap keyword creates pending action', () async {
+      test('roadmap keyword adds system message', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('create a roadmap for chemistry').toList();
-        expect(fakePending.createdActions.length, equals(1));
+        final history = service.memory.getHistory();
+        expect(history.any((m) =>
+            m.role == MessageRole.system &&
+            m.content.contains('roadmap')), isTrue);
       });
 
-      test('programar keyword (Portuguese) creates pending action', () async {
+      test('programar keyword (Portuguese) schedules a lesson', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('programar estudos de matematica').toList();
-        expect(fakePending.createdActions.length, equals(1));
+        expect(fakePlanner.scheduleCallCount, greaterThan(0));
       });
 
-      test('reprogramar keyword (Portuguese) creates pending action', () async {
+      test('reprogramar keyword (Portuguese) schedules', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('reprogramar sessoes').toList();
-        expect(fakePending.createdActions.length, equals(1));
+        expect(fakePlanner.scheduleCallCount, greaterThan(0));
       });
 
-      test('planificar keyword (Spanish) creates pending action', () async {
+      test('planificar keyword (Spanish) adds system message', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('planificar el estudio').toList();
-        expect(fakePending.createdActions.length, equals(1));
+        final history = service.memory.getHistory();
+        expect(history.any((m) =>
+            m.role == MessageRole.system), isTrue);
       });
 
-      test('does not create duplicate when existing pending exists',
-          () async {
+      test('non-planning message does not trigger scheduling', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
-        );
-        await service.chat('schedule a lesson').toList();
-        await service.chat('schedule another lesson').toList();
-        expect(fakePending.createdActions.length, equals(1));
-      });
-
-      test('non-planning message does not create pending action', () async {
-        final service = createMentorService(
-          llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('hello how are you').toList();
-        expect(fakePending.createdActions, isEmpty);
+        expect(fakePlanner.scheduleCallCount, equals(0));
       });
 
       test('topic is extracted from schedule message', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule a lesson about calculus').toList();
-        expect(fakePending.createdActions.first.topicTitle, equals('calculus'));
+        expect(fakePlanner.lastScheduledTopicTitle, equals('calculus'));
       });
 
       test('topic with punctuation is trimmed', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule study linear algebra, please').toList();
-        expect(
-          fakePending.createdActions.first.topicTitle,
-          equals('linear algebra'),
-        );
+        expect(fakePlanner.lastScheduledTopicTitle, equals('linear algebra'));
       });
 
       test('topic after learn keyword is extracted', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule learn dart').toList();
-        expect(
-          fakePending.createdActions.first.topicTitle,
-          equals('dart'),
-        );
+        expect(fakePlanner.lastScheduledTopicTitle, equals('dart'));
       });
 
       test('topic after topic keyword is extracted', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule topic world history').toList();
-        expect(
-          fakePending.createdActions.first.topicTitle,
-          equals('world history'),
-        );
+        expect(fakePlanner.lastScheduledTopicTitle, equals('world history'));
       });
 
       test('fallback to general when no topic keyword found', () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         await service.chat('schedule something').toList();
-        expect(
-          fakePending.createdActions.first.topicTitle,
-          equals('general'),
-        );
-      });
-
-      test('pending action includes original message in payload', () async {
-        final service = createMentorService(
-          llmService: llm,
-          pendingActionRepo: fakePending,
-        );
-        const originalMsg = 'schedule a review for tomorrow';
-        await service.chat(originalMsg).toList();
-        final payload =
-            fakePending.createdActions.first.payload;
-        expect(payload['originalMessage'], equals(originalMsg));
+        expect(fakePlanner.lastScheduledTopicTitle, equals('general'));
       });
 
       test('chat completes when LLM response triggers planning intent',
           () async {
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: fakePending,
+          plannerService: fakePlanner,
         );
         final chunks = await service.chat('schedule math review').toList();
         expect(chunks, isNotEmpty);
       });
 
-      test('repository throws are caught silently during planning intent',
-          () async {
-        final throwingPending = FakePendingActionRepository();
-        throwingPending.setThrowOnCreate();
+      test('planner errors are caught silently during scheduling', () async {
+        final planner = FakePlannerService();
+        planner.setScheduleResult(false);
         final service = createMentorService(
           llmService: llm,
-          pendingActionRepo: throwingPending,
+          plannerService: planner,
         );
         final chunks = await service.chat('schedule a lesson').toList();
         expect(chunks, isNotEmpty);
-        expect(throwingPending.createdActions, isEmpty);
       });
     });
 

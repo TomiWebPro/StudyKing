@@ -30,7 +30,6 @@ class HiveInitializer {
     await Hive.openBox(HiveBoxNames.answers);
     await Hive.openBox(HiveBoxNames.sources);
     await Hive.openBox(HiveBoxNames.attempts);
-    await Hive.openBox(HiveBoxNames.lessonBlocks);
     await Hive.openBox(HiveBoxNames.lessons);
     await Hive.openBox<String>(HiveBoxNames.sessions);
     await Hive.openBox(HiveBoxNames.progress);

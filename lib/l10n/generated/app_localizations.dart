@@ -524,6 +524,84 @@ abstract class AppLocalizations {
   /// **'Accuracy'**
   String get accuracy;
 
+  /// Heading for exam configuration screen
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Configuration'**
+  String get examConfiguration;
+
+  /// Button label to start an exam
+  ///
+  /// In en, this message translates to:
+  /// **'Start Exam'**
+  String get startExam;
+
+  /// Label for exam duration selector
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Duration'**
+  String get examDuration;
+
+  /// Label for number of questions selector
+  ///
+  /// In en, this message translates to:
+  /// **'Number of Questions'**
+  String get numberOfQuestions;
+
+  /// Label for number of incorrect answers in results
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect'**
+  String get incorrectLabel;
+
+  /// Label for number of skipped questions in results
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get skippedLabel;
+
+  /// Message shown when exam is auto-submitted due to time
+  ///
+  /// In en, this message translates to:
+  /// **'Exam was auto-submitted when time ran out.'**
+  String get examAutoSubmitted;
+
+  /// Heading for topic breakdown section in results
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Breakdown'**
+  String get topicBreakdown;
+
+  /// Dialog text shown when starting practice
+  ///
+  /// In en, this message translates to:
+  /// **'Starting {mode}...'**
+  String startingPractice(String mode);
+
+  /// Button label to navigate back to practice
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Practice'**
+  String get backToPractice;
+
+  /// Semantic hint for swipe to delete gesture
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to delete'**
+  String get swipeToDelete;
+
+  /// Validation error for non-positive numeric input
+  ///
+  /// In en, this message translates to:
+  /// **'Value must be positive'**
+  String get valueMustBePositive;
+
+  /// Validation error when correct answers exceed total questions
+  ///
+  /// In en, this message translates to:
+  /// **'Correct answers cannot exceed total questions'**
+  String get correctExceedsQuestions;
+
   /// Button label to restart practice
   ///
   /// In en, this message translates to:
@@ -3032,6 +3110,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 question} other{{count} questions}}'**
   String questionsCountMetric(int count);
 
+  /// Abbreviated question count (e.g., 5Q)
+  ///
+  /// In en, this message translates to:
+  /// **'{count}Q'**
+  String questionsAbbreviation(int count);
+
   /// Metric label for minutes
   ///
   /// In en, this message translates to:
@@ -3793,6 +3877,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Milestone'**
   String get milestone;
+
+  /// Short milestone label in timeline
+  ///
+  /// In en, this message translates to:
+  /// **'M{order}'**
+  String milestoneShort(int order);
 
   /// Target completion date label
   ///

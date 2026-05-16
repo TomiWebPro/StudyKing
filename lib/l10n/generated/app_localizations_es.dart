@@ -293,6 +293,49 @@ class AppLocalizationsEs extends AppLocalizations {
   String get accuracy => 'Precisión';
 
   @override
+  String get examConfiguration => 'Configuración del Examen';
+
+  @override
+  String get startExam => 'Comenzar Examen';
+
+  @override
+  String get examDuration => 'Duración del Examen';
+
+  @override
+  String get numberOfQuestions => 'Número de Preguntas';
+
+  @override
+  String get incorrectLabel => 'Incorrectas';
+
+  @override
+  String get skippedLabel => 'Omitidas';
+
+  @override
+  String get examAutoSubmitted =>
+      'El examen se envió automáticamente cuando se acabó el tiempo.';
+
+  @override
+  String get topicBreakdown => 'Desglose por Tema';
+
+  @override
+  String startingPractice(String mode) {
+    return 'Comenzando $mode...';
+  }
+
+  @override
+  String get backToPractice => 'Volver a la Práctica';
+
+  @override
+  String get swipeToDelete => 'Deslizar para eliminar';
+
+  @override
+  String get valueMustBePositive => 'El valor debe ser positivo';
+
+  @override
+  String get correctExceedsQuestions =>
+      'Las respuestas correctas no pueden exceder el total de preguntas';
+
+  @override
   String get practiceAgain => 'Practicar de Nuevo';
 
   @override
@@ -1716,6 +1759,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String questionsAbbreviation(int count) {
+    return '${count}P';
+  }
+
+  @override
   String minutesCountMetric(int count) {
     return '$count min';
   }
@@ -2220,6 +2268,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get milestone => 'Hito';
+
+  @override
+  String milestoneShort(int order) {
+    return 'H$order';
+  }
 
   @override
   String get targetCompletion => 'Finalización Prevista';

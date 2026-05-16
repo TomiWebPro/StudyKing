@@ -115,5 +115,21 @@ void main() {
       expect(find.byType(MetricCard), findsOneWidget);
       expect(find.byType(GradientContainer), findsOneWidget);
     });
+
+    testWidgets('has combined semantics label', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const MetricCard(
+          icon: Icons.star,
+          value: '95%',
+          label: 'Accuracy',
+          accent: Colors.amber,
+        ),
+      ));
+
+      final matchingSemantics = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Accuracy: 95%',
+      );
+      expect(matchingSemantics, findsOneWidget);
+    });
   });
 }

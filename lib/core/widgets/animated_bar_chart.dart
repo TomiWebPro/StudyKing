@@ -11,6 +11,7 @@ class AnimatedBarChart extends StatefulWidget {
   final String? yAxisLabel;
   final bool showValueTooltips;
   final bool reduceMotion;
+  final double maxBarWidth;
 
   const AnimatedBarChart({
     super.key,
@@ -23,6 +24,7 @@ class AnimatedBarChart extends StatefulWidget {
     this.yAxisLabel,
     this.showValueTooltips = true,
     this.reduceMotion = false,
+    this.maxBarWidth = 48,
   });
 
   static const double minBarWidth = 24;
@@ -39,7 +41,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
     final count = widget.data.length;
     if (count == 0) return AnimatedBarChart.minBarWidth;
     final computed = (availableWidth - 8 * (count - 1)) / count;
-    return computed.clamp(AnimatedBarChart.minBarWidth, double.infinity);
+    return computed.clamp(AnimatedBarChart.minBarWidth, widget.maxBarWidth);
   }
 
   Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme, double barWidth, Color accentColor) {
@@ -124,15 +126,19 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
           LayoutBuilder(
             builder: (context, constraints) {
               final barWidth = _computeBarWidth(constraints.maxWidth);
+              final totalBarWidth = widget.data.length * barWidth + 8 * (widget.data.length - 1);
+              final surplus = (constraints.maxWidth - totalBarWidth).clamp(0.0, double.infinity);
               return Row(
+                mainAxisAlignment: surplus > 0 ? MainAxisAlignment.center : MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: widget.data.keys.map((day) {
                   final count = widget.data[day] ?? 0;
                   final height = widget.minBarHeight +
                       (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
-                  return Expanded(
+                  return Semantics(
+                    label: '$day: $count sessions',
+                    value: '$count',
                     child: Column(
                       key: ValueKey('bar_$day'),
                       mainAxisSize: MainAxisSize.min,

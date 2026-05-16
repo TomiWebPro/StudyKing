@@ -21,7 +21,9 @@ class MetricCard extends StatelessWidget {
     final theme = Theme.of(context);
     final padding = ResponsiveUtils.cardPadding(context);
 
-    return GradientContainer(
+    return Semantics(
+      label: '$label: $value',
+      child: GradientContainer(
       accent: accent,
       padding: padding,
       child: Column(
@@ -50,6 +52,7 @@ class MetricCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

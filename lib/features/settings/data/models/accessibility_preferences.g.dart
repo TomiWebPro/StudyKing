@@ -9,7 +9,7 @@ part of 'accessibility_preferences.dart';
 class AccessibilityPreferencesAdapter
     extends TypeAdapter<AccessibilityPreferences> {
   @override
-  final int typeId = 11;
+  final int typeId = 34;
 
   @override
   AccessibilityPreferences read(BinaryReader reader) {

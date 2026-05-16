@@ -24,7 +24,6 @@ class DatabaseMigration {
         HiveBoxNames.answers,
         HiveBoxNames.sources,
         HiveBoxNames.attempts,
-        HiveBoxNames.lessonBlocks,
         HiveBoxNames.lessons,
         HiveBoxNames.sessions,
       ];

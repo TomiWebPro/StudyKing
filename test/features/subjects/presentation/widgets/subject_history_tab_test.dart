@@ -130,7 +130,7 @@ void main() {
       expect(find.text('7/10'), findsOneWidget);
     });
 
-    testWidgets('shows check_circle icon for score >= 80', (tester) async {
+    testWidgets('shows play_arrow icon for practice session type (score >= 80)', (tester) async {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
       ]);
@@ -143,10 +143,10 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
-    testWidgets('shows sticky_note_2 for score between 50 and 79', (tester) async {
+    testWidgets('shows play_arrow practice icon (score between 50 and 79)', (tester) async {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 6, questionsAnswered: 10),
       ]);
@@ -159,11 +159,10 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
-    testWidgets('shows sticky_note_2 for score below 50', (tester) async {
+    testWidgets('shows play_arrow practice icon (score below 50)', (tester) async {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId, correctAnswers: 3, questionsAnswered: 10),
       ]);
@@ -176,8 +175,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
     testWidgets('renders multiple sessions with sequential numbering', (tester) async {
@@ -267,7 +265,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
     testWidgets('shows date and duration in subtitle', (tester) async {
@@ -300,7 +298,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('90%'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
     testWidgets('shows correct score percentage for medium score 50-79', (tester) async {
@@ -317,7 +315,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('60%'), findsOneWidget);
-      expect(find.byIcon(Icons.sticky_note_2), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
     testWidgets('shows correct score percentage for low score < 50', (tester) async {
@@ -334,6 +332,90 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('30%'), findsOneWidget);
+    });
+
+    testWidgets('shows timer icon for focus session type', (tester) async {
+      final repo = _FakeSessionRepository([
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          subjectId: testSubjectId,
+          type: SessionType.focus,
+          startTime: DateTime(2024, 6, 15, 10, 30),
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          actualDurationMs: 3600000,
+          completed: true,
+          createdAt: DateTime(2024, 6, 15, 10, 30),
+        ),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.timer), findsWidgets);
+      expect(find.byIcon(Icons.play_arrow), findsNothing);
+    });
+
+    testWidgets('shows school icon for tutoring session type', (tester) async {
+      final repo = _FakeSessionRepository([
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          subjectId: testSubjectId,
+          type: SessionType.tutoring,
+          startTime: DateTime(2024, 6, 15, 10, 30),
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          actualDurationMs: 3600000,
+          completed: true,
+          createdAt: DateTime(2024, 6, 15, 10, 30),
+        ),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.school), findsWidgets);
+      expect(find.byIcon(Icons.play_arrow), findsNothing);
+    });
+
+    testWidgets('shows edit_note icon for manual session type', (tester) async {
+      final repo = _FakeSessionRepository([
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          subjectId: testSubjectId,
+          type: SessionType.manual,
+          startTime: DateTime(2024, 6, 15, 10, 30),
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          actualDurationMs: 3600000,
+          completed: true,
+          createdAt: DateTime(2024, 6, 15, 10, 30),
+        ),
+      ]);
+      await tester.pumpWidget(_buildTestApp(
+        SubjectHistoryTab(
+          subjectId: testSubjectId,
+          onSessionTap: (_) {},
+          sessionRepository: repo,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.edit_note), findsWidgets);
+      expect(find.byIcon(Icons.play_arrow), findsNothing);
     });
   });
 }

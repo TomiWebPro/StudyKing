@@ -7,7 +7,6 @@ import 'package:studyking/features/practice/providers/practice_providers.dart' s
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/voice_controller.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
-import '../models/lesson_plan_model.dart';
 import '../services/prompts/prompts.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
@@ -42,13 +41,5 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
 });
 
 final promptsProvider = Provider<ConversationPromptSet>((ref) {
-  return const ConversationPromptSet();
-});
-
-final lessonPlanProvider = Provider<LessonPlan?>((ref) {
-  return null;
-});
-
-final promptTemplatesProvider = Provider<ConversationPromptSet>((ref) {
   return const ConversationPromptSet();
 });

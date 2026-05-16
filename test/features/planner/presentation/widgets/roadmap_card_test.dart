@@ -56,7 +56,7 @@ void main() {
       ));
 
       expect(find.text('Master IB Physics'), findsOneWidget);
-      expect(find.text('active'), findsOneWidget);
+      expect(find.text('In Progress'), findsOneWidget);
     });
 
     testWidgets('shows progress bar and percentage', (tester) async {
@@ -78,7 +78,7 @@ void main() {
         )),
       ));
 
-      expect(find.textContaining('milestones'), findsOneWidget);
+      expect(find.textContaining('Milestones'), findsOneWidget);
     });
 
     testWidgets('shows completed milestones', (tester) async {
@@ -150,7 +150,7 @@ void main() {
         RoadmapCard(roadmap: roadmap(status: 'completed')),
       ));
 
-      expect(find.text('completed'), findsOneWidget);
+      expect(find.text('Completed'), findsOneWidget);
     });
   });
 }

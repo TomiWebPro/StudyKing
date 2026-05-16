@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 
 void main() {
@@ -92,11 +93,61 @@ void main() {
         expect(json['iconName'], 'emoji_events');
         expect(json['category'], 'general');
       });
+
+      test('serializes with null criteria', () {
+        final now = DateTime(2026, 5, 15);
+        final badge = BadgeModel(
+          id: 'b2',
+          studentId: 's1',
+          name: 'Test',
+          description: 'Desc',
+          unlockedAt: now,
+          criteria: null,
+        );
+
+        final json = badge.toJson();
+        expect(json['id'], 'b2');
+        expect(json['criteria'], isNull);
+      });
+
+      test('serializes with empty criteria map', () {
+        final badge = BadgeModel(
+          id: 'b3',
+          studentId: 's1',
+          name: 'Empty',
+          description: 'Empty criteria',
+          criteria: {},
+        );
+
+        final json = badge.toJson();
+        expect(json['criteria'], isEmpty);
+      });
+
+      test('criteria map defaults to null', () {
+        final badge = BadgeModel(
+          id: 'b4',
+          studentId: 's1',
+          name: 'Null Criteria',
+          description: 'Should have null criteria',
+        );
+
+        expect(badge.criteria, isNull);
+      });
     });
 
     group('Hive type annotation', () {
       test('class has HiveType annotation', () {
         expect(BadgeModel, isNotNull);
+      });
+
+      test('class implements HiveObject', () {
+        final badge = BadgeModel(
+          id: 'hive-test',
+          studentId: 's1',
+          name: 'Hive',
+          description: 'Hive test',
+        );
+        expect(badge, isA<HiveObject>());
       });
     });
   });
@@ -247,6 +298,68 @@ void main() {
 
         expect(def.isSatisfiedBy({'hours': 'invalid'}), isFalse);
       });
+
+      test('handles num value with lessThan operator exactly equal', () {
+        final def = const BadgeDefinition(
+          id: 'test',
+          name: 'Test',
+          description: 'D',
+          iconName: 'star',
+          category: 'milestone',
+          checkKey: 'score',
+          checkOperator: CheckOperator.lessThan,
+          checkValue: 50,
+        );
+
+        expect(def.isSatisfiedBy({'score': 49}), isTrue);
+        expect(def.isSatisfiedBy({'score': 50}), isFalse);
+        expect(def.isSatisfiedBy({'score': 51}), isFalse);
+      });
+
+      test('handles empty stats map', () {
+        final def = const BadgeDefinition(
+          id: 'test',
+          name: 'Test',
+          description: 'D',
+          iconName: 'star',
+          category: 'milestone',
+          checkKey: 'score',
+          checkOperator: CheckOperator.greaterOrEqual,
+          checkValue: 1,
+        );
+
+        expect(def.isSatisfiedBy({}), isFalse);
+      });
+
+      test('handles key exists with null value', () {
+        final def = const BadgeDefinition(
+          id: 'test',
+          name: 'Test',
+          description: 'D',
+          iconName: 'star',
+          category: 'milestone',
+          checkKey: 'score',
+          checkOperator: CheckOperator.greaterOrEqual,
+          checkValue: 1,
+        );
+
+        expect(def.isSatisfiedBy({'score': null}), isFalse);
+      });
+
+      test('handles empty string for string value', () {
+        final def = const BadgeDefinition(
+          id: 'test',
+          name: 'Test',
+          description: 'D',
+          iconName: 'star',
+          category: 'milestone',
+          checkKey: 'hours',
+          checkOperator: CheckOperator.greaterOrEqual,
+          checkValue: 1,
+        );
+
+        expect(def.isSatisfiedBy({'hours': ''}), isFalse);
+      });
     });
   });
 
@@ -299,6 +412,24 @@ void main() {
     test('definitions use various operators', () {
       final operators = BadgeDefinitions.all.map((b) => b.checkOperator).toSet();
       expect(operators, contains(CheckOperator.greaterOrEqual));
+    });
+
+    test('getById returns null for empty string id', () {
+      expect(BadgeDefinitions.getById(''), isNull);
+    });
+
+    test('all definitions have unique ids', () {
+      final ids = BadgeDefinitions.all.map((b) => b.id).toList();
+      expect(ids.toSet().length, ids.length);
+    });
+
+    test('each definition has unique checkKey values', () {
+      for (final def in BadgeDefinitions.all) {
+        expect(def.checkKey, anyOf(
+          'totalAttempts', 'accuracy', 'dailyActivity',
+          'totalStudyTimeHours', 'weeklyActivity',
+        ));
+      }
     });
   });
 

@@ -7,7 +7,8 @@ import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
+import 'package:studyking/features/practice/presentation/screens/exam_session_screen.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
@@ -41,6 +42,7 @@ class AppRoutes {
   static const String lessonList = '/lesson-list';
   static const String llmTasks = '/llm-tasks';
   static const String focusMode = '/focus-mode';
+  static const String examSession = '/exam-session';
 }
 
 class SubjectDetailArgs {
@@ -78,6 +80,16 @@ class PracticeSessionArgs {
     this.topicId,
     this.questionCount = 10,
     this.isSpacedRepetition = false,
+  });
+}
+
+class ExamSessionArgs {
+  final String subjectId;
+  final String subjectName;
+
+  const ExamSessionArgs({
+    required this.subjectId,
+    required this.subjectName,
   });
 }
 
@@ -216,6 +228,18 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
         const LlmTaskManagerScreen(),
         routeSettings,
       );
+    case AppRoutes.examSession:
+      final args = routeSettings.arguments;
+      if (args is ExamSessionArgs) {
+        return _materialPageRoute(
+          ExamSessionScreen(
+            subjectId: args.subjectId,
+            subjectName: args.subjectName,
+          ),
+          routeSettings,
+        );
+      }
+      return null;
     case AppRoutes.focusMode:
       return _materialPageRoute(
         const FocusTimerScreen(),

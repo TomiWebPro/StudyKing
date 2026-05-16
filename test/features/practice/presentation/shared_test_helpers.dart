@@ -12,7 +12,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/practice/presentation/practice_session_screen.dart';
+import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 
 class FakeQuestionRepository extends QuestionRepository {
   final Result<List<Question>> result;

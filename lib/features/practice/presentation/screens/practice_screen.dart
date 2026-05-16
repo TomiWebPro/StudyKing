@@ -22,7 +22,7 @@ import 'package:studyking/features/practice/presentation/widgets/topic_selection
 import 'package:studyking/features/practice/presentation/widgets/spaced_repetition_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
-import 'package:studyking/features/practice/presentation/screens/exam_session_screen.dart';
+
 
 class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
@@ -212,13 +212,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _navigateToExam(Subject subject) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (context) => ExamSessionScreen(
-          subjectId: subject.id,
-          subjectName: subject.name,
-        ),
+      AppRoutes.examSession,
+      arguments: ExamSessionArgs(
+        subjectId: subject.id,
+        subjectName: subject.name,
       ),
     );
   }
@@ -275,9 +274,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _showSubjectSelector() {
+    final l10n = AppLocalizations.of(context)!;
     SubjectSelectionSheet.show(context,
         subjects: _subjects,
-        onSubjectSelected: (subject) => _startPractice(subject));
+        onSubjectSelected: (subject) {
+          _showStartingPracticeDialog(l10n.practiceMode);
+          _startPractice(subject);
+        });
   }
 
   void _showPracticeModeDialog() {
@@ -351,17 +354,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.practiceMode),
-        actions: [
-          if (_subjects.isNotEmpty)
-            Semantics(
-              label: l10n.practiceOptions,
-              child: IconButton(
-                icon: const Icon(Icons.tune),
-                onPressed: _showPracticeModeDialog,
-                tooltip: l10n.practiceOptions,
-              ),
-            ),
-        ],
+        actions: const [],
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton.extended(
@@ -369,6 +362,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             ? null
             : () {
                 if (_subjects.length == 1) {
+                  _showStartingPracticeDialog(AppLocalizations.of(context)!.practiceMode);
                   _startPractice(_subjects.first);
                 } else {
                   _showSubjectSelector();
@@ -410,78 +404,54 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Widget _buildExtraModes() {
     final l10n = AppLocalizations.of(context)!;
+    final isXs = ResponsiveUtils.breakpointOf(context).isXs;
+    final modeCards = [
+      _ExtraModeCard(
+        icon: Icons.timer,
+        iconColor: Theme.of(context).colorScheme.primary,
+        title: l10n.examMode,
+        description: l10n.examModeDescription,
+        onTap: _startExamMode,
+      ),
+      _ExtraModeCard(
+        icon: Icons.source,
+        iconColor: Theme.of(context).colorScheme.secondary,
+        title: l10n.sourcePractice,
+        description: l10n.sourcePracticeDescription,
+        onTap: _showSourcePracticeSheet,
+      ),
+    ];
     return Padding(
-            padding: ResponsiveUtils.listPadding(context),
-      child: Row(
-        children: [
-          Expanded(
-            child: Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _startExamMode,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 32,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.examMode,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.examModeDescription,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+      padding: ResponsiveUtils.listPadding(context),
+      child: isXs
+          ? Column(
+              children: modeCards,
+            )
+          : Row(
+              children: modeCards
+                  .map((card) => Expanded(child: card))
+                  .toList(),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _showSourcePracticeSheet,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.source,
-                        size: 32,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.sourcePractice,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.sourcePracticeDescription,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    );
+  }
+
+  Future<void> _showStartingPracticeDialog(String modeName) async {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text(l10n.startingPractice(modeName)),
+          ],
+        ),
       ),
     );
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildSubjectSection(BuildContext context) {
@@ -502,6 +472,55 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             subject: subject,
             onTap: () => _startPractice(subject))),
       ],
+    );
+  }
+}
+
+class _ExtraModeCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  const _ExtraModeCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Icon(icon, size: 32, color: iconColor),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -355,7 +355,7 @@ class PersonalLearningPlanService {
       if (adherenceScore < 0.3 && plannedMinutes > 0) {
         final missedMinutes = plannedMinutes - actualMinutes;
         if (missedMinutes > 0) {
-          await _redistributeMissedWorkload(studentId, missedMinutes, plan);
+          await redistributeMissedWorkload(studentId, missedMinutes, plan);
         }
       }
 
@@ -364,13 +364,13 @@ class PersonalLearningPlanService {
             .map((t) => t.topicId)
             .toList();
         if (completedTopicIds.isNotEmpty) {
-          await _linkDailyPlanToRoadmap(studentId, completedTopicIds);
+          await linkDailyPlanToRoadmap(studentId, completedTopicIds);
         }
       }
     } catch (_) {}
   }
 
-  Future<void> _linkDailyPlanToRoadmap(
+  Future<void> linkDailyPlanToRoadmap(
     String studentId,
     List<String> completedTopicIds,
   ) async {
@@ -400,7 +400,17 @@ class PersonalLearningPlanService {
     }
   }
 
-  Future<void> _redistributeMissedWorkload(
+  Future<void> redistributeMissedWorkloadForStudent(
+    String studentId,
+    int missedMinutes,
+  ) async {
+    await _planRepository.init();
+    final plan = await _planRepository.loadPlan(studentId);
+    if (plan == null) return;
+    await redistributeMissedWorkload(studentId, missedMinutes, plan);
+  }
+
+  Future<void> redistributeMissedWorkload(
     String studentId,
     int missedMinutes,
     PersonalLearningPlan plan,

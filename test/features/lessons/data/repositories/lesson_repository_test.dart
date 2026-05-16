@@ -395,7 +395,7 @@ void main() {
         await repo.addBlock(LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l2', type: LessonBlockType.text, content: 'C3'));
         final blocksResult = await repo.getBlocksForLesson('l1');
         expect(blocksResult.isSuccess, isTrue);
-        final blocks = blocksResult.data!;
+        final List<LessonBlock> blocks = blocksResult.data!;
         expect(blocks.length, 2);
         final ids = blocks.map((b) => b.id).toSet();
         expect(ids, containsAll(['b1', 'b2']));

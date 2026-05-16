@@ -51,9 +51,9 @@ class PlanSummaryCard extends StatelessWidget {
               spacing: 16,
               runSpacing: 8,
               children: [
-                buildSummaryChip('${summary.totalQuestions}Q', l10n.total),
+                buildSummaryChip(l10n.questionsAbbreviation(summary.totalQuestions), l10n.total),
                 buildSummaryChip(
-                    '${summary.totalMinutes}min', l10n.totalTime),
+                    l10n.minutesCountMetric(summary.totalMinutes), l10n.totalTime),
                 buildSummaryChip(
                     '${summary.newTopics} ${l10n.newTopics}', l10n.topics),
                 buildSummaryChip(

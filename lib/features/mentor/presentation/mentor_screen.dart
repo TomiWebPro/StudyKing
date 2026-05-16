@@ -5,7 +5,8 @@ import 'package:studyking/core/providers/app_providers.dart' show databaseProvid
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
-import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider, mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
@@ -58,6 +59,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       llmService: llmService,
       masteryService: masteryService,
       progressTracker: progressTracker,
+      plannerService: ref.read(plannerServiceProvider),
+      nudgeRepo: ref.read(mentorEngagementNudgeRepoProvider),
+      sessionRepository: ref.read(mentorSessionRepositoryProvider),
       modelId: ref.read(mentorModelIdProvider),
       studentId: studentId,
     );

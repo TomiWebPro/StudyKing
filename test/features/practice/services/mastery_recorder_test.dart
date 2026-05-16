@@ -6,7 +6,6 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
@@ -95,11 +94,6 @@ class _FakeAttemptRepository extends AttemptRepository {
   Future<void> init() async {}
 }
 
-class _FakeMasteryStateRepo extends MasteryStateRepository {
-  @override
-  Future<void> init() async {}
-}
-
 class _FakeQuestionMasteryStateRepo extends QuestionMasteryStateRepository {
   @override
   Future<void> init() async {}
@@ -146,7 +140,6 @@ void main() {
     late _FakeMasteryGraphService fakeMasteryGraph;
     late _FakeSpacedRepetitionEngine fakeEngine;
     late _FakeAttemptRepository fakeAttemptRepo;
-    late _FakeMasteryStateRepo fakeMasteryStateRepo;
     late _FakeQuestionMasteryStateRepo fakeQuestionMasteryRepo;
     late _FakeQuestionRepository fakeQuestionRepo;
     late MasteryRecorder recorder;
@@ -155,7 +148,6 @@ void main() {
       fakeMasteryGraph = _FakeMasteryGraphService();
       fakeEngine = _FakeSpacedRepetitionEngine();
       fakeAttemptRepo = _FakeAttemptRepository();
-      fakeMasteryStateRepo = _FakeMasteryStateRepo();
       fakeQuestionMasteryRepo = _FakeQuestionMasteryStateRepo();
       fakeQuestionRepo = _FakeQuestionRepository();
 
@@ -163,7 +155,6 @@ void main() {
         masteryGraphService: fakeMasteryGraph,
         srEngine: fakeEngine,
         attemptRepo: fakeAttemptRepo,
-        masteryStateRepo: fakeMasteryStateRepo,
         questionMasteryRepo: fakeQuestionMasteryRepo,
         questionRepo: fakeQuestionRepo,
       );

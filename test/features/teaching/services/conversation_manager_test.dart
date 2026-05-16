@@ -4,9 +4,24 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
+
+class FakeConversationRepo extends ConversationRepository {
+  final List<ConversationMessage> _messages = [];
+
+  @override
+  Future<void> saveMessage(ConversationMessage message) async {
+    _messages.add(message);
+  }
+
+  @override
+  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
+    return _messages.where((m) => m.sessionId == sessionId).toList();
+  }
+}
 
 class FakeLlmService extends LlmService {
   FakeLlmService()
@@ -72,6 +87,31 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
       return EvaluationResult(score: 0.2, explanation: 'Incorrect answer.');
     }
     return EvaluationResult(score: 0.5, explanation: 'Partial answer.');
+  }
+}
+
+class RichResultEvaluator extends ExerciseEvaluator {
+  RichResultEvaluator()
+      : super(
+          llmService: FakeLlmService(),
+          modelId: 'test-model',
+        );
+
+  @override
+  Future<EvaluationResult> evaluate({
+    required String question,
+    required String studentAnswer,
+    required String subjectId,
+    required String topicTitle,
+    String? systemPrompt,
+    String? userPrompt,
+  }) async {
+    return EvaluationResult(
+      score: 0.85,
+      explanation: 'Good work, mostly correct.',
+      partialCredit: 0.5,
+      conceptBreakdown: {'ConceptA': 0.9, 'ConceptB': 0.7},
+    );
   }
 }
 
@@ -435,6 +475,191 @@ void main() {
         );
 
         expect(m.sessionStartTime, equals(fixedNow));
+      });
+    });
+
+    group('exercise keyword detection', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('detects "practice" keyword and transitions to exercise', () async {
+        await manager.sendMessage('Hello').toList();
+        await manager.sendMessage('I need practice problems').toList();
+        expect(manager.phase, equals(ConversationPhase.exercise));
+      });
+
+      test('detects "quiz" keyword and transitions to exercise', () async {
+        await manager.sendMessage('Hello').toList();
+        await manager.sendMessage('Give me a quiz').toList();
+        expect(manager.phase, equals(ConversationPhase.exercise));
+      });
+
+      test('detects "exercise" keyword and transitions to exercise', () async {
+        await manager.sendMessage('Hello').toList();
+        await manager.sendMessage('Give me an exercise').toList();
+        expect(manager.phase, equals(ConversationPhase.exercise));
+      });
+
+      test('transitions from adaptiveReview to teaching when no keyword', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.adaptiveReview;
+        await manager.sendMessage('I understand now').toList();
+        expect(manager.phase, equals(ConversationPhase.teaching));
+      });
+    });
+
+    group('consecutive incorrect feedback transition', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('transitions to adaptiveReview when consecutiveIncorrect >= 2 then to teaching', () async {
+        await manager.sendMessage('Hello').toList();
+
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('wrong').toList();
+        expect(manager.phase, equals(ConversationPhase.feedback));
+
+        await manager.sendMessage('ok').toList();
+
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('wrong').toList();
+        expect(manager.phase, equals(ConversationPhase.feedback));
+
+        await manager.sendMessage('ok').toList();
+
+        expect(manager.phase, equals(ConversationPhase.teaching));
+      });
+
+      test('adaptiveReview overridden by exercise keyword when consecutiveIncorrect >= 2', () async {
+        await manager.sendMessage('Hello').toList();
+
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('wrong').toList();
+
+        await manager.sendMessage('ok').toList();
+
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('wrong').toList();
+
+        await manager.sendMessage('I need practice').toList();
+
+        expect(manager.phase, equals(ConversationPhase.exercise));
+      });
+    });
+
+    group('adaptive streaming chunks', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('yields 2 chunks with fast adaptive pace (1.5)', () async {
+        manager.adaptivePace = 1.5;
+        final chunks = await manager.sendMessage('Hello').toList();
+        expect(chunks.length, equals(2));
+        expect(chunks[0], equals('Mock tutor'));
+        expect(chunks[1], equals(' response'));
+      });
+
+      test('yields 4 chunks with default adaptive pace (1.0)', () async {
+        final chunks = await manager.sendMessage('Hello').toList();
+        expect(chunks.length, equals(4));
+        expect(chunks[0], equals('Mock '));
+        expect(chunks[1], equals('tutor'));
+        expect(chunks[2], equals(' resp'));
+        expect(chunks[3], equals('onse'));
+      });
+
+      test('yields 7 chunks with slow adaptive pace (0.5)', () async {
+        manager.adaptivePace = 0.5;
+        final chunks = await manager.sendMessage('Hello').toList();
+        expect(chunks.length, equals(7));
+        expect(chunks[0], equals('Moc'));
+        expect(chunks[1], equals('k t'));
+        expect(chunks[2], equals('uto'));
+        expect(chunks[3], equals('r r'));
+        expect(chunks[4], equals('esp'));
+        expect(chunks[5], equals('ons'));
+        expect(chunks[6], equals('e'));
+      });
+    });
+
+    group('persistence repo integration', () {
+      test('loads persisted messages on initialize when repo is provided', () async {
+        final persistedMessages = [
+          ConversationMessage(
+            id: 'p1',
+            sessionId: 'persist-session',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Welcome back!',
+            timestamp: DateTime(2024, 1, 1),
+          ),
+          ConversationMessage(
+            id: 'p2',
+            sessionId: 'persist-session',
+            role: MessageRole.student,
+            type: MessageType.text,
+            content: 'Hello again!',
+            timestamp: DateTime(2024, 1, 1, 0, 1),
+          ),
+        ];
+
+        final persistRepo = FakeConversationRepo();
+        for (final msg in persistedMessages) {
+          await persistRepo.saveMessage(msg);
+        }
+
+        final m = ConversationManager(
+          llmService: llmService,
+          modelId: 'test-model',
+          sessionId: 'persist-session',
+          studentId: 'student-123',
+          topicTitle: 'Test',
+          subjectId: 'test',
+          topicId: 't1',
+          exerciseEvaluator: exerciseEvaluator,
+          persistenceRepo: persistRepo,
+        );
+
+        await m.initialize();
+
+        expect(m.messages.length, equals(2));
+        expect(m.messages[0].content, equals('Welcome back!'));
+        expect(m.messages[1].content, equals('Hello again!'));
+      });
+    });
+
+    group('evaluation result with partialCredit and conceptBreakdown', () {
+      test('includes partialCredit and conceptBreakdown in system message', () async {
+        final richEvaluator = RichResultEvaluator();
+        final m = ConversationManager(
+          llmService: llmService,
+          modelId: 'test-model',
+          sessionId: 'eval-detail-session',
+          studentId: 'student-123',
+          topicTitle: 'Test',
+          subjectId: 'test',
+          topicId: 't1',
+          exerciseEvaluator: richEvaluator,
+        );
+        await m.initialize();
+        await m.sendMessage('Hello').toList();
+
+        m.phase = ConversationPhase.exercise;
+        await m.sendMessage('anything').toList();
+
+        expect(m.lastEvaluationResult, isNotNull);
+        expect(m.lastEvaluationResult!.partialCredit, equals(0.5));
+        expect(m.lastEvaluationResult!.conceptBreakdown, isNotNull);
+        expect(m.lastEvaluationResult!.conceptBreakdown!.length, equals(2));
+
+        final systemMsgs = m.messages.where((msg) => msg.role == MessageRole.system);
+        expect(systemMsgs.isNotEmpty, isTrue);
+        final evalMsg = systemMsgs.first;
+        expect(evalMsg.content, contains('partialCredit'));
+        expect(evalMsg.content, contains('conceptBreakdown'));
       });
     });
   });

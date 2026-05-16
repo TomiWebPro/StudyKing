@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 part 'accessibility_preferences.g.dart';
 
-@HiveType(typeId: 11)
+@HiveType(typeId: 34)
 class AccessibilityPreferences extends HiveObject {
   @HiveField(0)
   final bool boldText;

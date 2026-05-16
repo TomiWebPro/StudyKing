@@ -30,7 +30,7 @@ import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
-import 'features/practice/presentation/practice_screen.dart';
+import 'features/practice/presentation/screens/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
 

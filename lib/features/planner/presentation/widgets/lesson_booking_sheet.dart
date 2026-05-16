@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/repositories/student_availability_repository.dart';
 import '../../services/planner_service.dart';
@@ -103,7 +104,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
             leading: const Icon(Icons.calendar_today),
             title: Text(l10n.date),
             subtitle: Text(
-              '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'),
+              DateFormat.yMd(l10n.localeName).format(_selectedDate)),
             trailing: TextButton(
               onPressed: () async {
                 final picked = await showDatePicker(

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +20,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
-import 'package:studyking/features/practice/presentation/practice_results_screen.dart';
+import 'package:studyking/features/practice/presentation/screens/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
@@ -62,6 +61,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   final List<String> _mistakeQuestionIds = [];
   bool _isCorrect = false;
   int _currentConfidence = 3;
+  DateTime? _questionStartTime;
 
   @override
   void initState() {
@@ -139,6 +139,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _isSubmitted = false;
     _isFeedbackVisible = false;
     _currentConfidence = 3;
+    _questionStartTime = DateTime.now();
     if (mounted) setState(() {});
   }
 
@@ -172,11 +173,14 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final question = _questions[_currentIndex];
     final isCorrect = _validateAnswer(question, _currentAnswer!);
     if (isCorrect) _correctAnswers++;
+    final timeSpentMs = _questionStartTime != null
+        ? DateTime.now().difference(_questionStartTime!).inMilliseconds
+        : 0;
     _answerRecords.add(PracticeAnswerRecord(
       questionId: question.id,
       questionType: question.type,
       isCorrect: isCorrect,
-      timeSpent: const Duration(seconds: 0),
+      timeSpent: Duration(milliseconds: timeSpentMs),
       userAnswer: _currentAnswer!,
     ));
     if (!isCorrect) {
@@ -189,8 +193,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       subjectId: question.subjectId,
       topicId: question.topicId,
       isCorrect: isCorrect,
-      timeSpentMs: _sessionService.elapsedNotifier.value.inMilliseconds ~/
-          max(1, _questions.length),
+      timeSpentMs: timeSpentMs,
       confidence: _currentConfidence,
       userAnswer: _currentAnswer!,
     );
@@ -216,6 +219,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         _isSubmitted = false;
         _isFeedbackVisible = false;
         _currentConfidence = 3;
+        _questionStartTime = DateTime.now();
       });
     } else {
       _completeSession();

@@ -125,8 +125,8 @@ void main() {
 
       expect(find.text('Intro'), findsOneWidget);
       expect(find.text('Practice'), findsOneWidget);
-      expect(find.text('10min'), findsOneWidget);
-      expect(find.text('20min'), findsOneWidget);
+      expect(find.text('10m'), findsOneWidget);
+      expect(find.text('20m'), findsOneWidget);
     });
 
     testWidgets('highlights current section in timeline', (tester) async {

@@ -30,6 +30,11 @@ class RoadmapCard extends StatelessWidget {
         : roadmap.status == 'completed'
             ? theme.colorScheme.primary
             : theme.colorScheme.error;
+    final statusLabel = switch (roadmap.status) {
+      'active' => l10n.inProgress,
+      'completed' => l10n.completed,
+      _ => l10n.notStarted,
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -48,7 +53,7 @@ class RoadmapCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    roadmap.status,
+                    statusLabel,
                     style: TextStyle(
                       fontSize: 12,
                       color: statusColor,

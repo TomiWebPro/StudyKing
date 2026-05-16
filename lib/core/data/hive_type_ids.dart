@@ -5,7 +5,6 @@ const int _typeIdTopicProgressModel = 1;
 const int _typeIdQuestionModel = 2;
 const int _typeIdAnswerModel = 3;
 const int _typeIdSettingsBox = 4;
-const int _typeIdSourceModel = 26;
 const int _typeIdLessonBlockModel = 6;
 const int _typeIdLessonModel = 7;
 const int _typeIdTaskModel = 9;
@@ -23,12 +22,18 @@ const int _typeIdDailyPlan = 20;
 const int _typeIdPlannedTopic = 21;
 const int _typeIdPlanSummary = 22;
 const int _typeIdPlanRecommendation = 23;
+const int _typeIdPendingActionModel = 5;
+const int _typeIdBadgeModel = 8;
 const int _typeIdStudentAttempt = 24;
 const int _typeIdMarkschemeLegacy = 25;
 const int _typeIdConversationMessage = 27;
 const int _typeIdTutorSession = 28;
+const int _typeIdRoadmapModel = 29;
 const int _typeIdPlanAdherenceMetric = 30;
 const int _typeIdMasteryImprovementMetric = 31;
+const int _typeIdEngagementNudgeModel = 32;
+const int _typeIdPlanAdherenceModel = 33;
+const int _typeIdAccessibilityPreferences = 34;
 const int _typeIdStudentAvailability = 35;
 
 const List<int> _allTypeIds = [
@@ -37,9 +42,10 @@ const List<int> _allTypeIds = [
   _typeIdQuestionModel,
   _typeIdAnswerModel,
   _typeIdSettingsBox,
-  _typeIdSourceModel,
+  _typeIdPendingActionModel,
   _typeIdLessonBlockModel,
   _typeIdLessonModel,
+  _typeIdBadgeModel,
   _typeIdTaskModel,
   _typeIdUserProfileModel,
   _typeIdSubjectModel,
@@ -59,8 +65,12 @@ const List<int> _allTypeIds = [
   _typeIdMarkschemeLegacy,
   _typeIdConversationMessage,
   _typeIdTutorSession,
+  _typeIdRoadmapModel,
   _typeIdPlanAdherenceMetric,
   _typeIdMasteryImprovementMetric,
+  _typeIdEngagementNudgeModel,
+  _typeIdPlanAdherenceModel,
+  _typeIdAccessibilityPreferences,
   _typeIdStudentAvailability,
 ];
 

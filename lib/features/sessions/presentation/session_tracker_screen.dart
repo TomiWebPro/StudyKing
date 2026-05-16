@@ -279,6 +279,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                         _isTrackingSession ? formatDurationFromContext(context, Duration(seconds: _elapsedSeconds)) : l10n.tapStartToBegin,
                         style: theme.textTheme.displayLarge?.copyWith(
                           fontWeight: FontWeight.w600,
+                          fontSize: (MediaQuery.sizeOf(context).shortestSide * 0.09).clamp(36.0, 64.0),
                           color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
                         ),
                       ),
@@ -484,6 +485,7 @@ class _SessionEndDialog extends StatefulWidget {
 }
 
 class _SessionEndDialogState extends State<_SessionEndDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _questionsController = TextEditingController(text: '0');
   final _correctController = TextEditingController(text: '0');
 
@@ -494,34 +496,63 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
     super.dispose();
   }
 
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      final questions = int.parse(_questionsController.text);
+      final correct = int.parse(_correctController.text);
+      Navigator.pop(
+        context,
+        _SessionEndStats(questionsAnswered: questions, correctAnswers: correct),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(l10n.sessionComplete),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(l10n.howManyQuestions),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _questionsController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: l10n.questionsAnswered,
-              border: const OutlineInputBorder(),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.howManyQuestions),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _questionsController,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.questionsAnswered,
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) {
+                final n = int.tryParse(value ?? '');
+                if (n == null || n < 0) return l10n.valueMustBePositive;
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _correctController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: l10n.correctAnswers,
-              border: const OutlineInputBorder(),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _correctController,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                labelText: l10n.correctAnswers,
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) {
+                final n = int.tryParse(value ?? '');
+                if (n == null || n < 0) return l10n.valueMustBePositive;
+                final questions = int.tryParse(_questionsController.text) ?? 0;
+                if (n > questions) return l10n.correctExceedsQuestions;
+                return null;
+              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -530,14 +561,7 @@ class _SessionEndDialogState extends State<_SessionEndDialog> {
           child: Text(l10n.skip),
         ),
         FilledButton(
-          onPressed: () {
-            final questions = int.tryParse(_questionsController.text) ?? 0;
-            final correct = int.tryParse(_correctController.text) ?? 0;
-            Navigator.pop(
-              context,
-              _SessionEndStats(questionsAnswered: questions, correctAnswers: correct),
-            );
-          },
+          onPressed: _submit,
           child: Text(l10n.save),
         ),
       ],

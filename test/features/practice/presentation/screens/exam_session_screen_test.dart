@@ -7,7 +7,6 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
@@ -36,7 +35,6 @@ class FakeMasteryRecorder extends MasteryRecorder {
           masteryGraphService: MasteryGraphService(),
           srEngine: SpacedRepetitionEngine(),
           attemptRepo: AttemptRepository(),
-          masteryStateRepo: MasteryStateRepository(),
           questionMasteryRepo: QuestionMasteryStateRepository(),
           questionRepo: QuestionRepository(),
         );

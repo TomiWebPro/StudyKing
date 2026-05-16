@@ -268,6 +268,16 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               onSelected: (value) => _handleExport(value),
               itemBuilder: (context) => [
                 PopupMenuItem(
+                  enabled: false,
+                  child: Text(
+                    l10n.sessionHistoryExport,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                PopupMenuItem(
                   value: 'csv',
                   child: ListTile(
                     leading: const Icon(Icons.table_chart),
@@ -292,6 +302,16 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   ),
                 ),
                 const PopupMenuDivider(),
+                PopupMenuItem(
+                  enabled: false,
+                  child: Text(
+                    l10n.exportComprehensiveReport,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 PopupMenuItem(
                   value: 'comprehensive_csv',
                   child: ListTile(
@@ -451,16 +471,20 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
         final icon = _sessionIcon(session.type);
         final color = _sessionColor(session.type, theme);
 
-        return Dismissible(
+        return Semantics(
+          hint: l10n.swipeToDelete,
+          child: Dismissible(
           key: Key(session.id),
           direction: DismissDirection.endToStart,
           confirmDismiss: (direction) => _deleteSession(session),
-          background: Container(
+          background: Semantics(
+            excludeSemantics: true,
+            child: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 16),
             color: Theme.of(context).colorScheme.error,
             child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
-          ),
+          ),),
           child: Card(
             margin: EdgeInsets.symmetric(horizontal: ResponsiveUtils.horizontalSpacing(context), vertical: 4),
             child: ListTile(
@@ -529,6 +553,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               ),
               isThreeLine: true,
             ),
+          ),
           ),
         );
       },

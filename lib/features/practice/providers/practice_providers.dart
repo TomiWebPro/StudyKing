@@ -84,7 +84,6 @@ final masteryRecorderProvider = Provider<MasteryRecorder>((ref) {
     masteryGraphService: ref.read(masteryGraphServiceProvider),
     srEngine: ref.read(spacedRepetitionEngineProvider),
     attemptRepo: ref.read(attemptRepositoryProvider),
-    masteryStateRepo: ref.read(masteryStateRepositoryProvider),
     questionMasteryRepo: ref.read(questionMasteryStateRepositoryProvider),
     questionRepo: ref.read(questionRepositoryProvider),
   );

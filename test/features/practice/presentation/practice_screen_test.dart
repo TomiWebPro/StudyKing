@@ -11,7 +11,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/features/practice/presentation/practice_screen.dart';
+import 'package:studyking/features/practice/presentation/screens/practice_screen.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -25,7 +25,6 @@ const _kTopicFocus = 'Topic Focus';
 const _kWeakAreas = 'Weak Areas';
 const _kPractice = 'Practice';
 const _kNoSubjects = 'No Subjects';
-const _kPracticeMode = 'Practice Mode';
 const _kNoReviewsScheduled = 'No reviews scheduled.';
 const _kNoTopicsAvailable = 'No topics available';
 const _kNoWeakAreasFound = 'No weak areas found. Keep up the great work!';
@@ -108,6 +107,7 @@ Widget _buildTestApp({
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(subjectRepo)),
+      subjectRepositoryProvider.overrideWithValue(subjectRepo),
       questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
       spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepository()),
       if (masteryService != null)
@@ -190,22 +190,6 @@ void main() {
 
       expect(find.byType(FloatingActionButton), findsOneWidget);
       expect(find.text(_kPractice), findsOneWidget);
-    });
-
-    testWidgets('tune icon opens practice mode dialog for multiple subjects', (tester) async {
-      final box = _MockSubjectBox();
-      box.addSubject(_subject(id: '1', name: 'Math'));
-      box.addSubject(_subject(id: '2', name: 'Physics'));
-      final repo = _FakeSubjectRepository(box);
-
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.tune));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text(_kPracticeMode), findsAtLeast(1));
     });
 
     testWidgets('FAB shows no subjects when empty', (tester) async {
@@ -423,27 +407,6 @@ void main() {
   });
 
   group('PracticeScreen - UI states', () {
-    testWidgets('tune icon shown only when subjects exist', (tester) async {
-      final box = _MockSubjectBox();
-      box.addSubject(_subject(id: '1', name: 'Math'));
-      final repo = _FakeSubjectRepository(box);
-
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.tune), findsOneWidget);
-    });
-
-    testWidgets('tune icon not shown when no subjects', (tester) async {
-      final box = _MockSubjectBox();
-      final repo = _FakeSubjectRepository(box);
-
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.tune), findsNothing);
-    });
-
     testWidgets('shows your subjects header when multiple subjects exist', (tester) async {
       final box = _MockSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
@@ -518,23 +481,6 @@ void main() {
       expect(find.text(_kNoSubjects), findsOneWidget);
     });
 
-    testWidgets('practice mode dialog opens via tune icon', (tester) async {
-      final box = _MockSubjectBox();
-      box.addSubject(_subject(id: '1', name: 'Math'));
-      box.addSubject(_subject(id: '2', name: 'Physics'));
-      final repo = _FakeSubjectRepository(box);
-
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.tune));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('Practice Mode'), findsAtLeast(1));
-      expect(find.text('Choose Subject'), findsOneWidget);
-    });
-
     testWidgets('navigates to practice session from FAB tap', (tester) async {
       int pushCount = 0;
 
@@ -554,8 +500,30 @@ void main() {
 
       await tester.tap(find.text('Practice'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
       expect(pushCount, greaterThan(0));
+    });
+
+    testWidgets('extra modes stack vertically on xs breakpoint', (tester) async {
+      tester.view.physicalSize = const Size(590, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final box = _MockSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exam Mode'), findsOneWidget);
+      expect(find.text('Source Practice'), findsOneWidget);
+      final extraCards = find.byType(Card);
+      expect(extraCards, findsAtLeast(2));
     });
   });
 }

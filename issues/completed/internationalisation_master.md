@@ -1,101 +1,86 @@
-# Spanish Localization Gaps: Hardcoded English Strings and Locale-Unaware Formatting
+# Systematic Locale-Unaware Percentage Formatting & Hardcoded User-Facing Strings
 
 ## Context
 
-The codebase has 100% ARB key parity and strong i18n infrastructure (`locale_config.dart`, `number_format_utils.dart`, `time_utils.dart`, CI coverage checks). However, several UI surfaces still bypass the translation system with hardcoded English strings or locale-unaware formatting. These gaps mean Spanish (and future) users see English fragments mixed into their localized UI.
+The codebase already has a locale-aware percentage utility (`formatPercent` in `lib/core/utils/number_format_utils.dart`) and an ARB-based i18n system. However, **12 presentation widgets bypass both** and use the pattern `'${(value * 100).round()}%'` directly. For **Spanish (es)** and other comma-decimal locales like French, German, Portuguese, this produces **incorrect output**: e.g. `85.5%` instead of the correct `85,5%`.
 
-## Affected Files
+Additionally, several widgets embed **untranslated shorthand strings** and **hardcoded status labels** that are invisible to the i18n system.
 
-| File | Lines | Issue |
+---
+
+## Issue 1: Hardcoded `'${(value * 100).round()}%'` in 12 locations across 8 files
+
+These use Dart's default number-to-string conversion which always produces a period decimal separator, ignoring the active locale.
+
+### Affected files
+
+| File | Line(s) | Current Code |
 |---|---|---|
-| `lib/features/ingestion/presentation/upload_screen.dart` | 83, 136, 141, 150, 363, 428 | Hardcoded English SnackBar/chip/button strings |
-| `lib/features/dashboard/presentation/widgets/summary_row.dart` | 43, 52 | `'$accuracy%'` and `'...h'` bypass locale-aware formatting |
-| `lib/features/planner/presentation/planner_screen.dart` | 408 | `'${goal.targetHoursPerDay}h/${l10n.days}'` — hardcoded `h` |
-| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | 122, 270, 278 | Hardcoded `$` symbol and `tokens` label |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart` | 141 | Timer format `m:ss` — hardcoded `:` separator |
-| `lib/features/settings/data/models/settings_model.dart` | 114–188 | `formattedText`, `formatUsageSummary` produce English-only sentences |
-| `lib/features/sessions/services/session_export_service.dart` | 158–169 | PDF duration format uses `'h'` / `'m'` instead of locale-aware `l10n.durationHours` |
-| `lib/l10n/app_en.arb` / `app_es.arb` | missing keys | Missing ARB keys for URL/file fetch messages, `tokens` label, `currencySymbol` |
+| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | 77, 183 | `'${(data.todayProgress * 100).round()}%'` and `'${(data.cumulativeProgress * 100).round()}%'` |
+| `lib/features/planner/presentation/widgets/plan_summary_card.dart` | 62 | `'${(summary.estimatedCoverage * 100).round()}%'` |
+| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` | 108 | `'${(progress * 100).round()}%'` |
+| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 151 | `'${(score * 100).round()}%'` |
+| `lib/features/dashboard/presentation/widgets/weak_areas_card.dart` | 49 | `'${(state.accuracy * 100).round()}%'` |
+| `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart` | 79 | `'${(state.accuracy * 100).round()}%'` |
+| `lib/features/dashboard/presentation/widgets/mastery_progress_card.dart` | 60–61 | `'${(avgAccuracy * 100).round()}%'` and `'${(avgReadiness * 100).round()}%'` |
+| `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart` | 41, 49 | `'${(averageAdherence * 100).round()}%'` and `'${(weeklyAdherence * 100).round()}%'` |
 
-## Issues
+### Rationale
 
-### P0 — Missing ARB keys (6 strings never reach translations)
+The only way to render locale-correct percentages in Flutter is through `NumberFormat.percentPattern(localeName)`, which is already wrapped in `formatPercent()` at `lib/core/utils/number_format_utils.dart:15`. All these call sites should either use that utility or pass the formatted string through an ARB message (preferred when the surrounding text also needs translation).
 
-Six user-facing strings in `upload_screen.dart` are hardcoded in English. They never pass through `AppLocalizations`, so Spanish users always see English messages.
+---
 
-- **Line 83**: `Text('File picker error: $e')`
-- **Line 136**: `Text('URL content fetched successfully')`
-- **Line 141**: `Text('Failed to fetch URL: ${result.error}')`
-- **Line 150**: `Text('URL fetch error: $e')`
-- **Line 363**: `label: const Text('File')`
-- **Line 428**: `label: const Text('Fetch & Scrape')`
+## Issue 2: Untranslated roadmap status badge (`roadmap_card.dart:51`)
 
-The existing keys `uploadFailed` and `contentUploadedSuccessfully` are for *submission* errors — these are *content ingestion* errors and need separate keys.
+The `roadmap.status` string (values: `"active"`, `"completed"`, etc.) is displayed directly via `Text(roadmap.status, ...)`.
 
-**Fix**: Add ARB keys in both `app_en.arb` and `app_es.arb`:
-- `filePickerError` → `"File picker error: {error}"` / `"Error del selector de archivos: {error}"`
-- `urlFetchSuccess` → `"URL content fetched successfully"` / `"Contenido de URL obtenido exitosamente"`
-- `urlFetchFailed` → `"Failed to fetch URL: {error}"` / `"Error al obtener URL: {error}"`
-- `urlFetchError` → `"URL fetch error: {error}"` / `"Error de obtención de URL: {error}"`
-- `file` → `"File"` / `"Archivo"`
-- `fetchAndScrape` → `"Fetch & Scrape"` / `"Obtener y extraer"`
+- **Spanish speakers** see `"active"` and `"completed"` in English.
+- The ARB files already have `"inProgress"`, `"completed"`, `"notStarted"` keys.
+- **Fix**: Map the raw status string to the appropriate ARB key.
 
-### P1 — Locale-unaware unit abbreviations
+---
 
-Three files render unit abbreviations (`%`, `h`, `$`) by concatenation, which is invisible to the ARB system and unbreakable for comma-decimal locales.
+## Issue 3: Hardcoded `'M${milestone.order}'` label (`milestone_timeline.dart:86`)
 
-- **`summary_row.dart:43`**: `'$accuracy%'` — should use `formatPercent(accuracy / 100, l10n.localeName)` (note: `formatPercent` takes 0–100 range internally and handles division)
+The milestone abbreviation prefix `"M"` is hardcoded. In Spanish, an abbreviation like `"H"` (for "Hito") would be expected. This should go through an ARB key or use `l10n.milestone` combined with numbering.
 
-- **`summary_row.dart:52`**: `'${formatDecimal(...)}h'` — the `h` suffix should use `l10n.hoursAbbreviation` or be wrapped in an ARB template. Same pattern in **`planner_screen.dart:408`** (`'...h/${l10n.days}'`).
+---
 
-- **`llm_task_manager_screen.dart:122`**: `'\$${formatDecimal(...)}'` — hardcodes `$`. Should use `NumberFormat.currency(...)` with locale or an ARB `currencySymbol` key. Same pattern in **`settings_model.dart:114,120,188`**.
+## Issue 4: Hardcoded Shorthand Labels
 
-- **`llm_task_manager_screen.dart:270`**: `'${_formatTokens(task.tokensUsed, l10n.localeName)} tokens'` — hardcodes `tokens`. Should use ARB key `tokensLabel: "{count} tokens"` / `"{count} tokens"` or `l10n.tokensAndCost`.
+Three widgets embed English-centric shorthand that is not exposed to the i18n system:
 
-### P1 — English-only user-facing model strings
+| File | Line | Code | Problem |
+|---|---|---|---|
+| `plan_summary_card.dart` | 53 | `'${summary.totalQuestions}Q'` | "Q" is English; Spanish uses `"P"` (preguntas) |
+| `calendar_view_widget.dart` | 168 | `'${dailyPlan.targetMinutes}m'` | "m" is assumed universal but should go through ARB (cf. `minutesCountMetric` and `durationMinutes` keys) |
+| `lesson_progress_bar.dart` | 166 | `'${section.durationMinutes}min'` | Hardcoded "min" instead of using `l10n.durationMinutes` or `l10n.minutesValue` |
 
-`settings_model.dart` has three methods that produce fully English strings:
+Note: the ARB files already have `questionsAndMinutes`, `topicQuestionsAndMinutes`, `minutesCountMetric`, `durationMinutes` keys that cover these shorthands. The widgets simply aren't using them for these specific labels.
 
-- **`formattedText`/`formattedTextWithLocale`** (lines 118–122): Produces strings like `"2025-01-15: $0.1234, cost/tk: 0.0000001234"` — the labels `cost/tk` are English.
-- **`formatUsageSummary`** (line 184–189): Produces `"Usage: $X.XX over Y tokens, avg: $Z.ZZ per 1k tokens"` — a whole English sentence.
+---
 
-These are used in `settings_screen.dart` (a user-facing screen). The text should be assembled from ARB template keys with placeholders, or the methods should accept `AppLocalizations`.
+## Issue 5: Hardcoded ISO date format in `lesson_booking_sheet.dart:106`
 
-**Fix**: Create ARB keys:
-- `usageRecordFormat` → `"{date}: {cost}, cost/tk: {costPerToken}"` (ES: `"{date}: {cost}, costo/token: {costPerToken}"`)
-- `usageSummary` → `"Usage: {totalCost} over {totalTokens} tokens, avg: {avgCost} per 1k tokens"` (ES: `"Uso: {totalCost} sobre {totalTokens} tokens, promedio: {avgCost} por cada 1k tokens"`)
+```dart
+'${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'
+```
 
-### P2 — PDF duration format bypasses locale
+This always renders `YYYY-MM-DD` regardless of locale. **Spanish** expects `DD/MM/YYYY` (or a named format like `15 de mayo de 2026`). Should use `DateFormat.yMd(l10n.localeName)`.
 
-`session_export_service.dart` lines 158–169 format durations in PDF output using hardcoded `'h'`, `'m'`, `'s'` suffixes. Per AGENTS.md, "PDF exports should use the user's locale." The ARB already has `durationHours`, `durationMinutes`, `durationSeconds` keys with proper pluralization.
-
-**Fix**: Replace `_formatTotalDuration` and `_formatDuration` to accept `AppLocalizations` (or `l10n.localeName`) and use `l10n.durationHours(count)`, `l10n.durationMinutes(count)`, etc.
-
-### P2 — Lesson detail timer separator
-
-`lesson_detail_screen.dart:141`: `'${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'` — the `:` separator is hardcoded. Consider whether this timer is always 7-segment digital (in which case `:` is acceptable as a non-linguistic separator) or should be localized. Minor issue, flagged for awareness.
+---
 
 ## Acceptance Criteria
 
-1. **New ARB keys** added to both `app_en.arb` and `app_es.arb`:
-   - `filePickerError` (with `{error}` placeholder)
-   - `urlFetchSuccess` (no placeholder)
-   - `urlFetchFailed` (with `{error}` placeholder)
-   - `urlFetchError` (with `{error}` placeholder)
-   - `file` (no placeholder)
-   - `fetchAndScrape` (no placeholder)
-   - `hoursAbbreviation` (e.g., `"{count}h"` → ES: `"{count}h"`)
-   - `tokensLabel` (e.g., `"{count} tokens"` → ES: `"{count} tokens"`)
-   - `usageRecordFormat` / `usageSummary` (templated with placeholders)
-2. **All 6 hardcoded strings in `upload_screen.dart`** replaced with `l10n.*` calls.
-3. **`summary_row.dart:43`** uses `formatPercent()` instead of `'$accuracy%'`.
-4. **No hardcoded `$` currency signs remain** in user-facing UI code (use `NumberFormat.currency` or ARB key).
-5. **No hardcoded `h` suffixes remain** in user-facing widgets (use `l10n.hoursAbbreviation` or `l10n.durationHours`).
-6. **`settings_model.dart`** `formattedText`/`formatUsageSummary` methods accept `AppLocalizations` or use templated ARB keys.
-7. **PDF export** in `session_export_service.dart` uses locale-aware durations instead of `'h'`/`'m'`/`'s'`.
-8. **Coverage tests** pass (existing `check_i18n_coverage.sh` and test suite).
-9. **`check_i18n_coverage.sh`** updated if needed to validate the new keys.
+1. All 12 hardcoded `${(value * 100).round()}%` patterns replaced with `formatPercent(value, localeName)` — verify with `Locale('es')` that the output is `85,5%` not `85.5%`.
+2. `roadmap.status` shows translated label ("Activo", "Completado") when locale is Spanish.
+3. `'M${milestone.order}'` goes through ARB (e.g., `l10n.milestoneShort(milestone.order)` or equivalent).
+4. Shorthand labels (`Q`, `m`, `min`) replaced with existing ARB keys: `questionsAndMinutes`, `minutesCountMetric`, `durationMinutes`.
+5. Hardcoded ISO date in `lesson_booking_sheet.dart:106` replaced with `DateFormat.yMd(localeName)` or `.yMMMd()` depending on UX intent.
+6. All changes produce correct output for both `es` and `en` locales without regression.
+7. At least one widget test for a percentage-displaying widget asserts the correct Spanish-formatted output.
 
-## Rationale
+## Spanish as a Template for Future Locales
 
-Spanish was chosen as the first non-English locale because it is the second most spoken language globally and follows Latin American conventions. Fixing these gaps now ensures that adding new locales (fr, de, pt, etc.) is purely additive (new ARB file + new `AppLocale` entry) with zero code changes. Every hardcoded English string is a barrier to adding the next language.
+Every fix above should be implemented by **adding an ARB key** (if one doesn't already exist) and referencing it through `AppLocalizations.of(context)`. This creates a clear pattern: any new language only needs a new `.arb` file without touching source code.

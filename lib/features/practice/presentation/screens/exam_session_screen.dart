@@ -53,6 +53,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
 
   final List<ExamQuestionResult> _results = [];
   ExamResult? _examResult;
+  DateTime? _questionStartTime;
 
   int _durationMinutes = 30;
   int _questionCount = 10;
@@ -144,6 +145,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       _currentAnswer = null;
       _isSubmitted = false;
       _isFeedbackVisible = false;
+      _questionStartTime = DateTime.now();
     });
   }
 
@@ -165,12 +167,13 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     if (_currentAnswer == null || _questions.isEmpty) return;
     final question = _questions[_currentIndex];
     final isCorrect = _validateAnswer(question, _currentAnswer!);
+    final timeSpentMs = _computeTimeSpent();
 
     _results.add(ExamQuestionResult(
       question: question,
       userAnswer: _currentAnswer,
       isCorrect: isCorrect,
-      timeSpentMs: _examService.isTimeUp() ? 0 : 1,
+      timeSpentMs: timeSpentMs,
       wasSkipped: false,
     ));
 
@@ -180,7 +183,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       subjectId: question.subjectId,
       topicId: question.topicId,
       isCorrect: isCorrect,
-      timeSpentMs: 1,
+      timeSpentMs: timeSpentMs,
       confidence: isCorrect ? 4 : 2,
       userAnswer: _currentAnswer!,
     );
@@ -198,6 +201,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         _currentAnswer = null;
         _isSubmitted = false;
         _isFeedbackVisible = false;
+        _questionStartTime = DateTime.now();
       });
     } else {
       _finishExam();
@@ -381,7 +385,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Exam Configuration',
+              l10n.examConfiguration,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
@@ -394,7 +398,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               child: FilledButton.icon(
                 onPressed: _questions.isEmpty ? null : _startExam,
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('Start Exam'),
+                label: Text(l10n.startExam),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               ),
             ),
@@ -405,11 +409,12 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   }
 
   Widget _buildDurationSelector() {
+    final l10n = AppLocalizations.of(context)!;
     const durations = [15, 30, 45, 60];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Exam Duration', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(l10n.examDuration, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -424,11 +429,12 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   }
 
   Widget _buildQuestionCountSelector() {
+    final l10n = AppLocalizations.of(context)!;
     const counts = [5, 10, 15, 20, 30];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Number of Questions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(l10n.numberOfQuestions, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -461,8 +467,8 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
             const SizedBox(height: 24),
             _buildResultRow(l10n.totalQuestions, '${result.questionResults.length}'),
             _buildResultRow(l10n.correctAnswers, '${result.totalCorrect}'),
-            _buildResultRow('Incorrect', '${result.totalIncorrect}'),
-            _buildResultRow('Skipped', '${result.totalSkipped}'),
+            _buildResultRow(l10n.incorrectLabel, '${result.totalIncorrect}'),
+            _buildResultRow(l10n.skippedLabel, '${result.totalSkipped}'),
             _buildResultRow(
               l10n.accuracy,
               formatPercent(result.accuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
@@ -471,14 +477,14 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Exam was auto-submitted when time ran out.',
+                  l10n.examAutoSubmitted,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             const SizedBox(height: 24),
             if (result.topicBreakdown.isNotEmpty) ...[
               Text(
-                'Topic Breakdown',
+                l10n.topicBreakdown,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
@@ -511,6 +517,11 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         ),
       ),
     );
+  }
+
+  int _computeTimeSpent() {
+    if (_questionStartTime == null) return 0;
+    return DateTime.now().difference(_questionStartTime!).inMilliseconds;
   }
 
   Widget _buildResultRow(String label, String value) {

@@ -1,6 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-@HiveType(typeId: 30)
+@HiveType(typeId: 5)
 class PendingActionModel extends HiveObject {
   @HiveField(0)
   final String id;

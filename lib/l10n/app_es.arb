@@ -345,6 +345,63 @@
   "@accuracy": {
     "description": "Label for accuracy stat"
   },
+  "examConfiguration": "Configuración del Examen",
+  "@examConfiguration": {
+    "description": "Heading for exam configuration screen"
+  },
+  "startExam": "Comenzar Examen",
+  "@startExam": {
+    "description": "Button label to start an exam"
+  },
+  "examDuration": "Duración del Examen",
+  "@examDuration": {
+    "description": "Label for exam duration selector"
+  },
+  "numberOfQuestions": "Número de Preguntas",
+  "@numberOfQuestions": {
+    "description": "Label for number of questions selector"
+  },
+  "incorrectLabel": "Incorrectas",
+  "@incorrectLabel": {
+    "description": "Label for number of incorrect answers in results"
+  },
+  "skippedLabel": "Omitidas",
+  "@skippedLabel": {
+    "description": "Label for number of skipped questions in results"
+  },
+  "examAutoSubmitted": "El examen se envió automáticamente cuando se acabó el tiempo.",
+  "@examAutoSubmitted": {
+    "description": "Message shown when exam is auto-submitted due to time"
+  },
+  "topicBreakdown": "Desglose por Tema",
+  "@topicBreakdown": {
+    "description": "Heading for topic breakdown section in results"
+  },
+  "startingPractice": "Comenzando {mode}...",
+  "@startingPractice": {
+    "description": "Dialog text shown when starting practice",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "backToPractice": "Volver a la Práctica",
+  "@backToPractice": {
+    "description": "Button label to navigate back to practice"
+  },
+  "swipeToDelete": "Deslizar para eliminar",
+  "@swipeToDelete": {
+    "description": "Semantic hint for swipe to delete gesture"
+  },
+  "valueMustBePositive": "El valor debe ser positivo",
+  "@valueMustBePositive": {
+    "description": "Validation error for non-positive numeric input"
+  },
+  "correctExceedsQuestions": "Las respuestas correctas no pueden exceder el total de preguntas",
+  "@correctExceedsQuestions": {
+    "description": "Validation error when correct answers exceed total questions"
+  },
   "practiceAgain": "Practicar de Nuevo",
   "@practiceAgain": {
     "description": "Button label to restart practice"
@@ -2289,6 +2346,15 @@
       }
     }
   },
+  "questionsAbbreviation": "{count}P",
+  "@questionsAbbreviation": {
+    "description": "Abbreviated question count (e.g., 5P)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "minutesCountMetric": "{count} min",
   "@minutesCountMetric": {
     "description": "Metric label for minutes",
@@ -2957,6 +3023,15 @@
   "milestone": "Hito",
   "@milestone": {
     "description": "A single milestone"
+  },
+  "milestoneShort": "H{order}",
+  "@milestoneShort": {
+    "description": "Short milestone label in timeline",
+    "placeholders": {
+      "order": {
+        "type": "int"
+      }
+    }
   },
   "targetCompletion": "Finalización Prevista",
   "@targetCompletion": {

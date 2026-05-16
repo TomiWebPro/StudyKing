@@ -9,8 +9,58 @@ import 'package:studyking/core/providers/app_providers.dart' show settingsProvid
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviation;
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class FakePlannerService extends PlannerService {
+  @override
+  Future<PersonalLearningPlan?> loadExistingPlan() async => null;
+  @override
+  Future<List<RoadmapModel>> loadRoadmaps() async => [];
+  @override
+  Future<List<PendingActionModel>> loadPendingActions() async => [];
+  @override
+  Future<List<TutorSession>> getScheduledLessons() async => [];
+  @override
+  Future<AdherenceDeviation?> checkAdherence() async => null;
+  @override
+  Future<bool> hasSchedulingConflict({required DateTime startTime, required int durationMinutes, String? excludeSessionId}) async => false;
+  @override
+  Future<bool> scheduleLesson({required String topicId, required String topicTitle, required String subjectId, required DateTime scheduledTime, int durationMinutes = 30}) async => true;
+}
+
+class _FakeNudgeRepo extends EngagementNudgeRepository {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<void> create(EngagementNudgeModel nudge) async {}
+  @override
+  Future<List<EngagementNudgeModel>> getRecentByStudent(String studentId, {int limit = 10}) async => [];
+  @override
+  Future<int> getTodayCount(String studentId) async => 0;
+}
+
+class _FakeSessionRepo2 extends SessionRepository {
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success([]);
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
+  @override
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
+}
 
 class FakeLlmService extends LlmService {
   final bool shouldThrow;
@@ -48,6 +98,9 @@ Widget _buildTestApp({LlmService? llmService}) {
       settingsProvider.overrideWith(
         (ref) => SettingsController(SettingsRepository()),
       ),
+      plannerServiceProvider.overrideWithValue(FakePlannerService()),
+      mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
+      mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

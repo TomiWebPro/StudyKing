@@ -52,7 +52,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: MediaQuery.sizeOf(context).height * 0.25,
+            expandedHeight: (MediaQuery.sizeOf(context).height * 0.25).clamp(100.0, 200.0),
             floating: false,
             pinned: true,
             backgroundColor: color.withValues(alpha: 0.1),

@@ -3,20 +3,18 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'mastery_graph_service.dart';
-import 'adaptive_practice_engine.dart';
 
 class MasteryIntegrationService {
   final MasteryGraphService _masteryService;
-  final AdaptivePracticeEngine _adaptiveEngine;
+
+  static const List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
 
   MasteryGraphService get masteryService => _masteryService;
 
   MasteryIntegrationService({
     MasteryGraphService? masteryService,
     MasteryGraphRepository? repository,
-    AdaptivePracticeEngine? adaptiveEngine,
-  })  : _masteryService = masteryService ?? MasteryGraphService(),
-        _adaptiveEngine = adaptiveEngine ?? AdaptivePracticeEngine();
+  })  : _masteryService = masteryService ?? MasteryGraphService();
 
   Future<void> initialize() async {
     return _masteryService.init();
@@ -53,8 +51,7 @@ class MasteryIntegrationService {
     }
 
     final mastery = masteryResult.data!;
-    final difficulty = _adaptiveEngine.getRecommendedDifficulty(
-      topicId: topicId,
+    final difficulty = _recommendedDifficulty(
       currentAccuracy: mastery.accuracy,
       currentStreak: mastery.currentStreak,
     );
@@ -85,7 +82,7 @@ class MasteryIntegrationService {
     }
 
     final mastery = masteryResult.data!;
-    final interval = _adaptiveEngine.calculateReviewInterval(
+    final interval = _calculateReviewInterval(
       correctCount: mastery.correctCount,
       incorrectCount: mastery.incorrectCount,
       averageConfidence: mastery.averageConfidence,
@@ -116,6 +113,33 @@ class MasteryIntegrationService {
     } catch (e) {
       return Result.failure(e.toString());
     }
+  }
+
+  int _recommendedDifficulty({
+    required double currentAccuracy,
+    required int currentStreak,
+  }) {
+    if (currentAccuracy < 0.6) {
+      return 0;
+    } else if (currentAccuracy > 0.9 && currentStreak >= 5) {
+      return 2;
+    }
+    return 1;
+  }
+
+  double _calculateReviewInterval({
+    required int correctCount,
+    required int incorrectCount,
+    required double averageConfidence,
+  }) {
+    final totalAttempts = correctCount + incorrectCount;
+    if (totalAttempts == 0) return 1.0;
+
+    final accuracy = correctCount / totalAttempts;
+    final strength = (accuracy * 2 + averageConfidence / 5) / 3;
+
+    final intervalIndex = (strength.clamp(0.0, 1.0) * (_intervalMultipliers.length - 1)).ceil().clamp(0, _intervalMultipliers.length - 1);
+    return _intervalMultipliers[intervalIndex];
   }
 
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) {

@@ -376,55 +376,10 @@ class PlannerService {
   }
 
   Future<void> redistributeWorkload(int missedMinutes) async {
-    await planRepo.init();
-    final plan = await planRepo.loadPlan(studentId);
-    if (plan == null) return;
-
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final redistributeDays = 3;
-    final extraPerDay = (missedMinutes / redistributeDays).ceil();
-
-    final updatedPlans = plan.dailyPlans.map((day) {
-      final dDay = DateTime(day.date.year, day.date.month, day.date.day);
-      if (dDay.isAfter(todayStart) &&
-          dDay.difference(todayStart).inDays <= redistributeDays &&
-          !day.isRestDay) {
-        return day.copyWith(
-          targetMinutes: day.targetMinutes + extraPerDay,
-        );
-      }
-      return day;
-    }).toList();
-
-    final updated = plan.copyWith(dailyPlans: updatedPlans);
-    await planRepo.savePlan(updated);
+    await planService.redistributeMissedWorkloadForStudent(studentId, missedMinutes);
   }
 
   Future<void> linkDailyPlanToRoadmap(List<String> completedTopicIds) async {
-    await roadmapRepo.init();
-    final roadmaps = await roadmapRepo.getRoadmapsByStudent(studentId);
-    for (final roadmap in roadmaps) {
-      if (roadmap.status == 'completed') continue;
-      bool changed = false;
-      final updatedMilestones = roadmap.milestones.map((m) {
-        if (m.isCompleted) return m;
-        final hasAny = completedTopicIds.any((id) => m.topicsCovered.contains(id));
-        if (hasAny) {
-          changed = true;
-          return m.copyWith(isCompleted: true);
-        }
-        return m;
-      }).toList();
-      if (changed) {
-        final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
-        final newPercentage = (completedCount / updatedMilestones.length * 100);
-        await roadmapRepo.saveRoadmap(roadmap.copyWith(
-          milestones: updatedMilestones,
-          completionPercentage: newPercentage,
-          status: newPercentage >= 100 ? 'completed' : roadmap.status,
-        ));
-      }
-    }
+    await planService.linkDailyPlanToRoadmap(studentId, completedTopicIds);
   }
 }

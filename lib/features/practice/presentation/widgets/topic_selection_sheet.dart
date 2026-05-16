@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/app_runtime_config.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/practice/presentation/widgets/practice_sheet_template.dart';
 
 class TopicSelectionSheet extends StatelessWidget {
   final List<String> topics;
@@ -16,35 +15,19 @@ class TopicSelectionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return SafeArea(
-      child: Container(
-        padding: ResponsiveUtils.screenPadding(context),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.selectTopic,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...topics.map((topic) => Semantics(
-              label: '${l10n.selectTopic} $topic',
-              child: ListTile(
-                leading: const Icon(Icons.topic),
-                title: Text(topic),
-                onTap: () {
-                  Navigator.pop(context);
-                  onTopicSelected(topic);
-                },
-              ),
-            )),
-            const SizedBox(height: 16),
-          ],
+    return PracticeSheetTemplate(
+      title: l10n.selectTopic,
+      children: topics.map((topic) => Semantics(
+        label: '${l10n.selectTopic} $topic',
+        child: ListTile(
+          leading: const Icon(Icons.topic),
+          title: Text(topic),
+          onTap: () {
+            Navigator.pop(context);
+            onTopicSelected(topic);
+          },
         ),
-      ),
+      )).toList(),
     );
   }
 
@@ -52,13 +35,20 @@ class TopicSelectionSheet extends StatelessWidget {
     required List<String> topics,
     required void Function(String) onTopicSelected,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      shape: bottomSheetShape,
-      builder: (_) => TopicSelectionSheet(
-        topics: topics,
-        onTopicSelected: onTopicSelected,
-      ),
+    return PracticeSheetTemplate.show(
+      context,
+      title: AppLocalizations.of(context)!.selectTopic,
+      children: topics.map((topic) => Semantics(
+        label: '${AppLocalizations.of(context)!.selectTopic} $topic',
+        child: ListTile(
+          leading: const Icon(Icons.topic),
+          title: Text(topic),
+          onTap: () {
+            Navigator.pop(context);
+            onTopicSelected(topic);
+          },
+        ),
+      )).toList(),
     );
   }
 }

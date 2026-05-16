@@ -4,7 +4,6 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
@@ -20,7 +19,6 @@ class MasteryRecorder {
     required MasteryGraphService masteryGraphService,
     required SpacedRepetitionEngine srEngine,
     required AttemptRepository attemptRepo,
-    required MasteryStateRepository masteryStateRepo,
     required QuestionMasteryStateRepository questionMasteryRepo,
     required QuestionRepository questionRepo,
   })  : _masteryGraphService = masteryGraphService,

@@ -103,6 +103,26 @@ void main() {
         expect(snapshot.avgReadiness, 0.0);
         expect(snapshot.avgReviewUrgency, 0.0);
       });
+
+      test('parses double values for int fields via num cast', () {
+        final snapshot = MasterySnapshot.fromMap({
+          'totalTopics': 10.7,
+          'masteredTopics': 5.2,
+          'weakTopics': 2.9,
+          'averageAccuracy': 0.85,
+          'totalAttempts': 100.0,
+          'avgReadiness': 0.75,
+          'avgReviewUrgency': 0.3,
+        });
+
+        expect(snapshot.totalTopics, 10);
+        expect(snapshot.masteredTopics, 5);
+        expect(snapshot.weakTopics, 2);
+        expect(snapshot.averageAccuracy, 0.85);
+        expect(snapshot.totalAttempts, 100);
+        expect(snapshot.avgReadiness, 0.75);
+        expect(snapshot.avgReviewUrgency, 0.3);
+      });
     });
   });
 
@@ -218,6 +238,28 @@ void main() {
         expect(stats.dailyActivity, 0);
         expect(stats.topicsStudied, 0);
       });
+
+      test('parses double values for int fields via num cast', () {
+        final stats = OverallStats.fromMap({
+          'totalAttempts': 200.0,
+          'correctAttempts': 150.9,
+          'accuracy': 75.3,
+          'avgTimePerQuestion': 30.7,
+          'totalStudyTimeHours': '42',
+          'weeklyActivity': 5.0,
+          'dailyActivity': 3.0,
+          'topicsStudied': 8.0,
+        });
+
+        expect(stats.totalAttempts, 200);
+        expect(stats.correctAttempts, 150);
+        expect(stats.accuracy, 75);
+        expect(stats.avgTimePerQuestion, 30);
+        expect(stats.totalStudyTimeHours, '42');
+        expect(stats.weeklyActivity, 5);
+        expect(stats.dailyActivity, 3);
+        expect(stats.topicsStudied, 8);
+      });
     });
   });
 
@@ -291,6 +333,22 @@ void main() {
         expect(entry.attempts, 0);
         expect(entry.accuracy, 0);
         expect(entry.improvement, 0.0);
+      });
+
+      test('parses double values for int fields via num cast', () {
+        final entry = WeeklyTrendEntry.fromMap({
+          'week': 12.0,
+          'month': 3.0,
+          'attempts': 50.9,
+          'accuracy': 80.4,
+          'improvement': 0.15,
+        });
+
+        expect(entry.week, 12);
+        expect(entry.month, 3);
+        expect(entry.attempts, 50);
+        expect(entry.accuracy, 80);
+        expect(entry.improvement, 0.15);
       });
     });
   });
@@ -409,6 +467,20 @@ void main() {
         expect(stats.totalSessions, 0);
         expect(stats.plannedMinutes, 0);
       });
+
+      test('parses double values for int fields via num cast', () {
+        final stats = FocusTodayStats.fromMap({
+          'totalSeconds': 7200.0,
+          'completedSessions': 3.0,
+          'totalSessions': 4.0,
+          'plannedMinutes': 120.0,
+        });
+
+        expect(stats.totalSeconds, 7200);
+        expect(stats.completedSessions, 3);
+        expect(stats.totalSessions, 4);
+        expect(stats.plannedMinutes, 120);
+      });
     });
   });
 
@@ -440,6 +512,14 @@ void main() {
         expect(AdherenceData(averageAdherence: 0.1).isEmpty, isFalse);
         expect(AdherenceData(weeklyAdherence: 0.1).isEmpty, isFalse);
       });
+
+      test('isEmpty with both fields non-zero', () {
+        expect(AdherenceData(averageAdherence: 0.5, weeklyAdherence: 0.5).isEmpty, isFalse);
+      });
+
+      test('isEmpty with zero values in both fields', () {
+        expect(AdherenceData(averageAdherence: 0.0, weeklyAdherence: 0.0).isEmpty, isTrue);
+      });
     });
   });
 
@@ -461,6 +541,21 @@ void main() {
       expect(badge.description, '7-day streak');
       expect(badge.category, 'streak');
     });
+
+    test('supports empty name and description', () {
+      final badge = BadgeDisplay(name: '', description: '');
+      expect(badge.name, '');
+      expect(badge.description, '');
+      expect(badge.category, 'general');
+    });
+
+    test('supports long strings', () {
+      final longName = 'A' * 100;
+      final longDesc = 'B' * 200;
+      final badge = BadgeDisplay(name: longName, description: longDesc);
+      expect(badge.name, longName);
+      expect(badge.description, longDesc);
+    });
   });
 
   group('DashboardArgs', () {
@@ -472,6 +567,16 @@ void main() {
     test('accepts different student IDs', () {
       final args = DashboardArgs(studentId: 'abc-def-ghi');
       expect(args.studentId, 'abc-def-ghi');
+    });
+
+    test('accepts empty studentId', () {
+      final args = DashboardArgs(studentId: '');
+      expect(args.studentId, '');
+    });
+
+    test('accepts studentId with special characters', () {
+      final args = DashboardArgs(studentId: 'user_123@school.edu');
+      expect(args.studentId, 'user_123@school.edu');
     });
   });
 }

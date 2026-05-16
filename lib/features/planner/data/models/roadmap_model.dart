@@ -1,6 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-@HiveType(typeId: 24)
+@HiveType(typeId: 29)
 class RoadmapModel extends HiveObject {
   @HiveField(0)
   final String id;

@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 
@@ -53,6 +57,51 @@ class _FakeBadgeBox implements Box<BadgeModel> {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _BadgeModelAdapter extends TypeAdapter<BadgeModel> {
+  @override
+  final int typeId = 31;
+
+  @override
+  BadgeModel read(BinaryReader reader) {
+    final id = reader.readString();
+    final studentId = reader.readString();
+    final name = reader.readString();
+    final description = reader.readString();
+    final iconName = reader.readString();
+    final category = reader.readString();
+    final unlockedAt = DateTime.fromMillisecondsSinceEpoch(reader.readInt());
+    Map<String, dynamic>? criteria;
+    if (reader.readBool()) {
+      criteria = Map<String, dynamic>.from(jsonDecode(reader.readString()) as Map);
+    }
+    return BadgeModel(
+      id: id,
+      studentId: studentId,
+      name: name,
+      description: description,
+      iconName: iconName,
+      category: category,
+      unlockedAt: unlockedAt,
+      criteria: criteria,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, BadgeModel obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.studentId);
+    writer.writeString(obj.name);
+    writer.writeString(obj.description);
+    writer.writeString(obj.iconName);
+    writer.writeString(obj.category);
+    writer.writeInt(obj.unlockedAt.millisecondsSinceEpoch);
+    writer.writeBool(obj.criteria != null);
+    if (obj.criteria != null) {
+      writer.writeString(jsonEncode(obj.criteria));
+    }
+  }
 }
 
 BadgeModel createTestBadge({
@@ -237,5 +286,74 @@ void main() {
       });
     });
 
+  });
+
+  group('BadgeRepository (init with real Hive)', () {
+    late BadgeRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_BadgeModelAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('badge_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = BadgeRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('badges');
+    });
+
+    test('init opens badge box and supports CRUD', () async {
+      final badge = createTestBadge(id: 'init-1', name: 'Init Test');
+      await repository.create(badge);
+      final stored = await repository.get('init-1');
+      expect(stored, isNotNull);
+      expect(stored!.name, 'Init Test');
+    });
+
+    test('getByStudent works after init', () async {
+      await repository.create(createTestBadge(id: 'a1', studentId: 's1'));
+      await repository.create(createTestBadge(id: 'a2', studentId: 's1'));
+      await repository.create(createTestBadge(id: 'b1', studentId: 's2'));
+
+      final result = await repository.getByStudent('s1');
+      expect(result.length, 2);
+    });
+
+    test('hasBadge works after init', () async {
+      await repository.create(createTestBadge(id: 'h1', studentId: 's1'));
+      expect(await repository.hasBadge('s1', 'h1'), isTrue);
+      expect(await repository.hasBadge('s1', 'none'), isFalse);
+    });
+
+    test('getBadgeCount works after init', () async {
+      await repository.create(createTestBadge(id: 'c1', studentId: 's1'));
+      await repository.create(createTestBadge(id: 'c2', studentId: 's1'));
+      expect(await repository.getBadgeCount('s1'), 2);
+    });
+
+    test('getBadgeMap works after init', () async {
+      await repository.create(createTestBadge(id: 'm1', studentId: 's1'));
+      final map = await repository.getBadgeMap('s1');
+      expect(map, contains('m1'));
+    });
+
+    test('delete works after init', () async {
+      await repository.create(createTestBadge(id: 'd1'));
+      await repository.delete('d1');
+      expect(await repository.get('d1'), isNull);
+    });
+
+    test('getAll works after init', () async {
+      await repository.create(createTestBadge(id: 'g1'));
+      await repository.create(createTestBadge(id: 'g2'));
+      expect(await repository.getAll(), hasLength(2));
+    });
   });
 }

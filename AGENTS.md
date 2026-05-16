@@ -27,6 +27,20 @@ Every source file in `lib/features/*/` must have a corresponding test file follo
 - Use `pumpAndSettle` for widget tests that involve async operations.
 - Use `NavigatorObserver` for verifying navigation behavior.
 
+## MentorService Dependencies
+
+When writing tests for `MentorService` or `MentorScreen`, provide these fakes:
+
+| Parameter | Provider | Fake class |
+|---|---|---|
+| `plannerService` | `plannerServiceProvider` | `FakePlannerService` (override `loadExistingPlan`, `loadRoadmaps`, `loadPendingActions`, `getScheduledLessons`, `checkAdherence`, `hasSchedulingConflict`, `scheduleLesson`) |
+| `nudgeRepo` | `mentorEngagementNudgeRepoProvider` | Fake `EngagementNudgeRepository` (override `init`, `create`, `getRecentByStudent`, `getTodayCount`) |
+| `sessionRepository` | `mentorSessionRepositoryProvider` | Fake `SessionRepository` (override `getAll`, `getByDate`, `getTodayDurationMs`) |
+| `masteryService` | `masteryGraphServiceProvider` | `FakeMasteryGraphService` (override `getWeakTopics`, `getAtRiskQuestions`) |
+| `progressTracker` | `mentorProgressTrackerProvider` | `FakeProgressTracker` (override `getOverallStats`, `getRecommendations`, `getBadges`) |
+
+`MentorService.checkWellbeingAndGenerateNudges()` can be called independently for proactive engagement.
+
 ## i18n / Number Formatting Conventions
 
 - **Never use `toStringAsFixed()` for user-facing numeric displays.** It always produces a period decimal separator (e.g. `"85.5%"`), which is incorrect for comma-decimal locales (Spanish `es`, French, German, etc.).

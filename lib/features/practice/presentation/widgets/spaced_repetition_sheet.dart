@@ -101,7 +101,12 @@ class SpacedRepetitionSheet extends StatelessWidget {
                 l10n.noReviewsScheduled,
                 style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => Navigator.pop(sheetContext),
+                child: Text(l10n.backToPractice),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

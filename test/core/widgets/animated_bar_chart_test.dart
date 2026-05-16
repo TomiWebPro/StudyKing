@@ -258,5 +258,28 @@ void main() {
       expect(find.text('5'), findsOneWidget);
       expect(find.byType(TweenAnimationBuilder), findsNothing);
     });
+
+    testWidgets('bars have Semantics labels for screen readers', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const AnimatedBarChart(
+          data: {'Mon': 10, 'Tue': 20, 'Wed': 15},
+          accentColor: Colors.blue,
+        ),
+      ));
+
+      final semanticsNodes = find.byWidgetPredicate(
+        (w) => w is Semantics && (w.properties.label ?? '').contains('sessions'),
+      );
+      expect(semanticsNodes, findsAtLeast(2));
+
+      final labels = semanticsNodes.evaluate().map((e) {
+        final widget = e.widget as Semantics;
+        return widget.properties.label;
+      });
+
+      expect(labels, contains('Mon: 10 sessions'));
+      expect(labels, contains('Tue: 20 sessions'));
+      expect(labels, contains('Wed: 15 sessions'));
+    });
   });
 }

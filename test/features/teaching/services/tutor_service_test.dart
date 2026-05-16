@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -15,6 +18,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/models/evaluation_result.dart';
@@ -167,10 +171,41 @@ class FixedClock extends Clock {
   DateTime now() => fixedTime;
 }
 
+class FakeQuestionRepository extends QuestionRepository {
+  final List<Question> _createdQuestions = [];
+
+  List<Question> get createdQuestions => List.unmodifiable(_createdQuestions);
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    _createdQuestions.add(question);
+    return Result.success(null);
+  }
+}
+
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> _savedSessions = [];
+
+  List<Session> get savedSessions => List.unmodifiable(_savedSessions);
+
+  @override
+  Future<Result<void>> save(Session session) async {
+    _savedSessions.add(session);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(List.from(_savedSessions));
+  }
+}
+
 void main() {
   group('TutorService', () {
     late FakeConversationRepository conversationRepo;
     late FakeTutorSessionRepository tutorSessionRepo;
+    late FakeQuestionRepository fakeQuestionRepo;
+    late FakeSessionRepository fakeSessionRepo;
     late DatabaseService database;
     late FakeLlmService llmService;
     late FakeMasteryGraphService masteryService;
@@ -180,12 +215,14 @@ void main() {
     setUp(() {
       conversationRepo = FakeConversationRepository();
       tutorSessionRepo = FakeTutorSessionRepository();
+      fakeQuestionRepo = FakeQuestionRepository();
+      fakeSessionRepo = FakeSessionRepository();
       database = DatabaseService(
         topicRepository: TopicRepository(),
-        questionRepository: QuestionRepository(),
+        questionRepository: fakeQuestionRepo,
         attemptRepository: AttemptRepository(),
         lessonRepository: LessonRepository(),
-        sessionRepository: SessionRepository(),
+        sessionRepository: fakeSessionRepo,
         subjectRepository: SubjectRepository(),
         conversationRepository: conversationRepo,
         tutorSessionRepository: tutorSessionRepo,
@@ -420,6 +457,101 @@ void main() {
         final session = await tutorService.getActiveSession();
         expect(session, isNotNull);
         expect(session!.status, equals(SessionStatus.inProgress));
+      });
+    });
+
+    group('recordAttempt accuracy threshold', () {
+      test('records isCorrect=false when accuracy is <= 0.5', () async {
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+        await manager.sendMessage('Hello').toList();
+
+        manager.recordCorrectAnswer();
+        manager.recordIncorrectAnswer();
+
+        await tutorService.endLesson();
+
+        expect(masteryService.recordedAttempts.length, equals(1));
+        expect(masteryService.recordedAttempts.first['isCorrect'], isFalse);
+      });
+    });
+
+    group('_persistExercisesAsQuestions', () {
+      test('persists exercise as question when exercises and evaluation exist', () async {
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+        await manager.sendMessage('Hello').toList();
+
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('correct').toList();
+
+        await tutorService.endLesson();
+
+        expect(fakeQuestionRepo.createdQuestions.length, equals(1));
+        final question = fakeQuestionRepo.createdQuestions.first;
+        expect(question.text, contains('Algebra'));
+        expect(question.subjectId, equals('math'));
+        expect(question.topicId, equals('topic-1'));
+        expect(question.type, equals(QuestionType.typedAnswer));
+        expect(question.explanation, contains('Good job'));
+      });
+
+      test('does not persist question when no exercises done', () async {
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+        await manager.sendMessage('Hello').toList();
+
+        await tutorService.endLesson();
+
+        expect(fakeQuestionRepo.createdQuestions, isEmpty);
+      });
+
+      test('does not persist question when exerciseCount is 0', () async {
+        await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+
+        await tutorService.endLesson();
+
+        expect(fakeQuestionRepo.createdQuestions, isEmpty);
+      });
+    });
+
+    group('endLesson session repository', () {
+      test('creates a Session entry in session repository', () async {
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+        await manager.sendMessage('Hello').toList();
+
+        await tutorService.endLesson();
+
+        expect(fakeSessionRepo.savedSessions.length, equals(1));
+        final session = fakeSessionRepo.savedSessions.first;
+        expect(session.studentId, equals('student-1'));
+        expect(session.subjectId, equals('math'));
+        expect(session.topicId, equals('topic-1'));
+        expect(session.type, equals(SessionType.tutoring));
+        expect(session.completed, isTrue);
+        expect(session.sourceId, startsWith('tutor_'));
       });
     });
   });

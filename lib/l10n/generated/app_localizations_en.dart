@@ -290,6 +290,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accuracy => 'Accuracy';
 
   @override
+  String get examConfiguration => 'Exam Configuration';
+
+  @override
+  String get startExam => 'Start Exam';
+
+  @override
+  String get examDuration => 'Exam Duration';
+
+  @override
+  String get numberOfQuestions => 'Number of Questions';
+
+  @override
+  String get incorrectLabel => 'Incorrect';
+
+  @override
+  String get skippedLabel => 'Skipped';
+
+  @override
+  String get examAutoSubmitted => 'Exam was auto-submitted when time ran out.';
+
+  @override
+  String get topicBreakdown => 'Topic Breakdown';
+
+  @override
+  String startingPractice(String mode) {
+    return 'Starting $mode...';
+  }
+
+  @override
+  String get backToPractice => 'Back to Practice';
+
+  @override
+  String get swipeToDelete => 'Swipe to delete';
+
+  @override
+  String get valueMustBePositive => 'Value must be positive';
+
+  @override
+  String get correctExceedsQuestions =>
+      'Correct answers cannot exceed total questions';
+
+  @override
   String get practiceAgain => 'Practice Again';
 
   @override
@@ -1698,6 +1740,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String questionsAbbreviation(int count) {
+    return '${count}Q';
+  }
+
+  @override
   String minutesCountMetric(int count) {
     return '$count min';
   }
@@ -2194,6 +2241,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get milestone => 'Milestone';
+
+  @override
+  String milestoneShort(int order) {
+    return 'M$order';
+  }
 
   @override
   String get targetCompletion => 'Target Completion';

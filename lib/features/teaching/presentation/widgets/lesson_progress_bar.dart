@@ -119,6 +119,7 @@ class LessonProgressBar extends StatelessWidget {
   }
 
   Widget _buildSectionTimeline(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final plan = lessonPlan!;
     int cumulative = 0;
 
@@ -164,7 +165,7 @@ class LessonProgressBar extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${section.durationMinutes}min',
+                  l10n.durationMinutes(section.durationMinutes),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),

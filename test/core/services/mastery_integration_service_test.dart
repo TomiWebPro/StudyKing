@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/mastery_integration_service.dart';
-import 'package:studyking/core/services/adaptive_practice_engine.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
@@ -105,16 +104,13 @@ void main() {
   group('MasteryIntegrationService', () {
     late MasteryIntegrationService service;
     late MockMasteryGraphRepository mockRepo;
-    late AdaptivePracticeEngine adaptiveEngine;
 
     setUp(() {
       mockRepo = MockMasteryGraphRepository();
       final masteryService = MasteryGraphService(repository: mockRepo);
-      adaptiveEngine = AdaptivePracticeEngine();
       service = MasteryIntegrationService(
         masteryService: masteryService,
         repository: mockRepo,
-        adaptiveEngine: adaptiveEngine,
       );
     });
 
