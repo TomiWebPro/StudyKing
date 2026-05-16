@@ -501,9 +501,9 @@ void main() {
       expect(screen.showModeNavigation, isTrue);
     });
 
-    test('default defaultModelId is openai/gpt-4o-mini', () {
+    test('default defaultModelId is empty string', () {
       const screen = QuickGuideScreen();
-      expect(screen.defaultModelId, 'openai/gpt-4o-mini');
+      expect(screen.defaultModelId, '');
     });
 
     test('default systemPrompt is null', () {

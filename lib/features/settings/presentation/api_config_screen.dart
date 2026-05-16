@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
-    show apiBaseUrlProvider, apiKeyProvider, settingsProvider;
+    show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, settingsProvider;
 
 class ApiConfigScreen extends ConsumerStatefulWidget {
   const ApiConfigScreen({super.key});
@@ -18,6 +19,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _baseUrlController = TextEditingController();
 
+  LlmProvider _selectedProvider = LlmProvider.openRouter;
   bool _isSaving = false;
   bool _isTesting = false;
   bool _obscureApiKey = true;
@@ -39,6 +41,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     setState(() {
       _apiKeyController.text = ref.read(apiKeyProvider);
       _baseUrlController.text = ref.read(apiBaseUrlProvider);
+      _selectedProvider = ref.read(llmProviderProvider);
     });
   }
 
@@ -61,9 +64,12 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
       ref.read(apiKeyProvider.notifier).state = apiKey;
       ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
-      await ref
-          .read(settingsProvider.notifier)
-          .updateSettings(apiKey: apiKey, apiBaseUrl: baseUrl);
+      ref.read(llmProviderProvider.notifier).state = _selectedProvider;
+      await ref.read(settingsProvider.notifier).updateSettings(
+            apiKey: apiKey,
+            apiBaseUrl: baseUrl,
+            llmProvider: _selectedProvider,
+          );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,6 +176,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               obscureText: _obscureApiKey,
             ),
             const SizedBox(height: 24),
+            _buildProviderSection(),
+            const SizedBox(height: 24),
             _buildApiSection(
               title: l10n.apiBaseUrl,
               controller: _baseUrlController,
@@ -251,6 +259,60 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         const SizedBox(height: 4),
         Text(
           description,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProviderSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.aiModel,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<LlmProvider>(
+          initialValue: _selectedProvider,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          items: LlmProvider.values.map((provider) {
+            String label;
+            switch (provider) {
+              case LlmProvider.openRouter:
+                label = 'OpenRouter';
+                break;
+              case LlmProvider.ollama:
+                label = 'Ollama';
+                break;
+              case LlmProvider.openAI:
+                label = 'OpenAI';
+                break;
+            }
+            return DropdownMenuItem(
+              value: provider,
+              child: Text(label),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _selectedProvider = value;
+              if (value == LlmProvider.ollama && _baseUrlController.text.isEmpty) {
+                _baseUrlController.text = 'http://localhost:11434';
+              }
+            });
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.apiBaseUrlDescription,
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],

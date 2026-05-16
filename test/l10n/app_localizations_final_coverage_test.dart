@@ -142,19 +142,19 @@ void main() {
     });
 
     test('plan explanation labels', () {
-      expect(l10n.planExplanationAccuracyBelow60,
+      expect(l10n.planAccuracyLow,
           'Accuracy is below 60% — needs focused practice');
-      expect(l10n.planExplanationOverdueReview,
+      expect(l10n.planReviewOverdue,
           'Review is overdue — forgetting risk is high');
-      expect(l10n.planExplanationLowStreak, 'Streak is low — consistency needed');
-      expect(l10n.planExplanationPrerequisite,
+      expect(l10n.planStreakLow, 'Streak is low — consistency needed');
+      expect(l10n.planPrerequisite,
           'Prerequisite for upcoming topics — must master first');
-      expect(l10n.planExplanationHighMastery, 'High mastery — ready to advance');
-      expect(l10n.planExplanationGoodProgress,
+      expect(l10n.planHighMastery, 'High mastery — ready to advance');
+      expect(l10n.planGoodProgress,
           'Good progress — maintain consistency');
-      expect(l10n.planExplanationDeveloping, 'Developing — needs more practice');
-      expect(l10n.planExplanationAtRisk, 'At risk — review overdue');
-      expect(l10n.planExplanationNeedsAttention,
+      expect(l10n.planDeveloping, 'Developing — needs more practice');
+      expect(l10n.planAtRisk, 'At risk — review overdue');
+      expect(l10n.planNeedsAttention,
           'Needs attention — focus on fundamentals');
     });
 
@@ -204,9 +204,9 @@ void main() {
     });
 
     test('suggestion aliases', () {
-      expect(l10n.suggestionFundamentals, 'Review basic concepts first');
-      expect(l10n.suggestionPractice, 'More practice questions recommended');
-      expect(l10n.suggestionAdvanced, 'Ready for advanced topics');
+      expect(l10n.adapSuggestionFundamentals, 'Review basic concepts first');
+      expect(l10n.adapSuggestionMorePractice, 'More practice questions recommended');
+      expect(l10n.adapSuggestionAdvancedTopics, 'Ready for advanced topics');
     });
 
     test('miscellaneous section', () {
@@ -246,61 +246,61 @@ void main() {
     });
 
     test('notification channel aliases', () {
-      expect(l10n.notificationChannelGeneralName, 'StudyKing Notifications');
-      expect(l10n.notificationChannelGeneralDesc,
+      expect(l10n.notifChannelGeneral, 'StudyKing Notifications');
+      expect(l10n.notifChannelGeneralDesc,
           'General StudyKing notifications');
-      expect(l10n.notificationChannelDailyReminderName,
+      expect(l10n.notifChannelDailyReminder,
           'Daily Study Reminders');
-      expect(l10n.notificationChannelDailyReminderDesc,
+      expect(l10n.notifChannelDailyReminderDesc,
           'Daily reminders to study');
-      expect(l10n.notificationChannelRevisionName, 'Revision Reminders');
-      expect(l10n.notificationChannelRevisionDesc,
+      expect(l10n.notifChannelRevision, 'Revision Reminders');
+      expect(l10n.notifChannelRevisionDesc,
           'Reminders to review topics that need practice');
-      expect(l10n.notificationChannelWellbeingName, 'Wellbeing Alerts');
-      expect(l10n.notificationChannelWellbeingDesc,
+      expect(l10n.notifChannelWellbeing, 'Wellbeing Alerts');
+      expect(l10n.notifChannelWellbeingDesc,
           'Alerts about study-life balance and overwork');
-      expect(l10n.notificationChannelPlanningName, 'Planning Suggestions');
-      expect(l10n.notificationChannelPlanningDesc,
+      expect(l10n.notifChannelPlanning, 'Planning Suggestions');
+      expect(l10n.notifChannelPlanningDesc,
           'Suggestions about study plan adjustments');
-      expect(l10n.notificationChannelLessonsName, 'Lesson Notifications');
-      expect(l10n.notificationChannelLessonsDesc,
+      expect(l10n.notifChannelLessons, 'Lesson Notifications');
+      expect(l10n.notifChannelLessonsDesc,
           'Notifications about upcoming lessons');
-      expect(l10n.notificationChannelMasteryName, 'Mastery Alerts');
-      expect(l10n.notificationChannelMasteryDesc,
+      expect(l10n.notifChannelMastery, 'Mastery Alerts');
+      expect(l10n.notifChannelMasteryDesc,
           'Alerts about low topic mastery and weak areas');
-      expect(l10n.notificationChannelBadgesName, 'Badge Notifications');
-      expect(l10n.notificationChannelBadgesDesc,
+      expect(l10n.notifChannelBadges, 'Badge Notifications');
+      expect(l10n.notifChannelBadgesDesc,
           'Notifications about earned badges and achievements');
     });
 
     test('notification title aliases', () {
-      expect(l10n.notificationTimeToReviewTitle, 'Time to Review!');
-      expect(l10n.notificationTakeABreakTitle, 'Take a Break');
-      expect(l10n.notificationPlanAdjustmentTitle, 'Plan Adjustment');
-      expect(l10n.notificationUpcomingLessonTitle, 'Upcoming Lesson');
-      expect(l10n.notificationTopicsNeedAttentionTitle,
+      expect(l10n.notifTitleTimeToReview, 'Time to Review!');
+      expect(l10n.notifTitleTakeBreak, 'Take a Break');
+      expect(l10n.notifTitlePlanAdjustment, 'Plan Adjustment');
+      expect(l10n.notifTitleUpcomingLesson, 'Upcoming Lesson');
+      expect(l10n.notifTitleTopicsNeedAttention,
           'Topics Need Attention');
-      expect(l10n.notificationBadgeUnlockedTitle, 'Badge Unlocked!');
+      expect(l10n.notifTitleBadgeUnlocked, 'Badge Unlocked!');
     });
 
     test('recommendation aliases', () {
-      expect(l10n.recommendationAccuracyLow,
+      expect(l10n.recommendAccuracyBelow60,
           'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.');
-      expect(l10n.recommendationReviewBasics,
+      expect(l10n.recommendReviewBasics,
           'Review basic topics before advancing');
-      expect(l10n.recommendationExcellentProgress,
+      expect(l10n.recommendAccuracyExcellent,
           'Excellent progress! Ready for advanced topics.');
-      expect(l10n.recommendationChallengingPractice,
+      expect(l10n.recommendChallengingQuestions,
           'Try challenging practice questions');
-      expect(l10n.recommendationLowHours,
+      expect(l10n.recommendConsistency,
           'You studied less than 1 hour total. Consistency is key!');
-      expect(l10n.recommendationSetDailyGoal,
+      expect(l10n.recommendSetDailyGoal,
           'Set a daily study goal of 30 minutes');
-      expect(l10n.recommendationNoActivity,
+      expect(l10n.recommendNoActivity,
           'No study activity this week. Get back on track!');
-      expect(l10n.recommendationQuickReview,
+      expect(l10n.recommendQuickReview,
           'Start with a quick 15-minute review session');
-      expect(l10n.recommendationReviewWithTutor,
+      expect(l10n.recommendAiTutor,
           'Review weak topics with the AI tutor');
     });
   });
@@ -362,12 +362,12 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notificationTakeABreakBody('3'),
+      expect(l10n.notifBodyOverwork('3'),
           'You\'ve studied 3 hours today. Remember to rest!');
     });
 
     test('notificationPlanAdjustmentBody', () {
-      expect(l10n.notificationPlanAdjustmentBody(7),
+      expect(l10n.notifBodyPlanAdjustment(7),
           'You\'ve had 7 days of low adherence. Shall we adjust your plan?');
     });
 
@@ -377,7 +377,7 @@ void main() {
     });
 
     test('notificationTopicsNeedAttentionBody', () {
-      expect(l10n.notificationTopicsNeedAttentionBody('Math'),
+      expect(l10n.notifBodyLowMastery('Math'),
           'Low mastery detected in: Math');
     });
 
@@ -407,12 +407,12 @@ void main() {
     });
 
     test('adherenceLow7Days', () {
-      expect(l10n.adherenceLow7Days(10),
+      expect(l10n.adherenceLowDaysAdjust(10),
           'You have had 10 consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.');
     });
 
     test('adherenceLow3Days', () {
-      expect(l10n.adherenceLow3Days(5),
+      expect(l10n.adherenceLowDaysRegenerate(5),
           'You have had 5 consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?');
     });
 
@@ -508,18 +508,18 @@ void main() {
 
     test('badge names and descriptions', () {
       expect(l10n.badgeFirstStepName, 'Primer Paso');
-      expect(l10n.badgeFirstStepDesc, 'Respondió su primera pregunta!');
+      expect(l10n.badgeFirstStepDesc, '¡Respondió su primera pregunta!');
 
       expect(l10n.badgeAccuracyGoldName, 'Precisión de Oro');
-      expect(l10n.badgeAccuracyGoldDesc, 'Logró más del 90% de precisión!');
-      expect(l10n.badgeDailyScholarName, 'Estudiante Diario');
-      expect(l10n.badgeDailyScholarDesc, 'Estudió consistentemente hoy!');
+      expect(l10n.badgeAccuracyGoldDesc, '¡Alcanzó más del 90% de precisión!');
+      expect(l10n.badgeDailyScholarName, 'Estudioso Diario');
+      expect(l10n.badgeDailyScholarDesc, '¡Estudió constantemente hoy!');
       expect(l10n.badgeDedicatedLearnerName, 'Aprendiz Dedicado');
       expect(l10n.badgeDedicatedLearnerDesc,
-          'Estudió más de 10 horas en total!');
+          '¡Estudió más de 10 horas en total!');
       expect(l10n.badgeWeeklyWarriorName, 'Guerrero Semanal');
       expect(l10n.badgeWeeklyWarriorDesc,
-          'Activo durante una semana completa!');
+          '¡Activo durante una semana completa!');
     });
 
     test('notification channel names and descriptions', () {
@@ -549,22 +549,22 @@ void main() {
     });
 
     test('plan explanation labels', () {
-      expect(l10n.planExplanationAccuracyBelow60,
+      expect(l10n.planAccuracyLow,
           'La precisión está por debajo del 60% — necesita práctica enfocada');
-      expect(l10n.planExplanationOverdueReview,
+      expect(l10n.planReviewOverdue,
           'El repaso está vencido — el riesgo de olvido es alto');
-      expect(l10n.planExplanationLowStreak,
+      expect(l10n.planStreakLow,
           'La racha es baja — se necesita constancia');
-      expect(l10n.planExplanationPrerequisite,
+      expect(l10n.planPrerequisite,
           'Requisito previo para temas próximos — debe dominarlo primero');
-      expect(l10n.planExplanationHighMastery,
-          'Dominio alto — listo para avanzar');
-      expect(l10n.planExplanationGoodProgress,
+      expect(l10n.planHighMastery,
+          'Alto dominio — listo para avanzar');
+      expect(l10n.planGoodProgress,
           'Buen progreso — mantenga la constancia');
-      expect(l10n.planExplanationDeveloping,
+      expect(l10n.planDeveloping,
           'En desarrollo — necesita más práctica');
-      expect(l10n.planExplanationAtRisk, 'En riesgo — repaso vencido');
-      expect(l10n.planExplanationNeedsAttention,
+      expect(l10n.planAtRisk, 'En riesgo — repaso vencido');
+      expect(l10n.planNeedsAttention,
           'Necesita atención — enfoque en fundamentos');
     });
 
@@ -580,7 +580,7 @@ void main() {
 
     test('plan focus labels', () {
       expect(l10n.planFocusGeneralReview, 'Repaso general');
-      expect(l10n.planFocusWeakAreas, 'Enfoque en áreas débiles');
+      expect(l10n.planFocusWeakAreas, 'Enfoque en áreas por mejorar');
       expect(l10n.planFocusPracticeReview, 'Práctica y repaso');
       expect(l10n.planFocusRestAndReview, 'Descanso y repaso');
     });
@@ -613,14 +613,14 @@ void main() {
 
     test('badge century club aliases', () {
       expect(l10n.badgeCenturyClubName, 'Club del Centenario');
-      expect(l10n.badgeCenturyClubDesc, 'Respondió más de 100 preguntas!');
+      expect(l10n.badgeCenturyClubDesc, '¡Respondió más de 100 preguntas!');
     });
 
     test('suggestion aliases', () {
-      expect(l10n.suggestionFundamentals, 'Repase conceptos básicos primero');
-      expect(l10n.suggestionPractice,
+      expect(l10n.adapSuggestionFundamentals, 'Repase conceptos básicos primero');
+      expect(l10n.adapSuggestionMorePractice,
           'Se recomiendan más preguntas de práctica');
-      expect(l10n.suggestionAdvanced, 'Listo para temas avanzados');
+      expect(l10n.adapSuggestionAdvancedTopics, 'Listo para temas avanzados');
     });
 
     test('miscellaneous section', () {
@@ -642,7 +642,7 @@ void main() {
           'La precisión está por debajo del 60% — necesita práctica enfocada');
       expect(l10n.planReviewOverdue,
           'El repaso está vencido — el riesgo de olvido es alto');
-      expect(l10n.planStreakLow, 'La racha es baja — se necesita consistencia');
+      expect(l10n.planStreakLow, 'La racha es baja — se necesita constancia');
       expect(l10n.planPrerequisite,
           'Requisito previo para temas próximos — debe dominarlo primero');
       expect(l10n.planRequiredForDependent,
@@ -653,7 +653,7 @@ void main() {
       expect(l10n.planPartOfSyllabusGoal, 'Parte del objetivo del temario');
       expect(l10n.planHighMastery, 'Alto dominio — listo para avanzar');
       expect(l10n.planGoodProgress,
-          'Buen progreso — mantenga la consistencia');
+          'Buen progreso — mantenga la constancia');
       expect(l10n.planDeveloping, 'En desarrollo — necesita más práctica');
       expect(l10n.planAtRisk, 'En riesgo — repaso vencido');
       expect(l10n.planNeedsAttention,
@@ -664,66 +664,66 @@ void main() {
     });
 
     test('notification channel aliases', () {
-      expect(l10n.notificationChannelGeneralName,
+      expect(l10n.notifChannelGeneral,
           'Notificaciones de StudyKing');
-      expect(l10n.notificationChannelGeneralDesc,
+      expect(l10n.notifChannelGeneralDesc,
           'Notificaciones generales de StudyKing');
-      expect(l10n.notificationChannelDailyReminderName,
-          'Recordatorios Diarios de Estudio');
-      expect(l10n.notificationChannelDailyReminderDesc,
+      expect(l10n.notifChannelDailyReminder,
+          'Recordatorios de Estudio Diarios');
+      expect(l10n.notifChannelDailyReminderDesc,
           'Recordatorios diarios para estudiar');
-      expect(l10n.notificationChannelRevisionName, 'Recordatorios de Repaso');
-      expect(l10n.notificationChannelRevisionDesc,
+      expect(l10n.notifChannelRevision, 'Recordatorios de Revisión');
+      expect(l10n.notifChannelRevisionDesc,
           'Recordatorios para repasar temas que necesitan práctica');
-      expect(l10n.notificationChannelWellbeingName, 'Alertas de Bienestar');
-      expect(l10n.notificationChannelWellbeingDesc,
+      expect(l10n.notifChannelWellbeing, 'Alertas de Bienestar');
+      expect(l10n.notifChannelWellbeingDesc,
           'Alertas sobre equilibrio estudio-vida y sobrecarga');
-      expect(l10n.notificationChannelPlanningName,
+      expect(l10n.notifChannelPlanning,
           'Sugerencias de Planificación');
-      expect(l10n.notificationChannelPlanningDesc,
+      expect(l10n.notifChannelPlanningDesc,
           'Sugerencias sobre ajustes al plan de estudio');
-      expect(l10n.notificationChannelLessonsName,
+      expect(l10n.notifChannelLessons,
           'Notificaciones de Lecciones');
-      expect(l10n.notificationChannelLessonsDesc,
+      expect(l10n.notifChannelLessonsDesc,
           'Notificaciones sobre próximas lecciones');
-      expect(l10n.notificationChannelMasteryName, 'Alertas de Dominio');
-      expect(l10n.notificationChannelMasteryDesc,
-          'Alertas sobre bajo dominio de temas y áreas débiles');
-      expect(l10n.notificationChannelBadgesName,
+      expect(l10n.notifChannelMastery, 'Alertas de Dominio');
+      expect(l10n.notifChannelMasteryDesc,
+          'Alertas sobre bajo dominio de temas y áreas por mejorar');
+      expect(l10n.notifChannelBadges,
           'Notificaciones de Insignias');
-      expect(l10n.notificationChannelBadgesDesc,
+      expect(l10n.notifChannelBadgesDesc,
           'Notificaciones sobre insignias y logros obtenidos');
     });
 
     test('notification title aliases', () {
-      expect(l10n.notificationTimeToReviewTitle, 'Hora de Repasar!');
-      expect(l10n.notificationTakeABreakTitle, 'Tome un Descanso');
-      expect(l10n.notificationPlanAdjustmentTitle, 'Ajuste de Plan');
-      expect(l10n.notificationUpcomingLessonTitle, 'Próxima Lección');
-      expect(l10n.notificationTopicsNeedAttentionTitle,
+      expect(l10n.notifTitleTimeToReview, '¡Hora de Repasar!');
+      expect(l10n.notifTitleTakeBreak, 'Tome un Descanso');
+      expect(l10n.notifTitlePlanAdjustment, 'Ajuste de Plan');
+      expect(l10n.notifTitleUpcomingLesson, 'Próxima Lección');
+      expect(l10n.notifTitleTopicsNeedAttention,
           'Temas que Requieren Atención');
-      expect(l10n.notificationBadgeUnlockedTitle, 'Insignia Desbloqueada!');
+      expect(l10n.notifTitleBadgeUnlocked, '¡Insignia Desbloqueada!');
     });
 
     test('recommendation aliases', () {
-      expect(l10n.recommendationAccuracyLow,
+      expect(l10n.recommendAccuracyBelow60,
           'Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.'); // ignore: lines_longer_than_80_chars
-      expect(l10n.recommendationReviewBasics,
+      expect(l10n.recommendReviewBasics,
           'Repase temas básicos antes de avanzar');
-      expect(l10n.recommendationExcellentProgress,
-          'Progreso excelente! Listo para temas avanzados.');
-      expect(l10n.recommendationChallengingPractice,
-          'Pruebe preguntas de práctica desafiantes');
-      expect(l10n.recommendationLowHours,
-          'Estudió menos de 1 hora en total. La consistencia es clave!');
-      expect(l10n.recommendationSetDailyGoal,
-          'Establezca una meta diaria de estudio de 30 minutos');
-      expect(l10n.recommendationNoActivity,
-          'Sin actividad de estudio esta semana. Vuelva al ritmo!');
-      expect(l10n.recommendationQuickReview,
-          'Comience con una sesión rápida de repaso de 15 minutos');
-      expect(l10n.recommendationReviewWithTutor,
-          'Repase temas débiles con el tutor de IA');
+      expect(l10n.recommendAccuracyExcellent,
+          '¡Excelente progreso! Listo para temas avanzados.');
+      expect(l10n.recommendChallengingQuestions,
+          'Intente preguntas de práctica desafiantes');
+      expect(l10n.recommendConsistency,
+          'Estudió menos de 1 hora en total. ¡La constancia es clave!');
+      expect(l10n.recommendSetDailyGoal,
+          'Establezca una meta diaria de 30 minutos');
+      expect(l10n.recommendNoActivity,
+          'Sin actividad de estudio esta semana. ¡Retome el ritmo!');
+      expect(l10n.recommendQuickReview,
+          'Comience con una sesión de repaso rápido de 15 minutos');
+      expect(l10n.recommendAiTutor,
+          'Repase temas débiles con el tutor IA');
     });
   });
 
@@ -776,13 +776,13 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notificationTakeABreakBody('3'),
-          'Ha estudiado 3 horas hoy. Recuerde descansar!');
+      expect(l10n.notifBodyOverwork('3'),
+          'Ha estudiado 3 horas hoy. ¡Recuerde descansar!');
     });
 
     test('notificationPlanAdjustmentBody', () {
-      expect(l10n.notificationPlanAdjustmentBody(7),
-          'Ha tenido 7 días de baja adherencia. Ajustamos su plan?');
+      expect(l10n.notifBodyPlanAdjustment(7),
+          'Ha tenido 7 días de bajo cumplimiento. ¿Ajustamos su plan?');
     });
 
     test('notificationUpcomingLessonBody', () {
@@ -791,7 +791,7 @@ void main() {
     });
 
     test('notificationTopicsNeedAttentionBody', () => expect(
-        l10n.notificationTopicsNeedAttentionBody('Mate'),
+        l10n.notifBodyLowMastery('Mate'),
         'Bajo dominio detectado en: Mate'));
 
     test('notificationBadgeUnlockedBody', () {
@@ -801,42 +801,42 @@ void main() {
 
     test('nudgeOverwork', () {
       expect(l10n.nudgeOverwork('6'),
-          'Ha estudiado 6 horas hoy. Considere tomar un descanso!');
+          'Ha estudiado 6 horas hoy. ¡Considere tomar un descanso!');
     });
 
     test('nudgeRevision', () {
       expect(l10n.nudgeRevision(7, 'Biología'),
-          'Han pasado 7 días desde que practicó "Biología". Es hora de repasar!');
+          'Han pasado 7 días desde que practicó "Biología". ¡Hora de repasar!');
     });
 
     test('nudgePlanAdjustment', () {
       expect(l10n.nudgePlanAdjustment(5),
-          'Ha tenido 5 días de baja adherencia. Le gustaría ajustar su plan de estudio?');
+          'Ha tenido 5 días de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?');
     });
 
     test('nudgeWeeklyDigest', () {
       expect(l10n.nudgeWeeklyDigest(50, 85, '12.5', 3, 2),
-          'Resumen semanal: 50 preguntas respondidas, 85% precisión, 12.5 horas estudiadas, 3 áreas débiles, 2 insignias obtenidas.');
+          'Resumen semanal: 50 preguntas respondidas, 85% precisión, 12.5 horas estudiadas, 3 áreas por mejorar, 2 insignias obtenidas.');
     });
 
     test('adherenceLow7Days', () {
-      expect(l10n.adherenceLow7Days(10),
-          'Ha tenido 10 días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o hablar con su mentor.');
+      expect(l10n.adherenceLowDaysAdjust(10),
+          'Ha tenido 10 días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o consultar con su mentor.');
     });
 
     test('adherenceLow3Days', () {
-      expect(l10n.adherenceLow3Days(5),
-          'Ha tenido 5 días consecutivos de bajo cumplimiento. ¿Desea regenerar su plan con objetivos ajustados?');
+      expect(l10n.adherenceLowDaysRegenerate(5),
+          '¿Ha tenido 5 días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?');
     });
 
     test('adherenceLowDaysAdjust', () {
       expect(l10n.adherenceLowDaysAdjust(7),
-          'Ha tenido 7 días consecutivos de baja adherencia. Considere ajustar su plan de estudio o consultar con su mentor.');
+          'Ha tenido 7 días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o consultar con su mentor.');
     });
 
     test('adherenceLowDaysRegenerate', () {
       expect(l10n.adherenceLowDaysRegenerate(3),
-          'Ha tenido 3 días consecutivos de baja adherencia. Le gustaría regenerar su plan con objetivos ajustados?');
+          '¿Ha tenido 3 días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?');
     });
 
     test('adherenceLowToday', () {
@@ -997,15 +997,15 @@ void main() {
               return SingleChildScrollView(
                 child: Column(
                   children: [
-                    Text(l.planExplanationAccuracyBelow60),
-                    Text(l.planExplanationOverdueReview),
-                    Text(l.planExplanationLowStreak),
-                    Text(l.planExplanationPrerequisite),
-                    Text(l.planExplanationHighMastery),
-                    Text(l.planExplanationGoodProgress),
-                    Text(l.planExplanationDeveloping),
-                    Text(l.planExplanationAtRisk),
-                    Text(l.planExplanationNeedsAttention),
+                    Text(l.planAccuracyLow),
+                    Text(l.planReviewOverdue),
+                    Text(l.planStreakLow),
+                    Text(l.planPrerequisite),
+                    Text(l.planHighMastery),
+                    Text(l.planGoodProgress),
+                    Text(l.planDeveloping),
+                    Text(l.planAtRisk),
+                    Text(l.planNeedsAttention),
                     Text(l.planReasonRequiredDependent),
                     Text(l.planReasonWeakPerformance),
                     Text(l.planReasonHighForgettingRisk),
@@ -1058,13 +1058,13 @@ void main() {
                     Text(l.nudgeRevision(7, 'Biology')),
                     Text(l.nudgePlanAdjustment(5)),
                     Text(l.nudgeWeeklyDigest(50, 85, '12.5', 3, 2)),
-                    Text(l.adherenceLow7Days(10)),
-                    Text(l.adherenceLow3Days(5)),
+                    Text(l.adherenceLowDaysAdjust(10)),
+                    Text(l.adherenceLowDaysRegenerate(5)),
                     Text(l.adherenceLowToday(30, 60)),
                     Text(l.adherencePartialToday(45, 60)),
                     Text(l.adherenceExceededToday(75, 60)),
                     Text(l.recommendWeakTopics(3)),
-                    Text(l.recommendationAccuracyLow),
+                    Text(l.recommendAccuracyBelow60),
                   ],
                 ),
               );
@@ -1193,17 +1193,17 @@ void main() {
               return SingleChildScrollView(
                 child: Column(
                   children: [
-                    Text(l.notificationTimeToReviewTitle),
+                    Text(l.notifTitleTimeToReview),
                     Text(l.notificationTimeToReviewBody(5, 'History')),
-                    Text(l.notificationTakeABreakTitle),
-                    Text(l.notificationTakeABreakBody('3')),
-                    Text(l.notificationPlanAdjustmentTitle),
-                    Text(l.notificationPlanAdjustmentBody(7)),
-                    Text(l.notificationUpcomingLessonTitle),
+                    Text(l.notifTitleTakeBreak),
+                    Text(l.notifBodyOverwork('3')),
+                    Text(l.notifTitlePlanAdjustment),
+                    Text(l.notifBodyPlanAdjustment(7)),
+                    Text(l.notifTitleUpcomingLesson),
                     Text(l.notificationUpcomingLessonBody('Physics', '2:00')),
-                    Text(l.notificationTopicsNeedAttentionTitle),
-                    Text(l.notificationTopicsNeedAttentionBody('Math')),
-                    Text(l.notificationBadgeUnlockedTitle),
+                    Text(l.notifTitleTopicsNeedAttention),
+                    Text(l.notifBodyLowMastery('Math')),
+                    Text(l.notifTitleBadgeUnlocked),
                     Text(l.notificationBadgeUnlockedBody('Gold', '90%')),
                   ],
                 ),

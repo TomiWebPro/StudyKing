@@ -1,125 +1,48 @@
-# UI/UX Issue: Systemic accessibility, theming, responsive navigation, and i18n gaps
+# Broken Accessibility: Duplicate `NumericFocusOrder` Values Break Keyboard & Switch Navigation Across All Features
 
 ## Context
 
-A review of the presentation layer across all features reveals four high-impact UI/UX problems that collectively degrade the experience for users with accessibility needs, users on non-mobile form factors, users in dark/high-contrast mode, and non-English users.
+Every screen in StudyKing that uses `FocusTraversalOrder` with `NumericFocusOrder` assigns **duplicate order values** within the same `FocusTraversalGroup`. Because Flutter's focus traversal system uses `NumericFocusOrder` values as a strict ascending sequence (lower = earlier focus), duplicates cause **undefined, non-deterministic focus ordering**. This breaks keyboard tab navigation, screen reader scan mode, and switch-control sequential navigation — all core accessibility requirements.
 
----
+## Root Cause
 
-## Issue 1 — Accessibility: `TextScaler.noScaling` prevents system font scaling
+Developers copy-pasted `NumericFocusOrder(order: 1)` as the starting focus value in every `FocusTraversalGroup` without realizing that **each group must have globally unique order values across all children**. Instead of using `NumericFocusOrder`, most screens should simply rely on Flutter's **default lexical widget-order traversal** (which matches visual reading order) and use `FocusTraversalOrder` only when a non-lexical order is truly needed.
 
-**File:** `lib/main.dart:135`
+## Affected Files
 
-```dart
-MediaQuery.of(context).copyWith(
-  boldText: systemBoldText,
-  textScaler: TextScaler.noScaling,  // ← disables user font-size preferences
-)
-```
+| File | Issue | Line(s) |
+|---|---|---|
+| `lib/features/lessons/presentation/lesson_list_screen.dart` | Orders 1 used twice — once in the empty-state `FocusTraversalGroup` and once in the AppBar actions `FocusTraversalGroup`. In the populated-state ListView, the tutor button (AppBar action, order=1) competes with the first lesson item (order=2) even though they are in different `FocusTraversalGroup`s. Expected: no manual ordering needed at all — lexical order is correct. | 100–185 |
+| `lib/features/lessons/presentation/lesson_detail_screen.dart` | `NumericFocusOrder(1)` used in both the AppBar actions (line 112) and the `BottomAppBar` row (line 151). The main-body lesson blocks start at order=1 as well (line 131). Three groups with order=1 causes focus to skip unpredictably. | 112, 131, 151 |
+| `lib/features/sessions/presentation/session_tracker_screen.dart` | No `FocusTraversalOrder` exists, but the screen uses `Semantics` on some InteractiveViewers without pairing with a `FocusTraversalGroup`. The `_buildRecentSessionsList` (line 420) wraps cards in `Semantics` with no focus ordering, causing tab navigation to skip entire card content areas. | 420–456 |
+| `lib/features/sessions/presentation/session_history_screen.dart` | No `FocusTraversalOrder` at all. The `Dismissible` items (line 452) are not keyboard-accessible — swipe-to-delete has no keyboard alternative. Filter buttons (date, subject) have no `FocusTraversalOrder`. The share menu `PopupMenuButton` (line 267) is not keyboard-navigable. | 267, 339, 452 |
+| `lib/features/planner/presentation/planner_screen.dart` | Heaviest offender. The `_buildStudyPlanTab` method applies `NumericFocusOrder` from 1–4 for course/days/hours/generate inputs (lines 273–369). But `_buildPendingActionsSection`, `_buildAdherenceBanner`, `_buildScheduledLessonsSection`, and `_buildDailyPlans` all render children **outside** any `FocusTraversalGroup`, making their interactive items unreachable or interleaved arbitrarily. `NumericFocusOrder(1)` is reused across multiple independent groups. | 253–396 |
+| `lib/features/settings/presentation/settings_screen.dart` | Every section resets order to 1: accessibility toggles start at 1, notification toggles start at 1, analytics tiles start at 1. Within the same `ListView`, focus hops erratically across the 6+ sections. The `_tile` helper method (line 217–228) skips `FocusTraversalOrder` when `order <= 0`, causing some tiles (e.g., about, sign-out) to receive no order at all, making them unfocusable by keyboard. | 39–197, 217–228 |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | No `FocusTraversalOrder` anywhere in the main scrollable body. All interactive cards (collapsible headers, InkWell for focus mode, planner card) rely on default widget-order traversal, which is fine — but the `CollapsibleCard` titles have `button: true` semantics (collapsible_card.dart:74) without integrating with focus traversal, causing screen readers to incorrectly announce collapsed content as interactive. | dashboad_screen.dart:78–174, collapsible_card.dart:72–93 |
 
-**Problem:** The global `MediaQuery` override uses `TextScaler.noScaling`, which flatly ignores the user's system font size setting (`Settings > Display > Font size` on Android, `Display > Text size` on iOS, etc.). Visually impaired users who rely on system-wide font scaling are unable to read any UI text in the app. While the app has its own in-app `fontSize` setting (`settings.fontSize`), this is a separate opt-in mechanism that many users will not discover.
+## Rationale
 
-**Rationale:** WCAG Success Criterion 1.4.4 (Resize Text) requires that text can be resized up to 200% without loss of content or functionality. `noScaling` is a direct violation. The in-app slider at `lib/features/settings/presentation/settings_screen.dart` partially mitigates this, but:
-- Only accessible via Settings → Font Size (hidden from first-time users)
-- Does not respond to OS-level accessibility preferences
-- Users with motor impairments who rely on OS-wide settings are excluded
+1. **WCAG 2.1 SC 2.4.3 (Focus Order)**: "If a Web page can be navigated sequentially and the navigation sequences affect meaning or operation, focusable components receive focus in an order that preserves meaning and operability." Duplicate `NumericFocusOrder` values violate this — focus jumps are unpredictable.
 
-**Acceptance criteria:**
-- Remove `TextScaler.noScaling` (default behaviour uses `TextScaler.linear` which respects the system text scale factor)
-- OR replace with `TextScaler.linear(clamp(1.0, systemFactor * effectiveFontSize / 16, 2.0))` if there is a strong justification for capping
-- Verify that all screens render correctly at 1.5× and 2.0× text scale factors (no overflow, no clipped text, no overlapping widgets)
-- The in-app font-size slider should compound with (multiply) the OS scale factor
+2. **Platform compliance**: Both iOS and Android accessibility guidelines require predictable focus order. Flutter's `NumericFocusOrder` with duplicates creates a hard failure on automated a11y scanners (e.g., `flutter analyze --fatal-infrastructure` with `a11y` enabled, axe‑dev for web).
 
----
+3. **Degraded experience for real users**: Students using switch-control, voice control (iOS Switch Control, Android Switch Access), or keyboard-only navigation (desktop web) cannot reliably navigate StudyKing. This includes students with motor disabilities who are a key demographic for an all-in-one study platform.
 
-## Issue 2 — Design language: Hardcoded colors break dark mode and high-contrast themes
+4. **Copy-paste compounding**: The pattern of `NumericFocusOrder(order: 1)` was copied across features without understanding the semantics. Most screens don't need `NumericFocusOrder` at all — Flutter's default lexical ordering (based on widget tree position) is sufficient and correct.
 
-**Files:** `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:81`, `lib/features/teaching/presentation/tutor_screen.dart:305`
+## Acceptance Criteria
 
-```dart
-// lesson_progress_bar.dart:81
-remaining <= 5
-    ? Colors.orange   // ← hardcoded, not a theme token
+1. Remove all `NumericFocusOrder` annotations from `lesson_list_screen.dart`, `lesson_detail_screen.dart`, `session_tracker_screen.dart`, `session_history_screen.dart`, `planner_screen.dart`, and `settings_screen.dart` where the default widget-tree traversal order is already correct.
 
-// tutor_screen.dart:305
-_isVoiceListening ? Colors.red : null   // ← hardcoded, should use colorScheme.error
-```
+2. Where `NumericFocusOrder` is genuinely needed (e.g., a floating action button should be reached before a bottom-app-bar item), ensure **every order value within a single `FocusTraversalGroup` is unique** and respects visual reading order.
 
-**Problem:** Hardcoded material `Colors.orange` and `Colors.red` do not adapt:
-- In dark mode, `Colors.orange` (0xFFFF9800) maintains high luminance against a dark background but has poor contrast on the `AlwaysStoppedAnimation` composited on `surfaceContainerHighest`.
-- In high-contrast mode (`highContrastLightTheme` / `highContrastDarkTheme`), these colors are not part of the seed-derived scheme and jar against the increased contrast palette.
-- `Colors.orange` (`#FF9800`) has a contrast ratio of only ~2.8:1 against `surfaceContainerHighest` in light mode, failing WCAG AA for non-text elements.
+3. Add keyboard-action alternatives for touch-only interactions:
+   - `Dismissible` in `session_history_screen.dart` must have a keyboard-triggerable delete action (e.g., a `FocusTraversalOrder`-wrapped trailing IconButton that calls `_deleteSession`).
+   - `PopupMenuButton` export share menu must be keyboard-navigable without needing pointer hover.
+   - ChoiceChip duration selectors in `focus_timer_screen.dart` must be reachable by sequential keyboard navigation.
 
-**Rationale:** A review of the entire widget layer shows that **every other file** correctly uses `Theme.of(context).colorScheme.*` tokens. These two locations are regression points that were likely added as quick visual indicators without considering theming. The `AppTheme` class already defines `progressColor()` at `lib/core/theme/app_theme.dart:124`, but `LessonProgressBar` does not use it.
+4. Add `FocusTraversalGroup` to the body of `session_tracker_screen.dart`, `session_history_screen.dart`, and `dashboard_screen.dart` with appropriate (non-conflicting) child ordering so that all interactive elements are keyboard-reachable.
 
-**Affected scenarios:**
-1. High-contrast theme enabled: orange bar is visually jarring, no longer matches the increased-contrast outline palette
-2. Custom seed colour: only `primary`/`tertiary`/`error` derive from seed; `Colors.orange` stays fixed
-3. Mic icon in `TutorScreen` — `Colors.red` is not `colorScheme.error`, so in dark mode the high-luminance red overpowers the UI
+5. Verify with `SemanticsDebugger` enabled (wrap `MaterialApp` with `showSemanticsDebugger: true` in debug mode) that every interactive element has a unique and readable semantic label and that tab-order flows left-to-right, top-to-bottom without jumps.
 
-**Acceptance criteria:**
-- Replace `Colors.orange` in `lesson_progress_bar.dart:81` with `Theme.of(context).colorScheme.tertiary` (or use `AppTheme.progressColor()` which maps ranges to `primary`/`tertiary`/`error`)
-- Replace `Colors.red` in `tutor_screen.dart:305` with `Theme.of(context).colorScheme.error`
-- Verify visually in both light and dark themes at default and high-contrast settings
-
----
-
-## Issue 3 — Responsive navigation: Bottom NavigationBar used on all screen widths, no NavigationRail for tablets
-
-**Files:** `lib/main.dart:281-315`
-
-**Problem:** The app uses `NavigationBar` (Material 3 bottom navigation) unconditionally for all form factors. On tablets (≥840px width, `ScreenBreakpoint.md` and `lg`) and desktop windows, the bottom nav:
-- Wastes horizontal space that could be used for a side rail with labels
-- Violates Material 3 guidance that recommends `NavigationRail` for medium–large screens
-- The 5-destination bar becomes crowded on tablets in landscape mode (text labels clip)
-
-The `MainScreen` at `lib/main.dart:206` has no `LayoutBuilder` or breakpoint-conditional build:
-```dart
-body: Stack(children: [...]),
-bottomNavigationBar: NavigationBar(...)
-```
-
-**Rationale:** The `ResponsiveUtils` class already defines breakpoints (`xs`/`sm`/`md`/`lg`) and several widgets use `LayoutBuilder` or `bp` checks to adapt (e.g., `SummaryRow`, `PracticeSessionNavButtons`, `PlannerScreen`). The navigation shell is the most fundamental layout component and should be the first to adapt, yet it is fully static.
-
-The 5-tab structure maps naturally to `NavigationRail`:
-- `NavigationRail` with `leading` containing the FAB (dashboard) — replaces the separate `FloatingActionButton`
-- `NavigationRail.destinations` for subjects / practice / mentor / focus / settings
-- `NavigationRail.extended` can optionally show labels
-
-**Acceptance criteria:**
-- At breakpoints ≥ `ScreenBreakpoint.md` (840px), replace `NavigationBar` with `NavigationRail` pinned to the leading edge
-- Move the dashboard FAB into the `NavigationRail.leading` or a `NavigationRail`-adjacent slot so it does not require a separate `FloatingActionButton`
-- Preserve `Offstage` + `TickerMode` tab switching (or migrate to `IndexedStack` if preferred)
-- Verify on a 10" tablet (landscape and portrait) and a desktop window ≥1200px
-
----
-
-## Issue 4 — Localization: Hardcoded untranslated string in PlannerScreen tabs
-
-**File:** `lib/features/planner/presentation/planner_screen.dart:225`
-
-```dart
-Tab(text: l10n.studyPlanner),
-const Tab(text: 'Calendar'),      // ← hardcoded English, not localised
-Tab(text: l10n.roadmaps),
-```
-
-**Problem:** The second tab in the Planner screen's `TabBar` is a `const Tab(text: 'Calendar')` literal while both neighbouring tabs use `AppLocalizations.of(context)!.studyPlanner` and `AppLocalizations.of(context)!.roadmaps`. This causes `'Calendar'` to display in English for all locales.
-
-**Rationale:** Since `AppLocalizations` is auto-generated with a `.calendar` key (or should have one added), using a raw string here breaks the i18n contract. Every other string in the planner screen correctly uses `l10n.*`.
-
-**Acceptance criteria:**
-- Add `calendar` to the ARB localisation file(s)
-- Replace `const Tab(text: 'Calendar')` with `Tab(text: l10n.calendar)`
-- Verify no regressions in `TabBar` rendering (the `Tab` is no longer `const`, which is acceptable since the screen is stateful)
-
----
-
-## Summary
-
-| Issue | Area | Severity | Effort |
-|-------|------|----------|--------|
-| 1. Text scaling disabled | Accessibility | Critical | Small (1–3 files) |
-| 2. Hardcoded theme colours | Design language | High | Small (2 files) |
-| 3. No responsive navigation shell | Responsive layout | High | Medium (main.dart) |
-| 4. Hardcoded 'Calendar' string | i18n | Medium | Trivial (1 string) |
+6. Existing unit/widget tests must continue to pass. Add a widget test for each affected screen verifying that keyboard tab navigation visits all interactive elements in the correct visual order.

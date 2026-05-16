@@ -112,10 +112,10 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
             order: const NumericFocusOrder(1),
             child: Semantics(
               button: true,
-              label: l10n.teachingMode,
+              label: l10n.aiTutor,
               child: IconButton(
                 icon: const Icon(Icons.smart_toy_outlined),
-                tooltip: l10n.teachingMode,
+                tooltip: l10n.aiTutor,
                 onPressed: _openTutorMode,
               ),
             ),
@@ -151,11 +151,11 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                   order: const NumericFocusOrder(1),
                   child: Semantics(
                     button: true,
-                    label: l10n.teachingMode,
+                    label: l10n.aiTutor,
                     child: ElevatedButton.icon(
                       onPressed: _openTutorMode,
                       icon: const Icon(Icons.smart_toy, size: 18),
-                      label: Text(l10n.teachingMode),
+                      label: Text(l10n.aiTutor),
                     ),
                   ),
                 ),

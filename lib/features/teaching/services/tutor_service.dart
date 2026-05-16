@@ -62,7 +62,7 @@ class TutorService {
       exerciseKeywords: exerciseKeywords,
     );
 
-    manager.initialize(
+    await manager.initialize(
       studentId: studentId,
       topicTitle: topicTitle,
       subjectId: subjectId,

@@ -14,12 +14,15 @@ final llmUsageMeterProvider = Provider<LlmUsageMeter>((ref) {
 
 final llmServiceProvider = Provider<LlmService>((ref) {
   final apiKey = ref.watch(apiKeyProvider);
+  final apiBaseUrl = ref.watch(apiBaseUrlProvider);
+  final llmProvider = ref.watch(llmProviderProvider);
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
   return LlmService(
     config: LlmConfiguration(
-      provider: LlmProvider.openRouter,
+      provider: llmProvider,
       apiKey: apiKey,
+      baseUrl: apiBaseUrl,
     ),
     taskManager: taskManager,
     usageMeter: usageMeter,

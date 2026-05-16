@@ -1,100 +1,85 @@
-# Test Coverage Quality & Structural Gaps
+# Structural Deficiencies in Test File Placement and Coverage Gaps Across Feature Model Tests
 
 ## Context
 
-The test suite is **complete by file count** — every source widget, service, provider, repository, model, and adapter has a matching test file. However, many tests are **superficial, missing assertions, or omit critical scenarios**. Additionally, **85 `_Fake*` classes are duplicated** across files rather than shared, creating maintenance fragility.
+The project defines strict test file placement conventions in `AGENTS.md` requiring every source file under `lib/features/*/` to have a corresponding test file at the mirrored path under `test/features/*/`. Audit of the lessons feature (and cross-feature analysis) reveals three structural categories of deficiencies: **misplaced tests**, **entirely untested models**, and **missing barrel/structural tests**.
 
 ---
 
-## Issue 1 — Vacuous Tests (no assertions)
+## Issue 1: Misplaced Feature Model Tests in `test/core/`
 
-Two tests in `plan_summary_card_test.dart` call `pumpWidget` but never call `expect` — they pass trivially and provide zero coverage value.
+**Problem:** `Lesson` and `LessonBlock` models live in `lib/features/lessons/data/models/` but their dedicated unit tests reside in `test/core/data/models/` instead of `test/features/lessons/data/models/`. This violates the AGENTS.md convention and creates a discoverability problem.
 
-**Files:**
-- `test/features/planner/presentation/widgets/plan_summary_card_test.dart:71` — `shows estimated coverage percentage` (no assertions)
-- `test/features/planner/presentation/widgets/plan_summary_card_test.dart:104` — `does not show focus areas section when empty` (no assertions)
+**Affected files:**
+- `test/core/data/models/lesson_model_test.dart` — tests `lib/features/lessons/data/models/lesson_model.dart`
+- `test/core/data/models/lesson_block_model_test.dart` — tests `lib/features/lessons/data/models/lesson_block_model.dart`
 
-**Rationale:** These tests create a widget with specific data but verify nothing. They give a false sense of coverage and waste CI time.
-
-**AC:** Both tests should contain appropriate `expect` calls (e.g. verifying the coverage % text renders, verifying focus area text is absent).
+**Rationale:** The AGENTS.md table mandates `lib/features/*/models/*.dart` → `test/features/*/models/*_test.dart` (data models at `test/features/*/data/models/*_test.dart`). Placing feature-specific model tests under `test/core/` breaks the mirror convention, confuses developers, and is inconsistent with how every other feature places its tests.
 
 ---
 
-## Issue 2 — Duplicate Identical Test
+## Issue 2: Entirely Missing Dedicated Model Tests Across Five Features
 
-Two tests in `planner_screen_test.dart` assert exactly the same thing.
+**Problem:** Twenty-two data model files across five features have zero dedicated unit tests. These models define core business objects with JSON serialization, Hive annotations, `copyWith`, and edge case handling — all untested in isolation. They are only exercised incidentally as dependencies of repository/service tests, meaning model-specific behaviors (null fallbacks, serialization roundtrips, edge cases) are not validated.
 
-**Files:**
-- `test/features/planner/presentation/planner_screen_test.dart:304` — `shows title and form fields`
-- `test/features/planner/presentation/planner_screen_test.dart:315` — `shows title and form labels`
+**Affected files:**
 
-Both pump the same widget and assert `find.text('Study Planner')`, `find.text('Create Study Plan')`, `find.text('Generate Plan')`.
-
-**Rationale:** Duplicate tests increase maintenance burden without improving coverage.
-
-**AC:** Remove the duplicate (`shows title and form labels`) or differentiate it with a unique assertion.
-
----
-
-## Issue 3 — Incomplete / Misleading Test Scenarios
-
-### 3a. "duration can be decreased" never decreases
-`lesson_booking_sheet_test.dart:170` — test name promises a decrease interaction but only checks the initial `'30 minutes'` text. The decrease button is never tapped.
-
-**Fix:** Tap `Icons.remove_circle_outline` and verify `'15 minutes'` appears.
-
-### 3b. ProgressOverlayWidget color tests only check text, not color
-`progress_overlay_widget_test.dart:37-65` — Three tests ("green/50%/red" for 100%/50%/30%) only assert the percentage text string. The actual `progressColor` logic determining green/orange/red is never verified.
-
-**Fix:** Check for specific `Color` values on the rendered container or progress bar using `tester.widget`.
-
-### 3c. CalendarViewWidget misses key behaviors
-`calendar_view_widget_test.dart` — covers month header, day cells, and navigation, but misses:
-- Tapping a day **without** topics (no `onDayTap` fire)
-- Rest day rendering in calendar
-- Empty plan (zero `dailyPlans`)
-- Month-boundary navigation (Dec → Jan)
-
-**Fix:** Add tests for each edge case.
-
-### 3d. LessonBookingSheet: conflict UI untested
-The source widget has a `_hasConflict` flag showing a `warning_amber_rounded` icon and a red container, plus a `SnackBar` when scheduling with a conflict. None of these paths are tested.
-
-**Fix:** Add tests for conflict detection rendering and conflict-blocked scheduling.
-
-### 3e. PlannerScreen: "Pending Actions" tab untested
-The 1408-line `planner_screen_test.dart` covers "Study Plan" and "Roadmaps" tabs thoroughly, but never switches to the "Pending Actions" tab.
-
-**Fix:** Add tests for the Pending Actions tab — empty state, list rendering, accept/dismiss interactions.
-
----
-
-## Issue 4 — Massive Duplication of Fake Classes (85 classes)
-
-**85 `_Fake*` classes** are defined across the test suite, with identical fakes for the same repository/service repeated across files:
-
-| Fake Class | Files where duplicated |
+| Feature | Untested Model Files (source) |
 |---|---|
-| `_FakeSessionRepository` | `session_history_screen_test`, `subject_detail_screen_test`, `subject_history_tab_test`, `subject_stats_tab_test`, `dashboard_data_loader_test`, `practice_session_service_test`, `engagement_scheduler_test`, `session_tracker_screen_test`, `planner_screen_test` |
-| `_FakeTopicRepository` | `planner_screen_test`, `lesson_service_test`, `dashboard_data_loader_test`, `topic_list_screen_test`, `upload_screen_test`, `database_service_test` |
-| `_FakeMasteryGraphRepository` | `planner_screen_test`, `dashboard_screen_test` |
-| `_FakeQuestionRepository` | `practice_data_service_test`, `practice_screen_test`, `database_service_test`, `main_screen_test`, `question_repository_test` |
+| **planner** (8 models) | `engagement_nudge_model.dart`, `task_model.dart`, `student_availability_model.dart`, `roadmap_model.dart`, `plan_adherence_model.dart`, `pending_action_model.dart`, `plan_adherence_metric_model.dart`, `personal_learning_plan_model.dart` |
+| **questions** (2 models) | `markscheme_model.dart`, `question_evaluation_model.dart` |
+| **teaching** (2 models) | `conversation_message_model.dart`, `tutor_session_model.dart` |
+| **subjects** (2 models) | `topic_progress_model.dart`, `topic_dependency_model.dart` |
+| **ingestion** (1 model) | `source_model.dart` |
 
-**Root Cause:** There are no shared test utility or `test_helpers` directories. Each test file reinvents its own fakes.
+**Rationale:** Each of these models has nontrivial fields, JSON serialization, Hive type adapters, `copyWith` methods, and nullable field fallbacks. Without dedicated unit tests:
+- Regressions in serialization format go undetected.
+- Null field / missing key edge cases are unchecked.
+- Hive adapter registration breaks silently.
+- `copyWith` field omissions or bugs are not caught.
 
-**Rationale:** When a repository interface changes, every file with its duplicate fake must be updated. This has already caused inconsistency (some fakes use `noSuchMethod`, others don't; some implement all methods, others only partial).
-
-**AC:** Extract shared fake classes into `test/helpers/` or per-feature `test/features/*/helpers/`. Each repository/service should have exactly one canonical fake used across the suite.
+Well-tested peer models (e.g. the practice feature's 6 model files with 6 dedicated test files at `test/features/practice/data/models/`) demonstrate the expected pattern.
 
 ---
 
-## Acceptance Criteria (Summary)
+## Issue 3: Missing Barrel / Structural Tests for 10 of 14 Features
 
-1. Add assertions to the two vacuous tests in `plan_summary_card_test.dart`.
-2. Remove the duplicate planner screen test.
-3. Add the missing interaction/assertion to `lesson_booking_sheet` duration decrease test.
-4. Verify actual rendered colors (not just text) in `progress_overlay_widget` color tests.
-5. Add edge-case tests to `calendar_view_widget`: empty plan, rest day, no-topic tap.
-6. Add conflict-UI and conflict-blocking tests to `lesson_booking_sheet`.
-7. Add "Pending Actions" tab tests to `planner_screen_test`.
-8. Extract the 85 duplicated `_Fake*` classes into shared test helpers.
+**Problem:** Only 4 of 14 features have a barrel test at the feature root (e.g. `test/features/dashboard/dashboard_barrel_test.dart`). The remaining 10 features lack any test verifying that their barrel export file loads without error.
+
+**Features missing barrel tests:**
+`focus_mode`, `ingestion`, `lessons`, `llm_tasks`, `mentor`, `planner`, `sessions`, `settings`, `subjects`, `teaching`
+
+**Rationale:** A barrel test (typically named `<feature>_test.dart` or `<feature>_barrel_test.dart`) validates that all exports resolve, preventing accidental broken imports when refactoring. Features that already have one (`dashboard`, `practice`, `questions`, `quickguide`) show this is a lightweight, high-value practice.
+
+---
+
+## Issue 4: Stale Deprecated Test File in Subjects
+
+**Problem:** `test/features/subjects/models/subject_model_test.dart` contains only a deprecation notice ("moved to `test/core/data/models/subject_model_test.dart`") and has been left as dead code. This file should be removed.
+
+**Affected file:**
+- `test/features/subjects/models/subject_model_test.dart`
+
+**Rationale:** Dead test files waste developer attention, produce misleading test counts, and can cause confusion about where tests actually live.
+
+---
+
+## Acceptance Criteria
+
+1. **Lesson model tests moved:** Create `test/features/lessons/data/models/lesson_model_test.dart` and `test/features/lessons/data/models/lesson_block_model_test.dart` (relocated from `test/core/data/models/`). The originals at `test/core/data/models/` may remain if they still test core models, but must not test feature models.
+
+2. **New model tests added:** For each of the 15 untested model files in planner (8), questions (2), teaching (2), subjects (2), and ingestion (1), add a dedicated unit test file at `test/features/<feature>/data/models/<model>_test.dart` covering at minimum:
+   - Constructor with required fields
+   - Constructor with all fields
+   - `toJson` serialization
+   - `fromJson` deserialization (including missing keys)
+   - Serialization roundtrip (`toJson` → `fromJson`)
+   - `copyWith` (identity and field updates)
+   - Null/missing field edge cases
+   - Equality / hashCode
+
+3. **Barrel tests added:** Create barrel test files (`test/features/<feature>/<feature>_test.dart` or `<feature>_barrel_test.dart`) for each of the 10 missing features, verifying all exports resolve without error.
+
+4. **Stale file removed:** Delete `test/features/subjects/models/subject_model_test.dart`.
+
+5. **Verification:** Run `flutter test` and confirm all existing tests continue to pass, and new tests execute successfully.

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/app_providers.dart' show defaultModelForProvider, llmProviderProvider, settingsProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
@@ -23,5 +23,7 @@ final mentorPendingActionRepoProvider = Provider<PendingActionRepository>((ref) 
 
 final mentorModelIdProvider = Provider<String>((ref) {
   final savedModel = ref.watch(settingsProvider).selectedModel;
-  return savedModel;
+  if (savedModel.isNotEmpty) return savedModel;
+  final provider = ref.watch(llmProviderProvider);
+  return defaultModelForProvider(provider);
 });

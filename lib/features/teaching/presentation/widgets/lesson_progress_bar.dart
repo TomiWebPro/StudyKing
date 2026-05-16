@@ -78,7 +78,7 @@ class LessonProgressBar extends StatelessWidget {
                 isOvertime
                     ? Theme.of(context).colorScheme.error
                     : remaining <= 5
-                        ? Colors.orange
+                        ? Theme.of(context).colorScheme.tertiary
                         : Theme.of(context).colorScheme.primary,
               ),
             ),

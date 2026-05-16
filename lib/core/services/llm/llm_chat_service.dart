@@ -101,7 +101,7 @@ class LlmService {
     messages.add({'role': 'system', 'content': systemPrompt});
 
     if (memory != null) {
-      messages.addAll(memory.getHistory());
+      messages.addAll(ConversationMemory.fromConversationMessages(memory.getHistory()));
     } else if (history != null) {
       messages.addAll(history);
     }
@@ -249,7 +249,7 @@ class LlmService {
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
-      ollamaMessages.addAll(memory.getHistory());
+      ollamaMessages.addAll(ConversationMemory.fromConversationMessages(memory.getHistory()));
     } else if (history != null) {
       ollamaMessages.addAll(history);
     }
@@ -293,7 +293,7 @@ class LlmService {
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : 'http://localhost:11434';
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
-      ollamaMessages.addAll(memory.getHistory());
+      ollamaMessages.addAll(ConversationMemory.fromConversationMessages(memory.getHistory()));
     } else if (history != null) {
       ollamaMessages.addAll(history);
     }

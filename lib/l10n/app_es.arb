@@ -2064,10 +2064,6 @@
   "@mentor": {
     "description": "Bottom navigation label for AI mentor"
   },
-  "teachingMode": "Tutor IA",
-  "@teachingMode": {
-    "description": "Label for AI tutor mode button"
-  },
   "startAiTutoring": "Iniciar Tutoría IA",
   "@startAiTutoring": {
     "description": "Button label to start AI tutoring session"
@@ -2934,10 +2930,6 @@
   "@revisionReminders": {
     "description": "Revision reminder toggle"
   },
-  "lessonNotifications": "Notificaciones de Lecciones",
-  "@lessonNotifications": {
-    "description": "Lesson notification toggle"
-  },
   "overworkAlerts": "Alertas de Sobrecarga",
   "@overworkAlerts": {
     "description": "Overwork alert toggle"
@@ -3509,7 +3501,6 @@
   "@badgeFirstStepDesc": {
     "description": "Description for the 'first attempt' badge"
   },
-
   "badgeAccuracyGoldName": "Precisión de Oro",
   "@badgeAccuracyGoldName": {
     "description": "Name for the 'accuracy gold' badge"
@@ -3744,42 +3735,6 @@
       }
     }
   },
-  "planExplanationAccuracyBelow60": "La precisión está por debajo del 60% — necesita práctica enfocada",
-  "@planExplanationAccuracyBelow60": {
-    "description": "Plan explanation when accuracy is low"
-  },
-  "planExplanationOverdueReview": "El repaso está vencido — el riesgo de olvido es alto",
-  "@planExplanationOverdueReview": {
-    "description": "Plan explanation when review is overdue"
-  },
-  "planExplanationLowStreak": "La racha es baja — se necesita constancia",
-  "@planExplanationLowStreak": {
-    "description": "Plan explanation when streak is low"
-  },
-  "planExplanationPrerequisite": "Requisito previo para temas próximos — debe dominarlo primero",
-  "@planExplanationPrerequisite": {
-    "description": "Plan explanation for prerequisite topics"
-  },
-  "planExplanationHighMastery": "Dominio alto — listo para avanzar",
-  "@planExplanationHighMastery": {
-    "description": "Plan explanation for high mastery"
-  },
-  "planExplanationGoodProgress": "Buen progreso — mantenga la constancia",
-  "@planExplanationGoodProgress": {
-    "description": "Plan explanation for good progress"
-  },
-  "planExplanationDeveloping": "En desarrollo — necesita más práctica",
-  "@planExplanationDeveloping": {
-    "description": "Plan explanation for developing topics"
-  },
-  "planExplanationAtRisk": "En riesgo — repaso vencido",
-  "@planExplanationAtRisk": {
-    "description": "Plan explanation for at-risk topics"
-  },
-  "planExplanationNeedsAttention": "Necesita atención — enfoque en fundamentos",
-  "@planExplanationNeedsAttention": {
-    "description": "Plan explanation for topics needing attention"
-  },
   "planReasonRequiredDependent": "Requerido para temas dependientes",
   "@planReasonRequiredDependent": {
     "description": "Reason for prerequisite topics"
@@ -3815,24 +3770,6 @@
   "planFocusRestAndReview": "Descanso y repaso",
   "@planFocusRestAndReview": {
     "description": "Rest day focus label"
-  },
-  "adherenceLow7Days": "Ha tenido {days} días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o hablar con su mentor.",
-  "@adherenceLow7Days": {
-    "description": "Message when 7+ consecutive low adherence days",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "adherenceLow3Days": "Ha tenido {days} días consecutivos de bajo cumplimiento. ¿Desea regenerar su plan con objetivos ajustados?",
-  "@adherenceLow3Days": {
-    "description": "Message when 3+ consecutive low adherence days",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
   },
   "adapSuggestionFundamentals": "Repase conceptos básicos primero",
   "@adapSuggestionFundamentals": {
@@ -3875,10 +3812,6 @@
       }
     }
   },
-  "notificationTimeToReviewTitle": "¡Hora de Repasar!",
-  "@notificationTimeToReviewTitle": {
-    "description": "Title for the revision reminder notification"
-  },
   "notificationTimeToReviewBody": "Han pasado {days} días desde que practicó \"{topic}\".",
   "@notificationTimeToReviewBody": {
     "description": "Body for the revision reminder notification",
@@ -3890,36 +3823,6 @@
         "type": "String"
       }
     }
-  },
-  "notificationTakeABreakTitle": "Tome un Descanso",
-  "@notificationTakeABreakTitle": {
-    "description": "Title for the overwork alert notification"
-  },
-  "notificationTakeABreakBody": "¡Ha estudiado {hours} horas hoy. Recuerde descansar!",
-  "@notificationTakeABreakBody": {
-    "description": "Body for the overwork alert notification",
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "notificationPlanAdjustmentTitle": "Ajuste de Plan",
-  "@notificationPlanAdjustmentTitle": {
-    "description": "Title for the plan adjustment suggestion notification"
-  },
-  "notificationPlanAdjustmentBody": "¿Ha tenido {days} días de bajo cumplimiento. Ajustamos su plan?",
-  "@notificationPlanAdjustmentBody": {
-    "description": "Body for the plan adjustment suggestion notification",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "notificationUpcomingLessonTitle": "Próxima Lección",
-  "@notificationUpcomingLessonTitle": {
-    "description": "Title for the upcoming lesson reminder notification"
   },
   "notificationUpcomingLessonBody": "Su lección \"{lesson}\" comienza a las {time}",
   "@notificationUpcomingLessonBody": {
@@ -3933,23 +3836,6 @@
       }
     }
   },
-  "notificationTopicsNeedAttentionTitle": "Temas que Requieren Atención",
-  "@notificationTopicsNeedAttentionTitle": {
-    "description": "Title for the low mastery warning notification"
-  },
-  "notificationTopicsNeedAttentionBody": "Bajo dominio detectado en: {topics}",
-  "@notificationTopicsNeedAttentionBody": {
-    "description": "Body for the low mastery warning notification",
-    "placeholders": {
-      "topics": {
-        "type": "String"
-      }
-    }
-  },
-  "notificationBadgeUnlockedTitle": "¡Insignia Desbloqueada!",
-  "@notificationBadgeUnlockedTitle": {
-    "description": "Title for the badge unlocked notification"
-  },
   "notificationBadgeUnlockedBody": "Obtuvo la insignia \"{badge}\": {description}",
   "@notificationBadgeUnlockedBody": {
     "description": "Body for the badge unlocked notification",
@@ -3962,68 +3848,28 @@
       }
     }
   },
-  "notificationChannelGeneralName": "Notificaciones de StudyKing",
-  "@notificationChannelGeneralName": {
-    "description": "Name of the general notification channel"
-  },
-  "notificationChannelGeneralDesc": "Notificaciones generales de StudyKing",
-  "@notificationChannelGeneralDesc": {
-    "description": "Description of the general notification channel"
-  },
-  "notificationChannelDailyReminderName": "Recordatorios Diarios de Estudio",
-  "@notificationChannelDailyReminderName": {
-    "description": "Name of the daily study reminders channel"
-  },
-  "notificationChannelDailyReminderDesc": "Recordatorios diarios para estudiar",
-  "@notificationChannelDailyReminderDesc": {
-    "description": "Description of the daily study reminders channel"
-  },
-  "notificationChannelRevisionName": "Recordatorios de Repaso",
-  "@notificationChannelRevisionName": {
-    "description": "Name of the revision reminders channel"
-  },
-  "notificationChannelRevisionDesc": "Recordatorios para repasar temas que necesitan práctica",
-  "@notificationChannelRevisionDesc": {
+  "notifChannelRevisionDesc": "Recordatorios para repasar temas que necesitan práctica",
+  "@notifChannelRevisionDesc": {
     "description": "Description of the revision reminders channel"
   },
-  "notificationChannelWellbeingName": "Alertas de Bienestar",
-  "@notificationChannelWellbeingName": {
-    "description": "Name of the wellbeing alerts channel"
-  },
-  "notificationChannelWellbeingDesc": "Alertas sobre equilibrio estudio-vida y sobrecarga",
-  "@notificationChannelWellbeingDesc": {
+  "notifChannelWellbeingDesc": "Alertas sobre equilibrio estudio-vida y sobrecarga",
+  "@notifChannelWellbeingDesc": {
     "description": "Description of the wellbeing alerts channel"
   },
-  "notificationChannelPlanningName": "Sugerencias de Planificación",
-  "@notificationChannelPlanningName": {
-    "description": "Name of the planning suggestions channel"
-  },
-  "notificationChannelPlanningDesc": "Sugerencias sobre ajustes al plan de estudio",
-  "@notificationChannelPlanningDesc": {
+  "notifChannelPlanningDesc": "Sugerencias sobre ajustes al plan de estudio",
+  "@notifChannelPlanningDesc": {
     "description": "Description of the planning suggestions channel"
   },
-  "notificationChannelLessonsName": "Notificaciones de Lecciones",
-  "@notificationChannelLessonsName": {
-    "description": "Name of the lesson notifications channel"
-  },
-  "notificationChannelLessonsDesc": "Notificaciones sobre próximas lecciones",
-  "@notificationChannelLessonsDesc": {
+  "notifChannelLessonsDesc": "Notificaciones sobre próximas lecciones",
+  "@notifChannelLessonsDesc": {
     "description": "Description of the lesson notifications channel"
   },
-  "notificationChannelMasteryName": "Alertas de Dominio",
-  "@notificationChannelMasteryName": {
-    "description": "Name of the mastery alerts channel"
-  },
-  "notificationChannelMasteryDesc": "Alertas sobre bajo dominio de temas y áreas por mejorar",
-  "@notificationChannelMasteryDesc": {
+  "notifChannelMasteryDesc": "Alertas sobre bajo dominio de temas y áreas por mejorar",
+  "@notifChannelMasteryDesc": {
     "description": "Description of the mastery alerts channel"
   },
-  "notificationChannelBadgesName": "Notificaciones de Insignias",
-  "@notificationChannelBadgesName": {
-    "description": "Name of the badge notifications channel"
-  },
-  "notificationChannelBadgesDesc": "Notificaciones sobre insignias y logros obtenidos",
-  "@notificationChannelBadgesDesc": {
+  "notifChannelBadgesDesc": "Notificaciones sobre insignias y logros obtenidos",
+  "@notifChannelBadgesDesc": {
     "description": "Description of the badge notifications channel"
   },
   "planAccuracyLow": "La precisión está por debajo del 60% — necesita práctica enfocada",
@@ -4121,63 +3967,6 @@
       }
     }
   },
-  "recommendationAccuracyLow": "Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.",
-  "@recommendationAccuracyLow": {
-    "description": "Recommendation when accuracy is below 60 percent"
-  },
-  "recommendationReviewBasics": "Repase temas básicos antes de avanzar",
-  "@recommendationReviewBasics": {
-    "description": "Action suggestion for low accuracy"
-  },
-  "recommendationExcellentProgress": "¡Progreso excelente! Listo para temas avanzados.",
-  "@recommendationExcellentProgress": {
-    "description": "Recommendation when accuracy exceeds 85 percent"
-  },
-  "recommendationChallengingPractice": "Pruebe preguntas de práctica desafiantes",
-  "@recommendationChallengingPractice": {
-    "description": "Action suggestion for high accuracy"
-  },
-  "recommendationLowHours": "¡Estudió menos de 1 hora en total. La constancia es clave!",
-  "@recommendationLowHours": {
-    "description": "Recommendation when study time is very low"
-  },
-  "recommendationSetDailyGoal": "Establezca una meta diaria de estudio de 30 minutos",
-  "@recommendationSetDailyGoal": {
-    "description": "Action suggestion for low study hours"
-  },
-  "recommendationNoActivity": "¡Sin actividad de estudio esta semana. Vuelva al ritmo!",
-  "@recommendationNoActivity": {
-    "description": "Recommendation when no weekly activity is detected"
-  },
-  "recommendationQuickReview": "Comience con una sesión rápida de repaso de 15 minutos",
-  "@recommendationQuickReview": {
-    "description": "Action suggestion for no weekly activity"
-  },
-  "recommendationWeakTopics": "Tiene {count} tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.",
-  "@recommendationWeakTopics": {
-    "description": "Recommendation when there are weak topics needing improvement",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "recommendationReviewWithTutor": "Repase temas débiles con el tutor de IA",
-  "@recommendationReviewWithTutor": {
-    "description": "Action suggestion for weak topics"
-  },
-  "suggestionFundamentals": "Repase conceptos básicos primero",
-  "@suggestionFundamentals": {
-    "description": "Suggestion for topics with accuracy below 60 percent"
-  },
-  "suggestionPractice": "Se recomiendan más preguntas de práctica",
-  "@suggestionPractice": {
-    "description": "Suggestion for topics with accuracy between 60 and 80 percent"
-  },
-  "suggestionAdvanced": "Listo para temas avanzados",
-  "@suggestionAdvanced": {
-    "description": "Suggestion for topics with accuracy above 80 percent"
-  },
   "shareSessionsText": "Sesiones de Estudio",
   "@shareSessionsText": {
     "description": "Text when sharing study session files"
@@ -4222,24 +4011,36 @@
   "@adherenceLowToday": {
     "description": "Message when student is far below daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "adherencePartialToday": "Ha estudiado {actualMinutes} min hoy frente a los {plannedMinutes} min planificados. Intente ponerse al día con los temas restantes.",
   "@adherencePartialToday": {
     "description": "Message when student partially meets daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "adherenceExceededToday": "¡Buen trabajo! Ha estudiado {actualMinutes} min frente a los {plannedMinutes} min planificados.",
   "@adherenceExceededToday": {
     "description": "Message when student exceeds daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "overtimeLabel": "+{minutes} min",

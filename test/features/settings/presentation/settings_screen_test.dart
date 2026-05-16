@@ -7,6 +7,7 @@ import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeSettingsRepository implements SettingsRepository {
@@ -56,9 +57,13 @@ class FakeSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> init() async {}
+  @override
   Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
   @override
   Future<void> saveApiKey({required String service, required String key}) async {}
+  @override
+  Future<String?> getApiKey({required String service}) async => _settings.apiKey;
   @override
   Future<void> saveProfileData(UserProfile profile) async {}
   @override
@@ -68,9 +73,9 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> clearProfile() async {}
   @override
-  Future<String?> getApiKey({required String service}) async => null;
+  Future<void> saveProvider(LlmProvider provider) async {}
   @override
-  Future<void> init() async {}
+  Future<LlmProvider> getProvider() async => LlmProvider.openRouter;
 }
 
 final fakeRepo = FakeSettingsRepository();

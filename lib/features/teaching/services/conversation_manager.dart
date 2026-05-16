@@ -4,15 +4,9 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
-
-enum ConversationPhase {
-  greeting,
-  teaching,
-  exercise,
-  feedback,
-  adaptiveReview,
-  closing,
-}
+import 'conversation_phase.dart';
+export 'conversation_phase.dart';
+import 'prompts/prompts.dart';
 
 class ConversationManager {
   final LlmService _llmService;
@@ -23,6 +17,7 @@ class ConversationManager {
   final List<String> _correctKeywords;
   final List<String> _incorrectKeywords;
   final List<String> _exerciseKeywords;
+  final PromptTemplates _prompts;
 
   String _studentId = '';
   String _topicTitle = '';
@@ -43,39 +38,21 @@ class ConversationManager {
     required List<String> incorrectKeywords,
     required List<String> exerciseKeywords,
     ConversationRepository? persistenceRepo,
+    PromptTemplates? prompts,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
         _correctKeywords = correctKeywords,
         _incorrectKeywords = incorrectKeywords,
         _exerciseKeywords = exerciseKeywords,
+        _prompts = prompts ?? PromptTemplates.defaultTemplates,
         _memory = ConversationMemory(
           maxTurns: 30,
           sessionId: sessionId,
           repository: persistenceRepo,
         );
 
-  List<ConversationMessage> get messages {
-    final history = _memory.getHistory();
-    final result = <ConversationMessage>[];
-    for (int i = 0; i < history.length; i++) {
-      final msg = history[i];
-      final role = msg['role'] == 'assistant'
-          ? MessageRole.tutor
-          : msg['role'] == 'system'
-              ? MessageRole.system
-              : MessageRole.student;
-      result.add(ConversationMessage(
-        id: '${sessionId}_msg_$i',
-        sessionId: sessionId,
-        role: role,
-        type: MessageType.text,
-        content: msg['content'] ?? '',
-        timestamp: _sessionStartTime.add(Duration(seconds: i)),
-      ));
-    }
-    return result;
-  }
+  List<ConversationMessage> get messages => _memory.getHistory();
 
   ConversationPhase get phase => _phase;
   int get exerciseCount => _exerciseCount;
@@ -110,28 +87,16 @@ class ConversationManager {
     required String subjectId,
     required int durationMinutes,
   }) async {
-    final prompt = '''
-You are a knowledgeable AI tutor for $subjectId. Create a structured lesson plan for the topic "$topicTitle".
-
-The lesson should be $durationMinutes minutes long.
-
-Return a JSON object with:
-{
-  "goals": ["goal1", "goal2", "goal3"],
-  "sections": [
-    {"title": "section title", "duration": 10, "type": "explanation|exercise|review"},
-    ...
-  ],
-  "checkpoints": ["checkpoint1", "checkpoint2"],
-  "estimatedDifficulty": 1-5
-}
-''';
+    final prompt = _prompts.buildLessonPlanPrompt(
+      subjectId: subjectId,
+      topicTitle: topicTitle,
+      durationMinutes: durationMinutes,
+    );
 
     final response = await _llmService.chat(
       message: prompt,
       modelId: _modelId,
-      systemPrompt:
-          'You are a curriculum designer creating lesson plans. Respond only with valid JSON.',
+      systemPrompt: _prompts.lessonPlanSystemPrompt,
     );
 
     return response;
@@ -153,7 +118,12 @@ Return a JSON object with:
     }
 
     final buffer = StringBuffer();
-    final tutorPrompt = _buildTutorPrompt();
+    final tutorPrompt = _prompts.buildTutorPrompt(
+      subjectId: _subjectId,
+      topicTitle: _topicTitle,
+      adaptivePace: _adaptivePace,
+      phase: _phase,
+    );
 
     await for (final chunk in _llmService.chatStream(
       message: content,
@@ -184,43 +154,6 @@ Return a JSON object with:
         await Future.delayed(const Duration(milliseconds: 15));
       }
     }
-  }
-
-  String _buildTutorPrompt() {
-    final paceContext = switch (_adaptivePace) {
-      > 1.2 => 'The student is doing well. Accelerate pace.',
-      < 0.8 => 'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.',
-      _ => 'Maintain a steady teaching pace.',
-    };
-
-    final timeContext = switch (_phase) {
-      ConversationPhase.greeting => 'Start the lesson warmly.',
-      ConversationPhase.teaching => 'Teach the concept step by step. Engage the student with questions.',
-      ConversationPhase.exercise => 'Give the student a practice question to assess understanding.',
-      ConversationPhase.feedback => 'Provide constructive feedback on their answer.',
-      ConversationPhase.adaptiveReview => 'The student needs extra help. Re-explain the concept more simply. Use different examples.',
-      ConversationPhase.closing => 'Wrap up the lesson. Summarize key points.',
-    };
-
-    return '''
-You are an AI tutor for $_subjectId teaching "$_topicTitle".
-
-Guidelines:
-- $timeContext
-- $paceContext
-- Explain concepts step by step
-- Adapt to the student's level
-- Encourage the student always
-- If they answer correctly, accelerate; if struggling, simplify
-- Keep track of the lesson hour - be mindful of time
-- Ask questions to check understanding
-- Never give away answers directly - guide the student
-- Insert inline exercises naturally into the conversation
-- Celebrate correct answers with specific praise
-- For wrong answers, explain why and guide toward the correct reasoning
-
-Be conversational, warm, and educational.
-''';
   }
 
   void _evaluateExerciseResponse(String content) {
@@ -284,22 +217,18 @@ Be conversational, warm, and educational.
   }
 
   Future<String> generateSummary() async {
-    final prompt = '''
-Summarize what was covered in this lesson about "$_topicTitle".
-Include:
-1. Key concepts explained
-2. Questions answered ($_exerciseCount exercises, $_correctCount correct)
-3. Student's apparent understanding level (confidence: ${(confidenceRating * 100).round()}%)
-4. Adaptive pace used (${_adaptivePace.toStringAsFixed(1)}x)
-5. Recommendations for next lesson
-
-Keep it concise and constructive.
-''';
+    final prompt = _prompts.buildSummaryPrompt(
+      topicTitle: _topicTitle,
+      exerciseCount: _exerciseCount,
+      correctCount: _correctCount,
+      confidenceRating: confidenceRating,
+      adaptivePace: _adaptivePace,
+    );
 
     return await _llmService.chat(
       message: prompt,
       modelId: _modelId,
-      systemPrompt: 'You are a tutor writing lesson notes.',
+      systemPrompt: _prompts.summarySystemPrompt,
     );
   }
 

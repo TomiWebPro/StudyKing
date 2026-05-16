@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
 import '../models/user_profile_model.dart';
@@ -60,6 +61,22 @@ class SettingsRepository {
     } else {
       return box.get('apiKey_$service');
     }
+  }
+
+  /// Save LLM provider selection
+  Future<void> saveProvider(LlmProvider provider) async {
+    final box = _requireSettingsBox();
+    await box.put('llmProvider', provider.name);
+  }
+
+  /// Get LLM provider selection
+  Future<LlmProvider> getProvider() async {
+    final box = _requireSettingsBox();
+    final stored = box.get('llmProvider', defaultValue: 'openRouter') as String;
+    return LlmProvider.values.firstWhere(
+      (p) => p.name == stored,
+      orElse: () => LlmProvider.openRouter,
+    );
   }
 
   /// Save profile data

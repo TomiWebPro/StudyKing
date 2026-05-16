@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/app_providers.dart' show defaultModelForProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -24,7 +24,7 @@ class QuickGuideScreen extends ConsumerStatefulWidget {
   const QuickGuideScreen({
     super.key,
     this.llmService,
-    this.defaultModelId = 'openai/gpt-4o-mini',
+    this.defaultModelId = '',
     this.systemPrompt,
     this.showModeNavigation = true,
   });
@@ -127,10 +127,17 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       } else {
         final l10n = AppLocalizations.of(context)!;
         final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
+        final savedModel = ref.read(selectedModelProvider);
+        final provider = ref.read(llmProviderProvider);
+        final effectiveModelId = savedModel.isNotEmpty
+            ? savedModel
+            : (widget.defaultModelId.isNotEmpty
+                ? widget.defaultModelId
+                : defaultModelForProvider(provider));
 
         await for (final chunk in llm.chatStream(
           message: text,
-          modelId: widget.defaultModelId,
+          modelId: effectiveModelId,
           memory: _memory,
           systemPrompt: effectiveSystem,
         )) {

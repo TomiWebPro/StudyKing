@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/presentation/api_config_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 
 class FakeSettingsRepository {
   SettingsBox _settings = SettingsBox();
@@ -42,6 +43,8 @@ class FakeSettingsRepository {
   Future<UserProfile?> getProfileData() async => null;
   Future<void> clearProfile() async {}
   Future<void> init() async {}
+  Future<void> saveProvider(LlmProvider provider) async {}
+  Future<LlmProvider> getProvider() async => LlmProvider.openRouter;
 }
 
 final fakeApiRepo = FakeSettingsRepository();

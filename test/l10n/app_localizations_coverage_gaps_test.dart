@@ -117,11 +117,11 @@ void main() {
 
     group('Parameterized Methods', () {
       test('recommendationWeakTopics', () {
-        expect(l10n.recommendationWeakTopics(1),
+        expect(l10n.recommendWeakTopics(1),
             'You have 1 topic(s) that need improvement. Focus on strengthening these areas.');
-        expect(l10n.recommendationWeakTopics(3),
+        expect(l10n.recommendWeakTopics(3),
             'You have 3 topic(s) that need improvement. Focus on strengthening these areas.');
-        expect(l10n.recommendationWeakTopics(0),
+        expect(l10n.recommendWeakTopics(0),
             'You have 0 topic(s) that need improvement. Focus on strengthening these areas.');
       });
     });
@@ -163,7 +163,7 @@ void main() {
         expect(l10n.mastered, 'Dominados');
         expect(l10n.topics, 'Temas');
         expect(l10n.practiceAllWeakAreas,
-            'Practicar Todas las Áreas Débiles');
+            'Practicar Todas las áreas por mejorar');
         expect(l10n.practiceThisTopic, 'Practicar este tema');
         expect(l10n.noTopicDataYet,
             'Aún no hay datos de temas. ¡Empiece a estudiar para ver su progreso!');
@@ -241,11 +241,11 @@ void main() {
 
     group('Parameterized Methods', () {
       test('recommendationWeakTopics', () {
-        expect(l10n.recommendationWeakTopics(1),
+        expect(l10n.recommendWeakTopics(1),
             'Tiene 1 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
-        expect(l10n.recommendationWeakTopics(3),
+        expect(l10n.recommendWeakTopics(3),
             'Tiene 3 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
-        expect(l10n.recommendationWeakTopics(0),
+        expect(l10n.recommendWeakTopics(0),
             'Tiene 0 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
       });
     });
@@ -376,7 +376,7 @@ void main() {
           final l = AppLocalizations.of(context)!;
           return SingleChildScrollView(
             child: Column(children: [
-              Text(l.recommendationWeakTopics(3)),
+              Text(l.recommendWeakTopics(3)),
             ]),
           );
         }),

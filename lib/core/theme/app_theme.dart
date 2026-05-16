@@ -59,6 +59,13 @@ class AppTheme {
         backgroundColor: colorScheme.surfaceContainerHigh,
         indicatorColor: colorScheme.secondaryContainer,
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        indicatorColor: colorScheme.secondaryContainer,
+        labelType: NavigationRailLabelType.all,
+        groupAlignment: -0.8,
+        minWidth: 80,
+      ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 4,
         shape: const RoundedRectangleBorder(

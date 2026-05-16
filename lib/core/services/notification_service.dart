@@ -57,8 +57,8 @@ class NotificationService {
     final l10n = _l10n;
     final androidDetails = AndroidNotificationDetails(
       channelId ?? 'studyking_general',
-      channelName ?? l10n?.notificationChannelGeneralName ?? 'StudyKing Notifications',
-      channelDescription: l10n?.notificationChannelGeneralDesc ?? 'General StudyKing notifications',
+      channelName ?? l10n?.notifChannelGeneral ?? 'StudyKing Notifications',
+      channelDescription: l10n?.notifChannelGeneralDesc ?? 'General StudyKing notifications',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -88,8 +88,8 @@ class NotificationService {
     final l10n = _l10n;
     final androidDetails = AndroidNotificationDetails(
       'studyking_daily_reminder',
-      l10n?.notificationChannelDailyReminderName ?? 'Daily Study Reminders',
-      channelDescription: l10n?.notificationChannelDailyReminderDesc ?? 'Daily reminders to study',
+      l10n?.notifChannelDailyReminder ?? 'Daily Study Reminders',
+      channelDescription: l10n?.notifChannelDailyReminderDesc ?? 'Daily reminders to study',
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -133,12 +133,12 @@ class NotificationService {
     final l10n = _l10n;
     await showNotification(
       id: id,
-      title: l10n?.notificationTimeToReviewTitle ?? 'Time to Review!',
+      title: l10n?.notifTitleTimeToReview ?? 'Time to Review!',
       body: l10n?.notificationTimeToReviewBody(daysSinceLastPractice, topicName)
           ?? 'It\'s been $daysSinceLastPractice days since you practiced "$topicName".',
       payload: 'topic_$topicName',
       channelId: 'studyking_revision',
-      channelName: l10n?.notificationChannelRevisionName ?? 'Revision Reminders',
+      channelName: l10n?.notifChannelRevision ?? 'Revision Reminders',
     );
   }
 
@@ -150,12 +150,12 @@ class NotificationService {
     final hoursStr = hoursStudied.toStringAsFixed(1);
     await showNotification(
       id: id,
-      title: l10n?.notificationTakeABreakTitle ?? 'Take a Break',
-      body: l10n?.notificationTakeABreakBody(hoursStr)
+      title: l10n?.notifTitleTakeBreak ?? 'Take a Break',
+      body: l10n?.notifBodyOverwork(hoursStr)
           ?? 'You\'ve studied $hoursStr hours today. Remember to rest!',
       payload: 'overwork_warning',
       channelId: 'studyking_wellbeing',
-      channelName: l10n?.notificationChannelWellbeingName ?? 'Wellbeing Alerts',
+      channelName: l10n?.notifChannelWellbeing ?? 'Wellbeing Alerts',
     );
   }
 
@@ -166,12 +166,12 @@ class NotificationService {
     final l10n = _l10n;
     await showNotification(
       id: id,
-      title: l10n?.notificationPlanAdjustmentTitle ?? 'Plan Adjustment',
-      body: l10n?.notificationPlanAdjustmentBody(consecutiveLowDays)
+      title: l10n?.notifTitlePlanAdjustment ?? 'Plan Adjustment',
+      body: l10n?.notifBodyPlanAdjustment(consecutiveLowDays)
           ?? 'You\'ve had $consecutiveLowDays days of low adherence. Shall we adjust your plan?',
       payload: 'plan_adjustment',
       channelId: 'studyking_planning',
-      channelName: l10n?.notificationChannelPlanningName ?? 'Planning Suggestions',
+      channelName: l10n?.notifChannelPlanning ?? 'Planning Suggestions',
     );
   }
 
@@ -184,12 +184,12 @@ class NotificationService {
     final timeStr = '${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}';
     await showNotification(
       id: id,
-      title: l10n?.notificationUpcomingLessonTitle ?? 'Upcoming Lesson',
+      title: l10n?.notifTitleUpcomingLesson ?? 'Upcoming Lesson',
       body: l10n?.notificationUpcomingLessonBody(lessonTitle, timeStr)
           ?? 'Your lesson "$lessonTitle" starts at $timeStr',
       payload: 'lesson_${startTime.millisecondsSinceEpoch}',
       channelId: 'studyking_lessons',
-      channelName: l10n?.notificationChannelLessonsName ?? 'Lesson Notifications',
+      channelName: l10n?.notifChannelLessons ?? 'Lesson Notifications',
     );
   }
 
@@ -203,12 +203,12 @@ class NotificationService {
     final suffix = weakTopics.length > 3 ? ' and ${weakTopics.length - 3} more' : '';
     await showNotification(
       id: id,
-      title: l10n?.notificationTopicsNeedAttentionTitle ?? 'Topics Need Attention',
-      body: l10n?.notificationTopicsNeedAttentionBody('$topicList$suffix')
+      title: l10n?.notifTitleTopicsNeedAttention ?? 'Topics Need Attention',
+      body: l10n?.notifBodyLowMastery('$topicList$suffix')
           ?? 'Low mastery detected in: $topicList$suffix',
       payload: 'weak_topics',
       channelId: 'studyking_mastery',
-      channelName: l10n?.notificationChannelMasteryName ?? 'Mastery Alerts',
+      channelName: l10n?.notifChannelMastery ?? 'Mastery Alerts',
     );
   }
 
@@ -220,12 +220,12 @@ class NotificationService {
     final l10n = _l10n;
     await showNotification(
       id: id,
-      title: l10n?.notificationBadgeUnlockedTitle ?? 'Badge Unlocked!',
+      title: l10n?.notifTitleBadgeUnlocked ?? 'Badge Unlocked!',
       body: l10n?.notificationBadgeUnlockedBody(badgeName, badgeDescription)
           ?? 'You earned the "$badgeName" badge: $badgeDescription',
       payload: 'badge_$badgeName',
       channelId: 'studyking_badges',
-      channelName: l10n?.notificationChannelBadgesName ?? 'Badge Notifications',
+      channelName: l10n?.notifChannelBadges ?? 'Badge Notifications',
     );
   }
 

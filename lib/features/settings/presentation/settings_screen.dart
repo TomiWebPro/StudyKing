@@ -124,7 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   order: const NumericFocusOrder(3),
                   child: SwitchListTile(
                     secondary: const Icon(Icons.school),
-                    title: Text(l10n.lessonNotifications),
+                    title: Text(l10n.notifChannelLessons),
                     value: settings.lessonNotificationsEnabled,
                     onChanged: (value) =>
                         ref.read(settingsProvider.notifier).updateLessonNotifications(value),

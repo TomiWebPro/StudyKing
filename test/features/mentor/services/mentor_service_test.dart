@@ -6,6 +6,7 @@ import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -252,10 +253,10 @@ void main() {
         await service.chat('Hello').toList();
         final history = service.memory.getHistory();
         expect(history.length, equals(2));
-        expect(history[0]['role'], equals('user'));
-        expect(history[0]['content'], equals('Hello'));
-        expect(history[1]['role'], equals('assistant'));
-        expect(history[1]['content'], equals('Mentor response'));
+        expect(history[0].role, equals(MessageRole.student));
+        expect(history[0].content, equals('Hello'));
+        expect(history[1].role, equals(MessageRole.tutor));
+        expect(history[1].content, equals('Mentor response'));
       });
     });
 
@@ -284,8 +285,8 @@ void main() {
         await service.chat('schedule a lesson').toList();
         final history = service.memory.getHistory();
         expect(history.length, equals(2));
-        expect(history[0]['role'], equals('user'));
-        expect(history[1]['role'], equals('assistant'));
+        expect(history[0].role, equals(MessageRole.student));
+        expect(history[1].role, equals(MessageRole.tutor));
       });
     });
 
@@ -468,8 +469,8 @@ void main() {
 
         final history = service.memory.getHistory();
         expect(history.any((m) =>
-            m['role'] == 'system' &&
-            m['content']!.contains('Algebra')), isTrue);
+            m.role == MessageRole.system &&
+            m.content.contains('Algebra')), isTrue);
       });
 
       test('does nothing when session not found', () async {
@@ -492,7 +493,7 @@ void main() {
 
         await service.suggestReschedule('nonexistent');
         final history = service.memory.getHistory();
-        expect(history.where((m) => m['role'] == 'system'), isEmpty);
+        expect(history.where((m) => m.role == MessageRole.system), isEmpty);
       });
 
       test('adds system message about rescheduling to memory', () async {
@@ -525,8 +526,8 @@ void main() {
 
         final history = service.memory.getHistory();
         expect(history.any((m) =>
-            m['role'] == 'system' &&
-            m['content']!.contains('Algebra')), isTrue);
+            m.role == MessageRole.system &&
+            m.content.contains('Algebra')), isTrue);
       });
 
       test('creates pending action with correct fields', () async {

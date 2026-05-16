@@ -2064,10 +2064,6 @@
   "@mentor": {
     "description": "Bottom navigation label for AI mentor"
   },
-  "teachingMode": "AI Tutor",
-  "@teachingMode": {
-    "description": "Label for AI tutor mode button"
-  },
   "startAiTutoring": "Start AI Tutoring",
   "@startAiTutoring": {
     "description": "Button label to start AI tutoring session"
@@ -2934,10 +2930,6 @@
   "@revisionReminders": {
     "description": "Revision reminder toggle"
   },
-  "lessonNotifications": "Lesson Notifications",
-  "@lessonNotifications": {
-    "description": "Lesson notification toggle"
-  },
   "overworkAlerts": "Overwork Alerts",
   "@overworkAlerts": {
     "description": "Overwork alert toggle"
@@ -3509,7 +3501,6 @@
   "@badgeFirstStepDesc": {
     "description": "Description for the 'first attempt' badge"
   },
-
   "badgeAccuracyGoldName": "Accuracy Gold",
   "@badgeAccuracyGoldName": {
     "description": "Name for the 'accuracy gold' badge"
@@ -3744,42 +3735,6 @@
       }
     }
   },
-  "planExplanationAccuracyBelow60": "Accuracy is below 60% — needs focused practice",
-  "@planExplanationAccuracyBelow60": {
-    "description": "Plan explanation when accuracy is low"
-  },
-  "planExplanationOverdueReview": "Review is overdue — forgetting risk is high",
-  "@planExplanationOverdueReview": {
-    "description": "Plan explanation when review is overdue"
-  },
-  "planExplanationLowStreak": "Streak is low — consistency needed",
-  "@planExplanationLowStreak": {
-    "description": "Plan explanation when streak is low"
-  },
-  "planExplanationPrerequisite": "Prerequisite for upcoming topics — must master first",
-  "@planExplanationPrerequisite": {
-    "description": "Plan explanation for prerequisite topics"
-  },
-  "planExplanationHighMastery": "High mastery — ready to advance",
-  "@planExplanationHighMastery": {
-    "description": "Plan explanation for high mastery"
-  },
-  "planExplanationGoodProgress": "Good progress — maintain consistency",
-  "@planExplanationGoodProgress": {
-    "description": "Plan explanation for good progress"
-  },
-  "planExplanationDeveloping": "Developing — needs more practice",
-  "@planExplanationDeveloping": {
-    "description": "Plan explanation for developing topics"
-  },
-  "planExplanationAtRisk": "At risk — review overdue",
-  "@planExplanationAtRisk": {
-    "description": "Plan explanation for at-risk topics"
-  },
-  "planExplanationNeedsAttention": "Needs attention — focus on fundamentals",
-  "@planExplanationNeedsAttention": {
-    "description": "Plan explanation for topics needing attention"
-  },
   "planReasonRequiredDependent": "Required for dependent topics",
   "@planReasonRequiredDependent": {
     "description": "Reason for prerequisite topics"
@@ -3815,24 +3770,6 @@
   "planFocusRestAndReview": "Rest and review",
   "@planFocusRestAndReview": {
     "description": "Rest day focus label"
-  },
-  "adherenceLow7Days": "You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.",
-  "@adherenceLow7Days": {
-    "description": "Message when 7+ consecutive low adherence days",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "adherenceLow3Days": "You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?",
-  "@adherenceLow3Days": {
-    "description": "Message when 3+ consecutive low adherence days",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
   },
   "adapSuggestionFundamentals": "Review basic concepts first",
   "@adapSuggestionFundamentals": {
@@ -3875,10 +3812,6 @@
       }
     }
   },
-  "notificationTimeToReviewTitle": "Time to Review!",
-  "@notificationTimeToReviewTitle": {
-    "description": "Title of revision reminder notification"
-  },
   "notificationTimeToReviewBody": "It's been {days} days since you practiced \"{topic}\".",
   "@notificationTimeToReviewBody": {
     "description": "Body of revision reminder notification",
@@ -3890,36 +3823,6 @@
         "type": "String"
       }
     }
-  },
-  "notificationTakeABreakTitle": "Take a Break",
-  "@notificationTakeABreakTitle": {
-    "description": "Title of overwork warning notification"
-  },
-  "notificationTakeABreakBody": "You've studied {hours} hours today. Remember to rest!",
-  "@notificationTakeABreakBody": {
-    "description": "Body of overwork warning notification",
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "notificationPlanAdjustmentTitle": "Plan Adjustment",
-  "@notificationPlanAdjustmentTitle": {
-    "description": "Title of plan adjustment suggestion notification"
-  },
-  "notificationPlanAdjustmentBody": "You've had {days} days of low adherence. Shall we adjust your plan?",
-  "@notificationPlanAdjustmentBody": {
-    "description": "Body of plan adjustment suggestion notification",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "notificationUpcomingLessonTitle": "Upcoming Lesson",
-  "@notificationUpcomingLessonTitle": {
-    "description": "Title of upcoming lesson reminder notification"
   },
   "notificationUpcomingLessonBody": "Your lesson \"{lesson}\" starts at {time}",
   "@notificationUpcomingLessonBody": {
@@ -3933,23 +3836,6 @@
       }
     }
   },
-  "notificationTopicsNeedAttentionTitle": "Topics Need Attention",
-  "@notificationTopicsNeedAttentionTitle": {
-    "description": "Title of low mastery warning notification"
-  },
-  "notificationTopicsNeedAttentionBody": "Low mastery detected in: {topics}",
-  "@notificationTopicsNeedAttentionBody": {
-    "description": "Body of low mastery warning notification",
-    "placeholders": {
-      "topics": {
-        "type": "String"
-      }
-    }
-  },
-  "notificationBadgeUnlockedTitle": "Badge Unlocked!",
-  "@notificationBadgeUnlockedTitle": {
-    "description": "Title of badge unlocked notification"
-  },
   "notificationBadgeUnlockedBody": "You earned the \"{badge}\" badge: {description}",
   "@notificationBadgeUnlockedBody": {
     "description": "Body of badge unlocked notification",
@@ -3962,68 +3848,28 @@
       }
     }
   },
-  "notificationChannelGeneralName": "StudyKing Notifications",
-  "@notificationChannelGeneralName": {
-    "description": "Name of the general notifications channel"
-  },
-  "notificationChannelGeneralDesc": "General StudyKing notifications",
-  "@notificationChannelGeneralDesc": {
-    "description": "Description of the general notifications channel"
-  },
-  "notificationChannelDailyReminderName": "Daily Study Reminders",
-  "@notificationChannelDailyReminderName": {
-    "description": "Name of the daily study reminders channel"
-  },
-  "notificationChannelDailyReminderDesc": "Daily reminders to study",
-  "@notificationChannelDailyReminderDesc": {
-    "description": "Description of the daily study reminders channel"
-  },
-  "notificationChannelRevisionName": "Revision Reminders",
-  "@notificationChannelRevisionName": {
-    "description": "Name of the revision reminders channel"
-  },
-  "notificationChannelRevisionDesc": "Reminders to review topics that need practice",
-  "@notificationChannelRevisionDesc": {
+  "notifChannelRevisionDesc": "Reminders to review topics that need practice",
+  "@notifChannelRevisionDesc": {
     "description": "Description of the revision reminders channel"
   },
-  "notificationChannelWellbeingName": "Wellbeing Alerts",
-  "@notificationChannelWellbeingName": {
-    "description": "Name of the wellbeing alerts channel"
-  },
-  "notificationChannelWellbeingDesc": "Alerts about study-life balance and overwork",
-  "@notificationChannelWellbeingDesc": {
+  "notifChannelWellbeingDesc": "Alerts about study-life balance and overwork",
+  "@notifChannelWellbeingDesc": {
     "description": "Description of the wellbeing alerts channel"
   },
-  "notificationChannelPlanningName": "Planning Suggestions",
-  "@notificationChannelPlanningName": {
-    "description": "Name of the planning suggestions channel"
-  },
-  "notificationChannelPlanningDesc": "Suggestions about study plan adjustments",
-  "@notificationChannelPlanningDesc": {
+  "notifChannelPlanningDesc": "Suggestions about study plan adjustments",
+  "@notifChannelPlanningDesc": {
     "description": "Description of the planning suggestions channel"
   },
-  "notificationChannelLessonsName": "Lesson Notifications",
-  "@notificationChannelLessonsName": {
-    "description": "Name of the lesson notifications channel"
-  },
-  "notificationChannelLessonsDesc": "Notifications about upcoming lessons",
-  "@notificationChannelLessonsDesc": {
+  "notifChannelLessonsDesc": "Notifications about upcoming lessons",
+  "@notifChannelLessonsDesc": {
     "description": "Description of the lesson notifications channel"
   },
-  "notificationChannelMasteryName": "Mastery Alerts",
-  "@notificationChannelMasteryName": {
-    "description": "Name of the mastery alerts channel"
-  },
-  "notificationChannelMasteryDesc": "Alerts about low topic mastery and weak areas",
-  "@notificationChannelMasteryDesc": {
+  "notifChannelMasteryDesc": "Alerts about low topic mastery and weak areas",
+  "@notifChannelMasteryDesc": {
     "description": "Description of the mastery alerts channel"
   },
-  "notificationChannelBadgesName": "Badge Notifications",
-  "@notificationChannelBadgesName": {
-    "description": "Name of the badge notifications channel"
-  },
-  "notificationChannelBadgesDesc": "Notifications about earned badges and achievements",
-  "@notificationChannelBadgesDesc": {
+  "notifChannelBadgesDesc": "Notifications about earned badges and achievements",
+  "@notifChannelBadgesDesc": {
     "description": "Description of the badge notifications channel"
   },
   "planAccuracyLow": "Accuracy is below 60% — needs focused practice",
@@ -4121,63 +3967,6 @@
       }
     }
   },
-  "recommendationAccuracyLow": "Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.",
-  "@recommendationAccuracyLow": {
-    "description": "Recommendation when accuracy is below 60 percent"
-  },
-  "recommendationReviewBasics": "Review basic topics before advancing",
-  "@recommendationReviewBasics": {
-    "description": "Action suggestion for low accuracy"
-  },
-  "recommendationExcellentProgress": "Excellent progress! Ready for advanced topics.",
-  "@recommendationExcellentProgress": {
-    "description": "Recommendation when accuracy is above 85 percent"
-  },
-  "recommendationChallengingPractice": "Try challenging practice questions",
-  "@recommendationChallengingPractice": {
-    "description": "Action suggestion for high accuracy"
-  },
-  "recommendationLowHours": "You studied less than 1 hour total. Consistency is key!",
-  "@recommendationLowHours": {
-    "description": "Recommendation when study time is very low"
-  },
-  "recommendationSetDailyGoal": "Set a daily study goal of 30 minutes",
-  "@recommendationSetDailyGoal": {
-    "description": "Action suggestion for low study hours"
-  },
-  "recommendationNoActivity": "No study activity this week. Get back on track!",
-  "@recommendationNoActivity": {
-    "description": "Recommendation when no weekly activity detected"
-  },
-  "recommendationQuickReview": "Start with a quick 15-minute review session",
-  "@recommendationQuickReview": {
-    "description": "Action suggestion for no weekly activity"
-  },
-  "recommendationWeakTopics": "You have {count} topic(s) that need improvement. Focus on strengthening these areas.",
-  "@recommendationWeakTopics": {
-    "description": "Recommendation when there are weak topics needing improvement",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "recommendationReviewWithTutor": "Review weak topics with the AI tutor",
-  "@recommendationReviewWithTutor": {
-    "description": "Action suggestion for weak topics"
-  },
-  "suggestionFundamentals": "Review basic concepts first",
-  "@suggestionFundamentals": {
-    "description": "Suggestion for topics with accuracy below 60 percent"
-  },
-  "suggestionPractice": "More practice questions recommended",
-  "@suggestionPractice": {
-    "description": "Suggestion for topics with accuracy between 60 and 80 percent"
-  },
-  "suggestionAdvanced": "Ready for advanced topics",
-  "@suggestionAdvanced": {
-    "description": "Suggestion for topics with accuracy above 80 percent"
-  },
   "shareSessionsText": "Study Sessions",
   "@shareSessionsText": {
     "description": "Share text when sharing study session files"
@@ -4222,24 +4011,36 @@
   "@adherenceLowToday": {
     "description": "Message when student is far below daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "adherencePartialToday": "You studied {actualMinutes} min today vs {plannedMinutes} min planned. Try to catch up with the remaining topics.",
   "@adherencePartialToday": {
     "description": "Message when student partially meets daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "adherenceExceededToday": "Great work! You studied {actualMinutes} min vs {plannedMinutes} min planned.",
   "@adherenceExceededToday": {
     "description": "Message when student exceeds daily study target",
     "placeholders": {
-      "actualMinutes": {},
-      "plannedMinutes": {}
+      "actualMinutes": {
+        "type": "int"
+      },
+      "plannedMinutes": {
+        "type": "int"
+      }
     }
   },
   "overtimeLabel": "+{minutes}m",

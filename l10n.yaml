@@ -13,5 +13,9 @@ supported-locales:
 #   overrides for terms like "ordenador", "vale", "añadir", etc.
 # - The locale resolution callback in lib/core/config/locale_config.dart
 #   maps all Spanish variants to 'es'. See AppLocale.resolveLocale().
-# - Adding a new locale: edit AppLocale enum in locale_config.dart only.
-#   l10n.yaml, main.dart, and profile_screen.dart derive from it.
+# - Adding a new locale:
+#     1. Create app_xx.arb (copy app_en.arb as template)
+#     2. Edit AppLocale enum in lib/core/config/locale_config.dart
+#     3. Add to supported-locales in this file
+#     4. Run: flutter gen-l10n
+#     5. Run: scripts/check_i18n_coverage.sh (validates 100% key parity)

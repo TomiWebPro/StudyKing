@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -50,6 +51,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
+    LlmProvider? llmProvider,
     ThemeMode? themeMode,
     double? fontSize,
     bool? studyRemindersEnabled,
@@ -91,6 +93,9 @@ class SettingsController extends StateNotifier<SettingsBox> {
         planAdjustmentNotificationsEnabled:
             planAdjustmentNotificationsEnabled ?? state.planAdjustmentNotificationsEnabled,
       );
+      if (llmProvider != null) {
+        await _repository.saveProvider(llmProvider);
+      }
       state = await _repository.getSettings();
     } catch (e) {
       _logger.e('Error updating settings', e);
@@ -206,6 +211,19 @@ final apiKeyProvider = StateProvider<String>((ref) => '');
 final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBaseUrlString);
 
 final selectedModelProvider = StateProvider<String>((ref) => '');
+
+final llmProviderProvider = StateProvider<LlmProvider>((ref) => LlmProvider.openRouter);
+
+String defaultModelForProvider(LlmProvider provider) {
+  switch (provider) {
+    case LlmProvider.openRouter:
+      return 'gemini-2.0-flash';
+    case LlmProvider.ollama:
+      return 'llama3';
+    case LlmProvider.openAI:
+      return 'gpt-4o-mini';
+  }
+}
 
 final localeProvider = StateProvider<Locale>((ref) {
   try {

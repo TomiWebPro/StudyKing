@@ -24,12 +24,12 @@ ISSUES_OPEN_DIR = os.path.join(ISSUES_DIR, "open")
 ISSUES_COMPLETED_DIR = os.path.join(ISSUES_DIR, "completed")
 CONSECUTIVE_FAILS = 0
 MAX_FAILS = 3
-RETRY_DELAY_HOURS = 1
+
 CYCLE_COUNT = 0
 MASTER_LOOP_DELAY_SECONDS = 20
 MAIN_LOOP_DELAY_SECONDS = 5
 MASTER_TIMEOUT_SECONDS = 600
-IDLE_TIMEOUT_SECONDS = 90
+IDLE_TIMEOUT_SECONDS = 300
 CONNECTION_RETRY_DELAYS = [5, 15, 45]
 
 CONNECTION_ERROR_PATTERNS = [
@@ -672,8 +672,6 @@ def main_loop():
 
         if CONSECUTIVE_FAILS >= MAX_FAILS:
             log(f"!!! {MAX_FAILS} consecutive failures reached !!!")
-            log(f"Waiting {RETRY_DELAY_HOURS}h before retrying...")
-            time.sleep(RETRY_DELAY_HOURS * 3600)
             CONSECUTIVE_FAILS = 0
             continue
 

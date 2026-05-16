@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/app_providers.dart';
 import 'core/constants/app_constants.dart';
+import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
@@ -118,7 +119,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
 
     return MaterialApp(
       locale: locale,
-      title: 'StudyKing',
+      title: AppLocalizations.of(context)?.appTitle ?? 'StudyKing',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -129,10 +130,14 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
       supportedLocales: AppLocale.supportedLocales,
       localeResolutionCallback: AppLocale.resolveLocale,
       builder: (context, child) {
+        final systemTextScale = MediaQuery.textScalerOf(context).scale(1.0);
+        final scaledFontSize = effectiveFontSize / 16.0;
+        final totalScale =
+            (systemTextScale * scaledFontSize).clamp(1.0, 2.0);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             boldText: systemBoldText,
-            textScaler: TextScaler.noScaling,
+            textScaler: TextScaler.linear(totalScale),
           ),
           child: child!,
         );
@@ -254,65 +259,121 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isWideScreen = ResponsiveUtils.breakpointOf(context).isTablet;
+
+    final bodyContent = Stack(
+      children: [
+        for (int i = 0; i < _navigatorKeys.length; i++)
+          Offstage(
+            offstage: i != _selectedIndex,
+            child: TickerMode(
+              enabled: i == _selectedIndex,
+              child: _tabNavigators[i],
+            ),
+          ),
+      ],
+    );
+
     return Semantics(
       explicitChildNodes: true,
       child: Scaffold(
-        body: Stack(
-          children: [
-            for (int i = 0; i < _navigatorKeys.length; i++)
-              Offstage(
-                offstage: i != _selectedIndex,
-                child: TickerMode(
-                  enabled: i == _selectedIndex,
-                  child: _tabNavigators[i],
+        body: isWideScreen
+            ? Row(
+                children: [
+                  NavigationRail(
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (index) {
+                      setState(() {
+                        _selectedIndex = index;
+                      });
+                    },
+                    leading: FloatingActionButton.small(
+                      onPressed: () => _openDashboard(),
+                      tooltip: l10n.dashboard,
+                      child: const Icon(Icons.dashboard),
+                    ),
+                    labelType: NavigationRailLabelType.all,
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.school_outlined),
+                        selectedIcon: Icon(Icons.school),
+                        label: Text(l10n.subjects),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.play_arrow_outlined),
+                        selectedIcon: Icon(Icons.play_arrow),
+                        label: Text(l10n.practice),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.auto_awesome_outlined),
+                        selectedIcon: Icon(Icons.auto_awesome),
+                        label: Text(l10n.mentor),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.timer_outlined),
+                        selectedIcon: Icon(Icons.timer),
+                        label: Text(l10n.focusMode),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.settings_outlined),
+                        selectedIcon: Icon(Icons.settings),
+                        label: Text(l10n.settings),
+                      ),
+                    ],
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1),
+                  Expanded(child: bodyContent),
+                ],
+              )
+            : bodyContent,
+        floatingActionButton: isWideScreen
+            ? null
+            : Semantics(
+                button: true,
+                label: l10n.dashboard,
+                child: FloatingActionButton.small(
+                  onPressed: () => _openDashboard(),
+                  tooltip: l10n.dashboard,
+                  child: const Icon(Icons.dashboard),
                 ),
               ),
-          ],
-        ),
-        floatingActionButton: Semantics(
-          button: true,
-          label: l10n.dashboard,
-          child: FloatingActionButton.small(
-            onPressed: () => _openDashboard(),
-            tooltip: l10n.dashboard,
-            child: const Icon(Icons.dashboard),
-          ),
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          destinations: [
-            NavigationDestination(
-              icon: Icon(Icons.school_outlined),
-              selectedIcon: Icon(Icons.school),
-              label: l10n.subjects,
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.play_arrow_outlined),
-              selectedIcon: Icon(Icons.play_arrow),
-              label: l10n.practice,
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined),
-              selectedIcon: Icon(Icons.auto_awesome),
-              label: l10n.mentor,
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.timer_outlined),
-              selectedIcon: Icon(Icons.timer),
-              label: l10n.focusMode,
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: l10n.settings,
-            ),
-          ],
-        ),
+        bottomNavigationBar: isWideScreen
+            ? null
+            : NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(Icons.school_outlined),
+                    selectedIcon: Icon(Icons.school),
+                    label: l10n.subjects,
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.play_arrow_outlined),
+                    selectedIcon: Icon(Icons.play_arrow),
+                    label: l10n.practice,
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.auto_awesome_outlined),
+                    selectedIcon: Icon(Icons.auto_awesome),
+                    label: l10n.mentor,
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.timer_outlined),
+                    selectedIcon: Icon(Icons.timer),
+                    label: l10n.focusMode,
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings),
+                    label: l10n.settings,
+                  ),
+                ],
+              ),
       ),
     );
   }

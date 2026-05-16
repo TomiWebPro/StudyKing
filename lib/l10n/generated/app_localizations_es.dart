@@ -1546,9 +1546,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mentor => 'Mentor';
 
   @override
-  String get teachingMode => 'Tutor IA';
-
-  @override
   String get startAiTutoring => 'Iniciar Tutoría IA';
 
   @override
@@ -2199,9 +2196,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get revisionReminders => 'Recordatorios de Revisión';
 
   @override
-  String get lessonNotifications => 'Notificaciones de Lecciones';
-
-  @override
   String get overworkAlerts => 'Alertas de Sobrecarga';
 
   @override
@@ -2764,40 +2758,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get planExplanationAccuracyBelow60 =>
-      'La precisión está por debajo del 60% — necesita práctica enfocada';
-
-  @override
-  String get planExplanationOverdueReview =>
-      'El repaso está vencido — el riesgo de olvido es alto';
-
-  @override
-  String get planExplanationLowStreak =>
-      'La racha es baja — se necesita constancia';
-
-  @override
-  String get planExplanationPrerequisite =>
-      'Requisito previo para temas próximos — debe dominarlo primero';
-
-  @override
-  String get planExplanationHighMastery => 'Dominio alto — listo para avanzar';
-
-  @override
-  String get planExplanationGoodProgress =>
-      'Buen progreso — mantenga la constancia';
-
-  @override
-  String get planExplanationDeveloping =>
-      'En desarrollo — necesita más práctica';
-
-  @override
-  String get planExplanationAtRisk => 'En riesgo — repaso vencido';
-
-  @override
-  String get planExplanationNeedsAttention =>
-      'Necesita atención — enfoque en fundamentos';
-
-  @override
   String get planReasonRequiredDependent => 'Requerido para temas dependientes';
 
   @override
@@ -2823,16 +2783,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get planFocusRestAndReview => 'Descanso y repaso';
-
-  @override
-  String adherenceLow7Days(int days) {
-    return 'Ha tenido $days días consecutivos de bajo cumplimiento. Considere ajustar su plan de estudio o hablar con su mentor.';
-  }
-
-  @override
-  String adherenceLow3Days(int days) {
-    return 'Ha tenido $days días consecutivos de bajo cumplimiento. ¿Desea regenerar su plan con objetivos ajustados?';
-  }
 
   @override
   String get adapSuggestionFundamentals => 'Repase conceptos básicos primero';
@@ -2862,31 +2812,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get notificationTimeToReviewTitle => '¡Hora de Repasar!';
-
-  @override
   String notificationTimeToReviewBody(int days, String topic) {
     return 'Han pasado $days días desde que practicó \"$topic\".';
   }
-
-  @override
-  String get notificationTakeABreakTitle => 'Tome un Descanso';
-
-  @override
-  String notificationTakeABreakBody(String hours) {
-    return '¡Ha estudiado $hours horas hoy. Recuerde descansar!';
-  }
-
-  @override
-  String get notificationPlanAdjustmentTitle => 'Ajuste de Plan';
-
-  @override
-  String notificationPlanAdjustmentBody(int days) {
-    return '¿Ha tenido $days días de bajo cumplimiento. Ajustamos su plan?';
-  }
-
-  @override
-  String get notificationUpcomingLessonTitle => 'Próxima Lección';
 
   @override
   String notificationUpcomingLessonBody(String lesson, String time) {
@@ -2894,77 +2822,32 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get notificationTopicsNeedAttentionTitle =>
-      'Temas que Requieren Atención';
-
-  @override
-  String notificationTopicsNeedAttentionBody(String topics) {
-    return 'Bajo dominio detectado en: $topics';
-  }
-
-  @override
-  String get notificationBadgeUnlockedTitle => '¡Insignia Desbloqueada!';
-
-  @override
   String notificationBadgeUnlockedBody(String badge, String description) {
     return 'Obtuvo la insignia \"$badge\": $description';
   }
 
   @override
-  String get notificationChannelGeneralName => 'Notificaciones de StudyKing';
-
-  @override
-  String get notificationChannelGeneralDesc =>
-      'Notificaciones generales de StudyKing';
-
-  @override
-  String get notificationChannelDailyReminderName =>
-      'Recordatorios Diarios de Estudio';
-
-  @override
-  String get notificationChannelDailyReminderDesc =>
-      'Recordatorios diarios para estudiar';
-
-  @override
-  String get notificationChannelRevisionName => 'Recordatorios de Repaso';
-
-  @override
-  String get notificationChannelRevisionDesc =>
+  String get notifChannelRevisionDesc =>
       'Recordatorios para repasar temas que necesitan práctica';
 
   @override
-  String get notificationChannelWellbeingName => 'Alertas de Bienestar';
-
-  @override
-  String get notificationChannelWellbeingDesc =>
+  String get notifChannelWellbeingDesc =>
       'Alertas sobre equilibrio estudio-vida y sobrecarga';
 
   @override
-  String get notificationChannelPlanningName => 'Sugerencias de Planificación';
-
-  @override
-  String get notificationChannelPlanningDesc =>
+  String get notifChannelPlanningDesc =>
       'Sugerencias sobre ajustes al plan de estudio';
 
   @override
-  String get notificationChannelLessonsName => 'Notificaciones de Lecciones';
-
-  @override
-  String get notificationChannelLessonsDesc =>
+  String get notifChannelLessonsDesc =>
       'Notificaciones sobre próximas lecciones';
 
   @override
-  String get notificationChannelMasteryName => 'Alertas de Dominio';
-
-  @override
-  String get notificationChannelMasteryDesc =>
+  String get notifChannelMasteryDesc =>
       'Alertas sobre bajo dominio de temas y áreas por mejorar';
 
   @override
-  String get notificationChannelBadgesName => 'Notificaciones de Insignias';
-
-  @override
-  String get notificationChannelBadgesDesc =>
+  String get notifChannelBadgesDesc =>
       'Notificaciones sobre insignias y logros obtenidos';
 
   @override
@@ -3037,56 +2920,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get recommendationAccuracyLow =>
-      'Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.';
-
-  @override
-  String get recommendationReviewBasics =>
-      'Repase temas básicos antes de avanzar';
-
-  @override
-  String get recommendationExcellentProgress =>
-      '¡Progreso excelente! Listo para temas avanzados.';
-
-  @override
-  String get recommendationChallengingPractice =>
-      'Pruebe preguntas de práctica desafiantes';
-
-  @override
-  String get recommendationLowHours =>
-      '¡Estudió menos de 1 hora en total. La constancia es clave!';
-
-  @override
-  String get recommendationSetDailyGoal =>
-      'Establezca una meta diaria de estudio de 30 minutos';
-
-  @override
-  String get recommendationNoActivity =>
-      '¡Sin actividad de estudio esta semana. Vuelva al ritmo!';
-
-  @override
-  String get recommendationQuickReview =>
-      'Comience con una sesión rápida de repaso de 15 minutos';
-
-  @override
-  String recommendationWeakTopics(int count) {
-    return 'Tiene $count tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.';
-  }
-
-  @override
-  String get recommendationReviewWithTutor =>
-      'Repase temas débiles con el tutor de IA';
-
-  @override
-  String get suggestionFundamentals => 'Repase conceptos básicos primero';
-
-  @override
-  String get suggestionPractice => 'Se recomiendan más preguntas de práctica';
-
-  @override
-  String get suggestionAdvanced => 'Listo para temas avanzados';
-
-  @override
   String get shareSessionsText => 'Sesiones de Estudio';
 
   @override
@@ -3117,17 +2950,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get subjectIdHint => 'p. ej. sub_física';
 
   @override
-  String adherenceLowToday(Object actualMinutes, Object plannedMinutes) {
+  String adherenceLowToday(int actualMinutes, int plannedMinutes) {
     return 'Ha estudiado $actualMinutes min hoy frente a los $plannedMinutes min planificados. Considere redistribuir la carga restante.';
   }
 
   @override
-  String adherencePartialToday(Object actualMinutes, Object plannedMinutes) {
+  String adherencePartialToday(int actualMinutes, int plannedMinutes) {
     return 'Ha estudiado $actualMinutes min hoy frente a los $plannedMinutes min planificados. Intente ponerse al día con los temas restantes.';
   }
 
   @override
-  String adherenceExceededToday(Object actualMinutes, Object plannedMinutes) {
+  String adherenceExceededToday(int actualMinutes, int plannedMinutes) {
     return '¡Buen trabajo! Ha estudiado $actualMinutes min frente a los $plannedMinutes min planificados.';
   }
 

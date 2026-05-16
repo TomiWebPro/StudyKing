@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/widgets/conversation_input.dart';
-import 'package:studyking/core/providers/app_providers.dart' show database, settingsProvider;
-import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
@@ -60,16 +59,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     if (widget.tutorService != null) {
       _tutorService = widget.tutorService!;
     } else {
-      final llmService = ref.read(llmServiceProvider);
-      final masteryService = MasteryGraphService();
-      final modelId = 'openai/gpt-4o-mini';
-
-      _tutorService = TutorService(
-        database: database,
-        llmService: llmService,
-        masteryService: masteryService,
-        modelId: modelId,
-      );
+      _tutorService = ref.read(tutorServiceProvider);
     }
 
     _startLesson();
@@ -302,7 +292,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
                 IconButton(
                   icon: Icon(
                     _isVoiceListening ? Icons.mic : Icons.mic_none,
-                    color: _isVoiceListening ? Colors.red : null,
+                    color: _isVoiceListening ? Theme.of(context).colorScheme.error : null,
                   ),
                   onPressed: _isInitialized && !_isSending ? _toggleVoiceInput : null,
                   tooltip: l10n.voiceInput,

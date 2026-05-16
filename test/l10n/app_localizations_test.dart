@@ -825,7 +825,7 @@ void main() {
         expect(l10n.selectTopic, 'Seleccionar Tema');
         expect(l10n.noTopicsAvailable, 'No hay temas disponibles');
         expect(l10n.noWeakAreasFound, 'No se encontraron áreas por mejorar. ¡Siga así!');
-        expect(l10n.noWeakAreasQuestions, 'No hay preguntas disponibles para sus áreas débiles.');
+        expect(l10n.noWeakAreasQuestions, 'No hay preguntas disponibles para sus áreas por mejorar.');
         expect(l10n.questionsDueForReview, 'preguntas pendientes de repaso');
         expect(l10n.spacedRepetitionMode, 'Repetición Espaciada');
       });
@@ -1009,7 +1009,7 @@ void main() {
         expect(l10n.validating, 'Validando...');
         expect(l10n.renderedGraph, 'Gráfico generado');
         expect(l10n.noDataUploaded, 'No hay datos subidos');
-        expect(l10n.uploadOrPasteData, 'Sube o pegue datos para visualizar');
+        expect(l10n.uploadOrPasteData, 'Cargue o pegue datos para visualizar');
         expect(l10n.selectGraphType, 'Seleccione un tipo de gráfico para visualizar');
         expect(l10n.uploadDataFileDialog, 'Subir Archivo de Datos');
         expect(l10n.fileUploadImplemented, 'La funcionalidad de carga de archivos se implementaría aquí.');
@@ -1239,7 +1239,7 @@ void main() {
       });
 
       test('practiceQuestionsFrom', () {
-        expect(l10n.practiceQuestionsFrom('Matemáticas'), 'Practica preguntas de Matemáticas');
+        expect(l10n.practiceQuestionsFrom('Matemáticas'), 'Practique preguntas de Matemáticas');
       });
 
       test('sessionNumber', () {

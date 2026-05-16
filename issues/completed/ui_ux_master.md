@@ -1,97 +1,125 @@
-# Focus Mode: Uncontrolled Animation Lifecycle, Break Timer Stale-Listener Bug, and Invisible Navigation Tab
-
-## Summary
-
-The Focus Mode feature has three interrelated UI/UX defects: (1) a stale-listener memory/state bug in the break countdown, (2) an unscoped pulse animation that rebuilds the entire timer widget per frame, and (3) the entire feature is unreachable from the bottom navigation bar, requiring users to discover it through unmarked deep links.
-
----
+# UI/UX Issue: Systemic accessibility, theming, responsive navigation, and i18n gaps
 
 ## Context
 
-Focus Mode (`lib/features/focus_mode/`) is a cross-cutting feature for timed study sessions with a Pomodoro-style break. It is the app's primary tool for tracking study duration and adherence. Despite its importance, it has no dedicated navigation tab, its animations are not properly scoped, and its break timer accumulates listeners on every session completion.
+A review of the presentation layer across all features reveals four high-impact UI/UX problems that collectively degrade the experience for users with accessibility needs, users on non-mobile form factors, users in dark/high-contrast mode, and non-English users.
 
 ---
 
-## Issue 1: Break Timer Listener Accumulation (Stale Closure Bug)
+## Issue 1 — Accessibility: `TextScaler.noScaling` prevents system font scaling
 
-**Affected file:** `lib/features/focus_mode/presentation/focus_timer_screen.dart:99-117`
+**File:** `lib/main.dart:135`
 
-### What happens
+```dart
+MediaQuery.of(context).copyWith(
+  boldText: systemBoldText,
+  textScaler: TextScaler.noScaling,  // ← disables user font-size preferences
+)
+```
 
-Each time a session completes, `_onSessionComplete` → `_startBreakTimer()` is called. Inside `_startBreakTimer`, a **new listener** is attached to `_breakController` via `addListener`. The listener closure captures `_breakRemaining` by reference and decrements it.
+**Problem:** The global `MediaQuery` override uses `TextScaler.noScaling`, which flatly ignores the user's system font size setting (`Settings > Display > Font size` on Android, `Display > Text size` on iOS, etc.). Visually impaired users who rely on system-wide font scaling are unable to read any UI text in the app. While the app has its own in-app `fontSize` setting (`settings.fontSize`), this is a separate opt-in mechanism that many users will not discover.
 
-- **First session:** 1 listener → break counts down correctly.
-- **Second session (after break ends, user starts another):** 2 listeners → `_breakRemaining` decrements twice per tick. The break ends in ~150s instead of 300s.
-- **Nth session:** N listeners → break time shrinks proportionally.
+**Rationale:** WCAG Success Criterion 1.4.4 (Resize Text) requires that text can be resized up to 200% without loss of content or functionality. `noScaling` is a direct violation. The in-app slider at `lib/features/settings/presentation/settings_screen.dart` partially mitigates this, but:
+- Only accessible via Settings → Font Size (hidden from first-time users)
+- Does not respond to OS-level accessibility preferences
+- Users with motor impairments who rely on OS-wide settings are excluded
 
-### Root cause
-
-`_startBreakTimer` calls `_breakController.addListener(...)` but the old listener is never removed. `_breakController.dispose()` in `dispose()` discards the controller object but does not cleanly remove the individual listener closures. The `_breakController` is only created once in `initState` but listeners are appended unconditionally.
-
-### Acceptance criteria
-
-- [ ] Each call to `_startBreakTimer` must register exactly **one** listener.
-- [ ] The listener must be removed when the break state resets (`_inBreak = false`) or when the widget disposes.
-- [ ] An alternative: use a `Timer.periodic` for the break countdown instead of `AnimationController.addListener`, which is semantically clearer and avoids listener-management issues entirely.
-
----
-
-## Issue 2: Unscoped Pulse Animation — Full Widget Tree Rebuild Per Frame
-
-**Affected file:** `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart:33-76, 104-110`
-
-### What happens
-
-The `_pulseController` is a repeating `AnimationController` (1s duration) that drives a `Transform.scale` (`1.0 + _pulseController.value * 0.03` — a 3% scale pulse). The `AnimatedBuilder` wrapping the timer circle rebuilds the **entire** widget subtree (the `SizedBox`, `Stack`, `CircularProgressIndicator`, `Column`, `FittedBox`, two `Text` widgets) on every animation frame (~60fps).
-
-### Problems
-
-1. **Performance:** `CircularProgressIndicator` is itself a repaint-boundary-breaking widget. Nesting it inside an `AnimatedBuilder` that fires 60 times per second forces a relayout of the entire timer display, including the `FittedBox` and text measuring.
-2. **Offstate energy waste:** The controller is never stopped when the widget is offstage (tab switched away). It continues to tick server frames that are never displayed.
-3. **Paused state gap:** When `isPaused` is true, `_syncPulseAnimation` stops the controller. But when `isPaused` transitions back to false, the check `!_pulseController.isAnimating` may be false (controller still in `Animating` state from a previous `.repeat()` call), causing the pulse to **not resume**. The `didUpdateWidget` → `_syncPulseAnimation` call does not properly reset the controller's animation state.
-
-### Acceptance criteria
-
-- [ ] The pulse animation should be driven by a **reactive state** (e.g., a simple `AnimatedScale` or a custom `AnimatedWidget` that does not rebuild the entire child subtree) rather than an unscoped `AnimatedBuilder`.
-- [ ] The `_pulseController` must be stopped when `isPaused` is true and properly retriggered when it becomes false (verify `_syncPulseAnimation` logic).
-- [ ] The controller should respect `TickerMode` (it already does via the tab navigator's `Offstage`+`TickerMode`, but verify that break timer and pulse both pause/resume correctly when the user switches tabs and returns).
+**Acceptance criteria:**
+- Remove `TextScaler.noScaling` (default behaviour uses `TextScaler.linear` which respects the system text scale factor)
+- OR replace with `TextScaler.linear(clamp(1.0, systemFactor * effectiveFontSize / 16, 2.0))` if there is a strong justification for capping
+- Verify that all screens render correctly at 1.5× and 2.0× text scale factors (no overflow, no clipped text, no overlapping widgets)
+- The in-app font-size slider should compound with (multiply) the OS scale factor
 
 ---
 
-## Issue 3: Focus Mode Has No Navigation Tab
+## Issue 2 — Design language: Hardcoded colors break dark mode and high-contrast themes
 
-**Affected files:** `lib/main.dart:293-327`, `lib/features/focus_mode/presentation/focus_timer_screen.dart`
+**Files:** `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart:81`, `lib/features/teaching/presentation/tutor_screen.dart:305`
 
-### What happens
+```dart
+// lesson_progress_bar.dart:81
+remaining <= 5
+    ? Colors.orange   // ← hardcoded, not a theme token
 
-Focus Mode is **not** listed in the `NavigationBar` destinations. The bottom bar shows: Subjects, Practice, Mentor, Dashboard, Settings. There is no Focus Mode tab.
+// tutor_screen.dart:305
+_isVoiceListening ? Colors.red : null   // ← hardcoded, should use colorScheme.error
+```
 
-### How users reach Focus Mode today
+**Problem:** Hardcoded material `Colors.orange` and `Colors.red` do not adapt:
+- In dark mode, `Colors.orange` (0xFFFF9800) maintains high luminance against a dark background but has poor contrast on the `AlwaysStoppedAnimation` composited on `surfaceContainerHighest`.
+- In high-contrast mode (`highContrastLightTheme` / `highContrastDarkTheme`), these colors are not part of the seed-derived scheme and jar against the increased contrast palette.
+- `Colors.orange` (`#FF9800`) has a contrast ratio of only ~2.8:1 against `surfaceContainerHighest` in light mode, failing WCAG AA for non-text elements.
 
-1. A `Card` on the Dashboard screen (line 98 in `dashboard_screen.dart`) with `Navigator.pushNamed(context, AppRoutes.focusMode)` — no label explaining this navigates to Focus Mode.
-2. An `InkWell` wrapping `SessionSummaryCard` inside a `CollapsibleCard` titled "Focus Time" on the dashboard.
-3. Deep links from planner adherence features.
-4. There is no direct entry point from the main navigation.
+**Rationale:** A review of the entire widget layer shows that **every other file** correctly uses `Theme.of(context).colorScheme.*` tokens. These two locations are regression points that were likely added as quick visual indicators without considering theming. The `AppTheme` class already defines `progressColor()` at `lib/core/theme/app_theme.dart:124`, but `LessonProgressBar` does not use it.
 
-### Why this matters
+**Affected scenarios:**
+1. High-contrast theme enabled: orange bar is visually jarring, no longer matches the increased-contrast outline palette
+2. Custom seed colour: only `primary`/`tertiary`/`error` derive from seed; `Colors.orange` stays fixed
+3. Mic icon in `TutorScreen` — `Colors.red` is not `colorScheme.error`, so in dark mode the high-luminance red overpowers the UI
 
-- **Discoverability failure:** A first-time user has no way to know Focus Mode exists. It is buried two levels deep inside the Dashboard's focus stats card.
-- **Navigation inconsistency:** The app has a tab for Mentor (an AI chat) but not for the study timer — a core study tool in any serious study app.
-- **Context loss:** When the user navigates from the dashboard to Focus Mode, the back button returns to the dashboard, not to wherever they were before. A dedicated tab would preserve context via `TabNavigator`.
-
-### Acceptance criteria
-
-- [ ] Add a Focus Mode destination to the `NavigationBar` (replace one existing tab or add a 6th tab, whichever preserves visual balance — max 5 is recommended by Material Design guidelines, so consider merging or re-labeling).
-- [ ] If adding a 6th tab is undesirable (Material guideline recommends 3–5), consider replacing the Dashboard tab with Focus Mode and making Dashboard a top-level app bar action or the FAB (which is already a duplicate Dashboard button).
-- [ ] Ensure the entry point from Dashboard's focus card still works as a shortcut (deep link to the tab).
-- [ ] Add a visual indicator (e.g., badge or dot) when a focus session is active.
+**Acceptance criteria:**
+- Replace `Colors.orange` in `lesson_progress_bar.dart:81` with `Theme.of(context).colorScheme.tertiary` (or use `AppTheme.progressColor()` which maps ranges to `primary`/`tertiary`/`error`)
+- Replace `Colors.red` in `tutor_screen.dart:305` with `Theme.of(context).colorScheme.error`
+- Verify visually in both light and dark themes at default and high-contrast settings
 
 ---
 
-## Related Observations (Low Priority)
+## Issue 3 — Responsive navigation: Bottom NavigationBar used on all screen widths, no NavigationRail for tablets
 
-| Observation | Location | Notes |
-|---|---|---|
-| `FocusTimerScreen` creates `StudyTimerService` by reading the provider in `initState`, but holds a raw reference instead of watching it — if the provider's state is ever invalidated, the stale reference is used silently. | `focus_timer_screen.dart:53` | Not critical since the service is a singleton-like provider, but violates Riverpod conventions. |
-| `SessionSummaryCard` reads `todayStats` by hardcoded string keys (`'completedSessions'`, `'totalSessions'`, `'totalMs'`) — the caller in `dashboard_screen.dart` passes keys `'totalSeconds'`, `'plannedMinutes'`, `'hours'`. There is a partial key mismatch: `totalMs` vs `totalSeconds`. | `session_summary_card.dart:34-35`, `dashboard_screen.dart:100-106` | The card will show 0 for totals if keys mismatch; only `completedSessions`/`totalSessions` survive. |
-| All route transitions use `FadeTransition` only (`app_router.dart:234`). No visual hierarchy — a settings dialog fades in identically to a detail screen push. | `lib/core/routes/app_router.dart:229-240` | Monotonous; consider slide transitions for drill-down routes, fade for modals, aligning with Material 3 navigation semantics. |
+**Files:** `lib/main.dart:281-315`
+
+**Problem:** The app uses `NavigationBar` (Material 3 bottom navigation) unconditionally for all form factors. On tablets (≥840px width, `ScreenBreakpoint.md` and `lg`) and desktop windows, the bottom nav:
+- Wastes horizontal space that could be used for a side rail with labels
+- Violates Material 3 guidance that recommends `NavigationRail` for medium–large screens
+- The 5-destination bar becomes crowded on tablets in landscape mode (text labels clip)
+
+The `MainScreen` at `lib/main.dart:206` has no `LayoutBuilder` or breakpoint-conditional build:
+```dart
+body: Stack(children: [...]),
+bottomNavigationBar: NavigationBar(...)
+```
+
+**Rationale:** The `ResponsiveUtils` class already defines breakpoints (`xs`/`sm`/`md`/`lg`) and several widgets use `LayoutBuilder` or `bp` checks to adapt (e.g., `SummaryRow`, `PracticeSessionNavButtons`, `PlannerScreen`). The navigation shell is the most fundamental layout component and should be the first to adapt, yet it is fully static.
+
+The 5-tab structure maps naturally to `NavigationRail`:
+- `NavigationRail` with `leading` containing the FAB (dashboard) — replaces the separate `FloatingActionButton`
+- `NavigationRail.destinations` for subjects / practice / mentor / focus / settings
+- `NavigationRail.extended` can optionally show labels
+
+**Acceptance criteria:**
+- At breakpoints ≥ `ScreenBreakpoint.md` (840px), replace `NavigationBar` with `NavigationRail` pinned to the leading edge
+- Move the dashboard FAB into the `NavigationRail.leading` or a `NavigationRail`-adjacent slot so it does not require a separate `FloatingActionButton`
+- Preserve `Offstage` + `TickerMode` tab switching (or migrate to `IndexedStack` if preferred)
+- Verify on a 10" tablet (landscape and portrait) and a desktop window ≥1200px
+
+---
+
+## Issue 4 — Localization: Hardcoded untranslated string in PlannerScreen tabs
+
+**File:** `lib/features/planner/presentation/planner_screen.dart:225`
+
+```dart
+Tab(text: l10n.studyPlanner),
+const Tab(text: 'Calendar'),      // ← hardcoded English, not localised
+Tab(text: l10n.roadmaps),
+```
+
+**Problem:** The second tab in the Planner screen's `TabBar` is a `const Tab(text: 'Calendar')` literal while both neighbouring tabs use `AppLocalizations.of(context)!.studyPlanner` and `AppLocalizations.of(context)!.roadmaps`. This causes `'Calendar'` to display in English for all locales.
+
+**Rationale:** Since `AppLocalizations` is auto-generated with a `.calendar` key (or should have one added), using a raw string here breaks the i18n contract. Every other string in the planner screen correctly uses `l10n.*`.
+
+**Acceptance criteria:**
+- Add `calendar` to the ARB localisation file(s)
+- Replace `const Tab(text: 'Calendar')` with `Tab(text: l10n.calendar)`
+- Verify no regressions in `TabBar` rendering (the `Tab` is no longer `const`, which is acceptable since the screen is stateful)
+
+---
+
+## Summary
+
+| Issue | Area | Severity | Effort |
+|-------|------|----------|--------|
+| 1. Text scaling disabled | Accessibility | Critical | Small (1–3 files) |
+| 2. Hardcoded theme colours | Design language | High | Small (2 files) |
+| 3. No responsive navigation shell | Responsive layout | High | Medium (main.dart) |
+| 4. Hardcoded 'Calendar' string | i18n | Medium | Trivial (1 string) |

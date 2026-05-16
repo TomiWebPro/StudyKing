@@ -14,7 +14,7 @@ void main() {
 
     test('mentor and tutor section', () {
       expect(l10n.mentor, 'Mentor');
-      expect(l10n.teachingMode, 'AI Tutor');
+      expect(l10n.aiTutor, 'AI Tutor');
       expect(l10n.startAiTutoring, 'Start AI Tutoring');
       expect(l10n.endLesson, 'End Lesson');
       expect(l10n.typeYourMessage, 'Type your message...');
@@ -55,7 +55,7 @@ void main() {
       expect(l10n.notificationPreferences, 'Notification Preferences');
       expect(l10n.dailyReminders, 'Daily Reminders');
       expect(l10n.revisionReminders, 'Revision Reminders');
-      expect(l10n.lessonNotifications, 'Lesson Notifications');
+      expect(l10n.notifChannelLessons, 'Lesson Notifications');
       expect(l10n.overworkAlerts, 'Overwork Alerts');
       expect(l10n.planAdjustmentNotifications, 'Plan Adjustment Alerts');
       expect(l10n.quietHours, 'Quiet Hours');
@@ -418,7 +418,7 @@ void main() {
 
     test('mentor and tutor section', () {
       expect(l10n.mentor, 'Mentor');
-      expect(l10n.teachingMode, 'Tutor IA');
+      expect(l10n.aiTutor, 'Tutor IA');
       expect(l10n.startAiTutoring, 'Iniciar Tutoría IA');
       expect(l10n.endLesson, 'Finalizar Lección');
       expect(l10n.typeYourMessage, 'Escriba su mensaje...');
@@ -458,7 +458,7 @@ void main() {
       expect(l10n.notificationPreferences, 'Preferencias de Notificaciones');
       expect(l10n.dailyReminders, 'Recordatorios Diarios');
       expect(l10n.revisionReminders, 'Recordatorios de Revisión');
-      expect(l10n.lessonNotifications, 'Notificaciones de Lecciones');
+      expect(l10n.notifChannelLessons, 'Notificaciones de Lecciones');
       expect(l10n.overworkAlerts, 'Alertas de Sobrecarga');
       expect(l10n.planAdjustmentNotifications, 'Alertas de Ajuste de Plan');
       expect(l10n.quietHours, 'Horas de Silencio');
@@ -766,7 +766,7 @@ void main() {
     });
 
     test('uploadFailed', () {
-      expect(l10n.uploadFailed('error de red'), 'Error al subir: error de red');
+      expect(l10n.uploadFailed('error de red'), 'Error al cargar: error de red');
     });
 
     test('focusLabel', () {
@@ -799,7 +799,7 @@ void main() {
                 child: Column(
                   children: [
                     Text(l.mentor),
-                    Text(l.teachingMode),
+                    Text(l.aiTutor),
                     Text(l.startAiTutoring),
                     Text(l.endLesson),
                     Text(l.typeYourMessage),
@@ -904,7 +904,7 @@ void main() {
                     Text(l.notificationPreferences),
                     Text(l.dailyReminders),
                     Text(l.revisionReminders),
-                    Text(l.lessonNotifications),
+                    Text(l.notifChannelLessons),
                     Text(l.overworkAlerts),
                     Text(l.planAdjustmentNotifications),
                     Text(l.quietHours),

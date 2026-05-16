@@ -1,96 +1,148 @@
-# Planner Feature L10n Bleed: Hardcoded English Strings Bypass Translation System
+# Internationalisation Master: Spanish Localisation Audit & Architecture Improvements
 
-## Context
+## Summary
 
-The project has a well-engineered ARB-based i18n pipeline with full English/Spanish coverage (1757 keys each). However, the **planner feature** — the app's most complex feature — contains **30+ hardcoded English strings** across providers, widgets, and services that completely bypass the translation system. These strings appear as success/error messages, progress labels, calendar headers, empty-state text, and button labels. A Spanish user sees a jarring mix of Spanish (from ARB keys) and untranslated English in adjacent UI elements. When adding future languages (French, German, etc.), these strings will remain stubbornly in English.
-
-The `planner_providers.dart` `StateNotifier` is the single worst offender: it cannot access `AppLocalizations` because there is no `BuildContext` in a `StateNotifier`. The existing pattern of threading an `AppLocalizations?` parameter through individual methods (used in `createRoadmap` and `scheduleLessonWithConflictCheck`) is inconsistent — 16 of 18 error/success messages remain hardcoded.
+The app has a solid foundation with Flutter's ARB-based l10n system (908 keys each in `app_en.arb` and `app_es.arb`), but contains structural issues that make adding new locales unnecessarily expensive and risk translation drift. This issue addresses three high-value improvements: deduplication of redundant keys, placeholder metadata fixes, and hardcoded string migration.
 
 ---
 
-## Affected Files
+## Issue 1: 79 Groups of Duplicate Translation Keys (160 keys total)
 
-| File | Problem | Count |
-|---|---|---|
-| `lib/features/planner/providers/planner_providers.dart:280-471` | Hardcoded English success/error messages in `PlannerNotifier` that have no access to `AppLocalizations` | **21 strings** |
-| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart:24,50,60,64,106,122,148,163,167,181` | Hardcoded English "Progress Overview", "Today's Progress", "Planned: X min", "Actual: Y min", "Weekly", English day abbreviations `['M','T','W','T','F','S','S']`, "Actual"/"Planned" legend, "X/Y days — Z% of plan" | **10 strings** |
-| `lib/features/planner/presentation/widgets/calendar_view_widget.dart:96` | Hardcoded English day header abbreviations `['M','T','W','T','F','S','S']` | **7 strings** |
-| `lib/features/planner/presentation/widgets/calendar_view_widget.dart:80` | `DateFormat.yMMM()` without locale parameter → always shows English month names | **1 usage** |
-| `lib/features/planner/presentation/widgets/milestone_timeline.dart:110,123` | `DateFormat.yMMMd()` / `DateFormat.MMMd()` without locale → always English dates | **2 usages** |
-| `lib/features/planner/presentation/widgets/roadmap_card.dart:98` | `DateFormat.yMMMd()` without locale → always English dates | **1 usage** |
-| `lib/features/planner/presentation/widgets/roadmap_card.dart:90` | `${l10n.milestones.toLowerCase()}` — `.toLowerCase()` is a non-l10n hack that breaks for languages with different casing rules | **1 usage** |
-| `lib/features/planner/presentation/widgets/roadmap_card.dart:123` | Hardcoded `'${milestone.topicsCovered.length} topics'` | **1 string** |
-| `lib/features/planner/presentation/planner_screen.dart:225` | `const Tab(text: 'Calendar')` — hardcoded tab label | **1 string** |
-| `lib/features/planner/presentation/planner_screen.dart:417,421` | `${l10n.days.toLowerCase()}` — `.toLowerCase()` hack | **2 usages** |
-| `lib/features/planner/presentation/planner_screen.dart:501` | `const Text('Redistribute')` — hardcoded button label | **1 string** |
-| `lib/features/planner/presentation/planner_screen.dart:539` | Manual `'${hour}:${minute}'` time formatting — not locale-aware (should use `DateFormat.jm()` with locale) | **1 usage** |
-| `lib/features/planner/presentation/planner_screen.dart:610` | `Text('No study plan yet')` — hardcoded empty-state text | **1 string** |
-| `lib/features/planner/services/planner_service.dart:176` | Hardcoded `'Topics: ${milestoneTopics.length} syllabus topics'` | **1 string** |
-| `lib/features/planner/services/planner_service.dart:184` | Hardcoded `'Mastery >= 80% on all milestone topics'` | **1 string** |
-| `lib/features/planner/services/syllabus_resolver.dart:50,109,122,140` | Hardcoded English error messages | **4 strings** |
+### Context
+Across both ARB files, 79 groups of keys share identical values. For example:
+- `notifChannelBadges`, `notificationChannelBadgesName` → same value
+- `planAccuracyLow`, `planExplanationAccuracyBelow60` → same value
+- `adherenceLow7Days`, `adherenceLowDaysAdjust` → same value
+
+### Rationale
+Every duplicated key must be translated separately for each new locale. This doubles the translation budget for 160 keys and creates a maintenance liability: when one copy is updated, the other is forgotten, leading to inconsistent UI text.
+
+### Affected files
+- `lib/l10n/app_en.arb`
+- `lib/l10n/app_es.arb`
+
+### Action
+Consolidate each group into a single key and update all Dart references. Key groups to merge (non-exhaustive):
+| Keep | Remove |
+|---|---|
+| `aiTutor` | `teachingMode` |
+| `planAccuracyLow` | `planExplanationAccuracyBelow60` |
+| `planAtRisk` | `planExplanationAtRisk` |
+| `planDeveloping` | `planExplanationDeveloping` |
+| `planGoodProgress` | `planExplanationGoodProgress` |
+| `planHighMastery` | `planExplanationHighMastery` |
+| `planLowStreak` | `planExplanationLowStreak` |
+| `planNeedsAttention` | `planExplanationNeedsAttention` |
+| `planOverdueReview` | `planExplanationOverdueReview` |
+| `planPrerequisite` | `planExplanationPrerequisite` |
+| `adherenceLowDaysAdjust` | `adherenceLow7Days` |
+| `adherenceLowDaysRegenerate` | `adherenceLow3Days` |
+| `notifChannelGeneral` | `notificationChannelGeneralName` |
+| `notifChannelGeneralDesc` | `notificationChannelGeneralDesc` |
+| `notifChannelBadges` | `notificationChannelBadgesName` |
+| `notifChannelMastery` | `notificationChannelMasteryName` |
+| `notifChannelWellbeing` | `notificationChannelWellbeingName` |
+| `notifChannelPlanning` | `notificationChannelPlanningName` |
+| `notifChannelRevision` | `notificationChannelRevisionName` |
+| `notifChannelLessons` | `notificationChannelLessonsName` / `lessonNotifications` |
+| `notifChannelDailyReminder` | `notificationChannelDailyReminderName` |
+| `notifChannelDailyReminderDesc` | `notificationChannelDailyReminderDesc` |
+| `notifTitleTimeToReview` | `notificationTimeToReviewTitle` |
+| `notifTitleTakeBreak` | `notificationTakeABreakTitle` |
+| `notifBodyOverwork` | `notificationTakeABreakBody` |
+| `notifTitlePlanAdjustment` | `notificationPlanAdjustmentTitle` |
+| `notifBodyPlanAdjustment` | `notificationPlanAdjustmentBody` |
+| `notifTitleUpcomingLesson` | `notificationUpcomingLessonTitle` |
+| `notifTitleTopicsNeedAttention` | `notificationTopicsNeedAttentionTitle` |
+| `notifBodyLowMastery` | `notificationTopicsNeedAttentionBody` |
+| `notifTitleBadgeUnlocked` | `notificationBadgeUnlockedTitle` |
+| `recommendAccuracyBelow60` | `recommendationAccuracyLow` |
+| `recommendReviewBasics` | `recommendationReviewBasics` |
+| `recommendAccuracyExcellent` | `recommendationExcellentProgress` |
+| `recommendChallengingQuestions` | `recommendationChallengingPractice` |
+| `recommendConsistency` | `recommendationLowHours` |
+| `recommendSetDailyGoal` | `recommendationSetDailyGoal` |
+| `recommendNoActivity` | `recommendationNoActivity` |
+| `recommendQuickReview` | `recommendationQuickReview` |
+| `recommendWeakTopics` | `recommendationWeakTopics` |
+| `recommendAiTutor` | `recommendationReviewWithTutor` |
+| `adapSuggestionFundamentals` | `suggestionFundamentals` |
+| `adapSuggestionMorePractice` | `suggestionPractice` |
+| `adapSuggestionAdvancedTopics` | `suggestionAdvanced` |
 
 ---
 
-## Rationale
+## Issue 2: Missing Placeholder Types in Adherence Keys (Both Locales)
 
-1. **Broken Spanish UX:** ARB keys exist for `failedToGeneratePlan` ("Error al generar el plan"), `timeConflict` ("Conflicto de horario con una lección programada"), `milestones` ("Hitos"), `topics` ("Temas"), `targetCompletion` ("Finalización Prevista"), and `noStudyPlanToday` ("No hay plan de estudio para hoy") — **none of which are used** in the planner code. Instead, hardcoded English equivalents appear.
+### Context
+Three keys in both `app_en.arb` and `app_es.arb` define `placeholders` with **empty type metadata**:
 
-2. **Day abbreviations are language-specific:** `['M', 'T', 'W', 'T', 'F', 'S', 'S']` is correct for English but wrong for Spanish (where it should be `['L', 'M', 'M', 'J', 'V', 'S', 'D']` for lunes→domingo). Using `DateFormat.E()` with the user's locale solves this properly.
+```
+"adherenceLowToday": { "actualMinutes": {}, "plannedMinutes": {} }
+"adherencePartialToday": { "actualMinutes": {}, "plannedMinutes": {} }
+"adherenceExceededToday": { "actualMinutes": {}, "plannedMinutes": {} }
+```
 
-3. **`.toLowerCase()` breaks l10n:** `${l10n.milestones.toLowerCase()}` works by accident in English and Spanish (Latin script) but breaks in Turkish (`İ` → `i` instead of `i`), and is meaningless for scripts like Arabic or Chinese. The ARB keys should return text in the correct case for each locale.
+### Rationale
+ARB placeholders must declare a `type` (e.g. `"type": "int"` or `"type": "String"`) for the Flutter codegen to handle them correctly. Empty brace objects will cause the codegen (`flutter gen-l10n`) to emit a warning or silently produce incorrect type signatures (`dynamic` instead of typed parameters).
 
-4. **DateFormat defaults to English:** `DateFormat.yMMMd()` without a locale argument always formats in English. It must receive the current locale from `AppLocalizations` (e.g., `DateFormat.yMMMd(l10n.localeName)`).
+### Affected files
+- `lib/l10n/app_en.arb` (lines 4225-4226, 4233-4234, 4241-4242)
+- `lib/l10n/app_es.arb` (lines 4225-4226, 4233-4234, 4241-4242)
 
-5. **PlannerNotifier pattern is broken:** A `StateNotifier` has no `BuildContext`, so it cannot call `AppLocalizations.of(context)`. The fix should pass `AppLocalizations` as a parameter (already done for `createRoadmap` and `scheduleLessonWithConflictCheck`) but must be applied **consistently** to all methods.
+### Action
+Add `"type": "int"` to each placeholder metadata entry.
+
+---
+
+## Issue 3: Hardcoded `'StudyKing'` in main.dart
+
+### Context
+`lib/main.dart:121` uses a raw string for the MaterialApp title:
+```dart
+title: 'StudyKing',
+```
+
+### Rationale
+The app already defines `l10n.appTitle` (value: `"StudyKing"`) in both ARB files. Using the localised accessor ensures the title is consistent when the app name is ever localised, and avoids an untranslated string being visible in the Android task switcher / iOS app switcher.
+
+### Affected files
+- `lib/main.dart` (line 121)
+
+### Action
+Replace `title: 'StudyKing'` with `title: l10n.appTitle`.
+
+---
+
+## Issue 4: New Locale Onboarding Lacks Automation
+
+### Context
+The `l10n.yaml` comment block correctly documents the steps to add a new locale, but they are entirely manual:
+1. Create a new `app_xx.arb` file
+2. Edit `AppLocale` enum in `lib/core/config/locale_config.dart`
+3. Add to `supported-locales` in `l10n.yaml`
+4. Flutter codegen
+
+### Rationale
+Manual steps invite human error (forgetting to register the locale, missing an ARB key). An automated check would:
+- Validate that every key in `app_en.arb` exists in the new locale's ARB
+- Fail CI if translation coverage is below 100%
+
+### Affected files
+- `l10n.yaml`
+- `lib/core/config/locale_config.dart`
+- `lib/l10n/app_en.arb` (template, all others derive from it)
+
+### Action
+Add a CI script (e.g. in `scripts/check_i18n_coverage.sh`) that compares all locale ARB key sets against `app_en.arb` and fails on gaps. This is critical for upcoming locale additions (e.g. French, German, Japanese).
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] **AC1 — ARB keys added:** Add the following new keys to both `app_en.arb` and `app_es.arb` (Spanish values provided):
-  - `planGeneratedSuccessfully` → "Plan generated successfully" / "Plan generado exitosamente"
-  - `failedToGeneratePlan` → Already exists — just wire it up
-  - `syllabusPlanGenerated` → "Syllabus-based plan generated successfully" / "Plan basado en el programa generado exitosamente"
-  - `failedToGenerateSyllabusPlan` → "Failed to generate syllabus plan" / "Error al generar el plan basado en el programa"
-  - `failedToCreateRoadmap` → "Failed to create roadmap" / "Error al crear la hoja de ruta"
-  - `failedToUpdateMilestone` → "Failed to update milestone" / "Error al actualizar el hito"
-  - `actionAccepted` → "Action accepted" / "Acción aceptada"
-  - `failedToExecuteAction` → "Failed to execute action — missing parameters" / "Error al ejecutar la acción — faltan parámetros"
-  - `failedToAcceptAction` → "Failed to accept action" / "Error al aceptar la acción"
-  - `failedToDismissAction` → "Failed to dismiss action" / "Error al descartar la acción"
-  - `lessonScheduled` → "Lesson scheduled" / "Lección programada"
-  - `failedToScheduleLesson` → "Failed to schedule lesson" / "Error al programar la lección"
-  - `planRegeneratedFromAdherence` → "Plan regenerated based on your adherence" / "Plan regenerado según tu cumplimiento"
-  - `failedToRegeneratePlan` → "Failed to regenerate plan" / "Error al regenerar el plan"
-  - `missedWorkloadRedistributed` → "Missed workload redistributed over next 3 days" / "Trabajo pendiente redistribuido en los próximos 3 días"
-  - `failedToRedistributeWorkload` → "Failed to redistribute workload" / "Error al redistribuir el trabajo pendiente"
-  - `progressOverview` → "Progress Overview" / "Resumen de Progreso"
-  - `todaysProgress` → "Today's Progress" / "Progreso de Hoy"
-  - `weekly` → "Weekly" / "Semanal"
-  - `actual` → "Actual" / "Real"
-  - `planned` → "Planned" / "Planificado"
-  - `noStudyPlanYet` → "No study plan yet" / "Aún no hay plan de estudio"
-  - `calendar` → "Calendar" / "Calendario"
-  - `redistribute` → "Redistribute" / "Redistribuir"
-
-- [ ] **AC2 — PlannerNotifier uses ARB keys:** Refactor `PlannerNotifier` so all methods that set `successMessage` or `error` accept `AppLocalizations l10n` as a parameter (like `createRoadmap` already does). The caller in `planner_screen.dart` must pass `l10n` when invoking these methods.
-
-- [ ] **AC3 — ProgressOverlayWidget uses ARB keys:** Replace all hardcoded English strings in `progress_overlay_widget.dart` with `AppLocalizations.of(context)!` lookups.
-
-- [ ] **AC4 — Day abbreviations use DateFormat:** Replace hardcoded `['M', 'T', 'W', 'T', 'F', 'S', 'S']` in both `calendar_view_widget.dart` and `progress_overlay_widget.dart` with `DateFormat.E()` using the user's locale.
-
-- [ ] **AC5 — All DateFormat calls pass locale:** Every `DateFormat.xxx().format(...)` call in the planner feature must include the locale parameter, e.g. `DateFormat.yMMMd(l10n.localeName).format(...)`.
-
-- [ ] **AC6 — `.toLowerCase()` removed:** Eliminate all `.toLowerCase()` hacks on localized strings in `roadmap_card.dart` and `planner_screen.dart`. Use properly cased ARB values or ICU plural variants.
-
-- [ ] **AC7 — Hardcoded `'topics'` string replaced:** Replace `'${milestone.topicsCovered.length} topics'` in `roadmap_card.dart` with an ICU plural ARB key (e.g., `topicCount` with `{count, plural, =1{1 topic} other{{count} topics}}`).
-
-- [ ] **AC8 — `planner_screen.dart` hardcoded strings replaced:**
-  - `'Calendar'` tab label → use new `l10n.calendar` key
-  - `'Redistribute'` button → use new `l10n.redistribute` key
-  - `'No study plan yet'` → use new `l10n.noStudyPlanYet` key
-  - Manual time formatting → `DateFormat.Hm(l10n.localeName)` or `DateFormat.jm(l10n.localeName)`
-
-- [ ] **AC9 — Service-layer errors wired:** Add `AppLocalizations` parameter to `planner_service.dart` and `syllabus_resolver.dart` error messages, or raise errors with codes that the provider translates.
-
-- [ ] **AC10 — Verify with Spanish locale:** Run the app with `Locale('es')` and confirm every hardcoded English string listed above now appears in Spanish.
+- [ ] All 79 groups of duplicate translation keys consolidated into single keys; Dart references updated.
+- [ ] `adherenceLowToday`, `adherencePartialToday`, `adherenceExceededToday` have correct `"type": "int"` on all placeholders in both EN and ES ARB files.
+- [ ] `l10n.appTitle` used in `main.dart:121` instead of `'StudyKing'`.
+- [ ] CI script added (`scripts/check_i18n_coverage.sh`) that validates 100% key parity between `app_en.arb` and all locale files.
+- [ ] `flutter gen-l10n` completes without warnings.
+- [ ] Spanish display is unchanged (values remain identical after deduplication, only key names change).

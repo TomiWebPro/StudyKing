@@ -2744,12 +2744,6 @@ abstract class AppLocalizations {
   /// **'Mentor'**
   String get mentor;
 
-  /// Label for AI tutor mode button
-  ///
-  /// In en, this message translates to:
-  /// **'AI Tutor'**
-  String get teachingMode;
-
   /// Button label to start AI tutoring session
   ///
   /// In en, this message translates to:
@@ -3746,12 +3740,6 @@ abstract class AppLocalizations {
   /// **'Revision Reminders'**
   String get revisionReminders;
 
-  /// Lesson notification toggle
-  ///
-  /// In en, this message translates to:
-  /// **'Lesson Notifications'**
-  String get lessonNotifications;
-
   /// Overwork alert toggle
   ///
   /// In en, this message translates to:
@@ -4736,60 +4724,6 @@ abstract class AppLocalizations {
   /// **'You have had {days} days of low plan adherence. Would you like to adjust your study plan?'**
   String nudgePlanAdjustment(int days);
 
-  /// Plan explanation when accuracy is low
-  ///
-  /// In en, this message translates to:
-  /// **'Accuracy is below 60% — needs focused practice'**
-  String get planExplanationAccuracyBelow60;
-
-  /// Plan explanation when review is overdue
-  ///
-  /// In en, this message translates to:
-  /// **'Review is overdue — forgetting risk is high'**
-  String get planExplanationOverdueReview;
-
-  /// Plan explanation when streak is low
-  ///
-  /// In en, this message translates to:
-  /// **'Streak is low — consistency needed'**
-  String get planExplanationLowStreak;
-
-  /// Plan explanation for prerequisite topics
-  ///
-  /// In en, this message translates to:
-  /// **'Prerequisite for upcoming topics — must master first'**
-  String get planExplanationPrerequisite;
-
-  /// Plan explanation for high mastery
-  ///
-  /// In en, this message translates to:
-  /// **'High mastery — ready to advance'**
-  String get planExplanationHighMastery;
-
-  /// Plan explanation for good progress
-  ///
-  /// In en, this message translates to:
-  /// **'Good progress — maintain consistency'**
-  String get planExplanationGoodProgress;
-
-  /// Plan explanation for developing topics
-  ///
-  /// In en, this message translates to:
-  /// **'Developing — needs more practice'**
-  String get planExplanationDeveloping;
-
-  /// Plan explanation for at-risk topics
-  ///
-  /// In en, this message translates to:
-  /// **'At risk — review overdue'**
-  String get planExplanationAtRisk;
-
-  /// Plan explanation for topics needing attention
-  ///
-  /// In en, this message translates to:
-  /// **'Needs attention — focus on fundamentals'**
-  String get planExplanationNeedsAttention;
-
   /// Reason for prerequisite topics
   ///
   /// In en, this message translates to:
@@ -4844,18 +4778,6 @@ abstract class AppLocalizations {
   /// **'Rest and review'**
   String get planFocusRestAndReview;
 
-  /// Message when 7+ consecutive low adherence days
-  ///
-  /// In en, this message translates to:
-  /// **'You have had {days} consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.'**
-  String adherenceLow7Days(int days);
-
-  /// Message when 3+ consecutive low adherence days
-  ///
-  /// In en, this message translates to:
-  /// **'You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?'**
-  String adherenceLow3Days(int days);
-
   /// Suggestion to review fundamentals
   ///
   /// In en, this message translates to:
@@ -4898,47 +4820,11 @@ abstract class AppLocalizations {
     int badgeCount,
   );
 
-  /// Title of revision reminder notification
-  ///
-  /// In en, this message translates to:
-  /// **'Time to Review!'**
-  String get notificationTimeToReviewTitle;
-
   /// Body of revision reminder notification
   ///
   /// In en, this message translates to:
   /// **'It\'s been {days} days since you practiced \"{topic}\".'**
   String notificationTimeToReviewBody(int days, String topic);
-
-  /// Title of overwork warning notification
-  ///
-  /// In en, this message translates to:
-  /// **'Take a Break'**
-  String get notificationTakeABreakTitle;
-
-  /// Body of overwork warning notification
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve studied {hours} hours today. Remember to rest!'**
-  String notificationTakeABreakBody(String hours);
-
-  /// Title of plan adjustment suggestion notification
-  ///
-  /// In en, this message translates to:
-  /// **'Plan Adjustment'**
-  String get notificationPlanAdjustmentTitle;
-
-  /// Body of plan adjustment suggestion notification
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve had {days} days of low adherence. Shall we adjust your plan?'**
-  String notificationPlanAdjustmentBody(int days);
-
-  /// Title of upcoming lesson reminder notification
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming Lesson'**
-  String get notificationUpcomingLessonTitle;
 
   /// Body of upcoming lesson reminder notification
   ///
@@ -4946,125 +4832,47 @@ abstract class AppLocalizations {
   /// **'Your lesson \"{lesson}\" starts at {time}'**
   String notificationUpcomingLessonBody(String lesson, String time);
 
-  /// Title of low mastery warning notification
-  ///
-  /// In en, this message translates to:
-  /// **'Topics Need Attention'**
-  String get notificationTopicsNeedAttentionTitle;
-
-  /// Body of low mastery warning notification
-  ///
-  /// In en, this message translates to:
-  /// **'Low mastery detected in: {topics}'**
-  String notificationTopicsNeedAttentionBody(String topics);
-
-  /// Title of badge unlocked notification
-  ///
-  /// In en, this message translates to:
-  /// **'Badge Unlocked!'**
-  String get notificationBadgeUnlockedTitle;
-
   /// Body of badge unlocked notification
   ///
   /// In en, this message translates to:
   /// **'You earned the \"{badge}\" badge: {description}'**
   String notificationBadgeUnlockedBody(String badge, String description);
 
-  /// Name of the general notifications channel
-  ///
-  /// In en, this message translates to:
-  /// **'StudyKing Notifications'**
-  String get notificationChannelGeneralName;
-
-  /// Description of the general notifications channel
-  ///
-  /// In en, this message translates to:
-  /// **'General StudyKing notifications'**
-  String get notificationChannelGeneralDesc;
-
-  /// Name of the daily study reminders channel
-  ///
-  /// In en, this message translates to:
-  /// **'Daily Study Reminders'**
-  String get notificationChannelDailyReminderName;
-
-  /// Description of the daily study reminders channel
-  ///
-  /// In en, this message translates to:
-  /// **'Daily reminders to study'**
-  String get notificationChannelDailyReminderDesc;
-
-  /// Name of the revision reminders channel
-  ///
-  /// In en, this message translates to:
-  /// **'Revision Reminders'**
-  String get notificationChannelRevisionName;
-
   /// Description of the revision reminders channel
   ///
   /// In en, this message translates to:
   /// **'Reminders to review topics that need practice'**
-  String get notificationChannelRevisionDesc;
-
-  /// Name of the wellbeing alerts channel
-  ///
-  /// In en, this message translates to:
-  /// **'Wellbeing Alerts'**
-  String get notificationChannelWellbeingName;
+  String get notifChannelRevisionDesc;
 
   /// Description of the wellbeing alerts channel
   ///
   /// In en, this message translates to:
   /// **'Alerts about study-life balance and overwork'**
-  String get notificationChannelWellbeingDesc;
-
-  /// Name of the planning suggestions channel
-  ///
-  /// In en, this message translates to:
-  /// **'Planning Suggestions'**
-  String get notificationChannelPlanningName;
+  String get notifChannelWellbeingDesc;
 
   /// Description of the planning suggestions channel
   ///
   /// In en, this message translates to:
   /// **'Suggestions about study plan adjustments'**
-  String get notificationChannelPlanningDesc;
-
-  /// Name of the lesson notifications channel
-  ///
-  /// In en, this message translates to:
-  /// **'Lesson Notifications'**
-  String get notificationChannelLessonsName;
+  String get notifChannelPlanningDesc;
 
   /// Description of the lesson notifications channel
   ///
   /// In en, this message translates to:
   /// **'Notifications about upcoming lessons'**
-  String get notificationChannelLessonsDesc;
-
-  /// Name of the mastery alerts channel
-  ///
-  /// In en, this message translates to:
-  /// **'Mastery Alerts'**
-  String get notificationChannelMasteryName;
+  String get notifChannelLessonsDesc;
 
   /// Description of the mastery alerts channel
   ///
   /// In en, this message translates to:
   /// **'Alerts about low topic mastery and weak areas'**
-  String get notificationChannelMasteryDesc;
-
-  /// Name of the badge notifications channel
-  ///
-  /// In en, this message translates to:
-  /// **'Badge Notifications'**
-  String get notificationChannelBadgesName;
+  String get notifChannelMasteryDesc;
 
   /// Description of the badge notifications channel
   ///
   /// In en, this message translates to:
   /// **'Notifications about earned badges and achievements'**
-  String get notificationChannelBadgesDesc;
+  String get notifChannelBadgesDesc;
 
   /// Explanation when topic accuracy is below 60 percent
   ///
@@ -5186,84 +4994,6 @@ abstract class AppLocalizations {
   /// **'You have had {days} consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?'**
   String adherenceLowDaysRegenerate(int days);
 
-  /// Recommendation when accuracy is below 60 percent
-  ///
-  /// In en, this message translates to:
-  /// **'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.'**
-  String get recommendationAccuracyLow;
-
-  /// Action suggestion for low accuracy
-  ///
-  /// In en, this message translates to:
-  /// **'Review basic topics before advancing'**
-  String get recommendationReviewBasics;
-
-  /// Recommendation when accuracy is above 85 percent
-  ///
-  /// In en, this message translates to:
-  /// **'Excellent progress! Ready for advanced topics.'**
-  String get recommendationExcellentProgress;
-
-  /// Action suggestion for high accuracy
-  ///
-  /// In en, this message translates to:
-  /// **'Try challenging practice questions'**
-  String get recommendationChallengingPractice;
-
-  /// Recommendation when study time is very low
-  ///
-  /// In en, this message translates to:
-  /// **'You studied less than 1 hour total. Consistency is key!'**
-  String get recommendationLowHours;
-
-  /// Action suggestion for low study hours
-  ///
-  /// In en, this message translates to:
-  /// **'Set a daily study goal of 30 minutes'**
-  String get recommendationSetDailyGoal;
-
-  /// Recommendation when no weekly activity detected
-  ///
-  /// In en, this message translates to:
-  /// **'No study activity this week. Get back on track!'**
-  String get recommendationNoActivity;
-
-  /// Action suggestion for no weekly activity
-  ///
-  /// In en, this message translates to:
-  /// **'Start with a quick 15-minute review session'**
-  String get recommendationQuickReview;
-
-  /// Recommendation when there are weak topics needing improvement
-  ///
-  /// In en, this message translates to:
-  /// **'You have {count} topic(s) that need improvement. Focus on strengthening these areas.'**
-  String recommendationWeakTopics(int count);
-
-  /// Action suggestion for weak topics
-  ///
-  /// In en, this message translates to:
-  /// **'Review weak topics with the AI tutor'**
-  String get recommendationReviewWithTutor;
-
-  /// Suggestion for topics with accuracy below 60 percent
-  ///
-  /// In en, this message translates to:
-  /// **'Review basic concepts first'**
-  String get suggestionFundamentals;
-
-  /// Suggestion for topics with accuracy between 60 and 80 percent
-  ///
-  /// In en, this message translates to:
-  /// **'More practice questions recommended'**
-  String get suggestionPractice;
-
-  /// Suggestion for topics with accuracy above 80 percent
-  ///
-  /// In en, this message translates to:
-  /// **'Ready for advanced topics'**
-  String get suggestionAdvanced;
-
   /// Share text when sharing study session files
   ///
   /// In en, this message translates to:
@@ -5328,19 +5058,19 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'You studied {actualMinutes} min today vs {plannedMinutes} min planned. Consider redistributing the remaining workload.'**
-  String adherenceLowToday(Object actualMinutes, Object plannedMinutes);
+  String adherenceLowToday(int actualMinutes, int plannedMinutes);
 
   /// Message when student partially meets daily study target
   ///
   /// In en, this message translates to:
   /// **'You studied {actualMinutes} min today vs {plannedMinutes} min planned. Try to catch up with the remaining topics.'**
-  String adherencePartialToday(Object actualMinutes, Object plannedMinutes);
+  String adherencePartialToday(int actualMinutes, int plannedMinutes);
 
   /// Message when student exceeds daily study target
   ///
   /// In en, this message translates to:
   /// **'Great work! You studied {actualMinutes} min vs {plannedMinutes} min planned.'**
-  String adherenceExceededToday(Object actualMinutes, Object plannedMinutes);
+  String adherenceExceededToday(int actualMinutes, int plannedMinutes);
 
   /// Label showing overtime duration in minutes
   ///

@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -48,6 +52,54 @@ class _MockSourceRepository extends SourceRepository {
   Future<List<Source>> getByType(String sourceType) async {
     return _storage.values.where((s) => s.type.name == sourceType).toList();
   }
+}
+
+class _TestSourceAdapter extends TypeAdapter<Source> {
+  @override
+  final int typeId = 26;
+
+  @override
+  Source read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return Source.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, Source obj) {
+    writer.write(obj.toJson());
+  }
+}
+
+Source createTestSource({
+  String id = 'src-1',
+  String title = 'Test Source',
+  SourceType type = SourceType.pdf,
+  String content = '',
+  String subjectId = '',
+  String topicId = '',
+  String syllabusId = '',
+  String sourceUrl = '',
+  String studentId = '',
+  String language = '',
+  String summary = '',
+}) {
+  return Source(
+    id: id,
+    title: title,
+    type: type,
+    content: content,
+    subjectId: subjectId,
+    topicId: topicId,
+    syllabusId: syllabusId,
+    sourceUrl: sourceUrl,
+    studentId: studentId,
+    language: language,
+    summary: summary,
+  );
 }
 
 void main() {
@@ -158,6 +210,220 @@ void main() {
 
       test('returns empty for non-existent type', () async {
         expect(await repository.getByType('video'), isEmpty);
+      });
+    });
+  });
+
+  group('SourceRepository Hive integration', () {
+    late String hivePath;
+    late SourceRepository repo;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final dir = await Directory.systemTemp.createTemp('hive_source_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(26)) {
+        Hive.registerAdapter(_TestSourceAdapter());
+      }
+      repo = SourceRepository();
+      await repo.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        await Directory(hivePath).delete(recursive: true);
+      }
+    });
+
+    test('init opens box and readies the repository', () async {
+      expect(repo, isNotNull);
+      expect(await repo.getAll(), isEmpty);
+    });
+
+    test('init is idempotent when called multiple times', () async {
+      await repo.init();
+      await repo.create(createTestSource(id: 's1'));
+      final result = await repo.getAll();
+      expect(result.length, 1);
+    });
+
+    group('create', () {
+      test('stores a source and retrieves it', () async {
+        await repo.create(createTestSource());
+        final stored = await repo.get('src-1');
+        expect(stored, isNotNull);
+        expect(stored!.title, 'Test Source');
+        expect(stored.type, SourceType.pdf);
+      });
+
+      test('stores a source with all fields', () async {
+        await repo.create(createTestSource(
+          id: 'full-src',
+          title: 'Full Source',
+          type: SourceType.textbook,
+          content: 'Full content',
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          syllabusId: 'syl-1',
+          sourceUrl: 'https://example.com',
+          studentId: 'stu-1',
+          language: 'en',
+          summary: 'Summary text',
+        ));
+        final stored = await repo.get('full-src');
+        expect(stored, isNotNull);
+        expect(stored!.title, 'Full Source');
+        expect(stored.type, SourceType.textbook);
+        expect(stored.content, 'Full content');
+        expect(stored.subjectId, 'sub-1');
+        expect(stored.topicId, 'topic-1');
+        expect(stored.syllabusId, 'syl-1');
+        expect(stored.sourceUrl, 'https://example.com');
+        expect(stored.studentId, 'stu-1');
+        expect(stored.language, 'en');
+        expect(stored.summary, 'Summary text');
+      });
+
+      test('overwrites existing source with same id', () async {
+        await repo.create(createTestSource(id: 's1', title: 'Original'));
+        await repo.create(createTestSource(id: 's1', title: 'Updated'));
+        final stored = await repo.get('s1');
+        expect(stored?.title, 'Updated');
+      });
+    });
+
+    group('get', () {
+      test('returns null for non-existent source', () async {
+        expect(await repo.get('nonexistent'), isNull);
+      });
+
+      test('returns stored source by id', () async {
+        await repo.create(createTestSource(id: 'find-me', title: 'Find Me'));
+        final result = await repo.get('find-me');
+        expect(result, isNotNull);
+        expect(result!.id, 'find-me');
+      });
+    });
+
+    group('getAll', () {
+      test('returns empty list when no sources exist', () async {
+        expect(await repo.getAll(), isEmpty);
+      });
+
+      test('returns all stored sources', () async {
+        await repo.create(createTestSource(id: 's1'));
+        await repo.create(createTestSource(id: 's2'));
+        await repo.create(createTestSource(id: 's3'));
+        final all = await repo.getAll();
+        expect(all.length, 3);
+      });
+    });
+
+    group('getBySubject', () {
+      test('returns sources matching the subject', () async {
+        await repo.create(createTestSource(id: 's1', subjectId: 'math'));
+        await repo.create(createTestSource(id: 's2', subjectId: 'math'));
+        await repo.create(createTestSource(id: 's3', subjectId: 'physics'));
+        final mathSources = await repo.getBySubject('math');
+        expect(mathSources.length, 2);
+        expect(mathSources.every((s) => s.subjectId == 'math'), isTrue);
+      });
+
+      test('returns empty when no sources match the subject', () async {
+        await repo.create(createTestSource(id: 's1', subjectId: 'math'));
+        final result = await repo.getBySubject('physics');
+        expect(result, isEmpty);
+      });
+    });
+
+    group('getByTopic', () {
+      test('returns sources matching the topic', () async {
+        await repo.create(createTestSource(id: 's1', topicId: 'algebra'));
+        await repo.create(createTestSource(id: 's2', topicId: 'algebra'));
+        await repo.create(createTestSource(id: 's3', topicId: 'geometry'));
+        final algebraSources = await repo.getByTopic('algebra');
+        expect(algebraSources.length, 2);
+        expect(algebraSources.every((s) => s.topicId == 'algebra'), isTrue);
+      });
+
+      test('returns empty when no sources match the topic', () async {
+        await repo.create(createTestSource(id: 's1', topicId: 'algebra'));
+        final result = await repo.getByTopic('geometry');
+        expect(result, isEmpty);
+      });
+    });
+
+    group('getByStudent', () {
+      test('returns sources matching the student', () async {
+        await repo.create(createTestSource(id: 's1', studentId: 'stu1'));
+        await repo.create(createTestSource(id: 's2', studentId: 'stu1'));
+        await repo.create(createTestSource(id: 's3', studentId: 'stu2'));
+        final stu1Sources = await repo.getByStudent('stu1');
+        expect(stu1Sources.length, 2);
+        expect(stu1Sources.every((s) => s.studentId == 'stu1'), isTrue);
+      });
+
+      test('returns empty when no sources match the student', () async {
+        await repo.create(createTestSource(id: 's1', studentId: 'stu1'));
+        final result = await repo.getByStudent('stu2');
+        expect(result, isEmpty);
+      });
+    });
+
+    group('getByType', () {
+      test('returns sources of the given type', () async {
+        await repo.create(createTestSource(id: 's1', type: SourceType.pdf));
+        await repo.create(createTestSource(id: 's2', type: SourceType.textbook));
+        await repo.create(createTestSource(id: 's3', type: SourceType.pdf));
+        final pdfSources = await repo.getByType('pdf');
+        expect(pdfSources.length, 2);
+      });
+
+      test('returns empty when no sources match the type', () async {
+        await repo.create(createTestSource(id: 's1', type: SourceType.pdf));
+        final result = await repo.getByType('video');
+        expect(result, isEmpty);
+      });
+
+      test('distinguishes between different types', () async {
+        await repo.create(createTestSource(id: 's1', type: SourceType.pdf));
+        await repo.create(createTestSource(id: 's2', type: SourceType.syllabus));
+        await repo.create(createTestSource(id: 's3', type: SourceType.video));
+        await repo.create(createTestSource(id: 's4', type: SourceType.lectureNotes));
+        await repo.create(createTestSource(id: 's5', type: SourceType.externalResource));
+        await repo.create(createTestSource(id: 's6', type: SourceType.textbook));
+        expect(await repo.getByType('pdf'), hasLength(1));
+        expect(await repo.getByType('syllabus'), hasLength(1));
+        expect(await repo.getByType('video'), hasLength(1));
+        expect(await repo.getByType('lectureNotes'), hasLength(1));
+        expect(await repo.getByType('externalResource'), hasLength(1));
+        expect(await repo.getByType('textbook'), hasLength(1));
+      });
+    });
+
+    group('delete', () {
+      test('removes a stored source', () async {
+        await repo.create(createTestSource(id: 'to-delete'));
+        expect(await repo.get('to-delete'), isNotNull);
+        await repo.delete('to-delete');
+        expect(await repo.get('to-delete'), isNull);
+      });
+
+      test('does not throw when deleting non-existent source', () async {
+        await repo.create(createTestSource(id: 'existing'));
+        await repo.delete('nonexistent');
+        expect(await repo.get('existing'), isNotNull);
+      });
+    });
+
+    group('save (update via Repository base)', () {
+      test('updates an existing source via save', () async {
+        await repo.create(createTestSource(id: 'updatable', title: 'Original'));
+        await repo.save('updatable', createTestSource(id: 'updatable', title: 'Updated'));
+        final stored = await repo.get('updatable');
+        expect(stored?.title, 'Updated');
       });
     });
   });
