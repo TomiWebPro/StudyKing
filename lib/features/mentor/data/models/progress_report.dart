@@ -7,7 +7,7 @@ class ProgressReport {
   final int topicsStudied;
   final int completedLessons;
   final int weeklyActivity;
-  final String totalStudyTimeHours;
+  final num totalStudyTimeHours;
   final List<MasteryState> weakTopics;
   final List<Map<String, dynamic>> badges;
   final List<Map<String, dynamic>> recommendations;

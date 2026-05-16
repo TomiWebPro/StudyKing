@@ -669,7 +669,7 @@ void main() {
       expect(result!.totalAttempts, 10);
       expect(result.correctAttempts, 0);
       expect(result.accuracy, 0);
-      expect(result.totalStudyTimeHours, '0');
+      expect(result.totalStudyTimeHours, 0);
     });
   });
 

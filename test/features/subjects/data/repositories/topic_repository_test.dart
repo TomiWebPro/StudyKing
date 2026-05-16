@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'dart:io';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class _MockTopicRepository extends TopicRepository {
   final Map<String, Topic> _storage = {};
@@ -187,4 +190,92 @@ void main() {
       });
     });
   });
+
+  group('TopicRepository (init with real Hive)', () {
+    late TopicRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestTopicAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('topic_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = TopicRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('topics');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final topic = createTestTopic(id: 'hive-1', title: 'Hive Test');
+      await repository.create(topic);
+      final stored = await repository.get('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.title, 'Hive Test');
+    });
+
+    test('getBySubject works after init', () async {
+      await repository.create(createTestTopic(id: 't1', subjectId: 's1'));
+      await repository.create(createTestTopic(id: 't2', subjectId: 's1'));
+      await repository.create(createTestTopic(id: 't3', subjectId: 's2'));
+      expect(await repository.getBySubject('s1'), hasLength(2));
+    });
+
+    test('delete works after init', () async {
+      await repository.create(createTestTopic(id: 'd1'));
+      await repository.delete('d1');
+      expect(await repository.get('d1'), isNull);
+    });
+  });
+}
+
+class _TestTopicAdapter extends TypeAdapter<Topic> {
+  @override
+  final int typeId = 0;
+
+  @override
+  Topic read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return Topic(
+      id: fields[0] as String,
+      subjectId: fields[1] as String,
+      title: fields[2] as String,
+      description: fields[3] as String,
+      parentId: fields[4] as String?,
+      sortOrder: fields[5] as int? ?? 0,
+      syllabusText: fields[6] as String? ?? '',
+      childTopicIds: (fields[7] as List?)?.cast<String>() ?? [],
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Topic obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.subjectId)
+      ..writeByte(2)
+      ..write(obj.title)
+      ..writeByte(3)
+      ..write(obj.description)
+      ..writeByte(4)
+      ..write(obj.parentId)
+      ..writeByte(5)
+      ..write(obj.sortOrder)
+      ..writeByte(6)
+      ..write(obj.syllabusText)
+      ..writeByte(7)
+      ..write(obj.childTopicIds);
+  }
 }

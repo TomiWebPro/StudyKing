@@ -58,7 +58,7 @@ class ExportSection extends ConsumerWidget {
       if (!context.mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'StudyKing Progress Report',
+        text: l10n.shareProgressReport,
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -78,7 +78,7 @@ class ExportSection extends ConsumerWidget {
       if (!context.mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'StudyKing Session History',
+        text: l10n.shareSessionHistory,
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -94,14 +94,14 @@ class ExportSection extends ConsumerWidget {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
       if (result.isFailure) throw Exception(result.error);
       final data = result.data!;
-      final jsonString = formatInstrumentation(data);
+      final jsonString = formatInstrumentation(data, l10n);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
       if (!context.mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'StudyKing Instrumentation Data',
+        text: l10n.shareInstrumentationData,
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -112,19 +112,19 @@ class ExportSection extends ConsumerWidget {
   }
 
   @visibleForTesting
-  String formatInstrumentation(Map<String, dynamic> data) {
+  String formatInstrumentation(Map<String, dynamic> data, AppLocalizations l10n) {
     final buffer = StringBuffer();
-    buffer.writeln('=== Instrumentation Dashboard ===');
-    buffer.writeln('Generated: ${data['generatedAt']}');
+    buffer.writeln(l10n.instrumentationDashboard);
+    buffer.writeln(l10n.instrumentationGenerated(data['generatedAt'] ?? ''));
     buffer.writeln();
 
     final adherence = data['planAdherence'] as Map<String, dynamic>? ?? {};
-    buffer.writeln('--- Plan Adherence ---');
+    buffer.writeln(l10n.instrumentationPlanAdherence);
     adherence.forEach((k, v) => buffer.writeln('$k: $v'));
     buffer.writeln();
 
     final mastery = data['masteryImprovement'] as Map<String, dynamic>? ?? {};
-    buffer.writeln('--- Mastery Improvement ---');
+    buffer.writeln(l10n.instrumentationMasteryImprovement);
     mastery.forEach((k, v) => buffer.writeln('$k: $v'));
 
     return buffer.toString();

@@ -258,6 +258,42 @@ void main() {
         );
         expect(eval.isMatch(''), isFalse);
       });
+
+      test('partialMatch returns false (no special handling)', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+          evaluationType: EvaluationType.partialMatch,
+        );
+        expect(eval.isMatch('Paris'), isTrue);
+        expect(eval.isMatch('London'), isFalse);
+      });
+
+      test('acceptableMatch returns false when not in acceptable list', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+          acceptableAnswers: ['Lyon'],
+          evaluationType: EvaluationType.acceptableMatch,
+        );
+        expect(eval.isMatch('Paris'), isTrue);
+        expect(eval.isMatch('Lyon'), isTrue);
+        expect(eval.isMatch('Marseille'), isFalse);
+      });
+
+      test('fuzzyMatch with low matching ratio returns false', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'one two three four',
+          evaluationType: EvaluationType.fuzzyMatch,
+        );
+        expect(eval.isMatch('one two five six'), isFalse);
+      });
+
+      test('fuzzyMatch with partial word overlap but low ratio', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'a b c d',
+          evaluationType: EvaluationType.fuzzyMatch,
+        );
+        expect(eval.isMatch('a b x y'), isFalse);
+      });
     });
   });
 

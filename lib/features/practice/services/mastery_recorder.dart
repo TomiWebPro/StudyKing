@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -50,9 +51,11 @@ class MasteryRecorder {
         isCorrect: isCorrect,
         confidence: confidence,
       );
+      final currentSrData = _deserializeSrData(question.srDataJson);
       final srResult = _srEngine.scheduleReview(
         questionId: questionId,
         grade: grade,
+        currentData: currentSrData,
         now: now,
       );
 
@@ -81,7 +84,10 @@ class MasteryRecorder {
         _logger.w('MasteryGraphService.recordAttempt failed: ${masteryResult.error}');
       }
 
-      final updatedQuestion = question.copyWith(nextReview: srResult.nextReview);
+      final updatedQuestion = question.copyWith(
+        nextReview: srResult.nextReview,
+        srDataJson: _serializeSrData(srResult.updatedData),
+      );
       await _questionRepo.save(questionId, updatedQuestion);
 
       final questionMasteryResult = await _questionMasteryRepo.getQuestionMasteryState(
@@ -94,6 +100,7 @@ class MasteryRecorder {
           confidence: confidence,
           timeSpentMs: timeSpentMs,
           now: now,
+          sm2NextReview: srResult.nextReview,
         );
         await _questionMasteryRepo.updateQuestionMasteryState(updatedQM);
       }
@@ -103,5 +110,33 @@ class MasteryRecorder {
       _logger.e('MasteryRecorder.recordAttempt failed', e);
       return Result.failure('Failed to record attempt: $e');
     }
+  }
+
+  QuestionSRData _deserializeSrData(String? json) {
+    if (json == null || json.isEmpty) return const QuestionSRData();
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      return QuestionSRData(
+        repetitions: map['r'] as int? ?? 0,
+        easeFactor: (map['ef'] as num?)?.toDouble() ?? 2.5,
+        previousInterval: map['pi'] != null
+            ? Duration(milliseconds: map['pi'] as int)
+            : null,
+        lastReview: map['lr'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(map['lr'] as int)
+            : null,
+      );
+    } catch (_) {
+      return const QuestionSRData();
+    }
+  }
+
+  String _serializeSrData(QuestionSRData data) {
+    return jsonEncode({
+      'r': data.repetitions,
+      'ef': data.easeFactor,
+      if (data.previousInterval != null) 'pi': data.previousInterval!.inMilliseconds,
+      if (data.lastReview != null) 'lr': data.lastReview!.millisecondsSinceEpoch,
+    });
   }
 }

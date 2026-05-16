@@ -56,9 +56,11 @@ final spacedRepetitionRepositoryProvider = Provider<SpacedRepetitionRepository>(
 final spacedRepetitionServiceProvider = Provider<SpacedRepetitionService>((ref) {
   final questionRepo = ref.read(questionRepositoryProvider);
   final attemptRepo = ref.read(attemptRepositoryProvider);
+  final srEngine = ref.read(spacedRepetitionEngineProvider);
   return SpacedRepetitionService(
     questionRepo: questionRepo,
     attemptRepo: attemptRepo,
+    srEngine: srEngine,
   );
 });
 

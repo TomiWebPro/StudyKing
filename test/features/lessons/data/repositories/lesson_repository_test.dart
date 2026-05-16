@@ -364,9 +364,11 @@ void main() {
     });
 
     group('addBlock', () {
-      test('stores a lesson block and retrieves it', () async {
+      test('stores a lesson block when lesson exists', () async {
+        await repo.create(createTestLesson(id: 'l1'));
         final block = LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'Content');
-        await repo.addBlock(block);
+        final addResult = await repo.addBlock(block);
+        expect(addResult.isSuccess, isTrue);
         final blocksResult = await repo.getBlocksForLesson('l1');
         expect(blocksResult.isSuccess, isTrue);
         final blocks = blocksResult.data!;
@@ -376,9 +378,11 @@ void main() {
         expect(blocks.first.type, LessonBlockType.text);
       });
 
-      test('stores a block with all fields', () async {
+      test('stores a block with all fields when lesson exists', () async {
+        await repo.create(createTestLesson(id: 'l1'));
         final block = LessonBlock(id: 'b2', subjectId: 'sub-1', lessonId: 'l1', type: LessonBlockType.example, content: 'Example', order: 5);
-        await repo.addBlock(block);
+        final addResult = await repo.addBlock(block);
+        expect(addResult.isSuccess, isTrue);
         final blocksResult = await repo.getBlocksForLesson('l1');
         expect(blocksResult.isSuccess, isTrue);
         final blocks = blocksResult.data!;
@@ -386,10 +390,20 @@ void main() {
         expect(blocks.first.order, 5);
         expect(blocks.first.type, LessonBlockType.example);
       });
+
+      test('returns failure when lesson does not exist', () async {
+        final block = LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'nonexistent', type: LessonBlockType.text, content: 'Content');
+        final result = await repo.addBlock(block);
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Lesson not found'));
+      });
     });
 
     group('getBlocksForLesson', () {
       test('returns blocks for a specific lesson', () async {
+        await repo.create(createTestLesson(id: 'l1'));
+        await repo.create(createTestLesson(id: 'l2'));
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repo.addBlock(LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C2'));
         await repo.addBlock(LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l2', type: LessonBlockType.text, content: 'C3'));
@@ -401,9 +415,15 @@ void main() {
         expect(ids, containsAll(['b1', 'b2']));
       });
 
-      test('returns empty when no blocks for lesson', () async {
-        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
+      test('returns empty list when lesson does not exist', () async {
         final result = await repo.getBlocksForLesson('nonexistent');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('returns empty list when lesson has no blocks', () async {
+        await repo.create(createTestLesson(id: 'empty-lesson'));
+        final result = await repo.getBlocksForLesson('empty-lesson');
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
       });
@@ -411,6 +431,9 @@ void main() {
 
     group('getBlocksBySubject', () {
       test('returns blocks for a specific subject', () async {
+        await repo.create(createTestLesson(id: 'l1'));
+        await repo.create(createTestLesson(id: 'l2'));
+        await repo.create(createTestLesson(id: 'l3'));
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         await repo.addBlock(LessonBlock(id: 'b2', subjectId: 'math', lessonId: 'l2', type: LessonBlockType.text, content: 'C2'));
         await repo.addBlock(LessonBlock(id: 'b3', subjectId: 'physics', lessonId: 'l3', type: LessonBlockType.text, content: 'C3'));
@@ -420,8 +443,15 @@ void main() {
       });
 
       test('returns empty when no blocks for subject', () async {
+        await repo.create(createTestLesson(id: 'l1'));
         await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'l1', type: LessonBlockType.text, content: 'C1'));
         final result = await repo.getBlocksBySubject('physics');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('returns empty when no lessons exist', () async {
+        final result = await repo.getBlocksBySubject('math');
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
       });
@@ -451,4 +481,128 @@ void main() {
       });
     });
   });
+
+  group('LessonRepository error handling', () {
+    late _ThrowingLessonRepository throwingRepo;
+
+    setUp(() {
+      throwingRepo = _ThrowingLessonRepository();
+    });
+
+    group('init', () {
+      test('error during init is logged and rethrown', () async {
+        final repo = _FailingInitLessonRepository();
+        await expectLater(repo.init(), throwsException);
+      });
+    });
+
+    group('create', () {
+      test('returns failure when save throws', () async {
+        throwingRepo.throwOnSave = true;
+        final lesson = createTestLesson();
+        final result = await throwingRepo.create(lesson);
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to create lesson'));
+      });
+    });
+
+    group('getBySubject', () {
+      test('returns failure when filterBy throws', () async {
+        throwingRepo.throwOnFilterBy = true;
+        final result = await throwingRepo.getBySubject('math');
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to get lessons'));
+      });
+    });
+
+    group('getByTopic', () {
+      test('returns failure when filterBy throws', () async {
+        throwingRepo.throwOnFilterBy = true;
+        final result = await throwingRepo.getByTopic('algebra');
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to get lessons'));
+      });
+    });
+
+    group('getBySubjectAndTopic', () {
+      test('returns failure when filterBy throws', () async {
+        throwingRepo.throwOnFilterBy = true;
+        final result = await throwingRepo.getBySubjectAndTopic('math', 'algebra');
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to get lessons'));
+      });
+    });
+
+    group('addBlock', () {
+      test('returns failure when get throws', () async {
+        throwingRepo.throwOnGet = true;
+        final block = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        final result = await throwingRepo.addBlock(block);
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to add block'));
+      });
+    });
+
+    group('getBlocksForLesson', () {
+      test('returns failure when get throws', () async {
+        throwingRepo.throwOnGet = true;
+        final result = await throwingRepo.getBlocksForLesson('l1');
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to get blocks'));
+      });
+    });
+
+    group('getBlocksBySubject', () {
+      test('returns failure when getAll throws', () async {
+        throwingRepo.throwOnGetAll = true;
+        final result = await throwingRepo.getBlocksBySubject('math');
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Failed to get blocks'));
+      });
+    });
+  });
+}
+
+class _FailingInitLessonRepository extends LessonRepository {
+  @override
+  Future<void> openBox(String boxName) async {
+    throw Exception('Failed to open box');
+  }
+}
+
+class _ThrowingLessonRepository extends LessonRepository {
+  bool throwOnSave = false;
+  bool throwOnGet = false;
+  bool throwOnGetAll = false;
+  bool throwOnFilterBy = false;
+
+  @override
+  Future<void> save(String key, Lesson item) async {
+    if (throwOnSave) throw Exception('Save error');
+  }
+
+  @override
+  Future<Lesson?> get(String id) async {
+    if (throwOnGet) throw Exception('Get error');
+    return null;
+  }
+
+  @override
+  Future<List<Lesson>> getAll() async {
+    if (throwOnGetAll) throw Exception('GetAll error');
+    return [];
+  }
+
+  @override
+  List<Lesson> filterBy<K>(K Function(Lesson) getter, K value) {
+    if (throwOnFilterBy) throw Exception('FilterBy error');
+    return [];
+  }
 }

@@ -1,94 +1,38 @@
-# Dashboard Module: Dead Code, Duplicated Logic, and Misplaced Concerns
+# Issue: Dead & Duplicated Question Card Widget — Refactor to Single Source of Truth
 
 ## Context
 
-The dashboard module (`lib/features/dashboard/`) has accumulated structural issues: a dead service file that duplicates logic from active providers, a providers file that mixes data-fetching concerns with UI state management, and a barrel file that silently omits dead code while lacking exports for internally-used widgets.
+The `lib/features/questions/` feature is architecturally incomplete: it has no `screens/`, `providers/`, or `services/` directories — only `widgets/`, `data/`, and a barrel file. Its barrel (`questions.dart`) exports `question_card_widget.dart` but **no consumer in `lib/` actually imports it**. Instead, the `practice` feature built its own near-identical question card (`practice_session_question_card.dart`) that directly deep-imports from `questions/presentation/widgets/`, creating tight cross-feature coupling. This leaves 438 lines of dead code shipped in the bundle while duplicating rendering logic.
 
----
+## Affected Files
 
-## Issues
-
-### 1. Dead code: `services/dashboard_data_loader.dart`
-
-`DashboardDataLoader` and its `DashboardData` model class are **never imported** by any file under `lib/`. The only consumer is `test/features/dashboard/services/dashboard_data_loader_test.dart`.
-
-**Affected files:**
-- `lib/features/dashboard/services/dashboard_data_loader.dart` (entire file, ~126 lines)
-
-**Rationale:**
-- Zero imports from `lib/` — confirmed by grep across the entire `lib/` tree.
-- Not exported in `dashboard.dart` barrel.
-- The class was likely a precursor to the provider-based approach in `dashboard_data_providers.dart` but was never removed.
-- Retaining dead code increases maintenance burden (readers wonder if it is used) and misleads new contributors.
-
-**Acceptance criteria:**
-- Delete `lib/features/dashboard/services/dashboard_data_loader.dart`.
-- Delete `test/features/dashboard/services/dashboard_data_loader_test.dart`.
-- Verify all imports referencing this file are removed (there should be none in `lib/` and only one in `test/`).
-- Confirm dashboard tests still pass.
-
----
-
-### 2. Duplicated business logic: focus-today-stats computed in two places
-
-The same "today's focus session" computation appears in **two locations** with slightly different error handling and return types:
-
-| Location | File:Line | Return type | Error handling |
-|---|---|---|---|
-| Provider | `dashboard_data_providers.dart:56-72` | `FocusTodayStats?` (typed model) | Silent `catch (_)` |
-| Dead service | `dashboard_data_loader.dart:60-77` | `Map<String, dynamic>?` (raw map) | `_logger.w('...')` |
-
-The duplication itself has been rendered harmless by the dead code in (1), but the live provider still has a subtle issue: `totalMs` is computed but only `totalSeconds` (a derived value) is actually stored in the model. The `totalMs` field is **computed and then discarded**.
-
-**Affected files:**
-- `lib/features/dashboard/providers/dashboard_data_providers.dart:56-72`
-
-**Rationale:**
-- Unnecessary CPU work: `fold<int>(0, ...)` computes `totalMs` but the value is never used outside the scope.
-- Inconsistency with the now-dead service version (which used `totalMs` in a map) suggests the computation was copied without cleanup.
-- After deletion of the dead file in (1), this is the only remaining copy — an opportunity to simplify.
-
-**Acceptance criteria:**
-- Remove the unused `totalMs` variable from `dashboardFocusStatsProvider`.
-- Keep only `totalSeconds` (computed via `totalMs ~/ 1000` can become a direct computation) or simplify further.
-- Confirm `FocusTodayStats.fromMap` call reflects the change.
-
----
-
-### 3. Misplaced concerns: UI state management in `dashboard_data_providers.dart`
-
-The file `dashboard_data_providers.dart` is named to suggest it contains **data-layer providers** (fetchers of mastery, stats, adherence, etc.). However, it also houses the **UI layout state** for card collapse/expand:
-
-| Lines | Concern | Correctness |
+| File | Lines | Role |
 |---|---|---|
-| 127–143 | `DashboardLayoutPreferences` (model) | Layout concern |
-| 145–168 | `DashboardLayoutNotifier` (StateNotifier) | Layout concern |
-| 170–174 | `dashboardLayoutPreferencesProvider` | Layout concern |
+| `lib/features/questions/presentation/widgets/question_card_widget.dart` | 438 | **Dead code** — exported but never imported by any `lib/` consumer |
+| `lib/features/practice/presentation/widgets/practice_session_question_card.dart` | 160 | **Duplicated logic** — reimplements question card with partial feature set; deep-imports from `questions/` widgets |
+| `lib/features/questions/presentation/widgets/single_answer_widget.dart` | 168 | Shared widget, correctly split |
+| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | 349 | SRP violation — domain models (`Stroke`, `DrawingPoint`) and painters (`DrawingPainter`, `GridPainter`) mixed in same file as widget |
+| `lib/features/questions/questions.dart` | 8 | Barrel file — re-exports `question_card_widget.dart` that nothing uses |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 375 | Scattered — `_ChatMessage` private class defined at line 370 inside the screen file |
+| `lib/core/utils/logger.dart` | 50 | Logging — `setVerbose` is static mutable global state |
 
-These three declarations are UI-state management — they control which dashboard cards are collapsed — and have nothing to do with "data providers." Placing them here violates the **Single Responsibility Principle** and makes the file harder to navigate.
+## Rationale
 
-**Affected files:**
-- `lib/features/dashboard/providers/dashboard_data_providers.dart:125-174`
+1. **Dead code in production bundle.** `question_card_widget.dart` (438 lines) is exported from the barrel but not referenced by a single `lib/` file. Only test files import it. This adds unnecessary binary size and maintenance surface.
 
-**Rationale:**
-- A developer looking for "dashboard layout preferences" will not look in a file named `dashboard_data_providers.dart`.
-- The file already spans 174 lines with 8 `FutureProvider.family` declarations; adding UI state on top makes it a grab-bag.
-- Clean separation: data providers belong together (`dashboard_providers.dart` or `dashboard_data_providers.dart`), layout state should live in a dedicated file like `providers/dashboard_layout_providers.dart`.
+2. **Duplicated question rendering.** `practice_session_question_card.dart` reimplements the same switch-on-question-type pattern with different styling and a narrower set of question types. Any change to how a typed-answer or essay question renders must be made in two places. This has already diverged — `question_card_widget.dart` has `reduceMotion`/`largeTouchTargets`/`onNext` support that the practice version lacks.
 
-**Acceptance criteria:**
-- Extract `DashboardLayoutPreferences`, `DashboardLayoutNotifier`, and `dashboardLayoutPreferencesProvider` into a new file `lib/features/dashboard/providers/dashboard_layout_providers.dart`.
-- Update the barrel export in `dashboard.dart` (add the new file).
-- Update any imports that reference `dashboardLayoutPreferencesProvider`.
-- Confirm no imports are broken and all tests pass.
+3. **Cross-feature deep imports.** `practice_session_question_card.dart` directly imports `questions/presentation/widgets/single_answer_widget.dart`, `canvas_drawing_widget.dart`, and `math_expression_widget.dart`. This violates the principle that features should interact through well-defined public APIs (the barrel file), not by reaching into another feature's presentation internals.
 
----
+4. **SRP violations.** `canvas_drawing_widget.dart` mixes domain models (`Stroke`, `DrawingPoint`) and rendering logic (`DrawingPainter`, `GridPainter`) into the same 349-line file. `mentor_screen.dart` defines `_ChatMessage` inline at the bottom of a 375-line screen file.
 
-## Summary
+5. **Inappropriate log level.** `canvas_drawing_widget.dart:280` uses `_logger.d` (debug) for a JSON parse failure, which is an actual error condition — should be at least `warn`.
 
-| # | Issue | Severity | Effort |
-|---|---|---|---|
-| 1 | Dead code: `dashboard_data_loader.dart` (126 lines, zero imports) | High | Low |
-| 2 | Duplicated/unused `totalMs` computation in focus-stats provider | Low | Trivial |
-| 3 | Layout UI state mixed into `dashboard_data_providers.dart` | Medium | Low |
+## Acceptance Criteria
 
-All three are independent but affect the same module; addressing them together restores clarity to the dashboard data layer.
+- [ ] **Remove `question_card_widget.dart`** from the barrel export after migrating its unique capabilities (submit button, `reduceMotion`, `largeTouchTargets`, `onNext`, correct/incorrect debrief chips) into `practice_session_question_card.dart` or a shared widget.
+- [ ] **Extract domain models** from `canvas_drawing_widget.dart` into `lib/features/questions/data/models/drawing_models.dart` for `Stroke` and `DrawingPoint`.
+- [ ] **Extract painters** from `canvas_drawing_widget.dart` into `lib/features/questions/presentation/painters/` for `DrawingPainter` and `GridPainter`.
+- [ ] **Fix log level** in `canvas_drawing_widget.dart:280` — change `_logger.d` → `_logger.w` for the JSON parse failure case.
+- [ ] **Extract `_ChatMessage`** from `mentor_screen.dart` into `lib/features/mentor/data/models/chat_message_data.dart` as a public or package-private class.
+- [ ] Verify no regressions: all existing tests in `test/features/questions/` and `test/features/practice/` pass.

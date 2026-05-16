@@ -1,9 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_state_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
 class MockMasteryBox implements Box<MasteryState> {
@@ -506,6 +513,79 @@ void main() {
         expect(result.data?['averageAccuracy'], 0.0);
         expect(result.data?['avgReadiness'], 0.0);
       });
+    });
+  });
+
+  group('MasteryGraphRepository (init with real Hive)', () {
+    late MasteryGraphRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(MasteryStateAdapter());
+      Hive.registerAdapter(QuestionMasteryStateAdapter());
+      Hive.registerAdapter(TopicDependencyAdapter());
+      Hive.registerAdapter(QuestionEvaluationAdapter());
+      Hive.registerAdapter(EvaluationStepAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('mg_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = MasteryGraphRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.box<QuestionMasteryState>('question_mastery_states').close();
+      await Hive.box<TopicDependency>('topic_dependencies').close();
+      await Hive.box<QuestionEvaluation>('question_evaluations').close();
+      await Hive.deleteBoxFromDisk('mastery_states');
+      await Hive.deleteBoxFromDisk('question_mastery_states');
+      await Hive.deleteBoxFromDisk('topic_dependencies');
+      await Hive.deleteBoxFromDisk('question_evaluations');
+    });
+
+    test('init opens boxes and supports CRUD', () async {
+      final state = MasteryState.initial(studentId: 's1', topicId: 't1');
+      await repository.updateMasteryState(state);
+      final result = await repository.getMasteryState('s1', 't1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.topicId, 't1');
+    });
+
+    test('getAllMasteryStates works after init', () async {
+      await repository.updateMasteryState(MasteryState.initial(studentId: 's1', topicId: 't1'));
+      await repository.updateMasteryState(MasteryState.initial(studentId: 's1', topicId: 't2'));
+      final result = await repository.getAllMasteryStates('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(2));
+    });
+
+    test('question mastery CRUD works after init', () async {
+      final now = DateTime.now();
+      final qms = QuestionMasteryState.initial(studentId: 's1', questionId: 'q1', now: now);
+      await repository.updateQuestionMasteryState(qms);
+      final result = await repository.getQuestionMasteryState('s1', 'q1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.questionId, 'q1');
+    });
+
+    test('topic dependency CRUD works after init', () async {
+      final dep = TopicDependency(topicId: 't1', prerequisites: ['t0']);
+      await repository.updateTopicDependency(dep);
+      final result = await repository.getTopicDependency('t1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.prerequisites, ['t0']);
+    });
+
+    test('evaluation CRUD works after init', () async {
+      final eval = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+      await repository.saveEvaluation(eval);
+      final result = await repository.getEvaluation('q1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.correctAnswer, 'Paris');
     });
   });
 }

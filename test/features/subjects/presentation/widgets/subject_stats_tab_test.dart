@@ -55,12 +55,11 @@ void main() {
 
     testWidgets('shows stat cards with zeros when no sessions', (tester) async {
       final repo = _FakeSessionRepository([]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Sessions'), findsOneWidget);
@@ -69,17 +68,19 @@ void main() {
       expect(find.text('Time'), findsOneWidget);
       expect(find.text('Practice Progress'), findsOneWidget);
       expect(find.text('Overall Score'), findsOneWidget);
-      expect(find.text('Keep practicing to improve your score!'), findsOneWidget);
+      expect(
+        find.text('Keep practicing to improve your score!'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows stat cards with zeros when repo throws', (tester) async {
       final repo = _FakeSessionRepository([], shouldThrow: true);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Sessions'), findsOneWidget);
@@ -91,12 +92,11 @@ void main() {
         _session(id: 's1', subjectId: testSubjectId),
         _session(id: 's2', subjectId: testSubjectId),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('2'), findsOneWidget);
@@ -104,14 +104,18 @@ void main() {
 
     testWidgets('displays correct accuracy percentage', (tester) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 8,
+          questionsAnswered: 10,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('80.0%'), findsAtLeast(1));
@@ -122,12 +126,11 @@ void main() {
         _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 20),
         _session(id: 's2', subjectId: testSubjectId, questionsAnswered: 15),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('35'), findsOneWidget);
@@ -136,16 +139,25 @@ void main() {
     testWidgets('aggregates stats across multiple sessions', (tester) async {
       final repo = _FakeSessionRepository([
         _session(
-            id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10, timeSpentMs: 60000),
-        _session(
-            id: 's2', subjectId: testSubjectId, correctAnswers: 6, questionsAnswered: 10, timeSpentMs: 120000),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 8,
+          questionsAnswered: 10,
+          timeSpentMs: 60000,
         ),
-      ));
+        _session(
+          id: 's2',
+          subjectId: testSubjectId,
+          correctAnswers: 6,
+          questionsAnswered: 10,
+          timeSpentMs: 120000,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('2'), findsOneWidget);
@@ -158,12 +170,11 @@ void main() {
         _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 10),
         _session(id: 's2', subjectId: 'other-subject', questionsAnswered: 100),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('10'), findsOneWidget);
@@ -174,41 +185,47 @@ void main() {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(MetricCard), findsNWidgets(4));
     });
 
-    testWidgets('shows LinearProgressIndicator with correct value', (tester) async {
+    testWidgets('shows LinearProgressIndicator with correct value', (
+      tester,
+    ) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 8,
+          questionsAnswered: 10,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      final progress = tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
       expect(progress.value, closeTo(0.8, 0.01));
     });
 
     testWidgets('shows ProgressIndicator header', (tester) async {
       final repo = _FakeSessionRepository([]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Practice Progress'), findsOneWidget);
@@ -216,29 +233,39 @@ void main() {
 
     testWidgets('shows 100% accuracy for perfect score', (tester) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 10, questionsAnswered: 10),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 10,
+          questionsAnswered: 10,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('100.0%'), findsAtLeast(1));
     });
 
-    testWidgets('shows 0.0% accuracy when no questions answered', (tester) async {
+    testWidgets('shows 0.0% accuracy when no questions answered', (
+      tester,
+    ) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, questionsAnswered: 0, correctAnswers: 0),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          questionsAnswered: 0,
+          correctAnswers: 0,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('0.0%'), findsAtLeast(1));
@@ -246,18 +273,25 @@ void main() {
 
     testWidgets('shows overall score section with percentage', (tester) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 8, questionsAnswered: 10),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 8,
+          questionsAnswered: 10,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Overall Score'), findsOneWidget);
-      expect(find.text('Keep practicing to improve your score!'), findsOneWidget);
+      expect(
+        find.text('Keep practicing to improve your score!'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows correct total time formatting', (tester) async {
@@ -265,12 +299,11 @@ void main() {
         _session(id: 's1', subjectId: testSubjectId, timeSpentMs: 3600000),
         _session(id: 's2', subjectId: testSubjectId, timeSpentMs: 1800000),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('2'), findsOneWidget);
@@ -280,12 +313,11 @@ void main() {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
-          subjectId: testSubjectId,
-          sessionRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       final headerFinder = find.text('Practice Progress');
@@ -294,14 +326,18 @@ void main() {
 
     testWidgets('shows 50.0% accuracy for medium score', (tester) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 5, questionsAnswered: 10),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 5,
+          questionsAnswered: 10,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('50.0%'), findsAtLeast(1));
@@ -309,17 +345,143 @@ void main() {
 
     testWidgets('shows 25.0% accuracy for low score', (tester) async {
       final repo = _FakeSessionRepository([
-        _session(id: 's1', subjectId: testSubjectId, correctAnswers: 25, questionsAnswered: 100),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectStatsTab(
+        _session(
+          id: 's1',
           subjectId: testSubjectId,
-          sessionRepository: repo,
+          correctAnswers: 25,
+          questionsAnswered: 100,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('25.0%'), findsAtLeast(1));
+    });
+
+    testWidgets('progress indicator shows 50% value for medium score', (
+      tester,
+    ) async {
+      final repo = _FakeSessionRepository([
+        _session(
+          id: 's1',
+          subjectId: testSubjectId,
+          correctAnswers: 5,
+          questionsAnswered: 10,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.5, 0.01));
+    });
+
+    testWidgets('progress indicator shows 25% value for low score', (
+      tester,
+    ) async {
+      final repo = _FakeSessionRepository([
+        _session(
+          id: 's1',
+          subjectId: testSubjectId,
+          correctAnswers: 25,
+          questionsAnswered: 100,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.25, 0.01));
+    });
+
+    testWidgets('renders MetricCard with how_to_vote icon for sessions', (
+      tester,
+    ) async {
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: testSubjectId),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.how_to_vote), findsOneWidget);
+      expect(find.byIcon(Icons.question_answer), findsOneWidget);
+      expect(find.byIcon(Icons.access_time), findsOneWidget);
+    });
+
+    testWidgets('MetricCard for accuracy displays star icon', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(
+          id: 's1',
+          subjectId: testSubjectId,
+          correctAnswers: 8,
+          questionsAnswered: 10,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+
+    testWidgets('section header renders with correct title styling', (
+      tester,
+    ) async {
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: testSubjectId),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final headerText = tester.widget<Text>(find.text('Practice Progress'));
+      expect(headerText.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('overall score text shows bold font weight', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(
+          id: 's1',
+          subjectId: testSubjectId,
+          correctAnswers: 8,
+          questionsAnswered: 10,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final overallScoreText = tester.widget<Text>(find.text('80.0%').last);
+      expect(overallScoreText.style?.fontWeight, FontWeight.bold);
     });
   });
 }

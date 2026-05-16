@@ -55,3 +55,50 @@ if [ "$HAD_ERROR" = true ]; then
 fi
 
 echo "All locales have 100% key parity with app_en.arb."
+echo ""
+
+# ──────────────────────────────────────────────
+# Section 2: Detect hardcoded user-facing strings
+# Scans lib/features/ and lib/core/ for string
+# literals in Text(), Semantics(label:), etc.
+# that are not using l10n.* or AppLocalizations.
+# ──────────────────────────────────────────────
+echo "Checking for hardcoded user-facing strings (heuristic)..."
+HARDCODED=false
+
+while IFS=':' read -r file line content; do
+  [ -z "$file" ] && continue
+  # Skip lines using l10n or AppLocalizations
+  case "$content" in
+    *l10n.*|*AppLocalizations.of*) continue ;;
+  esac
+  echo "  WARN: $file:$line — ${2:-hardcoded string}: $content"
+  HARDCODED=true
+done < <(grep -rnP 'Text\([^)]*["'"'"']' lib/features/ lib/core/ 2>/dev/null || true)
+
+while IFS=':' read -r file line content; do
+  [ -z "$file" ] && continue
+  case "$content" in
+    *l10n.*|*AppLocalizations.of*) continue ;;
+  esac
+  echo "  WARN: $file:$line — hardcoded string in Semantics(label:): $content"
+  HARDCODED=true
+done < <(grep -rnP 'Semantics\([^)]*label:\s*["'"'"']' lib/features/ lib/core/ 2>/dev/null || true)
+
+while IFS=':' read -r file line content; do
+  [ -z "$file" ] && continue
+  case "$content" in
+    *l10n.*|*AppLocalizations.of*) continue ;;
+  esac
+  echo "  WARN: $file:$line — hardcoded string in tooltip:: $content"
+  HARDCODED=true
+done < <(grep -rnP 'tooltip:\s*["'"'"']' lib/features/ lib/core/ 2>/dev/null || true)
+
+if [ "$HARDCODED" = true ]; then
+  echo ""
+  echo "WARNING: Potential hardcoded user-facing strings found (see above)."
+  echo "These should use l10n.* or AppLocalizations.of(context)!.* instead."
+  echo "(Not failing the build — heuristic check may have false positives.)"
+fi
+
+echo "i18n coverage check complete."

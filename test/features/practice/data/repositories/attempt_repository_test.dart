@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 
@@ -177,6 +180,51 @@ void main() {
         await repository.delete('a1');
         expect(await repository.get('a1'), isNull);
       });
+    });
+  });
+
+  group('AttemptRepository (init with real Hive)', () {
+    late AttemptRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(StudentAttemptAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('attempt_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = AttemptRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('attempts');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final attempt = StudentAttempt(id: 'hive-1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: DateTime.now());
+      await repository.create(attempt);
+      final stored = await repository.get('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.studentId, 's1');
+    });
+
+    test('getByStudent works after init', () async {
+      await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: DateTime.now()));
+      await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', timestamp: DateTime.now()));
+      await repository.create(StudentAttempt(id: 'a3', studentId: 's2', questionId: 'q3', subjectId: 'sub1', timestamp: DateTime.now()));
+      expect(await repository.getByStudent('s1'), hasLength(2));
+    });
+
+    test('getSubjectStats works after init', () async {
+      await repository.create(StudentAttempt(id: 's1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', isCorrect: true, timestamp: DateTime.now()));
+      await repository.create(StudentAttempt(id: 's2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', isCorrect: false, timestamp: DateTime.now()));
+      final stats = await repository.getSubjectStats('sub1');
+      expect(stats['total'], 2);
+      expect(stats['correct'], 1);
     });
   });
 }

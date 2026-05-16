@@ -1668,6 +1668,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get howConfident => 'How confident are you?';
 
   @override
+  String get confidenceRatingOf => 'of';
+
+  @override
   String get notConfidentAtAll => 'Not confident at all';
 
   @override
@@ -2153,6 +2156,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mentorChangesDone =>
       'Done! The changes have been made to your schedule.';
+
+  @override
+  String get mentorAccuracy => 'Accuracy';
+
+  @override
+  String get mentorBadges => 'Badges';
+
+  @override
+  String get mentorRecommendationsSection => 'Recommendations';
 
   @override
   String get mentorProgressReportTitle => '📊 **Your Study Progress Report**\n';
@@ -3227,4 +3239,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendHint => 'Press Enter to send, Ctrl+Enter for new line';
+
+  @override
+  String get shareProgressReport => 'StudyKing Progress Report';
+
+  @override
+  String get shareSessionHistory => 'StudyKing Session History';
+
+  @override
+  String get shareInstrumentationData => 'StudyKing Instrumentation Data';
+
+  @override
+  String get instrumentationDashboard => '=== Instrumentation Dashboard ===';
+
+  @override
+  String instrumentationGenerated(String date) {
+    return 'Generated: $date';
+  }
+
+  @override
+  String get instrumentationPlanAdherence => '--- Plan Adherence ---';
+
+  @override
+  String get instrumentationMasteryImprovement => '--- Mastery Improvement ---';
+
+  @override
+  String get partialLabel => 'Partial';
+
+  @override
+  String get localeEn => 'English';
+
+  @override
+  String get localeEs => 'Spanish';
 }

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
@@ -155,4 +158,147 @@ void main() {
       });
     });
   });
+
+  group('RoadmapRepository (init with real Hive)', () {
+    late RoadmapRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestMilestoneAdapter());
+      Hive.registerAdapter(_TestRoadmapAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('roadmap_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = RoadmapRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('roadmaps');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final roadmap = createTestRoadmap(id: 'hive-1', goal: 'Hive Test');
+      await repository.saveRoadmap(roadmap);
+      final stored = await repository.loadRoadmap('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.goal, 'Hive Test');
+    });
+
+    test('getRoadmapsByStudent works after init', () async {
+      await repository.saveRoadmap(createTestRoadmap(id: 'r1', studentId: 's1'));
+      await repository.saveRoadmap(createTestRoadmap(id: 'r2', studentId: 's1'));
+      await repository.saveRoadmap(createTestRoadmap(id: 'r3', studentId: 's2'));
+      expect(await repository.getRoadmapsByStudent('s1'), hasLength(2));
+    });
+
+    test('deleteRoadmap works after init', () async {
+      await repository.saveRoadmap(createTestRoadmap(id: 'd1'));
+      await repository.deleteRoadmap('d1');
+      expect(await repository.loadRoadmap('d1'), isNull);
+    });
+  });
+}
+
+class _TestMilestoneAdapter extends TypeAdapter<MilestoneModel> {
+  @override
+  final int typeId = 25;
+
+  @override
+  MilestoneModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return MilestoneModel(
+      id: fields[0] as String,
+      title: fields[1] as String,
+      description: fields[2] as String? ?? '',
+      deadline: fields[3] as DateTime,
+      topicsCovered: (fields[4] as List?)?.cast<String>() ?? [],
+      assessmentCriteria: (fields[5] as List?)?.cast<String>() ?? [],
+      isCompleted: fields[6] as bool? ?? false,
+      progress: (fields[7] as num?)?.toDouble() ?? 0.0,
+      order: fields[8] as int? ?? 0,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MilestoneModel obj) {
+    writer
+      ..writeByte(9)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.title)
+      ..writeByte(2)
+      ..write(obj.description)
+      ..writeByte(3)
+      ..write(obj.deadline)
+      ..writeByte(4)
+      ..write(obj.topicsCovered)
+      ..writeByte(5)
+      ..write(obj.assessmentCriteria)
+      ..writeByte(6)
+      ..write(obj.isCompleted)
+      ..writeByte(7)
+      ..write(obj.progress)
+      ..writeByte(8)
+      ..write(obj.order);
+  }
+}
+
+class _TestRoadmapAdapter extends TypeAdapter<RoadmapModel> {
+  @override
+  final int typeId = 29;
+
+  @override
+  RoadmapModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return RoadmapModel(
+      id: fields[0] as String,
+      studentId: fields[1] as String,
+      goal: fields[2] as String,
+      createdAt: fields[3] as DateTime,
+      targetCompletionDate: fields[4] as DateTime?,
+      milestones: (fields[5] as List?)?.cast<MilestoneModel>() ?? [],
+      completionPercentage: (fields[6] as num?)?.toDouble() ?? 0.0,
+      status: fields[7] as String? ?? 'active',
+      subjectId: fields[8] as String?,
+      plannedVsActual: fields[9] != null ? Map<String, double>.from(fields[9] as Map) : null,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, RoadmapModel obj) {
+    writer
+      ..writeByte(10)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.studentId)
+      ..writeByte(2)
+      ..write(obj.goal)
+      ..writeByte(3)
+      ..write(obj.createdAt)
+      ..writeByte(4)
+      ..write(obj.targetCompletionDate)
+      ..writeByte(5)
+      ..write(obj.milestones)
+      ..writeByte(6)
+      ..write(obj.completionPercentage)
+      ..writeByte(7)
+      ..write(obj.status)
+      ..writeByte(8)
+      ..write(obj.subjectId)
+      ..writeByte(9)
+      ..write(obj.plannedVsActual);
+  }
 }

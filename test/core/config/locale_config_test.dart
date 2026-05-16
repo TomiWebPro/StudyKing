@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/config/locale_config.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
   group('AppLocale', () {
@@ -49,6 +50,25 @@ void main() {
       final supported = [const Locale('en'), const Locale('es')];
       final result = AppLocale.resolveLocale(const Locale('fr'), supported);
       expect(result, equals(const Locale('en')));
+    });
+
+    test('AppLocale.values matches AppLocalizations.supportedLocales', () {
+      final appLocaleCodes = AppLocale.values.map((l) => l.locale.languageCode).toSet();
+      final generatedCodes = AppLocalizations.supportedLocales.map((l) => l.languageCode).toSet();
+
+      expect(appLocaleCodes.length, equals(AppLocale.values.length),
+          reason: 'AppLocale should have unique language codes');
+      expect(generatedCodes.length, equals(AppLocalizations.supportedLocales.length),
+          reason: 'AppLocalizations should have unique supported locales');
+
+      expect(appLocaleCodes.length, equals(generatedCodes.length),
+          reason: 'AppLocale.values count must match AppLocalizations.supportedLocales count. '
+              'If adding a new locale, update AppLocale enum AND regenerate l10n.');
+      for (final code in appLocaleCodes) {
+        expect(generatedCodes, contains(code),
+            reason: 'Locale "$code" is defined in AppLocale but missing from '
+                'AppLocalizations.supportedLocales. Run flutter gen-l10n to regenerate.');
+      }
     });
 
   });

@@ -18,7 +18,20 @@ class WeakAreasCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final weakStates = allMastery.where((s) => s.accuracy < 0.6).toList();
-    if (weakStates.isEmpty) return const SizedBox.shrink();
+    if (weakStates.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Text(
+            l10n.noWeakAreasFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16),

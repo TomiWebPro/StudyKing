@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
@@ -253,4 +256,95 @@ void main() {
       });
     });
   });
+
+  group('EngagementNudgeRepository (init with real Hive)', () {
+    late EngagementNudgeRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestEngagementNudgeAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('nudge_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = EngagementNudgeRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('engagement_nudges');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final nudge = createTestNudge(id: 'hive-1', message: 'Hive test');
+      await repository.create(nudge);
+      final stored = await repository.getByStudent('student-1');
+      expect(stored, hasLength(1));
+      expect(stored.first.message, 'Hive test');
+    });
+
+    test('getRecentByStudent works after init', () async {
+      await repository.create(createTestNudge(id: 'n1', studentId: 's1'));
+      await repository.create(createTestNudge(id: 'n2', studentId: 's1'));
+      expect(await repository.getRecentByStudent('s1'), hasLength(2));
+    });
+
+    test('markActedUpon works after init', () async {
+      await repository.create(createTestNudge(id: 'm1', studentId: 's1'));
+      await repository.markActedUpon('m1');
+      final result = await repository.getByStudent('s1');
+      expect(result.first.wasActedUpon, isTrue);
+    });
+  });
+}
+
+class _TestEngagementNudgeAdapter extends TypeAdapter<EngagementNudgeModel> {
+  @override
+  final int typeId = 32;
+
+  @override
+  EngagementNudgeModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return EngagementNudgeModel(
+      id: fields[0] as String,
+      studentId: fields[1] as String,
+      nudgeType: fields[2] as String,
+      message: fields[3] as String,
+      severity: fields[4] as String? ?? 'medium',
+      topicId: fields[5] as String?,
+      sentAt: fields[6] as DateTime,
+      wasActedUpon: fields[7] as bool? ?? false,
+      actedUponAt: fields[8] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, EngagementNudgeModel obj) {
+    writer
+      ..writeByte(9)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.studentId)
+      ..writeByte(2)
+      ..write(obj.nudgeType)
+      ..writeByte(3)
+      ..write(obj.message)
+      ..writeByte(4)
+      ..write(obj.severity)
+      ..writeByte(5)
+      ..write(obj.topicId)
+      ..writeByte(6)
+      ..write(obj.sentAt)
+      ..writeByte(7)
+      ..write(obj.wasActedUpon)
+      ..writeByte(8)
+      ..write(obj.actedUponAt);
+  }
 }

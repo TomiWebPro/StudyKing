@@ -38,10 +38,21 @@ class SubjectStatsTab extends StatelessWidget {
         final subjectSessions = snapshot.data ?? [];
 
         final totalSessions = subjectSessions.length;
-        final totalQuestions = subjectSessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
-        final totalCorrect = subjectSessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
-        final totalTime = subjectSessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-        final avgScore = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0;
+        final totalQuestions = subjectSessions.fold<int>(
+          0,
+          (sum, s) => sum + s.questionsAnswered,
+        );
+        final totalCorrect = subjectSessions.fold<int>(
+          0,
+          (sum, s) => sum + s.correctAnswers,
+        );
+        final totalTime = subjectSessions.fold<int>(
+          0,
+          (sum, s) => sum + s.actualDurationMs,
+        );
+        final avgScore = totalQuestions > 0
+            ? (totalCorrect / totalQuestions * 100)
+            : 0.0;
 
         return Column(
           children: [
@@ -85,7 +96,10 @@ class SubjectStatsTab extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     l10n.time,
-                    formatDurationFromContext(context, Duration(milliseconds: totalTime)),
+                    formatDurationFromContext(
+                      context,
+                      Duration(milliseconds: totalTime),
+                    ),
                     Icons.access_time,
                     Theme.of(context).colorScheme.tertiary,
                   ),
@@ -117,7 +131,9 @@ class SubjectStatsTab extends StatelessWidget {
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
                       value: avgScore / 100,
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _scoreColor(context, avgScore),
                       ),
@@ -143,21 +159,22 @@ class SubjectStatsTab extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
-    return MetricCard(
-      label: label,
-      value: value,
-      icon: icon,
-      accent: color,
-    );
+  Widget _buildStatCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return MetricCard(label: label, value: value, icon: icon, accent: color);
   }
 
   Color _scoreColor(BuildContext context, double score) {

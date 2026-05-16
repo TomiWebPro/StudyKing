@@ -9,7 +9,9 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
 import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
@@ -81,6 +83,7 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 void main() {
   setUpAll(() {
     Hive.registerAdapter(PlanAdherenceMetricAdapter());
+    Hive.registerAdapter(PlanAdherenceModelAdapter());
     Hive.registerAdapter(MasteryImprovementMetricAdapter());
   });
 
@@ -92,10 +95,13 @@ void main() {
   group('InstrumentationService', () {
     late InstrumentationService service;
     late MockMasteryGraphRepository mockRepo;
+    late PlanAdherenceRepository adherenceRepo;
 
     setUp(() async {
       mockRepo = MockMasteryGraphRepository();
-      service = InstrumentationService(repository: mockRepo);
+      adherenceRepo = PlanAdherenceRepository();
+      await adherenceRepo.init();
+      service = InstrumentationService(repository: mockRepo, adherenceRepository: adherenceRepo);
       await service.init();
     });
 
@@ -175,12 +181,12 @@ void main() {
     });
 
     group('getAdherenceHistory', () {
-      test('returns empty history initially', () {
-        final history = service.getAdherenceHistory('student1');
+      test('returns empty history initially', () async {
+        final history = await service.getAdherenceHistory('student1');
         expect(history, isEmpty);
       });
 
-      test('returns history after recording', () {
+      test('returns history after recording', () async {
         service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 10,
@@ -188,7 +194,7 @@ void main() {
           plannedMinutes: 30,
           actualMinutes: 25,
         );
-        final history = service.getAdherenceHistory('student1');
+        final history = await service.getAdherenceHistory('student1');
         expect(history.length, equals(1));
       });
     });
@@ -216,135 +222,6 @@ void main() {
       test('exports empty data', () async {
         final result = await service.exportInstrumentationData('student1');
         expect(result.isSuccess, isTrue);
-      });
-    });
-  });
-
-  group('PlanAdherenceTracker', () {
-    late PlanAdherenceTracker tracker;
-
-    setUp(() async {
-      tracker = PlanAdherenceTracker();
-      await tracker.init();
-    });
-
-    group('recordDay', () {
-      test('records day with all parameters', () {
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 1),
-          plannedQuestions: 15,
-          actualQuestions: 12,
-          plannedMinutes: 30,
-          actualMinutes: 25,
-        );
-      });
-
-      test('records day with metadata', () {
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 1),
-          plannedQuestions: 15,
-          actualQuestions: 12,
-          plannedMinutes: 30,
-          actualMinutes: 25,
-          metadata: {'sessionId': 'sess1'},
-        );
-      });
-    });
-
-    group('getAverageAdherence', () {
-      test('returns 0 for empty metrics', () {
-        final avg = tracker.getAverageAdherence('student1');
-        expect(avg, equals(0.0));
-      });
-
-      test('calculates average correctly', () {
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 1),
-          plannedQuestions: 10,
-          actualQuestions: 10,
-          plannedMinutes: 30,
-          actualMinutes: 30,
-        );
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 2),
-          plannedQuestions: 10,
-          actualQuestions: 5,
-          plannedMinutes: 30,
-          actualMinutes: 15,
-        );
-        final avg = tracker.getAverageAdherence('student1');
-        expect(avg, greaterThan(0.0));
-      });
-
-      test('returns 0 for non-existent student', () {
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 1),
-          plannedQuestions: 10,
-          actualQuestions: 10,
-          plannedMinutes: 30,
-          actualMinutes: 30,
-        );
-        final avg = tracker.getAverageAdherence('nonexistent');
-        expect(avg, equals(0.0));
-      });
-    });
-
-    group('getWeeklyMetrics', () {
-      test('returns weekly metrics', () {
-        final now = DateTime.now();
-        tracker.recordDay(
-          studentId: 'student1',
-          date: now,
-          plannedQuestions: 10,
-          actualQuestions: 10,
-          plannedMinutes: 30,
-          actualMinutes: 30,
-        );
-        final metrics = tracker.getWeeklyMetrics('student1');
-        expect(metrics.length, equals(1));
-      });
-
-      test('excludes old metrics', () {
-        final now = DateTime.now();
-        final weekAgo = now.subtract(const Duration(days: 10));
-        tracker.recordDay(
-          studentId: 'student1',
-          date: weekAgo,
-          plannedQuestions: 10,
-          actualQuestions: 10,
-          plannedMinutes: 30,
-          actualMinutes: 30,
-        );
-        final metrics = tracker.getWeeklyMetrics('student1');
-        expect(metrics, isEmpty);
-      });
-    });
-
-    group('getAllMetrics', () {
-      test('returns all metrics for student', () {
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 1),
-          plannedQuestions: 10,
-          actualQuestions: 10,
-          plannedMinutes: 30,
-          actualMinutes: 30,
-        );
-        tracker.recordDay(
-          studentId: 'student1',
-          date: DateTime(2026, 5, 2),
-          plannedQuestions: 10,
-          actualQuestions: 8,
-          plannedMinutes: 30,
-          actualMinutes: 25,
-        );
-        final metrics = tracker.getAllMetrics('student1');
-        expect(metrics.length, equals(2));
       });
     });
   });
@@ -485,80 +362,6 @@ void main() {
     });
   });
 
-  group('PlanAdherenceTracker - getConsecutiveLowAdherenceDays', () {
-    late PlanAdherenceTracker tracker;
-
-    setUp(() async {
-      tracker = PlanAdherenceTracker();
-      await tracker.init();
-    });
-
-    test('returns 0 when no metrics exist', () {
-      expect(tracker.getConsecutiveLowAdherenceDays('student1'), 0);
-    });
-
-    test('returns 0 when adherence is above threshold', () {
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 1),
-        plannedQuestions: 10, actualQuestions: 10,
-        plannedMinutes: 30, actualMinutes: 30,
-      );
-      expect(tracker.getConsecutiveLowAdherenceDays('student1'), 0);
-    });
-
-    test('counts consecutive low adherence days', () {
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 1),
-        plannedQuestions: 10, actualQuestions: 1,
-        plannedMinutes: 30, actualMinutes: 5,
-      );
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 2),
-        plannedQuestions: 10, actualQuestions: 2,
-        plannedMinutes: 30, actualMinutes: 5,
-      );
-      expect(tracker.getConsecutiveLowAdherenceDays('student1'), greaterThan(0));
-    });
-
-    test('breaks streak when adherence meets threshold', () {
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 1),
-        plannedQuestions: 10, actualQuestions: 1,
-        plannedMinutes: 30, actualMinutes: 5,
-      );
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 2),
-        plannedQuestions: 10, actualQuestions: 10,
-        plannedMinutes: 30, actualMinutes: 30,
-      );
-      final count = tracker.getConsecutiveLowAdherenceDays('student1');
-      expect(count, equals(0));
-    });
-
-    test('uses custom threshold', () {
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 1),
-        plannedQuestions: 10, actualQuestions: 8,
-        plannedMinutes: 30, actualMinutes: 25,
-      );
-      expect(tracker.getConsecutiveLowAdherenceDays('student1', threshold: 0.9), greaterThan(0));
-    });
-  });
-
-  group('PlanAdherenceTracker - calculateAdherenceScore edge cases', () {
-    test('zero planned values return 1.0 (perfect score)', () async {
-      final tracker = PlanAdherenceTracker();
-      await tracker.init();
-      tracker.recordDay(
-        studentId: 'student1', date: DateTime(2026, 5, 1),
-        plannedQuestions: 0, actualQuestions: 0,
-        plannedMinutes: 0, actualMinutes: 0,
-      );
-      final metrics = tracker.getAllMetrics('student1');
-      expect(metrics.first.adherenceScore, 1.0);
-    });
-  });
-
   group('MasteryImprovementTracker - getPreviousState', () {
     test('returns null for unknown topic', () {
       final tracker = MasteryImprovementTracker();
@@ -581,7 +384,9 @@ void main() {
   group('InstrumentationService - dashboard with actual adherence data', () {
     test('dashboard reflects recorded adherence', () async {
       final mockRepo = MockMasteryGraphRepository();
-      final svc = InstrumentationService(repository: mockRepo);
+      final adherenceRepo = PlanAdherenceRepository();
+      await adherenceRepo.init();
+      final svc = InstrumentationService(repository: mockRepo, adherenceRepository: adherenceRepo);
       await svc.init();
 
       svc.recordPlanAdherence(

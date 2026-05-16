@@ -32,11 +32,11 @@ class _MockTracker extends StudyProgressTracker {
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
     return {
       'accuracy': 80,
-      'totalStudyTimeHours': '3.5',
+      'totalStudyTimeHours': 3.5,
       'weeklyActivity': 25,
       'topicsStudied': 10,
-      'correctAttempts': '40',
-      'totalAttempts': '50',
+      'correctAttempts': 40,
+      'totalAttempts': 50,
     };
   }
 

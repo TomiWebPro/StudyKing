@@ -48,7 +48,7 @@ class StudyProgressTracker {
       'correctAttempts': correctAttempts,
       'accuracy': (accuracy * 100).round(),
       'avgTimePerQuestion': (avgTimePerQuestion / 1000).round(),
-      'totalStudyTimeHours': (totalTimeMs / 3600000).toStringAsFixed(1),
+      'totalStudyTimeHours': totalTimeMs / 3600000,
       'weeklyActivity': weeklyAttempts,
       'dailyActivity': dailyAttempts,
       'topicsStudied': attempts
@@ -153,7 +153,7 @@ class StudyProgressTracker {
       });
     }
 
-    final totalHours = double.parse(stats['totalStudyTimeHours'] as String);
+    final totalHours = (stats['totalStudyTimeHours'] as num).toDouble();
     if (totalHours < 1) {
       recommendations.add({
         'type': 'engagement',
@@ -257,7 +257,7 @@ class StudyProgressTracker {
     csvLines.add('"$studentId","correctAttempts","${stats['correctAttempts']}"');
     csvLines.add('"$studentId","accuracy","${stats['accuracy']}%"');
     csvLines.add('"$studentId","avgTimePerQuestion","${stats['avgTimePerQuestion']}"');
-    csvLines.add('"$studentId","totalStudyTimeHours","${stats['totalStudyTimeHours']}"');
+    csvLines.add('"$studentId","totalStudyTimeHours","${(stats['totalStudyTimeHours'] as num).toStringAsFixed(1)}"');
     csvLines.add('"$studentId","weeklyActivity","${stats['weeklyActivity']}"');
     csvLines.add('"$studentId","dailyActivity","${stats['dailyActivity']}"');
 

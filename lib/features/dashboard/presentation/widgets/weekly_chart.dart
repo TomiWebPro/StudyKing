@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
@@ -9,6 +10,15 @@ class WeeklyChart extends ConsumerWidget {
   final List<WeeklyTrendEntry> weeklyTrend;
 
   const WeeklyChart({super.key, required this.weeklyTrend});
+
+  Map<String, int> _fallbackDayLabels(String localeName) {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    return {
+      for (var i = 0; i < 7; i++)
+        DateFormat('E', localeName).format(startOfWeek.add(Duration(days: i))): 0,
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +53,7 @@ class WeeklyChart extends ConsumerWidget {
         AnimatedBarChart(
           data: chartData.isNotEmpty
               ? chartData
-              : {'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0},
+              : _fallbackDayLabels(l10n.localeName),
           accentColor: Theme.of(context).colorScheme.primary,
           reduceMotion: ref.watch(settingsProvider).reduceMotion,
         ),

@@ -195,7 +195,7 @@ class EngagementScheduler {
     double totalHours = 0;
     try {
       final stats = await _tracker.getOverallStats(studentId);
-      totalHours = double.tryParse(stats['totalStudyTimeHours'] as String? ?? '0') ?? 0;
+      totalHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0;
     } catch (e) {
       _logger.w('Failed to get overall stats for overwork nudge: $e');
     }
@@ -268,7 +268,9 @@ class EngagementScheduler {
   Future<String> getWeeklyDigest(String studentId) async {
     final stats = await _tracker.getOverallStats(studentId);
     final accuracy = stats['accuracy'] as int? ?? 0;
-    final totalHours = stats['totalStudyTimeHours'] as String? ?? '0';
+    final rawHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0.0;
+    final localeName = _l10n?.localeName ?? 'en';
+    final totalHours = formatDecimal(rawHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
     final weeklyActivity = stats['weeklyActivity'] as int? ?? 0;
     final badges = await _tracker.getBadges(studentId);
     final weakResult = await _masteryService.getWeakTopics(studentId);

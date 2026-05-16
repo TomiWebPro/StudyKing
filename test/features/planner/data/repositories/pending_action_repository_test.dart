@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
@@ -220,4 +223,92 @@ void main() {
       });
     });
   });
+
+  group('PendingActionRepository (init with real Hive)', () {
+    late PendingActionRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestPendingActionAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('pa_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = PendingActionRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('pending_actions');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final action = createTestAction(id: 'hive-1');
+      await repository.create(action);
+      final stored = await repository.get('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.actionType, 'schedule');
+    });
+
+    test('getPending works after init', () async {
+      await repository.create(createTestAction(id: 'a1', studentId: 's1'));
+      await repository.create(createTestAction(id: 'a2', studentId: 's1', status: 'completed'));
+      expect(await repository.getPending('s1'), hasLength(1));
+    });
+
+    test('markCompleted works after init', () async {
+      await repository.create(createTestAction(id: 'm1', studentId: 's1'));
+      await repository.markCompleted('m1');
+      final stored = await repository.get('m1');
+      expect(stored?.status, 'completed');
+    });
+  });
+}
+
+class _TestPendingActionAdapter extends TypeAdapter<PendingActionModel> {
+  @override
+  final int typeId = 5;
+
+  @override
+  PendingActionModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return PendingActionModel(
+      id: fields[0] as String,
+      studentId: fields[1] as String,
+      actionType: fields[2] as String,
+      topicTitle: fields[3] as String? ?? '',
+      sessionId: fields[4] as String?,
+      payload: (fields[5] as Map?)?.map((k, v) => MapEntry(k as String, v)) ?? {},
+      createdAt: fields[6] as DateTime,
+      status: fields[7] as String? ?? 'pending',
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, PendingActionModel obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.studentId)
+      ..writeByte(2)
+      ..write(obj.actionType)
+      ..writeByte(3)
+      ..write(obj.topicTitle)
+      ..writeByte(4)
+      ..write(obj.sessionId)
+      ..writeByte(5)
+      ..write(obj.payload)
+      ..writeByte(6)
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.status);
+  }
 }

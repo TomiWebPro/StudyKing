@@ -47,7 +47,7 @@ void main() {
 
     testWidgets('displays study time hours', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: OverallStats(totalStudyTimeHours: '12.5')),
+        SummaryRow(overallStats: OverallStats(totalStudyTimeHours: 12.5)),
       ));
       await tester.pumpAndSettle();
 
@@ -76,7 +76,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         SummaryRow(overallStats: OverallStats(
           accuracy: 80,
-          totalStudyTimeHours: '10',
+          totalStudyTimeHours: 10,
           weeklyActivity: 20,
           topicsStudied: 5,
         )),

@@ -8,10 +8,6 @@ import '../models/user_profile_model.dart';
 
 /// Real implementation of settings repository using Hive storage
 class SettingsRepository {
-  static final SettingsRepository _instance = SettingsRepository._internal();
-  factory SettingsRepository() => _instance;
-  SettingsRepository._internal();
-
   Box? _settingsBox;
   Box? _profileBox;
   static const String _currentProfileKey = 'current_profile';

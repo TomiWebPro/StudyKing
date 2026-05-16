@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
@@ -325,6 +328,49 @@ void main() {
       test('does nothing when student has no records', () async {
         await repository.deleteByStudent('none');
       });
+    });
+  });
+
+  group('PlanAdherenceRepository (init with real Hive)', () {
+    late PlanAdherenceRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(PlanAdherenceModelAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('adherence_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = PlanAdherenceRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('plan_adherence');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final model = createTestAdherence(id: 'hive-1');
+      await repository.create(model);
+      final stored = await repository.get('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.adherenceScore, 0.8);
+    });
+
+    test('getByStudent works after init', () async {
+      await repository.create(createTestAdherence(id: 'a1', studentId: 's1'));
+      await repository.create(createTestAdherence(id: 'a2', studentId: 's1'));
+      await repository.create(createTestAdherence(id: 'a3', studentId: 's2'));
+      expect(await repository.getByStudent('s1'), hasLength(2));
+    });
+
+    test('delete works after init', () async {
+      await repository.create(createTestAdherence(id: 'd1'));
+      await repository.delete('d1');
+      expect(await repository.get('d1'), isNull);
     });
   });
 }

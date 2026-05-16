@@ -20,7 +20,8 @@ class SubjectLessonsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final lessonRepo = (lessonRepository ?? ref.read(lessonRepositoryProvider))!;
+    final lessonRepo =
+        (lessonRepository ?? ref.read(lessonRepositoryProvider))!;
 
     Future<List<Lesson>> loadLessons() async {
       try {
@@ -45,8 +46,13 @@ class SubjectLessonsTab extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.book_outlined, size: 64,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.book_outlined,
+                  size: 64,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   l10n.noLessonsYet,
@@ -69,13 +75,23 @@ class SubjectLessonsTab extends ConsumerWidget {
           itemBuilder: (context, index) {
             final lesson = subjectLessons[index];
             return Card(
-              margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
+              margin: EdgeInsets.only(
+                bottom: ResponsiveUtils.verticalSpacing(context) * 0.75,
+              ),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  child: Icon(Icons.book, color: Theme.of(context).primaryColor),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.book,
+                    color: Theme.of(context).primaryColor,
+                  ),
                 ),
-                title: Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                title: Text(
+                  lesson.title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 subtitle: Text(
                   l10n.blocksCount(lesson.blocks.length),
                   style: Theme.of(context).textTheme.bodySmall,

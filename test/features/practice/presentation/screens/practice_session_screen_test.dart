@@ -16,7 +16,7 @@ import 'package:studyking/features/practice/presentation/screens/practice_sessio
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'shared_test_helpers.dart';
+import '../shared_test_helpers.dart';
 
 const _kCorrectFeedback = 'Correct!';
 const _kIncorrectFeedback = 'Incorrect';

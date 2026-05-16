@@ -12,7 +12,7 @@ void main() {
         topicsStudied: 5,
         completedLessons: 10,
         weeklyActivity: 7,
-        totalStudyTimeHours: '42.5',
+        totalStudyTimeHours: 42.5,
       );
 
       expect(report.totalAttempts, 100);
@@ -21,7 +21,7 @@ void main() {
       expect(report.topicsStudied, 5);
       expect(report.completedLessons, 10);
       expect(report.weeklyActivity, 7);
-      expect(report.totalStudyTimeHours, '42.5');
+      expect(report.totalStudyTimeHours, 42.5);
     });
 
     test('uses default empty lists when not provided', () {
@@ -32,7 +32,7 @@ void main() {
         topicsStudied: 0,
         completedLessons: 0,
         weeklyActivity: 0,
-        totalStudyTimeHours: '0',
+        totalStudyTimeHours: 0,
       );
 
       expect(report.weakTopics, isEmpty);
@@ -58,7 +58,7 @@ void main() {
         topicsStudied: 3,
         completedLessons: 5,
         weeklyActivity: 3,
-        totalStudyTimeHours: '20',
+        totalStudyTimeHours: 20,
         weakTopics: weakTopics,
       );
 
@@ -81,7 +81,7 @@ void main() {
         topicsStudied: 8,
         completedLessons: 15,
         weeklyActivity: 5,
-        totalStudyTimeHours: '60',
+        totalStudyTimeHours: 60,
         badges: badges,
         recommendations: recommendations,
       );
@@ -100,7 +100,7 @@ void main() {
         topicsStudied: 2,
         completedLessons: 4,
         weeklyActivity: 2,
-        totalStudyTimeHours: '8',
+        totalStudyTimeHours: 8,
       );
       final b = ProgressReport(
         totalAttempts: 10,
@@ -109,7 +109,7 @@ void main() {
         topicsStudied: 2,
         completedLessons: 4,
         weeklyActivity: 2,
-        totalStudyTimeHours: '8',
+        totalStudyTimeHours: 8,
       );
 
       expect(a.totalAttempts, b.totalAttempts);
@@ -129,7 +129,7 @@ void main() {
         topicsStudied: 2,
         completedLessons: 4,
         weeklyActivity: 2,
-        totalStudyTimeHours: '8',
+        totalStudyTimeHours: 8,
       );
       final b = ProgressReport(
         totalAttempts: 20,
@@ -138,7 +138,7 @@ void main() {
         topicsStudied: 4,
         completedLessons: 8,
         weeklyActivity: 4,
-        totalStudyTimeHours: '16',
+        totalStudyTimeHours: 16,
       );
 
       expect(a, isNot(equals(b)));

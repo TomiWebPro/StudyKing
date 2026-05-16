@@ -6,6 +6,7 @@ import 'hive_box_names.dart';
 import 'hive_type_ids.dart';
 import 'package:studyking/features/questions/data/questions_data.dart';
 import 'package:studyking/features/practice/data/practice_data.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/planner_data.dart';
 import 'package:studyking/features/subjects/data/subjects_data.dart';
 import 'package:studyking/features/teaching/data/teaching_data.dart';
@@ -37,6 +38,7 @@ class HiveInitializer {
 
     await Hive.openBox<ConversationMessage>(HiveBoxNames.conversations);
     await Hive.openBox<TutorSession>(HiveBoxNames.tutorSessions);
+    await Hive.openBox<PlanAdherenceModel>(HiveBoxNames.planAdherence);
     await Hive.openBox(HiveBoxNames.planAdherenceMetrics);
     await Hive.openBox(HiveBoxNames.masteryImprovementMetrics);
     await SessionMigrationService.migrateIfNeeded();

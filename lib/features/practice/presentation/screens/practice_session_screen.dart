@@ -480,6 +480,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   Widget _buildConfidenceSelector() {
     final l10n = AppLocalizations.of(context)!;
+    final currentLabel = _getConfidenceLabel(l10n, _currentConfidence);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -490,53 +491,55 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(5, (index) {
-            final rating = index + 1;
-            final isSelected = _currentConfidence == rating;
-            return Semantics(
-              button: true,
-              label: '${l10n.howConfident} $rating',
-              child: InkWell(
-                onTap: () => setState(() => _currentConfidence = rating),
-                borderRadius: BorderRadius.circular(24),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? _getConfidenceColor(rating).withValues(alpha: 0.2)
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                    border: Border.all(
+        Semantics(
+          label: '${l10n.howConfident}: $_currentConfidence ${l10n.confidenceRatingOf} 5, $currentLabel',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(5, (index) {
+              final rating = index + 1;
+              final isSelected = _currentConfidence == rating;
+              return Semantics(
+                selected: isSelected,
+                child: InkWell(
+                  onTap: () => setState(() => _currentConfidence = rating),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? _getConfidenceColor(rating)
-                          : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$rating',
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ? _getConfidenceColor(rating).withValues(alpha: 0.2)
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
+                      shape: BoxShape.circle,
+                      border: Border.all(
                         color: isSelected
                             ? _getConfidenceColor(rating)
-                            : Theme.of(context).colorScheme.onSurface,
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$rating',
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? _getConfidenceColor(rating)
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
         const SizedBox(height: 4),
         Center(
           child: Text(
-            _getConfidenceLabel(l10n, _currentConfidence),
+            currentLabel,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

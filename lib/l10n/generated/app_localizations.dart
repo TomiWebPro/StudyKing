@@ -2996,6 +2996,12 @@ abstract class AppLocalizations {
   /// **'How confident are you?'**
   String get howConfident;
 
+  /// Screen reader label fragment for range indicator, e.g. '3 of 5'
+  ///
+  /// In en, this message translates to:
+  /// **'of'**
+  String get confidenceRatingOf;
+
   /// Confidence level 1
   ///
   /// In en, this message translates to:
@@ -3739,6 +3745,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done! The changes have been made to your schedule.'**
   String get mentorChangesDone;
+
+  /// Section header for accuracy in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy'**
+  String get mentorAccuracy;
+
+  /// Section header for badges in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'Badges'**
+  String get mentorBadges;
+
+  /// Section header for recommendations in progress report
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations'**
+  String get mentorRecommendationsSection;
 
   /// Title for the progress report
   ///
@@ -5563,6 +5587,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Press Enter to send, Ctrl+Enter for new line'**
   String get sendHint;
+
+  /// Share text for progress report CSV
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Progress Report'**
+  String get shareProgressReport;
+
+  /// Share text for session history CSV
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Session History'**
+  String get shareSessionHistory;
+
+  /// Share text for instrumentation data export
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Instrumentation Data'**
+  String get shareInstrumentationData;
+
+  /// Header for instrumentation dashboard export
+  ///
+  /// In en, this message translates to:
+  /// **'=== Instrumentation Dashboard ==='**
+  String get instrumentationDashboard;
+
+  /// Generated timestamp line in instrumentation export
+  ///
+  /// In en, this message translates to:
+  /// **'Generated: {date}'**
+  String instrumentationGenerated(String date);
+
+  /// Section header for plan adherence in instrumentation export
+  ///
+  /// In en, this message translates to:
+  /// **'--- Plan Adherence ---'**
+  String get instrumentationPlanAdherence;
+
+  /// Section header for mastery improvement in instrumentation export
+  ///
+  /// In en, this message translates to:
+  /// **'--- Mastery Improvement ---'**
+  String get instrumentationMasteryImprovement;
+
+  /// Accessibility label for partially correct evaluation
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get partialLabel;
+
+  /// Label for English language option
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get localeEn;
+
+  /// Label for Spanish language option
+  ///
+  /// In en, this message translates to:
+  /// **'Spanish'**
+  String get localeEs;
 }
 
 class _AppLocalizationsDelegate

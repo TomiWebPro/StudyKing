@@ -138,7 +138,7 @@ class ChatBubble extends StatelessWidget {
 
   String _evaluationSemanticLabel(BuildContext context, double score) {
     final l10n = AppLocalizations.of(context)!;
-    final label = score >= 0.7 ? l10n.correctFeedback : (score <= 0.3 ? l10n.incorrectFeedback : 'Partial');
+    final label = score >= 0.7 ? l10n.correctFeedback : (score <= 0.3 ? l10n.incorrectFeedback : l10n.partialLabel);
     return '$label, ${formatPercent(score * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}';
   }
 

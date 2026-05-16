@@ -1,118 +1,101 @@
-# Test Coverage & Structural Gaps
+# Test Coverage Audit: 5 Untested Files, 3 Orphaned Tests, and Structural Gaps
 
-## Summary
+## Context
 
-Despite near-100% file-level test coverage, several structural and qualitative issues undermine test maintainability and completeness.
+A comprehensive audit of the test directory against `lib/features/` source files reveals several coverage gaps and structural issues. The project has ~213 source files and ~206 test files (excluding `.g.dart`), which is strong overall, but 5 source files have **zero test coverage**, 3 test files are **orphaned** (no source counterpart), and at least one category of tests (provider-level) is systematically **too thin** to catch regressions.
 
----
+## Issues Identified
 
-## Issue 1: Duplicate SettingsController Test Files
+### 1. Untested source files (highest risk)
 
-**Affected Files:**
-- `test/core/providers/app_providers_test.dart` (tests `SettingsController` with unsafe mock)
-- `test/core/providers/settings_controller_test.dart` (tests same `SettingsController` with proper fake)
+| File | Lines | Risk | Reason |
+|---|---|---|---|
+| `lib/features/dashboard/providers/dashboard_layout_providers.dart` | 53 | **High** | `DashboardLayoutNotifier` is a `StateNotifier` that opens a Hive box, reads/writes state as JSON-like lists, and exposes `toggleCollapsed()` with mutation + persistence. State management with I/O is easy to break silently. |
+| `lib/features/planner/data/adapters/plan_adherence_model_adapter.dart` | 52 | **Medium** | Hive `TypeAdapter` for `PlanAdherenceModel` — binary serialization with 10 fields. A field-order mismatch or type change in the model that isn't reflected in the adapter will cause silent data corruption at runtime. |
+| `lib/features/ingestion/data/models/source_chunk.dart` | 31 | **Low** | Pure data class with `toJson`/`fromJson`. Straightforward but uncovered. |
+| `lib/features/ingestion/services/extraction_result.dart` | 37 | **Low** | Data class with `toMetaJson`/`chunksToJson`. Straightforward but uncovered. |
+| `lib/features/ingestion/providers/ingestion_providers.dart` | 46 | **Medium** | Defines 6 Riverpod providers wiring together services and repositories. A provider change that breaks the dependency graph won't be caught. |
 
-**Problem:**
-Both files test the same `SettingsController` class from `lib/core/providers/app_providers.dart`. They use different fake/mock strategies and have inconsistent quality:
+**Affected tests**: None exist — all 5 files need new test files.
 
-| Dimension | `app_providers_test.dart` | `settings_controller_test.dart` |
+**Acceptance criteria**:
+- [ ] `dashboard_layout_providers_test.dart` covering: `DashboardLayoutPreferences.copyWith`, `isCollapsed`, `DashboardLayoutNotifier.init` (with mocked Hive box), `toggleCollapsed` (add/remove/persist), and provider creation via `ProviderContainer`.
+- [ ] `plan_adherence_model_adapter_test.dart` covering: `typeId == 33`, `read` returns correct fields, `write` produces correct bytes, round-trip fidelity for all 10 fields, null `planId` and `metadata` fields.
+- [ ] `source_chunk_test.dart` covering: constructor, `toJson`/`fromJson` round-trip, equality, `hashCode`.
+- [ ] `extraction_result_test.dart` covering: `toMetaJson`, `chunksToJson`, default values.
+- [ ] `ingestion_providers_test.dart` covering: all 6 providers instantiate correctly, dependency overrides work (smoke tests per `teaching_providers_test.dart` pattern).
+
+### 2. Orphaned / dead test files
+
+| File | Lines | Problem |
 |---|---|---|
-| Fake type | `_MockSettingsRepository` (no `implements`) | `_FakeSettingsRepository implements SettingsRepository` |
-| Type safety | `mockRepo as dynamic` (unsafe) | Proper interface implementation |
-| Assertions | Only checks repo was called | Asserts state change on controller |
-| Error handling | Test with zero assertions | Validates state unchanged on error |
+| `test/features/settings/presentation/simple_list_test.dart` | 32 | Debug-only script that prints to stdout — no assertions, no source file, no value. Dead code. |
+| `test/features/settings/data/adapters/settings_box_adapter_test.dart` | 83 | `SettingsBoxAdapter` and `UserProfileAdapter` no longer live in `lib/features/settings/data/adapters/` — they are embedded in their respective model files. The adapter tests are duplicated in `models_test.dart` (lines 200–249). |
+| `test/features/settings/data/adapters/user_profile_adapter_test.dart` | 75 | Same as above — orphaned and redundant. |
+| `test/features/settings/data/models_test.dart` | 268 | **Partially** orphaned: the Hive adapter sub-tests (lines 200–249) duplicate the same adapter tests in the orphaned adapter test files. The `SettingsBox` and `UserProfile` model tests here also overlap with dedicated per-model test files (`settings_box_test.dart`, `user_profile_model_test.dart`). |
 
-**Rationale:** Violates DRY—any change to `SettingsController` requires updating two test files. The `app_providers_test.dart` version is the weaker of the two and should be removed (or restructured to only test the pure `Provider` declarations, not `SettingsController`).
+**Affected tests**: 4 files that should be removed or consolidated.
 
-**Acceptance Criteria:**
-- Only one test location for `SettingsController` exists
-- The surviving test uses `implements SettingsRepository` (not `as dynamic`)
-- All `updateXxx` methods verify controller state changed, not just that the repo was called
-- Error cases assert state remains unchanged
+**Acceptance criteria**:
+- [ ] Delete `simple_list_test.dart` — it tests no source code.
+- [ ] Delete `settings_box_adapter_test.dart` and `user_profile_adapter_test.dart` — their content is duplicated in `models_test.dart`.
+- [ ] Audit `models_test.dart` against `settings_box_test.dart` and `user_profile_model_test.dart` for overlap; remove or deduplicate the overlapping test cases.
 
----
+### 3. Thin provider-level tests (systematic weakness)
 
-## Issue 2: Missing Test Files for Constants
+`test/features/teaching/providers/teaching_providers_test.dart` (81 lines) covers 6 providers with 7 tests, but every test is a single-assertion construction check (e.g., `expect(provider.read(...), isA<TutorService>())`). This pattern is repeated in other provider test files across the project. These tests confirm the provider *creates* something but never verify that the created object has the expected dependencies injected, nor that provider logic (e.g., fallbacks, computed values) behaves correctly under edge conditions.
 
-**Affected Files:**
-- `lib/core/constants/app_constants.dart` → **no test** (should be `test/core/constants/app_constants_test.dart`)
-- `lib/core/constants/llm_defaults.dart` → **no test** (should be `test/core/constants/llm_defaults_test.dart`)
+The same thin pattern is observable across provider tests in most features — they verify instantiation but not behavior or dependency wiring.
 
-**Rationale:** `app_constants.dart` defines `defaultModelForProvider` and other app-wide constants; `llm_defaults.dart` defines model pricing and configuration constants. Per `AGENTS.md` convention, every source file must have a companion test.
+**Affected patterns**: All `test/features/*/providers/*_test.dart` files that only assert `isA<...>()`.
 
-**Acceptance Criteria:**
-- `test/core/constants/app_constants_test.dart` exists, covering `defaultModelForProvider` and exported constants
-- `test/core/constants/llm_defaults_test.dart` exists, covering pricing/default configurations
+**Acceptance criteria**:
+- [ ] Audit provider tests across all features — flag any that only test construction (`isA<...>()` or `isNotNull`).
+- [ ] Add at least one behavioral assertion per provider group. For example:
+  - `teachingModelIdProvider`: verify fallback logic when `selectedModel` is empty, when `llmProvider` changes.
+  - `tutorServiceProvider`: verify it is the same instance across reads (auto-dispose behavior).
+  - `voiceControllerProvider`: verify it is correctly disposed.
+- [ ] Document the minimum bar for provider tests in `AGENTS.md`.
 
----
+### 4. Test file placement inconsistencies
 
-## Issue 3: `clock.dart` Has No Dedicated Unit Test
+A small number of files break the convention in `AGENTS.md`:
 
-**Affected Files:**
-- `lib/core/utils/clock.dart` (8 lines: `Clock` abstract class + `SystemClock`)
-- No file at `test/core/utils/clock_test.dart`
+- `test/features/teaching/models/evaluation_result_test.dart` — tests `lib/features/teaching/models/evaluation_result.dart`, which is under `models/` in the source, so this is correct.
+- But `test/features/teaching/providers/teaching_providers_test.dart` tests providers that *depend on* services — the test could also validate that wiring is correct, which it currently doesn't.
 
-**Rationale:** `clock.dart` is used by at least 4 services (`teaching_providers`, `practice_session_service`, `conversation_manager`, `tutor_service`) through codebase trace. Its `Clock` abstraction is the standard mechanism for making time-based logic testable. Without a dedicated test, there is no guarantee that `SystemClock.now()` fulfills the contract.
+More generally, the convention table in `AGENTS.md` is incomplete: it doesn't cover `data/adapters/`, `data/teaching_data.dart`-style data files, or `core/`-level files.
 
-**Acceptance Criteria:**
-- `test/core/utils/clock_test.dart` exists
-- Verifies `Clock` can be subclassed
-- Verifies `SystemClock.now()` returns a `DateTime` close to real time (within tolerance)
+**Acceptance criteria**:
+- [ ] Extend the `AGENTS.md` convention table to cover all subdirectory patterns found in the codebase (adapters, data files, core utilities).
+- [ ] Verify every source file matches the expected test location; fix any mismatches (none found in this audit, but the convention should be explicit to prevent future drift).
 
----
+## Rationale
 
-## Issue 4: Test Placement Anomaly—`localization_helpers` Test in Wrong Directory
+- The `DashboardLayoutNotifier` is UI-adjacent state with persistence — exactly the kind of code where a missing `.put()` or a stale Hive key silently breaks the user experience. It's the highest-ROI file to test.
+- The `PlanAdherenceModelAdapter` is binary serialization: if the model gains a field and the adapter doesn't, old data is read as garbage. A round-trip test catches this instantly.
+- The orphaned tests (`simple_list_test.dart`, duplicate adapter tests) create confusion — a developer adding or changing adapter code doesn't know which test file to update.
+- Provider tests that only check creation give a false sense of coverage. A provider whose dependency was accidentally removed (making construction throw) would still be caught, but incorrect wiring (wrong implementation injected) would not.
 
-**Affected Files:**
-- Source: `lib/core/utils/localization_helpers.dart`
-- Test: `test/core/services/localization_service_test.dart`
+## Affected Files
 
-**Rationale:** Per `AGENTS.md`, the test file for `lib/core/utils/localization_helpers.dart` should be at `test/core/utils/localization_helpers_test.dart`, not under `services/`. This causes confusion when developers search for tests by location convention.
+**New test files needed (5)**:
+- `test/features/dashboard/providers/dashboard_layout_providers_test.dart`
+- `test/features/planner/data/adapters/plan_adherence_model_adapter_test.dart`
+- `test/features/ingestion/data/models/source_chunk_test.dart`
+- `test/features/ingestion/services/extraction_result_test.dart`
+- `test/features/ingestion/providers/ingestion_providers_test.dart`
 
-**Acceptance Criteria:**
-- Test file moved/content copied to `test/core/utils/localization_helpers_test.dart`
-- Original `test/core/services/localization_service_test.dart` removed or replaced with a redirecting import comment
+**Files to remove (3)**:
+- `test/features/settings/presentation/simple_list_test.dart`
+- `test/features/settings/data/adapters/settings_box_adapter_test.dart`
+- `test/features/settings/data/adapters/user_profile_adapter_test.dart`
 
----
+**Files to audit for deduplication (1)**:
+- `test/features/settings/data/models_test.dart`
 
-## Issue 5: Heavy Fake Pattern in Lesson Provider Tests
+**Files to raise quality bar (all provider tests)**:
+- `test/features/*/providers/*_test.dart` — systematically add behavioral assertions beyond `isA<...>()`.
 
-**Affected Files:**
-- `test/features/lessons/providers/lesson_providers_test.dart`
-
-**Problem:**
-`_FakeLessonService` extends `LessonService`, which requires passing a full `DatabaseService` with **8 concrete repositories** to `super()`:
-
-```dart
-super(database: DatabaseService(
-  topicRepository: TopicRepository(),
-  questionRepository: QuestionRepository(),
-  attemptRepository: AttemptRepository(),
-  lessonRepository: LessonRepository(),
-  sessionRepository: SessionRepository(),
-  subjectRepository: SubjectRepository(),
-  conversationRepository: ConversationRepository(),
-  tutorSessionRepository: TutorSessionRepository(),
-));
-```
-
-All 8 repositories are dead weight—every overridden method in the fake ignores them entirely. This pattern repeats across other fake/service test files. The fakes are fragile: if `DatabaseService` or `LessonService` constructors change, all fakes break even though no real behavior depends on those parameters.
-
-**Accepted Criteria (for a targeted refactor):**
-- `_FakeLessonService` (and similar fakes) should not depend on concrete `DatabaseService` construction
-- Options: Extract a `LessonServiceBase` abstract class, or make the fake not extend the real class (just implement the same public interface)
-
----
-
-## Issue 6: Orphan Test File `test/core/model_test.dart`
-
-**Affected Files:**
-- `test/core/model_test.dart`
-
-**Problem:**
-This file exists at `test/core/model_test.dart` but there is no corresponding source at `lib/core/model.dart`. It tests `main.dart` (app loading) and `QuestionModel` (which already has its own test at `test/core/data/models/question_model_test.dart`). This creates confusion about where tests live.
-
-**Acceptance Criteria:**
-- App loading test moved to a more appropriate location (e.g., `test/app_test.dart` or integrated into existing widget tests)
-- `QuestionModel` tests removed from this file (already covered elsewhere)
-- Orphan file deleted
+**Documentation**:
+- `AGENTS.md` — extend test placement convention table.

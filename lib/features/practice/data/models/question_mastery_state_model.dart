@@ -91,6 +91,7 @@ class QuestionMasteryState extends HiveObject {
     required int confidence,
     required int timeSpentMs,
     required DateTime now,
+    DateTime? sm2NextReview,
   }) {
     final newTotalTimeMs = totalTimeMs + timeSpentMs;
     final newTotalAttempts = totalAttempts + 1;
@@ -134,7 +135,7 @@ class QuestionMasteryState extends HiveObject {
       incorrectCount: newIncorrectCount,
       correctCount: newCorrectCount,
     );
-    final newNextReview = _calculateNextReview(
+    final newNextReview = sm2NextReview ?? _calculateNextReview(
       masteryLevel: newMasteryLevel,
       now: now,
     );

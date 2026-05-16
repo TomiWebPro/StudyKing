@@ -8,10 +8,23 @@ Every source file in `lib/features/*/` must have a corresponding test file follo
 |---|---|---|
 | `lib/features/*/services/*.dart` | `test/features/*/services/*_test.dart` |
 | `lib/features/*/data/repositories/*.dart` | `test/features/*/data/repositories/*_test.dart` |
+| `lib/features/*/data/adapters/*.dart` | `test/features/*/data/adapters/*_test.dart` |
 | `lib/features/*/providers/*.dart` | `test/features/*/providers/*_test.dart` |
 | `lib/features/*/presentation/*.dart` | `test/features/*/presentation/*_test.dart` |
 | `lib/features/*/presentation/widgets/*.dart` | `test/features/*/presentation/widgets/*_test.dart` |
 | `lib/features/*/models/*.dart` | `test/features/*/models/*_test.dart` |
+| `lib/core/services/*.dart` | `test/core/services/*_test.dart` |
+| `lib/core/providers/*.dart` | `test/core/providers/*_test.dart` |
+| `lib/core/utils/*.dart` | `test/core/utils/*_test.dart` |
+| `lib/core/data/**/*.dart` | `test/core/data/**/*_test.dart` |
+
+## Provider Test Coverage Bar
+
+Every provider test file must include at least one **behavioral assertion** beyond construction checks (`isA<...>()` or `isNotNull`). Acceptable behavioral assertions include:
+- Verifying dependency wiring via overrides (e.g., a fake repo injected through a provider is used by a downstream service).
+- Testing fallback logic (e.g., when a config value is empty, the provider falls back to a default).
+- Verifying singleton behavior (same instance across reads).
+- Testing that error states are handled gracefully.
 
 ## Unit vs Widget Tests
 

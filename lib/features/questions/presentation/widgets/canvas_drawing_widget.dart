@@ -6,6 +6,9 @@ import 'package:studyking/core/utils/responsive.dart';
 import '../../../../core/utils/logger.dart';
 import 'package:flutter/rendering.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/questions/data/models/drawing_models.dart';
+import 'package:studyking/features/questions/presentation/painters/drawing_painter.dart';
+import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
 
 class CanvasDrawingWidget extends StatefulWidget {
   final String? instruction;
@@ -277,73 +280,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
         _strokes.addAll(loadedStrokes);
       }
     } catch (_) {
-      _logger.d('Invalid initial drawing payload');
+      _logger.w('Invalid initial drawing payload');
     }
   }
 }
 
-class Stroke {
-  final List<DrawingPoint> points;
-  final Color color;
-  final double strokeWidth;
-
-  Stroke({required this.points, this.color = Colors.black, this.strokeWidth = 3});
-}
-
-class DrawingPoint {
-  final Offset point;
-  final double? pressure;
-
-  DrawingPoint({required this.point, this.pressure});
-}
-
-class DrawingPainter extends CustomPainter {
-  final List<Stroke> strokes;
-
-  DrawingPainter({required this.strokes});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final stroke in strokes) {
-      if (stroke.points.isEmpty) continue;
-      final paint = Paint()
-        ..color = stroke.color
-        ..strokeWidth = stroke.strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      final path = Path()..moveTo(stroke.points.first.point.dx, stroke.points.first.point.dy);
-      for (var i = 1; i < stroke.points.length; i++) {
-        path.lineTo(stroke.points[i].point.dx, stroke.points[i].point.dy);
-      }
-      canvas.drawPath(path, paint);
-      if (stroke.points.length == 1) {
-        canvas.drawCircle(stroke.points.first.point, stroke.strokeWidth / 2, paint..style = PaintingStyle.fill);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DrawingPainter oldDelegate) => oldDelegate.strokes != strokes;
-}
-
-class GridPainter extends CustomPainter {
-  final Color gridColor;
-
-  GridPainter({this.gridColor = const Color(0xFFE0E0E0)});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = gridColor..strokeWidth = 1.0;
-    for (double y = 0; y < size.height; y += 20) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-    for (double x = 0; x < size.width; x += 20) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant GridPainter oldDelegate) =>
-      oldDelegate.gridColor != gridColor;
-}

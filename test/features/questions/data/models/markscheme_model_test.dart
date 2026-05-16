@@ -148,6 +148,27 @@ void main() {
         final ms = Markscheme(correctAnswer: 'Paris');
         expect(ms.isMatch('London'), isFalse);
       });
+
+      test('matches when correct answer is contained in user answer', () {
+        final ms = Markscheme(correctAnswer: 'Paris');
+        expect(ms.isMatch('The capital is Paris'), isTrue);
+      });
+
+      test('matches with acceptable answer in different case', () {
+        final ms = Markscheme(
+          correctAnswer: 'Paris',
+          acceptableAnswers: ['The capital of France'],
+        );
+        expect(ms.isMatch('THE CAPITAL OF FRANCE'), isTrue);
+      });
+
+      test('matches with extra whitespace and acceptable answer', () {
+        final ms = Markscheme(
+          correctAnswer: 'Paris',
+          acceptableAnswers: ['capital'],
+        );
+        expect(ms.isMatch('  CAPITAL  '), isTrue);
+      });
     });
   });
 

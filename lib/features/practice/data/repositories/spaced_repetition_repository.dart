@@ -7,6 +7,7 @@ import 'package:studyking/core/utils/logger.dart';
 
 /// Legacy wrapper that delegates to [SpacedRepetitionService].
 /// New code should depend on [SpacedRepetitionService] directly.
+@Deprecated('Use SpacedRepetitionService directly instead')
 class SpacedRepetitionRepository {
   final Logger _logger = const Logger('SpacedRepetitionRepository');
   final SpacedRepetitionService _service;

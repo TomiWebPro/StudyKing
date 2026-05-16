@@ -72,6 +72,7 @@ class MasteryIntegrationService {
     return 'Practice and reinforce';
   }
 
+  @Deprecated('Use SpacedRepetitionEngine.scheduleReview() directly instead')
   Future<Result<double>> calculateSpacedRepetitionInterval({
     required String studentId,
     required String questionId,

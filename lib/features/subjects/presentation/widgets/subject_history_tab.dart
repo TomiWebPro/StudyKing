@@ -43,8 +43,13 @@ class SubjectHistoryTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history, size: 64,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.history,
+                  size: 64,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   l10n.noSessionsYet,
@@ -73,14 +78,16 @@ class SubjectHistoryTab extends StatelessWidget {
             final color = _sessionColor(session.type, context);
 
             return Card(
-              margin: EdgeInsets.only(bottom: ResponsiveUtils.verticalSpacing(context) * 0.75),
+              margin: EdgeInsets.only(
+                bottom: ResponsiveUtils.verticalSpacing(context) * 0.75,
+              ),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: _scoreColor(context, score).withValues(alpha: 0.2),
-                  child: Icon(
-                    icon,
-                    color: color,
-                  ),
+                  backgroundColor: _scoreColor(
+                    context,
+                    score,
+                  ).withValues(alpha: 0.2),
+                  child: Icon(icon, color: color),
                 ),
                 title: Row(
                   children: [
@@ -97,7 +104,12 @@ class SubjectHistoryTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      formatPercent(score, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
+                      formatPercent(
+                        score,
+                        l10n.localeName,
+                        minFractionDigits: 0,
+                        maxFractionDigits: 0,
+                      ),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: _scoreColor(context, score),

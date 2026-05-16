@@ -209,11 +209,11 @@ class InMemorySettingsRepository implements MockSettingsRepository {
 void main() {
   sharedUninitializedTests();
 
-  group('SettingsRepository singleton', () {
-    test('factory returns same instance', () {
+  group('SettingsRepository construction', () {
+    test('constructor creates new instances (singleton removed)', () {
       final a = SettingsRepository();
       final b = SettingsRepository();
-      expect(identical(a, b), isTrue);
+      expect(identical(a, b), isFalse);
     });
   });
 

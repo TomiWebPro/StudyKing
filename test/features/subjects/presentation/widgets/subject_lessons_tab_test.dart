@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/lessons/data/models/lesson_model.dart';
-import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -74,39 +77,39 @@ void main() {
 
     testWidgets('shows loading indicator initially', (tester) async {
       final repo = _FakeLessonRepository([]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('shows empty state when no lessons', (tester) async {
       final repo = _FakeLessonRepository([]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('No lessons yet'), findsOneWidget);
-      expect(find.text('Start learning by creating topics and questions'), findsOneWidget);
+      expect(
+        find.text('Start learning by creating topics and questions'),
+        findsOneWidget,
+      );
       expect(find.byIcon(Icons.book_outlined), findsOneWidget);
     });
 
     testWidgets('shows empty state when repository throws', (tester) async {
       final repo = _FakeLessonRepository([], shouldThrow: true);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('No lessons yet'), findsOneWidget);
@@ -116,12 +119,11 @@ void main() {
       final repo = _FakeLessonRepository([
         _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra Basics'),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Algebra Basics'), findsOneWidget);
@@ -130,14 +132,18 @@ void main() {
 
     testWidgets('shows blocks count in subtitle', (tester) async {
       final repo = _FakeLessonRepository([
-        _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra', blockCount: 3),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
+        _lesson(
+          id: 'l1',
           subjectId: testSubjectId,
-          lessonRepository: repo,
+          title: 'Algebra',
+          blockCount: 3,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('3 blocks'), findsOneWidget);
@@ -145,14 +151,18 @@ void main() {
 
     testWidgets('shows singular blocks count for single block', (tester) async {
       final repo = _FakeLessonRepository([
-        _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra', blockCount: 1),
-      ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
+        _lesson(
+          id: 'l1',
           subjectId: testSubjectId,
-          lessonRepository: repo,
+          title: 'Algebra',
+          blockCount: 1,
         ),
-      ));
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('1 block'), findsOneWidget);
@@ -162,12 +172,11 @@ void main() {
       final repo = _FakeLessonRepository([
         _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra'),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.book), findsOneWidget);
@@ -180,12 +189,11 @@ void main() {
         _lesson(id: 'l2', subjectId: testSubjectId, title: 'Geometry'),
         _lesson(id: 'l3', subjectId: testSubjectId, title: 'Calculus'),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Algebra'), findsOneWidget);
@@ -199,12 +207,11 @@ void main() {
         _lesson(id: 'l1', subjectId: testSubjectId, title: 'Correct Subject'),
         _lesson(id: 'l2', subjectId: 'other-subject', title: 'Wrong Subject'),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Correct Subject'), findsOneWidget);
@@ -225,7 +232,8 @@ void main() {
           onGenerateRoute: (settings) {
             if (settings.name == '/lesson-detail') {
               return MaterialPageRoute(
-                builder: (_) => const Scaffold(body: Text('Lesson Detail Page')),
+                builder: (_) =>
+                    const Scaffold(body: Text('Lesson Detail Page')),
                 settings: settings,
               );
             }
@@ -252,15 +260,155 @@ void main() {
       final repo = _FakeLessonRepository([
         _lesson(id: 'l1', subjectId: 'other', title: 'Other Lesson'),
       ]);
-      await tester.pumpWidget(_buildTestApp(
-        SubjectLessonsTab(
-          subjectId: testSubjectId,
-          lessonRepository: repo,
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('No lessons yet'), findsOneWidget);
+    });
+
+    testWidgets('navigates to lesson detail with correct arguments', (
+      tester,
+    ) async {
+      final repo = _FakeLessonRepository([
+        _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra'),
+      ]);
+
+      LessonDetailArgs? capturedArgs;
+      final observer = _TestNavigatorObserver();
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          navigatorObservers: [observer],
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.lessonDetail) {
+              capturedArgs = settings.arguments as LessonDetailArgs;
+              return MaterialPageRoute(
+                builder: (_) =>
+                    const Scaffold(body: Text('Lesson Detail Page')),
+                settings: settings,
+              );
+            }
+            return null;
+          },
+          home: Scaffold(
+            body: SubjectLessonsTab(
+              subjectId: testSubjectId,
+              lessonRepository: repo,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Algebra'));
+      await tester.pumpAndSettle();
+
+      expect(capturedArgs, isNotNull);
+      expect(capturedArgs!.lessonId, 'l1');
+      expect(capturedArgs!.topicId, 'topic-1');
+      expect(capturedArgs!.subjectId, testSubjectId);
+    });
+
+    testWidgets('shows "0 blocks" for lesson with no blocks', (tester) async {
+      final repo = _FakeLessonRepository([
+        _lesson(
+          id: 'l1',
+          subjectId: testSubjectId,
+          title: 'Empty Lesson',
+          blockCount: 0,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 blocks'), findsOneWidget);
+    });
+
+    testWidgets('works with lessonRepository from provider override', (
+      tester,
+    ) async {
+      final repo = _FakeLessonRepository([
+        _lesson(id: 'l1', subjectId: testSubjectId, title: 'Provider Lesson'),
+      ]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [lessonRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SubjectLessonsTab(subjectId: testSubjectId)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Provider Lesson'), findsOneWidget);
+    });
+
+    testWidgets('renders lesson card with chevron and book icon', (
+      tester,
+    ) async {
+      final repo = _FakeLessonRepository([
+        _lesson(
+          id: 'l1',
+          subjectId: testSubjectId,
+          title: 'Test Lesson',
+          blockCount: 2,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<Card>(find.byType(Card).first);
+      expect(card.margin, isNotNull);
+    });
+
+    testWidgets('renders multiple lessons each in a card', (tester) async {
+      final repo = _FakeLessonRepository([
+        _lesson(
+          id: 'l1',
+          subjectId: testSubjectId,
+          title: 'Lesson A',
+          blockCount: 1,
+        ),
+        _lesson(
+          id: 'l2',
+          subjectId: testSubjectId,
+          title: 'Lesson B',
+          blockCount: 2,
+        ),
+        _lesson(
+          id: 'l3',
+          subjectId: testSubjectId,
+          title: 'Lesson C',
+          blockCount: 3,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsNWidgets(3));
+      expect(find.text('Lesson A'), findsOneWidget);
+      expect(find.text('Lesson B'), findsOneWidget);
+      expect(find.text('Lesson C'), findsOneWidget);
     });
   });
 }

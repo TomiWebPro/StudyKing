@@ -67,6 +67,42 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
     return Text(l10n.unsupportedQuestionType(question.type.localizedLabel(l10n)));
   }
 
+  Widget _buildMultiChoiceContent(BuildContext context) {
+    final options = question.options;
+    if (options.isEmpty) {
+      return Text(AppLocalizations.of(context)!.noOptionsAvailable);
+    }
+
+    final selected = <String>{};
+    if (currentAnswer != null && currentAnswer!.isNotEmpty) {
+      selected.addAll(currentAnswer!.split('||').map((e) => e.trim()).where((e) => e.isNotEmpty));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: options.map((option) {
+        final isSelected = selected.contains(option);
+        return CheckboxListTile(
+          value: isSelected,
+          onChanged: isSubmitted
+              ? null
+              : (value) {
+                  final updated = Set<String>.from(selected);
+                  if (value ?? false) {
+                    updated.add(option);
+                  } else {
+                    updated.remove(option);
+                  }
+                  onAnswerSelected(updated.isEmpty ? null : updated.join('||'));
+                },
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: Text(option, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -121,7 +157,6 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
   Widget _buildQuestionWidget(BuildContext context, WidgetRef ref) {
     switch (question.type) {
       case QuestionType.singleChoice:
-      case QuestionType.multiChoice:
         final correctAnswer = question.markscheme?.correctAnswer ?? '';
         if (question.options.isEmpty) {
           return Text(AppLocalizations.of(context)!.noOptionsAvailable);
@@ -135,6 +170,9 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
           onAnswerSelected: onAnswerSelected,
           reduceMotion: ref.watch(settingsProvider).reduceMotion,
         );
+
+      case QuestionType.multiChoice:
+        return _buildMultiChoiceContent(context);
 
       case QuestionType.mathExpression:
         return MathExpressionWidget(expression: question.text, isSolution: false);

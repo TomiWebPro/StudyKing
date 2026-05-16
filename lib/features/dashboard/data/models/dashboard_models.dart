@@ -41,7 +41,7 @@ class OverallStats {
   final int correctAttempts;
   final int accuracy;
   final int avgTimePerQuestion;
-  final String totalStudyTimeHours;
+  final num totalStudyTimeHours;
   final int weeklyActivity;
   final int dailyActivity;
   final int topicsStudied;
@@ -51,7 +51,7 @@ class OverallStats {
     this.correctAttempts = 0,
     this.accuracy = 0,
     this.avgTimePerQuestion = 0,
-    this.totalStudyTimeHours = '0',
+    this.totalStudyTimeHours = 0,
     this.weeklyActivity = 0,
     this.dailyActivity = 0,
     this.topicsStudied = 0,
@@ -63,7 +63,9 @@ class OverallStats {
       correctAttempts: (map['correctAttempts'] as num?)?.toInt() ?? 0,
       accuracy: (map['accuracy'] as num?)?.toInt() ?? 0,
       avgTimePerQuestion: (map['avgTimePerQuestion'] as num?)?.toInt() ?? 0,
-      totalStudyTimeHours: (map['totalStudyTimeHours'] as String?) ?? '0',
+      totalStudyTimeHours: (map['totalStudyTimeHours'] is String
+          ? double.tryParse(map['totalStudyTimeHours'] as String) ?? 0
+          : (map['totalStudyTimeHours'] as num?) ?? 0),
       weeklyActivity: (map['weeklyActivity'] as num?)?.toInt() ?? 0,
       dailyActivity: (map['dailyActivity'] as num?)?.toInt() ?? 0,
       topicsStudied: (map['topicsStudied'] as num?)?.toInt() ?? 0,

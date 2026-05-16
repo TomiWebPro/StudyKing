@@ -20,7 +20,9 @@ final dashboardStudyProgressTrackerProvider = Provider<StudyProgressTracker>((re
 });
 
 final dashboardInstrumentationServiceProvider = Provider<InstrumentationService>((ref) {
-  return InstrumentationService();
+  return InstrumentationService(
+    adherenceRepository: ref.read(dashboardAdherenceRepositoryProvider),
+  );
 });
 
 final dashboardAdherenceRepositoryProvider = Provider<PlanAdherenceRepository>((ref) {

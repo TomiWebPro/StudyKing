@@ -1,300 +1,320 @@
-# Future Functionality Plan: Service Consolidation & Architectural Unification
+# Future Functionality Plan: Dual-Model Resolution & Data Architecture Unification
 
 ## Context
 
-After a deep audit of the StudyKing codebase (13 feature modules, ~50+ service files, 20+ Hive models), the most critical finding is **fragmented service architecture**: core functionalities are implemented in 2–3 redundant, incompatible, or disconnected ways across different features. This fragmentation causes silent data inconsistencies (e.g., two incompatible spaced repetition interval calculations, parallel nudge generation without dedup) and makes the codebase harder to extend, test, and maintain.
+Deep audit of the StudyKing codebase reveals a fundamental architectural anti-pattern: **semantically identical domain concepts are modeled multiple times** across different features, with different serialization strategies, different immutability contracts, and no synchronization between them. This causes silent data corruption (a write to one model is invisible to readers of the other) and makes the codebase extremely difficult to reason about.
 
-Additionally, several areas in the product vision (`agent_must_read.md`) have only partial or stub implementations: voice/speech interaction, vision-based student work interpretation, lesson generation, lesson duration tracking, question variant generation, and multi-syllabus support.
-
-This issue proposes a phased consolidation plan to unify the architecture and close the gap between vision and implementation.
+The previously completed issue (`issues/completed/future_functionality_planner.md`) addressed service-level fragmentation (timer, SR-engine, nudge consolidation). This issue addresses the **data-model-level fragmentation** — a more foundational problem.
 
 ---
 
-## Phase 1 — High-Impact Service Consolidation
+## Phase 1 — Critical Dual-Model Resolution
 
-### 1.1 Unify Timer Implementations (3 → 1)
+### 1.1 Consolidate Session Models: `Session` ⟷ `TutorSession`
 
-**Current state:** Three independent `Timer.periodic(1s)` implementations:
+**Current state:** Two independent session models exist with overlapping semantics:
 
-| Class | File | Used by |
+| Aspect | `Session` (core/data) | `TutorSession` (teaching/data) |
 |---|---|---|
-| `StudyTimerService` | `lib/features/sessions/services/study_timer_service.dart` | Focus Mode only |
-| `ExamSessionService` | `lib/features/practice/services/exam_session_service.dart` | Exam sessions |
-| `PracticeSessionService` | `lib/features/practice/services/practice_session_service.dart` | Practice sessions |
+| File | `lib/core/data/models/session_model.dart` | `lib/features/teaching/data/models/tutor_session_model.dart` |
+| Hive typeId | Stored as JSON string in `Box<String>` | typeId 28 (native Hive) |
+| Repository | `SessionRepository` (JSON encode/decode) | `TutorSessionRepository` (extends `Repository<TutorSession>`) |
+| Key fields | `id`, `studentId`, `subjectId`, `topicId`, `type` (enum), `startTime`, `endTime`, `actualDurationMs`, `completed`, `plannedDurationMinutes`, `questionsAnswered`, `correctAnswers` | `id`, `studentId`, `subjectId`, `topicId`, `topicTitle`, `status` (different enum: `SessionStatus`), `startTime`, `endTime`, `plannedDurationMinutes`, `lessonPlanJson`, `questionsAsked` (≠ `questionsAnswered`), `questionsCorrect` (≠ `correctAnswers`), `confidenceRating`, `tutorNotes`, `topicsCovered`, `totalMessages`, `totalTokensUsed` |
 
-All three track elapsed/remaining time with `Timer.periodic`. `StudyTimerService` has the most complete lifecycle (start/pause/resume/complete/cancel + daily cap + today stats). `ExamSessionService` and `PracticeSessionService` duplicate this logic.
+**Key problems:**
 
-**Rationale:** A single unified `StudyTimerService` (renamed to `SessionTimerService`) eliminates 200+ lines of duplicated timer logic, ensures consistent daily cap enforcement, and simplifies testing.
+1. **Naming collision:** `Session` and `TutorSession` are both "sessions" but with different field names for the same concept (`questionsAsked` vs `questionsAnswered`, `questionsCorrect` vs `correctAnswers`). Developers must constantly check which model they're working with.
 
-**Acceptance criteria:**
+2. **Data duplication:** `TutorService.endLesson()` creates BOTH a `TutorSession` record (into `TutorSessionRepository`) AND a `Session` record (into `SessionRepository`) for the same lesson. These can diverge silently.
 
-- [ ] `ExamSessionService` and `PracticeSessionService` delegate to `SessionTimerService` for all timer functionality.
-- [ ] Original timer fields (`Timer? _timer`, `_elapsedMs`, `_isPaused`) removed from both services.
-- [ ] All existing tests for all three services pass without modification (test for delegation only).
+3. **`Session` stored as JSON string:** `SessionRepository` uses `Box<String>` and manually calls `jsonEncode`/`jsonDecode` — losing all Hive type safety, indexing, and query optimization. Every `getAll()` iterates ALL sessions and decodes each one.
 
----
+4. **`PlannerService.scheduleLesson()` creates `TutorSession` objects for scheduling**, but the session history views query `SessionRepository`. Scheduled lessons may not appear where users expect them.
 
-### 1.2 Consolidate Spaced Repetition (5+ classes → 1 canonical path)
+**Proposed resolution:**
 
-**Current state:** Three independent, incompatible interval calculation paths:
-
-| Path | Location | Algorithm |
-|---|---|---|
-| `SpacedRepetitionEngine.scheduleReview()` | `lib/features/practice/services/spaced_repetition_engine.dart` | Proper SM-2 (ease factor, repetition count) |
-| `SpacedRepetitionService.updateNextReviewDate()` | `lib/features/practice/services/spaced_repetition_service.dart` | Fixed thresholds (30min/12h/1d/3d/7d based on masteryLevel) |
-| `QuestionMasteryState` (via `_calculateNextReview`) | `lib/features/practice/data/models/` | Mastery-level-based multipliers |
-
-Additionally, `MasteryRecorder.recordAttempt()` calls both `SpacedRepetitionEngine.scheduleReview()` AND `MasteryGraphService.recordAttempt()` which independently updates question mastery state. `MasteryIntegrationService.calculateSpacedRepetitionInterval()` creates a fourth independent interval calculation.
-
-**Rationale:** With three incompatible interval algorithms, the same student answering the same question correctly will get three different next-review dates depending on which code path executes. This breaks the core value proposition of adaptive spaced repetition.
+- [ ] Merge the two models into a single `Session` model (core) with an optional `tutorMetadata` field containing teaching-specific data (lessonPlanJson, confidenceRating, tutorNotes, topicsCovered, totalMessages, totalTokensUsed).
+- [ ] Unify field naming: use `questionsAnswered` and `correctAnswers` consistently.
+- [ ] Migrate `SessionRepository` from `Box<String>` to a proper `Box<Session>` with a Hive TypeAdapter.
+- [ ] Eliminate `TutorSessionRepository` — all session storage goes through the unified `SessionRepository`.
+- [ ] Add a migration script that reads all existing JSON-serialized sessions and all existing `TutorSession` Hive records into the new unified box.
 
 **Affected files:**
-- `lib/features/practice/services/spaced_repetition_engine.dart`
-- `lib/features/practice/services/spaced_repetition_service.dart`
-- `lib/features/practice/services/mastery_recorder.dart`
-- `lib/core/services/mastery_integration_service.dart`
-- `lib/features/practice/data/models/question_mastery_state.dart` (or wherever `_calculateNextReview` lives)
-
-**Acceptance criteria:**
-
-- [ ] `SpacedRepetitionService.updateNextReviewDate()` uses `SpacedRepetitionEngine.scheduleReview()` (SM-2) as its sole interval calculation method.
-- [ ] `MasteryRecorder.recordAttempt()` is the **only** method that records attempts and updates next-review dates. All other code paths that independently set `nextReview` are removed.
-- [ ] `MasteryIntegrationService.calculateSpacedRepetitionInterval()` is removed; callers delegate to `SpacedRepetitionEngine`.
-- [ ] `SpacedRepetitionRepository` (labeled "legacy") is either removed or explicitly deprecated with a lint warning.
-- [ ] All spaced repetition tests are updated/added to verify SM-2-based scheduling from the service layer.
+| File | Change |
+|---|---|
+| `lib/core/data/models/session_model.dart` | Add `tutorMetadata`, rename fields for consistency |
+| `lib/features/teaching/data/models/tutor_session_model.dart` | Delete (merge into Session) |
+| `lib/core/data/repositories/` → create `session_adapter.dart` | New Hive TypeAdapter for Session |
+| `lib/features/sessions/data/repositories/session_repository.dart` | Rewrite: `Box<Session>` instead of `Box<String>` |
+| `lib/features/teaching/data/repositories/tutor_session_repository.dart` | Delete |
+| `lib/features/teaching/services/tutor_service.dart` | Removes redundant `Session` creation in `endLesson()` |
+| `lib/features/planner/services/planner_service.dart` | Uses `SessionRepository` for scheduling lessons |
+| `lib/features/sessions/services/session_export_service.dart` | Uses unified model |
+| `lib/features/dashboard/providers/dashboard_data_providers.dart` | Uses unified model |
 
 ---
 
-### 1.3 Consolidate Nudge Generation (2 → 1)
+### 1.2 Consolidate Progress Tracking Models: `TopicProgress` ⟷ `MasteryState`
 
-**Current state:** Two independent services generate `EngagementNudgeModel` records:
+**Current state:** Two models track per-topic student progress, with different longevity expectations:
 
-| Service | File | Triggers |
+| Aspect | `TopicProgress` | `MasteryState` |
 |---|---|---|
-| `EngagementScheduler` | `lib/core/services/engagement_scheduler.dart` | Timer-driven daily checks |
-| `MentorService.checkWellbeingAndGenerateNudges()` | `lib/features/mentor/services/mentor_service.dart` | On chat interaction |
+| Location | `lib/features/subjects/data/models/topic_progress_model.dart` | `lib/features/practice/data/models/mastery_state_model.dart` |
+| Hive typeId | 1 | 16 |
+| Mutability | **Mutable** (non-final fields `questionsAnswered`, `correctAnswers`, `averageTimeMs`, `lastUpdated`) | **Immutable** (all fields final, `copyWith` for updates) |
+| Fields | `topicId`, `questionsAnswered`, `correctAnswers`, `averageTimeMs`, `lastUpdated` | `studentId`, `topicId`, `accuracy`, `confidenceTrend`, `speedTrend`, `forgettingRisk`, `totalAttempts`, `correctAttempts`, `averageTimeMs`, `lastAttempt`, `lastUpdated`, `currentStreak`, `bestStreak`, `recentConfidence`, `recentAccuracy`, `masteryLevel`, `readinessScore`, `reviewUrgency`, `weakSubtopics` |
 
-Both check overwork, revision needs, and inactivity. No deduplication guard exists between them.
+**Key problems:**
 
-**Rationale:** Without dedup, the same student can receive the same "you've been studying too much" nudge from both paths on the same day. The nudge system must have a single source of truth for what was already sent.
+1. **Mutable fields violate the codebase convention.** Every other Hive model in the codebase uses immutable fields with `copyWith`. `TopicProgress` is the only model with non-final public fields. This is a maintenance hazard — any code can silently mutate a stored Hive object without calling `save()`.
 
-**Acceptance criteria:**
+2. **Semantic overlap:** Both track `questionsAnswered`/`totalAttempts`, `correctAnswers`/`correctAttempts`, `averageTimeMs`, and `lastUpdated`. `ProgressRepository.recordAttempt()` updates `TopicProgress` independently of `MasteryRecorder.recordAttempt()` which updates `MasteryState`. The same student attempt is recorded in two places with no synchronization.
 
-- [ ] Nudge generation logic is extracted into a shared `NudgeEngine` (or similar) that both `EngagementScheduler` and `MentorService` call.
-- [ ] Rate-limiting / dedup check (`getTodayCount`) is enforced at the shared layer, not in each caller.
-- [ ] No duplicate `EngagementNudgeModel` records are created for the same condition within the same dedup window.
+3. **`ProgressRepository` is orphaned:** The `ProgressRepository` in `lib/features/subjects/data/repositories/progress_repository.dart` is never used by any other feature — it is only imported by its barrel file. Meanwhile `MasteryStateRepository` is actively used by `MasteryGraphService`, `MasteryRecorder`, and the dashboard.
 
----
+**Proposed resolution:**
 
-### 1.4 Consolidate Evaluation Models (2 → 1)
-
-**Current state:** Two parallel answer evaluation structures:
-
-| Model | Hive typeId | Features |
-|---|---|---|
-| `Markscheme` + `MarkSchemeStep` | 12, 13 | Simpler, fewer fields |
-| `QuestionEvaluation` + `EvaluationStep` | 14, 15 | Richer (versioning, metadata, partialCredit) |
-
-Both have their own `isMatch()` implementations with slightly different logic.
-
-**Rationale:** Two models with the same purpose cause confusion about which one to use when adding new features. The richer `QuestionEvaluation` should become the canonical model.
+- [ ] Deprecate `TopicProgress` model and `ProgressRepository` with `@Deprecated('Use MasteryState and MasteryStateRepository instead')`.
+- [ ] Migrate any consumers of `TopicProgress` to `MasteryState` (the dashboard's `OverallStats` already uses `MasterySnapshot` from `MasteryState` data, so there likely are no downstream consumers).
+- [ ] Keep the model file for data migration only (existing Hive boxes with typeId 1), with a one-time migration script.
 
 **Affected files:**
-- `lib/features/questions/data/models/markscheme_model.dart`
-- `lib/features/questions/data/models/question_evaluation_model.dart`
-- `lib/features/questions/data/adapters/markscheme_adapter.dart`
-- `lib/features/questions/data/adapters/question_evaluation_adapter.dart`
-
-**Acceptance criteria:**
-
-- [ ] `QuestionEvaluation` is the canonical evaluation model. `Markscheme` is deprecated with a `@Deprecated` annotation pointing to `QuestionEvaluation`.
-- [ ] A migration path exists for existing Hive data (read `Markscheme` stores and convert on write).
-- [ ] `Question.text` and `Question.markscheme` field references throughout the codebase are updated to use `QuestionEvaluation` where applicable.
+| File | Change |
+|---|---|
+| `lib/features/subjects/data/models/topic_progress_model.dart` | Add `@Deprecated` annotation, remove mutability warnings |
+| `lib/features/subjects/data/repositories/progress_repository.dart` | Add `@Deprecated`, delegate to `MasteryStateRepository` |
+| `lib/features/subjects/providers/` (if exists) | Remove references to `ProgressRepository` |
 
 ---
 
-## Phase 2 — Vision Gap Closure
+### 1.3 Consolidate Adherence Models: `PlanAdherenceMetric` ⟷ `PlanAdherenceModel`
 
-### 2.1 Voice & Speech Interaction Integration
+**Current state:** Two nearly identical classes track plan adherence:
 
-**Current state:** The `api_config.dart` has a `WhisperApiKey` and `TeachingService` references a `VoiceController`, but:
-- Speech-to-text: Not integrated into any interactive workflow beyond basic wiring.
-- Text-to-speech: Dependency `flutter_tts` exists in `pubspec.yaml` but no usage found outside `voice_controller.dart` in teaching.
-- Voice conversation loop: No end-to-end voice interaction in practice, mentor, or lesson modes.
+| Aspect | `PlanAdherenceMetric` | `PlanAdherenceModel` |
+|---|---|---|
+| File | `lib/features/planner/data/models/plan_adherence_metric_model.dart` | `lib/features/planner/data/models/plan_adherence_model.dart` |
+| Hive typeId | 30 (adapter) | 33 (native `@HiveType`) |
+| Extends `HiveObject` | No (plain class) | Yes |
+| Fields | `date`, `studentId`, `plannedQuestions`, `actualQuestions`, `plannedMinutes`, `actualMinutes`, `adherenceScore`, `metadata` | `id`, `studentId`, `date`, `plannedQuestions`, `actualQuestions`, `plannedMinutes`, `actualMinutes`, `adherenceScore`, `planId`, `metadata` |
+| Repository | Adapter registered but no dedicated repository | `PlanAdherenceRepository` |
 
-**Per vision:** "The platform should support voice conversation, speech-to-text and text-to-speech throughout."
+`PlanAdherenceMetric` has no `id` field — it cannot be uniquely identified or deleted. `PlanAdherenceModel` does have an `id`. The `InstrumentationService` internally creates `PlanAdherenceMetric` records (via an inline `PlanAdherenceTracker`), while `PlannerService` creates `PlanAdherenceModel` records. These two data sources never reconcile, so adherence reports can show different numbers depending on which table is queried.
 
-**Acceptance criteria:**
+**Proposed resolution:**
 
-- [ ] Mentor chat supports voice input (STT) and voice output (TTS) via a toggle.
-- [ ] Practice session answer input supports voice dictation.
-- [ ] Focus timer supports voice commands ("start focus", "pause", "stop").
-- [ ] Lesson mode STT/TTS works with the active conversation phase state machine.
+- [ ] Delete `PlanAdherenceMetric` model and its adapter (typeId 30).
+- [ ] `InstrumentationService` delegates to `PlanAdherenceRepository` instead of its internal tracker.
+- [ ] Migration script reads all `PlanAdherenceMetric` records from the old box and writes `PlanAdherenceModel` records.
 
----
-
-### 2.2 Lesson Generation & Scheduling
-
-**Current state:**
-- `LessonService` (`lib/features/lessons/services/lesson_service.dart`) is **misnamed**: it operates on `TutorSession` objects, not `Lesson` objects. It is effectively a `TutorSessionService` which aliases teaching sessions.
-- There is **no service** that generates `Lesson` / `LessonBlock` objects from syllabus content.
-- The `Lesson` model has no `duration` field (per vision: "Lesson time and duration can be dynamically specified by the student").
-- The `Lesson` model's `markscheme` field is `String?` instead of the structured `Markscheme` / `QuestionEvaluation` type.
-
-**Rationale:** Without lesson generation, the system cannot produce structured, visual, slide-like lessons from uploaded content or syllabi. The vision explicitly calls for dynamically generated lesson plans.
-
-**Acceptance criteria:**
-
-- [ ] `LessonService` is renamed to `TutorSessionQueryService` and its public API is updated to make clear it queries tutor sessions.
-- [ ] A new `LessonGenerationService` exists that can generate `Lesson` + `LessonBlock` objects from syllabus content, study material, or topic specifications.
-- [ ] `Lesson` model gains a `durationMinutes` field.
-- [ ] `Lesson.markscheme` is changed from `String?` to `QuestionEvaluation?`.
-- [ ] Lesson generation is accessible from the topic detail screen and the planner.
+**Affected files:**
+| File | Change |
+|---|---|
+| `lib/features/planner/data/models/plan_adherence_metric_model.dart` | Delete |
+| `lib/features/planner/data/adapters/plan_adherence_adapter.dart` | Delete |
+| `lib/features/planner/data/adapters.dart` | Remove adapter registration for typeId 30 |
+| `lib/core/services/instrumentation_service.dart` | Use `PlanAdherenceRepository` instead of `PlanAdherenceMetric` |
 
 ---
 
-### 2.3 Question Variant Generation
+### 1.4 Consolidate Subject Progress Model: `TopicProgress` (subjects) ⟷ `TopicDependency` (subjects) — Missing Link
 
-**Current state:** The `Question` model has a `variantIds: List<String>` field, but there is no service that generates or manages variants.
+The `TopicDependency` model already has an `isReady()` method and `calculatePriority()` that use `masteryThreshold` and downstream topic analysis to determine topic readiness. However, there is **no runtime bridge** between `TopicDependency` and `MasteryState`. The planner's `SyllabusResolver` manually fetches both and builds `SyllabusTopicNode` objects, but there is no reusable service that says "is topic X ready to be studied given the student's current mastery states and topic dependencies."
 
-**Per vision:** "Questions should be expanded through generated variants, and used to measure understanding, identify weak areas, and drive adaptive revision."
+**Proposed resolution:**
 
-**Acceptance criteria:**
+- [ ] Create a `TopicReadinessService` that combines `TopicDependency` data with `MasteryState` data to answer: "Which topics is the student ready to study next?"
+- [ ] This service would be used by `PlannerService` (for plan generation), `MentorService` (for study recommendations), and the dashboard (for "ready to learn" suggestions).
+- [ ] Replace the ad-hoc readiness logic in `SyllabusResolver.resolveSyllabus()` with calls to this service.
 
-- [ ] A `QuestionVariantGenerationService` exists that can produce 3–5 variants of a given question (different numeric values, reworded stems, different wrong options for MCQs).
-- [ ] Variants are linked to the parent question via `variantIds`.
-- [ ] Variants are automatically generated for new questions during content ingestion.
-- [ ] Practice sessions can optionally include variants of previously seen questions.
-
----
-
-### 2.4 Vision-Based Student Work Interpretation
-
-**Current state:** A `CanvasDrawingWidget` exists for freehand answer input, but there is no OCR, no image analysis, no handwritten answer interpretation.
-
-**Per vision:** "The platform should support vision-based interpretation of student work and handwritten/drawn responses on canvas."
-
-**Acceptance criteria:**
-
-- [ ] A canvas answer submission can be sent to an LLM with vision capability (via the LLM service) for interpretation and comparison against the markscheme.
-- [ ] The practice/exam session flow supports "draw your answer" as a first-class input method.
-- [ ] Interpreted answers from canvas are stored alongside typed answers in the `StudentAttempt` model.
+**Affected files:**
+| File | Change |
+|---|---|
+| New: `lib/core/services/topic_readiness_service.dart` | New service |
+| `lib/features/planner/services/syllabus_resolver.dart` | Delegate to `TopicReadinessService` |
+| `lib/features/mentor/services/mentor_service.dart` | Add topic readiness to recommendations |
 
 ---
 
-## Phase 3 — Architectural Cleanup
+## Phase 2 — Repository Pattern Standardization
 
-### 3.1 Fix Content Pipeline Error Handling
+### 2.1 Eliminate Direct Hive Box Access
 
-**Current bug:** In `lib/features/ingestion/services/content_pipeline.dart`, when the pipeline catches an error during processing, it returns `Result.success(failed)` wrapping the failed source. Callers checking `isSuccess` will think the pipeline completed successfully.
+**Current state:** Repository implementations follow two incompatible patterns:
 
-**Acceptance criteria:**
+| Pattern | Examples | Characteristics |
+|---|---|---|
+| Extends `Repository<T>` | `MasteryStateRepository`, `AttemptRepository`, `PlanRepository`, `TopicRepository`, `QuestionRepository`, `SourceRepository`, `ConversationRepository`, `TutorSessionRepository` | Has `init()` calling `openBox()`, uses `filterBy()`, `save()`, `get()`, `getAll()`, `delete()` from base class |
+| Direct Hive box access | `SessionRepository`, `QuestionMasteryStateRepository`, `QuestionEvaluationRepository` | Manually calls `Hive.box<T>()`, manual iteration over values, no base class methods |
 
-- [ ] Error branches return `Result.failure(...)` with appropriate error details.
-- [ ] Upper layers (upload screen, background task runner) handle `Result.failure` correctly.
+The second pattern is particularly problematic in `SessionRepository` which stores JSON strings instead of typed Hive objects, and `QuestionMasteryStateRepository` which has its own `_box` field instead of using the base class.
 
----
+**Proposed resolution:**
+- [ ] `SessionRepository` — convert to `Box<Session>` with a proper `SessionAdapter` (see 1.1), extend `Repository<Session>`.
+- [ ] `QuestionMasteryStateRepository` — extend `Repository<QuestionMasteryState>`, remove manual `_box` field.
+- [ ] `QuestionEvaluationRepository` — extend `Repository<QuestionEvaluation>`, remove manual `_box` field.
 
-### 3.2 Fix StudyProgressTracker Locale Bug
-
-Per AGENTS.md: "Never use `toStringAsFixed()` for user-facing numeric displays." The `StudyProgressTracker` uses `toStringAsFixed(1)` on line ~51 for the accuracy percentage.
-
-**Acceptance criteria:**
-
-- [ ] All user-facing numeric formatting in `StudyProgressTracker` uses locale-aware helpers from `lib/core/utils/number_format_utils.dart`.
-- [ ] CSV export methods remain in invariant `en` format.
-- [ ] The accuracy percentage in `getOverallStats` and related methods uses `formatPercent` or similar.
-
----
-
-### 3.3 Create Ingestion Providers Directory
-
-**Current state:** `lib/features/ingestion/` has no `providers/` directory. Every other feature does. `ContentPipeline` and `DocumentExtractor` must be manually constructed everywhere they are used.
-
-**Acceptance criteria:**
-
-- [ ] `lib/features/ingestion/providers/` exists with Riverpod providers for `ContentPipeline`, `DocumentExtractor`, and `WebScraper`.
-- [ ] Existing code that manually constructs these classes is updated to use the providers.
+**Affected files:**
+| File | Change |
+|---|---|
+| `lib/features/sessions/data/repositories/session_repository.dart` | Extend `Repository<Session>`, add Hive adapter |
+| `lib/features/practice/data/repositories/question_mastery_state_repository.dart` | Extend `Repository<QuestionMasteryState>` |
+| `lib/features/practice/data/repositories/question_evaluation_repository.dart` | Extend `Repository<QuestionEvaluation>` |
 
 ---
 
-### 3.4 Fix Plan Adherence Dual Tracking
+### 2.2 Eliminate Manual Box Passing in `MasteryGraphRepository`
 
-**Current state:** `InstrumentationService` has an internal `PlanAdherenceTracker` using `PlanAdherenceMetric` model, while `PlanAdherenceRepository` uses `PlanAdherenceModel`. Both track the same concept with no synchronization.
+`MasteryGraphRepository` has a `.test()` factory that takes 4 separate `Box` parameters and manually calls `attachBox()` on sub-repositories. This is fragile and bypasses the normal `init()` lifecycle. The `.test()` factory should be removed and the test infrastructure should use the real `init()` path or a properly designed test injection mechanism.
 
-**Acceptance criteria:**
-
-- [ ] `InstrumentationService`'s `PlanAdherenceTracker` is removed; `InstrumentationService` delegates to `PlanAdherenceRepository` instead.
-- [ ] No data loss for existing `PlanAdherenceMetric` records — migration script reads old box and writes to `PlanAdherenceRepository`.
+- [ ] Remove `MasteryGraphRepository.test()` — tests should call the real `init()` path.
+- [ ] Add an `initForTest()` method or mockable box factory on `Repository<T>` base class.
 
 ---
 
-### 3.5 Fix `MentorService` Hardcoded Values
+## Phase 3 — Missing High-Value Features
 
-**Current:** `completedLessons: 0` in `getProgressReport()` — never computed from actual data.
+### 3.1 Data Export/Backup Mechanism
 
-**Acceptance criteria:**
+**Current state:** The only export functionality is `SessionExportService` which exports session data to CSV/JSON/PDF for sharing. There is **no general mechanism** to:
+- Export all user data (sources, questions, attempts, plans, mastery states) as a portable backup
+- Import data from a backup
+- Transfer data between devices
+- Recover from Hive corruption
 
-- [ ] `completedLessons` is queried from `TutorSessionRepository` (count of completed tutor sessions for the student).
-- [ ] The field is included in integration/widget tests for the progress report.
+The entire learning history (thousands of question attempts, months of mastery data) is stored in local Hive boxes with no redundancy.
+
+**Proposed resolution:**
+- [ ] Implement a `DataBackupService` that serializes all Hive boxes to a single portable file (e.g., JSON or SQLite).
+- [ ] Implement a `DataRestoreService` that can import a backup file and restore all boxes.
+- [ ] Add a "Backup & Restore" section to the Settings screen.
+- [ ] Consider automatic periodic backups.
+
+---
+
+### 3.2 Offline-First Sync Architecture (Roadmap)
+
+While local-first storage is correct for this app, the complete absence of any sync strategy means users WILL lose data on device failure, app cache clear, or Hive corruption. This is a roadmap item:
+
+- [ ] Design a sync layer that supports: local-only (current), manual file-based backup (3.1), and optionally cloud sync.
+- [ ] Each Hive model must have a `syncStrategy` (last-write-wins, merge, or no-sync).
+- [ ] The `Result<T>` error handling pattern should be extended to support conflict resolution.
+
+---
+
+### 3.3 Dashboard Business Logic Layer
+
+`lib/features/dashboard/services/` exists but is **empty**. The dashboard providers (`dashboard_data_providers.dart`) call repositories directly from providers, mixing data fetching and transformation in the provider layer. A dedicated `DashboardService` should encapsulate:
+- Aggregating data from multiple repositories (mastery, adherence, focus, sessions)
+- Computing derived stats (weekly trends, streak calculations, badge eligibility)
+- Caching intermediate results
+
+- [ ] Create `DashboardService` in `lib/features/dashboard/services/`.
+- [ ] Move aggregation logic from `dashboard_data_providers.dart` into the service.
+- [ ] Providers become thin wrappers that call the service.
+
+---
+
+## Phase 4 — Future Vision Features
+
+### 4.1 Multi-Syllabus Simultaneous Learning
+
+The product vision states: "The system should allow a student to learn and track from multiple syllabi simultaneously." The current architecture assumes a single syllabus per plan (`PersonalLearningPlan` has `syllabusGoals` but `SyllabusGoal` is not a Hive type and `PlannerService.generatePlan()` takes only a single `course` string). To support multi-syllabus:
+
+- [ ] `PersonalLearningPlan` should natively support multiple `SyllabusGoal` objects with independent progress tracking.
+- [ ] Dashboard should show per-syllabus and combined stats.
+- [ ] Planner should generate plans that interleave topics from multiple syllabi based on priority and due dates.
+- [ ] `LessonScreen` should indicate which syllabus a lesson belongs to.
+
+### 4.2 Relative Remaining Lesson Count
+
+The vision says: "A relative remaining lesson count should be given by the system towards mastery, so not all lessons must be planned at once." Currently, there is no calculation of "lessons remaining to mastery." This requires:
+
+- [ ] Mastery threshold definitions per topic/syllabus.
+- [ ] Historical lesson-to-mastery-improvement ratio (how many lessons does it typically take to move from `developing` to `proficient`?).
+- [ ] A `RemainingWorkloadEstimator` service that computes remaining lessons based on current mastery state, target mastery, and historical improvement rate.
+
+### 4.3 Proactive Engagement Scheduling
+
+The `EngagementScheduler` exists (`lib/core/services/engagement_scheduler.dart`) but is not wired into the app's startup lifecycle. There is no service that runs:
+- Daily nudge checks at appropriate times
+- Lesson reminders before scheduled sessions
+- Overwork alerts after long study sessions
+- Inactivity nudges after N days without activity
+
+Resolution:
+- [ ] Wire `EngagementScheduler` into app lifecycle (post-frame callback after Hive init).
+- [ ] Implement platform-specific notification scheduling (Android notification channels, iOS notification requests) for when the app is in the background.
 
 ---
 
 ## Files Summary
 
-### Phase 1 — Consolidation
+### Phase 1 — Dual-Model Resolution
 | Issue | Primary files to modify |
 |---|---|
-| Timer unification | `study_timer_service.dart`, `exam_session_service.dart`, `practice_session_service.dart`, `focus_mode_providers.dart` |
-| SR consolidation | `spaced_repetition_engine.dart`, `spaced_repetition_service.dart`, `mastery_recorder.dart`, `mastery_integration_service.dart`, `question_mastery_state.dart` |
-| Nudge consolidation | `engagement_scheduler.dart`, `mentor_service.dart`, nudge repo |
-| Evaluation models | `markscheme_model.dart`, `question_evaluation_model.dart`, adapters |
+| 1.1 Session consolidation | `session_model.dart`, `tutor_session_model.dart` (delete), `session_repository.dart` (rewrite), `tutor_session_repository.dart` (delete), `tutor_service.dart`, `planner_service.dart` |
+| 1.2 Progress model consolidation | `topic_progress_model.dart` (deprecate), `progress_repository.dart` (deprecate) |
+| 1.3 Adherence model consolidation | `plan_adherence_metric_model.dart` (delete), `plan_adherence_adapter.dart` (delete), `instrumentation_service.dart` |
+| 1.4 Topic readiness service | New: `topic_readiness_service.dart`; Update: `syllabus_resolver.dart`, `mentor_service.dart` |
 
-### Phase 2 — Vision Gaps
-| Feature | New / modified files |
-|---|---|
-| Voice integration | `voice_controller.dart`, mentor + practice + focus screens |
-| Lesson generation | `lesson_service.dart` (rename) → new `lesson_generation_service.dart`, `lesson_model.dart` |
-| Variant generation | New `question_variant_generation_service.dart`, `Question.variantIds` wiring |
-| Vision interpretation | `canvas_drawing_widget.dart`, practice session flow, `StudentAttempt` model |
-
-### Phase 3 — Cleanup
+### Phase 2 — Repository Standardization
 | Issue | Files |
 |---|---|
-| Pipeline error handling | `content_pipeline.dart` |
-| Locale formatting | `study_progress_tracker.dart` |
-| Ingestion providers | New `lib/features/ingestion/providers/` dir |
-| Adherence tracking | `instrumentation_service.dart`, `plan_adherence_repository.dart` |
-| Mentor hardcoded value | `mentor_service.dart` |
+| 2.1 Direct Hive access | `session_repository.dart`, `question_mastery_state_repository.dart`, `question_evaluation_repository.dart` |
+| 2.2 Manual box passing | `mastery_graph_repository.dart`, `repository.dart` (base class) |
+
+### Phase 3 — Missing Features
+| Issue | New / modified files |
+|---|---|
+| 3.1 Data backup/restore | New: `data_backup_service.dart`, `data_restore_service.dart`; Settings screen |
+| 3.2 Sync architecture | Design doc; model annotations |
+| 3.3 Dashboard service | New: `lib/features/dashboard/services/dashboard_service.dart`; Update: `dashboard_data_providers.dart` |
+
+### Phase 4 — Vision Features
+| Issue | New files |
+|---|---|
+| 4.1 Multi-syllabus | `PersonalLearningPlan` changes, dashboard stats, planner changes |
+| 4.2 Remaining lesson count | New: `remaining_workload_estimator.dart` |
+| 4.3 Engagement scheduling | `engagement_scheduler.dart` lifecycle wiring, notification service |
 
 ---
 
 ## Dependencies & Ordering
 
 ```
-Phase 1 (Consolidation)
-  └── 1.1 Timer unification ──────────────────── blocks → Practice exam timer fix
-  └── 1.2 SR consolidation ───────────────────── blocks → Adaptive practice improvements
-  └── 1.3 Nudge consolidation ────────────────── blocks → Mentor proactive features
-  └── 1.4 Evaluation model consolidation ─────── blocks → Question variant generation (2.3)
+Phase 1 (Dual-Model Resolution)
+  ├── 1.1 Session consolidation ───────── blocks → Dashboard focus stats (uses unified Session)
+  ├── 1.2 Progress consolidation ──────── blocks → Topic readiness service (1.4)
+  ├── 1.3 Adherence consolidation ─────── blocks → Planner reliability
+  └── 1.4 Topic readiness service ─────── depends on: 1.2
 
-Phase 2 (Vision Gaps)
-  └── 2.1 Voice integration ─────────────────── depends on: 1.3 (mentor consolidation)
-  └── 2.2 Lesson generation ─────────────────── depends on: 1.4 (evaluation model)
-  └── 2.3 Variant generation ────────────────── depends on: 1.4 (evaluation model)
-  └── 2.4 Vision interpretation ─────────────── independent
+Phase 2 (Repository Standardization)
+  ├── 2.1 Direct Hive elimination ─────── depends on: 1.1 (Session repo rewrite)
+  └── 2.2 Manual box passing ──────────── independent
 
-Phase 3 (Cleanup)
-  └── 3.1–3.5 ───────────────────────────────── independent of Phases 1–2 (can run in parallel)
+Phase 3 (Missing Features)
+  ├── 3.1 Data backup ─────────────────── independent
+  ├── 3.2 Sync architecture ───────────── depends on: 3.1
+  └── 3.3 Dashboard service ───────────── depends on: 1.1, 1.2
+
+Phase 4 (Vision Features)
+  ├── 4.1 Multi-syllabus ──────────────── depends on: 1.4
+  ├── 4.2 Remaining lesson count ──────── depends on: 1.4
+  └── 4.3 Engagement scheduling ───────── depends on: 1.3, 1.1
 ```
-
----
 
 ## Rationale Summary
 
-The codebase has strong local patterns (immutable models, `Result<T>` error handling, barrel exports, Riverpod providers, comprehensive ARB localization). The core weakness is **horizontal fragmentation** — the same concept (timers, SR, nudges, evaluation) is independently re-implemented across features. Fixing this is the highest-leverage investment because:
+The codebase has excellent local patterns (immutability, barrel files, Riverpod, `Result<T>`, ARB localization). The critical weakness is **data-model fragmentation** — the same real-world concepts (sessions, progress, adherence) are independently modeled 2–3 times each with incompatible serialization, different field names, and no synchronization. This is a more foundational issue than the service-level fragmentation addressed in the previous planner issue because:
 
-1. **Correctness:** Three incompatible SR algorithms means the spaced repetition system cannot function as intended.
-2. **Maintainability:** Every new feature that needs a timer or nudge either duplicates code or picks the wrong existing implementation.
-3. **Velocity:** 1.1–1.4 directly unblock the vision features in Phase 2 (voice, lessons, variants, vision).
-4. **Test surface:** Consolidation reduces total test files and eliminates cross-feature test duplication.
+1. **Data integrity risk:** Dual models with independent write paths guarantee silent divergence. A student's progress, session history, and plan adherence will differ depending on which model you query.
+
+2. **Cognitive load:** Developers must remember which of 3 progress models to update, which of 2 session models to query, and which field naming convention to use. This slows down every feature addition.
+
+3. **Test fragility:** Every new feature must mock 2–3 redundant models, making tests brittle and harder to write.
+
+4. **Migration cost grows with time:** Every day the dual models exist, more data accumulates in both, making eventual consolidation more expensive.
+
+Phase 1 should be prioritized above all other work, including the previously identified service consolidations, because data-model fragmentation makes the service fragmentation impossible to fix correctly — you cannot consolidate services if their underlying data models are contradictory.

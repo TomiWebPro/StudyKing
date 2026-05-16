@@ -40,6 +40,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     final taskManager = ref.watch(llmTaskManagerProvider);
     final tasks = taskManager.tasks;
     final activeTasks = taskManager.activeTasks;
+    final hasTokenData = tasks.any((t) => t.tokensUsed > 0);
 
     return Scaffold(
       appBar: AppBar(
@@ -70,8 +71,8 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             )
           : Column(
               children: [
-                _buildTokenUsageMeter(context, tasks, l10n),
-                const Divider(height: 1),
+                if (hasTokenData) _buildTokenUsageMeter(context, tasks, l10n),
+                if (hasTokenData) const Divider(height: 1),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),

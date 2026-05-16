@@ -99,5 +99,11 @@ void main() {
       expect(restored.description, 'First step');
       expect(restored.partialCredit, 0.5);
     });
+
+    test('hashCode and equality', () {
+      expect(EvaluationStepAdapter().hashCode, EvaluationStepAdapter().hashCode);
+      expect(EvaluationStepAdapter() == EvaluationStepAdapter(), isTrue);
+      expect(EvaluationStepAdapter() == Object(), isFalse);
+    });
   });
 }

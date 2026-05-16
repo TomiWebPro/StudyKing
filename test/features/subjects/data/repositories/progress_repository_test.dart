@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/subjects/data/repositories/progress_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
+import 'dart:io';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class _MockProgressRepository extends ProgressRepository {
   final Map<String, TopicProgress> _storage = {};
@@ -147,4 +150,79 @@ void main() {
       });
     });
   });
+
+  group('ProgressRepository (init with real Hive)', () {
+    late ProgressRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestTopicProgressAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('progress_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = ProgressRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('progress');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
+      final progress = await repository.get('t1');
+      expect(progress, isNotNull);
+      expect(progress?.topicId, 't1');
+      expect(progress?.questionsAnswered, 1);
+      expect(progress?.correctAnswers, 1);
+    });
+
+    test('recordAttempt updates existing progress', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 4000);
+      final progress = await repository.get('t1');
+      expect(progress?.questionsAnswered, 2);
+      expect(progress?.averageTimeMs, 3000);
+    });
+  });
+}
+
+class _TestTopicProgressAdapter extends TypeAdapter<TopicProgress> {
+  @override
+  final int typeId = 1;
+
+  @override
+  TopicProgress read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return TopicProgress(
+      topicId: fields[0] as String,
+      questionsAnswered: fields[1] as int? ?? 0,
+      correctAnswers: fields[2] as int? ?? 0,
+      averageTimeMs: (fields[3] as num?)?.toDouble() ?? 0.0,
+      lastUpdated: fields[4] as DateTime,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, TopicProgress obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.topicId)
+      ..writeByte(1)
+      ..write(obj.questionsAnswered)
+      ..writeByte(2)
+      ..write(obj.correctAnswers)
+      ..writeByte(3)
+      ..write(obj.averageTimeMs)
+      ..writeByte(4)
+      ..write(obj.lastUpdated);
+  }
 }

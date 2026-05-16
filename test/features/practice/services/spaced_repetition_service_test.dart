@@ -358,7 +358,7 @@ void main() {
     });
 
     group('updateNextReviewDate', () {
-      test('updates with 7-day interval for mastery >= 0.9', () async {
+      test('uses SM-2 engine: first review gets 1-day interval', () async {
         questionBox.put('q1', _createQuestion(id: 'q1'));
         final before = DateTime.now();
 
@@ -368,35 +368,31 @@ void main() {
         final updated = questionBox.get('q1');
         expect(updated?.nextReview, isNotNull);
         final diff = updated!.nextReview!.difference(before).inMilliseconds;
-        expect(diff, greaterThanOrEqualTo(7 * 24 * 60 * 60 * 1000 - 1000));
+        expect(diff, greaterThanOrEqualTo(24 * 60 * 60 * 1000 - 1000));
+        expect(diff, lessThan(25 * 60 * 60 * 1000));
       });
 
-      test('updates with 3-day interval for mastery >= 0.7', () async {
+      test('SM-2 interval grows with successive correct reviews', () async {
         questionBox.put('q1', _createQuestion(id: 'q1'));
 
-        final result = await service.updateNextReviewDate('q1', 0.8);
-        expect(result.isSuccess, isTrue);
+        await service.updateNextReviewDate('q1', 0.95);
+        final firstReview = questionBox.get('q1')!.nextReview!;
+        final firstDiff = firstReview.difference(DateTime.now()).inMilliseconds;
+        expect(firstDiff, greaterThanOrEqualTo(24 * 60 * 60 * 1000 - 1000));
+
+        await service.updateNextReviewDate('q1', 0.95);
+        final secondReview = questionBox.get('q1')!.nextReview!;
+        final secondDiff = secondReview.difference(firstReview).inMilliseconds;
+        expect(secondDiff, greaterThanOrEqualTo(5 * 24 * 60 * 60 * 1000 - 1000));
       });
 
-      test('updates with 1-day interval for mastery >= 0.5', () async {
+      test('stores serialized SR data on question', () async {
         questionBox.put('q1', _createQuestion(id: 'q1'));
 
-        final result = await service.updateNextReviewDate('q1', 0.6);
-        expect(result.isSuccess, isTrue);
-      });
-
-      test('updates with 12-hour interval for mastery >= 0.3', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-
-        final result = await service.updateNextReviewDate('q1', 0.4);
-        expect(result.isSuccess, isTrue);
-      });
-
-      test('updates with 30-minute interval for mastery < 0.3', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-
-        final result = await service.updateNextReviewDate('q1', 0.2);
-        expect(result.isSuccess, isTrue);
+        await service.updateNextReviewDate('q1', 0.95);
+        final updated = questionBox.get('q1')!;
+        expect(updated.srDataJson, isNotNull);
+        expect(updated.srDataJson, contains('"r"'));
       });
 
       test('returns failure for non-existent question', () async {

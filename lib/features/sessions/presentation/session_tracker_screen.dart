@@ -9,6 +9,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -179,7 +180,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
             d.date.month == DateTime.now().month &&
             d.date.day == DateTime.now().day).firstOrNull;
         if (todayPlan != null) {
-          final instrumentation = InstrumentationService();
+          final instrumentation = InstrumentationService(
+            adherenceRepository: PlanAdherenceRepository(),
+          );
           await instrumentation.init();
           instrumentation.recordPlanAdherence(
             studentId: studentId,

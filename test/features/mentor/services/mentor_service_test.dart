@@ -219,7 +219,7 @@ class FakeProgressTracker extends StudyProgressTracker {
     'correctAttempts': 7,
     'accuracy': 70,
     'avgTimePerQuestion': 30,
-    'totalStudyTimeHours': '2.5',
+    'totalStudyTimeHours': 2.5,
     'weeklyActivity': 5,
     'dailyActivity': 2,
     'topicsStudied': 3,
@@ -451,7 +451,7 @@ void main() {
           'correctAttempts': 15,
           'accuracy': 75,
           'avgTimePerQuestion': 30,
-          'totalStudyTimeHours': '3.0',
+          'totalStudyTimeHours': 3.0,
           'weeklyActivity': 8,
           'dailyActivity': 3,
           'topicsStudied': 5,
@@ -462,7 +462,7 @@ void main() {
         expect(report.accuracy, equals(75.0));
         expect(report.totalAttempts, equals(20));
         expect(report.correctAttempts, equals(15));
-        expect(report.totalStudyTimeHours, equals('3.0'));
+        expect(report.totalStudyTimeHours, equals(3.0));
         expect(report.weeklyActivity, equals(8));
         expect(report.topicsStudied, equals(5));
       });
@@ -487,7 +487,7 @@ void main() {
           'correctAttempts': 5,
           'accuracy': 50,
           'avgTimePerQuestion': 30,
-          'totalStudyTimeHours': '1.0',
+          'totalStudyTimeHours': 1.0,
           'weeklyActivity': 2,
           'dailyActivity': 1,
           'topicsStudied': 2,
@@ -857,7 +857,7 @@ void main() {
           'correctAttempts': 10,
           'accuracy': 67,
           'avgTimePerQuestion': 25,
-          'totalStudyTimeHours': '4.0',
+          'totalStudyTimeHours': 4.0,
           'weeklyActivity': 6,
           'dailyActivity': 2,
           'topicsStudied': 4,
@@ -906,7 +906,7 @@ void main() {
           'correctAttempts': 7,
           'accuracy': 70,
           'avgTimePerQuestion': 30,
-          'totalStudyTimeHours': '2.5',
+          'totalStudyTimeHours': 2.5,
           'weeklyActivity': 5,
           'dailyActivity': 2,
           'topicsStudied': 3,
@@ -934,7 +934,7 @@ void main() {
           'correctAttempts': 7,
           'accuracy': 70,
           'avgTimePerQuestion': 30,
-          'totalStudyTimeHours': '2.5',
+          'totalStudyTimeHours': 2.5,
           'weeklyActivity': 5,
           'dailyActivity': 2,
           'topicsStudied': 3,

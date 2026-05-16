@@ -41,7 +41,7 @@ String _resolveName(String id) {
 
 void main() {
   group('WeakAreasCard', () {
-    testWidgets('renders nothing when no weak areas', (tester) async {
+    testWidgets('shows positive message when no weak areas', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         WeakAreasCard(
           allMastery: [
@@ -53,7 +53,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Card), findsNothing);
-      expect(find.byType(SizedBox), findsOneWidget);
+      expect(find.text('No weak areas found. Keep up the great work!'), findsOneWidget);
     });
 
     testWidgets('renders weak areas with accuracy < 0.6', (tester) async {

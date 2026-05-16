@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_state_adapter.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -312,6 +316,53 @@ void main() {
         expect(snapshot['avgReadiness'], 0.0);
         expect(snapshot['avgReviewUrgency'], 0.0);
       });
+    });
+  });
+
+  group('MasteryStateRepository (init with real Hive)', () {
+    late MasteryStateRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(MasteryStateAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('ms_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = MasteryStateRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('mastery_states');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final state = MasteryState.initial(studentId: 's1', topicId: 't1');
+      await repository.updateMasteryState(state);
+      final result = await repository.getMasteryState('s1', 't1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.topicId, 't1');
+    });
+
+    test('getAllMasteryStates works after init', () async {
+      await repository.updateMasteryState(MasteryState.initial(studentId: 's1', topicId: 't1'));
+      await repository.updateMasteryState(MasteryState.initial(studentId: 's1', topicId: 't2'));
+      final result = await repository.getAllMasteryStates('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(2));
+    });
+
+    test('getMasterySnapshot works after init', () async {
+      final now = DateTime.now();
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.8, totalAttempts: 10));
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.5, totalAttempts: 5));
+      final result = await repository.getMasterySnapshot('s1');
+      expect(result.data?['totalTopics'], 2);
+      expect(result.data?['totalAttempts'], 15);
     });
   });
 }

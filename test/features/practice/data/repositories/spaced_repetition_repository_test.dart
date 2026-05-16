@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -354,4 +356,125 @@ void main() {
       });
     });
   });
+
+  group('SpacedRepetitionQueries (with real Hive box)', () {
+    late Box<Question> box;
+    late String hivePath;
+
+    setUp(() async {
+      try {
+        Hive.registerAdapter(_TestQuestionAdapterForSR());
+      } catch (_) {}
+      final dir = await Directory.systemTemp.createTemp('sr_query_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      box = await Hive.openBox<Question>('sr_test_questions');
+    });
+
+    tearDown(() async {
+      await box.close();
+      await Hive.deleteBoxFromDisk('sr_test_questions');
+    });
+
+    test('getQuestionsDueAfter works with real box', () async {
+      await box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
+      await box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
+      final due = SpacedRepetitionQueries.getQuestionsDueAfter(box, DateTime(2023, 1, 1));
+      expect(due.length, 1);
+      expect(due.first.id, 'q1');
+    });
+
+    test('isQuestionDueForReview works with real box', () async {
+      await box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
+      final q = box.get('q1')!;
+      expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isTrue);
+    });
+  });
+
+  group('SpacedRepetitionRepository (init with real Hive)', () {
+    late SpacedRepetitionRepository repository;
+    late String hivePath;
+
+    setUp(() async {
+      try {
+        Hive.registerAdapter(_TestQuestionAdapterForSR());
+      } catch (_) {}
+      final dir = await Directory.systemTemp.createTemp('sr_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      final questionRepo = QuestionRepository();
+      await questionRepo.init();
+      repository = SpacedRepetitionRepository(questionRepo: questionRepo);
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        await Directory(hivePath).delete(recursive: true);
+      }
+    });
+
+    test('init opens box and supports getQuestionsDueForReview', () async {
+      final result = await repository.getQuestionsDueForReview();
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('getSubjectDueCount returns zero when no questions', () async {
+      final result = await repository.getSubjectDueCount('sub1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 0);
+    });
+
+    test('getPracticeQuestions returns empty when no questions', () async {
+      final result = await repository.getPracticeQuestions('sub1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
+    });
+  });
+}
+
+class _TestQuestionAdapterForSR extends TypeAdapter<Question> {
+  @override
+  final int typeId = 2;
+
+  @override
+  Question read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return Question(
+      id: fields[0] as String,
+      text: fields[3] as String? ?? '',
+      type: QuestionType.values[fields[4] as int? ?? 0],
+      subjectId: fields[1] as String,
+      topicId: fields[2] as String,
+      createdAt: fields[5] as DateTime,
+      updatedAt: fields[6] as DateTime,
+      nextReview: fields[7] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Question obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.subjectId)
+      ..writeByte(2)
+      ..write(obj.topicId)
+      ..writeByte(3)
+      ..write(obj.text)
+      ..writeByte(4)
+      ..write(obj.type.index)
+      ..writeByte(5)
+      ..write(obj.createdAt)
+      ..writeByte(6)
+      ..write(obj.updatedAt)
+      ..writeByte(7)
+      ..write(obj.nextReview);
+  }
 }

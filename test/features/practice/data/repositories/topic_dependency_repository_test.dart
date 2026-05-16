@@ -3,6 +3,9 @@ import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'dart:io';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
 
 class _MockTopicDependencyBox implements Box<TopicDependency> {
   final Map<String, TopicDependency> _storage = {};
@@ -166,6 +169,44 @@ void main() {
         final result = await repository.getAllDependencies();
         expect(result.data, isEmpty);
       });
+    });
+  });
+
+  group('TopicDependencyRepository (init with real Hive)', () {
+    late TopicDependencyRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(TopicDependencyAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('td_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = TopicDependencyRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      await Hive.deleteBoxFromDisk('topic_dependencies');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final dep = TopicDependency(topicId: 't1', prerequisites: ['t0']);
+      await repository.updateTopicDependency(dep);
+      final result = await repository.getTopicDependency('t1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.prerequisites, ['t0']);
+    });
+
+    test('getAllDependencies works after init', () async {
+      await repository.updateTopicDependency(TopicDependency(topicId: 't1'));
+      await repository.updateTopicDependency(TopicDependency(topicId: 't2'));
+      final result = await repository.getAllDependencies();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(2));
     });
   });
 }

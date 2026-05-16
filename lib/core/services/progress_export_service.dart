@@ -45,7 +45,7 @@ class ProgressExportService {
     buffer.writeln(
         '${l10n.csvColTotalAttempts},${l10n.csvColCorrect},${l10n.csvColAccuracy},${l10n.csvColAvgTime},${l10n.csvColTotalHours},${l10n.csvColWeeklyActivity},${l10n.csvColDailyActivity},${l10n.csvColTopicsStudied}');
     buffer.writeln(
-        '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${overallStats['totalStudyTimeHours']},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
+        '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${(overallStats['totalStudyTimeHours'] as num).toStringAsFixed(1)},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
 
     buffer.writeln();
     buffer.writeln('=== ${l10n.csvTopicMastery} ===');

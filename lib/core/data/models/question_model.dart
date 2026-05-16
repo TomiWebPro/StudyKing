@@ -63,6 +63,10 @@ class Question extends HiveObject {
   @HiveField(18)
   final DateTime? nextReview;
 
+  /// JSON-serialized SM-2 data (repetitions, easeFactor, previousInterval, lastReview).
+  /// Managed by [SpacedRepetitionEngine] — not a Hive field.
+  final String? srDataJson;
+
   Question({
     required this.id,
     required this.text,
@@ -83,6 +87,7 @@ class Question extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
     this.nextReview,
+    this.srDataJson,
   });
 
   Map<String, dynamic> toJson() => {
@@ -103,6 +108,7 @@ class Question extends HiveObject {
     'explanation': explanation,
     'difficultyText': difficultyText,
     'nextReview': nextReview?.toIso8601String(),
+    'srDataJson': srDataJson,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -149,6 +155,7 @@ class Question extends HiveObject {
       explanation: json['explanation'],
       difficultyText: json['difficultyText'],
       nextReview: json['nextReview'] != null ? DateTime.parse(json['nextReview']) : null,
+      srDataJson: json['srDataJson'] as String?,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -174,6 +181,8 @@ class Question extends HiveObject {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? nextReview,
+    String? srDataJson,
+    bool clearSrData = false,
   }) {
     return Question(
       id: id ?? this.id,
@@ -193,6 +202,7 @@ class Question extends HiveObject {
       explanation: explanation ?? this.explanation,
       difficultyText: difficultyText ?? this.difficultyText,
       nextReview: nextReview ?? this.nextReview,
+      srDataJson: clearSrData ? null : (srDataJson ?? this.srDataJson),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

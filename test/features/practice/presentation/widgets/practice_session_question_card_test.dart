@@ -137,7 +137,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SingleAnswerWidget), findsOneWidget);
+      expect(find.byType(CheckboxListTile), findsNWidgets(2));
     });
 
     testWidgets('renders typed answer input', (tester) async {

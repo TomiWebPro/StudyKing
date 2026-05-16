@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/questions/data/models/drawing_models.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/questions/presentation/painters/drawing_painter.dart';
+import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
 import 'package:studyking/features/questions/questions.dart';
 
 void main() {
@@ -19,10 +24,6 @@ void main() {
       expect(MarkSchemeStep, isA<Type>());
     });
 
-    test('exports QuestionCardWidget', () {
-      expect(QuestionCardWidget, isA<Type>());
-    });
-
     test('exports SingleAnswerWidget', () {
       expect(SingleAnswerWidget, isA<Type>());
     });
@@ -33,6 +34,34 @@ void main() {
 
     test('exports MathExpressionWidget', () {
       expect(MathExpressionWidget, isA<Type>());
+    });
+
+    test('exports DrawingPainter', () {
+      expect(DrawingPainter, isA<Type>());
+    });
+
+    test('exports GridPainter', () {
+      expect(GridPainter, isA<Type>());
+    });
+
+    test('exports DrawingPoint', () {
+      expect(DrawingPoint, isA<Type>());
+    });
+
+    test('exports Stroke', () {
+      expect(Stroke, isA<Type>());
+    });
+
+    test('exports QuestionEvaluation', () {
+      expect(QuestionEvaluation, isA<Type>());
+    });
+
+    test('exports EvaluationStep', () {
+      expect(EvaluationStep, isA<Type>());
+    });
+
+    test('exports EvaluationType', () {
+      expect(EvaluationType, isA<Type>());
     });
   });
 }

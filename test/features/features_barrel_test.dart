@@ -35,10 +35,6 @@ void main() {
       expect(PracticeScreen, isNotNull);
     });
 
-    test('exports questions features', () {
-      expect(QuestionCardWidget, isNotNull);
-    });
-
     test('exports quickguide features', () {
       expect(QuickGuideScreen, isNotNull);
     });

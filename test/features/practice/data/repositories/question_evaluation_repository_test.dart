@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -217,6 +221,58 @@ void main() {
         final getResult = await repository.getEvaluation('q1');
         expect(getResult.data?.correctAnswer, '');
       });
+    });
+  });
+
+  group('QuestionEvaluationRepository (init with real Hive)', () {
+    late QuestionEvaluationRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(QuestionEvaluationAdapter());
+      Hive.registerAdapter(EvaluationStepAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('qe_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = QuestionEvaluationRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await Hive.box<QuestionEvaluation>('question_evaluations').close();
+      await Hive.deleteBoxFromDisk('question_evaluations');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final evaluation = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
+      await repository.saveEvaluation(evaluation);
+      final result = await repository.getEvaluation('q1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.correctAnswer, 'Paris');
+    });
+
+    test('migrateFromLegacy works after init', () async {
+      final result = await repository.migrateFromLegacy(
+        questionId: 'q1',
+        markscheme: '42',
+        correctAnswer: '42',
+        options: ['41', '42', '43'],
+        explanation: 'The answer',
+      );
+      expect(result.isSuccess, isTrue);
+      final getResult = await repository.getEvaluation('q1');
+      expect(getResult.isSuccess, isTrue);
+      expect(getResult.data?.correctAnswer, '42');
+    });
+
+    test('overwrites existing evaluation after init', () async {
+      await repository.saveEvaluation(QuestionEvaluation(questionId: 'q1', correctAnswer: 'Berlin'));
+      await repository.saveEvaluation(QuestionEvaluation(questionId: 'q1', correctAnswer: 'Munich'));
+      final result = await repository.getEvaluation('q1');
+      expect(result.data?.correctAnswer, 'Munich');
     });
   });
 }

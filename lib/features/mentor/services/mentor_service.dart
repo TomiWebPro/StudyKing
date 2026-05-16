@@ -506,14 +506,22 @@ class MentorService {
     final recommendations = await _progressTracker.getRecommendations(_studentId);
     final badges = await _progressTracker.getBadges(_studentId);
 
+    int completedLessons = 0;
+    try {
+      final completed = await _database.tutorSessionRepository.getCompletedSessions(_studentId);
+      completedLessons = completed.length;
+    } catch (e) {
+      _logger.w('Failed to fetch completed lessons count: $e');
+    }
+
     return ProgressReport(
       totalAttempts: stats['totalAttempts'] as int,
       correctAttempts: stats['correctAttempts'] as int,
       accuracy: (stats['accuracy'] as num).toDouble(),
       topicsStudied: stats['topicsStudied'] as int,
-      completedLessons: 0,
+      completedLessons: completedLessons,
       weeklyActivity: stats['weeklyActivity'] as int,
-      totalStudyTimeHours: stats['totalStudyTimeHours'] as String,
+      totalStudyTimeHours: (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0,
       weakTopics: weakResult.isSuccess ? weakResult.data! : [],
       badges: badges,
       recommendations: recommendations,

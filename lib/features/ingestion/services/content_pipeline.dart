@@ -201,7 +201,7 @@ class ContentPipeline {
           processingStatus: ProcessingStatus.failed.name,
         );
         await _sourceRepository.save(failed.id, failed);
-        return Result.success(failed);
+        return Result.failure(e.toString());
       } catch (e2) {
         _logger.e('Failed to save failed source', e2);
         return Result.failure(e.toString());

@@ -2250,6 +2250,10 @@
   "@howConfident": {
     "description": "Label for confidence selector"
   },
+  "confidenceRatingOf": "of",
+  "@confidenceRatingOf": {
+    "description": "Screen reader label fragment for range indicator, e.g. '3 of 5'"
+  },
   "notConfidentAtAll": "Not confident at all",
   "@notConfidentAtAll": {
     "description": "Confidence level 1"
@@ -2879,6 +2883,18 @@
   "mentorChangesDone": "Done! The changes have been made to your schedule.",
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
+  },
+  "mentorAccuracy": "Accuracy",
+  "@mentorAccuracy": {
+    "description": "Section header for accuracy in progress report"
+  },
+  "mentorBadges": "Badges",
+  "@mentorBadges": {
+    "description": "Section header for badges in progress report"
+  },
+  "mentorRecommendationsSection": "Recommendations",
+  "@mentorRecommendationsSection": {
+    "description": "Section header for recommendations in progress report"
   },
   "mentorProgressReportTitle": "📊 **Your Study Progress Report**\n",
   "@mentorProgressReportTitle": {
@@ -4472,5 +4488,50 @@
   "sendHint": "Press Enter to send, Ctrl+Enter for new line",
   "@sendHint": {
     "description": "Hint text below chat input field"
+  },
+  "shareProgressReport": "StudyKing Progress Report",
+  "@shareProgressReport": {
+    "description": "Share text for progress report CSV"
+  },
+  "shareSessionHistory": "StudyKing Session History",
+  "@shareSessionHistory": {
+    "description": "Share text for session history CSV"
+  },
+  "shareInstrumentationData": "StudyKing Instrumentation Data",
+  "@shareInstrumentationData": {
+    "description": "Share text for instrumentation data export"
+  },
+  "instrumentationDashboard": "=== Instrumentation Dashboard ===",
+  "@instrumentationDashboard": {
+    "description": "Header for instrumentation dashboard export"
+  },
+  "instrumentationGenerated": "Generated: {date}",
+  "@instrumentationGenerated": {
+    "description": "Generated timestamp line in instrumentation export",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "instrumentationPlanAdherence": "--- Plan Adherence ---",
+  "@instrumentationPlanAdherence": {
+    "description": "Section header for plan adherence in instrumentation export"
+  },
+  "instrumentationMasteryImprovement": "--- Mastery Improvement ---",
+  "@instrumentationMasteryImprovement": {
+    "description": "Section header for mastery improvement in instrumentation export"
+  },
+  "partialLabel": "Partial",
+  "@partialLabel": {
+    "description": "Accessibility label for partially correct evaluation"
+  },
+  "localeEn": "English",
+  "@localeEn": {
+    "description": "Label for English language option"
+  },
+  "localeEs": "Spanish",
+  "@localeEs": {
+    "description": "Label for Spanish language option"
   }
 }

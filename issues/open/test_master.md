@@ -1,72 +1,86 @@
-# Systemic Repository Test Anti-Pattern: Fakes Tested Instead of Real Implementations
+# Test Quality & Coverage Gaps
 
 ## Context
 
-The project has ~219 test files covering ~212 source files — impressive file-level coverage. However, a large portion of repository tests validate **in-memory fakes that reimplement the repository interface**, never exercising the real Hive-backed logic. This creates a false sense of safety.
+The codebase achieves ~98% structural test coverage (matching source-to-test file pairs). However, **depth and behavioral quality** vary significantly. Four source files have **zero** test coverage, seven core test files contain only trivial assertions (violating the AGENTS.md provider/ behavioral bar), and one test directory is orphaned. The subjects feature (`lib/features/subjects/presentation`) demonstrates the standard we should hold everywhere — its tests cover behavioral flows, error states, edge cases, and navigation — but other areas fall short.
 
-## Affected Files
+---
 
-### Purely mock/fake-based tests (no real Hive, no integration group):
+## Issue 1: Untested Source Files (4 files)
 
-| Test File | Mock | Problem |
+The following source files have **no corresponding test file**:
+
+| Source | Expected Test Location |
+|---|---|
+| `lib/features/questions/data/models/drawing_models.dart` (`Stroke`, `DrawingPoint`) | `test/features/questions/data/models/drawing_models_test.dart` |
+| `lib/features/questions/presentation/painters/drawing_painter.dart` (`DrawingPainter`) | `test/features/questions/presentation/painters/drawing_painter_test.dart` |
+| `lib/features/questions/presentation/painters/grid_painter.dart` (`GridPainter`) | `test/features/questions/presentation/painters/grid_painter_test.dart` |
+| `lib/features/mentor/data/models/chat_message_data.dart` | `test/features/mentor/data/models/chat_message_data_test.dart` |
+
+**Rationale:** These are non-trivial classes with serialization (`Stroke`, `DrawingPoint`), custom painting logic (`DrawingPainter.paint` with multi-stroke pathing and single-point fallback), grid-line math (`GridPainter.paint`), and data-model semantics (`ChatMessageData`). Leaving them untested creates blind spots for regressions in math-input and mentor-chat features.
+
+---
+
+## Issue 2: Overly Basic Test Files (7 files)
+
+These files contain **only** construction checks (`isA<Type>()`, `isNotNull`) or plain default-value assertions with **no** behavioral assertions as required by AGENTS.md:
+
+| Test File | Current Scope | Missing Behavioral Assertions |
 |---|---|---|
-| `test/features/practice/data/repositories/attempt_repository_test.dart` | `_MockAttemptRepository` (full in-memory `Map`) | Zero real logic tested |
-| `test/features/practice/data/repositories/mastery_state_repository_test.dart` | `_MockMasteryStateRepository` | Zero real logic tested |
-| `test/features/practice/data/repositories/question_choice_repository_test.dart` | `_MockQuestionChoiceRepository` | Zero real logic tested |
-| `test/features/practice/data/repositories/spaced_repetition_repository_test.dart` | `_MockSpacedRepetitionRepository` | Zero real logic tested |
-| `test/features/practice/data/repositories/question_mastery_state_repository_test.dart` | `_MockQuestionMasteryStateRepository` + fake `Box` | Fake box, no real Hive |
-| `test/features/practice/data/repositories/question_evaluation_repository_test.dart` | `_MockQuestionEvaluationRepository` + fake `Box` | Fake box, no real Hive |
-| `test/features/practice/data/repositories/topic_dependency_repository_test.dart` | `_MockTopicDependencyRepository` + fake `Box` | Fake box, no real Hive |
-| `test/features/practice/data/repositories/mastery_graph_repository_test.dart` | `MasteryGraphRepository.test(…)` with 4 fake boxes | Fake boxes, no real Hive |
-| `test/features/subjects/data/repositories/progress_repository_test.dart` | `_MockProgressRepository` | Zero real logic tested |
-| `test/features/subjects/data/repositories/topic_repository_test.dart` | `_MockTopicRepository` | Zero real logic tested |
-| `test/features/planner/data/repositories/pending_action_repository_test.dart` | `_MockPendingActionRepository` | Zero real logic tested |
-| `test/features/planner/data/repositories/roadmap_repository_test.dart` | `_MockRoadmapRepository` | Zero real logic tested |
-| `test/features/planner/data/repositories/plan_adherence_repository_test.dart` | `_MockPlanAdherenceRepository` | Zero real logic tested |
-| `test/features/planner/data/repositories/engagement_nudge_repository_test.dart` | `_MockEngagementNudgeRepository` | Zero real logic tested |
-| `test/features/planner/data/repositories/student_availability_repository_test.dart` | `MockStudentAvailabilityBox` | Fake box, no real Hive |
+| `test/core/providers/app_providers_test.dart` | 7 `container.read(...)` checks for default values (`isFalse`, `equals(16.0)`, `isEmpty`) | Override wiring, fallback logic, singleton identity, error handling |
+| `test/core/constants/app_constants_test.dart` | 11 barrel-export type checks (`isA<Type>()`, `isA<Function>()`) | No actual value/integration tests |
+| `test/core/constants/app_runtime_config_test.dart` | Border radius value check + 5 default-value checks | No behavioral logic, no `UiConfig` method testing |
+| `test/core/constants/llm_defaults_test.dart` | 3 return-value checks for `defaultModelForProvider()` | No edge-case providers, no empty/fallback paths |
+| `test/core/data/enums_test.dart` | Enum value counts + `.index` checks | No serialization, no fromIndex/fromString parsing |
+| `test/core/data/hive_type_ids_test.dart` | Single "does not throw" check | No conflict detection, no duplicate-ID scenarios |
+| `test/core/data/hive_box_names_test.dart` | 27 string-literal equality checks | No integration with actual box open logic |
 
-### Missing test file:
+**Rationale:** AGENTS.md mandates that every provider test file include **at least one behavioral assertion** (override wiring, fallback logic, singleton verification, or error-state handling). `test/core/providers/app_providers_test.dart` fails this bar outright. The other 6 files have no behavioral testing at all — they are brittle documentation, not tests.
 
-| Source | Location |
+---
+
+## Issue 3: Orphaned Test Directory
+
+`test/features/settings/data/adapters/` exists but is **empty**. There is no corresponding `lib/features/settings/data/adapters/` directory.
+
+**Action:** Either populate the directory with adapter tests if adapters are planned for settings, or remove the empty directory to avoid confusion.
+
+---
+
+## Issue 4: Missing Test Scenarios in Subject Tests
+
+While the subject presentation tests are **strong** overall, notable gaps exist:
+
+| Screen | Missing Scenario |
 |---|---|
-| `lib/features/practice/presentation/widgets/practice_sheet_template.dart` | No test file exists anywhere |
+| `subject_detail_screen_test.dart` | No test for when `sessionRepository` throws during History tab interaction. The screen accepts an optional `sessionRepository` param that is used in the History tab, but error propagation is untested. |
+| `subject_detail_screen_test.dart` | No test for the "more options" bottom sheet when routes `upload` / `dashboard` are **not** registered (navigation edge case that could crash). |
+| `subject_list_screen_test.dart` | Loading state (centered `CircularProgressIndicator`) is never asserted. The screen has two loading layers (provider async + `FutureBuilder`) but only error/data states are tested. |
 
-### Misplaced tests (inconsistent with conventions & sibling `exam_session_screen_test.dart`):
-
-| Current Location | Correct Location |
-|---|---|
-| `test/features/practice/presentation/practice_screen_test.dart` | `test/features/practice/presentation/screens/practice_screen_test.dart` |
-| `test/features/practice/presentation/practice_results_screen_test.dart` | `test/features/practice/presentation/screens/practice_results_screen_test.dart` |
-| `test/features/practice/presentation/practice_session_screen_test.dart` | `test/features/practice/presentation/screens/practice_session_screen_test.dart` |
-
-## Rationale
-
-The mock/fake-based repository tests verify that an **in-memory `Map` with a hand-written CRUD wrapper** works correctly — they do not test the actual `AttemptRepository`, `SpacedRepetitionRepository`, etc. This means:
-
-- **Hive serialization/deserialization** is never exercised for these repositories.
-- **Box initialization errors** (`init()` calling `Hive.openBox`) are never tested.
-- **Migration scenarios** (adding/removing fields, legacy data) have zero coverage.
-- **Null-safety and type coercion** in real Hive reads are not validated.
-- **Write conflicts, concurrent access, and deletion cascades** are invisible.
-
-The project already has a working pattern for proper repository testing: `badge_repository_test.dart` (fake box + real Hive `init()` group), `question_repository_test.dart` (unit tests with mock box + Hive integration group), and `lesson_repository_test.dart` show how to do it right.
-
-The `practice_sheet_template_test.dart` gap violates the explicit convention in `AGENTS.md` that every source file must have a test.
-
-The misplaced screen tests create confusion: sibling `exam_session_screen_test.dart` correctly lives under `presentation/screens/`, but 3 other screen tests sit in the parent directory. Tooling and convention-aware developers will not find them in the expected location.
+---
 
 ## Acceptance Criteria
 
-1. **Real Hive integration group added to each affected repository test**: Each repository listed above should have a test group that initializes a real Hive instance (temp directory), registers the real adapter, opens the real box, and performs at least one CRUD round-trip. Follow the pattern in `badge_repository_test.dart` (lines 291–358) or `question_repository_test.dart` (lines 727–761).
+1. **Drawing models & painters** (`drawing_models_test.dart`, `drawing_painter_test.dart`, `grid_painter_test.dart`):
+   - `Stroke` and `DrawingPoint` cover construction, default values (color=black, strokeWidth=3, pressure=null), and equality.
+   - `DrawingPainter` verifies `shouldRepaint` returns true/false for different/same strokes, and `paint` handles empty stroke lists gracefully (no crash).
+   - `GridPainter` verifies `shouldRepaint` for same/different colors, and `paint` produces expected line count for a given canvas size.
+   - Directory `test/features/questions/presentation/painters/` is created.
 
-2. **`practice_sheet_template_test.dart` created**: Tests should verify:
-   - Widget renders with title and children
-   - `PracticeSheetTemplate.show()` opens a modal bottom sheet
-   - Calling `show()` with various children renders correctly
-   - Tapping the title area does not dismiss (if applicable)
-   - Empty children list renders safely
+2. **Chat message data model** (`chat_message_data_test.dart`):
+   - Covers construction, JSON serialization roundtrip, missing/null fields, and role enum values.
 
-3. **Three screen tests moved**: `practice_screen_test.dart`, `practice_results_screen_test.dart`, and `practice_session_screen_test.dart` should be moved to `test/features/practice/presentation/screens/` and import paths updated. No test logic should change.
+3. **Core providers** (`app_providers_test.dart`):
+   - At least one behavioral assertion per AGENTS.md: override wiring (e.g., inject a fake value and verify it reads back), singleton identity, or error fallback.
 
-4. **Build/tests pass**: `flutter test` passes with zero failures after all changes.
+4. **Core constants** (`app_constants_test.dart`, `app_runtime_config_test.dart`, `llm_defaults_test.dart`):
+   - Replace barrel-export type checks with at least one meaningful behavioral assertion per group, or remove the file if the exports are trivial (convention: barrel-only files don't need tests).
+
+5. **Core data enums, hive type IDs, box names**:
+   - `enums_test.dart`: Add fromIndex/fromString parsing or serialization tests.
+   - `hive_type_ids_test.dart`: Add duplicate-ID conflict detection test.
+   - `hive_box_names_test.dart`: Remove or replace with integration-oriented test.
+
+6. **Orphaned directory**: Remove `test/features/settings/data/adapters/` or populate it with meaningful tests.
+
+7. **Subject screen gaps**: Add tests for (a) sessionRepository throw in detail screen History tab, (b) unregistered route edge case in bottom sheet, (c) loading state in list screen.

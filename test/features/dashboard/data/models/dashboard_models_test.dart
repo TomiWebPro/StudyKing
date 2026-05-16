@@ -134,7 +134,7 @@ void main() {
         expect(stats.correctAttempts, 0);
         expect(stats.accuracy, 0);
         expect(stats.avgTimePerQuestion, 0);
-        expect(stats.totalStudyTimeHours, '0');
+        expect(stats.totalStudyTimeHours, 0);
         expect(stats.weeklyActivity, 0);
         expect(stats.dailyActivity, 0);
         expect(stats.topicsStudied, 0);
@@ -152,7 +152,7 @@ void main() {
           correctAttempts: 150,
           accuracy: 75,
           avgTimePerQuestion: 30,
-          totalStudyTimeHours: '42',
+          totalStudyTimeHours: 42,
           weeklyActivity: 5,
           dailyActivity: 3,
           topicsStudied: 8,
@@ -162,7 +162,7 @@ void main() {
         expect(stats.correctAttempts, 150);
         expect(stats.accuracy, 75);
         expect(stats.avgTimePerQuestion, 30);
-        expect(stats.totalStudyTimeHours, '42');
+        expect(stats.totalStudyTimeHours, 42);
         expect(stats.weeklyActivity, 5);
         expect(stats.dailyActivity, 3);
         expect(stats.topicsStudied, 8);
@@ -199,7 +199,7 @@ void main() {
         expect(stats.correctAttempts, 150);
         expect(stats.accuracy, 75);
         expect(stats.avgTimePerQuestion, 30);
-        expect(stats.totalStudyTimeHours, '42');
+        expect(stats.totalStudyTimeHours, 42);
         expect(stats.weeklyActivity, 5);
         expect(stats.dailyActivity, 3);
         expect(stats.topicsStudied, 8);
@@ -211,7 +211,7 @@ void main() {
         expect(stats.correctAttempts, 0);
         expect(stats.accuracy, 0);
         expect(stats.avgTimePerQuestion, 0);
-        expect(stats.totalStudyTimeHours, '0');
+        expect(stats.totalStudyTimeHours, 0);
         expect(stats.weeklyActivity, 0);
         expect(stats.dailyActivity, 0);
         expect(stats.topicsStudied, 0);
@@ -233,7 +233,7 @@ void main() {
         expect(stats.correctAttempts, 0);
         expect(stats.accuracy, 0);
         expect(stats.avgTimePerQuestion, 0);
-        expect(stats.totalStudyTimeHours, '0');
+        expect(stats.totalStudyTimeHours, 0);
         expect(stats.weeklyActivity, 0);
         expect(stats.dailyActivity, 0);
         expect(stats.topicsStudied, 0);
@@ -255,7 +255,7 @@ void main() {
         expect(stats.correctAttempts, 150);
         expect(stats.accuracy, 75);
         expect(stats.avgTimePerQuestion, 30);
-        expect(stats.totalStudyTimeHours, '42');
+        expect(stats.totalStudyTimeHours, 42);
         expect(stats.weeklyActivity, 5);
         expect(stats.dailyActivity, 3);
         expect(stats.topicsStudied, 8);

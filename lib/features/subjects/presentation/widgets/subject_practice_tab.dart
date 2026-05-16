@@ -20,12 +20,17 @@ class SubjectPracticeTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.play_arrow, size: 64,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+          Icon(
+            Icons.play_arrow,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 24),
           Text(
             l10n.practiceMode,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(

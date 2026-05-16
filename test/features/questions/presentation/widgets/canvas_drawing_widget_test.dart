@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/questions/data/models/drawing_models.dart';
+import 'package:studyking/features/questions/presentation/painters/drawing_painter.dart';
+import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -592,6 +595,46 @@ void main() {
 
       testWidgets('save button re-enabled after save completes', (tester) async {
         await tester.pumpWidget(buildWidget());
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsOneWidget);
+      });
+    });
+
+    group('save error handling', () {
+      testWidgets('save catches error when callback throws', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          onDrawingComplete: (_) => throw Exception('Save failed'),
+        ));
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.textContaining('Failed to save drawing'), findsOneWidget);
+      });
+
+      testWidgets('save button re-enabled after error', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          onDrawingComplete: (_) => throw Exception('Save failed'),
+        ));
 
         final gesture = await tester.startGesture(const Offset(100, 100));
         await gesture.moveBy(const Offset(50, 50));

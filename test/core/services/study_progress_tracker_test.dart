@@ -120,7 +120,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['totalStudyTimeHours'], equals('1.0'));
+        expect(stats['totalStudyTimeHours'], equals(1.0));
       });
 
       test('counts weekly activity', () async {

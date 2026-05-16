@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 import 'package:studyking/features/planner/data/repositories/student_availability_repository.dart';
 
@@ -176,4 +178,84 @@ void main() {
       });
     });
   });
+
+  group('StudentAvailabilityRepository (init with real Hive)', () {
+    late StudentAvailabilityRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(_TestStudentAvailabilityAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('sa_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = StudentAvailabilityRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('student_availability');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final model = createAvailability(studentId: 'hive-1');
+      await repository.saveAvailability(model);
+      final stored = await repository.getByStudent('hive-1');
+      expect(stored, isNotNull);
+      expect(stored!.studentId, 'hive-1');
+      expect(stored.preferredStartHour, 9);
+    });
+
+    test('overwrites existing availability', () async {
+      await repository.saveAvailability(createAvailability(studentId: 's1', preferredStartHour: 8));
+      await repository.saveAvailability(createAvailability(studentId: 's1', preferredStartHour: 10));
+      final stored = await repository.getByStudent('s1');
+      expect(stored!.preferredStartHour, 10);
+    });
+  });
+}
+
+class _TestStudentAvailabilityAdapter extends TypeAdapter<StudentAvailabilityModel> {
+  @override
+  final int typeId = 35;
+
+  @override
+  StudentAvailabilityModel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return StudentAvailabilityModel(
+      studentId: fields[0] as String,
+      preferredStudyDays: (fields[1] as List?)?.cast<int>() ?? [1, 2, 3, 4, 5, 6, 7],
+      preferredStartHour: fields[2] as int? ?? 9,
+      preferredEndHour: fields[3] as int? ?? 21,
+      maxSessionsPerDay: fields[4] as int? ?? 3,
+      defaultSessionDurationMinutes: fields[5] as int? ?? 30,
+      blackoutDates: (fields[6] as List?)?.cast<DateTime>() ?? [],
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, StudentAvailabilityModel obj) {
+    writer
+      ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.studentId)
+      ..writeByte(1)
+      ..write(obj.preferredStudyDays)
+      ..writeByte(2)
+      ..write(obj.preferredStartHour)
+      ..writeByte(3)
+      ..write(obj.preferredEndHour)
+      ..writeByte(4)
+      ..write(obj.maxSessionsPerDay)
+      ..writeByte(5)
+      ..write(obj.defaultSessionDurationMinutes)
+      ..writeByte(6)
+      ..write(obj.blackoutDates);
+  }
 }

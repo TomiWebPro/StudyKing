@@ -8,6 +8,13 @@ import '../data/models/user_profile_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 
+extension _AppLocaleLabel on AppLocale {
+  String localizedLabel(AppLocalizations l10n) => switch (this) {
+    AppLocale.en => l10n.localeEn,
+    AppLocale.es => l10n.localeEs,
+  };
+}
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -413,13 +420,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         trailing: DropdownButton<String>(
                           value: _language,
                           items: AppLocale.values.map((appLocale) {
-                            final label = switch (appLocale) {
-                              AppLocale.en => l10n.english,
-                              AppLocale.es => l10n.spanish,
-                            };
                             return DropdownMenuItem(
                               value: appLocale.locale.languageCode,
-                              child: Text(label),
+                              child: Text(appLocale.localizedLabel(l10n)),
                             );
                           }).toList(),
                           onChanged: (value) {

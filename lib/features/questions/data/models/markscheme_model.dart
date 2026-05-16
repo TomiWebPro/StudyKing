@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+@Deprecated('Use QuestionEvaluation instead (typeId 14)')
 @HiveType(typeId: 12)
 class Markscheme extends HiveObject {
   @HiveField(0)
@@ -83,6 +84,7 @@ class Markscheme extends HiveObject {
   }
 }
 
+@Deprecated('Use EvaluationStep instead (typeId 15)')
 @HiveType(typeId: 13)
 class MarkSchemeStep {
   @HiveField(0)

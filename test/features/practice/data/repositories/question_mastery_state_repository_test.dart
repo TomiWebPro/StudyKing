@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -280,6 +284,52 @@ void main() {
         expect(result.data?.length, 1);
         expect(result.data![0].questionId, 'q1');
       });
+    });
+  });
+
+  group('QuestionMasteryStateRepository (init with real Hive)', () {
+    late QuestionMasteryStateRepository repository;
+    late String hivePath;
+
+    setUpAll(() {
+      Hive.registerAdapter(QuestionMasteryStateAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('qms_repo_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      repository = QuestionMasteryStateRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await Hive.box<QuestionMasteryState>('question_mastery_states').close();
+      await Hive.deleteBoxFromDisk('question_mastery_states');
+    });
+
+    test('init opens box and supports CRUD', () async {
+      final state = QuestionMasteryState.initial(studentId: 's1', questionId: 'q1', now: DateTime.now());
+      await repository.updateQuestionMasteryState(state);
+      final result = await repository.getQuestionMasteryState('s1', 'q1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.questionId, 'q1');
+    });
+
+    test('getDueQuestions works after init', () async {
+      await repository.updateQuestionMasteryState(QuestionMasteryState.initial(studentId: 's1', questionId: 'q1', now: DateTime(2020, 1, 1)));
+      await repository.updateQuestionMasteryState(QuestionMasteryState.initial(studentId: 's1', questionId: 'q2', now: DateTime.now()));
+      final result = await repository.getDueQuestions('s1', asOf: DateTime(2026, 5, 12));
+      expect(result.data?.length, 1);
+      expect(result.data![0].questionId, 'q1');
+    });
+
+    test('getAtRiskQuestions works after init', () async {
+      await repository.updateQuestionMasteryState(_createQS(questionId: 'q1', masteryLevel: 0.3));
+      await repository.updateQuestionMasteryState(_createQS(questionId: 'q2', masteryLevel: 0.8));
+      final result = await repository.getAtRiskQuestions('s1');
+      expect(result.data?.length, 1);
+      expect(result.data![0].questionId, 'q1');
     });
   });
 }

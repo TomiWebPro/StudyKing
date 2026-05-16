@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
@@ -50,18 +52,20 @@ class SpacedRepetitionQueries {
 }
 
 /// Service layer for spaced repetition logic.
-/// Depends on [QuestionRepository] and [AttemptRepository] for data access,
-/// rather than owning the question data box directly.
+/// Uses [SpacedRepetitionEngine] (proper SM-2) for all interval calculations.
 class SpacedRepetitionService {
   final Logger _logger = const Logger('SpacedRepetitionService');
   final QuestionRepository _questionRepo;
   final AttemptRepository _attemptRepo;
+  final SpacedRepetitionEngine _srEngine;
 
   SpacedRepetitionService({
     required QuestionRepository questionRepo,
     required AttemptRepository attemptRepo,
+    SpacedRepetitionEngine? srEngine,
   })  : _questionRepo = questionRepo,
-        _attemptRepo = attemptRepo;
+        _attemptRepo = attemptRepo,
+        _srEngine = srEngine ?? SpacedRepetitionEngine();
 
   /// Get questions due for review based on next_review date
   List<Question> getQuestionsDueForReview({DateTime? asOf}) {
@@ -97,7 +101,10 @@ class SpacedRepetitionService {
     }
   }
 
-  /// Update next_review date for a question based on practice result
+  /// Update next_review date for a question using SM-2 engine.
+  /// Maps masteryLevel (0.0–1.0) to an SM-2 grade and delegates to
+  /// [SpacedRepetitionEngine.scheduleReview] for proper interval calculation.
+  /// Stores serialized SM-2 state on the [Question] for progressive tracking.
   Future<Result<void>> updateNextReviewDate(
       String questionId, double masteryLevel) async {
     try {
@@ -106,22 +113,19 @@ class SpacedRepetitionService {
         return Result.failure('Question not found: $questionId');
       }
 
-      double newInterval;
-      if (masteryLevel >= 0.9) {
-        newInterval = 7 * 24 * 60 * 60 * 1000; // 7 days
-      } else if (masteryLevel >= 0.7) {
-        newInterval = 3 * 24 * 60 * 60 * 1000; // 3 days
-      } else if (masteryLevel >= 0.5) {
-        newInterval = 1 * 24 * 60 * 60 * 1000; // 1 day
-      } else if (masteryLevel >= 0.3) {
-        newInterval = 12 * 60 * 60 * 1000; // 12 hours
-      } else {
-        newInterval = 30 * 60 * 1000; // 30 minutes
-      }
+      final grade = _masteryLevelToGrade(masteryLevel);
+      final srData = _deserializeSrData(question.srDataJson);
 
-      final newReviewDate =
-          DateTime.now().add(Duration(milliseconds: newInterval.toInt()));
-      final updated = question.copyWith(nextReview: newReviewDate);
+      final srResult = _srEngine.scheduleReview(
+        questionId: questionId,
+        grade: grade,
+        currentData: srData,
+      );
+
+      final updated = question.copyWith(
+        nextReview: srResult.nextReview,
+        srDataJson: _serializeSrData(srResult.updatedData),
+      );
       await _questionRepo.save(questionId, updated);
 
       return Result.success(null);
@@ -130,6 +134,42 @@ class SpacedRepetitionService {
       return Result.failure(
           'Failed to update next review date: ${e.toString()}');
     }
+  }
+
+  int _masteryLevelToGrade(double masteryLevel) {
+    if (masteryLevel >= 0.9) return 5;
+    if (masteryLevel >= 0.7) return 4;
+    if (masteryLevel >= 0.5) return 3;
+    if (masteryLevel >= 0.3) return 2;
+    return 1;
+  }
+
+  QuestionSRData _deserializeSrData(String? json) {
+    if (json == null || json.isEmpty) return const QuestionSRData();
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      return QuestionSRData(
+        repetitions: map['r'] as int? ?? 0,
+        easeFactor: (map['ef'] as num?)?.toDouble() ?? 2.5,
+        previousInterval: map['pi'] != null
+            ? Duration(milliseconds: map['pi'] as int)
+            : null,
+        lastReview: map['lr'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(map['lr'] as int)
+            : null,
+      );
+    } catch (_) {
+      return const QuestionSRData();
+    }
+  }
+
+  String _serializeSrData(QuestionSRData data) {
+    return jsonEncode({
+      'r': data.repetitions,
+      'ef': data.easeFactor,
+      if (data.previousInterval != null) 'pi': data.previousInterval!.inMilliseconds,
+      if (data.lastReview != null) 'lr': data.lastReview!.millisecondsSinceEpoch,
+    });
   }
 
   /// Get question due history

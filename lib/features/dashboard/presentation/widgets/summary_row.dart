@@ -16,7 +16,7 @@ class SummaryRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final stats = overallStats ?? const OverallStats();
     final accuracy = stats.accuracy;
-    final totalHours = stats.totalStudyTimeHours;
+    final totalHours = stats.totalStudyTimeHours.toDouble();
     final weeklyActivity = stats.weeklyActivity;
     final topicsStudied = stats.topicsStudied;
     final bp = ResponsiveUtils.breakpointOf(context);
@@ -49,7 +49,7 @@ class SummaryRow extends StatelessWidget {
               width: itemWidth,
               child: MetricCard(
                 icon: Icons.timer,
-                value: l10n.hoursAbbreviation(formatDecimal(double.tryParse(totalHours) ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)),
+                value: l10n.hoursAbbreviation(formatDecimal(totalHours, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)),
                 label: l10n.studyTime,
                 accent: Theme.of(context).colorScheme.primary,
               ),

@@ -312,7 +312,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get examAutoSubmitted =>
-      'El examen se envió automáticamente cuando se acabó el tiempo.';
+      'El examen se envió automáticamente cuando se agotó el tiempo.';
 
   @override
   String get topicBreakdown => 'Desglose por Tema';
@@ -567,7 +567,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get studyAnalytics => 'Analíticas de Estudio';
+  String get studyAnalytics => 'Analítica de Estudio';
 
   @override
   String get totalStudySessions => 'Sesiones de Estudio Totales';
@@ -883,7 +883,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noDataUploaded => 'No hay datos subidos';
 
   @override
-  String get uploadOrPasteData => 'Cargue o pegue datos para visualizar';
+  String get uploadOrPasteData => 'Suba o pegue datos para visualizar';
 
   @override
   String get selectGraphType => 'Seleccione un tipo de gráfico para visualizar';
@@ -1079,7 +1079,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get easy => 'Fácil';
 
   @override
-  String get difficultyMedium => 'Medio';
+  String get difficultyMedium => 'Mediano';
 
   @override
   String get hard => 'Difícil';
@@ -1130,7 +1130,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get drawYourAnswer =>
-      'Dibuje su respuesta en el lienzo usando su dedo o lápiz';
+      'Dibuje su respuesta en el lienzo usando su dedo o lápiz óptico';
 
   @override
   String get apiConfiguration => 'Configuración de API';
@@ -1617,7 +1617,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get lessonTimeEnded =>
-      'El tiempo de lección terminó. Haga clic en \'Finalizar Lección\' para terminar.';
+      'El tiempo de lección terminó. Toque \'Finalizar Lección\' para terminar.';
 
   @override
   String get lessonComplete => 'Lección Completada';
@@ -1685,6 +1685,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get howConfident => '¿Qué tan seguro está?';
+
+  @override
+  String get confidenceRatingOf => 'de';
 
   @override
   String get notConfidentAtAll => 'Nada seguro';
@@ -1802,7 +1805,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String avgReadinessLabel(String percent) {
-    return 'Disposición Prom.: $percent';
+    return 'Preparación Prom.: $percent';
   }
 
   @override
@@ -1981,7 +1984,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicsLabel => 'Temas';
 
   @override
-  String get readiness => 'Disposición';
+  String get readiness => 'Preparación';
 
   @override
   String get overallMastery => 'Dominio General';
@@ -2180,6 +2183,15 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Listo! Los cambios se han realizado en su horario.';
 
   @override
+  String get mentorAccuracy => 'Precisión';
+
+  @override
+  String get mentorBadges => 'Insignias';
+
+  @override
+  String get mentorRecommendationsSection => 'Recomendaciones';
+
+  @override
   String get mentorProgressReportTitle =>
       '📊 **Su Informe de Progreso de Estudio**\n';
 
@@ -2288,7 +2300,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String completionOfValue(double value) {
-    return '$value% Completado';
+    return '$value% Completo';
   }
 
   @override
@@ -2723,7 +2735,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeDailyScholarName => 'Estudioso Diario';
 
   @override
-  String get badgeDailyScholarDesc => '¡Estudió constantemente hoy!';
+  String get badgeDailyScholarDesc => '¡Estudió de manera constante hoy!';
 
   @override
   String get badgeDedicatedLearnerName => 'Aprendiz Dedicado';
@@ -3029,7 +3041,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String adherenceLowDaysRegenerate(int days) {
-    return '¿Ha tenido $days días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?';
+    return 'Ha tenido $days días consecutivos de bajo cumplimiento. ¿Le gustaría regenerar su plan con objetivos ajustados?';
   }
 
   @override
@@ -3252,7 +3264,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String usageSummary(String totalCost, String totalTokens, String avgCost) {
-    return 'Uso: $totalCost sobre $totalTokens tokens, promedio: $avgCost por cada 1k tokens';
+    return 'Uso: $totalCost de $totalTokens tokens, promedio: $avgCost por cada 1k tokens';
   }
 
   @override
@@ -3264,4 +3276,37 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get sendHint =>
       'Presiona Enter para enviar, Ctrl+Enter para nueva línea';
+
+  @override
+  String get shareProgressReport => 'Informe de Progreso de StudyKing';
+
+  @override
+  String get shareSessionHistory => 'Historial de Sesiones de StudyKing';
+
+  @override
+  String get shareInstrumentationData =>
+      'Datos de Instrumentación de StudyKing';
+
+  @override
+  String get instrumentationDashboard => '=== Panel de Instrumentación ===';
+
+  @override
+  String instrumentationGenerated(String date) {
+    return 'Generado: $date';
+  }
+
+  @override
+  String get instrumentationPlanAdherence => '--- Cumplimiento del Plan ---';
+
+  @override
+  String get instrumentationMasteryImprovement => '--- Mejora del Dominio ---';
+
+  @override
+  String get partialLabel => 'Parcial';
+
+  @override
+  String get localeEn => 'Inglés';
+
+  @override
+  String get localeEs => 'Español';
 }
