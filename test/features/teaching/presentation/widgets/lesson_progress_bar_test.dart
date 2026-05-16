@@ -275,5 +275,81 @@ void main() {
       expect(find.text('3 correct'), findsOneWidget);
       expect(find.text('5 questions'), findsOneWidget);
     });
+
+    testWidgets('future section shows circle_outlined icon', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Main', durationMinutes: 10, type: LessonSectionType.explanation),
+          LessonSection(title: 'Review', durationMinutes: 5, type: LessonSectionType.summary),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      // Intro (0-5): completed → check_circle
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      // Main (5-15): current → play_circle_filled
+      expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
+      // Review (15-20): future → circle_outlined
+      expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+    });
+
+    testWidgets('displays large overtime value correctly', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 120,
+          plannedDurationMinutes: 45,
+          exerciseCount: 10,
+          correctCount: 7,
+          topicTitle: 'Math Marathon',
+        ),
+      ));
+
+      expect(find.text('+75m'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('10 questions'), findsOneWidget);
+      expect(find.text('7 correct'), findsOneWidget);
+    });
+
+    testWidgets('elapsed exactly at section end marks as completed not current', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Warmup', durationMinutes: 10, type: LessonSectionType.explanation),
+          LessonSection(title: 'Core', durationMinutes: 20, type: LessonSectionType.exercise),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      // Warmup (0-10): elapsed=10, sectionEnd=10 → isCompleted=true
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      // Core (10-30): elapsed=10, sectionStart=10, sectionEnd=30 → isCurrent=true (10 >= 10 && 10 < 30)
+      expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
+    });
   });
 }

@@ -1,118 +1,72 @@
-# Test Coverage & Structural Gaps
+# Systemic Repository Test Anti-Pattern: Fakes Tested Instead of Real Implementations
 
-## Summary
+## Context
 
-Despite near-100% file-level test coverage, several structural and qualitative issues undermine test maintainability and completeness.
+The project has ~219 test files covering ~212 source files — impressive file-level coverage. However, a large portion of repository tests validate **in-memory fakes that reimplement the repository interface**, never exercising the real Hive-backed logic. This creates a false sense of safety.
 
----
+## Affected Files
 
-## Issue 1: Duplicate SettingsController Test Files
+### Purely mock/fake-based tests (no real Hive, no integration group):
 
-**Affected Files:**
-- `test/core/providers/app_providers_test.dart` (tests `SettingsController` with unsafe mock)
-- `test/core/providers/settings_controller_test.dart` (tests same `SettingsController` with proper fake)
-
-**Problem:**
-Both files test the same `SettingsController` class from `lib/core/providers/app_providers.dart`. They use different fake/mock strategies and have inconsistent quality:
-
-| Dimension | `app_providers_test.dart` | `settings_controller_test.dart` |
+| Test File | Mock | Problem |
 |---|---|---|
-| Fake type | `_MockSettingsRepository` (no `implements`) | `_FakeSettingsRepository implements SettingsRepository` |
-| Type safety | `mockRepo as dynamic` (unsafe) | Proper interface implementation |
-| Assertions | Only checks repo was called | Asserts state change on controller |
-| Error handling | Test with zero assertions | Validates state unchanged on error |
+| `test/features/practice/data/repositories/attempt_repository_test.dart` | `_MockAttemptRepository` (full in-memory `Map`) | Zero real logic tested |
+| `test/features/practice/data/repositories/mastery_state_repository_test.dart` | `_MockMasteryStateRepository` | Zero real logic tested |
+| `test/features/practice/data/repositories/question_choice_repository_test.dart` | `_MockQuestionChoiceRepository` | Zero real logic tested |
+| `test/features/practice/data/repositories/spaced_repetition_repository_test.dart` | `_MockSpacedRepetitionRepository` | Zero real logic tested |
+| `test/features/practice/data/repositories/question_mastery_state_repository_test.dart` | `_MockQuestionMasteryStateRepository` + fake `Box` | Fake box, no real Hive |
+| `test/features/practice/data/repositories/question_evaluation_repository_test.dart` | `_MockQuestionEvaluationRepository` + fake `Box` | Fake box, no real Hive |
+| `test/features/practice/data/repositories/topic_dependency_repository_test.dart` | `_MockTopicDependencyRepository` + fake `Box` | Fake box, no real Hive |
+| `test/features/practice/data/repositories/mastery_graph_repository_test.dart` | `MasteryGraphRepository.test(…)` with 4 fake boxes | Fake boxes, no real Hive |
+| `test/features/subjects/data/repositories/progress_repository_test.dart` | `_MockProgressRepository` | Zero real logic tested |
+| `test/features/subjects/data/repositories/topic_repository_test.dart` | `_MockTopicRepository` | Zero real logic tested |
+| `test/features/planner/data/repositories/pending_action_repository_test.dart` | `_MockPendingActionRepository` | Zero real logic tested |
+| `test/features/planner/data/repositories/roadmap_repository_test.dart` | `_MockRoadmapRepository` | Zero real logic tested |
+| `test/features/planner/data/repositories/plan_adherence_repository_test.dart` | `_MockPlanAdherenceRepository` | Zero real logic tested |
+| `test/features/planner/data/repositories/engagement_nudge_repository_test.dart` | `_MockEngagementNudgeRepository` | Zero real logic tested |
+| `test/features/planner/data/repositories/student_availability_repository_test.dart` | `MockStudentAvailabilityBox` | Fake box, no real Hive |
 
-**Rationale:** Violates DRY—any change to `SettingsController` requires updating two test files. The `app_providers_test.dart` version is the weaker of the two and should be removed (or restructured to only test the pure `Provider` declarations, not `SettingsController`).
+### Missing test file:
 
-**Acceptance Criteria:**
-- Only one test location for `SettingsController` exists
-- The surviving test uses `implements SettingsRepository` (not `as dynamic`)
-- All `updateXxx` methods verify controller state changed, not just that the repo was called
-- Error cases assert state remains unchanged
+| Source | Location |
+|---|---|
+| `lib/features/practice/presentation/widgets/practice_sheet_template.dart` | No test file exists anywhere |
 
----
+### Misplaced tests (inconsistent with conventions & sibling `exam_session_screen_test.dart`):
 
-## Issue 2: Missing Test Files for Constants
+| Current Location | Correct Location |
+|---|---|
+| `test/features/practice/presentation/practice_screen_test.dart` | `test/features/practice/presentation/screens/practice_screen_test.dart` |
+| `test/features/practice/presentation/practice_results_screen_test.dart` | `test/features/practice/presentation/screens/practice_results_screen_test.dart` |
+| `test/features/practice/presentation/practice_session_screen_test.dart` | `test/features/practice/presentation/screens/practice_session_screen_test.dart` |
 
-**Affected Files:**
-- `lib/core/constants/app_constants.dart` → **no test** (should be `test/core/constants/app_constants_test.dart`)
-- `lib/core/constants/llm_defaults.dart` → **no test** (should be `test/core/constants/llm_defaults_test.dart`)
+## Rationale
 
-**Rationale:** `app_constants.dart` defines `defaultModelForProvider` and other app-wide constants; `llm_defaults.dart` defines model pricing and configuration constants. Per `AGENTS.md` convention, every source file must have a companion test.
+The mock/fake-based repository tests verify that an **in-memory `Map` with a hand-written CRUD wrapper** works correctly — they do not test the actual `AttemptRepository`, `SpacedRepetitionRepository`, etc. This means:
 
-**Acceptance Criteria:**
-- `test/core/constants/app_constants_test.dart` exists, covering `defaultModelForProvider` and exported constants
-- `test/core/constants/llm_defaults_test.dart` exists, covering pricing/default configurations
+- **Hive serialization/deserialization** is never exercised for these repositories.
+- **Box initialization errors** (`init()` calling `Hive.openBox`) are never tested.
+- **Migration scenarios** (adding/removing fields, legacy data) have zero coverage.
+- **Null-safety and type coercion** in real Hive reads are not validated.
+- **Write conflicts, concurrent access, and deletion cascades** are invisible.
 
----
+The project already has a working pattern for proper repository testing: `badge_repository_test.dart` (fake box + real Hive `init()` group), `question_repository_test.dart` (unit tests with mock box + Hive integration group), and `lesson_repository_test.dart` show how to do it right.
 
-## Issue 3: `clock.dart` Has No Dedicated Unit Test
+The `practice_sheet_template_test.dart` gap violates the explicit convention in `AGENTS.md` that every source file must have a test.
 
-**Affected Files:**
-- `lib/core/utils/clock.dart` (8 lines: `Clock` abstract class + `SystemClock`)
-- No file at `test/core/utils/clock_test.dart`
+The misplaced screen tests create confusion: sibling `exam_session_screen_test.dart` correctly lives under `presentation/screens/`, but 3 other screen tests sit in the parent directory. Tooling and convention-aware developers will not find them in the expected location.
 
-**Rationale:** `clock.dart` is used by at least 4 services (`teaching_providers`, `practice_session_service`, `conversation_manager`, `tutor_service`) through codebase trace. Its `Clock` abstraction is the standard mechanism for making time-based logic testable. Without a dedicated test, there is no guarantee that `SystemClock.now()` fulfills the contract.
+## Acceptance Criteria
 
-**Acceptance Criteria:**
-- `test/core/utils/clock_test.dart` exists
-- Verifies `Clock` can be subclassed
-- Verifies `SystemClock.now()` returns a `DateTime` close to real time (within tolerance)
+1. **Real Hive integration group added to each affected repository test**: Each repository listed above should have a test group that initializes a real Hive instance (temp directory), registers the real adapter, opens the real box, and performs at least one CRUD round-trip. Follow the pattern in `badge_repository_test.dart` (lines 291–358) or `question_repository_test.dart` (lines 727–761).
 
----
+2. **`practice_sheet_template_test.dart` created**: Tests should verify:
+   - Widget renders with title and children
+   - `PracticeSheetTemplate.show()` opens a modal bottom sheet
+   - Calling `show()` with various children renders correctly
+   - Tapping the title area does not dismiss (if applicable)
+   - Empty children list renders safely
 
-## Issue 4: Test Placement Anomaly—`localization_helpers` Test in Wrong Directory
+3. **Three screen tests moved**: `practice_screen_test.dart`, `practice_results_screen_test.dart`, and `practice_session_screen_test.dart` should be moved to `test/features/practice/presentation/screens/` and import paths updated. No test logic should change.
 
-**Affected Files:**
-- Source: `lib/core/utils/localization_helpers.dart`
-- Test: `test/core/services/localization_service_test.dart`
-
-**Rationale:** Per `AGENTS.md`, the test file for `lib/core/utils/localization_helpers.dart` should be at `test/core/utils/localization_helpers_test.dart`, not under `services/`. This causes confusion when developers search for tests by location convention.
-
-**Acceptance Criteria:**
-- Test file moved/content copied to `test/core/utils/localization_helpers_test.dart`
-- Original `test/core/services/localization_service_test.dart` removed or replaced with a redirecting import comment
-
----
-
-## Issue 5: Heavy Fake Pattern in Lesson Provider Tests
-
-**Affected Files:**
-- `test/features/lessons/providers/lesson_providers_test.dart`
-
-**Problem:**
-`_FakeLessonService` extends `LessonService`, which requires passing a full `DatabaseService` with **8 concrete repositories** to `super()`:
-
-```dart
-super(database: DatabaseService(
-  topicRepository: TopicRepository(),
-  questionRepository: QuestionRepository(),
-  attemptRepository: AttemptRepository(),
-  lessonRepository: LessonRepository(),
-  sessionRepository: SessionRepository(),
-  subjectRepository: SubjectRepository(),
-  conversationRepository: ConversationRepository(),
-  tutorSessionRepository: TutorSessionRepository(),
-));
-```
-
-All 8 repositories are dead weight—every overridden method in the fake ignores them entirely. This pattern repeats across other fake/service test files. The fakes are fragile: if `DatabaseService` or `LessonService` constructors change, all fakes break even though no real behavior depends on those parameters.
-
-**Accepted Criteria (for a targeted refactor):**
-- `_FakeLessonService` (and similar fakes) should not depend on concrete `DatabaseService` construction
-- Options: Extract a `LessonServiceBase` abstract class, or make the fake not extend the real class (just implement the same public interface)
-
----
-
-## Issue 6: Orphan Test File `test/core/model_test.dart`
-
-**Affected Files:**
-- `test/core/model_test.dart`
-
-**Problem:**
-This file exists at `test/core/model_test.dart` but there is no corresponding source at `lib/core/model.dart`. It tests `main.dart` (app loading) and `QuestionModel` (which already has its own test at `test/core/data/models/question_model_test.dart`). This creates confusion about where tests live.
-
-**Acceptance Criteria:**
-- App loading test moved to a more appropriate location (e.g., `test/app_test.dart` or integrated into existing widget tests)
-- `QuestionModel` tests removed from this file (already covered elsewhere)
-- Orphan file deleted
+4. **Build/tests pass**: `flutter test` passes with zero failures after all changes.

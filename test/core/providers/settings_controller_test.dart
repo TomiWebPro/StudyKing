@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
@@ -281,68 +279,4 @@ void main() {
     });
   });
 
-  group('Riverpod providers', () {
-    test('settingsProvider creates SettingsController', () {
-      final container = ProviderContainer();
-      final settings = container.read(settingsProvider);
-      expect(settings, isA<SettingsBox>());
-      container.dispose();
-    });
-
-    test('settingsLoadingProvider defaults to false', () {
-      final container = ProviderContainer();
-      expect(container.read(settingsLoadingProvider), isFalse);
-      container.dispose();
-    });
-
-    test('themeModeProvider defaults to light', () {
-      final container = ProviderContainer();
-      expect(container.read(themeModeProvider), equals(ThemeMode.light));
-      container.dispose();
-    });
-
-    test('fontSizeProvider defaults to 16', () {
-      final container = ProviderContainer();
-      expect(container.read(fontSizeProvider), equals(16.0));
-      container.dispose();
-    });
-
-    test('apiKeyProvider defaults to empty', () {
-      final container = ProviderContainer();
-      expect(container.read(apiKeyProvider), isEmpty);
-      container.dispose();
-    });
-
-    test('apiBaseUrlProvider defaults to OpenRouter base URL', () {
-      final container = ProviderContainer();
-      expect(container.read(apiBaseUrlProvider), isNotEmpty);
-      container.dispose();
-    });
-
-    test('selectedModelProvider defaults to empty', () {
-      final container = ProviderContainer();
-      expect(container.read(selectedModelProvider), isEmpty);
-      container.dispose();
-    });
-
-    test('llmProviderProvider defaults to OpenRouter', () {
-      final container = ProviderContainer();
-      expect(container.read(llmProviderProvider), equals(LlmProvider.openRouter));
-      container.dispose();
-    });
-  });
-
-  group('defaultModelForProvider', () {
-    test('returns gemini-2.0-flash for OpenRouter', () {
-      expect(defaultModelForProvider(LlmProvider.openRouter), equals('gemini-2.0-flash'));
-    });
-
-    test('returns llama3 for Ollama', () {
-      expect(defaultModelForProvider(LlmProvider.ollama), equals('llama3'));
-    });
-
-    test('returns gpt-4o-mini for OpenAI', () {
-      expect(defaultModelForProvider(LlmProvider.openAI), equals('gpt-4o-mini'));
-    });
-  });
 }

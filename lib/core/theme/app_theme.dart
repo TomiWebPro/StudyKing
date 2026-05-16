@@ -129,6 +129,10 @@ class AppTheme {
     );
   }
 
+  static const bottomSheetShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  );
+
   static Color progressColor(double value, BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     if (value >= 0.8) return cs.primary;

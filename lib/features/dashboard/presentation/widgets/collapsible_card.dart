@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class CollapsibleCard extends ConsumerWidget {
@@ -80,23 +80,36 @@ class CollapsibleCard extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(child: title),
-                    Icon(
-                      isCollapsed ? Icons.expand_more : Icons.expand_less,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    Tooltip(
+                      message: isCollapsed
+                          ? AppLocalizations.of(context)!.tapToExpand
+                          : AppLocalizations.of(context)!.tapToCollapse,
+                      child: Icon(
+                        isCollapsed ? Icons.expand_more : Icons.expand_less,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          if (!isCollapsed) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: ResponsiveUtils.cardPadding(context),
-              child: content,
-            ),
-          ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: isCollapsed
+                ? const SizedBox.shrink()
+                : Column(
+                    children: [
+                      const Divider(height: 1),
+                      Padding(
+                        padding: ResponsiveUtils.cardPadding(context),
+                        child: content,
+                      ),
+                    ],
+                  ),
+          ),
         ],
       ),
     );

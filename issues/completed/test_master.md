@@ -1,72 +1,118 @@
-# Test: Core error module test suite has structural redundancy, convention violations, and untested code paths
+# Test Coverage & Structural Gaps
 
-## Context
+## Summary
 
-`lib/core/errors/` contains three source files (`exceptions.dart`, `handlers.dart`, `result.dart`) covered by three test files (`test/core/errors/exceptions_test.dart`, `handle_error_ui_test.dart`, `result_and_conversion_test.dart`) totalling ~3070 lines. Despite high nominal coverage, the suite has significant structural problems.
+Despite near-100% file-level test coverage, several structural and qualitative issues undermine test maintainability and completeness.
 
-## Issues
+---
 
-### 1. Convention violation: `exceptions_test.dart` mixes unit tests and widget tests
+## Issue 1: Duplicate SettingsController Test Files
 
-Per `AGENTS.md`: *"Keep unit tests and widget tests in separate files — never mix them in the same file."*
+**Affected Files:**
+- `test/core/providers/app_providers_test.dart` (tests `SettingsController` with unsafe mock)
+- `test/core/providers/settings_controller_test.dart` (tests same `SettingsController` with proper fake)
 
-`exceptions_test.dart` contains both:
-- Pure unit tests for exception classes (lines 35–438: `toString`, codes, `originalError`, custom overrides)
-- Widget tests for `AppErrorHandler` SnackBar rendering (lines 469–788: `handleError`, `handleSyncError`, icon assertions, retry callback tests)
+**Problem:**
+Both files test the same `SettingsController` class from `lib/core/providers/app_providers.dart`. They use different fake/mock strategies and have inconsistent quality:
 
-These should be split into two files: one in `test/core/errors/exceptions_test.dart` (pure unit) and a widget test in a separate file.
-
-### 2. `captureContext` helper duplicated across all three test files
-
-The identical `captureContext` helper function appears verbatim in:
-- `test/core/errors/exceptions_test.dart` (lines 7–24)
-- `test/core/errors/handle_error_ui_test.dart` (lines 7–24)
-- `test/core/errors/result_and_conversion_test.dart` (lines 15–32)
-
-A common `test/core/errors/shared_test_helpers.dart` should be extracted and reused.
-
-### 3. Massive overlapping coverage and no clear boundary between test files
-
-Each of the three files tests overlapping aspects of `handlers.dart`:
-
-| File | What it tests from `handlers.dart` | Lines |
+| Dimension | `app_providers_test.dart` | `settings_controller_test.dart` |
 |---|---|---|
-| `exceptions_test.dart` | `handleError`, `handleSyncError`, `getRetryText` (for 4 exception types) + icons | ~320 widget lines |
-| `handle_error_ui_test.dart` | `handleError`, `handleSyncError`, `safely`, `safelySync` icons, retry combos, durations, edge cases | ~1528 lines |
-| `result_and_conversion_test.dart` | `_convertToAppException` via `safelySync`/`handleError` (18 conversion patterns) + `getRetryText` (complete) + `toString` | ~753 lines |
+| Fake type | `_MockSettingsRepository` (no `implements`) | `_FakeSettingsRepository implements SettingsRepository` |
+| Type safety | `mockRepo as dynamic` (unsafe) | Proper interface implementation |
+| Assertions | Only checks repo was called | Asserts state change on controller |
+| Error handling | Test with zero assertions | Validates state unchanged on error |
 
-A change to `handleSyncError` may require updates in all three files. The test responsibility should be clearly assigned per source file (one test file per source file).
+**Rationale:** Violates DRY—any change to `SettingsController` requires updating two test files. The `app_providers_test.dart` version is the weaker of the two and should be removed (or restructured to only test the pure `Provider` declarations, not `SettingsController`).
 
-### 4. `_convertToAppException` tested only via UI integration, never as pure logic
+**Acceptance Criteria:**
+- Only one test location for `SettingsController` exists
+- The surviving test uses `implements SettingsRepository` (not `as dynamic`)
+- All `updateXxx` methods verify controller state changed, not just that the repo was called
+- Error cases assert state remains unchanged
 
-The private `_convertToAppException` method (lines 235–298 of `handlers.dart`) contains 18 conversion rules, all tested via `safelySync`/`handleError` which require `BuildContext` + widget pumping. This makes each conversion test slow (~100ms per widget test) and coupled to Flutter.
+---
 
-These are pure string-matching → exception mapping rules that should be tested as fast synchronous unit tests. A refactor to make this method package-private (or extractable) would enable direct unit testing in microseconds rather than milliseconds.
+## Issue 2: Missing Test Files for Constants
 
-### 5. `_logError` / Logger interaction is never verified
+**Affected Files:**
+- `lib/core/constants/app_constants.dart` → **no test** (should be `test/core/constants/app_constants_test.dart`)
+- `lib/core/constants/llm_defaults.dart` → **no test** (should be `test/core/constants/llm_defaults_test.dart`)
 
-`handlers.dart` method `_logError` calls `_logger.e(...)` (line 231), but no test verifies that logging actually fires. The `AppErrorHandler.handleError` docstring promises *"Log to analytics"* but there is no assertion that the logger was called with the correct context name. If the logger silently fails (e.g., a future refactor changes the Logger API), no test would catch it.
+**Rationale:** `app_constants.dart` defines `defaultModelForProvider` and other app-wide constants; `llm_defaults.dart` defines model pricing and configuration constants. Per `AGENTS.md` convention, every source file must have a companion test.
 
-### 6. Missing test for `conversation_phase.dart`
+**Acceptance Criteria:**
+- `test/core/constants/app_constants_test.dart` exists, covering `defaultModelForProvider` and exported constants
+- `test/core/constants/llm_defaults_test.dart` exists, covering pricing/default configurations
 
-`lib/features/teaching/services/conversation_phase.dart` (an 8-line enum: `greeting`, `teaching`, `exercise`, `feedback`, `adaptiveReview`, `closing`) has no corresponding test file. AGENTS.md requires every `lib/features/*/` source file to have a test file. Although trivial, a basic test verifying:
-- All 6 enum values exist
-- Values are ordered correctly (since the conversation state machine relies on phase transitions)
-should exist at `test/features/teaching/services/conversation_phase_test.dart`.
+---
 
-## Rationale
+## Issue 3: `clock.dart` Has No Dedicated Unit Test
 
-- **Convention violations** make the test suite harder to navigate and violate project policy.
-- **Duplication** means maintainers must update 3 files for a single handler change, increasing the chance of stale tests.
-- **Integration-only testing** of `_convertToAppException` makes a pure-logic method ~10× slower to test than necessary.
-- **Unverified side effects** (`_logError`) is a common real-world regression vector.
-- **Missing enum test** may seem minor, but downstream state machine behavior depends on phase ordering.
+**Affected Files:**
+- `lib/core/utils/clock.dart` (8 lines: `Clock` abstract class + `SystemClock`)
+- No file at `test/core/utils/clock_test.dart`
 
-## Acceptance Criteria
+**Rationale:** `clock.dart` is used by at least 4 services (`teaching_providers`, `practice_session_service`, `conversation_manager`, `tutor_service`) through codebase trace. Its `Clock` abstraction is the standard mechanism for making time-based logic testable. Without a dedicated test, there is no guarantee that `SystemClock.now()` fulfills the contract.
 
-- [ ] `exceptions_test.dart` is split: unit tests stay, widget tests move to a dedicated widget test file
-- [ ] `captureContext` is extracted to `test/core/errors/shared_test_helpers.dart` and imported by error test files
-- [ ] Each `lib/core/errors/` source file has exactly one corresponding test file with clear responsibility boundaries
-- [ ] `_convertToAppException` is refactored to be testable without `BuildContext` (or extracted to a package-private helper) and has direct synchronous unit tests covering all 18 conversion rules
-- [ ] `_logError` interaction is verified (spy/fake logger asserts the correct tag and message are logged)
-- [ ] `test/features/teaching/services/conversation_phase_test.dart` exists and covers all 6 enum values and ordering
+**Acceptance Criteria:**
+- `test/core/utils/clock_test.dart` exists
+- Verifies `Clock` can be subclassed
+- Verifies `SystemClock.now()` returns a `DateTime` close to real time (within tolerance)
+
+---
+
+## Issue 4: Test Placement Anomaly—`localization_helpers` Test in Wrong Directory
+
+**Affected Files:**
+- Source: `lib/core/utils/localization_helpers.dart`
+- Test: `test/core/services/localization_service_test.dart`
+
+**Rationale:** Per `AGENTS.md`, the test file for `lib/core/utils/localization_helpers.dart` should be at `test/core/utils/localization_helpers_test.dart`, not under `services/`. This causes confusion when developers search for tests by location convention.
+
+**Acceptance Criteria:**
+- Test file moved/content copied to `test/core/utils/localization_helpers_test.dart`
+- Original `test/core/services/localization_service_test.dart` removed or replaced with a redirecting import comment
+
+---
+
+## Issue 5: Heavy Fake Pattern in Lesson Provider Tests
+
+**Affected Files:**
+- `test/features/lessons/providers/lesson_providers_test.dart`
+
+**Problem:**
+`_FakeLessonService` extends `LessonService`, which requires passing a full `DatabaseService` with **8 concrete repositories** to `super()`:
+
+```dart
+super(database: DatabaseService(
+  topicRepository: TopicRepository(),
+  questionRepository: QuestionRepository(),
+  attemptRepository: AttemptRepository(),
+  lessonRepository: LessonRepository(),
+  sessionRepository: SessionRepository(),
+  subjectRepository: SubjectRepository(),
+  conversationRepository: ConversationRepository(),
+  tutorSessionRepository: TutorSessionRepository(),
+));
+```
+
+All 8 repositories are dead weight—every overridden method in the fake ignores them entirely. This pattern repeats across other fake/service test files. The fakes are fragile: if `DatabaseService` or `LessonService` constructors change, all fakes break even though no real behavior depends on those parameters.
+
+**Accepted Criteria (for a targeted refactor):**
+- `_FakeLessonService` (and similar fakes) should not depend on concrete `DatabaseService` construction
+- Options: Extract a `LessonServiceBase` abstract class, or make the fake not extend the real class (just implement the same public interface)
+
+---
+
+## Issue 6: Orphan Test File `test/core/model_test.dart`
+
+**Affected Files:**
+- `test/core/model_test.dart`
+
+**Problem:**
+This file exists at `test/core/model_test.dart` but there is no corresponding source at `lib/core/model.dart`. It tests `main.dart` (app loading) and `QuestionModel` (which already has its own test at `test/core/data/models/question_model_test.dart`). This creates confusion about where tests live.
+
+**Acceptance Criteria:**
+- App loading test moved to a more appropriate location (e.g., `test/app_test.dart` or integrated into existing widget tests)
+- `QuestionModel` tests removed from this file (already covered elsewhere)
+- Orphan file deleted

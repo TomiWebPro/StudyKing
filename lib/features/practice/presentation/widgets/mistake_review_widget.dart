@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
@@ -24,9 +25,7 @@ class MistakeReviewWidget extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: AppTheme.bottomSheetShape,
       builder: (context) => MistakeReviewWidget(
         mistakes: mistakes,
         onRedo: onRedo,

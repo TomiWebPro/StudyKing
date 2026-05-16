@@ -419,7 +419,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         Wrap(
           spacing: 8,
           children: durations.map((d) => ChoiceChip(
-            label: Text('$d min'),
+            label: Text(l10n.durationMinutes(d)),
             selected: _durationMinutes == d,
             onSelected: (_) => setState(() => _durationMinutes = d),
           )).toList(),
@@ -465,10 +465,10 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
-            _buildResultRow(l10n.totalQuestions, '${result.questionResults.length}'),
-            _buildResultRow(l10n.correctAnswers, '${result.totalCorrect}'),
-            _buildResultRow(l10n.incorrectLabel, '${result.totalIncorrect}'),
-            _buildResultRow(l10n.skippedLabel, '${result.totalSkipped}'),
+            _buildResultRow(l10n.totalQuestions, formatDecimal(result.questionResults.length.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
+            _buildResultRow(l10n.correctAnswers, formatDecimal(result.totalCorrect.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
+            _buildResultRow(l10n.incorrectLabel, formatDecimal(result.totalIncorrect.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
+            _buildResultRow(l10n.skippedLabel, formatDecimal(result.totalSkipped.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
             _buildResultRow(
               l10n.accuracy,
               formatPercent(result.accuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),

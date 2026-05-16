@@ -134,4 +134,41 @@ void main() {
       expect(repo.box, same(box));
     });
   });
+
+  group('Repository.openBox', () {
+    late _TestRepository repo;
+    const boxName = 'open_box_test';
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('hive_openbox_test_');
+      Hive.init(dir.path);
+      repo = _TestRepository();
+      await repo.openBox(boxName);
+    });
+
+    tearDown(() async {
+      if (Hive.isBoxOpen(boxName)) {
+        await Hive.deleteBoxFromDisk(boxName);
+      }
+    });
+
+    test('openBox creates a box and allows operations', () async {
+      await repo.save('k1', _TestItem('1', 'abc'));
+      final result = await repo.get('k1');
+      expect(result, isNotNull);
+      expect(result!.name, 'abc');
+    });
+
+    test('openBox box contains saved items', () async {
+      await repo.save('k1', _TestItem('1', 'x'));
+      await repo.save('k2', _TestItem('2', 'y'));
+      final all = await repo.getAll();
+      expect(all, hasLength(2));
+    });
+
+    test('openBox box getter works', () {
+      expect(repo.box, isNotNull);
+      expect(repo.box.name, boxName);
+    });
+  });
 }

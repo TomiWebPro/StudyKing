@@ -2,6 +2,7 @@ export 'data/repositories/badge_repository.dart';
 export 'presentation/dashboard_screen.dart';
 export 'providers/dashboard_providers.dart';
 export 'providers/dashboard_data_providers.dart';
+export 'providers/dashboard_layout_providers.dart';
 export 'presentation/widgets/dashboard_header.dart';
 export 'presentation/widgets/summary_row.dart';
 export 'presentation/widgets/weekly_chart.dart';

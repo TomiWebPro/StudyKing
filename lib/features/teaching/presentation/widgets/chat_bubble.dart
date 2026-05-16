@@ -136,6 +136,12 @@ class ChatBubble extends StatelessWidget {
     }
   }
 
+  String _evaluationSemanticLabel(BuildContext context, double score) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = score >= 0.7 ? l10n.correctFeedback : (score <= 0.3 ? l10n.incorrectFeedback : 'Partial');
+    return '$label, ${formatPercent(score * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}';
+  }
+
   Widget _buildEvaluationContent(BuildContext context, String content) {
     try {
       final data = jsonDecode(content) as Map<String, dynamic>;
@@ -152,7 +158,7 @@ class ChatBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Semantics(
-            label: score >= 0.7 ? 'Correct' : (score <= 0.3 ? 'Incorrect' : 'Partial'),
+            label: _evaluationSemanticLabel(context, score),
             child: Row(
               children: [
                 Icon(

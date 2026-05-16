@@ -43,7 +43,11 @@ void main() {
       expect(controller.transcribedText, isA<Stream<String>>());
     });
 
-    test('requestPermission returns false', () async {
+    test('listeningState stream is available', () {
+      expect(controller.listeningState, isA<Stream<bool>>());
+    });
+
+    test('requestPermission returns false in test environment', () async {
       final granted = await controller.requestPermission();
       expect(granted, isFalse);
     });

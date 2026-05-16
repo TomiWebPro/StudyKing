@@ -45,6 +45,15 @@ class Source extends HiveObject {
   @HiveField(13, defaultValue: [])
   final List<String> generatedQuestionIds;
 
+  @HiveField(14, defaultValue: '')
+  final String extractionMethod;
+
+  @HiveField(15, defaultValue: '')
+  final String chunks;
+
+  @HiveField(16, defaultValue: '')
+  final String extractionMeta;
+
   Source({
     required this.id,
     required this.title,
@@ -60,6 +69,9 @@ class Source extends HiveObject {
     this.processingStatus = 'pending',
     this.extractedText = '',
     this.generatedQuestionIds = const [],
+    this.extractionMethod = '',
+    this.chunks = '',
+    this.extractionMeta = '',
   });
 
   ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
@@ -82,6 +94,9 @@ class Source extends HiveObject {
     'processingStatus': processingStatus,
     'extractedText': extractedText,
     'generatedQuestionIds': generatedQuestionIds,
+    'extractionMethod': extractionMethod,
+    'chunks': chunks,
+    'extractionMeta': extractionMeta,
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -105,6 +120,9 @@ class Source extends HiveObject {
             ?.map((e) => e as String)
             .toList() ??
         [],
+    extractionMethod: json['extractionMethod'] as String? ?? '',
+    chunks: json['chunks'] as String? ?? '',
+    extractionMeta: json['extractionMeta'] as String? ?? '',
   );
 
   Source copyWith({
@@ -122,6 +140,9 @@ class Source extends HiveObject {
     String? processingStatus,
     String? extractedText,
     List<String>? generatedQuestionIds,
+    String? extractionMethod,
+    String? chunks,
+    String? extractionMeta,
   }) {
     return Source(
       id: id ?? this.id,
@@ -138,6 +159,9 @@ class Source extends HiveObject {
       processingStatus: processingStatus ?? this.processingStatus,
       extractedText: extractedText ?? this.extractedText,
       generatedQuestionIds: generatedQuestionIds ?? this.generatedQuestionIds,
+      extractionMethod: extractionMethod ?? this.extractionMethod,
+      chunks: chunks ?? this.chunks,
+      extractionMeta: extractionMeta ?? this.extractionMeta,
     );
   }
 }

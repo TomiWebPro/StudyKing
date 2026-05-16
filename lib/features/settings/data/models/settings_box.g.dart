@@ -90,4 +90,3 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

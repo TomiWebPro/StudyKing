@@ -64,5 +64,21 @@ void main() {
       expect(find.text('W7'), findsOneWidget);
       expect(find.text('W10'), findsNothing);
     });
+
+    testWidgets('shows default day labels when trend is empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const WeeklyChart(weeklyTrend: []),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
+      expect(find.text('Mon'), findsOneWidget);
+      expect(find.text('Tue'), findsOneWidget);
+      expect(find.text('Wed'), findsOneWidget);
+      expect(find.text('Thu'), findsOneWidget);
+      expect(find.text('Fri'), findsOneWidget);
+      expect(find.text('Sat'), findsOneWidget);
+      expect(find.text('Sun'), findsOneWidget);
+    });
   });
 }

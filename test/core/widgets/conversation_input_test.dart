@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget wrapApp(Widget child) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
     home: Scaffold(
       body: child,
     ),
@@ -260,6 +262,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: MediaQuery(
             data: const MediaQueryData(
               padding: EdgeInsets.only(bottom: 20),

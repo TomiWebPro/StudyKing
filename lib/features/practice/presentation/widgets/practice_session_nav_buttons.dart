@@ -20,20 +20,19 @@ class PracticeSessionNavButtons extends StatelessWidget {
     if (bp == ScreenBreakpoint.xs) {
       return Column(
         children: [
-          if (onPrevious != null)
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(5),
-              child: Semantics(
-                label: l10n.previous,
-                child: ElevatedButton.icon(
-                  onPressed: onPrevious,
-                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                  icon: const Icon(Icons.arrow_back),
-                  label: Text(l10n.previous),
-                ),
+          FocusTraversalOrder(
+            order: const NumericFocusOrder(5),
+            child: Semantics(
+              label: l10n.previous,
+              child: ElevatedButton.icon(
+                onPressed: onPrevious,
+                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                icon: const Icon(Icons.arrow_back),
+                label: Text(l10n.previous),
               ),
             ),
-          if (onPrevious != null) const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 16),
           FocusTraversalOrder(
             order: const NumericFocusOrder(6),
             child: Semantics(
@@ -52,22 +51,21 @@ class PracticeSessionNavButtons extends StatelessWidget {
 
     return Row(
       children: [
-        if (onPrevious != null)
-          Expanded(
-            child: FocusTraversalOrder(
-              order: const NumericFocusOrder(5),
-              child: Semantics(
-                label: l10n.previous,
-                child: ElevatedButton.icon(
-                  onPressed: onPrevious,
-                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                  icon: const Icon(Icons.arrow_back),
-                  label: Text(l10n.previous),
-                ),
+        Expanded(
+          child: FocusTraversalOrder(
+            order: const NumericFocusOrder(5),
+            child: Semantics(
+              label: l10n.previous,
+              child: ElevatedButton.icon(
+                onPressed: onPrevious,
+                style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                icon: const Icon(Icons.arrow_back),
+                label: Text(l10n.previous),
               ),
             ),
           ),
-        if (onPrevious != null) const SizedBox(width: 16),
+        ),
+        const SizedBox(width: 16),
         Expanded(
           child: FocusTraversalOrder(
             order: const NumericFocusOrder(6),

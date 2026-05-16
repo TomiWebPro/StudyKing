@@ -337,6 +337,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
+          semanticLabel: AppLocalizations.of(ctx)!.progressReport,
           title: Row(
             children: [
               Icon(Icons.analytics,

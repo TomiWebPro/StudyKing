@@ -111,13 +111,29 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
               return AnimatedBuilder(
                 animation: _pulseController,
                 builder: (context, child) {
-                  final disableAnimations = MediaQuery.disableAnimationsOf(context);
-                  final pulse = widget.isPaused || disableAnimations
-                      ? 1.0
-                      : 1.0 + (_pulseController.value * 0.03);
-                  return Transform.scale(
-                    scale: pulse,
-                    child: child,
+                  final disableAnimations = MediaQuery.disableAnimationsOf(context) || widget.reduceMotion;
+                  if (widget.isPaused || disableAnimations) {
+                    return child!;
+                  }
+                  final ringOpacity = _pulseController.value * 0.15;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      child!,
+                      IgnorePointer(
+                        child: Container(
+                          width: size,
+                          height: size,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: progressColor.withValues(alpha: ringOpacity),
+                              width: 4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               child: SizedBox(

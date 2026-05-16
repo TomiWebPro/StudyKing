@@ -3,6 +3,9 @@ import '../errors/result.dart';
 import '../utils/logger.dart';
 import 'llm/llm_chat_service.dart';
 
+@Deprecated('Use ContentPipeline instead. PdfIngestionService duplicates logic '
+    'that ContentPipeline already handles (classification, summarization, '
+    'question generation/extraction).')
 class PdfIngestionException implements Exception {
   final String message;
   PdfIngestionException(this.message);
@@ -10,6 +13,10 @@ class PdfIngestionException implements Exception {
   String toString() => message;
 }
 
+@Deprecated('Use ContentPipeline instead. PdfIngestionService duplicates logic '
+    'that ContentPipeline already handles. The _generateQuestions method in '
+    'ContentPipeline now handles both extracting existing questions and '
+    'generating new ones.')
 class PdfIngestionService {
   final LlmService _llmService;
   final Logger _logger = const Logger('PdfIngestionService');

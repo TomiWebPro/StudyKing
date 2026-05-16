@@ -8,6 +8,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
   );
@@ -21,8 +22,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('0%'), findsOneWidget);
-      expect(find.text('0h'), findsOneWidget);
+      expect(find.text('0.0%'), findsOneWidget);
+      expect(find.text('0.0h'), findsOneWidget);
       expect(find.text('0'), findsAtLeast(1));
     });
 
@@ -32,7 +33,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('0%'), findsOneWidget);
+      expect(find.text('0.0%'), findsOneWidget);
     });
 
     testWidgets('displays accuracy percentage', (tester) async {
@@ -41,7 +42,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('85%'), findsOneWidget);
+      expect(find.text('85.0%'), findsOneWidget);
     });
 
     testWidgets('displays study time hours', (tester) async {

@@ -8,7 +8,7 @@ Widget _buildTestApp(Widget child) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
-    home: Scaffold(body: child),
+    home: Scaffold(body: SingleChildScrollView(child: child)),
   );
 }
 

@@ -5,54 +5,160 @@ import 'package:studyking/features/ingestion/services/document_extractor.dart';
 void main() {
   group('DocumentExtractor', () {
     group('extractText', () {
-      test('returns rawContent for SourceType.pdf', () {
+      test('returns direct text for SourceType.pdf', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'pdf content', sourceType: SourceType.pdf), 'pdf content');
+        final result = await extractor.extractText(
+          rawContent: 'pdf content',
+          sourceType: SourceType.pdf,
+        );
+        expect(result.text, 'pdf content');
+        expect(result.extractionMethod, 'pdf_text_direct');
       });
 
-      test('returns rawContent for SourceType.document', () {
+      test('returns direct text for SourceType.document', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'doc content', sourceType: SourceType.document), 'doc content');
+        final result = await extractor.extractText(
+          rawContent: 'doc content',
+          sourceType: SourceType.document,
+        );
+        expect(result.text, 'doc content');
       });
 
-      test('returns rawContent for SourceType.textbook', () {
+      test('returns direct text for SourceType.textbook', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'textbook content', sourceType: SourceType.textbook), 'textbook content');
+        final result = await extractor.extractText(
+          rawContent: 'textbook content',
+          sourceType: SourceType.textbook,
+        );
+        expect(result.text, 'textbook content');
       });
 
-      test('returns rawContent for SourceType.syllabus', () {
+      test('returns direct text for SourceType.syllabus', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'syllabus content', sourceType: SourceType.syllabus), 'syllabus content');
+        final result = await extractor.extractText(
+          rawContent: 'syllabus content',
+          sourceType: SourceType.syllabus,
+        );
+        expect(result.text, 'syllabus content');
       });
 
-      test('returns rawContent for SourceType.lectureNotes', () {
+      test('returns direct text for SourceType.lectureNotes', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'notes content', sourceType: SourceType.lectureNotes), 'notes content');
+        final result = await extractor.extractText(
+          rawContent: 'notes content',
+          sourceType: SourceType.lectureNotes,
+        );
+        expect(result.text, 'notes content');
       });
 
-      test('returns rawContent for SourceType.externalResource', () {
+      test('returns direct text for SourceType.externalResource', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'resource content', sourceType: SourceType.externalResource), 'resource content');
+        final result = await extractor.extractText(
+          rawContent: 'resource content',
+          sourceType: SourceType.externalResource,
+        );
+        expect(result.text, 'resource content');
       });
 
-      test('returns rawContent for SourceType.webPage', () {
+      test('strips HTML for SourceType.webPage', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'web content', sourceType: SourceType.webPage), 'web content');
+        final result = await extractor.extractText(
+          rawContent: '<html><body><p>Hello world content here</p></body></html>',
+          sourceType: SourceType.webPage,
+        );
+        expect(result.text, contains('Hello world content here'));
+        expect(result.extractionMethod, 'html_stripped');
       });
 
-      test('returns rawContent for SourceType.image', () {
+      test('passes through non-HTML for SourceType.webPage', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'image ocr content', sourceType: SourceType.image), 'image ocr content');
+        final result = await extractor.extractText(
+          rawContent: 'plain text content',
+          sourceType: SourceType.webPage,
+        );
+        expect(result.text, 'plain text content');
+        expect(result.extractionMethod, 'web_direct');
       });
 
-      test('returns rawContent for SourceType.video', () {
+      test('returns image file path for SourceType.image with file://', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'transcript content', sourceType: SourceType.video), 'transcript content');
+        final result = await extractor.extractText(
+          rawContent: 'file:///path/to/image.png',
+          sourceType: SourceType.image,
+        );
+        expect(result.text, 'file:///path/to/image.png');
+        expect(result.extractionMethod, 'image_file');
+        expect(result.mimeType, 'image/png');
       });
 
-      test('returns rawContent for SourceType.audio', () {
+      test('returns image URL for SourceType.image with http URL', () async {
         final extractor = DocumentExtractor();
-        expect(extractor.extractText(rawContent: 'audio transcript', sourceType: SourceType.audio), 'audio transcript');
+        final result = await extractor.extractText(
+          rawContent: 'https://example.com/photo.jpg',
+          sourceType: SourceType.image,
+        );
+        expect(result.text, 'https://example.com/photo.jpg');
+        expect(result.extractionMethod, 'image_url');
+      });
+
+      test('returns video raw content for SourceType.video', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: 'transcript content',
+          sourceType: SourceType.video,
+        );
+        expect(result.text, 'transcript content');
+        expect(result.extractionMethod, 'video_raw');
+      });
+
+      test('detects YouTube URL for SourceType.video', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: 'https://youtube.com/watch?v=abc123',
+          sourceType: SourceType.video,
+        );
+        expect(result.text, 'https://youtube.com/watch?v=abc123');
+        expect(result.extractionMethod, 'youtube_url');
+      });
+
+      test('returns audio raw content for SourceType.audio', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: 'audio transcript',
+          sourceType: SourceType.audio,
+        );
+        expect(result.text, 'audio transcript');
+        expect(result.extractionMethod, 'audio_raw');
+      });
+
+      test('detects URL for SourceType.audio', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: 'https://example.com/audio.mp3',
+          sourceType: SourceType.audio,
+        );
+        expect(result.text, 'https://example.com/audio.mp3');
+        expect(result.extractionMethod, 'audio_url');
+      });
+
+      test('populates extraction metadata via toMetaJson', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: 'some content',
+          sourceType: SourceType.pdf,
+        );
+        final meta = result.toMetaJson();
+        expect(meta['extractionMethod'], isNotEmpty);
+      });
+
+      test('handles empty content gracefully', () async {
+        final extractor = DocumentExtractor();
+        final result = await extractor.extractText(
+          rawContent: '',
+          sourceType: SourceType.pdf,
+        );
+        expect(result.text, '');
+        expect(result.extractionMethod, 'pdf_empty');
       });
     });
 
@@ -88,6 +194,29 @@ void main() {
         final extractor = DocumentExtractor();
         final text = 'a' * 500;
         expect(extractor.estimateChunkCount(text, chunkSize: 100), 5);
+      });
+    });
+
+    group('stripHtmlToText', () {
+      test('strips HTML tags from content', () {
+        final result = DocumentExtractor.stripHtmlToText(
+          '<html><body><p>This is a paragraph with enough text to pass the minimum length filter.</p></body></html>',
+        );
+        expect(result, 'This is a paragraph with enough text to pass the minimum length filter.');
+      });
+
+      test('removes script and style tags', () {
+        final result = DocumentExtractor.stripHtmlToText(
+          '<html><head><style>.css{color:red}</style></head><body><script>alert("x")</script><p>This is a paragraph with enough text to pass the minimum length filter.</p></body></html>',
+        );
+        expect(result, 'This is a paragraph with enough text to pass the minimum length filter.');
+      });
+
+      test('returns empty for HTML with no text', () {
+        final result = DocumentExtractor.stripHtmlToText(
+          '<html><head></head><body></body></html>',
+        );
+        expect(result, isEmpty);
       });
     });
   });

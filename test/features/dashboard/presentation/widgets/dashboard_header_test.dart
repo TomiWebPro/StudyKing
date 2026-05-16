@@ -7,6 +7,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     home: Scaffold(body: child),
   );
 }
@@ -20,11 +21,12 @@ void main() {
       expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
 
-    testWidgets('renders study dashboard title text', (tester) async {
+    testWidgets('renders study dashboard title text with semantics', (tester) async {
       await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
       await tester.pumpAndSettle();
 
       expect(find.text('Study Dashboard'), findsOneWidget);
+      expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
   });
 }

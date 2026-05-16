@@ -129,6 +129,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (ctx) => AlertDialog(
+        semanticLabel: l10n.createRoadmap,
         title: Text(l10n.createRoadmap),
         content: Column(
           mainAxisSize: MainAxisSize.min,

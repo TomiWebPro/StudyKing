@@ -166,8 +166,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
               if (dailyPlan != null && !dailyPlan.isRestDay)
                 Text(
                   l10n.minutesCountMetric(dailyPlan.targetMinutes),
-                  style: TextStyle(
-                    fontSize: 8,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),

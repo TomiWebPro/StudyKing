@@ -8,6 +8,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     home: Scaffold(body: child),
   );
 }
@@ -58,6 +59,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Chip), findsOneWidget);
+    });
+
+    testWidgets('shows no badges yet message when empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        BadgesCard(badges: []),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No achievements yet. Keep studying!'), findsOneWidget);
+      expect(find.byIcon(Icons.emoji_events), findsNothing);
+      expect(find.byType(Chip), findsNothing);
+    });
+
+    testWidgets('renders achievements heading with semantics', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        BadgesCard(badges: [
+          const BadgeDisplay(name: 'Test Badge', description: ''),
+        ]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.emoji_events), findsAtLeast(1));
+      expect(find.byType(Semantics), findsAtLeast(1));
     });
   });
 }

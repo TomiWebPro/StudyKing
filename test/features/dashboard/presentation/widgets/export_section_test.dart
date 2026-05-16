@@ -39,15 +39,18 @@ class _FakeInstrumentation extends InstrumentationService {
   }
 }
 
-Widget _buildTestApp(Widget child) {
+Widget _buildTestApp(Widget child, {InstrumentationService? instrumentation}) {
   return ProviderScope(
     overrides: [
       dashboardStudyProgressTrackerProvider.overrideWithValue(_FakeTracker()),
-      dashboardInstrumentationServiceProvider.overrideWithValue(_FakeInstrumentation()),
+      dashboardInstrumentationServiceProvider.overrideWithValue(
+        instrumentation ?? _FakeInstrumentation(),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
       home: Scaffold(body: child),
     ),
   );
@@ -65,6 +68,95 @@ void main() {
       expect(find.byIcon(Icons.download), findsOneWidget);
       expect(find.byIcon(Icons.history), findsOneWidget);
       expect(find.byIcon(Icons.analytics), findsOneWidget);
+    });
+
+    testWidgets('renders Export CSV button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const ExportSection(studentId: 'test-student'),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Export CSV'), findsOneWidget);
+    });
+
+    testWidgets('renders Session History button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const ExportSection(studentId: 'test-student'),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session History'), findsOneWidget);
+    });
+
+    testWidgets('renders Instrumentation button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const ExportSection(studentId: 'test-student'),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Instrumentation'), findsOneWidget);
+    });
+  });
+
+  group('ExportSection.formatInstrumentation', () {
+    test('formats instrumentation with complete data', () {
+      final data = {
+        'generatedAt': '2024-06-15T10:00:00.000',
+        'planAdherence': {'overall': '85%', 'weekly': '72%'},
+        'masteryImprovement': {'algebra': '+15%', 'geometry': '+8%'},
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data);
+
+      expect(result, contains('=== Instrumentation Dashboard ==='));
+      expect(result, contains('Generated: 2024-06-15T10:00:00.000'));
+      expect(result, contains('--- Plan Adherence ---'));
+      expect(result, contains('overall: 85%'));
+      expect(result, contains('weekly: 72%'));
+      expect(result, contains('--- Mastery Improvement ---'));
+      expect(result, contains('algebra: +15%'));
+      expect(result, contains('geometry: +8%'));
+    });
+
+    test('formats instrumentation with empty data', () {
+      final data = {
+        'generatedAt': '2024-06-15T10:00:00.000',
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data);
+
+      expect(result, contains('=== Instrumentation Dashboard ==='));
+      expect(result, contains('Generated: 2024-06-15T10:00:00.000'));
+      expect(result, contains('--- Plan Adherence ---'));
+      expect(result, contains('--- Mastery Improvement ---'));
+    });
+
+    test('formats instrumentation with null sections', () {
+      final data = {
+        'generatedAt': '2024-06-15T10:00:00.000',
+        'planAdherence': null,
+        'masteryImprovement': null,
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data);
+
+      expect(result, contains('=== Instrumentation Dashboard ==='));
+      expect(result, contains('--- Plan Adherence ---'));
+      expect(result, contains('--- Mastery Improvement ---'));
+    });
+
+    test('formats instrumentation with empty map sections', () {
+      final data = {
+        'generatedAt': '2024-06-15T10:00:00.000',
+        'planAdherence': <String, dynamic>{},
+        'masteryImprovement': <String, dynamic>{},
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data);
+
+      expect(result, contains('=== Instrumentation Dashboard ==='));
+      expect(result, contains('--- Plan Adherence ---'));
+      expect(result, contains('--- Mastery Improvement ---'));
     });
   });
 }

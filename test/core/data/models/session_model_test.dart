@@ -190,6 +190,22 @@ void main() {
         expect(json['endTime'], isNull);
         expect(json['plannedDurationMinutes'], isNull);
         expect(json['sourceId'], isNull);
+        expect(json['tutorSessionId'], isNull);
+        expect(json['sourceIds'], []);
+        expect(json['lessonIds'], []);
+      });
+
+      test('serializes tutorSessionId and list fields', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorSessionId: 'tutor-1',
+          sourceIds: ['src-1', 'src-2'],
+          lessonIds: ['lesson-1'],
+        );
+        final json = session.toJson();
+        expect(json['tutorSessionId'], 'tutor-1');
+        expect(json['sourceIds'], ['src-1', 'src-2']);
+        expect(json['lessonIds'], ['lesson-1']);
       });
     });
 
@@ -396,6 +412,48 @@ void main() {
         final session = Session.fromJson(json);
         expect(session.completed, isFalse);
       });
+
+      test('handles null sourceIds defaults to empty list', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'sourceIds': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.sourceIds, isEmpty);
+      });
+
+      test('handles null lessonIds defaults to empty list', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'lessonIds': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.lessonIds, isEmpty);
+      });
+
+      test('handles missing sourceIds key defaults to empty list', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+        };
+        final session = Session.fromJson(json);
+        expect(session.sourceIds, isEmpty);
+      });
+
+      test('handles missing lessonIds key defaults to empty list', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+        };
+        final session = Session.fromJson(json);
+        expect(session.lessonIds, isEmpty);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -538,6 +596,24 @@ void main() {
         );
         final copy = session.copyWith(clearSourceId: true);
         expect(copy.sourceId, isNull);
+      });
+
+      test('clearTutorSessionId sets tutorSessionId to null', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorSessionId: 'tutor-1',
+        );
+        final copy = session.copyWith(clearTutorSessionId: true);
+        expect(copy.tutorSessionId, isNull);
+      });
+
+      test('preserves tutorSessionId when null passed without clear flag', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorSessionId: 'tutor-1',
+        );
+        final copy = session.copyWith(tutorSessionId: null);
+        expect(copy.tutorSessionId, 'tutor-1');
       });
 
       test('clearPlannedDuration sets plannedDurationMinutes to null', () {

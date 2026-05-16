@@ -214,5 +214,61 @@ void main() {
       expect(find.text('Review Mistakes'), findsOneWidget);
       expect(find.text('Review 1 mistakes from this session'), findsOneWidget);
     });
+
+    testWidgets('static show displays bottom sheet with mistakes', (tester) async {
+      bool redoCalled = false;
+      final mistakes = [_createMistake(questionText: 'What is 2+2?')];
+      await tester.pumpWidget(_buildTestApp(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              MistakeReviewWidget.show(
+                context,
+                mistakes: mistakes,
+                onRedo: () => redoCalled = true,
+              );
+            },
+            child: const Text('Show Sheet'),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is 2+2?'), findsOneWidget);
+
+      await tester.tap(find.text('Redo Incorrect Questions'));
+      await tester.pumpAndSettle();
+      expect(redoCalled, isTrue);
+    });
+
+    testWidgets('static show dismiss button works', (tester) async {
+      bool dismissCalled = false;
+      final mistakes = [_createMistake()];
+      await tester.pumpWidget(_buildTestApp(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              MistakeReviewWidget.show(
+                context,
+                mistakes: mistakes,
+                onDismiss: () => dismissCalled = true,
+              );
+            },
+            child: const Text('Show Sheet'),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Dismiss'));
+      await tester.pumpAndSettle();
+      expect(dismissCalled, isTrue);
+    });
   });
 }

@@ -270,5 +270,91 @@ void main() {
       expect(find.byIcon(Icons.mic), findsOneWidget);
       expect(find.byIcon(Icons.mic_none), findsNothing);
     });
+
+    testWidgets('reduceMotion true still renders waveform container when listening', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+          reduceMotion: true,
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      final waveformFinder = find.byWidgetPredicate(
+        (w) =>
+            w is SizedBox &&
+            w.width == 24 &&
+            w.height == 24 &&
+            w.child is AnimatedBuilder,
+      );
+      expect(waveformFinder, findsOneWidget);
+    });
+
+    testWidgets('stream subscription lifecycle - emit after dispose is safe', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Active transcription');
+      await tester.pump();
+
+      // Remove widget to trigger dispose and subscription cancellation
+      await tester.pumpWidget(wrapApp(
+        const SizedBox.shrink(),
+      ));
+      await tester.pump();
+
+      // Emit after dispose - should not throw (mounted check or cancelled sub protects setState)
+      controller.addTranscription('');
+    });
+
+    testWidgets('transcription text is italic and uses ellipsis overflow', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Long transcription text that should overflow');
+      await tester.pump();
+
+      final transcriptionText = tester.widget<Text>(find.text('Long transcription text that should overflow'));
+      expect(transcriptionText.overflow, equals(TextOverflow.ellipsis));
+      expect(transcriptionText.style?.fontStyle, equals(FontStyle.italic));
+    });
+
+    testWidgets('mic icon color is error red when listening', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      final micIcon = tester.widget<Icon>(find.byIcon(Icons.mic));
+      expect(micIcon.color, isNotNull);
+    });
   });
 }

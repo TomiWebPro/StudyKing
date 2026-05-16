@@ -8,6 +8,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
   );
@@ -147,6 +148,75 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.pie_chart), findsOneWidget);
+    });
+
+    testWidgets('shows no pie chart icon when empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicBreakdownCard(
+          allMastery: [],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.pie_chart), findsNothing);
+    });
+
+    testWidgets('shows all mastery level labels', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicBreakdownCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.1, level: MasteryLevel.novice),
+            _state(topicId: 't2', accuracy: 0.3, level: MasteryLevel.browsing),
+            _state(topicId: 't3', accuracy: 0.5, level: MasteryLevel.developing),
+            _state(topicId: 't4', accuracy: 0.7, level: MasteryLevel.proficient),
+            _state(topicId: 't5', accuracy: 0.9, level: MasteryLevel.expert),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Novice'), findsOneWidget);
+      expect(find.text('Browsing'), findsOneWidget);
+      expect(find.text('Developing'), findsOneWidget);
+      expect(find.text('Proficient'), findsOneWidget);
+      expect(find.text('Expert'), findsOneWidget);
+    });
+
+    testWidgets('shows accuracy color at different thresholds', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicBreakdownCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.85),
+            _state(topicId: 't2', accuracy: 0.65),
+            _state(topicId: 't3', accuracy: 0.45),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Geometry'), findsOneWidget);
+      expect(find.text('Calculus'), findsOneWidget);
+      expect(find.text('85%'), findsOneWidget);
+      expect(find.text('65%'), findsOneWidget);
+      expect(find.text('45%'), findsOneWidget);
+    });
+
+    testWidgets('shows topic performance header', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicBreakdownCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.5),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Topic Performance'), findsOneWidget);
     });
   });
 }

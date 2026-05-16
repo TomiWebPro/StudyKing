@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget child) {

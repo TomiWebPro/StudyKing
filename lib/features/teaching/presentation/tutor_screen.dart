@@ -215,7 +215,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: color ?? Theme.of(context).colorScheme.primary),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color ?? Theme.of(context).colorScheme.primary,
+            ),
           ),
         ],
       ),

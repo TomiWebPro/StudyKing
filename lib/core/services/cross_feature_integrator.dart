@@ -1,4 +1,5 @@
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -153,5 +154,36 @@ class CrossFeatureIntegrator {
       byType.update(s.type, (v) => v + s.actualDurationMs, ifAbsent: () => s.actualDurationMs);
     }
     return byType;
+  }
+
+  Future<void> linkSourceToTopic({
+    required String sourceId,
+    required String topicId,
+    required SourceRepository sourceRepository,
+  }) async {
+    final source = await sourceRepository.get(sourceId);
+    if (source == null) {
+      _logger.w('Source not found for linking: $sourceId');
+      return;
+    }
+    final updated = source.copyWith(topicId: topicId);
+    await sourceRepository.save(sourceId, updated);
+    _logger.d('Linked source $sourceId to topic $topicId');
+  }
+
+  Future<void> notifyPlannerOfNewContent({
+    required String sourceId,
+    required List<String> topicIds,
+    required SourceRepository sourceRepository,
+  }) async {
+    final source = await sourceRepository.get(sourceId);
+    if (source == null) {
+      _logger.w('Source not found for planner notification: $sourceId');
+      return;
+    }
+    _logger.i(
+      'Planner notification: source $sourceId linked to topics $topicIds. '
+      'Planner should re-evaluate workload.',
+    );
   }
 }

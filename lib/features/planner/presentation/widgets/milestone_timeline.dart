@@ -84,8 +84,7 @@ class MilestoneTimeline extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             l10n.milestoneShort(milestone.order),
-                            style: TextStyle(
-                              fontSize: 9,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: color,
                               fontWeight: FontWeight.w500,
                             ),
@@ -119,11 +118,10 @@ class MilestoneTimeline extends StatelessWidget {
                           : Theme.of(context).colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  '${ms.title}: ${DateFormat.MMMd(l10n.localeName).format(ms.deadline)}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: ms.isCompleted
+                  child: Text(
+                    '${ms.title}: ${DateFormat.MMMd(l10n.localeName).format(ms.deadline)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: ms.isCompleted
                         ? Theme.of(context).colorScheme.primary
                         : isPast
                             ? Theme.of(context).colorScheme.error

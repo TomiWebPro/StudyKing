@@ -7,6 +7,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
   );
@@ -61,6 +62,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.event_note), findsOneWidget);
+    });
+
+    testWidgets('shows plan adherence title with semantics', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.8,
+          weeklyAdherence: 0.6,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Plan Adherence'), findsOneWidget);
+      expect(find.byType(Semantics), findsAtLeast(1));
+    });
+
+    testWidgets('uses error color style at very low adherence', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.2,
+          weeklyAdherence: 0.1,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('20%'), findsOneWidget);
+      expect(find.text('10%'), findsOneWidget);
     });
   });
 }

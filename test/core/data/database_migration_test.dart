@@ -81,5 +81,38 @@ void main() {
       expect(result.error, 'Connection failed');
       expect(result.hasErrors, isTrue);
     });
+
+    test('DatabaseValidationResult with only missing boxes', () {
+      final result = DatabaseValidationResult(
+        missingBoxes: ['topics'],
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingBoxes, ['topics']);
+      expect(result.error, isNull);
+      expect(result.hasErrors, isTrue);
+    });
+
+    test('DatabaseValidationResult with non-default version', () {
+      final result = DatabaseValidationResult(
+        currentVersion: 5,
+      );
+
+      expect(result.currentVersion, 5);
+      expect(result.isValid, isTrue);
+      expect(result.hasErrors, isFalse);
+    });
+
+    test('DatabaseValidationResult with error only', () {
+      final result = DatabaseValidationResult(
+        isValid: false,
+        error: 'Disk full',
+      );
+
+      expect(result.isValid, isFalse);
+      expect(result.missingBoxes, isEmpty);
+      expect(result.error, 'Disk full');
+      expect(result.hasErrors, isTrue);
+    });
   });
 }

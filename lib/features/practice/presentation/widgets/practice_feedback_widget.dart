@@ -39,8 +39,7 @@ class PracticeFeedbackWidget extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   isCorrect ? l10n.correctFeedback : l10n.incorrectFeedback,
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
                   ),

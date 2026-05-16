@@ -94,7 +94,7 @@ class ExportSection extends ConsumerWidget {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
       if (result.isFailure) throw Exception(result.error);
       final data = result.data!;
-      final jsonString = _formatInstrumentation(data);
+      final jsonString = formatInstrumentation(data);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
@@ -111,7 +111,8 @@ class ExportSection extends ConsumerWidget {
     }
   }
 
-  String _formatInstrumentation(Map<String, dynamic> data) {
+  @visibleForTesting
+  String formatInstrumentation(Map<String, dynamic> data) {
     final buffer = StringBuffer();
     buffer.writeln('=== Instrumentation Dashboard ===');
     buffer.writeln('Generated: ${data['generatedAt']}');

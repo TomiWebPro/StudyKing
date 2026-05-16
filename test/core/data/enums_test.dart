@@ -20,13 +20,17 @@ void main() {
 
   group('SourceType', () {
     test('has all expected values', () {
-      expect(SourceType.values.length, 6);
+      expect(SourceType.values.length, 10);
       expect(SourceType.pdf.index, 0);
       expect(SourceType.syllabus.index, 1);
       expect(SourceType.textbook.index, 2);
       expect(SourceType.video.index, 3);
       expect(SourceType.lectureNotes.index, 4);
       expect(SourceType.externalResource.index, 5);
+      expect(SourceType.image.index, 6);
+      expect(SourceType.webPage.index, 7);
+      expect(SourceType.audio.index, 8);
+      expect(SourceType.document.index, 9);
     });
   });
 
@@ -48,6 +52,18 @@ void main() {
       expect(GeneratedBy.ai.index, 0);
       expect(GeneratedBy.manual.index, 1);
       expect(GeneratedBy.hybrid.index, 2);
+    });
+  });
+
+  group('ProcessingStatus', () {
+    test('has all expected values', () {
+      expect(ProcessingStatus.values.length, 6);
+      expect(ProcessingStatus.pending.index, 0);
+      expect(ProcessingStatus.extracting.index, 1);
+      expect(ProcessingStatus.classifying.index, 2);
+      expect(ProcessingStatus.generatingQuestions.index, 3);
+      expect(ProcessingStatus.completed.index, 4);
+      expect(ProcessingStatus.failed.index, 5);
     });
   });
 }

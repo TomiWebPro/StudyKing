@@ -11,21 +11,19 @@ void main() {
 
     group('scheduleReview - SM-2 algorithm', () {
       test('grade >= 3 with 0 repetitions sets 1-day interval', () {
+        final now = DateTime(2026, 5, 16);
         final result = engine.scheduleReview(
           questionId: 'q1',
           grade: 3,
           currentData: const QuestionSRData(),
+          now: now,
         );
 
         expect(result.updatedData.repetitions, 1);
-        expect(result.updatedData.easeFactor, closeTo(2.5, 0.01));
+        expect(result.updatedData.easeFactor, closeTo(2.36, 0.01));
         expect(
-          result.nextReview.difference(DateTime.now()).inDays,
-          greaterThanOrEqualTo(0),
-        );
-        expect(
-          result.nextReview.difference(DateTime.now()).inDays,
-          lessThanOrEqualTo(2),
+          result.nextReview.difference(now).inDays,
+          1,
         );
       });
 
@@ -152,7 +150,7 @@ void main() {
           currentData: previousData,
         );
 
-        expect(result.updatedData.reviewLog, hasLength(2));
+        expect(result.updatedData.reviewLog, hasLength(1));
         expect(result.updatedData.reviewLog.last.grade, 4);
         expect(result.updatedData.reviewLog.last.questionId, 'q1');
       });
@@ -176,15 +174,16 @@ void main() {
 
     group('migrateFromLegacy', () {
       test('converts legacy 7-day interval to SM-2', () {
-        final legacyNextReview =
-            DateTime.now().add(const Duration(days: 7));
+        final now = DateTime(2026, 5, 16);
+        final legacyNextReview = now.add(const Duration(days: 7));
 
         final result = engine.migrateFromLegacy(
           questionId: 'q1',
           legacyNextReview: legacyNextReview,
-          legacyLastReview: DateTime.now().subtract(const Duration(days: 1)),
+          legacyLastReview: now.subtract(const Duration(days: 1)),
           totalAttempts: 5,
           accuracy: 0.9,
+          now: now,
         );
 
         expect(result.updatedData.repetitions, greaterThanOrEqualTo(3));

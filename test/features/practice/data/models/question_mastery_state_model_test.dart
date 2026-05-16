@@ -256,7 +256,7 @@ void main() {
         current = current.recordAttempt(isCorrect: true, confidence: 5, timeSpentMs: 60000, now: now);
 
         expect(current.totalTimeMs, 90000);
-        expect(current.averageTimeMs, 90000.0);
+        expect(current.averageTimeMs, 45000.0);
       });
 
       test('limits confidence history to 20 entries', () {

@@ -14,6 +14,8 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/utils/id_generator.dart';
 
+typedef QuestionValidator = bool Function(Map<String, dynamic> questionData);
+
 class ContentPipeline {
   final LlmService _llmService;
   final SourceRepository _sourceRepository;
@@ -34,7 +36,8 @@ class ContentPipeline {
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
-        _documentExtractor = documentExtractor ?? DocumentExtractor(),
+        _documentExtractor =
+            documentExtractor ?? DocumentExtractor(llmService: llmService),
         _webScraper = webScraper ?? WebScraper();
 
   Future<Result<Source>> processUpload({
@@ -85,10 +88,12 @@ class ContentPipeline {
     String language = '',
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
+    QuestionValidator? validator,
   }) async {
+    final sourceId = IdGenerator.generate('src');
+    Source source;
     try {
-      final sourceId = IdGenerator.generate('src');
-      final source = Source(
+      source = Source(
         id: sourceId,
         title: title,
         type: type,
@@ -103,19 +108,32 @@ class ContentPipeline {
       );
       await _sourceRepository.create(source);
       _logger.d('Source created: ${source.id}');
+    } catch (e) {
+      _logger.e('Failed to create initial source', e);
+      return Result.failure(e.toString());
+    }
 
+    try {
       Source updated = source;
 
       updated = _updateStatus(updated, ProcessingStatus.extracting);
-      final extracted = _documentExtractor.extractText(
+      final extractionResult = await _documentExtractor.extractText(
         rawContent: content,
         sourceType: type,
+        sourceUrl: sourceUrl,
       );
-      updated = updated.copyWith(extractedText: extracted);
+      updated = updated.copyWith(
+        extractedText: extractionResult.text,
+        extractionMethod: extractionResult.extractionMethod,
+        chunks: extractionResult.chunksToJson(),
+        extractionMeta: jsonEncode(extractionResult.toMetaJson()),
+      );
       await _sourceRepository.save(updated.id, updated);
-      _logger.d('Stage 1 complete: text extracted (${extracted.length} chars)');
+      _logger.d('Stage 1 complete: text extracted (${extractionResult.text.length} chars) via ${extractionResult.extractionMethod}');
 
-      final textToClassify = extracted.isNotEmpty ? extracted : content;
+      final textToClassify = extractionResult.text.isNotEmpty
+          ? extractionResult.text
+          : content;
 
       if (possibleTopics.isNotEmpty) {
         updated = _updateStatus(updated, ProcessingStatus.classifying);
@@ -148,6 +166,7 @@ class ContentPipeline {
           sourceId,
           studentId,
           modelId,
+          validator: validator,
         );
         if (questionIds.isNotEmpty) {
           updated = updated.copyWith(
@@ -158,6 +177,16 @@ class ContentPipeline {
         _logger.d(
           'Stage 4 complete: ${questionIds.length} questions generated',
         );
+
+        updated = _updateStatus(updated, ProcessingStatus.validating);
+        final validationResults = _validateGeneratedQuestions(
+          updated,
+          questionIds,
+        );
+        if (validationResults.isNotEmpty) {
+          _logger.w('Question validation warnings: $validationResults');
+        }
+        updated = _updateStatus(updated, ProcessingStatus.completed);
       }
 
       updated = _updateStatus(updated, ProcessingStatus.completed);
@@ -168,26 +197,27 @@ class ContentPipeline {
     } catch (e) {
       _logger.e('Pipeline failed', e);
       try {
-        final failed = Source(
-          id: 'src_${DateTime.now().millisecondsSinceEpoch}',
-          title: title,
-          type: type,
-          content: content,
-          subjectId: subjectId,
-          topicId: topicId,
-          syllabusId: syllabusId,
-          sourceUrl: sourceUrl,
-          studentId: studentId,
-          language: language,
+        final failed = source.copyWith(
           processingStatus: ProcessingStatus.failed.name,
         );
-        await _sourceRepository.create(failed);
+        await _sourceRepository.save(failed.id, failed);
         return Result.success(failed);
       } catch (e2) {
         _logger.e('Failed to save failed source', e2);
         return Result.failure(e.toString());
       }
     }
+  }
+
+  List<String> _validateGeneratedQuestions(
+    Source source,
+    List<String> questionIds,
+  ) {
+    final warnings = <String>[];
+    if (questionIds.isEmpty) {
+      warnings.add('No questions were generated for source ${source.id}');
+    }
+    return warnings;
   }
 
   Future<Result<String>> fetchAndScrapeUrl(String url) async {
@@ -280,12 +310,15 @@ Provide only the summary text.''';
     String topicId,
     String sourceId,
     String studentId,
-    String modelId,
-  ) async {
+    String modelId, {
+    QuestionValidator? validator,
+  }) async {
     final questionIds = <String>[];
     try {
       final prompt = '''
-Generate 3-5 practice questions based on the following content. Return ONLY a JSON array.
+Analyze the following content and extract any existing questions it contains.
+Also generate 3-5 new practice questions based on the content.
+Return ONLY a JSON array of question objects.
 Each object must have: "text" (the question), "type" ("singleChoice"), "options" (list of 4 answer strings), "correctAnswer" (the correct option text), "explanation" (brief explanation).
 
 Content:
@@ -301,6 +334,10 @@ $content''';
 
       final parsed = _parseQuestionResponse(response);
       for (final qData in parsed) {
+        if (!_isValidGeneratedQuestion(qData, validator: validator)) {
+          _logger.w('Skipping invalid question: ${qData['text']}');
+          continue;
+        }
         final qId = IdGenerator.generate('q');
         final question = Question(
           id: qId,
@@ -329,6 +366,30 @@ $content''';
     return questionIds;
   }
 
+  bool _isValidGeneratedQuestion(
+    Map<String, dynamic> qData, {
+    QuestionValidator? validator,
+  }) {
+    final text = qData['text'] as String? ?? '';
+    if (text.isEmpty) return false;
+
+    final options = (qData['options'] as List<dynamic>?)
+            ?.cast<String>() ??
+        [];
+    if (options.length < 2) return false;
+
+    final correctAnswer = qData['correctAnswer'] as String? ?? '';
+    if (correctAnswer.isEmpty) return false;
+    if (!options.contains(correctAnswer)) return false;
+
+    final explanation = qData['explanation'] as String? ?? '';
+    if (explanation.isEmpty) return false;
+
+    if (validator != null && !validator(qData)) return false;
+
+    return true;
+  }
+
   List<Map<String, dynamic>> _parseQuestionResponse(String response) {
     try {
       final cleaned = response
@@ -350,5 +411,6 @@ $content''';
 
   void dispose() {
     _webScraper.dispose();
+    _documentExtractor.dispose();
   }
 }

@@ -1,191 +1,214 @@
-# UI/UX: Responsive Layout Fragility, Data Viz Accessibility Gaps, and Fragmented Navigation Patterns
+# UI/UX Master Issue
 
-## Context
-
-Three cross-cutting UI/UX problems degrade the experience across device sizes and user abilities:
-
-1. **Responsive layout fragility** — Several key screens hardcode dimensions or use fixed-percentage sizing that breaks on short, tall, or wide viewports.
-2. **Screen-reader accessibility gaps** — Interactive data visualizations (`AnimatedBarChart`, `MetricCard`) and critical gestures (`Dismissible`) lack `Semantics` trees, making them invisible to assistive technology.
-3. **Fragmented bottom-sheet navigation** — Practice entry flow uses 6+ different bottom sheet widgets with inconsistent visual patterns and no progress indication, creating a disjointed user journey.
+**Issues identified across the codebase — accessibility, responsive layout, animation, sizing, navigation, and design consistency.**
 
 ---
 
-## Issue 1: Hardcoded & percentage-based sizing breaks on diverse viewports
+## 1. [A11Y-CRITICAL] Screen reader context lost in `AlertDialog` & raw dialogs
 
-### `lib/features/subjects/presentation/subject_detail_screen.dart:55`
+**Affected files:**
 
-```dart
-expandedHeight: MediaQuery.sizeOf(context).height * 0.25,
-```
+- `lib/features/quickguide/presentation/widgets/help_dialog.dart:8-18`
+- `lib/features/planner/presentation/planner_screen.dart:131-180`
+- `lib/features/mentor/presentation/mentor_screen.dart:337-357`
 
-**Problem**: The `SliverAppBar` consumes a fixed 25% of screen height. On landscape phones (~360×640, usable height after status bar ≈ 590px), the header eats 148px leaving ~442px for tabs + content — the `TabBarView` below the fold is barely visible on first load. On tablets in portrait (e.g. 820×1180), 25% = 295px, creating a massive empty header. Split-screen or foldable devices (e.g., ~412×360 landscape half-screen) leave virtually no content area.
+**Problem:** Several `AlertDialog` calls pass no `semanticLabel`, and the wrapping context has no `Semantics` node. `showQuickGuideHelpDialog` is a bare top-level function—screen readers announce the dialog content fields in flat order without recognizing it as a dialog landmark.
 
-**Rationale**: The header should use `ConstrainedBox` with `minHeight`/`maxHeight` (e.g., clamped to 100–200px) rather than a raw percentage of viewport height. The subject name/code + avatar can collapse into the `title` slot without needing a tall expanded state.
+**Acceptance Criteria:**
 
-### `lib/core/widgets/animated_bar_chart.dart:37-43`
-
-```dart
-double _computeBarWidth(double availableWidth) {
-  if (widget.barWidth != null) return widget.barWidth!;
-  final count = widget.data.length;
-  if (count == 0) return AnimatedBarChart.minBarWidth;
-  final computed = (availableWidth - 8 * (count - 1)) / count;
-  return computed.clamp(AnimatedBarChart.minBarWidth, double.infinity);
-}
-```
-
-**Problem**: Bars share available width equally with no upper bound. On tablet (1200px), with 7 data points, each bar can be ~170px wide — comically oversized for a single-digit value. On very narrow screens (320px), 7 bars at `minBarWidth` (24px) leave gaps so small labels overflow. No `maxBarWidth` cap.
-
-**Rationale**: Add a `maxBarWidth` parameter (default ~48–64px) and center/group the bars when the container exceeds `count * maxBarWidth + spacing`, similar to how `flex` charts handle overflow.
-
-### `lib/features/sessions/presentation/session_tracker_screen.dart:280` (the timer text)
-
-```dart
-style: theme.textTheme.displayLarge?.copyWith(
-  fontWeight: FontWeight.w600,
-  ...
-),
-```
-
-**Problem**: `displayLarge` is typically 57–60pt on Material 3. A 5–6 line text like "01:23:45" rendered at 60pt on a 360px-wide phone occupies nearly the full width. On tablets, it renders at the same size (no responsive scaling) while the timer gutter is oddly small relative to surrounding content.
-
-**Rationale**: Scale timer font size based on `MediaQuery.sizeOf(context).shortestSide`, e.g., `clamp(36, 64, shortestSide * 0.09)`. Or use `ResponsiveUtils` to pick a text style variant per breakpoint.
-
-### `lib/features/practice/presentation/practice_screen.dart:415-483` (extra modes row)
-
-```dart
-Row(
-  children: [
-    Expanded(child: Card(/* Exam Mode */)),
-    const SizedBox(width: 12),
-    Expanded(child: Card(/* Source Practice */)),
-  ],
-)
-```
-
-**Problem**: Two cards forced side-by-side with `Expanded` regardless of width. On an `xs` phone (<600px), each card's `bodySmall` description text wraps awkwardly to 3–4 lines. The `titleSmall` + `bodySmall` vertical stack at ~120px minimum height with cramped horizontal space.
-
-**Rationale**: Use `ResponsiveUtils.breakpointOf(context)` — stack vertically on `xs` (or `Column` with full-width cards), side-by-side on `sm+`.
+- Every `AlertDialog` must receive `semanticLabel` or be wrapped in `Semantics(dialog: true, ...)`.
+- `showQuickGuideHelpDialog` should be refactored into a widget so Semantics can be attached at the Scaffold/dialog level.
 
 ---
 
-## Issue 2: Screen-reader inaccessibility of data visualizations & gestures
+## 2. [A11Y] `GestureDetector`-based interactive elements are not keyboard-focusable
 
-### `lib/core/widgets/animated_bar_chart.dart:124-172`
+**Affected files:**
 
-**Problem**: Renders day-labels, value tooltips, and colored bars — but the entire chart is a `Semantics` void. Screen reader users get zero information about:
-- Which day each bar represents (labels are `Text` widgets, not in a `Semantics`-merged subtree)
-- The numeric value of each bar (visible as a tiny `Text` above the bar but not labeled as the bar's value)
-- The y-axis label (purely visual)
-- The trend / which day has the highest count
+- `lib/features/practice/presentation/practice_session_screen.dart:478-508`
+- `lib/features/practice/presentation/widgets/practice_mode_card.dart:33`
 
-**Rationale**: Wrap each bar column in:
-```dart
-Semantics(
-  label: '$day: $count sessions',
-  value: '$count',
-  child: Column(...),
-)
-```
-Wrap the entire chart in `Semantics(sortKey: ...)` so a screen reader can navigate per-bar. The existing `Tooltip` is mouse-only and provides no assistive-tech benefit.
+**Problem:** The confidence-selector circles and the practice-mode cards use `GestureDetector` with only `onTap`. These elements cannot receive keyboard focus, cannot be activated via Space/Enter, and are not announced as buttons by screen readers. Users relying on switch devices or keyboard-only navigation cannot interact with them.
 
-### `lib/core/widgets/metric_card.dart:24-52`
+**Acceptance Criteria:**
 
-**Problem**: `MetricCard` renders an icon + value + label inside `GradientContainer`, but the `Semantics` wrapper at `session_analytics.dart:93` only wraps the entire 4-card grid with a single `label: l10n.performanceMetrics`. Individual cards have no accessible name, role, or value. A screen reader hears "performance metrics" and then unlabeled "timer 00:30:00 avg session" — the `value` and `label` are just `Text` widgets without `Semantics.merge` or explicit labels.
-
-**Rationale**: Add to `MetricCard.build()`:
-```dart
-Semantics(
-  label: '$label: $value',
-  child: GradientContainer(...),
-)
-```
-
-### `lib/features/sessions/presentation/session_history_screen.dart:454-466`
-
-```dart
-return Dismissible(
-  key: Key(session.id),
-  direction: DismissDirection.endToStart,
-  confirmDismiss: (direction) => _deleteSession(session),
-  background: Container(
-    alignment: Alignment.centerRight,
-    ...
-    child: Icon(Icons.delete, ...),
-  ),
-  child: Card(...),
-);
-```
-
-**Problem**: The `Dismissible` swipe-to-delete gesture has no `Semantics` hint, label, or custom accessibility action. A screen reader user cannot discover that swiping left deletes the item, and the delete icon in the background is decorative-only (`Semantics(excludeSemantics: true)` is not set). The `ListTile` inside does have a `delete_outline` `IconButton` as a fallback (`session_history_screen.dart:519-527`), but the Dismissible's gesture path is silent.
-
-**Rationale**: Add `Semantics( hint: l10n.swipeToDelete, child: Dismissible(...) )` or use `ExcludeSemantics` on the background `Container`. Ensure the delete `IconButton` fallback has proper `Semantics(button: true)` (it already does) and the `Dismissible` is not incorrectly overriding focus.
-
-### `lib/features/sessions/presentation/session_tracker_screen.dart:507` (end-session dialog)
-
-**Problem**: The `_SessionEndDialog` has `TextField` widgets for "questions answered" and "correct answers" with no input validation. A user can enter `correct > questions` (e.g., 10 correct of 5 answered), or negative/zero values, and the dialog saves silently. No `Form`-level validation, no `errorText` feedback, no keyboard action (`textInputAction`) that moves to the next field.
-
-**Rationale**: Wrap in a `Form` with `TextFormField` + `validator` ensuring `correct <= questions` and both `>= 0`. Show inline `errorText`. Set `textInputAction: TextInputAction.next` on the first field and `TextInputAction.done` on the second.
+- Replace `GestureDetector` + `onTap` with `InkWell`/`TextButton`/`Semantics(button: true)` for interactive elements.
+- Each confidence rating circle should be a `FocusableActionDetector` or `InkWell` with appropriate accessibility roles.
+- Verify focus order with Tab key navigation on the practice session screen.
 
 ---
 
-## Issue 3: Fragmented bottom-sheet navigation in practice entry flow
+## 3. [A11Y] Typography below minimum legible size
 
-### `lib/features/practice/presentation/practice_screen.dart` — 6 entry surfaces, 5 bottom sheet types
+**Affected files:**
 
-```
-Practice Screen
-├── FAB → SubjectSelectionSheet (if >1 subject) or direct practice
-├── PracticeModeGrid
-│   ├── Quick Practice → PracticeModeSheet
-│   ├── Spaced Repetition → SpacedRepetitionSheet
-│   ├── Topic Focus → TopicSelectionSheet
-│   └── Weak Areas → WeakAreasSheet
-├── Extra Modes Row
-│   ├── Exam Mode → direct navigation
-│   └── Source Practice → SourcePracticeSheet
-└── Subject Practice Cards → direct navigation
-```
+- `lib/features/planner/presentation/widgets/milestone_timeline.dart:86-91` — fontSize 9 for milestone labels
+- `lib/features/planner/presentation/widgets/calendar_view_widget.dart:168-171` — fontSize 8 for minute counts
+- `lib/features/teaching/presentation/tutor_screen.dart:216-219` — fontSize 11 for stat chips
+- `lib/features/practice/presentation/widgets/practice_feedback_widget.dart:43-45` — hardcoded fontSize 18
 
-**Problems**:
-1. **Inconsistent visual language**: Each bottom sheet (`SubjectSelectionSheet`, `PracticeModeSheet`, `TopicSelectionSheet`, `SpacedRepetitionSheet`, `WeakAreasSheet`, `SourcePracticeSheet`) is a standalone widget built with `showModalBottomSheet`. Some use `ListTile`, some use custom card layouts, some have scrollable content, some don't. No shared sheet template or consistent `DraggableScrollableSheet` usage.
-2. **No exit awareness**: A user who opens "Spaced Repetition" then finds no due items gets a bare `SpacedRepetitionSheet.showAllCaughtUp(context)` dialog with no "back to practice" affordance — just "OK". They lose their mental position in the flow.
-3. **No visual progress**: If a user opens the FAB → `SubjectSelectionSheet` picks subject, they're dumped into a practice session. There's no "loading..." / "starting practice..." state — the session screen appears with no context of what practice mode was chosen.
-4. **Crowded app bar**: `PracticeScreen` app bar has a `tune` `IconButton` that opens `PracticeModeSheet` — duplicating the Quick Practice tile behavior. Two routes to the same sheet, one hidden in the app bar.
+**Problem:** Font sizes of 8–11 sp fall below WCAG AA minimum thresholds. `fontSize: 8` and `fontSize: 9` are practically illegible on many devices and cannot be scaled by system font settings. The hardcoded `fontSize: 18` in `practice_feedback_widget.dart` bypasses the user's system text scale.
 
-**Rationale**: Consolidate the bottom sheets into a single reusable `PracticeSheet` component that adapts its content list (subjects, modes, topics) based on a parameter. Add a visual progress stepper for multi-step flows (e.g., Select Subject → Select Mode → Practice). Remove the duplicate `tune` icon in the app bar or rename it to a clearly different action (e.g., "Filters").
+**Acceptance Criteria:**
 
-### `lib/features/sessions/presentation/session_history_screen.dart:265-320` (export popup menu)
-
-**Problem**: The `PopupMenuButton` lists 6 export options (CSV, PDF, JSON, comprehensive CSV, comprehensive PDF, comprehensive JSON) as a flat list with duplicate icons (`Icons.picture_as_pdf` appears twice, `Icons.code` appears twice). A user scanning this list cannot differentiate quick export from comprehensive export without reading each label line carefully. No grouping, no submenu, no disabled states for unavailable formats.
-
-**Rationale**: Group into sections with `PopupMenuSection` or use a bottom sheet with section headers: "Quick Export" / "Comprehensive Report". Alternatively, collapse comprehensive options into a single "Comprehensive Report" entry that then opens a format-picker sub-sheet.
+- No hardcoded `fontSize` below 12 sp in text `TextStyle` declarations.
+- Use theme text styles (e.g., `labelSmall`, `bodySmall`) which respect `MediaQuery.textScaler`.
+- Remove hardcoded `fontSize: 18` in `PracticeFeedbackWidget` — use `titleMedium` or `titleLarge` instead.
 
 ---
 
-## Acceptance Criteria
+## 4. [RESPONSIVE] 4-item GridView creates uneven layout on sm breakpoint
 
-### AC1: Responsive Sizing
-- [ ] `SubjectDetailScreen` header height is clamped to `min(200, max(100, viewportHeight * 0.25))` and collapses gracefully on landscape orientation.
-- [ ] `AnimatedBarChart` bars have a `maxBarWidth` (default 48px); when total chart width exceeds `count * maxBarWidth + spacing`, bars are centered with surplus space on each side.
-- [ ] Timer display in `SessionTrackerScreen` uses responsive font sizing (36–64px range based on `shortestSide`).
-- [ ] Extra modes row in `PracticeScreen` stacks vertically on `xs` breakpoint, side-by-side on `sm+`.
+**Affected file:** `lib/features/practice/presentation/widgets/practice_mode_grid.dart:39-80`
 
-### AC2: Accessibility
-- [ ] Each bar in `AnimatedBarChart` is wrapped in `Semantics(label: '$day: $count sessions')`.
-- [ ] `MetricCard` has per-card `Semantics(label: '$label: $value')`.
-- [ ] `Dismissible` in `session_history_screen.dart` has `Semantics(hint: l10n.swipeToDelete)` on the gesture surface; background container has `ExcludeSemantics`.
-- [ ] `_SessionEndDialog` uses `Form` + `TextFormField` with `validator` enforcing `correct <= questions` and `>= 0`.
+**Problem:** `gridCrossAxisCount` returns 3 for sm breakpoint (601–840 px), but there are exactly 4 grid children. This produces a 3+1 split row layout with one isolated card on the second row. Visual asymmetry causes confusion about which mode is "extra."
 
-### AC3: Navigation Consistency
-- [ ] Practice bottom sheets follow a shared template (`PracticeSheet`) with consistent padding, spacing, scroll behavior, and border radius.
-- [ ] `SpacedRepetitionSheet.showAllCaughtUp` includes a "Back to Practice" button (not just "OK").
-- [ ] Practice FAB → subject → session includes a brief "Starting practice…" loading state or an overlay explaining the practice mode chosen.
-- [ ] Export menu in `SessionHistoryScreen` groups quick/comprehensive options visually.
-- [ ] Duplicate `tune` icon in `PracticeScreen.appBar.actions` is removed or given a distinct purpose.
+**Acceptance Criteria:**
 
-### AC4: Testing
-- [ ] `AnimatedBarChart` widget test verifies `Semantics` labels on bars for screen readers.
-- [ ] `MetricCard` widget test verifies combined semantics label.
-- [ ] `SessionHistoryScreen` widget test verifies `Dismissible` accessibility hint.
-- [ ] `PracticeScreen` widget test verifies responsive stacking of extra modes on `xs` breakpoint.
+- At sm breakpoint, either force 2 columns or re-flow to a 2+2 grid.
+- Alternatively, limit visible cards and group the fourth under a "more" expander.
+
+---
+
+## 5. [ANIMATION] Question-card `AnimatedSwitcher` lacks directional cue
+
+**Affected file:** `lib/features/practice/presentation/practice_session_screen.dart:438-447`
+
+**Problem:** Only `FadeTransition` is used when switching between questions. Users have no spatial feedback about whether they moved forward or backward — especially critical on mobile where swipe gestures suggest left-right motion.
+
+**Acceptance Criteria:**
+
+- Add a horizontal `SlideTransition` (offset from right for "next", from left for "previous") combined with the existing fade.
+- Respect `reduceMotion` setting: fall back to instantaneous swap when animations are disabled.
+- Verify with `NavigatorObserver` that the transition doesn't interfere with accessibility focus placement.
+
+---
+
+## 6. [ANIMATION] Focus timer pulse animation risks vestibular issues
+
+**Affected file:** `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart:111-122`
+
+**Problem:** The entire timer circle pulses at ±3% scale continuously via `_pulseController.repeat(reverse: true)`. While `reduceMotion` and `MediaQuery.disableAnimationsOf` are checked, the default experience creates continuous motion in the user's peripheral awareness zone — this can trigger discomfort for users with vestibular or seizure disorders.
+
+**Acceptance Criteria:**
+
+- Replace full-circle pulse with a more subtle approach (e.g., a gentle color shift on the progress ring, or a small "breathing" ring overlay).
+- Ensure pulse amplitude is reduced from 3% to ≤1% if kept.
+- Verify `reduceMotion` branch works as expected and produces a fully static timer.
+
+---
+
+## 7. [DESIGN LANGUAGE] Inconsistent border radii across interactive surfaces
+
+**Affected file:** `lib/core/theme/app_theme.dart`
+
+| Element | Radius | Location |
+|---|---|---|
+| `CardTheme` | `12` | line 44 |
+| `ElevatedButton` | `8` | line 53 |
+| `FloatingActionButton` | `16` | line 73 |
+| `InputDecoration` (border) | `4` (default `OutlineInputBorder`) | — |
+| `BottomSheet` shape | varies inline | multiple files |
+
+**Problem:** Four different corner radii for primary interactive surfaces create visual dissonance. The bottom sheet radius is defined inline per-file (20 in `MistakeReviewWidget`, 20 in `SourcePracticeSheet`, via `bottomSheetShape` in `PracticeModeSheet`) instead of centralized.
+
+**Acceptance Criteria:**
+
+- Standardize to 2–3 distinct radii (e.g., 8 for buttons, 12 for cards, 16 for sheets/FABs).
+- Extract bottom sheet shape into `AppTheme` as a static getter used by all bottom sheet calls.
+- Verify no broken golden tests or visual regressions.
+
+---
+
+## 8. [NAVIGATION] Dashboard "collapsible card" affordance is too subtle
+
+**Affected file:** `lib/features/dashboard/presentation/widgets/collapsible_card.dart:72-91`
+
+**Problem:** The only visual cue that a card can be collapsed/expanded is a chevron (`expand_more`/`expand_less`) icon. Users do not know the entire card header is tappable. Combined with 7+ cards in a single scroll, the page feels like an endless list of equally-weighted sections.
+
+**Acceptance Criteria:**
+
+- Add a visible "Tap to collapse" tooltip or label.
+- Consider an `AnimatedCrossFade` between collapsed and expanded states for better feedback.
+- Prioritize the first 3–4 cards by default and collapse the rest, or add a "Show more" button.
+
+---
+
+## 9. [A11Y] Chat evaluation score lacks screen-reader detail
+
+**Affected file:** `lib/features/teaching/presentation/widgets/chat_bubble.dart:153-171`
+
+**Problem:** The `Semantics` label for evaluation feedback is just `'Correct'`, `'Incorrect'`, or `'Partial'` — the actual percentage score (e.g., "85 percent") is rendered visually via `Text` inside an `ExcludeSemantics` area. A screen reader user only hears "Correct" without knowing the actual score.
+
+**Acceptance Criteria:**
+
+- The `Semantics` label should include the numeric score, e.g., `"Correct, 85 percent"`.
+- Avoid `ExcludeSemantics` on the score text; or merge label + `Text` into one `Semantics` node with merge semantics.
+
+---
+
+## 10. [RESPONSIVE] `ConversationInput` keyboard-return as only send action, no hint
+
+**Affected file:** `lib/core/widgets/conversation_input.dart:42-48` and `111`
+
+**Problem:** The `TextField` uses `textInputAction: TextInputAction.send` (line 80) which maps the "return" key on software keyboards to "Send." However: (a) `onSubmitted` only fires when the send key is pressed; (b) there is no visual hint in the UI that `Ctrl+Enter` (via `CallbackShortcuts`) is an alternative; (c) if the keyboard lacks a dedicated send key, users have no discoverable way to submit.
+
+**Acceptance Criteria:**
+
+- Show a visible hint line under the input field or inside the hint text: e.g., "Press Enter to send, Ctrl+Enter for new line."
+- The `onSubmitted` callback should handle multi-line input gracefully (e.g., submit only if the text ends with a period/question mark and the keyboard send key was pressed).
+- Ensure the `CallbackShortcuts` is properly scoped so it doesn't interfere with other keyboard shortcuts on the same screen.
+
+---
+
+## 11. [SIZING] PracticeSessionNavButtons layout shift on first/last question
+
+**Affected file:** `lib/features/practice/presentation/widgets/practice_session_nav_buttons.dart:20-50`
+
+**Problem:** On xs screens, `onPrevious` being null for the first question removes the entire "Previous" button row, causing the "Next" button to shift upward. This creates a jarring re-layout every time the user hits the first question.
+
+**Acceptance Criteria:**
+
+- Reserve consistent height for navigation buttons regardless of whether "Previous" is shown.
+- Show "Previous" as disabled rather than absent on the first question, OR keep a fixed spacer that maintains the same layout height.
+
+---
+
+## 12. [DESIGN SYSTEM] No centralized bottom sheet shape — defined inline in 3+ files
+
+**Affected files:**
+
+- `lib/features/practice/presentation/widgets/mistake_review_widget.dart:27-29`
+- `lib/features/practice/presentation/widgets/source_practice_sheet.dart:23-25`
+- `lib/features/practice/presentation/widgets/practice_mode_sheet.dart:76` (references undefined `bottomSheetShape`)
+
+**Problem:** `practice_mode_sheet.dart:76` references `bottomSheetShape` which is not imported or defined in the file (`BottomSheet shape: bottomSheetShape,`). This may compile only if an import from an intermediate barrel file resolves it, but it's not explicit — a refactoring risk.
+
+**Acceptance Criteria:**
+
+- Define `static const bottomSheetShape = RoundedRectangleBorder(...)` in `AppTheme`.
+- All bottom sheet `show()` methods reference `AppTheme.bottomSheetShape`.
+- Remove inline shape definitions from individual sheet files.
+
+---
+
+## Severity Summary
+
+| # | Area | Severity | Effort |
+|---|------|----------|--------|
+| 1 | A11Y: Dialog context | Critical | Small |
+| 2 | A11Y: Keyboard focus | Critical | Medium |
+| 3 | A11Y: Font size | High | Small |
+| 4 | Responsive: Grid | Medium | Small |
+| 5 | Animation: Direction | Medium | Medium |
+| 6 | Animation: Vestibular | High | Small |
+| 7 | Design: Radius | Medium | Small |
+| 8 | Navigation: Affordance | Low | Medium |
+| 9 | A11Y: Score readout | High | Small |
+| 10 | Input: Discoverability | Low | Small |
+| 11 | Sizing: Layout shift | Medium | Small |
+| 12 | Design: Bottom sheet | High | Trivial |
+
+---
+
+*All 12 issues are independent and can be tackled in any order. Start with #1, #2, #3, and #6 for the highest accessibility + safety impact.*

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
@@ -59,10 +58,9 @@ final dashboardFocusStatsProvider =
     final todaySessions = todayResult.data ?? [];
     final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
     if (focusToday.isEmpty) return null;
-    final totalMs = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+    final totalSeconds = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs) ~/ 1000;
     return FocusTodayStats.fromMap({
-      'totalMs': totalMs,
-      'totalSeconds': totalMs ~/ 1000,
+      'totalSeconds': totalSeconds,
       'completedSessions': focusToday.where((s) => s.completed).length,
       'totalSessions': focusToday.length,
       'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
@@ -122,53 +120,3 @@ final dashboardBadgesProvider =
   }
 });
 
-const _layoutBoxName = 'dashboard_layout_prefs';
-
-class DashboardLayoutPreferences {
-  final Set<String> collapsedCards;
-
-  const DashboardLayoutPreferences({
-    this.collapsedCards = const {},
-  });
-
-  DashboardLayoutPreferences copyWith({
-    Set<String>? collapsedCards,
-  }) {
-    return DashboardLayoutPreferences(
-      collapsedCards: collapsedCards ?? this.collapsedCards,
-    );
-  }
-
-  bool isCollapsed(String cardId) => collapsedCards.contains(cardId);
-}
-
-class DashboardLayoutNotifier extends StateNotifier<DashboardLayoutPreferences> {
-  Box? _box;
-
-  DashboardLayoutNotifier() : super(const DashboardLayoutPreferences());
-
-  Future<void> init() async {
-    _box = await Hive.openBox(_layoutBoxName);
-    final saved = _box?.get('collapsedCards') as List<String>?;
-    if (saved != null) {
-      state = DashboardLayoutPreferences(collapsedCards: saved.toSet());
-    }
-  }
-
-  void toggleCollapsed(String cardId) {
-    final updated = Set<String>.from(state.collapsedCards);
-    if (updated.contains(cardId)) {
-      updated.remove(cardId);
-    } else {
-      updated.add(cardId);
-    }
-    state = state.copyWith(collapsedCards: updated);
-    _box?.put('collapsedCards', updated.toList());
-  }
-}
-
-final dashboardLayoutPreferencesProvider =
-    StateNotifierProvider<DashboardLayoutNotifier, DashboardLayoutPreferences>(
-        (ref) {
-  return DashboardLayoutNotifier();
-});

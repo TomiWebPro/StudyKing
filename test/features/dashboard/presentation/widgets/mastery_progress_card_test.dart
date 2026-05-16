@@ -8,6 +8,7 @@ Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
   );

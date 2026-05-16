@@ -4460,5 +4460,17 @@
         "type": "String"
       }
     }
+  },
+  "tapToExpand": "Tap to expand",
+  "@tapToExpand": {
+    "description": "Tooltip for collapsed card header"
+  },
+  "tapToCollapse": "Tap to collapse",
+  "@tapToCollapse": {
+    "description": "Tooltip for expanded card header"
+  },
+  "sendHint": "Press Enter to send, Ctrl+Enter for new line",
+  "@sendHint": {
+    "description": "Hint text below chat input field"
   }
 }

@@ -50,6 +50,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late final MistakeReviewService _mistakeReviewService;
   List<Question> _questions = [];
   int _currentIndex = 0;
+  int _previousIndex = 0;
   String? _currentAnswer;
   bool _isSubmitted = false;
   bool _isFeedbackVisible = false;
@@ -148,6 +149,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        semanticLabel: l10n.noQuestionsAvailable,
         title: Text(l10n.noQuestionsAvailable),
         content: Text(l10n.noQuestionsForSelectedSubject),
       ),
@@ -214,6 +216,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   void _nextQuestion() {
     if (_currentIndex < _questions.length - 1) {
       setState(() {
+        _previousIndex = _currentIndex;
         _currentIndex++;
         _currentAnswer = null;
         _isSubmitted = false;
@@ -227,7 +230,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _previousQuestion() {
-    if (_currentIndex > 0) setState(() => _currentIndex--);
+    if (_currentIndex > 0) {
+      setState(() {
+        _previousIndex = _currentIndex;
+        _currentIndex--;
+      });
+    }
   }
 
   Future<void> _completeSession() async {
@@ -444,7 +452,15 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                               switchInCurve: Curves.easeIn,
                               switchOutCurve: Curves.easeOut,
                               transitionBuilder: (child, animation) {
-                                return FadeTransition(opacity: animation, child: child);
+                                final isForward = _currentIndex > _previousIndex;
+                                final offset = isForward ? const Offset(0.3, 0.0) : const Offset(-0.3, 0.0);
+                                return SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: offset,
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: FadeTransition(opacity: animation, child: child),
+                                );
                               },
                               child: child,
                             ),
@@ -479,32 +495,37 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           children: List.generate(5, (index) {
             final rating = index + 1;
             final isSelected = _currentConfidence == rating;
-            return GestureDetector(
-              onTap: () => setState(() => _currentConfidence = rating),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? _getConfidenceColor(rating).withValues(alpha: 0.2)
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  shape: BoxShape.circle,
-                  border: Border.all(
+            return Semantics(
+              button: true,
+              label: '${l10n.howConfident} $rating',
+              child: InkWell(
+                onTap: () => setState(() => _currentConfidence = rating),
+                borderRadius: BorderRadius.circular(24),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
                     color: isSelected
-                        ? _getConfidenceColor(rating)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '$rating',
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ? _getConfidenceColor(rating).withValues(alpha: 0.2)
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                    border: Border.all(
                       color: isSelected
                           ? _getConfidenceColor(rating)
-                          : Theme.of(context).colorScheme.onSurface,
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rating',
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? _getConfidenceColor(rating)
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                   ),
                 ),

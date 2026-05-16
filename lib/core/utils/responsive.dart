@@ -75,7 +75,7 @@ class ResponsiveUtils {
       case ScreenBreakpoint.xs:
         return 2;
       case ScreenBreakpoint.sm:
-        return 3;
+        return 2;
       case ScreenBreakpoint.md:
         return 4;
       case ScreenBreakpoint.lg:

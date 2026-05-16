@@ -449,5 +449,114 @@ void main() {
 
       expect(find.byType(AnimatedBuilder), findsAtLeastNWidgets(1));
     });
+
+    testWidgets('streaming non-empty content wraps text in live region', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '22',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Typing...',
+            timestamp: now,
+            isStreaming: true,
+          ),
+        ),
+      ));
+
+      expect(find.text('Typing...'), findsOneWidget);
+    });
+
+    testWidgets('empty non-streaming content renders empty text', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '23',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: '',
+            timestamp: now,
+            isStreaming: false,
+          ),
+        ),
+      ));
+
+      expect(find.text(''), findsOneWidget);
+    });
+
+    testWidgets('evaluation at exact score 0.7 boundary shows correct feedback', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 0.7,
+        'explanation': 'Passing.',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '24',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text('70%'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.text('Passing.'), findsOneWidget);
+    });
+
+    testWidgets('evaluation at exact score 0.3 boundary shows incorrect feedback', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 0.3,
+        'explanation': 'Needs work.',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '25',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text('30%'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+      expect(find.text('Needs work.'), findsOneWidget);
+    });
+
+    testWidgets('empty evaluation score falls back gracefully', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'explanation': 'No score',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '26',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      // score is null → cast to double throws → falls to catch → plain text
+      expect(find.text(jsonEncode(evalData)), findsOneWidget);
+    });
   });
 }

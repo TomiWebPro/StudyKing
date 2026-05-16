@@ -1,200 +1,80 @@
-# Mentor-Planner Convergence & Proactive Engagement Engine
+# Implement Multi-Format Real Content Ingestion Pipeline
 
 ## Context
 
-The `agent_must_read.md` vision describes two distinct AI interaction systems: **Teaching Mode** (live tutoring) and **Assistance/Mentor Mode** (persistent companion for planning, motivation, accountability, scheduling, and wellbeing). The teaching mode is well-implemented through the `teaching` feature. However, the mentor mode has a critical gap: the `MentorService` (`lib/features/mentor/services/mentor_service.dart`) is a thin chat wrapper with minimal context awareness, while the `PlannerService` (`lib/features/planner/services/planner_service.dart`) and the plan/roadmap/scheduling infrastructure remain disconnected from the mentor conversation flow.
+The product vision requires students to upload "textbooks, PDFs, notes, question banks, syllabi, online video link, video/audio, online website link, screenshots, etc." and have the system "intelligently process, organize, classify, validate, and integrate this material." However, `DocumentExtractor` at `lib/features/ingestion/services/document_extractor.dart` is a **complete stub**: every `SourceType` (pdf, document, image, video, audio, textbook, syllabus, etc.) returns `rawContent` as-is with zero actual extraction logic. The `PdfIngestionService` at `lib/core/services/pdf_ingestion_service.dart` sends raw text to the LLM but never extracts it from an actual PDF. Similarly, `VoiceController` at `lib/features/teaching/services/voice_controller.dart` hardcodes `isAvailable = false`.
 
-Additionally, proactive engagement — a core requirement ("The system should proactively engage students with reminders, prompts, revision nudges...") — is entirely unimplemented: the `EngagementNudgeRepository` (`lib/features/planner/data/repositories/engagement_nudge_repository.dart`) is fully built but never called by any service or provider.
-
-## Problem
-
-### 1. Mentor context is too thin for intelligent assistance
-
-`MentorService._buildContextPrompt()` (`lib/features/mentor/services/mentor_service.dart:143-154`) injects only 6 aggregate stats (total attempts, correct attempts, accuracy, topics studied, weekly activity, total study hours). It has **zero awareness** of:
-
-- The student's current plan status, adherence, or deviation
-- Roadmap goals or milestones
-- Pending actions awaiting the student's decision
-- Upcoming scheduled lessons
-- Weak topics from the mastery graph (separate `getProgressReport` call not in chat context)
-- Multi-syllabus progress breakdown
-- Recent tutor session outcomes or feedback
-
-This makes the mentor feel shallow and disconnected from the student's actual study journey.
-
-### 2. Mentor cannot execute planning actions conversationally
-
-When a student says "schedule a lesson on photosynthesis," `MentorService._checkAndHandlePlanningIntent()` (`mentor_service.dart:79-141`) creates a `PendingActionModel` with a naive `DateTime.now() + 1 hour` schedule that:
-
-- Does not consult `StudentAvailabilityModel` (`lib/features/planner/data/models/student_availability_model.dart`) for preferred study times
-- Does not check for scheduling conflicts via `PlannerService.hasSchedulingConflict()`
-- Does not involve the student in a back-and-forth negotiation ("I see you're free tomorrow at 3pm — shall I book it?")
-- Does not use `PlannerService.scheduleLesson()` for actual booking
-
-The student must manually go to the Planner screen, find the pending action, and accept/reject it. This breaks the conversational flow.
-
-### 3. Proactive engagement is entirely dead code
-
-`EngagementNudgeRepository` (`lib/features/planner/data/repositories/engagement_nudge_repository.dart`, 63 lines) implements full CRUD for `EngagementNudgeModel` (overwork nudges, revision nudges, plan adjustment suggestions, lesson reminders, auto-regeneration). **Zero callers exist.** No service checks conditions and creates nudges. The `EngagementScheduler` (`core/services/engagement_scheduler.dart`) exists but its nudge creation logic has no integration point with the mentor.
-
-The vision requires proactive engagement: "reminders, prompts, revision nudges, lesson notifications, accountability messaging, and practice encouragement." None of this is functional.
-
-### 4. Mentor has no wellbeing/overwork awareness
-
-The vision states: "prevent student from overworking and stress" and "wellbeing support related to studying." The `EngagementNudgeModel.nudgeType` includes `overwork`, but no code ever detects excessive study sessions, late-night study, or consecutive days above target. The `StudyTimerService` (`lib/features/sessions/services/study_timer_service.dart`) has a `dailyCapMinutes` setting but this is never surfaced to the mentor.
-
-### 5. No accountability or motivation subsystem
-
-The vision requires accountability ("accountability messaging") and motivation ("motivation and encouragement"). The current code has:
-- `BadgeService` (`core/services/badge_service.dart`) — tracks badge unlocks but no integration with mentor conversation
-- `StudyProgressTracker` (`core/services/study_progress_tracker.dart`) — has recommendations but no structured motivation flow
-- No streak celebrations, milestone congratulations, or low-adherence check-ins
-
-### 6. Dead / unused code burden
-
-| Dead Code | Location | Lines | Impact |
-|---|---|---|---|
-| `EngagementNudgeRepository` | `planner/data/repositories/engagement_nudge_repository.dart` | 63 | Full CRUD, zero callers |
-| `AdaptivePracticeEngine` | `core/services/adaptive_practice_engine.dart` | 122 | Full engine, no provider wired, no screen uses it |
-| `lessonPlanProvider` | `teaching/providers/teaching_providers.dart` | 4 | Always returns null |
-| `promptTemplatesProvider` | `teaching/providers/teaching_providers.dart` | 4 | Exact duplicate of `promptsProvider` |
-| 6 `FutureProvider.family` in lessons | `lessons/providers/lesson_providers.dart` | ~30 | Defined, never consumed by any widget |
-
-### 7. Service-layer duplication
-
-`PlannerService.redistributeWorkload()` (planner) is a near-exact duplicate of `PersonalLearningPlanService._redistributeMissedWorkload()` (core). Same for `linkDailyPlanToRoadmap()` vs `_linkDailyPlanToRoadmap()`. Two versions of the same logic, risking divergence.
-
-### 8. Repository pattern inconsistency
-
-`core/data/repository.dart:4` states: "All repositories MUST wrap their public method return types in Result." `TutorSessionRepository` (`lib/features/teaching/data/repositories/tutor_session_repository.dart`) and `ConversationRepository` (`lib/features/teaching/data/repositories/conversation_repository.dart`) both throw raw exceptions instead of returning `Result<T>`, violating the project convention.
-
-## Proposed Solution
-
-### Phase 1: Mentor Context Expansion
-
-Extend `MentorService._buildContextPrompt()` to inject rich, structured context:
-
-- **Plan context**: Does a plan exist? Current phase? Adherence score? Deviation warning?
-- **Roadmap context**: Active roadmaps, nearest milestone, completion percentage
-- **Pending actions**: Count and types of actions awaiting decision
-- **Upcoming lessons**: Next 3 scheduled sessions with times
-- **Weak topics**: From `MasteryGraphService.getWeakTopics()`
-- **Recent session feedback**: Last tutor session outcome (if any today)
-- **Multi-syllabus**: Per-subject progress breakdown
-- **Wellbeing signals**: Today's study minutes vs daily cap, consecutive study days, late-night sessions
-
-### Phase 2: Conversational Scheduling & Action Execution
-
-Replace the PendingActionModel passthrough with direct conversational execution:
-
-- When the student asks to schedule, the mentor calls `PlannerService.scheduleLessonWithConflictCheck()` after checking `StudentAvailabilityModel`
-- The mentor proposes a time slot to the student for confirmation before booking
-- Rescheduling follows the same pattern: propose a new time, get confirmation, execute
-- Long-term planning ("I want to learn IB Physics in 180 days") calls `PlannerService.createRoadmap()` + `PlannerService.generatePlanFromSyllabus()` with conversational confirmation
-
-### Phase 3: Proactive Engagement Engine
-
-Wire `EngagementNudgeRepository` into a background service that:
-
-- **Overwork detection**: Checks daily study time against daily cap; fires nudge when exceeded
-- **Revision nudges**: Checks `QuestionMasteryStateRepository.getAtRiskQuestions()` for items approaching review date
-- **Plan adherence nudges**: Checks `PlanAdapter.checkAdherence()` and surfaces low-adherence warnings
-- **Lesson reminders**: Checks upcoming `TutorSession` objects and reminds before start
-- **Streak celebrations**: Detects consecutive study days and generates congratulatory messages
-
-Nudges flow into the mentor conversation as system-introduced messages and surface as notification-service notifications.
-
-### Phase 4: Wellbeing Monitor
-
-Add a background monitor that tracks:
-
-- Daily total study minutes from `StudyTimerService` / `SessionRepository`
-- Consecutive days above target
-- Late-night session detection (sessions starting after 10 PM)
-- Session count per day
-- Surfaces concerns through the mentor ("You've studied 6 hours today — that's above your usual. Want to take a break?")
-
-### Phase 5: Accountability & Motivation Subsystem
-
-- **Milestone celebrations**: When a roadmap milestone completes or adherence streak reaches 7 days, the mentor proactively congratulates
-- **Low-activity check-in**: If no study activity for 48+ hours, the mentor asks if everything is okay
-- **Plan regeneration prompt**: When adherence drops below 50% for 3 consecutive days, the mentor suggests a plan review
-- **Weekly digest**: Every Sunday, the mentor generates a short weekly summary of what was accomplished
-
-### Phase 6: Cleanup
-
-- Remove dead `AdaptivePracticeEngine` from core (superseded by `SpacedRepetitionEngine` in practice)
-- Remove dead providers: `lessonPlanProvider`, `promptTemplatesProvider`, the 6 unused lesson providers
-- Consolidate `PlannerService` duplication by delegating to `PersonalLearningPlanService` instead of duplicating
-- Fix repository pattern: wrap `TutorSessionRepository` and `ConversationRepository` methods in `Result<T>`
-- Remove dual block storage in `LessonRepository` (blocks stored both inline and separately)
-
-## Affected Files
-
-### Mentor Feature
-- `lib/features/mentor/services/mentor_service.dart` — Expand context, add proactive methods
-- `lib/features/mentor/providers/mentor_providers.dart` — Add new dependencies
-- `lib/features/mentor/presentation/mentor_screen.dart` — Surface proactive messages, add wellbeing UI
-
-### Planner Feature
-- `lib/features/planner/data/repositories/engagement_nudge_repository.dart` — Wire into services (currently dead code)
-- `lib/features/planner/data/models/engagement_nudge_model.dart` — May need condition-trigger fields
-- `lib/features/planner/services/planner_service.dart` — Expose scheduling/roadmap methods for conversational use
-- `lib/features/planner/services/syllabus_resolver.dart` — May need refactoring for mentor querying
-- `lib/features/planner/providers/planner_providers.dart` — Expose engagement nudge providers
-
-### Core Services
-- `lib/core/services/engagement_scheduler.dart` — Integrate nudge creation with repository
-- `lib/core/services/study_progress_tracker.dart` — Add wellbeing/motivation metrics
-- `lib/core/services/mastery_graph_service.dart` — Already has weak topic detection
-- `lib/core/services/personal_learning_plan_service.dart` — Consolidate duplicated logic from planner
-
-### Teaching Feature
-- `lib/features/teaching/providers/teaching_providers.dart` — Remove dead `lessonPlanProvider`, `promptTemplatesProvider`
-- `lib/features/teaching/data/repositories/tutor_session_repository.dart` — Wrap in `Result<T>`
-- `lib/features/teaching/data/repositories/conversation_repository.dart` — Wrap in `Result<T>`
-
-### Lessons Feature
-- `lib/features/lessons/providers/lesson_providers.dart` — Remove 6 unused providers or wire them to actual consumers
-- `lib/features/lessons/data/repositories/lesson_repository.dart` — Remove dual block storage
-
-### Practice Feature
-- `lib/core/services/adaptive_practice_engine.dart` — Remove (dead code, superseded by SpacedRepetitionEngine)
-- `lib/features/practice/providers/practice_providers.dart` — Remove `AdaptivePracticeEngine` provider reference if any
+Additionally, the `ContentPipeline` at `lib/features/ingestion/services/content_pipeline.dart` has no validation stage — AI-generated questions/summaries are created with no correctness or consistency checks, contrary to the vision's mandate that "AI-generated content should not be blindly trusted."
 
 ## Rationale
 
-The mentor mode is central to the StudyKing vision as "a persistent mentor that understands the student's history, habits, preferences, and academic goals." Currently, the mentor is a generic chat LLM with basic stats — it knows the student's accuracy but not their plan, their weak topics, their schedule, or their wellbeing. The gap between vision and implementation is the largest in the codebase.
+This is the single biggest gap between the vision and the current implementation. Without real extraction, the ingestion system cannot process actual student materials. Students must manually copy-paste text, defeating the purpose of the feature. The LLM-based generation stages (classification, summarization, question generation) work on whatever string is passed in, but there is no actual pipeline from a real file upload to structured knowledge.
 
-Fixing this delivers disproportionate user value because:
-1. It makes the mentor feel intelligent and personalized, not generic
-2. It enables a single conversational interface for scheduling, planning, motivation — reducing UX friction
-3. It completes the proactive engagement system that the architecture scaffolds but doesn't power
-4. It cleans up dead code that adds maintenance burden without providing value
-5. It consolidates duplicated business logic
+Three concrete problems block every student workflow:
+1. A student uploads a PDF textbook — `DocumentExtractor` returns `rawContent` (probably base64 or binary garbage).
+2. A student takes a photo of a whiteboard — `DocumentExtractor` returns `rawContent` as-is.
+3. A student shares a YouTube link — the system has no way to get the transcript.
+
+## Affected Files
+
+| File | Problem |
+|---|---|
+| `lib/features/ingestion/services/document_extractor.dart` | Stub — all source types return `rawContent`. No PDF parsing, no OCR, no transcription. |
+| `lib/core/services/pdf_ingestion_service.dart` | Sends PDF content to LLM but never actually extracts text from a PDF binary. Duplicates logic with `ContentPipeline._classifyTopic` and `_generateSummary`. |
+| `lib/features/ingestion/services/content_pipeline.dart` | No validation/correctness stage after AI generation. No progress reporting for long-running jobs. Error handler in `processFullPipeline` creates a new `Source` instead of reusing the existing one (loses the original source ID). |
+| `lib/features/ingestion/data/models/source_model.dart` | No fields for chunking/partitioning (large textbooks). No `ocrText` or `transcriptUrl` field separate from `extractedText`. |
+| `lib/core/services/cross_feature_integrator.dart` | Only links `Session` records. Has no mechanism to connect an ingested source to the planner's topic structure or the teaching feature's lesson plans. |
+| `lib/features/teaching/services/voice_controller.dart` | Stub — `isAvailable` always `false`, `requestPermission` returns `false`. Blocks the entire speech interaction modality. |
+| `lib/core/data/enums.dart` (SourceType) | Types `image`, `video`, `audio` defined but no extraction implementation exists for any of them. |
+| `pubspec.yaml` | Missing dependencies for: PDF text extraction (`pdf_text` or `syncfusion_flutter_pdf`), OCR (`google_mlkit_text_recognition`), audio transcription (whisper API or local model), video transcript fetching (YouTube API client). |
+
+## Suggested Implementation Approach
+
+### Phase 1 — real text extraction (high priority)
+
+1. **DocumentExtractor** — replace the stub switch with real extraction:
+   - `SourceType.pdf` / `document` / `textbook`: integrate a PDF parsing library (e.g., `syncfusion_flutter_pdf` or `pdfx`) to extract text page by page.
+   - `SourceType.webPage`: the `WebScraper` already fetches HTML; move HTML→text stripping into `DocumentExtractor` so all extraction lives in one place.
+   - `SourceType.image`: integrate OCR (e.g., `google_mlkit_text_recognition` for on-device, or send to an LLM vision model as a fallback).
+   - `SourceType.video` / `audio`: integrate a transcription service (Whisper API via the LLM layer, or a local whisper model). For YouTube, add YouTube Data API transcript fetching.
+   - Return the extracted plain text (same signature), but also populate new optional metadata fields on `Source`: `extractionMethod` (String), `pageCount` (int?), `ocrConfidence` (double?).
+
+2. **Source model** — add fields:
+   - `chunks` (`List<SourceChunk>`?) — for partitioning large textbooks into sub-sections with page ranges.
+   - `extractionMeta` (`Map<String, dynamic>`?) — store OCR confidence, page count, audio duration, etc.
+   - Add a `SourceChunk` model with `chunkIndex` (int), `pageStart` (int?), `pageEnd` (int?), `text` (String), `heading` (String?).
+
+### Phase 2 — AI output validation (medium priority)
+
+3. **ContentPipeline** — add a validation stage after `_generateQuestions`:
+   - Before persisting each generated question, validate that the question text is non-empty, the options list has ≥2 entries, `correctAnswer` appears in `options`, and `explanation` is non-empty.
+   - Add a configurable `validator` callback parameter to `processFullPipeline` so callers can inject domain-specific validation.
+   - Refactor the error handler to reuse the original `source` object (update its ID to the failed state) instead of creating a new one.
+
+4. **Merge PdfIngestionService into ContentPipeline** — the `PdfIngestionService` duplicates topic classification and summary generation that `ContentPipeline` already handles. Deprecate `PdfIngestionService` and move its question extraction logic into `ContentPipeline._generateQuestions` (which currently only generates *new* questions, not *extracts* existing ones from text).
+
+### Phase 3 — voice interaction (medium priority)
+
+5. **VoiceController** — replace the stub:
+   - Integrate a real speech-to-text (on-device: `speech_to_text` package; cloud: Whisper API via the LLM service).
+   - Integrate a real text-to-speech (on-device: `flutter_tts`; cloud: TTS via the LLM service or dedicated TTS API).
+   - Make `isAvailable` reflect actual platform capability.
+   - Wire the transcribed text into `ConversationManager.sendMessage()` in the teaching feature.
+
+### Phase 4 — cross-feature source linking (low priority)
+
+6. **CrossFeatureIntegrator** — add methods:
+   - `linkSourceToTopic(String sourceId, String topicId)` — associates a processed source with planner topics for syllabus tracking.
+   - `notifyPlannerOfNewContent(String sourceId, List<String> topicIds)` — triggers planner to re-evaluate workload if significant new material was ingested.
 
 ## Acceptance Criteria
 
-1. **Mentor context injection**: The mentor conversation prompt includes plan status, weak topics, upcoming lessons, and wellbeing signals. Verifiable by inspecting `_buildContextPrompt()` output.
-
-2. **Conversational scheduling**: Saying "schedule a lesson on [topic]" to the mentor proposes a time slot based on student availability, checks conflicts, waits for confirmation, and books via `PlannerService.scheduleLesson()`. No manual PendingAction acceptance required.
-
-3. **Roadmap creation**: Saying "create a roadmap for [subject] in [N] days" triggers `PlannerService.createRoadmap()` after conversational confirmation.
-
-4. **Engagement nudge generation**: At least three nudge types are generated and persisted (overwork, revision, plan adjustment). Nudges appear in the mentor conversation.
-
-5. **Wellbeing detection**: The mentor warns when daily study time exceeds the daily cap, and when sessions occur late at night.
-
-6. **Motivation/accountability**: The mentor congratulates after a 7-day study streak, and checks in after 48 hours of inactivity.
-
-7. **Plan adherence awareness**: The mentor knows the student's adherence score and can discuss plan adjustments.
-
-8. **Dead code removed**: `EngagementNudgeRepository` is wired into services. `AdaptivePracticeEngine` is removed. Dead providers are removed. No runtime errors from removal.
-
-9. **Duplicate logic consolidated**: `PlannerService.redistributeWorkload()` and `linkDailyPlanToRoadmap()` delegate to `PersonalLearningPlanService` instead of duplicating.
-
-10. **Repository consistency**: `TutorSessionRepository` and `ConversationRepository` return `Result<T>` from all public methods.
-
-11. **All existing tests pass** with zero changes to test logic.
-
-12. **New tests exist** for engagement nudge generation, conversational scheduling flow, wellbeing detection, and mentor context expansion.
+1. **PDF extraction**: Uploading a real PDF textbook extracts ≥90% of readable text correctly (verified against manual copy-paste). Page breaks and headings are preserved in `SourceChunk` metadata.
+2. **Web page extraction**: A URL paste into the ingestion screen extracts readable article text (not HTML boilerplate) and stores it as `extractedText`.
+3. **Image OCR**: A screenshot or photo of text is OCR'd and the recognized text is stored in `extractedText` with `extractionMeta.ocrConfidence`.
+4. **Audio/video transcription**: An audio file or YouTube link produces a text transcription stored in `extractedText` with `extractionMeta.durationSeconds`.
+5. **Validation guard**: If the LLM generates a question with `<2` options or an empty correct answer, the question is skipped (not persisted) and a warning is logged.
+6. **Error recovery**: If the pipeline fails mid-way (e.g., classification succeeds but question generation fails), the `Source` is saved with `processingStatus = failed` and the original `sourceId` is preserved (no orphan Source created).
+7. **Voice availability**: `VoiceController.isAvailable` returns `true` on devices with speech recognition support; `startListening` produces real transcribed text events.
+8. **Existing tests continue to pass** — all current `DocumentExtractor`, `ContentPipeline`, and `VoiceController` tests (if any) are updated or extended.
+9. **No regression** — `processUpload` (the non-pipeline path) still saves sources immediately without attempting extraction.

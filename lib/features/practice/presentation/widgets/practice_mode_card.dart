@@ -26,6 +26,7 @@ class PracticeModeCard extends StatelessWidget {
         : '$title, $subtitle';
     return Card(
       child: Semantics(
+        button: true,
         label: semanticLabel,
         enabled: isAvailable,
         child: InkWell(

@@ -5545,6 +5545,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Usage: {totalCost} over {totalTokens} tokens, avg: {avgCost} per 1k tokens'**
   String usageSummary(String totalCost, String totalTokens, String avgCost);
+
+  /// Tooltip for collapsed card header
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to expand'**
+  String get tapToExpand;
+
+  /// Tooltip for expanded card header
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to collapse'**
+  String get tapToCollapse;
+
+  /// Hint text below chat input field
+  ///
+  /// In en, this message translates to:
+  /// **'Press Enter to send, Ctrl+Enter for new line'**
+  String get sendHint;
 }
 
 class _AppLocalizationsDelegate

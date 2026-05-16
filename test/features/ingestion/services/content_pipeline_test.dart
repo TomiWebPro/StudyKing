@@ -14,9 +14,16 @@ class _MockLlmService extends LlmService {
   _MockLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
 
   bool classifyShouldFail = false;
+  bool questionGenShouldThrow = false;
   String classifyResult = 'Math';
   int classifyCallCount = 0;
   String summaryResult = 'Test summary';
+  String questionResult = '';
+
+  static const String defaultQuestions = '''[
+    {"text": "Q1", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Exp1"},
+    {"text": "Q2", "type": "singleChoice", "options": ["X", "Y", "Z", "W"], "correctAnswer": "X", "explanation": "Exp2"}
+  ]''';
 
   @override
   Future<String> chat({
@@ -28,6 +35,9 @@ class _MockLlmService extends LlmService {
     String feature = 'general',
   }) async {
     classifyCallCount++;
+    if (feature == 'question_generation' && questionGenShouldThrow) {
+      throw Exception('Question generation failed');
+    }
     if (feature == 'content_classification') {
       if (classifyShouldFail) return '';
       return classifyResult;
@@ -36,10 +46,7 @@ class _MockLlmService extends LlmService {
       return summaryResult;
     }
     if (feature == 'question_generation') {
-      return '''[
-        {"text": "Q1", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Exp1"},
-        {"text": "Q2", "type": "singleChoice", "options": ["X", "Y", "Z", "W"], "correctAnswer": "X", "explanation": "Exp2"}
-      ]''';
+      return questionResult.isNotEmpty ? questionResult : defaultQuestions;
     }
     return '';
   }
@@ -48,6 +55,8 @@ class _MockLlmService extends LlmService {
 class _MockSourceRepository extends SourceRepository {
   final Map<String, Source> _storage = {};
   bool shouldThrow = false;
+  int saveCallCount = 0;
+  int failSaveAfter = 999;
 
   @override
   Future<void> init() async {}
@@ -60,6 +69,8 @@ class _MockSourceRepository extends SourceRepository {
 
   @override
   Future<void> save(String key, Source item) async {
+    saveCallCount++;
+    if (saveCallCount >= failSaveAfter) throw Exception('Save error');
     _storage[key] = item;
   }
 
@@ -150,6 +161,7 @@ void main() {
     mockLlmService.classifyShouldFail = false;
     mockLlmService.classifyResult = 'Math';
     mockLlmService.classifyCallCount = 0;
+    mockLlmService.questionResult = '';
     mockTopicRepo.clear();
     pipeline = ContentPipeline(
       llmService: mockLlmService,
@@ -361,6 +373,73 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.topicId, isEmpty);
+    });
+
+    test('sets extractionMethod on source', () async {
+      final result = await pipeline.processFullPipeline(
+        title: 'Notes',
+        content: 'Some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.extractionMethod, isNotEmpty);
+    });
+
+    test('skips invalid generated questions during validation', () async {
+      mockLlmService.questionResult = '''[
+        {"text": "Valid Q", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Good explanation"},
+        {"text": "", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Bad - empty text"},
+        {"text": "Few options", "type": "singleChoice", "options": ["A"], "correctAnswer": "A", "explanation": "Bad - only 1 option"},
+        {"text": "No correct", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "", "explanation": "Bad - no correct answer"},
+        {"text": "Wrong answer", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "Z", "explanation": "Bad - Z not in options"},
+        {"text": "No expl", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": ""}
+      ]''';
+
+      final result = await pipeline.processFullPipeline(
+        title: 'Validation Test',
+        content: 'Test content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.generatedQuestionIds, hasLength(1));
+    });
+
+    test('preserves original source on pipeline failure', () async {
+      mockSourceRepo.failSaveAfter = 1;
+
+      final result = await pipeline.processFullPipeline(
+        title: 'Fail Test',
+        content: 'Content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test('reuses original source ID on mid-pipeline error', () async {
+      mockLlmService.questionGenShouldThrow = true;
+
+      final result = await pipeline.processFullPipeline(
+        title: 'Mid Fail',
+        content: 'Content for questions',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'model-1',
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.processingStatus, 'completed');
+      expect(result.data!.id, startsWith('src_'));
     });
   });
 }

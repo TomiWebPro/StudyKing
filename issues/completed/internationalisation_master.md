@@ -1,86 +1,83 @@
-# Systematic Locale-Unaware Percentage Formatting & Hardcoded User-Facing Strings
+# Exam session screen is entirely unlocalised — hardcoded English strings bypass `AppLocalizations`
 
 ## Context
 
-The codebase already has a locale-aware percentage utility (`formatPercent` in `lib/core/utils/number_format_utils.dart`) and an ARB-based i18n system. However, **12 presentation widgets bypass both** and use the pattern `'${(value * 100).round()}%'` directly. For **Spanish (es)** and other comma-decimal locales like French, German, Portuguese, this produces **incorrect output**: e.g. `85.5%` instead of the correct `85,5%`.
+The `exam_session_screen.dart` implements an exam-mode workflow (config, timer, results) that lives alongside the regular practice screens. Despite the broader practice feature being well-localised (50+ `AppLocalizations` usages, 4 correct `formatPercent` calls with `localeName`), **this screen contains 9+ hardcoded English user-facing strings and one locale-unaware duration abbreviation**. No corresponding ARB keys exist for any exam-related labels in either `app_en.arb` or `app_es.arb`.
 
-Additionally, several widgets embed **untranslated shorthand strings** and **hardcoded status labels** that are invisible to the i18n system.
+For a Spanish user the entire exam configuration screen, the result "Incorrect"/"Skipped" labels, and the auto-submission notice are always shown in English regardless of locale selection. The existing Spanish ARB file (380+ keys, formal *usted* register) is fully bypassed for this workflow.
 
----
+## Affected files
 
-## Issue 1: Hardcoded `'${(value * 100).round()}%'` in 12 locations across 8 files
+| File | Issue |
+|---|---|
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:384` | Hardcoded `'Exam Configuration'` heading |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:397` | Hardcoded `'Start Exam'` button |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:412` | Hardcoded `'Exam Duration'` label |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:417` | Hardcoded `'$d min'` — English abbreviation, not locale-aware |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:431` | Hardcoded `'Number of Questions'` label |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:464` | Hardcoded `'Incorrect'` result row label |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:465` | Hardcoded `'Skipped'` result row label |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:474` | Hardcoded `'Exam was auto-submitted when time ran out.'` notice |
+| `lib/features/practice/presentation/screens/exam_session_screen.dart:481` | Hardcoded `'Topic Breakdown'` section heading |
+| `lib/l10n/app_en.arb` | Missing ARB keys for all exam-related strings |
+| `lib/l10n/app_es.arb` | Missing ARB keys for all exam-related strings |
 
-These use Dart's default number-to-string conversion which always produces a period decimal separator, ignoring the active locale.
+## Detailed findings
 
-### Affected files
+### 1. Config screen — completely unlocalised (`exam_session_screen.dart:375-405`)
+Three headings and one button label are raw string literals. The method already receives a `l10n` parameter (`_buildConfigScreen(AppLocalizations l10n)`) but does not use it for these strings.
 
-| File | Line(s) | Current Code |
+### 2. Duration selector — locale-unaware abbreviation (`exam_session_screen.dart:407-424`)
+The chip labels `'$d min'` use the English convention (`"m"`). Per the documented abbreviation policy in `docs/i18n.md`:
+| Unit | EN | ES |
 |---|---|---|
-| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | 77, 183 | `'${(data.todayProgress * 100).round()}%'` and `'${(data.cumulativeProgress * 100).round()}%'` |
-| `lib/features/planner/presentation/widgets/plan_summary_card.dart` | 62 | `'${(summary.estimatedCoverage * 100).round()}%'` |
-| `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` | 108 | `'${(progress * 100).round()}%'` |
-| `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 151 | `'${(score * 100).round()}%'` |
-| `lib/features/dashboard/presentation/widgets/weak_areas_card.dart` | 49 | `'${(state.accuracy * 100).round()}%'` |
-| `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart` | 79 | `'${(state.accuracy * 100).round()}%'` |
-| `lib/features/dashboard/presentation/widgets/mastery_progress_card.dart` | 60–61 | `'${(avgAccuracy * 100).round()}%'` and `'${(avgReadiness * 100).round()}%'` |
-| `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart` | 41, 49 | `'${(averageAdherence * 100).round()}%'` and `'${(weeklyAdherence * 100).round()}%'` |
+| Minutes | `1m` / `{count}m` | `1min` / `{count}min` |
 
-### Rationale
+The hardcoded `'min'` happens to match the Spanish convention, but when a future locale uses a different abbreviation (e.g. French `"min"` → `"m"` invariant, Portuguese `"min"`), this will silently display the wrong token. The correct approach is to use the existing `l10n.sessionDurationMinutes(minutes)` key.
 
-The only way to render locale-correct percentages in Flutter is through `NumberFormat.percentPattern(localeName)`, which is already wrapped in `formatPercent()` at `lib/core/utils/number_format_utils.dart:15`. All these call sites should either use that utility or pass the formatted string through an ARB message (preferred when the surrounding text also needs translation).
+### 3. Results screen — mixed localisation (`exam_session_screen.dart:448-514`)
+- `l10n.totalQuestions` and `l10n.correctAnswers` are used correctly (lines 462–463)
+- `'Incorrect'` and `'Skipped'` are hardcoded (lines 464–465) even though the ARB file already has `incorrectFeedback` / `correctFeedback` / `skip` keys
+- `'Exam was auto-submitted when time ran out.'` is hardcoded (line 474) — a user-facing informational message
+- `'Topic Breakdown'` is hardcoded (line 481) — a section heading
 
----
+### 4. No ARB keys exist for any exam concept
+A search of both `app_en.arb` and `app_es.arb` confirms **zero** keys for: `exam`, `examConfiguration`, `startExam`, `examDuration`, `numberOfQuestions`, `examResults`, `skipped`, `autoSubmitted`, `timeRanOut`, or `topicBreakdown`.
 
-## Issue 2: Untranslated roadmap status badge (`roadmap_card.dart:51`)
+## Rationale
 
-The `roadmap.status` string (values: `"active"`, `"completed"`, etc.) is displayed directly via `Text(roadmap.status, ...)`.
+1. **Spanish users are fully blocked from using Exam mode in their language.** The formal *usted* register, positive framing ("Áreas por mejorar"), and locale-aware number formatting that work everywhere else in the app are absent for this entire feature.
 
-- **Spanish speakers** see `"active"` and `"completed"` in English.
-- The ARB files already have `"inProgress"`, `"completed"`, `"notStarted"` keys.
-- **Fix**: Map the raw status string to the appropriate ARB key.
+2. **Bad precedent.** If a new contributor adds a feature screen and copies the existing exam code pattern, they will replicate the unlocalised approach. All other practice screens use `final l10n = AppLocalizations.of(context)!;` — this screen should too.
 
----
+3. **Low-hanging fruit for a template to add future languages.** The exam screen's strings are a small, self-contained set (~10 keys) that can be extracted to ARB in a single pass. Adding those keys to `app_es.arb` creates a clear template for any future language (fr, de, pt, etc.).
 
-## Issue 3: Hardcoded `'M${milestone.order}'` label (`milestone_timeline.dart:86`)
+4. **The i18n infrastructure is ready.** `l10n.yaml` supports locale fallback, `AppLocale.resolveLocale()` maps regional variants, the coverage script validates key parity, and `number_format_utils.dart` provides locale-aware formatting — none of which is used by this screen.
 
-The milestone abbreviation prefix `"M"` is hardcoded. In Spanish, an abbreviation like `"H"` (for "Hito") would be expected. This should go through an ARB key or use `l10n.milestone` combined with numbering.
+## Acceptance criteria
 
----
-
-## Issue 4: Hardcoded Shorthand Labels
-
-Three widgets embed English-centric shorthand that is not exposed to the i18n system:
-
-| File | Line | Code | Problem |
-|---|---|---|---|
-| `plan_summary_card.dart` | 53 | `'${summary.totalQuestions}Q'` | "Q" is English; Spanish uses `"P"` (preguntas) |
-| `calendar_view_widget.dart` | 168 | `'${dailyPlan.targetMinutes}m'` | "m" is assumed universal but should go through ARB (cf. `minutesCountMetric` and `durationMinutes` keys) |
-| `lesson_progress_bar.dart` | 166 | `'${section.durationMinutes}min'` | Hardcoded "min" instead of using `l10n.durationMinutes` or `l10n.minutesValue` |
-
-Note: the ARB files already have `questionsAndMinutes`, `topicQuestionsAndMinutes`, `minutesCountMetric`, `durationMinutes` keys that cover these shorthands. The widgets simply aren't using them for these specific labels.
-
----
-
-## Issue 5: Hardcoded ISO date format in `lesson_booking_sheet.dart:106`
-
-```dart
-'${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'
-```
-
-This always renders `YYYY-MM-DD` regardless of locale. **Spanish** expects `DD/MM/YYYY` (or a named format like `15 de mayo de 2026`). Should use `DateFormat.yMd(l10n.localeName)`.
-
----
-
-## Acceptance Criteria
-
-1. All 12 hardcoded `${(value * 100).round()}%` patterns replaced with `formatPercent(value, localeName)` — verify with `Locale('es')` that the output is `85,5%` not `85.5%`.
-2. `roadmap.status` shows translated label ("Activo", "Completado") when locale is Spanish.
-3. `'M${milestone.order}'` goes through ARB (e.g., `l10n.milestoneShort(milestone.order)` or equivalent).
-4. Shorthand labels (`Q`, `m`, `min`) replaced with existing ARB keys: `questionsAndMinutes`, `minutesCountMetric`, `durationMinutes`.
-5. Hardcoded ISO date in `lesson_booking_sheet.dart:106` replaced with `DateFormat.yMd(localeName)` or `.yMMMd()` depending on UX intent.
-6. All changes produce correct output for both `es` and `en` locales without regression.
-7. At least one widget test for a percentage-displaying widget asserts the correct Spanish-formatted output.
-
-## Spanish as a Template for Future Locales
-
-Every fix above should be implemented by **adding an ARB key** (if one doesn't already exist) and referencing it through `AppLocalizations.of(context)`. This creates a clear pattern: any new language only needs a new `.arb` file without touching source code.
+- [ ] Add 10 new ARB keys to `app_en.arb`:
+  - `examConfiguration` — `"Exam Configuration"`
+  - `startExam` — `"Start Exam"`
+  - `examDuration` — `"Exam Duration"`
+  - `numberOfQuestions` — `"Number of Questions"`
+  - `incorrectResults` — `"Incorrect"` (distinct from `incorrectFeedback`)
+  - `skippedResults` — `"Skipped"` (distinct from `skip` verb)
+  - `autoSubmittedNotice` — `"Exam was auto-submitted when time ran out."`
+  - `topicBreakdown` — `"Topic Breakdown"`
+- [ ] Add the same 10 keys to `app_es.arb` with formal *usted* Spanish translations:
+  - `examConfiguration` → `"Configuración del Examen"`
+  - `startExam` → `"Iniciar Examen"`
+  - `examDuration` → `"Duración del Examen"`
+  - `numberOfQuestions` → `"Número de Preguntas"`
+  - `incorrectResults` → `"Incorrectas"`
+  - `skippedResults` → `"Omitidas"`
+  - `autoSubmittedNotice` → `"El examen se envió automáticamente al agotarse el tiempo."`
+  - `topicBreakdown` → `"Desglose por Tema"`
+- [ ] Replace all 9 hardcoded English strings in `exam_session_screen.dart` with calls to the new `l10n.*` getters
+- [ ] Replace `'$d min'` (line 417) with `l10n.sessionDurationMinutes(d)` to use the existing locale-aware key
+- [ ] Replace `'${result.questionResults.length}'`, `'${result.totalCorrect}'`, `'${result.totalIncorrect}'`, `'${result.totalSkipped}'` with `l10n.ofLabel` or `formatDecimal` for locale-aware number formatting
+- [ ] Run `bash scripts/gen_l10n.sh` to regenerate Dart code
+- [ ] Run `bash scripts/check_i18n_coverage.sh` to validate 100% key parity between EN and ES ARB files
+- [ ] Run `dart run scripts/validate_arb_no_duplicates.dart` to check for duplicate keys
+- [ ] Verify the screen renders correctly under `en` and `es` locales in a hot-reload test

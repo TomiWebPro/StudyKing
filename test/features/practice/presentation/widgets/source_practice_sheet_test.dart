@@ -86,6 +86,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('No sources available'), findsOneWidget);
     });
+
+    testWidgets('static show displays bottom sheet', (tester) async {
+      String? capturedId;
+      String? capturedTitle;
+      await tester.pumpWidget(_buildTestApp(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              SourcePracticeSheet.show(
+                context,
+                sources: sources,
+                onSourceSelected: (id, title) {
+                  capturedId = id;
+                  capturedTitle = title;
+                },
+              );
+            },
+            child: const Text('Show Sheet'),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Show Sheet'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Textbook Ch.1'), findsOneWidget);
+      expect(find.text('Questions: 15'), findsOneWidget);
+
+      await tester.tap(find.text('Textbook Ch.1'));
+      await tester.pumpAndSettle();
+
+      expect(capturedId, equals('s1'));
+      expect(capturedTitle, equals('Textbook Ch.1'));
+    });
   });
 
   group('SourceItemData', () {

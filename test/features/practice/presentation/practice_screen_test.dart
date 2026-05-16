@@ -7,6 +7,8 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -62,7 +64,9 @@ class _FakeQuestionRepository extends QuestionRepository {
 class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
   final Map<String, int> _dueCounts;
 
-  _FakeSpacedRepetitionRepository([this._dueCounts = const {}]);
+  _FakeSpacedRepetitionRepository([this._dueCounts = const {}]) : super(
+    service: _FakeSpacedRepetitionService(_dueCounts),
+  );
 
   @override
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
@@ -72,6 +76,20 @@ class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
   @override
   Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
     return Result.success([]);
+  }
+}
+
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  final Map<String, int> _dueCounts;
+
+  _FakeSpacedRepetitionService([this._dueCounts = const {}]) : super(
+    questionRepo: _FakeQuestionRepository([]),
+    attemptRepo: AttemptRepository(),
+  );
+
+  @override
+  Future<Result<int>> getSubjectDueCount(String subjectId) async {
+    return Result.success(_dueCounts[subjectId] ?? 0);
   }
 }
 
@@ -103,13 +121,16 @@ Widget _buildTestApp({
   SpacedRepetitionRepository? srRepo,
   MasteryGraphService? masteryService,
   NavigatorObserver? navigatorObserver,
+  Map<String, int>? srDueCounts,
 }) {
+  final dueCounts = srDueCounts ?? <String, int>{};
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(subjectRepo)),
       subjectRepositoryProvider.overrideWithValue(subjectRepo),
       questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
-      spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepository()),
+      spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepository(dueCounts)),
+      spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService(dueCounts)),
       if (masteryService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryService),
     ],
@@ -206,9 +227,8 @@ void main() {
       final box = _MockSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Chemistry'));
       final repo = _FakeSubjectRepository(box);
-      final srRepo = _FakeSpacedRepetitionRepository({'1': 5});
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srRepo: srRepo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srDueCounts: {'1': 5}));
       await tester.pumpAndSettle();
 
       expect(find.text('5'), findsOneWidget);
@@ -228,9 +248,8 @@ void main() {
       final box = _MockSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
-      final srRepo = _FakeSpacedRepetitionRepository({'1': 0});
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srRepo: srRepo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srDueCounts: {'1': 0}));
       await tester.pumpAndSettle();
 
       expect(find.text(_kSpacedRepetition), findsOneWidget);
@@ -262,9 +281,8 @@ void main() {
       final box = _MockSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
-      final srRepo = _FakeSpacedRepetitionRepository({'1': 0});
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srRepo: srRepo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srDueCounts: {'1': 0}));
       await tester.pumpAndSettle();
 
       // Spaced Repetition card should be disabled (no due counts)
@@ -284,9 +302,8 @@ void main() {
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
-      final srRepo = _FakeSpacedRepetitionRepository({'1': 0, '2': 0});
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srRepo: srRepo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srDueCounts: {'1': 0, '2': 0}));
       await tester.pumpAndSettle();
 
       expect(find.text(_kNoReviewsScheduled), findsAtLeast(1));
@@ -297,9 +314,8 @@ void main() {
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
-      final srRepo = _FakeSpacedRepetitionRepository({'1': 3, '2': 0});
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srRepo: srRepo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, srDueCounts: {'1': 3, '2': 0}));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text(_kSpacedRepetition));

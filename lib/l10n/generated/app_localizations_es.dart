@@ -3254,4 +3254,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String usageSummary(String totalCost, String totalTokens, String avgCost) {
     return 'Uso: $totalCost sobre $totalTokens tokens, promedio: $avgCost por cada 1k tokens';
   }
+
+  @override
+  String get tapToExpand => 'Toca para expandir';
+
+  @override
+  String get tapToCollapse => 'Toca para colapsar';
+
+  @override
+  String get sendHint =>
+      'Presiona Enter para enviar, Ctrl+Enter para nueva línea';
 }

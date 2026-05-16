@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/services/cross_feature_integrator.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
@@ -7,6 +8,12 @@ import 'package:studyking/features/practice/data/repositories/question_mastery_s
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
+import 'package:studyking/features/practice/services/mastery_recorder.dart';
+import 'package:studyking/features/practice/services/readiness_scorer.dart';
+import 'package:studyking/features/practice/services/difficulty_adapter.dart';
+import 'package:studyking/features/practice/services/exam_session_service.dart';
+import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
@@ -330,6 +337,153 @@ void main() {
       final result = container.read(masteryGraphServiceProvider);
       expect(result, isA<MasteryGraphService>());
     });
+
+    test('spacedRepetitionEngineProvider creates default engine', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(spacedRepetitionEngineProvider);
+      expect(result, isA<SpacedRepetitionEngine>());
+    });
+
+    test('spacedRepetitionEngineProvider can be overridden', () {
+      final fakeEngine = SpacedRepetitionEngine();
+      final container = ProviderContainer(
+        overrides: [
+          spacedRepetitionEngineProvider.overrideWithValue(fakeEngine),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(spacedRepetitionEngineProvider);
+      expect(result, same(fakeEngine));
+    });
+
+    test('masteryRecorderProvider creates recorder with dependencies', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(masteryRecorderProvider);
+      expect(result, isA<MasteryRecorder>());
+    });
+
+    test('masteryRecorderProvider can be overridden', () {
+      final fakeRecorder = FakeMasteryRecorder();
+      final container = ProviderContainer(
+        overrides: [
+          masteryRecorderProvider.overrideWithValue(fakeRecorder),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(masteryRecorderProvider);
+      expect(result, same(fakeRecorder));
+    });
+
+    test('readinessScorerProvider creates default scorer', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(readinessScorerProvider);
+      expect(result, isA<ReadinessScorer>());
+    });
+
+    test('readinessScorerProvider can be overridden', () {
+      final fakeScorer = ReadinessScorer();
+      final container = ProviderContainer(
+        overrides: [
+          readinessScorerProvider.overrideWithValue(fakeScorer),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(readinessScorerProvider);
+      expect(result, same(fakeScorer));
+    });
+
+    test('difficultyAdapterProvider creates default adapter', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(difficultyAdapterProvider);
+      expect(result, isA<DifficultyAdapter>());
+    });
+
+    test('difficultyAdapterProvider can be overridden', () {
+      final fakeAdapter = DifficultyAdapter();
+      final container = ProviderContainer(
+        overrides: [
+          difficultyAdapterProvider.overrideWithValue(fakeAdapter),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(difficultyAdapterProvider);
+      expect(result, same(fakeAdapter));
+    });
+
+    test('examSessionServiceProvider creates service with dependencies', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(examSessionServiceProvider);
+      expect(result, isA<ExamSessionService>());
+    });
+
+    test('examSessionServiceProvider can be overridden', () {
+      final fakeService = FakeExamSessionService();
+      final container = ProviderContainer(
+        overrides: [
+          examSessionServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(examSessionServiceProvider);
+      expect(result, same(fakeService));
+    });
+
+    test('mistakeReviewServiceProvider creates service with dependencies', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(mistakeReviewServiceProvider);
+      expect(result, isA<MistakeReviewService>());
+    });
+
+    test('mistakeReviewServiceProvider can be overridden', () {
+      final fakeService = FakeMistakeReviewService();
+      final container = ProviderContainer(
+        overrides: [
+          mistakeReviewServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(mistakeReviewServiceProvider);
+      expect(result, same(fakeService));
+    });
+
+    test('crossFeatureIntegratorProvider creates integrator with dependencies', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = container.read(crossFeatureIntegratorProvider);
+      expect(result, isA<CrossFeatureIntegrator>());
+    });
+
+    test('crossFeatureIntegratorProvider can be overridden', () {
+      final fakeIntegrator = FakeCrossFeatureIntegrator();
+      final container = ProviderContainer(
+        overrides: [
+          crossFeatureIntegratorProvider.overrideWithValue(fakeIntegrator),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(crossFeatureIntegratorProvider);
+      expect(result, same(fakeIntegrator));
+    });
   });
 }
 
@@ -359,4 +513,39 @@ class FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
 
 class FakeMasteryGraphService extends MasteryGraphService {
   FakeMasteryGraphService();
+}
+
+class FakeMasteryRecorder extends MasteryRecorder {
+  FakeMasteryRecorder()
+      : super(
+          masteryGraphService: MasteryGraphService(),
+          srEngine: SpacedRepetitionEngine(),
+          attemptRepo: AttemptRepository(),
+          questionMasteryRepo: QuestionMasteryStateRepository(),
+          questionRepo: QuestionRepository(),
+        );
+}
+
+class FakeExamSessionService extends ExamSessionService {
+  FakeExamSessionService()
+      : super(
+          sessionRepo: SessionRepository(),
+          studentIdService: StudentIdService(),
+        );
+}
+
+class FakeMistakeReviewService extends MistakeReviewService {
+  FakeMistakeReviewService()
+      : super(
+          attemptRepo: AttemptRepository(),
+          questionRepo: QuestionRepository(),
+        );
+}
+
+class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
+  FakeCrossFeatureIntegrator()
+      : super(
+          sessionRepo: SessionRepository(),
+          studentIdService: StudentIdService(),
+        );
 }

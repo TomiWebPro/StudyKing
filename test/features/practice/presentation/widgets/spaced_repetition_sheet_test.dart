@@ -113,6 +113,21 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
       expect(find.text('All caught up!'), findsOneWidget);
       expect(find.text('No reviews scheduled.'), findsOneWidget);
+      expect(find.text('Back to Practice'), findsOneWidget);
+    });
+
+    testWidgets('showAllCaughtUp back button pops the sheet', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const SizedBox.shrink()));
+      await tester.pumpAndSettle();
+
+      SpacedRepetitionSheet.showAllCaughtUp(tester.element(find.byType(SizedBox)));
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Back to Practice'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Back to Practice'), findsNothing);
     });
 
     testWidgets('showSubjectPicker displays bottom sheet with subjects', (tester) async {
