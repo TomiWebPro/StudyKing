@@ -2169,6 +2169,87 @@
       }
     }
   },
+  "examMode": "Modo de Examen",
+  "@examMode": {
+    "description": "Exam mode title"
+  },
+  "examModeDescription": "Simulación de examen cronometrado",
+  "@examModeDescription": {
+    "description": "Description for exam mode"
+  },
+  "sourcePractice": "Práctica por Fuente",
+  "@sourcePractice": {
+    "description": "Source practice mode title"
+  },
+  "sourcePracticeDescription": "Practique por fuente",
+  "@sourcePracticeDescription": {
+    "description": "Description for source practice mode"
+  },
+  "noSourcesAvailable": "No hay fuentes disponibles",
+  "@noSourcesAvailable": {
+    "description": "Message when no sources are available"
+  },
+  "howConfident": "¿Qué tan seguro está?",
+  "@howConfident": {
+    "description": "Label for confidence selector"
+  },
+  "notConfidentAtAll": "Nada seguro",
+  "@notConfidentAtAll": {
+    "description": "Confidence level 1"
+  },
+  "slightlyConfident": "Ligeramente seguro",
+  "@slightlyConfident": {
+    "description": "Confidence level 2"
+  },
+  "moderatelyConfident": "Moderadamente seguro",
+  "@moderatelyConfident": {
+    "description": "Confidence level 3"
+  },
+  "quiteConfident": "Bastante seguro",
+  "@quiteConfident": {
+    "description": "Confidence level 4"
+  },
+  "veryConfident": "Muy seguro",
+  "@veryConfident": {
+    "description": "Confidence level 5"
+  },
+  "reviewMistakes": "Revisar Errores",
+  "@reviewMistakes": {
+    "description": "Title for mistake review section"
+  },
+  "reviewMistakesDescription": "Revisar {count} errores de esta sesión",
+  "@reviewMistakesDescription": {
+    "description": "Description for mistake review",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noMistakesToReview": "No hay errores que revisar",
+  "@noMistakesToReview": {
+    "description": "Message when there are no mistakes to review"
+  },
+  "redoIncorrectQuestions": "Rehacer Preguntas Incorrectas",
+  "@redoIncorrectQuestions": {
+    "description": "Button to redo incorrect questions"
+  },
+  "noAnswerProvided": "No se proporcionó respuesta",
+  "@noAnswerProvided": {
+    "description": "Fallback text when no answer was given"
+  },
+  "correctAnswer": "Respuesta Correcta",
+  "@correctAnswer": {
+    "description": "Label for correct answer"
+  },
+  "practiceBySource": "Practicar por Fuente",
+  "@practiceBySource": {
+    "description": "Title for practice by source sheet"
+  },
+  "practiceBySourceDescription": "Seleccione una fuente para practicar preguntas",
+  "@practiceBySourceDescription": {
+    "description": "Description for practice by source sheet"
+  },
   "fallbackOption": "Opción {number}",
   "@fallbackOption": {
     "description": "Fallback option label for multiple choice questions",
@@ -4214,6 +4295,93 @@
     "description": "Error message when getting questions for topics fails",
     "placeholders": {
       "error": {
+        "type": "String"
+      }
+    }
+  },
+  "filePickerError": "Error del selector de archivos: {error}",
+  "@filePickerError": {
+    "description": "Error message when file picker fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "urlFetchSuccess": "Contenido de URL obtenido exitosamente",
+  "@urlFetchSuccess": {
+    "description": "Success message when URL content is fetched"
+  },
+  "urlFetchFailed": "Error al obtener URL: {error}",
+  "@urlFetchFailed": {
+    "description": "Error message when URL fetch fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "urlFetchError": "Error de obtención de URL: {error}",
+  "@urlFetchError": {
+    "description": "Error message for URL fetch exception",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "file": "Archivo",
+  "@file": {
+    "description": "Chip label for file upload mode"
+  },
+  "fetchAndScrape": "Obtener y extraer",
+  "@fetchAndScrape": {
+    "description": "Button label to fetch and scrape URL content"
+  },
+  "hoursAbbreviation": "{hours}h",
+  "@hoursAbbreviation": {
+    "description": "Hours abbreviation with formatted number",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "tokensLabel": "{count} tokens",
+  "@tokensLabel": {
+    "description": "Token count label with formatted number",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "usageRecordFormat": "{date}: {cost}, costo/token: {costPerToken}",
+  "@usageRecordFormat": {
+    "description": "Usage record format with date, cost, and cost per token",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "cost": {
+        "type": "String"
+      },
+      "costPerToken": {
+        "type": "String"
+      }
+    }
+  },
+  "usageSummary": "Uso: {totalCost} sobre {totalTokens} tokens, promedio: {avgCost} por cada 1k tokens",
+  "@usageSummary": {
+    "description": "Summary of total usage statistics",
+    "placeholders": {
+      "totalCost": {
+        "type": "String"
+      },
+      "totalTokens": {
+        "type": "String"
+      },
+      "avgCost": {
         "type": "String"
       }
     }

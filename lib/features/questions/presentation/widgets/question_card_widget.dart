@@ -146,7 +146,6 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
 
               if (!widget.isSubmitted)
                 Semantics(
-                  button: true,
                   label: l10n.submitAnswer,
                   child: SizedBox(
                     width: double.infinity,
@@ -174,7 +173,6 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
 
               if (widget.isSubmitted && widget.onNext != null)
                 Semantics(
-                  button: true,
                   label: l10n.nextQuestion,
                   child: SizedBox(
                     width: double.infinity,

@@ -7,6 +7,7 @@ class FocusTimerWidget extends StatefulWidget {
   final int elapsedSeconds;
   final bool isPaused;
   final bool isActive;
+  final bool reduceMotion;
   final VoidCallback? onPause;
   final VoidCallback? onResume;
   final VoidCallback? onComplete;
@@ -18,6 +19,7 @@ class FocusTimerWidget extends StatefulWidget {
     required this.elapsedSeconds,
     this.isPaused = false,
     this.isActive = false,
+    this.reduceMotion = false,
     this.onPause,
     this.onResume,
     this.onComplete,
@@ -65,8 +67,9 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
 
   void _syncPulseAnimation() {
     final isRunning = widget.isActive && !widget.isPaused;
+    final disableAll = widget.reduceMotion || MediaQuery.disableAnimationsOf(context);
     if (isRunning) {
-      if (MediaQuery.disableAnimationsOf(context)) {
+      if (disableAll) {
         _pulseController.stop();
         _pulseController.reset();
       } else if (!_pulseController.isAnimating) {
@@ -135,36 +138,44 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                         ),
                       ),
                     ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            _formatTime(remaining),
-                            style: theme.textTheme.displaySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isComplete ? cs.primary : null,
+                    Semantics(
+                      liveRegion: true,
+                      label: widget.isPaused
+                          ? '${l10n.timerPaused}, ${_formatTime(remaining)}'
+                          : isComplete
+                              ? '${l10n.timerDone}, ${_formatTime(remaining)}'
+                              : '${l10n.timerRemaining}, ${_formatTime(remaining)}',
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _formatTime(remaining),
+                              style: theme.textTheme.displaySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isComplete ? cs.primary : null,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.isPaused
-                              ? l10n.timerPaused
-                              : isComplete
-                                  ? l10n.timerDone
-                                  : l10n.timerRemaining,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: widget.isPaused
-                                ? cs.tertiary
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.isPaused
+                                ? l10n.timerPaused
                                 : isComplete
-                                    ? cs.primary
-                                    : cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
+                                    ? l10n.timerDone
+                                    : l10n.timerRemaining,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: widget.isPaused
+                                  ? cs.tertiary
+                                  : isComplete
+                                      ? cs.primary
+                                      : cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

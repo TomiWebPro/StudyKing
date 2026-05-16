@@ -221,17 +221,6 @@ final selectedModelProvider = StateProvider<String>((ref) => '');
 
 final llmProviderProvider = StateProvider<LlmProvider>((ref) => LlmProvider.openRouter);
 
-String defaultModelForProvider(LlmProvider provider) {
-  switch (provider) {
-    case LlmProvider.openRouter:
-      return 'gemini-2.0-flash';
-    case LlmProvider.ollama:
-      return 'llama3';
-    case LlmProvider.openAI:
-      return 'gpt-4o-mini';
-  }
-}
-
 final localeProvider = StateProvider<Locale>((ref) {
   try {
     final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;

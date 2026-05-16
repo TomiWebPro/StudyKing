@@ -10,6 +10,10 @@ class UiConfig {
   static const String notificationChannelName = 'Study Reminders';
 }
 
+const bottomSheetShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+);
+
 class CacheConfig {
   const CacheConfig._();
 

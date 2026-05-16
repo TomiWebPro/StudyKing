@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/data/database_service.dart';
 import '../../../core/data/enums.dart';
 import '../../../core/data/models/question_model.dart';
+import '../../../core/data/models/session_model.dart';
 import '../../../core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
@@ -117,6 +118,23 @@ class TutorService {
         studentId: session.studentId,
         actualMinutes: _elapsedMinutes(session).clamp(1, 480),
       );
+    } catch (_) {}
+
+    try {
+      final now = _clock.now();
+      final elapsedMs = _elapsedMinutes(session) * 60000;
+      await _database.sessionRepository.save(Session(
+        id: 'tutor_${session.id}_${now.millisecondsSinceEpoch}',
+        studentId: session.studentId,
+        subjectId: session.subjectId,
+        topicId: session.topicId,
+        type: SessionType.tutoring,
+        startTime: now.subtract(Duration(milliseconds: elapsedMs)),
+        endTime: now,
+        actualDurationMs: elapsedMs,
+        completed: true,
+        sourceId: session.id,
+      ));
     } catch (_) {}
 
     _currentManager = null;

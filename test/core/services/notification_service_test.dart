@@ -1,147 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/services/localization_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
-
-class _MockLocalizationService implements LocalizationService {
-  @override
-  AppLocalizations get l10n => AppLocalizationsEn();
-
-  @override
-  String badgeName(String badgeId) => '';
-  @override
-  String badgeDescription(String badgeId) => '';
-  @override
-  String nudgeOverwork(String hours) => '';
-  @override
-  String nudgeRevision(int days, String topic) => '';
-  @override
-  String nudgePlanAdjustment(int days) => '';
-  @override
-  String nudgeWeeklyDigest({required int weeklyActivity, required int accuracy, required String totalHours, required int weakCount, required int badgeCount}) => '';
-  @override
-  String notificationTimeToReviewTitle() => '';
-  @override
-  String notificationTimeToReviewBody(int days, String topic) => '';
-  @override
-  String notificationTakeABreakTitle() => '';
-  @override
-  String notificationTakeABreakBody(String hours) => '';
-  @override
-  String notificationPlanAdjustmentTitle() => '';
-  @override
-  String notificationPlanAdjustmentBody(int days) => '';
-  @override
-  String notificationUpcomingLessonTitle() => '';
-  @override
-  String notificationUpcomingLessonBody(String lesson, String time) => '';
-  @override
-  String notificationTopicsNeedAttentionTitle() => '';
-  @override
-  String notificationTopicsNeedAttentionBody(String topics) => '';
-  @override
-  String notificationBadgeUnlockedTitle() => '';
-  @override
-  String notificationBadgeUnlockedBody(String badge, String description) => '';
-  @override
-  String channelGeneralName() => '';
-  @override
-  String channelGeneralDesc() => '';
-  @override
-  String channelDailyReminderName() => '';
-  @override
-  String channelDailyReminderDesc() => '';
-  @override
-  String channelRevisionName() => '';
-  @override
-  String channelRevisionDesc() => '';
-  @override
-  String channelWellbeingName() => '';
-  @override
-  String channelWellbeingDesc() => '';
-  @override
-  String channelPlanningName() => '';
-  @override
-  String channelPlanningDesc() => '';
-  @override
-  String channelLessonsName() => '';
-  @override
-  String channelLessonsDesc() => '';
-  @override
-  String channelMasteryName() => '';
-  @override
-  String channelMasteryDesc() => '';
-  @override
-  String channelBadgesName() => '';
-  @override
-  String channelBadgesDesc() => '';
-  @override
-  String planAccuracyLow() => '';
-  @override
-  String planReviewOverdue() => '';
-  @override
-  String planStreakLow() => '';
-  @override
-  String planPrerequisite() => '';
-  @override
-  String planBlocksDownstream(int count) => '';
-  @override
-  String planRequiredForDependent() => '';
-  @override
-  String planWeakPerformance() => '';
-  @override
-  String planHighForgettingRisk() => '';
-  @override
-  String planNewSyllabusTopic() => '';
-  @override
-  String planPartOfSyllabusGoal() => '';
-  @override
-  String planRecommendationReason(double accuracy, double reviewUrgency) => '';
-  @override
-  String planFocusLabel({required bool isEmpty, required double weakRatio}) => '';
-  @override
-  String planRestAndReview() => '';
-  @override
-  String adherenceLowDaysAdjust(int days) => '';
-  @override
-  String adherenceLowDaysRegenerate(int days) => '';
-  @override
-  String adherenceLowToday(int actualMinutes, int plannedMinutes) => '';
-  @override
-  String adherencePartialToday(int actualMinutes, int plannedMinutes) => '';
-  @override
-  String adherenceExceededToday(int actualMinutes, int plannedMinutes) => '';
-  @override
-  String recommendationAccuracyLow() => '';
-  @override
-  String recommendationReviewBasics() => '';
-  @override
-  String recommendationExcellentProgress() => '';
-  @override
-  String recommendationChallengingPractice() => '';
-  @override
-  String recommendationLowHours() => '';
-  @override
-  String recommendationSetDailyGoal() => '';
-  @override
-  String recommendationNoActivity() => '';
-  @override
-  String recommendationQuickReview() => '';
-  @override
-  String recommendationWeakTopics(int count) => '';
-  @override
-  String recommendationReviewWithTutor() => '';
-  @override
-  String suggestionFundamentals() => '';
-  @override
-  String suggestionPractice() => '';
-  @override
-  String suggestionAdvanced() => '';
-  @override
-  String shareSessionsText() => '';
-}
 
 void main() {
   group('NotificationService', () {
@@ -151,10 +11,9 @@ void main() {
       expect(identical(service1, service2), isTrue);
     });
 
-    test('setLocalizationService stores the service', () {
+    test('setAppLocalizations stores the l10n', () {
       final service = NotificationService();
-      final locService = _MockLocalizationService();
-      service.setLocalizationService(locService);
+      service.setAppLocalizations(AppLocalizationsEn());
     });
 
     test('init does not throw during initialization', () async {
@@ -265,12 +124,7 @@ void main() {
       expect(service.showBadgeUnlocked, isA<Function>());
       expect(service.cancelNotification, isA<Function>());
       expect(service.cancelAll, isA<Function>());
-      expect(service.setLocalizationService, isA<Function>());
-    });
-
-    test('_l10n returns null when no localization service set', () {
-      // Can't access private _l10n directly, verify via public API
-      // If _l10n is null, fallbacks should be used
+      expect(service.setAppLocalizations, isA<Function>());
     });
   });
 }

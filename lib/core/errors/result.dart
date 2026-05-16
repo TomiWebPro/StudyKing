@@ -9,7 +9,6 @@ sealed class Result<T> {
 
   bool get isSuccess => this is SuccessResult<T>;
   bool get isFailure => this is FailureResult<T>;
-  bool get hasError => error != null;
 }
 
 class SuccessResult<T> extends Result<T> {

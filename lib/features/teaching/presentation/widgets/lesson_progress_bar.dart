@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../models/lesson_plan_model.dart';
@@ -105,7 +106,7 @@ class LessonProgressBar extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '${(progress * 100).round()}%',
+                formatPercent(progress * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

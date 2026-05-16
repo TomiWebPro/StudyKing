@@ -78,9 +78,10 @@ class _UploadScreenState extends State<UploadScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('File picker error: $e'),
+            content: Text(l10n.filePickerError(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -128,26 +129,28 @@ class _UploadScreenState extends State<UploadScreen> {
     try {
       final result = await pipeline.fetchAndScrapeUrl(url);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       if (result.isSuccess && result.data != null) {
         setState(() {
           _contentController.text = result.data!;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('URL content fetched successfully')),
+          SnackBar(content: Text(l10n.urlFetchSuccess)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to fetch URL: ${result.error}'),
+            content: Text(l10n.urlFetchFailed(result.error ?? 'unknown')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('URL fetch error: $e'),
+            content: Text(l10n.urlFetchError(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -360,7 +363,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     ),
                     ActionChip(
                       avatar: const Icon(Icons.upload_file, size: 18),
-                      label: const Text('File'),
+                      label: Text(l10n.file),
                       onPressed: _pickFile,
                     ),
                     ActionChip(
@@ -425,7 +428,7 @@ class _UploadScreenState extends State<UploadScreen> {
                               alignment: Alignment.centerRight,
                               child: TextButton.icon(
                                 icon: const Icon(Icons.download, size: 18),
-                                label: const Text('Fetch & Scrape'),
+                                label: Text(l10n.fetchAndScrape),
                                 onPressed: () {
                                   final url = _urlController.text.trim();
                                   if (url.isNotEmpty) _fetchUrlContent(url);

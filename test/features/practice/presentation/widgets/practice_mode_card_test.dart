@@ -126,6 +126,23 @@ void main() {
       expect(find.byType(Container), findsWidgets);
     });
 
+    testWidgets('renders disabled card with muted colors when onTap is null', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+          onTap: null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.flash_on), findsOneWidget);
+      expect(find.text('Quick Practice'), findsOneWidget);
+      expect(find.text('10 random questions'), findsOneWidget);
+    });
+
     testWidgets('renders with Semantics widget wrapping', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         PracticeModeCard(

@@ -1,366 +1,200 @@
-# [F] Adaptive Practice Engine & Cross-Feature Learning Integration
+# Mentor-Planner Convergence & Proactive Engagement Engine
 
 ## Context
 
-The `agent_must_read.md` describes the question system and adaptive practice as **central to the product vision**:
+The `agent_must_read.md` vision describes two distinct AI interaction systems: **Teaching Mode** (live tutoring) and **Assistance/Mentor Mode** (persistent companion for planning, motivation, accountability, scheduling, and wellbeing). The teaching mode is well-implemented through the `teaching` feature. However, the mentor mode has a critical gap: the `MentorService` (`lib/features/mentor/services/mentor_service.dart`) is a thin chat wrapper with minimal context awareness, while the `PlannerService` (`lib/features/planner/services/planner_service.dart`) and the plan/roadmap/scheduling infrastructure remain disconnected from the mentor conversation flow.
 
-> "Questions should be organized, categorized, linked to sources/topics/syllabi, expanded through generated variants, and used to measure understanding, identify weak areas, and drive adaptive revision."
+Additionally, proactive engagement — a core requirement ("The system should proactively engage students with reminders, prompts, revision nudges...") — is entirely unimplemented: the `EngagementNudgeRepository` (`lib/features/planner/data/repositories/engagement_nudge_repository.dart`) is fully built but never called by any service or provider.
 
-> "Adaptive practice should be a major component: the system should continuously test understanding, focus on weak areas, revisit old content intelligently, and optimize for retention and mastery rather than simple completion."
+## Problem
 
-The current implementation reveals four critical, interlocking deficiencies that prevent the system from delivering on this vision:
+### 1. Mentor context is too thin for intelligent assistance
 
-### Deficiency 1: No Scientifically Valid Spaced Repetition Algorithm
+`MentorService._buildContextPrompt()` (`lib/features/mentor/services/mentor_service.dart:143-154`) injects only 6 aggregate stats (total attempts, correct attempts, accuracy, topics studied, weekly activity, total study hours). It has **zero awareness** of:
 
-The app has **two parallel, unsynchronized** "next review" data sources (`Question.nextReview` at `lib/core/data/models/question_model.dart` and `QuestionMasteryState.nextReview` at `lib/features/practice/data/models/question_mastery_state.dart`), both using a primitive threshold-based interval system (`30min/12h/1d/3d/7d`).
+- The student's current plan status, adherence, or deviation
+- Roadmap goals or milestones
+- Pending actions awaiting the student's decision
+- Upcoming scheduled lessons
+- Weak topics from the mastery graph (separate `getProgressReport` call not in chat context)
+- Multi-syllabus progress breakdown
+- Recent tutor session outcomes or feedback
 
-**Neither implements SM-2, FSRS, or any scientifically validated algorithm.** Key gaps:
+This makes the mentor feel shallow and disconnected from the student's actual study journey.
 
-| Feature | Current State | Standard Practice (SM-2/FSRS) |
-|---|---|---|
-| Ease factor | Not tracked | Core to SM-2; adjusts per-card difficulty |
-| Recall probability | Not computed | Core to FSRS; drives optimal scheduling |
-| Confidence grading | `StudentAttempt.confidence` (1-5) collected but unused by SR | Used to adjust intervals |
-| Exponential spacing | Linear threshold bands | SM-2: geometric; FSRS: power-law |
-| Forgetting curve model | None (rule-based thresholds) | FSRS: DSR (Difficulty, Stability, Retrievability) model |
-| Inter-session spacing | Not considered | Spacing effect well-established in learning science |
+### 2. Mentor cannot execute planning actions conversationally
 
-The `MasteryCalculationService` at `lib/core/services/mastery_calculation_service.dart` computes `readinessScore` and `reviewUrgency` with sensible formulas (recency decay, streak normalization), but these are **never used to drive question selection** in practice sessions — they exist only as computed metadata on `MasteryState`.
+When a student says "schedule a lesson on photosynthesis," `MentorService._checkAndHandlePlanningIntent()` (`mentor_service.dart:79-141`) creates a `PendingActionModel` with a naive `DateTime.now() + 1 hour` schedule that:
 
-### Deficiency 2: Practice Sessions Don't Record Mastery
+- Does not consult `StudentAvailabilityModel` (`lib/features/planner/data/models/student_availability_model.dart`) for preferred study times
+- Does not check for scheduling conflicts via `PlannerService.hasSchedulingConflict()`
+- Does not involve the student in a back-and-forth negotiation ("I see you're free tomorrow at 3pm — shall I book it?")
+- Does not use `PlannerService.scheduleLesson()` for actual booking
 
-`PracticeSessionScreen` at `lib/features/practice/presentation/practice_session_screen.dart` validates answers, provides feedback, and saves sessions, but **never calls `MasteryGraphService.recordAttempt()`**. The mastery graph records happen through a separate, untraced pathway:
+The student must manually go to the Planner screen, find the pending action, and accept/reject it. This breaks the conversational flow.
 
-```
-PracticeSessionScreen
-  → PracticeSessionService.updateNextReview()  // updates Question.nextReview only
-  → PracticeSessionService.autoSaveSession()    // saves Session model
-  → PracticeSessionScreen._recordAdherence()    // records plan adherence
-  ⚠ NEVER calls MasteryGraphService.recordAttempt()
-```
+### 3. Proactive engagement is entirely dead code
 
-This means:
-- Topic-level `MasteryState.accuracy`, `confidenceTrend`, `forgettingRisk`, etc. are **never updated from practice sessions**.
-- The dashboard's weak topics, mastery snapshot, and recommendations are based on **stale or missing data**.
-- The planner's plan generation reads `MasteryState` readiness scores, which are **not being updated by actual practice**.
+`EngagementNudgeRepository` (`lib/features/planner/data/repositories/engagement_nudge_repository.dart`, 63 lines) implements full CRUD for `EngagementNudgeModel` (overwork nudges, revision nudges, plan adjustment suggestions, lesson reminders, auto-regeneration). **Zero callers exist.** No service checks conditions and creates nudges. The `EngagementScheduler` (`core/services/engagement_scheduler.dart`) exists but its nudge creation logic has no integration point with the mentor.
 
-There are **two broken things** here: (1) `recordAttempt()` is not called from the practice session flow, and (2) even if it were, `MasteryStateRepository` writes update the Hive box, but `StudyProgressTracker` (used by dashboard and mentor) creates its **own** `AttemptRepository` instance (`dashboard_providers.dart:17-20`), which may be backed by a different Hive box or instance.
+The vision requires proactive engagement: "reminders, prompts, revision nudges, lesson notifications, accountability messaging, and practice encouragement." None of this is functional.
 
-### Deficiency 3: Three Overlapping "Session" Concepts — No Coherent Learning Record
+### 4. Mentor has no wellbeing/overwork awareness
 
-The codebase has three separate session-tracking models:
+The vision states: "prevent student from overworking and stress" and "wellbeing support related to studying." The `EngagementNudgeModel.nudgeType` includes `overwork`, but no code ever detects excessive study sessions, late-night study, or consecutive days above target. The `StudyTimerService` (`lib/features/sessions/services/study_timer_service.dart`) has a `dailyCapMinutes` setting but this is never surfaced to the mentor.
 
-| Model | Feature | Fields | Purpose |
+### 5. No accountability or motivation subsystem
+
+The vision requires accountability ("accountability messaging") and motivation ("motivation and encouragement"). The current code has:
+- `BadgeService` (`core/services/badge_service.dart`) — tracks badge unlocks but no integration with mentor conversation
+- `StudyProgressTracker` (`core/services/study_progress_tracker.dart`) — has recommendations but no structured motivation flow
+- No streak celebrations, milestone congratulations, or low-adherence check-ins
+
+### 6. Dead / unused code burden
+
+| Dead Code | Location | Lines | Impact |
 |---|---|---|---|
-| `Session` | `core/data/models/session_model.dart` | `id, studentId, subjectId, type (practice/focus/tutoring/manual), startTime, endTime, actualDurationMs, questionsAnswered, correctAnswers, completed` | Generic time tracking |
-| `TutorSession` | `teaching/data/repositories/tutor_session_repository.dart` | `id, studentId, topicId, subjectId, status, messages, lessonPlanJson, startTime, endTime, durationMinutes, planAdherenceScore` | AI tutoring sessions |
-| `Lesson` | `lessons/data/models/lesson_model.dart` | `id, subjectId, topicId, title, difficulty, blocks[], markscheme, generatedBy` | Static content bundles |
+| `EngagementNudgeRepository` | `planner/data/repositories/engagement_nudge_repository.dart` | 63 | Full CRUD, zero callers |
+| `AdaptivePracticeEngine` | `core/services/adaptive_practice_engine.dart` | 122 | Full engine, no provider wired, no screen uses it |
+| `lessonPlanProvider` | `teaching/providers/teaching_providers.dart` | 4 | Always returns null |
+| `promptTemplatesProvider` | `teaching/providers/teaching_providers.dart` | 4 | Exact duplicate of `promptsProvider` |
+| 6 `FutureProvider.family` in lessons | `lessons/providers/lesson_providers.dart` | ~30 | Defined, never consumed by any widget |
 
-These models are **never cross-referenced**:
+### 7. Service-layer duplication
 
-- When a practice session completes, it creates a `Session(type: practice)` but does not link to the `TutorSession` that generated the practice material or the `Lesson` that taught the concept.
-- When a tutor session completes, it creates a `TutorSession` but **not** a `Session`. The planner/adherence system cannot track tutor time as "study time."
-- The `Lesson` model is purely static content with no creation flow — it exists as a displayable artifact but is neither generated by AI nor created by users nor linked to practice.
-- `Session.sourceId` exists on the model but is never populated by any caller.
+`PlannerService.redistributeWorkload()` (planner) is a near-exact duplicate of `PersonalLearningPlanService._redistributeMissedWorkload()` (core). Same for `linkDailyPlanToRoadmap()` vs `_linkDailyPlanToRoadmap()`. Two versions of the same logic, risking divergence.
 
-### Deficiency 4: No Exam/Quiz Mode, No Review-of-Mistakes Flow, No Source-Linked Practice
+### 8. Repository pattern inconsistency
 
-The practice feature has a "weak areas" mode that loads all questions from topics with `accuracy < 0.7`, but:
+`core/data/repository.dart:4` states: "All repositories MUST wrap their public method return types in Result." `TutorSessionRepository` (`lib/features/teaching/data/repositories/tutor_session_repository.dart`) and `ConversationRepository` (`lib/features/teaching/data/repositories/conversation_repository.dart`) both throw raw exceptions instead of returning `Result<T>`, violating the project convention.
 
-- Questions are shuffled randomly within the pool — no prioritization of most-at-risk questions.
-- There is no timed exam simulation mode.
-- There is no "review mistakes" flow at the end of a session showing correct answers.
-- There is no "redo incorrect" flow that automatically re-shows missed questions.
-- Questions generated by the `ContentPipeline` during ingestion (`Source.generatedQuestionIds`) are created but **never practiced** — there is no flow to practice questions from an ingested source.
-- Tutor-session exercises that get persisted as `Question` objects have no review path in the practice feature.
+## Proposed Solution
 
-### Additional Cross-Cutting Issues
+### Phase 1: Mentor Context Expansion
 
-| Finding | Location | Severity |
-|---|---|---|
-| `PracticeSessionService.updateNextReview()` updates `Question.nextReview` directly but does NOT update `QuestionMasteryState.nextReview` — the two SR fields diverge | `practice/services/practice_session_service.dart:53-63` | High |
-| `SpacedRepetitionRepository.getPracticeQuestions()` queries `Question.nextReview` while `QuestionMasteryStateRepository.getDueQuestions()` queries `QuestionMasteryState.nextReview` — different data sources return different due sets | Dual SR paths | High |
-| `MasteryCalculationService` computes `readinessScore` and `reviewUrgency` but no session selector uses these for question ordering | `core/services/mastery_calculation_service.dart` | High |
-| `Question.sourceIds` (list of source documents) is populated by `ContentPipeline` but never used for filtering/attribution in practice | `core/data/models/question_model.dart:119` | Medium |
-| `PracticeSessionScreen._recordAdherence()` imports `PlanAdapter` inline (`practice_session_screen.dart:72`) instead of dependency injection | Tight coupling | Medium |
-| `StudentAttempt.confidence` (1-5 scale) is collected in `PracticeSessionQuestionCard` but never passed to `MasteryGraphService.recordAttempt()` or `SpacedRepetitionService.updateNextReview()` | `practice/data/models/student_attempt.dart` | Medium |
-| `PracticeScreen._launchWeakAreasForSubject()` loads ALL questions from weak topics without ordering by mastery level | `practice/presentation/practice_screen.dart:210` | Medium |
-| `TutorService.endLesson()` saves exercises as `Question` objects with `source: tutor_session` but there is no practice mode filter for "questions from my tutor sessions" | `teaching/services/tutor_service.dart:95-120` | Medium |
-| `DashboardDataLoader` at `dashboard/services/dashboard_data_loader.dart` is completely unused — all data loading is inline in providers | Dead code | Low |
+Extend `MentorService._buildContextPrompt()` to inject rich, structured context:
 
-## Impact
+- **Plan context**: Does a plan exist? Current phase? Adherence score? Deviation warning?
+- **Roadmap context**: Active roadmaps, nearest milestone, completion percentage
+- **Pending actions**: Count and types of actions awaiting decision
+- **Upcoming lessons**: Next 3 scheduled sessions with times
+- **Weak topics**: From `MasteryGraphService.getWeakTopics()`
+- **Recent session feedback**: Last tutor session outcome (if any today)
+- **Multi-syllabus**: Per-subject progress breakdown
+- **Wellbeing signals**: Today's study minutes vs daily cap, consecutive study days, late-night sessions
 
-| Area | Current State | Target State |
-|---|---|---|
-| Spaced repetition | Dual unsynchronized fields; 6-band linear thresholds | Single SSOT with SM-2 or FSRS; exponential spacing; ease factor; recall probability |
-| Mastery tracking | `recordAttempt()` not called from practice sessions | Every practice answer updates topic mastery + question mastery + spaced repetition |
-| Session model | 3 overlapping models with no cross-references | `TutorSession` → creates `Session` for time tracking; `PracticeSession` links to `TutorSession` and `Source` |
-| Question selection | Random shuffle + flat pool from weak topics | Prioritized by `readinessScore`, `reviewUrgency`, confidence gaps; AI-difficulty-adaptive |
-| Exam/quiz mode | Not available | Timed exam simulation with configurable duration, question count, difficulty mix |
-| Mistake review | Not available | End-of-session review with correct answers, explanations, "redo incorrect" |
-| Source-linked practice | Source-generated questions exist but unreachable | "Practice from source" flow browsing sources and practicing their generated questions |
-| Tutor exercise review | Tutor exercises create `Question` objects but no practice path | "Review tutor exercises" filter in practice mode |
-| Essay/canvas evaluation | Length-based (essay) / presence-based (canvas) | AI-evaluated with rubric, partial credit, and concept-level feedback |
-| Learning record | `TutorSession` (teaching) and `Session` (practice/focus) in separate tables | Unified learning timeline showing all types of study activity |
+### Phase 2: Conversational Scheduling & Action Execution
 
-## Proposed Architecture
+Replace the PendingActionModel passthrough with direct conversational execution:
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     PRACTICE 2.0 ECOSYSTEM                          │
-│                                                                     │
-│  ┌─────────────────────┐    ┌──────────────────────────────────┐   │
-│  │   Learning Science   │    │     Question Selection Engine    │   │
-│  │       Engine         │    │                                  │   │
-│  │                      │    │  ┌────────────────────────────┐  │   │
-│  │  ┌────────────────┐  │    │  │ ReadinessScorer           │  │   │
-│  │  │ SpacedRepetition│  │    │  │  - readinessScore → order │  │   │
-│  │  │    Engine       │  │    │  │  - reviewUrgency → boost  │  │   │
-│  │  │  (NEW)          │  │    │  │  - confidenceGap → select │  │   │
-│  │  │  - SM-2 or FSRS │  │    │  └────────────────────────────┘  │   │
-│  │  │  - ease factor  │  │    │                                  │   │
-│  │  │  - recall prob  │  │    │  ┌────────────────────────────┐  │   │
-│  │  │  - log of all   │  │    │  │ SourceLinkedFilter (NEW)   │  │   │
-│  │  │   reviews       │  │    │  │  - practice by source      │  │   │
-│  │  └────────────────┘  │    │  │  - practice tutor exercises │  │   │
-│  │                      │    │  └────────────────────────────┘  │   │
-│  │  ┌────────────────┐  │    │                                  │   │
-│  │  │ MasteryRecorder │  │    │  ┌────────────────────────────┐  │   │
-│  │  │  (NEW)          │  │    │  │ DifficultyAdapter (NEW)    │  │   │
-│  │  │  - called from  │  │    │  │  - adaptive difficulty     │  │   │
-│  │  │   every practice│  │    │  │  - performance-based       │  │   │
-│  │  │  - updates topic│  │    │  │   ordering within session  │  │   │
-│  │  │   + question    │  │    │  └────────────────────────────┘  │   │
-│  │  │   + next review │  │    └──────────────────────────────────┘   │
-│  │  └────────────────┘  │                                          │
-│  └─────────────────────┘                                            │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                   Cross-Feature Integrator (NEW)              │   │
-│  │                                                              │   │
-│  │  TutorSession → creates Session (time tracking)              │   │
-│  │  PracticeSession → links to TutorSession / Source            │   │
-│  │  Adherence → records from ALL session types uniformly        │   │
-│  │  LearningTimelineProvider (NEW) → unified activity feed      │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │               Practice Mode Additions                        │   │
-│  │                                                              │   │
-│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │   │
-│  │  │ Exam Mode      │  │ Mistake Review │  │ Source Practice│  │   │
-│  │  │ (timed quiz)   │  │ (redo + show)  │  │ (by source)    │  │   │
-│  │  └────────────────┘  └────────────────┘  └────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+- When the student asks to schedule, the mentor calls `PlannerService.scheduleLessonWithConflictCheck()` after checking `StudentAvailabilityModel`
+- The mentor proposes a time slot to the student for confirmation before booking
+- Rescheduling follows the same pattern: propose a new time, get confirmation, execute
+- Long-term planning ("I want to learn IB Physics in 180 days") calls `PlannerService.createRoadmap()` + `PlannerService.generatePlanFromSyllabus()` with conversational confirmation
 
-### New/Refactored Components
+### Phase 3: Proactive Engagement Engine
 
-1. **`SpacedRepetitionEngine`** — Replaces `SpacedRepetitionService` and `QuestionMasteryState._calculateNextReview()` with a unified algorithm. Implements SM-2 (ease factor, graded recall) with option to swap to FSRS. Single source of truth for `nextReview` calculation. Stores review log entries for full history.
+Wire `EngagementNudgeRepository` into a background service that:
 
-2. **`MasteryRecorder`** — Dedicated service called at the end of every practice/tutor exercise evaluation. Accepts `(studentId, questionId, isCorrect, timeSpentMs, confidence)` and coordinates three updates atomically:
-   - `MasteryGraphService.recordAttempt()` for topic + question mastery
-   - `SpacedRepetitionEngine.scheduleReview()` for next review date
-   - `StudentAttempt` persistence for history
+- **Overwork detection**: Checks daily study time against daily cap; fires nudge when exceeded
+- **Revision nudges**: Checks `QuestionMasteryStateRepository.getAtRiskQuestions()` for items approaching review date
+- **Plan adherence nudges**: Checks `PlanAdapter.checkAdherence()` and surfaces low-adherence warnings
+- **Lesson reminders**: Checks upcoming `TutorSession` objects and reminds before start
+- **Streak celebrations**: Detects consecutive study days and generates congratulatory messages
 
-3. **`ReadinessScorer`** — Pure function that takes a set of candidate questions with their `MasteryState`, `QuestionMasteryState`, and `SpacedRepetition` data, and returns them ordered by optimal learning benefit. Factors: `reviewUrgency`, `readinessScore`, days since last attempt, confidence gap, difficulty mismatch.
+Nudges flow into the mentor conversation as system-introduced messages and surface as notification-service notifications.
 
-4. **`DifficultyAdapter`** — Optional mid-session adapter that selects the next question's difficulty based on the student's recent performance streak within the session (e.g., 3 correct → harder; 2 incorrect → easier).
+### Phase 4: Wellbeing Monitor
 
-5. **`CrossFeatureIntegrator`** — Single orchestration point that:
-   - When a `TutorSession` completes: creates a `Session(type: tutoring)` for time tracking
-   - When a practice session completes: links it to the source `TutorSession` or `Source` if applicable
-   - Provides unified learning timeline queries
+Add a background monitor that tracks:
 
-6. **`SessionLearningRecord`** (NEW model) or enhanced `Session` — Adds `lessonIds`, `tutorSessionId`, `sourceIds` fields to `Session` so a unified learning timeline can be rendered.
+- Daily total study minutes from `StudyTimerService` / `SessionRepository`
+- Consecutive days above target
+- Late-night session detection (sessions starting after 10 PM)
+- Session count per day
+- Surfaces concerns through the mentor ("You've studied 6 hours today — that's above your usual. Want to take a break?")
 
-7. **`ExamSessionService`** — Manages timed exam sessions with configurable parameters: duration, question count per topic/difficulty, subject coverage. Auto-submits on timeout. Returns detailed breakdown by topic.
+### Phase 5: Accountability & Motivation Subsystem
 
-8. **`MistakeReviewService`** — After a practice/exam session, collects all incorrect questions and presents them with correct answers, explanations, and a "redo" flow.
+- **Milestone celebrations**: When a roadmap milestone completes or adherence streak reaches 7 days, the mentor proactively congratulates
+- **Low-activity check-in**: If no study activity for 48+ hours, the mentor asks if everything is okay
+- **Plan regeneration prompt**: When adherence drops below 50% for 3 consecutive days, the mentor suggests a plan review
+- **Weekly digest**: Every Sunday, the mentor generates a short weekly summary of what was accomplished
 
-### SM-2 Algorithm Integration Detail
+### Phase 6: Cleanup
 
-```
-SpacedRepetitionEngine.scheduleReview(
-  questionId,
-  grade: 0-5 (SM-2 scale mapped from correctness + confidence)
-):
-  // SM-2 constants
-  if grade >= 3:
-    if repetitions == 0:
-      interval = 1 day
-    elif repetitions == 1:
-      interval = 6 days
-    else:
-      interval = round(previousInterval * easeFactor)
-    repetitions++
-  else:
-    repetitions = 0
-    interval = 1 day
-
-  easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
-  easeFactor = max(1.3, easeFactor)
-
-  nextReview = now + interval
-
-  // If FSRS mode:
-  // Use DSR model: stability = f(grade, previousStability, difficulty)
-  // Retrievability = exp(-timeElapsed / stability)
-  // nextReview when retrievability < targetRetention (e.g., 0.9)
-```
-
-### Mastery Recording Flow (Fixed)
-
-```
-PracticeSessionScreen._submitAnswer():
-  → AnswerValidationService.validate(question, answer)
-  → // Display feedback immediately
-  → MasteryRecorder.recordAttempt(
-      questionId: q.id,
-      isCorrect: result.isCorrect,
-      timeSpentMs: _timer.elapsedMs,
-      confidence: _confidenceRating,  // now collected and passed
-    )
-      → MasteryGraphService.recordAttempt(...)
-        → MasteryStateRepository.updateMastery()   // topic level
-        → QuestionMasteryStateRepository.recordAttempt(...)  // question level
-      → SpacedRepetitionEngine.scheduleReview(questionId, grade)
-        → updates Question.nextReview (single SSOT)
-      → AttemptRepository.save(studentAttempt)
-  → PlanAdapter.recordFromPracticeSession(...)
-  → PracticeSessionService.autoSaveSession()
-  → // If mistakes: save for review flow
-```
+- Remove dead `AdaptivePracticeEngine` from core (superseded by `SpacedRepetitionEngine` in practice)
+- Remove dead providers: `lessonPlanProvider`, `promptTemplatesProvider`, the 6 unused lesson providers
+- Consolidate `PlannerService` duplication by delegating to `PersonalLearningPlanService` instead of duplicating
+- Fix repository pattern: wrap `TutorSessionRepository` and `ConversationRepository` methods in `Result<T>`
+- Remove dual block storage in `LessonRepository` (blocks stored both inline and separately)
 
 ## Affected Files
 
-| File | Role | Required Change |
-|---|---|---|
-| `lib/features/practice/services/spaced_repetition_service.dart` | Current SR logic | Rewrite to `SpacedRepetitionEngine` with SM-2/FSRS; remove threshold-based intervals; add ease factor, review log |
-| `lib/features/practice/data/models/question_mastery_state.dart` | Per-question mastery | Remove `_calculateNextReview()` and `_updateMasteryLevel()` — delegate to `SpacedRepetitionEngine` and `MasteryRecorder`; keep as data-only model |
-| `lib/features/practice/services/practice_session_service.dart` | Session orchestration | Delegate `updateNextReview()` to `MasteryRecorder` instead of directly updating `Question.nextReview` |
-| `lib/features/practice/presentation/practice_session_screen.dart` | Main practice UI | Call `MasteryRecorder.recordAttempt()` after each answer; collect and pass `confidence`; add end-of-session review flow |
-| `lib/features/practice/presentation/practice_screen.dart` | Practice hub | Add "Exam Mode" and "Source Practice" mode cards; wire `ReadinessScorer` for weak-areas ordering |
-| `lib/features/practice/services/practice_data_service.dart` | Data orchestration | Add `ReadinessScorer`-based question ordering; add `getSourceLinkedQuestions()` |
-| `lib/features/practice/providers/practice_providers.dart` | DI wiring | Add `spacedRepetitionEngineProvider`, `masteryRecorderProvider`, `readinessScorerProvider`, `examSessionServiceProvider`, `mistakeReviewServiceProvider` |
-| `lib/features/practice/presentation/practice_session_screen.dart` | Session UI | Add end-of-session review widget showing mistakes with correct answers and redo button |
-| `lib/core/services/mastery_graph_service.dart` | Mastery coordination | Ensure `recordAttempt()` is idempotent and safe for concurrent calls from practice and tutor |
-| `lib/core/services/mastery_calculation_service.dart` | Mastery metrics | Keep as pure computation; wire into `ReadinessScorer` for question ordering |
-| `lib/core/data/models/question_model.dart` | Question model | Remove `nextReview` field from here (move to `SpacedRepetitionEngine`-managed storage) OR synchronize properly |
-| `lib/features/sessions/services/study_timer_service.dart` | Timer service | Ensure practice sessions use this for consistency (vs. inline timers) |
-| `lib/features/sessions/data/repositories/session_repository.dart` | Session persistence | Enable cross-referencing by `tutorSessionId`, `sourceIds` |
-| `lib/features/teaching/services/tutor_service.dart` | Tutor orchestration | On `endLesson()`, also create a `Session(type: tutoring)` for time tracking via `CrossFeatureIntegrator` |
-| `lib/features/ingestion/services/content_pipeline.dart` | Question generation | Ensure generated questions are tagged with `sourceId` and retrievable via `SourceRepository` |
-| `lib/features/dashboard/providers/dashboard_data_providers.dart` | Dashboard data | Fix `AttemptRepository` instance isolation — use shared provider from practice feature |
-| `lib/features/dashboard/services/dashboard_data_loader.dart` | Dashboard data aggregation | Either wire into providers or delete as dead code |
-| `lib/features/planner/services/planner_service.dart` | Plan generation | Use updated `MasteryState` data (now correctly updated from practice) for readiness-based planning |
-| `lib/features/mentor/services/mentor_service.dart` | Mentor context | Fix `completedLessons: 0` hardcode; use cross-feature integrator to count unified sessions |
-| `lib/features/practice/presentation/widgets/practice_session_question_card.dart` | Question card during session | Add confidence rating slider/buttons after each answer |
-| `lib/features/practice/presentation/screens/exam_session_screen.dart` | **NEW** | Timed exam mode with configurable duration, question pool selection, auto-submit |
-| `lib/features/practice/presentation/widgets/mistake_review_widget.dart` | **NEW** | Shows all incorrect answers with correct answer, explanation, and "try again" button |
-| `lib/features/practice/presentation/widgets/source_practice_sheet.dart` | **NEW** | Bottom sheet to browse sources and practice their linked questions |
-| `lib/features/practice/services/spaced_repetition_engine.dart` | **NEW** | SM-2/FSRS implementation with ease factor, graded recall, review log; single SSOT for `nextReview` |
-| `lib/features/practice/services/mastery_recorder.dart` | **NEW** | Coordinates attempt recording across mastery graph, SR engine, and attempt history |
-| `lib/features/practice/services/readiness_scorer.dart` | **NEW** | Ordering function for question selection based on multiple readiness signals |
-| `lib/features/practice/services/difficulty_adapter.dart` | **NEW** | Mid-session difficulty adjustment based on streak performance |
-| `lib/features/practice/services/exam_session_service.dart` | **NEW** | Exam lifecycle: configuration → timed delivery → auto-submit → breakdown results |
-| `lib/features/practice/services/mistake_review_service.dart` | **NEW** | Collects incorrect questions from a session, presents with correct answers |
-| `lib/core/services/cross_feature_integrator.dart` | **NEW** | Unified session creation: tutor + practice sessions create `Session` records for time tracking |
-| `lib/core/data/models/unified_session_model.dart` or update `Session` | **NEW/Update** | Add `tutorSessionId`, `sourceIds`, `lessonIds` linking fields |
+### Mentor Feature
+- `lib/features/mentor/services/mentor_service.dart` — Expand context, add proactive methods
+- `lib/features/mentor/providers/mentor_providers.dart` — Add new dependencies
+- `lib/features/mentor/presentation/mentor_screen.dart` — Surface proactive messages, add wellbeing UI
+
+### Planner Feature
+- `lib/features/planner/data/repositories/engagement_nudge_repository.dart` — Wire into services (currently dead code)
+- `lib/features/planner/data/models/engagement_nudge_model.dart` — May need condition-trigger fields
+- `lib/features/planner/services/planner_service.dart` — Expose scheduling/roadmap methods for conversational use
+- `lib/features/planner/services/syllabus_resolver.dart` — May need refactoring for mentor querying
+- `lib/features/planner/providers/planner_providers.dart` — Expose engagement nudge providers
+
+### Core Services
+- `lib/core/services/engagement_scheduler.dart` — Integrate nudge creation with repository
+- `lib/core/services/study_progress_tracker.dart` — Add wellbeing/motivation metrics
+- `lib/core/services/mastery_graph_service.dart` — Already has weak topic detection
+- `lib/core/services/personal_learning_plan_service.dart` — Consolidate duplicated logic from planner
+
+### Teaching Feature
+- `lib/features/teaching/providers/teaching_providers.dart` — Remove dead `lessonPlanProvider`, `promptTemplatesProvider`
+- `lib/features/teaching/data/repositories/tutor_session_repository.dart` — Wrap in `Result<T>`
+- `lib/features/teaching/data/repositories/conversation_repository.dart` — Wrap in `Result<T>`
+
+### Lessons Feature
+- `lib/features/lessons/providers/lesson_providers.dart` — Remove 6 unused providers or wire them to actual consumers
+- `lib/features/lessons/data/repositories/lesson_repository.dart` — Remove dual block storage
+
+### Practice Feature
+- `lib/core/services/adaptive_practice_engine.dart` — Remove (dead code, superseded by SpacedRepetitionEngine)
+- `lib/features/practice/providers/practice_providers.dart` — Remove `AdaptivePracticeEngine` provider reference if any
 
 ## Rationale
 
-1. **Learning science credibility**: SM-2 and FSRS are the most widely validated spaced repetition algorithms. The current 6-threshold-band system has no scientific basis and will produce suboptimal retention. Without credible SR, StudyKing cannot compete with dedicated SRS tools (Anki, SuperMemo) and loses its "scientifically optimized" value proposition.
+The mentor mode is central to the StudyKing vision as "a persistent mentor that understands the student's history, habits, preferences, and academic goals." Currently, the mentor is a generic chat LLM with basic stats — it knows the student's accuracy but not their plan, their weak topics, their schedule, or their wellbeing. The gap between vision and implementation is the largest in the codebase.
 
-2. **Mastery tracking is currently a no-op**: The fact that `MasteryGraphService.recordAttempt()` is never called from practice sessions means the entire mastery system (dashboard weak topics, planner readiness scores, mentor progress reports) is operating on **stale or default data**. This is a silent data quality bug that undermines every feature that reads mastery state.
-
-3. **Session model fragmentation creates blind spots**: A student could spend 2 hours in tutor sessions and 1 hour in practice sessions, but the dashboard/weekly trends show only practice time (since `TutorSession` never creates `Session` records). The planner's adherence tracking misses tutor time. This is a data integrity issue that affects student progress visibility.
-
-4. **Exam mode is a table-stakes feature**: Every competing learning platform (Khan Academy, Quizlet, Anki) offers timed exam/quiz modes. Its absence is a visible gap that users notice immediately.
-
-5. **Mistake review drives learning**: Educational research consistently shows that reviewing incorrect answers with correct solutions is one of the most effective learning interventions. The current flow shows correct/incorrect and moves on — no review, no redo, no spaced repetition of mistakes.
-
-6. **Source-generated questions are wasted**: The ingestion pipeline can generate questions from textbooks, PDFs, and other sources (`ContentPipeline.processFullPipeline()`), but these questions have no practice path. This represents wasted AI effort and missed learning opportunities.
-
-7. **Tutor exercise-review loop closes the teaching↔practice gap**: The vision describes tutor sessions that "assign exercises" and practice that "revisit[s] old content." Currently, tutor exercises are saved as `Question` objects but have no practice-mode visibility. Fixing this creates the desired teaching↔practice feedback loop.
-
-8. **Architectural simplification**: Fixing the dual-SR data source (`Question.nextReview` vs `QuestionMasteryState.nextReview`) by creating a single `SpacedRepetitionEngine` SSOT simplifies the entire data model and eliminates a class of subtle bugs where the two sources diverge.
+Fixing this delivers disproportionate user value because:
+1. It makes the mentor feel intelligent and personalized, not generic
+2. It enables a single conversational interface for scheduling, planning, motivation — reducing UX friction
+3. It completes the proactive engagement system that the architecture scaffolds but doesn't power
+4. It cleans up dead code that adds maintenance burden without providing value
+5. It consolidates duplicated business logic
 
 ## Acceptance Criteria
 
-### Spaced Repetition Engine
-- [ ] `SpacedRepetitionEngine` implements SM-2 algorithm with ease factor, repetition count, and graded recall (0-5).
-- [ ] FSRS mode available as optional drop-in replacement via configuration flag.
-- [ ] Single source of truth for `nextReview` — `Question.nextReview` field removed or synchronized; `QuestionMasteryState._calculateNextReview()` removed; all review scheduling goes through engine.
-- [ ] Review log stored (questionId, timestamp, grade, easeFactor, interval, nextReview) for analytics.
-- [ ] Migration path exists for existing `Question.nextReview` and `QuestionMasteryState.nextReview` values (convert to SM-2 initial parameters).
-- [ ] Engine handles edge cases: new questions (no history), grade=0 (complete reset), ease factor floor at 1.3.
+1. **Mentor context injection**: The mentor conversation prompt includes plan status, weak topics, upcoming lessons, and wellbeing signals. Verifiable by inspecting `_buildContextPrompt()` output.
 
-### Mastery Recording
-- [ ] `MasteryRecorder` exists and is called from `PracticeSessionScreen._submitAnswer()` for every answered question.
-- [ ] `MasteryRecorder.recordAttempt()` atomically calls `MasteryGraphService.recordAttempt()` + `SpacedRepetitionEngine.scheduleReview()` + `AttemptRepository.save()`.
-- [ ] `StudentAttempt.confidence` (1-5) is collected in the practice session UI and passed to `recordAttempt()`.
-- [ ] Topic-level `MasteryState.accuracy`, `confidenceTrend`, `forgettingRisk`, `reviewUrgency` update correctly after practice.
-- [ ] `MasteryGraphService.recordAttempt()` is idempotent (safe to call multiple times for same attempt).
-- [ ] Dashboard weak topics, mentor progress reports, and planner readiness scores reflect up-to-date data from practice.
+2. **Conversational scheduling**: Saying "schedule a lesson on [topic]" to the mentor proposes a time slot based on student availability, checks conflicts, waits for confirmation, and books via `PlannerService.scheduleLesson()`. No manual PendingAction acceptance required.
 
-### Unified Session Model
-- [ ] `TutorService.endLesson()` creates a `Session(type: tutoring)` with `actualDurationMs` matching the tutor session duration.
-- [ ] `PracticeSessionService.autoSaveSession()` links the `Session` to the originating `TutorSession` or `Source` when applicable (populates `tutorSessionId`/`sourceIds`).
-- [ ] `CrossFeatureIntegrator` provides `getUnifiedTimeline(studentId, limit, offset)` returning chronologically-merged sessions of all types.
-- [ ] Dashboard weekly trends include tutor session time in study duration calculations.
-- [ ] Planner adherence tracking records time from tutor + focus + practice + manual sessions uniformly.
-- [ ] Mentor `completedLessons` count uses unified session data instead of hardcoded 0.
+3. **Roadmap creation**: Saying "create a roadmap for [subject] in [N] days" triggers `PlannerService.createRoadmap()` after conversational confirmation.
 
-### Question Selection & Readiness Scoring
-- [ ] `ReadinessScorer` function exists and is used by all practice modes that select multiple questions (quick practice, weak areas, spaced repetition, exam mode).
-- [ ] `ReadinessScorer` factors: `reviewUrgency` (weight 0.4), `readinessScore` inverse (weight 0.3), days since last attempt (weight 0.2), confidence gap (weight 0.1).
-- [ ] Weak areas mode sorts questions by `ReadinessScorer` priority instead of random shuffle.
-- [ ] `DifficultyAdapter` optionally adjusts next question difficulty based on current-session streak (configurable, default off).
+4. **Engagement nudge generation**: At least three nudge types are generated and persisted (overwork, revision, plan adjustment). Nudges appear in the mentor conversation.
 
-### Exam Mode
-- [ ] `ExamSessionScreen` allows configuration: duration (15/30/45/60 min), question count, difficulty mix, topics/subjects.
-- [ ] Timer counts down; auto-submits remaining questions on expiration.
-- [ ] Results screen shows per-topic breakdown, accuracy, time per question, and a "review mistakes" button.
-- [ ] Exam sessions are persisted as `Session(type: practice)` with exam metadata.
+5. **Wellbeing detection**: The mentor warns when daily study time exceeds the daily cap, and when sessions occur late at night.
 
-### Mistake Review
-- [ ] After any practice/exam session, incorrect questions are collected and shown in a `MistakeReviewWidget`.
-- [ ] Mistake review shows: student's answer, correct answer, explanation (from `Question.explanation` or `Markscheme.explanation`), and a "Redo" button.
-- [ ] Redo launches a mini-session with only the previously-incorrect questions.
-- [ ] Questions remain in mistake-review pool until answered correctly at least once.
+6. **Motivation/accountability**: The mentor congratulates after a 7-day study streak, and checks in after 48 hours of inactivity.
 
-### Source-Linked Practice
-- [ ] `SourcePracticeSheet` lists all sources with `generatedQuestionIds.isNotEmpty`.
-- [ ] Tapping a source launches a practice session filtered to that source's generated questions.
-- [ ] "Practice from tutor exercises" filter available to practice questions with `source: tutor_session`.
+7. **Plan adherence awareness**: The mentor knows the student's adherence score and can discuss plan adjustments.
 
-### Evaluation Improvements
-- [ ] Essay answers evaluated via AI (delegates to `LlmService`) with rubric-based scoring instead of length-based.
-- [ ] Canvas drawing answers evaluated for content presence + basic shape detection or AI vision interpretation.
-- [ ] `AnswerValidationService` handles new evaluation types without breaking existing MCQ/text evaluation.
+8. **Dead code removed**: `EngagementNudgeRepository` is wired into services. `AdaptivePracticeEngine` is removed. Dead providers are removed. No runtime errors from removal.
 
-### Testing
-- [ ] `SpacedRepetitionEngine` unit tests: SM-2 algorithm correctness, ease factor adjustment, interval calculation, grade boundary cases, FSRS mode, migration path.
-- [ ] `MasteryRecorder` unit tests with fake `MasteryGraphService`, fake `SpacedRepetitionEngine`, fake `AttemptRepository`.
-- [ ] `ReadinessScorer` unit tests verifying ordering weights and edge cases (empty pool, single question, all-zeros).
-- [ ] `ExamSessionService` unit tests: timed auto-submit, configuration validation, result breakdown.
-- [ ] `MistakeReviewService` unit tests: question collection, answer comparison, redo session creation.
-- [ ] `CrossFeatureIntegrator` unit tests: `TutorSession` → `Session` creation, timeline merging, correct type attribution.
-- [ ] Widget tests for `ExamSessionScreen`, `MistakeReviewWidget`, `SourcePracticeSheet`.
-- [ ] Existing practice feature tests continue to pass (with updates for refactored dependencies).
+9. **Duplicate logic consolidated**: `PlannerService.redistributeWorkload()` and `linkDailyPlanToRoadmap()` delegate to `PersonalLearningPlanService` instead of duplicating.
 
-### Zero Regressions
-- [ ] Zero analysis warnings introduced.
-- [ ] All existing unit and widget tests pass.
-- [ ] No Hive migration issues for existing `Question.nextReview` values (migration path defined and tested).
+10. **Repository consistency**: `TutorSessionRepository` and `ConversationRepository` return `Result<T>` from all public methods.
 
-## Out of Scope
+11. **All existing tests pass** with zero changes to test logic.
 
-- Full FSRS parameter optimization (requires large review history dataset — can be added later)
-- Multi-player / collaborative practice
-- Peer-reviewed answers and community question banks
-- Real-time multiplayer quiz competitions
-- Video-based practice (watching video then answering questions)
-- "Explain like I'm 5" AI-generated rephrasing of questions
+12. **New tests exist** for engagement nudge generation, conversational scheduling flow, wellbeing detection, and mentor context expansion.

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
@@ -279,6 +280,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
               elapsedSeconds: _service.elapsedSeconds,
               isPaused: _service.isPaused,
               isActive: true,
+              reduceMotion: ref.watch(settingsProvider).reduceMotion,
               onPause: () => setState(() => _service.pauseSession()),
               onResume: () => setState(() => _service.resumeSession()),
               onComplete: () async {

@@ -8,6 +8,7 @@ import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -78,6 +79,67 @@ void main() {
       expect(find.text('Multiple Select'), findsOneWidget);
     });
 
+    testWidgets('calls onAnswerSelected when multi choice option tapped', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B', 'Option C'],
+            correctAnswer: 'Option B',
+          ),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option B'));
+      expect(captured, 'Option B');
+    });
+
+    testWidgets('does not call onAnswerSelected when submitted for multi choice', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 'Option A',
+          ),
+          currentAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option A'));
+      expect(captured, isNull);
+    });
+
+    testWidgets('shows feedback when submitted and feedback is visible for multi choice', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 'Option A',
+          ),
+          currentAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SingleAnswerWidget), findsOneWidget);
+    });
+
     testWidgets('renders typed answer input', (tester) async {
       await tester.pumpWidget(buildApp(
         PracticeSessionQuestionCard(
@@ -146,6 +208,10 @@ void main() {
           onAnswerSelected: (_) {},
         ),
       ));
+
+      expect(find.text('What is 2+2?'), findsOneWidget);
+      expect(find.text('Multiple Choice'), findsOneWidget);
+      expect(find.byType(SingleAnswerWidget), findsOneWidget);
     });
 
     testWidgets('renders math expression question type', (tester) async {

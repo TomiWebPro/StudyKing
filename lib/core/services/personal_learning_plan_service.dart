@@ -1,4 +1,5 @@
 import '../errors/result.dart';
+import '../utils/localization_helpers.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
@@ -11,9 +12,9 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import '../data/models/topic_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
-import 'localization_service.dart';
 
 
 class PlanGenerationConfig {
@@ -46,7 +47,7 @@ class PersonalLearningPlanService {
   final RoadmapRepository _roadmapRepository;
   final SyllabusResolver? _syllabusResolver;
   PlanGenerationConfig config;
-  final LocalizationService? _localizationService;
+  final AppLocalizations? _l10n;
 
   PersonalLearningPlanService({
     MasteryGraphService? masteryService,
@@ -58,7 +59,7 @@ class PersonalLearningPlanService {
     QuestionRepository? questionRepository,
     SyllabusResolver? syllabusResolver,
     PlanGenerationConfig? config,
-    LocalizationService? localizationService,
+    AppLocalizations? l10n,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
@@ -68,7 +69,7 @@ class PersonalLearningPlanService {
         _questionRepository = questionRepository ?? QuestionRepository(),
         _syllabusResolver = syllabusResolver,
         config = config ?? PlanGenerationConfig(),
-        _localizationService = localizationService;
+        _l10n = l10n;
 
   Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
     return _buildPlan(studentId: studentId);
@@ -213,22 +214,21 @@ class PersonalLearningPlanService {
           ) ??
           (1 - state.accuracy);
 
-      final l10n = _localizationService;
       final explanations = <String>[];
       if (state.accuracy < 0.6) {
-        explanations.add(l10n?.planAccuracyLow() ?? 'Accuracy is below 60% — needs focused practice');
+        explanations.add(_l10n?.planAccuracyLow ?? 'Accuracy is below 60% — needs focused practice');
       }
       if (state.reviewUrgency > 0.7) {
-        explanations.add(l10n?.planReviewOverdue() ?? 'Review is overdue — forgetting risk is high');
+        explanations.add(_l10n?.planReviewOverdue ?? 'Review is overdue — forgetting risk is high');
       }
       if (state.currentStreak < 3) {
-        explanations.add(l10n?.planStreakLow() ?? 'Streak is low — consistency needed');
+        explanations.add(_l10n?.planStreakLow ?? 'Streak is low — consistency needed');
       }
       if (isPrereq) {
-        explanations.add(l10n?.planPrerequisite() ?? 'Prerequisite for upcoming topics — must master first');
+        explanations.add(_l10n?.planPrerequisite ?? 'Prerequisite for upcoming topics — must master first');
       }
       if (downstreamCount > 0) {
-        explanations.add(l10n?.planBlocksDownstream(downstreamCount) ?? 'Blocks $downstreamCount downstream topic(s)');
+        explanations.add(_l10n?.planBlocksDownstream(downstreamCount) ?? 'Blocks $downstreamCount downstream topic(s)');
       }
 
       return PlanRecommendation(
@@ -237,9 +237,9 @@ class PersonalLearningPlanService {
         recommendationType: _classifyRecommendation(state),
         priority: priority,
         explanations: explanations,
-        prerequisiteReason: isPrereq ? (l10n?.planRequiredForDependent() ?? 'Required for dependent topics') : null,
-        weaknessReason: state.accuracy < 0.6 ? (l10n?.planWeakPerformance() ?? 'Weak performance') : null,
-        reviewReason: state.reviewUrgency > 0.7 ? (l10n?.planHighForgettingRisk() ?? 'High forgetting risk') : null,
+        prerequisiteReason: isPrereq ? (_l10n?.planRequiredForDependent ?? 'Required for dependent topics') : null,
+        weaknessReason: state.accuracy < 0.6 ? (_l10n?.planWeakPerformance ?? 'Weak performance') : null,
+        reviewReason: state.reviewUrgency > 0.7 ? (_l10n?.planHighForgettingRisk ?? 'High forgetting risk') : null,
       );
     }).toList();
   }
@@ -252,10 +252,10 @@ class PersonalLearningPlanService {
       if (!recommendations.any((r) => r.topicId == topicId)) {
         recommendations.add(PlanRecommendation(
           topicId: topicId,
-          reason: _localizationService?.planNewSyllabusTopic() ?? 'New syllabus topic',
+          reason: _l10n?.planNewSyllabusTopic ?? 'New syllabus topic',
           recommendationType: 'syllabus',
           priority: 1.0,
-          explanations: [_localizationService?.planPartOfSyllabusGoal() ?? 'Part of syllabus goal'],
+          explanations: [_l10n?.planPartOfSyllabusGoal ?? 'Part of syllabus goal'],
         ));
       }
     }
@@ -502,7 +502,7 @@ class PersonalLearningPlanService {
           stretchGoalQuestionIds: [],
           targetQuestions: 0,
           targetMinutes: 0,
-          focus: _localizationService?.planRestAndReview() ?? 'Rest and review',
+          focus: _l10n?.planRestAndReview ?? 'Rest and review',
           isRestDay: true,
         ));
         continue;
@@ -581,9 +581,9 @@ class PersonalLearningPlanService {
   }
 
   String _generateRecommendationReason(MasteryState state) {
-    final l10n = _localizationService;
+    final l10n = _l10n;
     if (l10n != null) {
-      return l10n.planRecommendationReason(state.accuracy, state.reviewUrgency);
+      return planRecommendationReason(state.accuracy, state.reviewUrgency, l10n);
     }
     if (state.accuracy >= 0.9) return 'High mastery — ready to advance';
     if (state.accuracy >= 0.8) return 'Good progress — maintain consistency';
@@ -641,11 +641,11 @@ class PersonalLearningPlanService {
   String _getStudentId() => StudentIdService().getStudentId();
 
   String _generateFocus(List<PlannedTopic> topics) {
-    final l10n = _localizationService;
+    final l10n = _l10n;
     if (l10n != null) {
-      if (topics.isEmpty) return l10n.planFocusLabel(isEmpty: true, weakRatio: 0);
+      if (topics.isEmpty) return planFocusLabel(isEmpty: true, weakRatio: 0, l10n: l10n);
       final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
-      return l10n.planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length);
+      return planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length, l10n: l10n);
     }
     if (topics.isEmpty) return 'General review';
     final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;

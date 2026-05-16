@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -14,16 +15,6 @@ class SessionSummaryCard extends StatelessWidget {
     this.weeklyMs = 0,
     this.recentSessions = const [],
   });
-
-  String _formatDuration(int totalMs) {
-    final totalSeconds = totalMs ~/ 1000;
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    }
-    return '${minutes}m';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +57,7 @@ class SessionSummaryCard extends StatelessWidget {
                       width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
                       child: MetricCard(
                         icon: Icons.access_time,
-                        value: _formatDuration(todayMs),
+                        value: formatDurationFromContext(context, Duration(milliseconds: todayMs)),
                         label: l10n.today,
                         accent: cs.primary,
                       ),
@@ -75,7 +66,7 @@ class SessionSummaryCard extends StatelessWidget {
                       width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
                       child: MetricCard(
                         icon: Icons.date_range,
-                        value: _formatDuration(weeklyMs),
+                        value: formatDurationFromContext(context, Duration(milliseconds: weeklyMs)),
                         label: l10n.thisWeek,
                         accent: cs.tertiary,
                       ),
@@ -103,9 +94,8 @@ class SessionSummaryCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               ...recentSessions.take(3).map((s) {
-                final durMs = s.actualDurationMs;
-                final durStr = _formatDuration(durMs);
-                final plannedStr = '${s.plannedDurationMinutes ?? 0}m';
+                final durStr = formatDurationFromContext(context, Duration(milliseconds: s.actualDurationMs));
+                final plannedStr = formatDurationFromContext(context, Duration(minutes: s.plannedDurationMinutes ?? 0));
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(

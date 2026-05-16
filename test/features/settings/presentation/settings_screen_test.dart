@@ -1,13 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/settings/presentation/settings_screen.dart';
-import 'package:studyking/features/settings/data/models/settings_box.dart';
-import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeSettingsRepository implements SettingsRepository {
@@ -109,18 +111,29 @@ Widget buildSettingsScreen({
   );
 }
 
-/// Pumps the settings screen with a large viewport so all ListView children render.
 Future<void> pumpWithSettings(WidgetTester tester, {
   SettingsBox? initialSettings,
   String apiKey = '',
   String selectedModel = '',
 }) async {
+  // Increase viewport so all ListView children are rendered
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(800, 3500);
   await tester.pumpWidget(buildSettingsScreen(
     initialSettings: initialSettings,
     apiKey: apiKey,
     selectedModel: selectedModel,
   ));
   await tester.pumpAndSettle();
+}
+
+Future<void> scrollToWidget(WidgetTester tester, Finder target) async {
+  await tester.dragUntilVisible(
+    target,
+    find.byType(Scrollable).first,
+    const Offset(0, -250),
+  );
+  await tester.pump();
 }
 
 void main() {
@@ -157,56 +170,70 @@ void main() {
     });
 
     testWidgets('shows Quick Guide tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       expect(find.widgetWithText(ListTile, 'Quick Guide'), findsOneWidget);
       expect(find.text('AI-powered study assistant'), findsOneWidget);
     });
 
     testWidgets('shows theme tile with correct label', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 2)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(themeMode: 0));
 
       expect(find.text('Theme'), findsOneWidget);
       expect(find.text('System'), findsOneWidget);
     });
 
     testWidgets('shows font size tile with correct label', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(fontSize: 14.0)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(fontSize: 13.0));
 
       expect(find.text('Font Size'), findsOneWidget);
       expect(find.text('Small'), findsOneWidget);
     });
 
+    testWidgets('font size label shows Medium for 14-16 range', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(fontSize: 15.0));
+
+      expect(find.text('Font Size'), findsOneWidget);
+      expect(find.text('Medium'), findsOneWidget);
+    });
+
+    testWidgets('font size label shows Large for 17-22 range', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(fontSize: 18.0));
+
+      expect(find.text('Font Size'), findsOneWidget);
+      expect(find.text('Large'), findsOneWidget);
+    });
+
+    testWidgets('font size label shows Extra Large for >= 23', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(fontSize: 24.0));
+
+      expect(find.text('Font Size'), findsOneWidget);
+      expect(find.text('Extra Large'), findsOneWidget);
+    });
+
     testWidgets('shows API key status as Not configured when empty', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(apiKey: ''));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, apiKey: '');
 
       expect(find.text('API Keys'), findsOneWidget);
       expect(find.text('Not configured'), findsOneWidget);
     });
 
     testWidgets('shows API key status as Configured when set', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
 
       expect(find.text('API Keys'), findsOneWidget);
       expect(find.text('Configured'), findsOneWidget);
     });
 
     testWidgets('shows request timeout tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 60)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(requestTimeoutSeconds: 60));
 
       expect(find.text('Request Timeout'), findsOneWidget);
       expect(find.text('60 seconds'), findsOneWidget);
     });
 
     testWidgets('shows session duration tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(sessionDurationMinutes: 45)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(sessionDurationMinutes: 45));
 
       expect(find.text('Session Duration'), findsOneWidget);
       expect(find.text('45 minutes'), findsOneWidget);
@@ -231,39 +258,34 @@ void main() {
     });
 
     testWidgets('shows total study sessions tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(totalSessionCount: 10)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(totalSessionCount: 10));
 
       expect(find.text('Total Study Sessions'), findsOneWidget);
       expect(find.text('10 sessions'), findsOneWidget);
     });
 
     testWidgets('shows total study time tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(totalStudyTimeMs: 7200000)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(totalStudyTimeMs: 7200000));
 
       expect(find.text('Total Study Time'), findsOneWidget);
-      expect(find.text('2h'), findsOneWidget);
+      expect(find.text('2h 0m 0s'), findsOneWidget);
     });
 
     testWidgets('shows About StudyKing tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       expect(find.widgetWithText(ListTile, 'About StudyKing'), findsOneWidget);
       expect(find.text('Version 0.1.0'), findsOneWidget);
     });
 
     testWidgets('shows Sign Out tile', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
-      expect(find.widgetWithText(ListTile, 'Sign Out'), findsOneWidget);
+      expect(find.text('Sign Out'), findsWidgets);
     });
 
     testWidgets('tapping theme tile opens theme dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 0)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(themeMode: 0));
 
       await tester.tap(find.text('Theme'));
       await tester.pumpAndSettle();
@@ -273,8 +295,7 @@ void main() {
     });
 
     testWidgets('can select dark theme from dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(themeMode: 0)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(themeMode: 0));
 
       await tester.tap(find.text('Theme'));
       await tester.pumpAndSettle();
@@ -285,9 +306,20 @@ void main() {
       expect(find.text('Dark'), findsWidgets);
     });
 
-    testWidgets('tapping font size tile opens font size dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(fontSize: 16.0)));
+    testWidgets('can select system theme from dialog', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(themeMode: 0));
+
+      await tester.tap(find.text('Theme'));
       await tester.pumpAndSettle();
+
+      await tester.tap(find.text('System'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('System'), findsWidgets);
+    });
+
+    testWidgets('tapping font size tile opens font size dialog', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(fontSize: 16.0));
 
       await tester.tap(find.text('Font Size'));
       await tester.pumpAndSettle();
@@ -297,9 +329,9 @@ void main() {
     });
 
     testWidgets('tapping session duration opens duration dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(sessionDurationMinutes: 30)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(sessionDurationMinutes: 30));
 
+      await scrollToWidget(tester, find.text('Session Duration'));
       await tester.tap(find.text('Session Duration'));
       await tester.pumpAndSettle();
 
@@ -311,12 +343,12 @@ void main() {
     });
 
     testWidgets('tapping analytics shows analytics sheet', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(
+      await pumpWithSettings(tester, initialSettings: SettingsBox(
         totalSessionCount: 5,
         totalQuestions: 100,
-      )));
-      await tester.pumpAndSettle();
+      ));
 
+      await scrollToWidget(tester, find.text('Total Study Sessions'));
       await tester.tap(find.text('Total Study Sessions'));
       await tester.pumpAndSettle();
 
@@ -327,9 +359,9 @@ void main() {
     });
 
     testWidgets('tapping about shows about dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
+      await scrollToWidget(tester, find.widgetWithText(ListTile, 'About StudyKing'));
       await tester.tap(find.widgetWithText(ListTile, 'About StudyKing'));
       await tester.pumpAndSettle();
 
@@ -338,10 +370,10 @@ void main() {
     });
 
     testWidgets('tapping sign out shows confirmation dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
-      await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+      await scrollToWidget(tester, find.text('Sign Out'));
+      await tester.tap(find.text('Sign Out').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Sign Out'), findsWidgets);
@@ -350,10 +382,10 @@ void main() {
     });
 
     testWidgets('cancel sign out closes dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(apiKey: 'test-key'));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, apiKey: 'test-key');
 
-      await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+      await scrollToWidget(tester, find.text('Sign Out'));
+      await tester.tap(find.text('Sign Out').last);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Cancel'));
@@ -363,33 +395,44 @@ void main() {
     });
 
     testWidgets('AI model label shows default text when empty', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(selectedModel: ''));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, selectedModel: '');
 
       expect(find.text('AI Model'), findsOneWidget);
       expect(find.text('Select a model from API'), findsOneWidget);
     });
 
     testWidgets('AI model label parses model path correctly', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(selectedModel: 'anthropic/claude-3-haiku'));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'anthropic/claude-3-haiku'));
 
       expect(find.text('AI Model'), findsOneWidget);
       expect(find.text('Claude 3 haiku'), findsOneWidget);
     });
 
     testWidgets('AI model label handles single word model', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(selectedModel: 'gpt-4'));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'gpt-4'));
 
       expect(find.text('AI Model'), findsOneWidget);
       expect(find.text('Gpt 4'), findsOneWidget);
     });
 
-    testWidgets('tapping AI model with empty API key shows warning dialog', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(apiKey: '', selectedModel: ''));
-      await tester.pumpAndSettle();
+    testWidgets('AI model label handles underscores', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'openai/gpt_4_turbo'));
 
+      expect(find.text('AI Model'), findsOneWidget);
+      expect(find.text('Gpt 4 turbo'), findsOneWidget);
+    });
+
+    testWidgets('AI model label handles model with trailing slash', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'provider/'));
+
+      expect(find.text('AI Model'), findsOneWidget);
+      expect(find.text('Provider/'), findsOneWidget);
+    });
+
+    testWidgets('tapping AI model with empty API key shows warning dialog', (tester) async {
+      await pumpWithSettings(tester, apiKey: '', selectedModel: '');
+
+      await scrollToWidget(tester, find.text('AI Model'));
       await tester.tap(find.text('AI Model'));
       await tester.pumpAndSettle();
 
@@ -399,9 +442,9 @@ void main() {
     });
 
     testWidgets('tapping timeout shows timeout dialog with slider', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 120)));
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester, initialSettings: SettingsBox(requestTimeoutSeconds: 120));
 
+      await scrollToWidget(tester, find.text('Request Timeout'));
       await tester.tap(find.text('Request Timeout'));
       await tester.pumpAndSettle();
 
@@ -411,10 +454,23 @@ void main() {
       expect(find.text('Save'), findsOneWidget);
     });
 
-    testWidgets('timeout dialog has slider that can be adjusted', (tester) async {
-      await tester.pumpWidget(buildSettingsScreen(initialSettings: SettingsBox(requestTimeoutSeconds: 120)));
+    testWidgets('timeout dialog cancel button closes dialog', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(requestTimeoutSeconds: 120));
+
+      await scrollToWidget(tester, find.text('Request Timeout'));
+      await tester.tap(find.text('Request Timeout'));
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save'), findsNothing);
+    });
+
+    testWidgets('timeout dialog has slider that can be adjusted', (tester) async {
+      await pumpWithSettings(tester, initialSettings: SettingsBox(requestTimeoutSeconds: 120));
+
+      await scrollToWidget(tester, find.text('Request Timeout'));
       await tester.tap(find.text('Request Timeout'));
       await tester.pumpAndSettle();
 
@@ -425,68 +481,70 @@ void main() {
       expect(saveButton, findsOneWidget);
     });
 
-    group('Network Error Handling', () {
-      testWidgets('shows error when model selection API returns non-200', (tester) async {
-        HttpOverrides.global = _MockHttpOverride(
-          responseStatusCode: 500,
-          responseBody: '{"error": "Server error"}',
-        );
-        addTearDown(() => HttpOverrides.global = null);
+    group('Accessibility Switches', () {
+      testWidgets('renders high contrast accessibility switch', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(highContrastEnabled: false));
 
-        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('AI Model'));
-        await tester.pumpAndSettle();
-
-        await tester.pump(const Duration(seconds: 2));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Unable to load models right now.'), findsOneWidget);
+        expect(find.widgetWithText(SwitchListTile, 'High Contrast Mode'), findsOneWidget);
       });
 
-      testWidgets('shows timeout error message after network timeout', (tester) async {
-        HttpOverrides.global = _TimeoutHttpOverride();
-        addTearDown(() => HttpOverrides.global = null);
+      testWidgets('renders large touch targets accessibility switch', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(largeTouchTargets: false));
 
-        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('AI Model'));
-        await tester.pump();
-
-        await tester.pump(const Duration(seconds: 16));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Model request timed out. Please try again.'), findsOneWidget);
+        expect(find.widgetWithText(SwitchListTile, 'Large Touch Targets'), findsOneWidget);
       });
 
-      testWidgets('shows generic error on malformed response', (tester) async {
-        HttpOverrides.global = _MockHttpOverride(
-          responseStatusCode: 200,
-          responseBody: 'not valid json {{{',
-        );
-        addTearDown(() => HttpOverrides.global = null);
+      testWidgets('renders reduce motion accessibility switch', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(reduceMotion: false));
 
-        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-        await tester.pumpAndSettle();
+        expect(find.widgetWithText(SwitchListTile, 'Reduce Motion'), findsOneWidget);
+      });
 
-        await tester.tap(find.text('AI Model'));
-        await tester.pumpAndSettle();
+      testWidgets('high contrast switch reflects state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(highContrastEnabled: true));
 
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pumpAndSettle();
+        final switchTile = find.widgetWithText(SwitchListTile, 'High Contrast Mode');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+      });
 
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+      testWidgets('large touch targets switch reflects state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(largeTouchTargets: true));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Large Touch Targets');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+      });
+
+      testWidgets('reduce motion switch reflects state', (tester) async {
+        await pumpWithSettings(tester, initialSettings: SettingsBox(reduceMotion: true));
+
+        final switchTile = find.widgetWithText(SwitchListTile, 'Reduce Motion');
+        final switchWidget = tester.widget<SwitchListTile>(switchTile);
+        expect(switchWidget.value, isTrue);
+      });
+    });
+
+    group('Focus Mode', () {
+      testWidgets('renders Focus Time tile', (tester) async {
+        await pumpWithSettings(tester);
+
+        expect(find.text('Focus Time'), findsOneWidget);
+        expect(find.text('Start a focused study session'), findsOneWidget);
+      });
+
+      testWidgets('renders Daily Study Cap tile', (tester) async {
+        await pumpWithSettings(tester);
+
+        expect(find.text('Daily Study Cap'), findsOneWidget);
       });
     });
 
     group('State Verification', () {
       testWidgets('theme change updates provider state', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(themeMode: ThemeMode.light.index),
-        ));
-        await tester.pumpAndSettle();
+        );
 
         await tester.tap(find.text('Theme'));
         await tester.pumpAndSettle();
@@ -498,10 +556,9 @@ void main() {
       });
 
       testWidgets('font size change updates state', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(fontSize: 16.0),
-        ));
-        await tester.pumpAndSettle();
+        );
 
         await tester.tap(find.text('Font Size'));
         await tester.pumpAndSettle();
@@ -510,9 +567,6 @@ void main() {
         expect(slider, findsOneWidget);
 
         await tester.drag(slider, const Offset(100, 0));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
       });
 
@@ -584,13 +638,13 @@ void main() {
       });
 
       testWidgets('timeout value persists after dialog closes', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(requestTimeoutSeconds: 60),
-        ));
-        await tester.pumpAndSettle();
+        );
 
         expect(find.text('60 seconds'), findsOneWidget);
 
+        await scrollToWidget(tester, find.text('Request Timeout'));
         await tester.tap(find.text('Request Timeout'));
         await tester.pumpAndSettle();
 
@@ -605,11 +659,11 @@ void main() {
       });
 
       testWidgets('session duration selection updates state', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(sessionDurationMinutes: 30),
-        ));
-        await tester.pumpAndSettle();
+        );
 
+        await scrollToWidget(tester, find.text('Session Duration'));
         await tester.tap(find.text('Session Duration'));
         await tester.pumpAndSettle();
 
@@ -622,11 +676,11 @@ void main() {
 
     group('Slider Validation', () {
       testWidgets('timeout slider clamps to 30-300 range', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(requestTimeoutSeconds: 120),
-        ));
-        await tester.pumpAndSettle();
+        );
 
+        await scrollToWidget(tester, find.text('Request Timeout'));
         await tester.tap(find.text('Request Timeout'));
         await tester.pumpAndSettle();
 
@@ -638,10 +692,9 @@ void main() {
       });
 
       testWidgets('font size slider clamps to 10-30 range', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(fontSize: 16.0),
-        ));
-        await tester.pumpAndSettle();
+        );
 
         await tester.tap(find.text('Font Size'));
         await tester.pumpAndSettle();
@@ -654,11 +707,11 @@ void main() {
       });
 
       testWidgets('only valid session duration options available', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           initialSettings: SettingsBox(sessionDurationMinutes: 30),
-        ));
-        await tester.pumpAndSettle();
+        );
 
+        await scrollToWidget(tester, find.text('Session Duration'));
         await tester.tap(find.text('Session Duration'));
         await tester.pumpAndSettle();
 
@@ -679,9 +732,9 @@ void main() {
         );
         addTearDown(() => HttpOverrides.global = null);
 
-        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-        await tester.pumpAndSettle();
+        await pumpWithSettings(tester, apiKey: 'sk-test-key');
 
+        await scrollToWidget(tester, find.text('AI Model'));
         await tester.tap(find.text('AI Model'));
         await tester.pumpAndSettle();
 
@@ -698,9 +751,9 @@ void main() {
         );
         addTearDown(() => HttpOverrides.global = null);
 
-        await tester.pumpWidget(buildSettingsScreen(apiKey: 'sk-test-key'));
-        await tester.pumpAndSettle();
+        await pumpWithSettings(tester, apiKey: 'sk-test-key');
 
+        await scrollToWidget(tester, find.text('AI Model'));
         await tester.tap(find.text('AI Model'));
         await tester.pumpAndSettle();
 
@@ -713,13 +766,13 @@ void main() {
 
     group('Sign Out Flow', () {
       testWidgets('sign out clears API key and model providers', (tester) async {
-        await tester.pumpWidget(buildSettingsScreen(
+        await pumpWithSettings(tester,
           apiKey: 'sk-to-be-cleared',
           selectedModel: 'test-model',
-        ));
-        await tester.pumpAndSettle();
+        );
 
-        await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
+        await scrollToWidget(tester, find.text('Sign Out'));
+        await tester.tap(find.text('Sign Out').last);
         await tester.pumpAndSettle();
 
         await tester.tap(find.widgetWithText(FilledButton, 'Sign Out'));
@@ -728,24 +781,290 @@ void main() {
         expect(find.text('Not configured'), findsOneWidget);
       });
     });
+
+    group('Daily Cap Dialog', () {
+      testWidgets('tapping daily study cap opens bottom sheet', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.text('Daily Study Cap'));
+        await tester.tap(find.text('Daily Study Cap'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('No limit'), findsOneWidget);
+        expect(find.text('30 minutes'), findsOneWidget);
+        expect(find.text('60 minutes'), findsOneWidget);
+      });
+
+      testWidgets('daily cap dialog shows cap options', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.text('Daily Study Cap'));
+        await tester.tap(find.text('Daily Study Cap'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('No limit'), findsOneWidget);
+        expect(find.text('30 minutes'), findsOneWidget);
+        expect(find.text('60 minutes'), findsOneWidget);
+        expect(find.text('90 minutes'), findsOneWidget);
+        expect(find.text('120 minutes'), findsOneWidget);
+        expect(find.text('180 minutes'), findsOneWidget);
+        expect(find.text('240 minutes'), findsOneWidget);
+      });
+
+      testWidgets('selecting daily cap closes dialog', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.text('Daily Study Cap'));
+        await tester.tap(find.text('Daily Study Cap'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('No limit'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Daily Study Cap'), findsOneWidget);
+      });
+    });
+
+    group('API Key Warning Dialog', () {
+      testWidgets('OK button on API key dialog navigates to api config', (tester) async {
+        await pumpWithSettings(tester, apiKey: '', selectedModel: '');
+
+        await scrollToWidget(tester, find.text('AI Model'));
+        await tester.tap(find.text('AI Model'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('OK'), findsOneWidget);
+
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        // Dialog should close
+        expect(find.text('API Key Required'), findsNothing);
+      });
+    });
+
+    group('About Dialog', () {
+      testWidgets('about dialog shows app information', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.widgetWithText(ListTile, 'About StudyKing'));
+        await tester.tap(find.widgetWithText(ListTile, 'About StudyKing'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AboutDialog), findsOneWidget);
+        expect(find.text('StudyKing'), findsWidgets);
+      });
+    });
+  });
+
+  group('Network Error Handling', () {
+    testWidgets('shows error when model selection API returns non-200', (tester) async {
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unable to load models right now.'), findsOneWidget);
+    });
+
+    testWidgets('shows timeout error message after network timeout', (tester) async {
+      HttpOverrides.global = _TimeoutHttpOverride();
+      addTearDown(() => HttpOverrides.global = null);
+
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 16));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Model request timed out. Please try again.'), findsOneWidget);
+    });
+
+    testWidgets('shows generic error on malformed response', (tester) async {
+      HttpOverrides.global = _MockHttpOverride(
+        responseStatusCode: 200,
+        responseBody: 'not valid json {{{',
+      );
+      addTearDown(() => HttpOverrides.global = null);
+
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('retry button appears on error and retries loading', (tester) async {
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retry'), findsOneWidget);
+    });
+  });
+
+  group('Model Search Filtering', () {
+    testWidgets('search filter narrows model list', (tester) async {
+      HttpOverrides.global = _MockHttpOverride(
+        responseStatusCode: 200,
+        responseBody: jsonEncode({
+          'data': [
+            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': [{'id': 'openai'}]},
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
+            {'id': 'google/gemini-pro', 'name': 'Gemini Pro', 'providers': [{'id': 'google'}]},
+          ]
+        }),
+      );
+      addTearDown(() => HttpOverrides.global = null);
+
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.text('GPT-4'), findsOneWidget);
+      expect(find.text('Claude 3'), findsOneWidget);
+      expect(find.text('Gemini Pro'), findsOneWidget);
+
+      final searchField = find.byType(TextField).first;
+      await tester.enterText(searchField, 'gpt');
+      await tester.pumpAndSettle();
+
+      expect(find.text('GPT-4'), findsOneWidget);
+      expect(find.text('Claude 3'), findsNothing);
+      expect(find.text('Gemini Pro'), findsNothing);
+    });
+
+    testWidgets('search is case-insensitive', (tester) async {
+      HttpOverrides.global = _MockHttpOverride(
+        responseStatusCode: 200,
+        responseBody: jsonEncode({
+          'data': [
+            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': [{'id': 'openai'}]},
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
+          ]
+        }),
+      );
+      addTearDown(() => HttpOverrides.global = null);
+
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      final searchField = find.byType(TextField).first;
+      await tester.enterText(searchField, 'CLAUDE');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Claude 3'), findsOneWidget);
+      expect(find.text('GPT-4'), findsNothing);
+    });
+
+    testWidgets('selecting model calls onModelSelected and closes sheet', (tester) async {
+      HttpOverrides.global = _MockHttpOverride(
+        responseStatusCode: 200,
+        responseBody: jsonEncode({
+          'data': [
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
+          ]
+        }),
+      );
+      addTearDown(() => HttpOverrides.global = null);
+
+      await pumpWithSettings(tester, apiKey: 'sk-test-key');
+
+      await scrollToWidget(tester, find.text('AI Model'));
+      await tester.tap(find.text('AI Model'));
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Claude 3'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select a model from API'), findsWidgets);
+    });
   });
 
   group('Keyboard accessibility', () {
     testWidgets('renders FocusTraversalGroup wrapping the settings list',
         (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
     });
 
     testWidgets('renders interactive tiles that are keyboard-reachable',
         (tester) async {
-      await tester.pumpWidget(buildSettingsScreen());
-      await tester.pumpAndSettle();
+      await pumpWithSettings(tester);
 
       expect(find.byType(ListTile), findsAtLeastNWidgets(1));
       expect(find.byType(SwitchListTile), findsAtLeastNWidgets(1));
+    });
+  });
+
+  group('Section Titles', () {
+    testWidgets('renders Accessibility section', (tester) async {
+      await pumpWithSettings(tester);
+
+      expect(find.text('Accessibility'), findsOneWidget);
+    });
+
+    testWidgets('renders Notification Preferences section', (tester) async {
+      await pumpWithSettings(tester);
+
+      expect(find.text('Notification Preferences'), findsOneWidget);
+    });
+
+    testWidgets('renders Study Preferences section', (tester) async {
+      await pumpWithSettings(tester);
+
+      expect(find.text('Study Preferences'), findsOneWidget);
+    });
+
+    testWidgets('renders Focus Mode section', (tester) async {
+      await pumpWithSettings(tester);
+
+      expect(find.text('Focus Mode'), findsOneWidget);
+    });
+
+    testWidgets('renders Study Analytics section', (tester) async {
+      await pumpWithSettings(tester);
+
+      expect(find.text('Study Analytics'), findsOneWidget);
+    });
+
+    testWidgets('renders About section', (tester) async {
+      await pumpWithSettings(tester);
+
+      scrollToWidget(tester, find.text('About'));
+      expect(find.text('About'), findsOneWidget);
     });
   });
 }

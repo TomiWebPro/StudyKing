@@ -17,7 +17,8 @@ class PracticeModeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: title,
+      label: subtitle != null ? '$title, $subtitle' : title,
+      button: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),

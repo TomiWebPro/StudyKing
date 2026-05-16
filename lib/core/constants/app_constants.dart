@@ -9,4 +9,5 @@ export 'app_build_config.dart';
 export 'app_config.dart';
 export 'app_runtime_config.dart';
 export 'app_storage_config.dart';
+export 'llm_defaults.dart';
 export 'security_config.dart';

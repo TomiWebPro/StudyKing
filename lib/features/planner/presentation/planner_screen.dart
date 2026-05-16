@@ -405,7 +405,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('${goal.targetHoursPerDay}h/${l10n.days}',
+                  Text('${l10n.hoursAbbreviation(goal.targetHoursPerDay.toString())}/${l10n.days}',
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),

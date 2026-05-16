@@ -40,7 +40,7 @@ class SummaryRow extends StatelessWidget {
               width: itemWidth,
               child: MetricCard(
                 icon: Icons.check_circle,
-                value: '$accuracy%',
+                value: formatPercent(accuracy.toDouble(), l10n.localeName),
                 label: l10n.accuracy,
                 accent: AppTheme.progressColor(accuracy / 100.0, context),
               ),
@@ -49,7 +49,7 @@ class SummaryRow extends StatelessWidget {
               width: itemWidth,
               child: MetricCard(
                 icon: Icons.timer,
-                value: '${formatDecimal(double.tryParse(totalHours) ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h',
+                value: l10n.hoursAbbreviation(formatDecimal(double.tryParse(totalHours) ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)),
                 label: l10n.studyTime,
                 accent: Theme.of(context).colorScheme.primary,
               ),

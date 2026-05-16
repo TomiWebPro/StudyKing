@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/token_pricing_config.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/settings/data/models/llm_models.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 @immutable
 class SettingsAPIKey {
@@ -111,15 +112,21 @@ class UsageRecord {
     return pricingConfig.calculateTotalCost(inputTokens, outputTokens, cachedTokensCost);
   }
 
-  String priceDisplayWithLocale(String localeName) => '\$${formatDecimal(totalCost, localeName, minFractionDigits: 4, maxFractionDigits: 4)}';
+  String priceDisplayWithLocale(String localeName) => formatCurrency(totalCost, localeName, minFractionDigits: 4, maxFractionDigits: 4);
 
-  String get priceDisplay => '\$${formatDecimal(totalCost, 'en', minFractionDigits: 4, maxFractionDigits: 4)}';
+  String get priceDisplay => formatCurrency(totalCost, 'en', minFractionDigits: 4, maxFractionDigits: 4);
 
   String get tokenDisplay => '($inputTokens in / $outputTokens out)';
 
   String formattedTextWithLocale(String localeName) => '${timestamp.toIso8601String().split(' ')[0]}: ${priceDisplayWithLocale(localeName)}, cost/tk: ${formatDecimal(totalCost / totalTokens, localeName, minFractionDigits: 10, maxFractionDigits: 10)}';
 
   String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${formatDecimal(totalCost / totalTokens, 'en', minFractionDigits: 10, maxFractionDigits: 10)}';
+
+  String formattedTextWithL10n(AppLocalizations l10n) => l10n.usageRecordFormat(
+    timestamp.toIso8601String().split(' ')[0],
+    priceDisplayWithLocale(l10n.localeName),
+    formatDecimal(totalCost / totalTokens, l10n.localeName, minFractionDigits: 10, maxFractionDigits: 10),
+  );
 
   @override
   String toString() => 'UsageRecord(\$: $formattedText)';
@@ -185,6 +192,18 @@ class LLMSettingsModel extends ChangeNotifier {
     final totalTokens = getTotalTokens();
     final totalCost = getTotalCost();
 
-    return 'Usage: \$${formatDecimal(totalCost, localeName, minFractionDigits: 2, maxFractionDigits: 2)} over $totalTokens tokens, avg: \$${formatDecimal(avgCostPer1000Tokens, localeName, minFractionDigits: 2, maxFractionDigits: 2)} per 1k tokens';
+    return 'Usage: ${formatCurrency(totalCost, localeName, minFractionDigits: 2, maxFractionDigits: 2)} over $totalTokens tokens, avg: ${formatCurrency(avgCostPer1000Tokens, localeName, minFractionDigits: 2, maxFractionDigits: 2)} per 1k tokens';
+  }
+
+  String formatUsageSummaryWithL10n(AppLocalizations l10n) {
+    final totalTokens = getTotalTokens();
+    final totalCost = getTotalCost();
+    final localeName = l10n.localeName;
+
+    return l10n.usageSummary(
+      formatCurrency(totalCost, localeName, minFractionDigits: 2, maxFractionDigits: 2),
+      totalTokens.toString(),
+      formatCurrency(avgCostPer1000Tokens, localeName, minFractionDigits: 2, maxFractionDigits: 2),
+    );
   }
 }

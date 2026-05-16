@@ -133,6 +133,19 @@ void main() {
       expect(find.text('50%'), findsOneWidget);
     });
 
+    testWidgets('renders 100% score when all correct', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionStatsBar(
+          elapsedTime: '1:00',
+          correctAnswers: 10,
+          currentIndex: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('100%'), findsOneWidget);
+    });
+
     testWidgets('renders low score percentage', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         PracticeSessionStatsBar(

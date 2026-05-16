@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
@@ -59,7 +60,7 @@ class PlanSummaryCard extends StatelessWidget {
                     '${summary.reviewTopics} ${l10n.reviewTopics}',
                     l10n.reviewTopics),
                 buildSummaryChip(
-                    '${(summary.estimatedCoverage * 100).round()}%',
+                    formatPercent(summary.estimatedCoverage * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                     l10n.coverage),
               ],
             ),

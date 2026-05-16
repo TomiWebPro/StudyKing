@@ -40,7 +40,7 @@ class PracticeSessionStatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scoreValue = currentIndex > 0 ? formatPercent(correctAnswers / (currentIndex + 1) * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0) : '0';
+    final scoreValue = currentIndex > 0 ? formatPercent(correctAnswers / (currentIndex + 1) * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0) : '0%';
     return Container(
       padding: ResponsiveUtils.cardPadding(context),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -52,8 +52,8 @@ class PracticeSessionStatsBar extends StatelessWidget {
             child: _buildMiniStat(context, l10n.time, elapsedTime ?? '0:00', Icons.access_time, Theme.of(context).colorScheme.primary),
           ),
           Semantics(
-            label: '${l10n.score}: $scoreValue%',
-            child: _buildMiniStat(context, l10n.score, '$scoreValue%', Icons.star, _getColorForScore(context, currentIndex > 0 ? correctAnswers / (currentIndex + 1) : 0)),
+            label: '${l10n.score}: $scoreValue',
+            child: _buildMiniStat(context, l10n.score, scoreValue, Icons.star, _getColorForScore(context, currentIndex > 0 ? correctAnswers / (currentIndex + 1) : 0)),
           ),
           Semantics(
             label: '${l10n.correct}: $correctAnswers',

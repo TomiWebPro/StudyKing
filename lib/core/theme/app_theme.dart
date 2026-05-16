@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/llm_task_manager.dart';
+import 'llm_task_status.dart';
 
 class AppTheme {
   static TextTheme createTextTheme(double fontSize) {

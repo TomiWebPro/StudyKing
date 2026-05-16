@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../utils/number_format_utils.dart';
-import 'localization_service.dart';
 
 class NotificationService {
   NotificationService();
@@ -12,13 +11,11 @@ class NotificationService {
   FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   Function(String?)? _onNotificationTap;
-  LocalizationService? _localizationService;
+  AppLocalizations? _l10n;
 
-  void setLocalizationService(LocalizationService localizationService) {
-    _localizationService = localizationService;
+  void setAppLocalizations(AppLocalizations l10n) {
+    _l10n = l10n;
   }
-
-  AppLocalizations? get _l10n => _localizationService?.l10n;
 
   Future<void> init({Function(String?)? onNotificationTap}) async {
     if (_initialized) return;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../providers/planner_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
@@ -74,7 +75,7 @@ class ProgressOverlayWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '${(data.todayProgress * 100).round()}%',
+                formatPercent(data.todayProgress * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 style: TextStyle(
                   color: progressColor,
                   fontWeight: FontWeight.bold,
@@ -180,7 +181,7 @@ class ProgressOverlayWidget extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            '${data.completedDays}/${data.totalPlanDays} ${l10n.days} — ${(data.cumulativeProgress * 100).round()}%',
+            '${data.completedDays}/${data.totalPlanDays} ${l10n.days} — ${formatPercent(data.cumulativeProgress * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}',
             style: theme.textTheme.bodySmall,
           ),
         ),

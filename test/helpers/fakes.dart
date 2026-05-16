@@ -239,7 +239,7 @@ class FakePlanAdapter extends PlanAdapter {
           planRepository: null,
           planService: null,
           masteryService: null,
-          localizationService: null,
+          l10n: null,
         );
 
   @override

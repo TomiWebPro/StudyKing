@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,10 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/mastery_recorder.dart';
+import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
@@ -22,6 +26,7 @@ import 'package:studyking/features/practice/presentation/widgets/practice_feedba
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_nav_buttons.dart';
+import 'package:studyking/features/practice/presentation/widgets/mistake_review_widget.dart';
 import 'package:studyking/features/practice/services/question_type_localizer.dart';
 
 class PracticeSessionScreen extends ConsumerStatefulWidget {
@@ -42,6 +47,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late PracticeSessionService _sessionService;
   late final AnswerValidationService _validationService;
   late final StudentIdService _studentIdService;
+  late final MasteryRecorder _masteryRecorder;
+  late final MistakeReviewService _mistakeReviewService;
   List<Question> _questions = [];
   int _currentIndex = 0;
   String? _currentAnswer;
@@ -52,7 +59,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   int _correctAnswers = 0;
   String? _elapsedTimeFormatted;
   final List<PracticeAnswerRecord> _answerRecords = [];
+  final List<String> _mistakeQuestionIds = [];
   bool _isCorrect = false;
+  int _currentConfidence = 3;
 
   @override
   void initState() {
@@ -60,6 +69,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _questionRepo = ref.read(questionRepositoryProvider);
     _srRepo = ref.read(spacedRepetitionRepositoryProvider);
     _studentIdService = ref.read(studentIdServiceProvider);
+    _masteryRecorder = ref.read(masteryRecorderProvider);
+    _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
@@ -127,6 +138,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _currentAnswer = null;
     _isSubmitted = false;
     _isFeedbackVisible = false;
+    _currentConfidence = 3;
     if (mounted) setState(() {});
   }
 
@@ -155,7 +167,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     return result.isCorrect;
   }
 
-  void _submitAnswer() {
+  Future<void> _submitAnswer() async {
     if (_currentAnswer == null || _questions.isEmpty) return;
     final question = _questions[_currentIndex];
     final isCorrect = _validateAnswer(question, _currentAnswer!);
@@ -167,6 +179,22 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       timeSpent: const Duration(seconds: 0),
       userAnswer: _currentAnswer!,
     ));
+    if (!isCorrect) {
+      _mistakeQuestionIds.add(question.id);
+    }
+
+    await _masteryRecorder.recordAttempt(
+      studentId: _studentIdService.getStudentId(),
+      questionId: question.id,
+      subjectId: question.subjectId,
+      topicId: question.topicId,
+      isCorrect: isCorrect,
+      timeSpentMs: _sessionService.elapsedNotifier.value.inMilliseconds ~/
+          max(1, _questions.length),
+      confidence: _currentConfidence,
+      userAnswer: _currentAnswer!,
+    );
+
     if (widget.args.isSpacedRepetition) {
       _updateNextReview(question.id, isCorrect);
     }
@@ -187,6 +215,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         _currentAnswer = null;
         _isSubmitted = false;
         _isFeedbackVisible = false;
+        _currentConfidence = 3;
       });
     } else {
       _completeSession();
@@ -209,6 +238,56 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _recordAdherence();
     if (!mounted) return;
     setState(() => _isSessionComplete = true);
+
+    if (_mistakeQuestionIds.isNotEmpty) {
+      _showMistakeReview();
+    } else {
+      _navigateToResults();
+    }
+  }
+
+  void _showMistakeReview() async {
+    final mistakes = await _mistakeReviewService.getMistakesFromSession(
+      studentId: _studentIdService.getStudentId(),
+      subjectId: widget.args.subjectId,
+      after: _sessionService.sessionStartTime,
+    );
+    if (!mounted || mistakes.isEmpty) {
+      _navigateToResults();
+      return;
+    }
+    MistakeReviewWidget.show(
+      context,
+      mistakes: mistakes,
+      onRedo: () {
+        Navigator.pop(context);
+        _startMistakeRedo(mistakes);
+      },
+      onDismiss: () {
+        Navigator.pop(context);
+        _navigateToResults();
+      },
+    );
+  }
+
+  void _startMistakeRedo(List<MistakeEntry> mistakes) {
+    final redoQuestions = mistakes.map((m) => m.question).toList();
+    setState(() {
+      _questions = redoQuestions..shuffle();
+      _currentIndex = 0;
+      _correctAnswers = 0;
+      _mistakeQuestionIds.clear();
+      _answerRecords.clear();
+      _isSessionComplete = false;
+      _sessionAutoSaved = false;
+      _currentAnswer = null;
+      _isSubmitted = false;
+      _isFeedbackVisible = false;
+    });
+    _sessionService.startTimer();
+  }
+
+  void _navigateToResults() {
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         Navigator.pop(context, PracticeSessionResult(
@@ -236,10 +315,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _currentIndex = 0;
       _correctAnswers = 0;
       _answerRecords.clear();
+      _mistakeQuestionIds.clear();
       _isSessionComplete = false;
       _currentAnswer = null;
       _isSubmitted = false;
       _isFeedbackVisible = false;
+      _sessionAutoSaved = false;
     });
     _loadQuestions();
     _sessionService.startTimer();
@@ -303,43 +384,69 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                   padding: ResponsiveUtils.screenPadding(context),
                   child: ListView(
                     children: [
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(2),
-                        child: PracticeSessionQuestionCard(
-                          question: question,
-                          currentAnswer: _currentAnswer,
-                          isSubmitted: _isSubmitted,
-                          isFeedbackVisible: _isFeedbackVisible,
-                          onAnswerSelected: _onAnswerSelected,
-                        ),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final reduceMotion = ref.watch(settingsProvider).reduceMotion;
+                          final child = Column(
+                            key: ValueKey('question_$_currentIndex'),
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FocusTraversalOrder(
+                                order: const NumericFocusOrder(2),
+                                child: PracticeSessionQuestionCard(
+                                  question: question,
+                                  currentAnswer: _currentAnswer,
+                                  isSubmitted: _isSubmitted,
+                                  isFeedbackVisible: _isFeedbackVisible,
+                                  onAnswerSelected: _onAnswerSelected,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              if (!_isSubmitted)
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(3),
+                                  child: Semantics(
+                                    label: AppLocalizations.of(context)!.submitAnswer,
+                                    child: FilledButton(
+                                      onPressed: _currentAnswer != null ? _submitAnswer : null,
+                                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                                      child: Text(AppLocalizations.of(context)!.submitAnswer),
+                                    ),
+                                  ),
+                                ),
+                              if (_isSubmitted)
+                                Column(
+                                  children: [
+                                    PracticeFeedbackWidget(
+                                      isCorrect: _isCorrect,
+                                      explanation: question.explanation,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildConfidenceSelector(),
+                                    const SizedBox(height: 16),
+                                    PracticeSessionNavButtons(
+                                      onPrevious: _previousQuestion,
+                                      onNext: _nextQuestion,
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          );
+                          if (reduceMotion) return child;
+                          return Semantics(
+                            liveRegion: true,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              switchInCurve: Curves.easeIn,
+                              switchOutCurve: Curves.easeOut,
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(opacity: animation, child: child);
+                              },
+                              child: child,
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 24),
-                      if (!_isSubmitted)
-                        FocusTraversalOrder(
-                          order: const NumericFocusOrder(3),
-                          child: Semantics(
-                            label: AppLocalizations.of(context)!.submitAnswer,
-                            child: FilledButton(
-                              onPressed: _currentAnswer != null ? _submitAnswer : null,
-                              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                              child: Text(AppLocalizations.of(context)!.submitAnswer),
-                            ),
-                          ),
-                        ),
-                      if (_isSubmitted)
-                        Column(
-                          children: [
-                            PracticeFeedbackWidget(
-                              isCorrect: _isCorrect,
-                              explanation: question.explanation,
-                            ),
-                            const SizedBox(height: 16),
-                            PracticeSessionNavButtons(
-                              onPrevious: _previousQuestion,
-                              onNext: _nextQuestion,
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ),
@@ -349,5 +456,103 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildConfidenceSelector() {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.howConfident,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(5, (index) {
+            final rating = index + 1;
+            final isSelected = _currentConfidence == rating;
+            return GestureDetector(
+              onTap: () => setState(() => _currentConfidence = rating),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _getConfidenceColor(rating).withValues(alpha: 0.2)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? _getConfidenceColor(rating)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '$rating',
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? _getConfidenceColor(rating)
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            _getConfidenceLabel(l10n, _currentConfidence),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getConfidenceColor(int rating) {
+    final cs = Theme.of(context).colorScheme;
+    switch (rating) {
+      case 1:
+        return cs.error;
+      case 2:
+        return cs.tertiary;
+      case 3:
+        return cs.tertiary;
+      case 4:
+        return cs.primary;
+      case 5:
+        return cs.primary;
+      default:
+        return cs.onSurfaceVariant;
+    }
+  }
+
+  String _getConfidenceLabel(AppLocalizations l10n, int rating) {
+    switch (rating) {
+      case 1:
+        return l10n.notConfidentAtAll;
+      case 2:
+        return l10n.slightlyConfident;
+      case 3:
+        return l10n.moderatelyConfident;
+      case 4:
+        return l10n.quiteConfident;
+      case 5:
+        return l10n.veryConfident;
+      default:
+        return '';
+    }
   }
 }

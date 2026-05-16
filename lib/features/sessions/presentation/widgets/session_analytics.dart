@@ -90,54 +90,57 @@ class SessionAnalyticsWidget extends StatelessWidget {
   Widget _buildMetricCards(BuildContext context, AppLocalizations l10n, Duration avgTimePerSession) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: MetricCard(
-                label: l10n.avgSession,
-                value: avgTimePerSession > Duration.zero
-                    ? formatDurationFromContext(context, avgTimePerSession)
-                    : '\u2014',
-                icon: Icons.timer,
-                accent: scheme.primary,
+    return Semantics(
+      label: l10n.performanceMetrics,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: MetricCard(
+                  label: l10n.avgSession,
+                  value: avgTimePerSession > Duration.zero
+                      ? formatDurationFromContext(context, avgTimePerSession)
+                      : '\u2014',
+                  icon: Icons.timer,
+                  accent: scheme.primary,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: MetricCard(
-                label: l10n.totalSessionsLabel,
-                value: sessions.length.toString(),
-                icon: Icons.history,
-                accent: scheme.secondary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: MetricCard(
+                  label: l10n.totalSessionsLabel,
+                  value: sessions.length.toString(),
+                  icon: Icons.history,
+                  accent: scheme.secondary,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: MetricCard(
-                label: l10n.currentStreakLabel,
-                value: l10n.daysCount(currentStreak),
-                icon: Icons.emoji_events,
-                accent: scheme.tertiary,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: MetricCard(
+                  label: l10n.currentStreakLabel,
+                  value: l10n.daysCount(currentStreak),
+                  icon: Icons.emoji_events,
+                  accent: scheme.tertiary,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: MetricCard(
-                label: l10n.totalTime,
-                value: formatDurationFromContext(context, _totalStudyTime),
-                icon: Icons.access_time,
-                accent: scheme.error,
+              const SizedBox(width: 12),
+              Expanded(
+                child: MetricCard(
+                  label: l10n.totalTime,
+                  value: formatDurationFromContext(context, _totalStudyTime),
+                  icon: Icons.access_time,
+                  accent: scheme.error,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -27,28 +27,38 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
   });
 
   Widget _buildTypedAnswerWidget(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        labelText: AppLocalizations.of(context)!.yourAnswer,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      textField: true,
+      label: l10n.yourAnswer,
+      child: TextField(
+        decoration: InputDecoration(
+          labelText: l10n.yourAnswer,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+        ),
+        maxLines: 3,
+        keyboardType: TextInputType.multiline,
+        onChanged: onAnswerSelected,
       ),
-      maxLines: 3,
-      keyboardType: TextInputType.multiline,
-      onChanged: onAnswerSelected,
     );
   }
 
   Widget _buildEssayWidget(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        labelText: AppLocalizations.of(context)!.yourAnswerCharacters(currentAnswer?.length ?? 0),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      textField: true,
+      label: '${l10n.yourAnswer}, ${currentAnswer?.length ?? 0}',
+      child: TextField(
+        decoration: InputDecoration(
+          labelText: l10n.yourAnswerCharacters(currentAnswer?.length ?? 0),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+        ),
+        maxLines: 5,
+        keyboardType: TextInputType.multiline,
+        onChanged: onAnswerSelected,
       ),
-      maxLines: 5,
-      keyboardType: TextInputType.multiline,
-      onChanged: onAnswerSelected,
     );
   }
 

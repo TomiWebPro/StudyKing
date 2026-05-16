@@ -1,6 +1,6 @@
 import '../data/models/question_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
-import 'localization_service.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class _QuestionState {
   int correctCount = 0;
@@ -13,11 +13,11 @@ class _QuestionState {
 
 class AdaptivePracticeEngine {
   final List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
-  final LocalizationService? _localizationService;
+  final AppLocalizations? _l10n;
   final Map<String, _QuestionState> _questionStates = {};
 
-  AdaptivePracticeEngine({LocalizationService? localizationService})
-      : _localizationService = localizationService;
+  AdaptivePracticeEngine({AppLocalizations? l10n})
+      : _l10n = l10n;
 
   void updateQuestionState({
     required String questionId,
@@ -99,16 +99,15 @@ class AdaptivePracticeEngine {
 
     final Map<String, dynamic> recommendations = {};
 
-    final l10n = _localizationService;
     if (accuracy < 0.6) {
       recommendations['focus'] = 'fundamentals';
-      recommendations['suggestion'] = l10n?.suggestionFundamentals() ?? 'Review basic concepts first';
+      recommendations['suggestion'] = _l10n?.adapSuggestionFundamentals ?? 'Review basic concepts first';
     } else if (accuracy < 0.8) {
       recommendations['focus'] = 'practice';
-      recommendations['suggestion'] = l10n?.suggestionPractice() ?? 'More practice questions recommended';
+      recommendations['suggestion'] = _l10n?.adapSuggestionMorePractice ?? 'More practice questions recommended';
     } else {
       recommendations['focus'] = 'mastery';
-      recommendations['suggestion'] = l10n?.suggestionAdvanced() ?? 'Ready for advanced topics';
+      recommendations['suggestion'] = _l10n?.adapSuggestionAdvancedTopics ?? 'Ready for advanced topics';
     }
 
     recommendations['timeToReview'] = calculateReviewInterval(

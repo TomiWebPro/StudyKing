@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -57,8 +58,8 @@ class MasteryProgressCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _miniStat(context, l10n.accuracy, '${(avgAccuracy * 100).round()}%', AppTheme.progressColor(avgAccuracy, context)),
-            _miniStat(context, l10n.readiness, '${(avgReadiness * 100).round()}%', Theme.of(context).colorScheme.tertiary),
+            _miniStat(context, l10n.accuracy, formatPercent(avgAccuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0), AppTheme.progressColor(avgAccuracy, context)),
+            _miniStat(context, l10n.readiness, formatPercent(avgReadiness * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0), Theme.of(context).colorScheme.tertiary),
             _miniStat(context, l10n.weakAreas, '$weakTopics', Theme.of(context).colorScheme.error),
           ],
         ),

@@ -1608,6 +1608,66 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get examMode => 'Exam Mode';
+
+  @override
+  String get examModeDescription => 'Timed exam simulation';
+
+  @override
+  String get sourcePractice => 'Source Practice';
+
+  @override
+  String get sourcePracticeDescription => 'Practice by source';
+
+  @override
+  String get noSourcesAvailable => 'No sources available';
+
+  @override
+  String get howConfident => 'How confident are you?';
+
+  @override
+  String get notConfidentAtAll => 'Not confident at all';
+
+  @override
+  String get slightlyConfident => 'Slightly confident';
+
+  @override
+  String get moderatelyConfident => 'Moderately confident';
+
+  @override
+  String get quiteConfident => 'Quite confident';
+
+  @override
+  String get veryConfident => 'Very confident';
+
+  @override
+  String get reviewMistakes => 'Review Mistakes';
+
+  @override
+  String reviewMistakesDescription(int count) {
+    return 'Review $count mistakes from this session';
+  }
+
+  @override
+  String get noMistakesToReview => 'No mistakes to review';
+
+  @override
+  String get redoIncorrectQuestions => 'Redo Incorrect Questions';
+
+  @override
+  String get noAnswerProvided => 'No answer provided';
+
+  @override
+  String get correctAnswer => 'Correct Answer';
+
+  @override
+  String get practiceBySource => 'Practice by Source';
+
+  @override
+  String get practiceBySourceDescription =>
+      'Select a source to practice questions from';
+
+  @override
   String fallbackOption(int number) {
     return 'Option $number';
   }
@@ -3061,5 +3121,49 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String failedToGetQuestionsForTopics(String error) {
     return 'Failed to get questions for topics: $error';
+  }
+
+  @override
+  String filePickerError(String error) {
+    return 'File picker error: $error';
+  }
+
+  @override
+  String get urlFetchSuccess => 'URL content fetched successfully';
+
+  @override
+  String urlFetchFailed(String error) {
+    return 'Failed to fetch URL: $error';
+  }
+
+  @override
+  String urlFetchError(String error) {
+    return 'URL fetch error: $error';
+  }
+
+  @override
+  String get file => 'File';
+
+  @override
+  String get fetchAndScrape => 'Fetch & Scrape';
+
+  @override
+  String hoursAbbreviation(String hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String tokensLabel(String count) {
+    return '$count tokens';
+  }
+
+  @override
+  String usageRecordFormat(String date, String cost, String costPerToken) {
+    return '$date: $cost, cost/tk: $costPerToken';
+  }
+
+  @override
+  String usageSummary(String totalCost, String totalTokens, String avgCost) {
+    return 'Usage: $totalCost over $totalTokens tokens, avg: $avgCost per 1k tokens';
   }
 }

@@ -84,7 +84,7 @@ class SessionExportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            '${l10n.totalTime}: ${_formatTotalDuration(sessions)}',
+            '${l10n.totalTime}: ${_formatTotalDuration(sessions, l10n)}',
             style: const pw.TextStyle(fontSize: 14),
           ),
           pw.SizedBox(height: 20),
@@ -97,7 +97,7 @@ class SessionExportService {
                 final s = entry.value;
                 final date =
                     '${s.startTime.day}/${s.startTime.month}/${s.startTime.year}';
-                final dur = _formatDuration(s.actualDurationMs);
+                final dur = _formatDuration(s.actualDurationMs, l10n);
                 final accuracy = s.questionsAnswered > 0
                     ? '${formatDecimal((s.correctAnswers / s.questionsAnswered) * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}%'
                     : '-';
@@ -149,24 +149,24 @@ class SessionExportService {
     return pdf.save();
   }
 
-  static String _formatTotalDuration(List<Session> sessions) {
+  static String _formatTotalDuration(List<Session> sessions, AppLocalizations l10n) {
     final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
     final minutes = totalMs ~/ 60000;
     final hours = minutes ~/ 60;
     final remainingMin = minutes % 60;
     if (hours > 0) {
-      return '${hours}h ${remainingMin}m';
+      return '${l10n.durationHours(hours)} ${l10n.durationMinutes(remainingMin)}';
     }
-    return '${remainingMin}m';
+    return l10n.durationMinutes(remainingMin);
   }
 
-  static String _formatDuration(int ms) {
+  static String _formatDuration(int ms, AppLocalizations l10n) {
     final minutes = ms ~/ 60000;
     final seconds = (ms % 60000) ~/ 1000;
     if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
+      return '${l10n.durationMinutes(minutes)} ${l10n.durationSeconds(seconds)}';
     }
-    return '${seconds}s';
+    return l10n.durationSeconds(seconds);
   }
 
   @visibleForTesting

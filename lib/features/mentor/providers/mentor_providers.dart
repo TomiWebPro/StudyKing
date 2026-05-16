@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/core/providers/app_providers.dart' show defaultModelForProvider, llmProviderProvider, settingsProvider;
+import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
+import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;

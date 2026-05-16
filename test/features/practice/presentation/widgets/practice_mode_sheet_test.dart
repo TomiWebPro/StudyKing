@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/features/practice/presentation/widgets/practice_mode_option.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_sheet.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -114,6 +115,19 @@ void main() {
 
       expect(selected, isNotNull);
       expect(selected!.id, 's2');
+    });
+
+    testWidgets('renders empty subjects list gracefully', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeSheet(
+          subjects: [],
+          onSubjectSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice Mode'), findsOneWidget);
+      expect(find.byType(PracticeModeOption), findsNothing);
     });
 
     testWidgets('static show displays bottom sheet', (tester) async {

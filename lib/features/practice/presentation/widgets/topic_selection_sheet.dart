@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/bottom_sheet_constants.dart';
+import 'package:studyking/core/constants/app_runtime_config.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 

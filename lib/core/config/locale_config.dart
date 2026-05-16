@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../l10n/generated/app_localizations.dart';
 
 enum AppLocale {
   en(Locale('en'), 'English'),
@@ -28,19 +27,5 @@ enum AppLocale {
       if (supported.languageCode == locale.languageCode) return supported;
     }
     return supportedLocales.first;
-  }
-
-  static List<DropdownMenuItem<String>> buildDropdownItems(
-      AppLocalizations l10n) {
-    return AppLocale.values.map((appLocale) {
-      final label = switch (appLocale) {
-        AppLocale.en => l10n.english,
-        AppLocale.es => l10n.spanish,
-      };
-      return DropdownMenuItem(
-        value: appLocale.locale.languageCode,
-        child: Text(label),
-      );
-    }).toList();
   }
 }

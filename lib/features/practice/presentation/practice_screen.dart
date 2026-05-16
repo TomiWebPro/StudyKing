@@ -21,6 +21,8 @@ import 'package:studyking/features/practice/presentation/widgets/practice_mode_s
 import 'package:studyking/features/practice/presentation/widgets/topic_selection_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/spaced_repetition_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
+import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
+import 'package:studyking/features/practice/presentation/screens/exam_session_screen.dart';
 
 class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
@@ -155,11 +157,16 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasQuestions)));
         return;
       }
+
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = scorer.scoreQuestions(weakQuestions);
+      final orderedQuestions = scored.map((s) => s.question).toList();
+
       if (!mounted) return;
       Navigator.pushNamed(context, AppRoutes.practiceSession,
           arguments: PracticeSessionArgs(
             subjectId: subject.id,
-            questionCount: weakQuestions.length,
+            questionCount: orderedQuestions.length,
           ));
     } catch (e) {
       if (mounted) {
@@ -189,6 +196,80 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
                 Text(AppLocalizations.of(context)!.noQuestionsAvailable)));
+      }
+    }
+  }
+
+  void _startExamMode() {
+    if (_subjects.isEmpty) return;
+    if (_subjects.length == 1) {
+      _navigateToExam(_subjects.first);
+    } else {
+      SubjectSelectionSheet.show(context,
+          subjects: _subjects,
+          onSubjectSelected: (subject) => _navigateToExam(subject));
+    }
+  }
+
+  void _navigateToExam(Subject subject) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExamSessionScreen(
+          subjectId: subject.id,
+          subjectName: subject.name,
+        ),
+      ),
+    );
+  }
+
+  void _showSourcePracticeSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final allQuestions = await _questionRepo.getAll();
+      final sourceMap = <String, Set<String>>{};
+      for (final q in allQuestions) {
+        for (final sourceId in q.sourceIds) {
+          sourceMap.putIfAbsent(sourceId, () => {});
+          sourceMap[sourceId]!.add(q.id);
+        }
+      }
+
+      final sources = sourceMap.entries
+          .where((e) => e.value.isNotEmpty)
+          .map((e) => SourceItemData(
+                id: e.key,
+                title: e.key,
+                questionCount: e.value.length,
+              ))
+          .toList();
+
+      if (sources.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.noSourcesAvailable)));
+        return;
+      }
+
+      if (!mounted) return;
+      SourcePracticeSheet.show(context,
+          sources: sources,
+          onSourceSelected: (sourceId, sourceTitle) {
+            final sourceQuestions = allQuestions
+                .where((q) => q.sourceIds.contains(sourceId))
+                .toList();
+            if (sourceQuestions.isNotEmpty) {
+              Navigator.pushNamed(context, AppRoutes.practiceSession,
+                  arguments: PracticeSessionArgs(
+                    subjectId: sourceQuestions.first.subjectId,
+                    questionCount: sourceQuestions.length,
+                  ));
+            }
+          });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.noSourcesAvailable)));
       }
     }
   }
@@ -318,8 +399,86 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             onTopicFocus: _showTopicSelector,
             onWeakAreas: _startWeakAreasPractice,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          _buildExtraModes(),
+          const SizedBox(height: 16),
           _buildSubjectSection(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtraModes() {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+            padding: ResponsiveUtils.listPadding(context),
+      child: Row(
+        children: [
+          Expanded(
+            child: Card(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _startExamMode,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 32,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.examMode,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.examModeDescription,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Card(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _showSourcePracticeSheet,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.source,
+                        size: 32,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.sourcePractice,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.sourcePracticeDescription,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -331,9 +490,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_subjects.length > 1) ...[
-          Text(l10n.yourSubjects,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold)),
+          Padding(
+      padding: ResponsiveUtils.listPadding(context),
+            child: Text(l10n.yourSubjects,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold)),
+          ),
           const SizedBox(height: 12),
         ],
         ..._subjects.map((subject) => SubjectPracticeCard(

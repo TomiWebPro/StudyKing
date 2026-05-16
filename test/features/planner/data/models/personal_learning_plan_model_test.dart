@@ -174,6 +174,109 @@ void main() {
         expect(copy.studentId, studentId);
       });
     });
+
+    group('syllabusGoals', () {
+      test('returns empty list when metadata is null', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+        );
+        expect(plan.syllabusGoals, []);
+      });
+
+      test('returns empty list when metadata lacks syllabus_goals key', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {'other': 'value'},
+        );
+        expect(plan.syllabusGoals, []);
+      });
+
+      test('parses syllabus goals from metadata', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              {'subjectId': 'sub-1', 'subjectTitle': 'IB Physics'},
+              {'subjectId': 'sub-2', 'subjectTitle': 'IB Math', 'targetDays': 60},
+            ],
+          },
+        );
+        final goals = plan.syllabusGoals;
+        expect(goals.length, 2);
+        expect(goals[0].subjectId, 'sub-1');
+        expect(goals[0].subjectTitle, 'IB Physics');
+        expect(goals[1].subjectId, 'sub-2');
+        expect(goals[1].targetDays, 60);
+      });
+    });
+
+    group('subjectPlans', () {
+      test('returns empty map when metadata is null', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+        );
+        expect(plan.subjectPlans, {});
+      });
+
+      test('returns empty map when metadata lacks subject_plans key', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {'other': 'value'},
+        );
+        expect(plan.subjectPlans, {});
+      });
+
+      test('parses subject plans from metadata', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {
+            'subject_plans': {
+              'sub-1': [
+                {
+                  'date': now.toIso8601String(),
+                  'dayNumber': 1,
+                  'priorityTopics': [],
+                  'reviewQuestionIds': [],
+                  'stretchGoalQuestionIds': [],
+                  'targetQuestions': 10,
+                  'targetMinutes': 30,
+                },
+              ],
+              'sub-2': [
+                {
+                  'date': now.toIso8601String(),
+                  'dayNumber': 2,
+                  'priorityTopics': [],
+                  'reviewQuestionIds': [],
+                  'stretchGoalQuestionIds': [],
+                  'targetQuestions': 15,
+                  'targetMinutes': 45,
+                },
+              ],
+            },
+          },
+        );
+        final plans = plan.subjectPlans;
+        expect(plans.length, 2);
+        expect(plans.keys, containsAll(['sub-1', 'sub-2']));
+        expect(plans['sub-1']!.length, 1);
+        expect(plans['sub-1']!.first.dayNumber, 1);
+        expect(plans['sub-2']!.first.dayNumber, 2);
+        expect(plans['sub-2']!.first.targetQuestions, 15);
+      });
+    });
   });
 
   group('DailyPlan', () {

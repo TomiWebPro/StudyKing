@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, defaultModelForProvider, llmProviderProvider, selectedModelProvider;
+import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
+import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, llmProviderProvider, selectedModelProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;

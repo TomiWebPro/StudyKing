@@ -7,12 +7,14 @@ class VoiceBar extends StatefulWidget {
   final VoiceController controller;
   final ValueChanged<String> onTranscriptionSubmitted;
   final bool isEnabled;
+  final bool reduceMotion;
 
   const VoiceBar({
     super.key,
     required this.controller,
     required this.onTranscriptionSubmitted,
     this.isEnabled = true,
+    this.reduceMotion = false,
   });
 
   @override
@@ -56,7 +58,9 @@ class _VoiceBarState extends State<VoiceBar> with SingleTickerProviderStateMixin
       }
     } else {
       widget.controller.startListening();
-      _waveController.repeat();
+      if (!widget.reduceMotion) {
+        _waveController.repeat();
+      }
     }
   }
 

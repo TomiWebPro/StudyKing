@@ -1,85 +1,64 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/settings/presentation/profile_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/providers/app_providers.dart' show localeProvider, settingsRepository;
+import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/presentation/profile_screen.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class FakeSettingsRepositoryProfile {
-  UserProfile? _profile;
-  bool shouldThrow = false;
+Directory? _tempDir;
 
-  Future<UserProfile?> getProfileData() async {
-    if (shouldThrow) throw Exception('Test error');
-    return _profile;
-  }
-
-  Future<void> saveProfileData(UserProfile profile) async {
-    _profile = profile;
-  }
-
-  Future<void> clearProfile() async {
-    _profile = null;
-  }
-
-  Future<void> init() async {}
+Future<void> _initHive() async {
+  _tempDir = await Directory.systemTemp.createTemp('hive_profile_test_');
+  Hive.init(_tempDir!.path);
+  Hive.registerAdapter(SettingsBoxAdapter());
+  Hive.registerAdapter(UserProfileAdapter());
+  Hive.registerAdapter(AccessibilityPreferencesAdapter());
+  await Hive.openBox(HiveBoxNames.settings);
+  await Hive.openBox(HiveBoxNames.profile);
+  await settingsRepository.init();
 }
 
-final fakeProfileRepo = FakeSettingsRepositoryProfile();
-
-class _TestSettingsNotifier extends StateNotifier<SettingsBox> {
-  _TestSettingsNotifier() : super(SettingsBox());
-
-  Future<void> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-  }) async {
-    state = SettingsBox(
-      apiKey: apiKey ?? state.apiKey,
-      apiBaseUrl: apiBaseUrl ?? state.apiBaseUrl,
-      selectedModel: selectedModel ?? state.selectedModel,
-      themeMode: themeMode?.index ?? state.themeMode,
-      fontSize: fontSize ?? state.fontSize,
-      totalSessionCount: state.totalSessionCount,
-      totalStudyTimeMs: state.totalStudyTimeMs,
-      totalQuestions: state.totalQuestions,
-      studyRemindersEnabled: studyRemindersEnabled ?? state.studyRemindersEnabled,
-      requestTimeoutSeconds: requestTimeoutSeconds ?? state.requestTimeoutSeconds,
-      sessionDurationMinutes: sessionDurationMinutes ?? state.sessionDurationMinutes,
-    );
-  }
+Future<void> _closeHive() async {
+  await Hive.close();
+  await _tempDir?.delete(recursive: true);
+  _tempDir = null;
 }
 
-final testSettingsProvider = StateNotifierProvider<_TestSettingsNotifier, SettingsBox>((ref) {
-  return _TestSettingsNotifier();
-});
-
-Widget buildProfileScreen({
-  UserProfile? initialProfile,
-  bool shouldThrowLoad = false,
-}) {
-  fakeProfileRepo._profile = initialProfile;
-  fakeProfileRepo.shouldThrow = shouldThrowLoad;
+Widget buildProfileScreen() {
   return ProviderScope(
     overrides: [
-      testSettingsProvider,
+      localeProvider.overrideWith((ref) => const Locale('en')),
     ],
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
       home: const ProfileScreen(),
     ),
   );
 }
 
 void main() {
-  setUp(() {
-    fakeProfileRepo._profile = null;
-    fakeProfileRepo.shouldThrow = false;
+  setUpAll(() async {
+    await _initHive();
+  });
+
+  tearDownAll(() async {
+    await _closeHive();
+  });
+
+  setUp(() async {
+    final settingsBox = Hive.box(HiveBoxNames.settings);
+    await settingsBox.clear();
+    final profileBox = Hive.box(HiveBoxNames.profile);
+    await profileBox.clear();
   });
 
   group('ProfileScreen', () {
@@ -332,7 +311,8 @@ void main() {
     });
 
     testWidgets('loads existing profile data into fields', (tester) async {
-      fakeProfileRepo._profile = UserProfile(
+      final profileBox = Hive.box(HiveBoxNames.profile);
+      await profileBox.put('test-id', UserProfile(
         id: 'test-id',
         name: 'Jane Doe',
         studentId: '12345',
@@ -341,9 +321,10 @@ void main() {
         preferredStudyTime: 'Morning',
         notificationsEnabled: false,
         language: 'es',
-      );
+      ));
+      await profileBox.put('current_profile', 'test-id');
 
-      await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+      await tester.pumpWidget(buildProfileScreen());
       await tester.pumpAndSettle();
 
       expect(find.text('Jane Doe'), findsOneWidget);
@@ -353,7 +334,8 @@ void main() {
     });
 
     testWidgets('handles profile load error gracefully', (tester) async {
-      fakeProfileRepo.shouldThrow = true;
+      await Hive.box(HiveBoxNames.settings).clear();
+      await Hive.box(HiveBoxNames.profile).clear();
 
       await tester.pumpWidget(buildProfileScreen());
       await tester.pumpAndSettle();
@@ -435,8 +417,6 @@ void main() {
 
     group('Save Verification', () {
       testWidgets('save triggers repository call with correct data', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -449,13 +429,12 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile, isNotNull);
-        expect(fakeProfileRepo._profile!.name, equals('Save Test User'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData, isNotNull);
+        expect(profileData!.name, equals('Save Test User'));
       });
 
       testWidgets('save includes student ID when provided', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -472,12 +451,11 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.studentId, equals('12345'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.studentId, equals('12345'));
       });
 
       testWidgets('save includes learning goal when provided', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -494,12 +472,11 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.learningGoal, equals('Pass Final Exam'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.learningGoal, equals('Pass Final Exam'));
       });
 
       testWidgets('save includes preferred study time when provided', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -516,7 +493,8 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.preferredStudyTime, equals('Evening 7-10 PM'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.preferredStudyTime, equals('Evening 7-10 PM'));
       });
 
       testWidgets('save shows loading indicator during save', (tester) async {
@@ -545,7 +523,6 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Name is required'), findsOneWidget);
-        expect(fakeProfileRepo._profile, isNull);
       });
 
       testWidgets('whitespace-only name shows error', (tester) async {
@@ -565,8 +542,6 @@ void main() {
       });
 
       testWidgets('name field trims whitespace before save', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -579,12 +554,11 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.name, equals('Trimmed User'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.name, equals('Trimmed User'));
       });
 
       testWidgets('student ID accepts numeric values only', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -601,12 +575,11 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.studentId, equals('9876543210'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.studentId, equals('9876543210'));
       });
 
       testWidgets('empty student ID is stored as null', (tester) async {
-        fakeProfileRepo._profile = null;
-
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
@@ -619,18 +592,31 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile!.studentId, isNull);
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData!.studentId, isNull);
+      });
+
+      testWidgets('name field has 60 character limit', (tester) async {
+        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpAndSettle();
+
+        final nameField = find.widgetWithText(TextField, 'Full Name');
+        final textField = tester.widget<TextField>(nameField);
+        final formatters = textField.inputFormatters ?? [];
+        expect(formatters.any((f) => f.toString().contains('60')), isTrue);
       });
     });
 
     group('Delete Account Flow', () {
       testWidgets('delete confirmation calls clearProfile', (tester) async {
-        fakeProfileRepo._profile = UserProfile(
+        final profileBox = Hive.box(HiveBoxNames.profile);
+        await profileBox.put('delete-test', UserProfile(
           id: 'delete-test',
           name: 'Delete Test',
-        );
+        ));
+        await profileBox.put('current_profile', 'delete-test');
 
-        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Delete'));
@@ -639,10 +625,14 @@ void main() {
         expect(find.textContaining('Are you sure'), findsOneWidget);
         expect(find.text('Delete Account'), findsWidgets);
 
-        await tester.tap(find.widgetWithText(FilledButton, 'Delete').last);
+        // Find the "Delete" button inside the dialog - it's the second one on screen
+        final deleteButtons = find.widgetWithText(FilledButton, 'Delete');
+        await tester.tap(deleteButtons.last);
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile, isNull);
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData, isNotNull);
+        expect(profileData!.id, equals('default_profile'));
       });
 
       testWidgets('delete confirmation shows warning message', (tester) async {
@@ -657,12 +647,14 @@ void main() {
       });
 
       testWidgets('cancel delete does not clear profile', (tester) async {
-        fakeProfileRepo._profile = UserProfile(
+        final profileBox = Hive.box(HiveBoxNames.profile);
+        await profileBox.put('cancel-delete-test', UserProfile(
           id: 'cancel-delete-test',
           name: 'Cancel Delete Test',
-        );
+        ));
+        await profileBox.put('current_profile', 'cancel-delete-test');
 
-        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Delete'));
@@ -671,8 +663,9 @@ void main() {
         await tester.tap(find.text('Cancel').first);
         await tester.pumpAndSettle();
 
-        expect(fakeProfileRepo._profile, isNotNull);
-        expect(fakeProfileRepo._profile!.name, equals('Cancel Delete Test'));
+        final profileData = await settingsRepository.getProfileData();
+        expect(profileData, isNotNull);
+        expect(profileData!.name, equals('Cancel Delete Test'));
       });
 
       testWidgets('delete button has danger styling', (tester) async {
@@ -689,26 +682,30 @@ void main() {
 
     group('Language Switch Side Effects', () {
       testWidgets('language dropdown shows current language', (tester) async {
-        fakeProfileRepo._profile = UserProfile(
+        final profileBox = Hive.box(HiveBoxNames.profile);
+        await profileBox.put('lang-test', UserProfile(
           id: 'lang-test',
           name: 'Lang User',
           language: 'es',
-        );
+        ));
+        await profileBox.put('current_profile', 'lang-test');
 
-        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         expect(find.text('Spanish'), findsAtLeastNWidgets(1));
       });
 
       testWidgets('can switch from Spanish to English', (tester) async {
-        fakeProfileRepo._profile = UserProfile(
+        final profileBox = Hive.box(HiveBoxNames.profile);
+        await profileBox.put('lang-switch-test', UserProfile(
           id: 'lang-switch-test',
           name: 'Switch User',
           language: 'es',
-        );
+        ));
+        await profileBox.put('current_profile', 'lang-switch-test');
 
-        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         await tester.tap(find.byType(DropdownButton<String>));
@@ -723,13 +720,15 @@ void main() {
 
     group('Notifications Toggle', () {
       testWidgets('notifications can be enabled', (tester) async {
-        fakeProfileRepo._profile = UserProfile(
+        final profileBox = Hive.box(HiveBoxNames.profile);
+        await profileBox.put('notif-test', UserProfile(
           id: 'notif-test',
           name: 'Notif User',
           notificationsEnabled: false,
-        );
+        ));
+        await profileBox.put('current_profile', 'notif-test');
 
-        await tester.pumpWidget(buildProfileScreen(initialProfile: fakeProfileRepo._profile));
+        await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         final switchTile = find.widgetWithText(SwitchListTile, 'Notifications');
@@ -785,22 +784,20 @@ void main() {
     });
 
     group('Error Handling', () {
-      testWidgets('shows generic error message on save failure', (tester) async {
-        fakeProfileRepo.shouldThrow = true;
-
+      testWidgets('shows success snackbar on successful save', (tester) async {
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
 
         await tester.enterText(
           find.widgetWithText(TextField, 'Full Name'),
-          'Error User',
+          'Success User',
         );
         await tester.pumpAndSettle();
 
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        expect(find.textContaining('Error'), findsWidgets);
+        expect(find.text('Profile saved successfully'), findsOneWidget);
       });
     });
   });

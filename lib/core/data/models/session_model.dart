@@ -18,6 +18,9 @@ class Session {
   final int correctAnswers;
   final bool completed;
   final String? sourceId;
+  final String? tutorSessionId;
+  final List<String> sourceIds;
+  final List<String> lessonIds;
   final List<String> tags;
   final DateTime createdAt;
 
@@ -35,6 +38,9 @@ class Session {
     this.correctAnswers = 0,
     this.completed = false,
     this.sourceId,
+    this.tutorSessionId,
+    this.sourceIds = const [],
+    this.lessonIds = const [],
     this.tags = const [],
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -60,6 +66,9 @@ class Session {
     'correctAnswers': correctAnswers,
     'completed': completed,
     'sourceId': sourceId,
+    'tutorSessionId': tutorSessionId,
+    'sourceIds': sourceIds,
+    'lessonIds': lessonIds,
     'tags': tags,
     'createdAt': createdAt.toIso8601String(),
   };
@@ -82,6 +91,9 @@ class Session {
     correctAnswers: json['correctAnswers'] ?? 0,
     completed: json['completed'] ?? false,
     sourceId: json['sourceId'],
+    tutorSessionId: json['tutorSessionId'],
+    sourceIds: json['sourceIds'] != null ? List<String>.from(json['sourceIds']) : [],
+    lessonIds: json['lessonIds'] != null ? List<String>.from(json['lessonIds']) : [],
     tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'])
@@ -102,12 +114,16 @@ class Session {
     int? correctAnswers,
     bool? completed,
     String? sourceId,
+    String? tutorSessionId,
+    List<String>? sourceIds,
+    List<String>? lessonIds,
     List<String>? tags,
     DateTime? createdAt,
     bool clearEndTime = false,
     bool clearSubjectId = false,
     bool clearTopicId = false,
     bool clearSourceId = false,
+    bool clearTutorSessionId = false,
     bool clearPlannedDuration = false,
   }) {
     return Session(
@@ -126,6 +142,9 @@ class Session {
       correctAnswers: correctAnswers ?? this.correctAnswers,
       completed: completed ?? this.completed,
       sourceId: clearSourceId ? null : (sourceId ?? this.sourceId),
+      tutorSessionId: clearTutorSessionId ? null : (tutorSessionId ?? this.tutorSessionId),
+      sourceIds: sourceIds ?? this.sourceIds,
+      lessonIds: lessonIds ?? this.lessonIds,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
     );

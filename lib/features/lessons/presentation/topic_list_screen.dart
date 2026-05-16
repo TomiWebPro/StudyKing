@@ -61,13 +61,14 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
       itemBuilder: (context, index) {
         final t = _topics[index];
         return Semantics(
-          label: t.title,
+          label: '${t.title}, ${t.description}',
+          button: true,
           child: Card(
             margin: EdgeInsets.only(
               bottom: ResponsiveUtils.verticalSpacing(context) * 0.75,
             ),
             child: ListTile(
-              leading: const Icon(Icons.folder, color: Colors.blue),
+              leading: Icon(Icons.folder, color: Theme.of(context).colorScheme.primary),
               title: Text(t.title),
               subtitle: Text(t.description),
               trailing: const Icon(Icons.chevron_right),

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show VoidCallback;
-
-enum LlmTaskStatus { queued, running, done, failed, cancelled }
+import '../theme/llm_task_status.dart';
+export '../theme/llm_task_status.dart';
 
 class LlmTask {
   final String id;

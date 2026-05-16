@@ -21,9 +21,13 @@ class PracticeModeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAvailable = onTap != null;
+    final semanticLabel = badge != null && badge! > 0
+        ? '$title, $subtitle, $badge'
+        : '$title, $subtitle';
     return Card(
       child: Semantics(
-        label: '$title, $subtitle',
+        label: semanticLabel,
+        enabled: isAvailable,
         child: InkWell(
           onTap: isAvailable ? onTap : null,
           borderRadius: BorderRadius.circular(12),

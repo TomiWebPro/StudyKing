@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -107,7 +108,7 @@ class ChatBubble extends StatelessWidget {
       return _buildEvaluationContent(context, content);
     }
 
-    return Text(
+    final textWidget = Text(
       content,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: message.role == MessageRole.student
@@ -115,6 +116,15 @@ class ChatBubble extends StatelessWidget {
                 : Theme.of(context).colorScheme.onSurface,
           ),
     );
+
+    if (message.isStreaming) {
+      return Semantics(
+        liveRegion: true,
+        child: textWidget,
+      );
+    }
+
+    return textWidget;
   }
 
   bool _isEvaluationMessage(String content) {
@@ -131,34 +141,35 @@ class ChatBubble extends StatelessWidget {
       final data = jsonDecode(content) as Map<String, dynamic>;
       final score = (data['score'] as num).toDouble();
       final explanation = data['explanation'] as String? ?? '';
+      final cs = Theme.of(context).colorScheme;
+      final evalColor = score >= 0.7
+          ? cs.primary
+          : score <= 0.3
+              ? cs.error
+              : cs.tertiary;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                score >= 0.7 ? Icons.check_circle : (score <= 0.3 ? Icons.cancel : Icons.info),
-                size: 18,
-                color: score >= 0.7
-                    ? Colors.green
-                    : score <= 0.3
-                        ? Colors.red
-                        : Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${(score * 100).round()}%',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: score >= 0.7
-                          ? Colors.green
-                          : score <= 0.3
-                              ? Colors.red
-                              : Colors.orange,
-                    ),
-              ),
-            ],
+          Semantics(
+            label: score >= 0.7 ? 'Correct' : (score <= 0.3 ? 'Incorrect' : 'Partial'),
+            child: Row(
+              children: [
+                Icon(
+                  score >= 0.7 ? Icons.check_circle : (score <= 0.3 ? Icons.cancel : Icons.info),
+                  size: 18,
+                  color: evalColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatPercent(score * 100, AppLocalizations.of(context)!.localeName, minFractionDigits: 0, maxFractionDigits: 0),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: evalColor,
+                      ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           ClipRRect(
@@ -167,13 +178,7 @@ class ChatBubble extends StatelessWidget {
               value: score,
               minHeight: 6,
               backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                score >= 0.7
-                    ? Colors.green
-                    : score <= 0.3
-                        ? Colors.red
-                        : Colors.orange,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(evalColor),
             ),
           ),
           if (explanation.isNotEmpty) ...[

@@ -23,53 +23,13 @@ class AppErrorHandler {
     bool retry = false,
     void Function()? retryCallback,
   }) async {
-    // Log to analytics (would be implemented with analytics SDK)
     _logError(error, contextName);
-    
-    // Convert to appropriate exception type
     final exception = _convertToAppException(error);
-    
-    // Handle based on exception type
     _showErrorUI(context, exception, retry: retry, retryCallback: retryCallback);
   }
   
-  /// Handles sync errors (for operations that aren't async)
   static void handleSyncError(BuildContext context, Object error, String contextName, {bool retry = false, void Function()? retryCallback}) {
-    _logError(error, contextName);
-
-    final l10n = AppLocalizations.of(context)!;
-    final exception = _convertToAppException(error);
-    final errorMessage = _getErrorMessage(exception, l10n);
-
-    if (retry && retryCallback != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white),
-              const SizedBox(width: 16),
-              Expanded(child: Text(errorMessage)),
-              TextButton(
-                onPressed: retryCallback,
-                child: Text(l10n.retry),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red.shade800,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red.shade800,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+    handleError(context, error, contextName, retry: retry, retryCallback: retryCallback);
   }
   
   /// Show user-friendly error message via ScaffoldMessenger

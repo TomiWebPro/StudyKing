@@ -221,6 +221,27 @@ void main() {
       expect(find.text('7 due'), findsOneWidget);
     });
 
+    testWidgets('spaced repetition callback not called when no due counts', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          onQuickPractice: () {},
+          onSpacedRepetition: () => called = true,
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Spaced Repetition'));
+      await tester.pumpAndSettle();
+
+      expect(called, isFalse);
+    });
+
     testWidgets('weak areas card is disabled when no subjects', (tester) async {
       bool called = false;
       await tester.pumpWidget(_buildTestApp(

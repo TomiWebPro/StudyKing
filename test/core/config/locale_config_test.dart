@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/config/locale_config.dart';
-import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 void main() {
   group('AppLocale', () {
@@ -52,14 +51,5 @@ void main() {
       expect(result, equals(const Locale('en')));
     });
 
-    test('buildDropdownItems creates correct items', () {
-      final l10n = AppLocalizationsEn();
-      final items = AppLocale.buildDropdownItems(l10n);
-      expect(items, hasLength(2));
-      expect(items[0].value, equals('en'));
-      expect(items[0].child, isA<Text>());
-      expect(items[1].value, equals('es'));
-      expect(items[1].child, isA<Text>());
-    });
   });
 }

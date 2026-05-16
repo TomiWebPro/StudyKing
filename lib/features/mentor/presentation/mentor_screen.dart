@@ -168,11 +168,18 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
+        final reduceMotion = ref.read(settingsProvider).reduceMotion;
+        if (reduceMotion) {
+          _scrollController.jumpTo(
+            _scrollController.position.maxScrollExtent,
+          );
+        } else {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }

@@ -3,9 +3,9 @@ import '../errors/exceptions.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'personal_learning_plan_service.dart';
 import 'mastery_graph_service.dart';
-import 'localization_service.dart';
 
 class AdherenceDeviation {
   final int consecutiveLowDays;
@@ -30,19 +30,19 @@ class PlanAdapter {
   final PlanRepository _planRepository;
   final PersonalLearningPlanService _planService;
   final MasteryGraphService _masteryService;
-  final LocalizationService? _localizationService;
+  final AppLocalizations? _l10n;
 
   PlanAdapter({
     PlanAdherenceRepository? adherenceRepository,
     PlanRepository? planRepository,
     PersonalLearningPlanService? planService,
     MasteryGraphService? masteryService,
-    LocalizationService? localizationService,
+    AppLocalizations? l10n,
   })  : _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _planService = planService ?? PersonalLearningPlanService(),
         _masteryService = masteryService ?? MasteryGraphService(),
-        _localizationService = localizationService;
+        _l10n = l10n;
 
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
     try {
@@ -59,7 +59,7 @@ class PlanAdapter {
           averageAdherence: avgAdherence,
           requiresRegeneration: true,
           requiresEscalation: true,
-          message: _localizationService?.adherenceLowDaysAdjust(lowDays)
+          message: _l10n?.adherenceLowDaysAdjust(lowDays)
               ?? 'You have had $lowDays consecutive days of low adherence. '
                  'Consider adjusting your study plan or discussing with your mentor.',
         );
@@ -69,7 +69,7 @@ class PlanAdapter {
           averageAdherence: avgAdherence,
           requiresRegeneration: true,
           requiresEscalation: false,
-          message: _localizationService?.adherenceLowDaysRegenerate(lowDays)
+          message: _l10n?.adherenceLowDaysRegenerate(lowDays)
               ?? 'You have had $lowDays consecutive days of low adherence. '
                  'Would you like to regenerate your plan with adjusted targets?',
         );
@@ -197,17 +197,16 @@ class PlanAdapter {
           : 1.0;
       final overallRatio = (minRatio * 0.6 + qRatio * 0.4).clamp(0.0, 1.5);
 
-      final l10n = _localizationService;
       if (overallRatio < 0.3) {
-        return l10n?.adherenceLowToday(actualMinutes, plannedMinutes)
+        return _l10n?.adherenceLowToday(actualMinutes, plannedMinutes)
             ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
                'Consider redistributing the remaining workload.';
       } else if (overallRatio < 0.7) {
-        return l10n?.adherencePartialToday(actualMinutes, plannedMinutes)
+        return _l10n?.adherencePartialToday(actualMinutes, plannedMinutes)
             ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
                'Try to catch up with the remaining topics.';
       } else if (overallRatio > 1.2) {
-        return l10n?.adherenceExceededToday(actualMinutes, plannedMinutes)
+        return _l10n?.adherenceExceededToday(actualMinutes, plannedMinutes)
             ?? 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
       }
       return null;

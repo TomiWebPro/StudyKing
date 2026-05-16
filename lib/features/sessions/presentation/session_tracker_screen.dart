@@ -270,11 +270,17 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _isTrackingSession ? formatDurationFromContext(context, Duration(seconds: _elapsedSeconds)) : l10n.tapStartToBegin,
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
+                    Semantics(
+                      liveRegion: true,
+                      label: _isTrackingSession
+                          ? '${l10n.currentSession}: ${formatDurationFromContext(context, Duration(seconds: _elapsedSeconds))}'
+                          : l10n.tapStartToBegin,
+                      child: Text(
+                        _isTrackingSession ? formatDurationFromContext(context, Duration(seconds: _elapsedSeconds)) : l10n.tapStartToBegin,
+                        style: theme.textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

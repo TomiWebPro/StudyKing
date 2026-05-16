@@ -62,6 +62,11 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
       ),
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
+      onEnd: () {
+        if (!_hasAnimated) {
+          setState(() => _hasAnimated = true);
+        }
+      },
       builder: (context, value, child) {
         return Container(
           width: barWidth,

@@ -94,8 +94,6 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       return;
     }
 
-    setState(() {}); // trigger any needed rebuild
-
     try {
       switch (format) {
         case 'csv':
@@ -264,65 +262,61 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 tooltip: l10n.clearFilters,
               ),
             ),
-            Semantics(
-              label: l10n.sessionHistoryExport,
-              button: true,
-              child: PopupMenuButton<String>(
-            icon: const Icon(Icons.share),
-            tooltip: l10n.sessionHistoryExport,
-            onSelected: (value) => _handleExport(value),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'csv',
-                child: ListTile(
-                  leading: const Icon(Icons.table_chart),
-                  title: Text(l10n.exportCsv),
-                  contentPadding: EdgeInsets.zero,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.share),
+              tooltip: l10n.sessionHistoryExport,
+              onSelected: (value) => _handleExport(value),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'csv',
+                  child: ListTile(
+                    leading: const Icon(Icons.table_chart),
+                    title: Text(l10n.exportCsv),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'pdf',
-                child: ListTile(
-                  leading: const Icon(Icons.picture_as_pdf),
-                  title: Text(l10n.exportPdf),
-                  contentPadding: EdgeInsets.zero,
+                PopupMenuItem(
+                  value: 'pdf',
+                  child: ListTile(
+                    leading: const Icon(Icons.picture_as_pdf),
+                    title: Text(l10n.exportPdf),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'json',
-                child: ListTile(
-                  leading: const Icon(Icons.code),
-                  title: Text(l10n.labelJson),
-                  contentPadding: EdgeInsets.zero,
+                PopupMenuItem(
+                  value: 'json',
+                  child: ListTile(
+                    leading: const Icon(Icons.code),
+                    title: Text(l10n.labelJson),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'comprehensive_csv',
-                child: ListTile(
-                  leading: const Icon(Icons.assessment),
-                  title: Text(l10n.comprehensiveCsv),
-                  contentPadding: EdgeInsets.zero,
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'comprehensive_csv',
+                  child: ListTile(
+                    leading: const Icon(Icons.assessment),
+                    title: Text(l10n.comprehensiveCsv),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'comprehensive_pdf',
-                child: ListTile(
-                  leading: const Icon(Icons.picture_as_pdf),
-                  title: Text(l10n.comprehensivePdf),
-                  contentPadding: EdgeInsets.zero,
+                PopupMenuItem(
+                  value: 'comprehensive_pdf',
+                  child: ListTile(
+                    leading: const Icon(Icons.picture_as_pdf),
+                    title: Text(l10n.comprehensivePdf),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'comprehensive_json',
-                child: ListTile(
-                  leading: const Icon(Icons.code),
-                  title: Text(l10n.comprehensiveJson),
-                  contentPadding: EdgeInsets.zero,
+                PopupMenuItem(
+                  value: 'comprehensive_json',
+                  child: ListTile(
+                    leading: const Icon(Icons.code),
+                    title: Text(l10n.comprehensiveJson),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-            ],
-              ),
+              ],
             ),
         ],
       ),

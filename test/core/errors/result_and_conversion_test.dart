@@ -38,7 +38,7 @@ void main() {
       expect(result.data, equals(42));
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
-      expect(result.hasError, isFalse);
+      expect(result.isFailure, isFalse);
     });
 
     test('Result.failure stores error and sets isSuccess to false', () {
@@ -46,7 +46,7 @@ void main() {
       expect(result.error, equals('Something went wrong'));
       expect(result.isSuccess, isFalse);
       expect(result.data, isNull);
-      expect(result.hasError, isTrue);
+      expect(result.isFailure, isTrue);
     });
 
     test('Result.success with null data', () {
@@ -59,7 +59,7 @@ void main() {
       final result = Result<int>.failure('');
       expect(result.error, isEmpty);
       expect(result.isSuccess, isFalse);
-      expect(result.hasError, isTrue);
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -92,14 +92,14 @@ void main() {
       final result = Result<Map<String, int>>.success({'a': 1, 'b': 2});
       expect(result.data, equals({'a': 1, 'b': 2}));
       expect(result.isSuccess, isTrue);
-      expect(result.hasError, isFalse);
+      expect(result.isFailure, isFalse);
     });
 
     test('Result.failure with complex data', () {
       final result = Result<List<String>>.failure('Multiple errors: one, two, three');
       expect(result.error, equals('Multiple errors: one, two, three'));
       expect(result.isSuccess, isFalse);
-      expect(result.hasError, isTrue);
+      expect(result.isFailure, isTrue);
     });
 
     test('Result.success with empty string data', () {
@@ -114,14 +114,14 @@ void main() {
       expect(result.isSuccess, isFalse);
     });
 
-    test('hasError returns false when error is empty string', () {
+    test('isFailure returns true when error is empty string', () {
       final result = Result<int>.failure('');
-      expect(result.hasError, isTrue);
+      expect(result.isFailure, isTrue);
     });
 
-    test('hasError returns true for non-empty error', () {
+    test('isFailure returns true for non-empty error', () {
       final result = Result<int>.failure('error');
-      expect(result.hasError, isTrue);
+      expect(result.isFailure, isTrue);
     });
   });
 

@@ -1,24 +1,25 @@
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/localization_helpers.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import 'badge_service.dart';
-import 'localization_service.dart';
 
 class StudyProgressTracker {
   final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
-  final LocalizationService? _localizationService;
+  final AppLocalizations? _l10n;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
-    LocalizationService? localizationService,
+    AppLocalizations? l10n,
   })  : _attemptRepo = attemptRepo,
         _masteryService = masteryService ?? MasteryGraphService(),
-        _localizationService = localizationService;
+        _l10n = l10n;
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
     final attempts = await _attemptRepo.getByStudent(studentId);
@@ -136,20 +137,19 @@ class StudyProgressTracker {
 
     final recommendations = <Map<String, dynamic>>[];
 
-    final l10n = _localizationService;
     if ((stats['accuracy'] as int) < 60) {
       recommendations.add({
         'type': 'review',
         'priority': 'high',
-        'message': l10n?.recommendationAccuracyLow() ?? 'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.',
-        'action': l10n?.recommendationReviewBasics() ?? 'Review basic topics before advancing',
+        'message': _l10n?.recommendAccuracyBelow60 ?? 'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.',
+        'action': _l10n?.recommendReviewBasics ?? 'Review basic topics before advancing',
       });
     } else if ((stats['accuracy'] as int) > 85) {
       recommendations.add({
         'type': 'advanced',
         'priority': 'medium',
-        'message': l10n?.recommendationExcellentProgress() ?? 'Excellent progress! Ready for advanced topics.',
-        'action': l10n?.recommendationChallengingPractice() ?? 'Try challenging practice questions',
+        'message': _l10n?.recommendAccuracyExcellent ?? 'Excellent progress! Ready for advanced topics.',
+        'action': _l10n?.recommendChallengingQuestions ?? 'Try challenging practice questions',
       });
     }
 
@@ -158,8 +158,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'engagement',
         'priority': 'medium',
-        'message': l10n?.recommendationLowHours() ?? 'You studied less than 1 hour total. Consistency is key!',
-        'action': l10n?.recommendationSetDailyGoal() ?? 'Set a daily study goal of 30 minutes',
+        'message': _l10n?.recommendConsistency ?? 'You studied less than 1 hour total. Consistency is key!',
+        'action': _l10n?.recommendSetDailyGoal ?? 'Set a daily study goal of 30 minutes',
       });
     }
 
@@ -167,8 +167,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'reminder',
         'priority': 'high',
-        'message': l10n?.recommendationNoActivity() ?? 'No study activity this week. Get back on track!',
-        'action': l10n?.recommendationQuickReview() ?? 'Start with a quick 15-minute review session',
+        'message': _l10n?.recommendNoActivity ?? 'No study activity this week. Get back on track!',
+        'action': _l10n?.recommendQuickReview ?? 'Start with a quick 15-minute review session',
       });
     }
 
@@ -179,9 +179,9 @@ class StudyProgressTracker {
         recommendations.add({
           'type': 'weakness',
           'priority': 'high',
-          'message': l10n?.recommendationWeakTopics(weakTopics.data!.length) ??
+          'message': _l10n?.recommendWeakTopics(weakTopics.data!.length) ??
               'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
-          'action': l10n?.recommendationReviewWithTutor() ?? 'Review weak topics with the AI tutor',
+          'action': _l10n?.recommendAiTutor ?? 'Review weak topics with the AI tutor',
         });
       }
     } catch (e) {
@@ -197,11 +197,11 @@ class StudyProgressTracker {
         tracker: this,
       );
       final badges = await badgeService.getBadges(studentId);
-      final l10n = _localizationService;
+      final l10n = _l10n;
       return badges.map((b) => {
         'id': b.id,
-        'name': l10n?.badgeName(b.id) ?? b.name,
-        'description': l10n?.badgeDescription(b.id) ?? b.description,
+        'name': l10n != null ? badgeName(b.id, l10n) : b.name,
+        'description': l10n != null ? badgeDescription(b.id, l10n) : b.description,
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
     } catch (e) {

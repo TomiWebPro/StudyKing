@@ -120,7 +120,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             children: [
               _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
               const SizedBox(width: 16),
-              _buildUsageStat(context, l10n.totalCost, '\$${formatDecimal(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)}'),
+              _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
               const SizedBox(width: 16),
               _buildUsageStat(context, l10n.done, '$completedTasks'),
               const SizedBox(width: 16),
@@ -263,7 +263,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                     Icon(Icons.token, size: 14, color: cs.primary),
                     const SizedBox(width: 4),
                     Text(
-                      '${_formatTokens(task.tokensUsed, l10n.localeName)} tokens',
+                      l10n.tokensLabel(_formatTokens(task.tokensUsed, l10n.localeName)),
                       style: TextStyle(fontSize: 11, color: cs.primary),
                     ),
                     if (task.estimatedCost > 0) ...[
@@ -271,7 +271,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                       Icon(Icons.attach_money, size: 14, color: cs.tertiary),
                       const SizedBox(width: 4),
                       Text(
-                        '\$${formatDecimal(task.estimatedCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)}',
+                        formatCurrency(task.estimatedCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4),
                         style: TextStyle(fontSize: 11, color: cs.tertiary),
                       ),
                     ],

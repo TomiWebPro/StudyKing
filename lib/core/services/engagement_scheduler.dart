@@ -1,10 +1,10 @@
 import 'dart:async';
 import '../utils/logger.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
 import '../services/plan_adapter.dart';
-import '../services/localization_service.dart';
 import '../utils/number_format_utils.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
@@ -41,7 +41,7 @@ class EngagementScheduler {
   final PlanAdapter? _planAdapter;
   final SessionRepository? _sessionRepository;
   final EngagementSchedulerConfig _config;
-  final LocalizationService? _localizationService;
+  final AppLocalizations? _l10n;
 
   Timer? _dailyTimer;
   bool _isInitialized = false;
@@ -56,7 +56,7 @@ class EngagementScheduler {
     PlanAdapter? planAdapter,
     SessionRepository? sessionRepository,
     EngagementSchedulerConfig? config,
-    LocalizationService? localizationService,
+    AppLocalizations? l10n,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
@@ -65,7 +65,7 @@ class EngagementScheduler {
         _planAdapter = planAdapter,
         _sessionRepository = sessionRepository,
         _config = config ?? const EngagementSchedulerConfig(),
-        _localizationService = localizationService;
+        _l10n = l10n;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -215,11 +215,11 @@ class EngagementScheduler {
     }
 
     if (totalHours > 4) {
-      final localeName = _localizationService?.l10n.localeName ?? 'en';
+      final localeName = _l10n?.localeName ?? 'en';
       final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
       return [EngagementNudge(
         type: NudgeType.overwork,
-        message: _localizationService?.nudgeOverwork(hoursStr)
+        message: _l10n?.nudgeOverwork(hoursStr)
             ?? 'You have studied $hoursStr hours today. Consider taking a break!',
         severity: NudgeSeverity.medium,
       )];
@@ -234,10 +234,9 @@ class EngagementScheduler {
       for (final state in weakResult.data!) {
         final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
         if (daysSince >= 3) {
-          final l10n = _localizationService;
           nudges.add(EngagementNudge(
             type: NudgeType.revision,
-            message: l10n?.nudgeRevision(daysSince, state.topicId)
+            message: _l10n?.nudgeRevision(daysSince, state.topicId)
                 ?? 'It has been $daysSince days since you practiced "${state.topicId}". Time for a review!',
             severity: daysSince >= 7 ? NudgeSeverity.high : NudgeSeverity.low,
             topicId: state.topicId,
@@ -255,7 +254,7 @@ class EngagementScheduler {
       if (consecutiveLow >= 3) {
         nudges.add(EngagementNudge(
           type: NudgeType.planAdjustment,
-          message: _localizationService?.nudgePlanAdjustment(consecutiveLow)
+          message: _l10n?.nudgePlanAdjustment(consecutiveLow)
               ?? 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
           severity: NudgeSeverity.medium,
         ));
@@ -274,13 +273,12 @@ class EngagementScheduler {
     final badges = await _tracker.getBadges(studentId);
     final weakResult = await _masteryService.getWeakTopics(studentId);
     final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
-    final l10n = _localizationService;
-    return l10n?.nudgeWeeklyDigest(
-          weeklyActivity: weeklyActivity,
-          accuracy: accuracy,
-          totalHours: totalHours,
-          weakCount: weakCount,
-          badgeCount: badges.length,
+    return _l10n?.nudgeWeeklyDigest(
+          weeklyActivity,
+          accuracy,
+          totalHours,
+          weakCount,
+          badges.length,
         ) ??
         'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, ${badges.length} badges earned.';
   }

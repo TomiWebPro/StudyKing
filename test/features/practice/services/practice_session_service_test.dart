@@ -4,6 +4,7 @@ import 'package:studyking/features/practice/data/repositories/spaced_repetition_
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 
 class _FakeSessionRepository extends SessionRepository {
@@ -41,6 +42,18 @@ class _UpdateCall {
   final String questionId;
   final double masteryLevel;
   _UpdateCall(this.questionId, this.masteryLevel);
+}
+
+class _FakeClock implements Clock {
+  DateTime _now;
+  _FakeClock(this._now);
+
+  @override
+  DateTime now() => _now;
+
+  void advance(Duration duration) {
+    _now = _now.add(duration);
+  }
 }
 
 void main() {
@@ -145,6 +158,84 @@ void main() {
           correctAnswers: 7,
         );
         expect(sessionRepo.saveCalled, isTrue);
+      });
+    });
+
+    test('startTimer cancels previous timer and resets elapsed', () async {
+      service.startTimer();
+      await Future.delayed(const Duration(milliseconds: 1100));
+      expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+
+      service.startTimer();
+      expect(service.elapsedNotifier.value, Duration.zero);
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(0));
+      service.dispose();
+    });
+
+    group('dispose', () {
+      test('stops the timer from updating elapsed', () async {
+        service.startTimer();
+        await Future.delayed(const Duration(milliseconds: 1100));
+        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+
+        service.dispose();
+        final valueAfterDispose = service.elapsedNotifier.value;
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        expect(service.elapsedNotifier.value, equals(valueAfterDispose));
+      });
+
+      test('can be called without an active timer', () {
+        expect(() => service.dispose(), returnsNormally);
+      });
+
+      test('dispose is idempotent on cancelTimer', () {
+        service.dispose();
+        expect(() => service.cancelTimer(), returnsNormally);
+      });
+    });
+
+    group('custom clock', () {
+      test('sessionStartTime reflects custom clock time', () {
+        final clock = _FakeClock(DateTime(2024, 6, 15, 10, 0, 0));
+        final customService = PracticeSessionService(
+          sessionRepo: sessionRepo,
+          srRepo: srRepo,
+          studentIdService: StudentIdService(),
+          clock: clock,
+          subjectId: 'subj-1',
+        );
+        customService.startTimer();
+        expect(
+          customService.sessionStartTime,
+          DateTime(2024, 6, 15, 10, 0, 0),
+        );
+        customService.dispose();
+      });
+
+      test('autoSaveSession uses custom clock for duration', () async {
+        final clock = _FakeClock(DateTime(2024, 6, 15, 10, 0, 0));
+        final repo = _FakeSessionRepository();
+        final customService = PracticeSessionService(
+          sessionRepo: repo,
+          srRepo: srRepo,
+          studentIdService: StudentIdService(),
+          clock: clock,
+          subjectId: 'subj-1',
+        );
+        customService.startTimer();
+        clock.advance(const Duration(minutes: 5));
+
+        await customService.autoSaveSession(
+          questionsAnswered: 10,
+          correctAnswers: 7,
+        );
+
+        expect(repo.sessions, hasLength(1));
+        expect(repo.sessions.first.correctAnswers, 7);
+        customService.dispose();
       });
     });
   });

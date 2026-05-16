@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class PlanAdherenceCard extends StatelessWidget {
@@ -38,7 +39,7 @@ class PlanAdherenceCard extends StatelessWidget {
               child: _buildAdherenceMetric(
                 context,
                 l10n.overall,
-                '${(averageAdherence * 100).round()}%',
+                formatPercent(averageAdherence * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 averageAdherence,
               ),
             ),
@@ -46,7 +47,7 @@ class PlanAdherenceCard extends StatelessWidget {
               child: _buildAdherenceMetric(
                 context,
                 l10n.thisWeek,
-                '${(weeklyAdherence * 100).round()}%',
+                formatPercent(weeklyAdherence * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 weeklyAdherence,
               ),
             ),

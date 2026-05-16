@@ -412,7 +412,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ?.displayName ?? _language),
                         trailing: DropdownButton<String>(
                           value: _language,
-                          items: AppLocale.buildDropdownItems(l10n),
+                          items: AppLocale.values.map((appLocale) {
+                            final label = switch (appLocale) {
+                              AppLocale.en => l10n.english,
+                              AppLocale.es => l10n.spanish,
+                            };
+                            return DropdownMenuItem(
+                              value: appLocale.locale.languageCode,
+                              child: Text(label),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             if (value != null) {
                               setState(() => _language = value);

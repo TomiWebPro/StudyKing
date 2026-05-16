@@ -1,17 +1,28 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/settings/presentation/api_config_screen.dart';
-import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/features/settings/presentation/api_config_screen.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class FakeSettingsRepository {
+class FakeSettingsRepository implements SettingsRepository {
   SettingsBox _settings = SettingsBox();
+  bool _shouldThrowOnSave = false;
 
+  void setThrowOnSave(bool shouldThrow) {
+    _shouldThrowOnSave = shouldThrow;
+  }
+
+  @override
   Future<SettingsBox> getSettings() async => _settings;
 
+  @override
   Future<void> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
@@ -21,7 +32,17 @@ class FakeSettingsRepository {
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
+    if (_shouldThrowOnSave) {
+      throw Exception('Simulated save failure');
+    }
     _settings = SettingsBox(
       apiKey: apiKey ?? _settings.apiKey,
       apiBaseUrl: apiBaseUrl ?? _settings.apiBaseUrl,
@@ -34,33 +55,61 @@ class FakeSettingsRepository {
       studyRemindersEnabled: studyRemindersEnabled ?? _settings.studyRemindersEnabled,
       requestTimeoutSeconds: requestTimeoutSeconds ?? _settings.requestTimeoutSeconds,
       sessionDurationMinutes: sessionDurationMinutes ?? _settings.sessionDurationMinutes,
+      highContrastEnabled: highContrastEnabled ?? _settings.highContrastEnabled,
+      largeTouchTargets: largeTouchTargets ?? _settings.largeTouchTargets,
+      reduceMotion: reduceMotion ?? _settings.reduceMotion,
+      revisionRemindersEnabled: revisionRemindersEnabled ?? _settings.revisionRemindersEnabled,
+      lessonNotificationsEnabled: lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
+      overworkAlertsEnabled: overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
     );
   }
 
-  Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
-  Future<void> saveApiKey({required String service, required String key}) async {}
-  Future<void> saveProfileData(UserProfile profile) async {}
-  Future<UserProfile?> getProfileData() async => null;
-  Future<void> clearProfile() async {}
+  @override
   Future<void> init() async {}
+  @override
+  Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
+  @override
+  Future<void> saveApiKey({required String service, required String key}) async {}
+  @override
+  Future<String?> getApiKey({required String service}) async => null;
+  @override
+  Future<void> saveProfileData(UserProfile profile) async {}
+  @override
+  Future<UserProfile?> getProfileData() async => null;
+  @override
+  Future<void> clearProfile() async {}
+  @override
+  Future<void> clearSettings() async {}
+  @override
   Future<void> saveProvider(LlmProvider provider) async {}
+  @override
   Future<LlmProvider> getProvider() async => LlmProvider.openRouter;
 }
 
 final fakeApiRepo = FakeSettingsRepository();
 
-class _TestSettingsNotifier extends StateNotifier<SettingsBox> {
-  _TestSettingsNotifier() : super(SettingsBox());
+class _TestSettingsNotifier extends SettingsController {
+  _TestSettingsNotifier() : super(fakeApiRepo);
 
+  @override
   Future<void> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
+    LlmProvider? llmProvider,
     ThemeMode? themeMode,
     double? fontSize,
     bool? studyRemindersEnabled,
     int? requestTimeoutSeconds,
     int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
   }) async {
     await fakeApiRepo.updateSettings(
       apiKey: apiKey,
@@ -71,32 +120,54 @@ class _TestSettingsNotifier extends StateNotifier<SettingsBox> {
       studyRemindersEnabled: studyRemindersEnabled,
       requestTimeoutSeconds: requestTimeoutSeconds,
       sessionDurationMinutes: sessionDurationMinutes,
+      highContrastEnabled: highContrastEnabled,
+      largeTouchTargets: largeTouchTargets,
+      reduceMotion: reduceMotion,
+      revisionRemindersEnabled: revisionRemindersEnabled,
+      lessonNotificationsEnabled: lessonNotificationsEnabled,
+      overworkAlertsEnabled: overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled,
     );
-    state = await fakeApiRepo.getSettings();
+    state = fakeApiRepo._settings;
   }
 }
-
-final testSettingsProvider = StateNotifierProvider<_TestSettingsNotifier, SettingsBox>((ref) {
-  return _TestSettingsNotifier();
-});
 
 Widget buildApiConfigScreen({
   String initialApiKey = '',
   String initialBaseUrl = 'https://openrouter.ai/api/v1',
+  LlmProvider initialProvider = LlmProvider.openRouter,
 }) {
   return ProviderScope(
     overrides: [
-      testSettingsProvider,
+      settingsProvider.overrideWith((ref) => _TestSettingsNotifier()),
       apiKeyProvider.overrideWith((ref) => initialApiKey),
       apiBaseUrlProvider.overrideWith((ref) => initialBaseUrl),
+      llmProviderProvider.overrideWith((ref) => initialProvider),
     ],
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
       home: const ApiConfigScreen(),
     ),
   );
 }
 
+class _TestTimeoutHttpOverride extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(context);
+    client.findProxy = (uri) => 'PROXY localhost';
+    return client;
+  }
+}
+
 void main() {
+  setUp(() {
+    fakeApiRepo._settings = SettingsBox();
+    fakeApiRepo.setThrowOnSave(false);
+  });
+
   group('ApiConfigScreen', () {
     testWidgets('renders API configuration screen', (tester) async {
       await tester.pumpWidget(buildApiConfigScreen());
@@ -143,6 +214,14 @@ void main() {
 
       expect(find.widgetWithText(ElevatedButton, 'Save API Keys'), findsOneWidget);
       expect(find.byIcon(Icons.save), findsOneWidget);
+    });
+
+    testWidgets('shows test connection button', (tester) async {
+      await tester.pumpWidget(buildApiConfigScreen());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(OutlinedButton, 'Test Connection'), findsOneWidget);
+      expect(find.byIcon(Icons.wifi_tethering), findsOneWidget);
     });
 
     testWidgets('API key field is obscured by default', (tester) async {
@@ -490,6 +569,7 @@ void main() {
 
     group('Error States', () {
       testWidgets('shows error snackbar when save fails', (tester) async {
+        fakeApiRepo.setThrowOnSave(true);
         await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
         await tester.pumpAndSettle();
 
@@ -500,7 +580,7 @@ void main() {
         await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
         await tester.pumpAndSettle();
 
-        expect(find.text('API keys saved successfully'), findsOneWidget);
+        expect(find.text('Unable to save API configuration'), findsOneWidget);
       });
     });
 
@@ -565,6 +645,146 @@ void main() {
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
         expect(find.byIcon(Icons.save), findsNothing);
+      });
+    });
+
+    group('Provider Selection', () {
+      testWidgets('renders provider dropdown section', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.text('AI Model'), findsWidgets);
+        expect(find.byType(DropdownButtonFormField<LlmProvider>), findsOneWidget);
+      });
+
+      testWidgets('provider dropdown shows all options', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButtonFormField<LlmProvider>));
+        await tester.pumpAndSettle();
+
+        expect(find.text('OpenRouter'), findsWidgets);
+        expect(find.text('Ollama'), findsOneWidget);
+        expect(find.text('OpenAI'), findsOneWidget);
+      });
+
+      testWidgets('selecting Ollama auto-fills base URL if empty', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialBaseUrl: ''));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButtonFormField<LlmProvider>));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Ollama').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('http://localhost:11434'), findsOneWidget);
+      });
+
+      testWidgets('selecting Ollama does not change non-empty base URL', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(
+          initialBaseUrl: 'https://custom.url',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButtonFormField<LlmProvider>));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Ollama').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('https://custom.url'), findsOneWidget);
+      });
+
+      testWidgets('selecting OpenAI does not change base URL', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialBaseUrl: ''));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButtonFormField<LlmProvider>));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('OpenAI').last);
+        await tester.pumpAndSettle();
+
+        final baseUrlField = find.byType(TextField).last;
+        expect(tester.widget<TextField>(baseUrlField).controller?.text, isEmpty);
+      });
+    });
+
+    group('Test Connection', () {
+      testWidgets('test connection with empty API key shows error', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: ''));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Test Connection'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('API key cannot be empty'), findsOneWidget);
+      });
+
+      testWidgets('test connection button disabled during test', (tester) async {
+        HttpOverrides.global = _TestTimeoutHttpOverride();
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Test Connection'));
+        await tester.pump();
+
+        final button = tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Testing...'));
+        expect(button.onPressed, isNull);
+      });
+
+      testWidgets('test connection shows loading text during test', (tester) async {
+        HttpOverrides.global = _TestTimeoutHttpOverride();
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Test Connection'));
+        await tester.pump();
+
+        expect(find.text('Testing...'), findsOneWidget);
+      });
+
+      testWidgets('test connection timeout shows error snackbar', (tester) async {
+        HttpOverrides.global = _TestTimeoutHttpOverride();
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Test Connection'));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Connection failed'), findsOneWidget);
+      });
+
+      testWidgets('test connection state resets after failure', (tester) async {
+        HttpOverrides.global = _TestTimeoutHttpOverride();
+        addTearDown(() => HttpOverrides.global = null);
+
+        await tester.pumpWidget(buildApiConfigScreen(initialApiKey: 'sk-test'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Test Connection'));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpAndSettle();
+
+        expect(find.widgetWithText(OutlinedButton, 'Test Connection'), findsOneWidget);
+      });
+    });
+
+    group('Provider Description', () {
+      testWidgets('shows AI model description text', (tester) async {
+        await tester.pumpWidget(buildApiConfigScreen());
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('endpoint URL for the AI service'), findsWidgets);
       });
     });
   });

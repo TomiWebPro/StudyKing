@@ -2882,6 +2882,120 @@ abstract class AppLocalizations {
   /// **'{mode} - {type}'**
   String practiceModeType(String mode, String type);
 
+  /// Exam mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Mode'**
+  String get examMode;
+
+  /// Description for exam mode
+  ///
+  /// In en, this message translates to:
+  /// **'Timed exam simulation'**
+  String get examModeDescription;
+
+  /// Source practice mode title
+  ///
+  /// In en, this message translates to:
+  /// **'Source Practice'**
+  String get sourcePractice;
+
+  /// Description for source practice mode
+  ///
+  /// In en, this message translates to:
+  /// **'Practice by source'**
+  String get sourcePracticeDescription;
+
+  /// Message when no sources are available
+  ///
+  /// In en, this message translates to:
+  /// **'No sources available'**
+  String get noSourcesAvailable;
+
+  /// Label for confidence selector
+  ///
+  /// In en, this message translates to:
+  /// **'How confident are you?'**
+  String get howConfident;
+
+  /// Confidence level 1
+  ///
+  /// In en, this message translates to:
+  /// **'Not confident at all'**
+  String get notConfidentAtAll;
+
+  /// Confidence level 2
+  ///
+  /// In en, this message translates to:
+  /// **'Slightly confident'**
+  String get slightlyConfident;
+
+  /// Confidence level 3
+  ///
+  /// In en, this message translates to:
+  /// **'Moderately confident'**
+  String get moderatelyConfident;
+
+  /// Confidence level 4
+  ///
+  /// In en, this message translates to:
+  /// **'Quite confident'**
+  String get quiteConfident;
+
+  /// Confidence level 5
+  ///
+  /// In en, this message translates to:
+  /// **'Very confident'**
+  String get veryConfident;
+
+  /// Title for mistake review section
+  ///
+  /// In en, this message translates to:
+  /// **'Review Mistakes'**
+  String get reviewMistakes;
+
+  /// Description for mistake review
+  ///
+  /// In en, this message translates to:
+  /// **'Review {count} mistakes from this session'**
+  String reviewMistakesDescription(int count);
+
+  /// Message when there are no mistakes to review
+  ///
+  /// In en, this message translates to:
+  /// **'No mistakes to review'**
+  String get noMistakesToReview;
+
+  /// Button to redo incorrect questions
+  ///
+  /// In en, this message translates to:
+  /// **'Redo Incorrect Questions'**
+  String get redoIncorrectQuestions;
+
+  /// Fallback text when no answer was given
+  ///
+  /// In en, this message translates to:
+  /// **'No answer provided'**
+  String get noAnswerProvided;
+
+  /// Label for correct answer
+  ///
+  /// In en, this message translates to:
+  /// **'Correct Answer'**
+  String get correctAnswer;
+
+  /// Title for practice by source sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Practice by Source'**
+  String get practiceBySource;
+
+  /// Description for practice by source sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Select a source to practice questions from'**
+  String get practiceBySourceDescription;
+
   /// Fallback option label for multiple choice questions
   ///
   /// In en, this message translates to:
@@ -5281,6 +5395,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to get questions for topics: {error}'**
   String failedToGetQuestionsForTopics(String error);
+
+  /// Error message when file picker fails
+  ///
+  /// In en, this message translates to:
+  /// **'File picker error: {error}'**
+  String filePickerError(String error);
+
+  /// Success message when URL content is fetched
+  ///
+  /// In en, this message translates to:
+  /// **'URL content fetched successfully'**
+  String get urlFetchSuccess;
+
+  /// Error message when URL fetch fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to fetch URL: {error}'**
+  String urlFetchFailed(String error);
+
+  /// Error message for URL fetch exception
+  ///
+  /// In en, this message translates to:
+  /// **'URL fetch error: {error}'**
+  String urlFetchError(String error);
+
+  /// Chip label for file upload mode
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get file;
+
+  /// Button label to fetch and scrape URL content
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch & Scrape'**
+  String get fetchAndScrape;
+
+  /// Hours abbreviation with formatted number
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h'**
+  String hoursAbbreviation(String hours);
+
+  /// Token count label with formatted number
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tokens'**
+  String tokensLabel(String count);
+
+  /// Usage record format with date, cost, and cost per token
+  ///
+  /// In en, this message translates to:
+  /// **'{date}: {cost}, cost/tk: {costPerToken}'**
+  String usageRecordFormat(String date, String cost, String costPerToken);
+
+  /// Summary of total usage statistics
+  ///
+  /// In en, this message translates to:
+  /// **'Usage: {totalCost} over {totalTokens} tokens, avg: {avgCost} per 1k tokens'**
+  String usageSummary(String totalCost, String totalTokens, String avgCost);
 }
 
 class _AppLocalizationsDelegate

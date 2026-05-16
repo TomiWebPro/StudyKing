@@ -1626,6 +1626,66 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get examMode => 'Modo de Examen';
+
+  @override
+  String get examModeDescription => 'Simulación de examen cronometrado';
+
+  @override
+  String get sourcePractice => 'Práctica por Fuente';
+
+  @override
+  String get sourcePracticeDescription => 'Practique por fuente';
+
+  @override
+  String get noSourcesAvailable => 'No hay fuentes disponibles';
+
+  @override
+  String get howConfident => '¿Qué tan seguro está?';
+
+  @override
+  String get notConfidentAtAll => 'Nada seguro';
+
+  @override
+  String get slightlyConfident => 'Ligeramente seguro';
+
+  @override
+  String get moderatelyConfident => 'Moderadamente seguro';
+
+  @override
+  String get quiteConfident => 'Bastante seguro';
+
+  @override
+  String get veryConfident => 'Muy seguro';
+
+  @override
+  String get reviewMistakes => 'Revisar Errores';
+
+  @override
+  String reviewMistakesDescription(int count) {
+    return 'Revisar $count errores de esta sesión';
+  }
+
+  @override
+  String get noMistakesToReview => 'No hay errores que revisar';
+
+  @override
+  String get redoIncorrectQuestions => 'Rehacer Preguntas Incorrectas';
+
+  @override
+  String get noAnswerProvided => 'No se proporcionó respuesta';
+
+  @override
+  String get correctAnswer => 'Respuesta Correcta';
+
+  @override
+  String get practiceBySource => 'Practicar por Fuente';
+
+  @override
+  String get practiceBySourceDescription =>
+      'Seleccione una fuente para practicar preguntas';
+
+  @override
   String fallbackOption(int number) {
     return 'Opción $number';
   }
@@ -3096,5 +3156,49 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String failedToGetQuestionsForTopics(String error) {
     return 'Error al obtener preguntas para los temas: $error';
+  }
+
+  @override
+  String filePickerError(String error) {
+    return 'Error del selector de archivos: $error';
+  }
+
+  @override
+  String get urlFetchSuccess => 'Contenido de URL obtenido exitosamente';
+
+  @override
+  String urlFetchFailed(String error) {
+    return 'Error al obtener URL: $error';
+  }
+
+  @override
+  String urlFetchError(String error) {
+    return 'Error de obtención de URL: $error';
+  }
+
+  @override
+  String get file => 'Archivo';
+
+  @override
+  String get fetchAndScrape => 'Obtener y extraer';
+
+  @override
+  String hoursAbbreviation(String hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String tokensLabel(String count) {
+    return '$count tokens';
+  }
+
+  @override
+  String usageRecordFormat(String date, String cost, String costPerToken) {
+    return '$date: $cost, costo/token: $costPerToken';
+  }
+
+  @override
+  String usageSummary(String totalCost, String totalTokens, String avgCost) {
+    return 'Uso: $totalCost sobre $totalTokens tokens, promedio: $avgCost por cada 1k tokens';
   }
 }
