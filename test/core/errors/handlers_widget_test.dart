@@ -10,7 +10,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        SyllabusException(message: 'Syllabus format is invalid'),
+        AppException(message: 'Syllabus format is invalid', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -21,7 +21,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        SyllabusException(message: 'Syllabus parsing failed'),
+        AppException(message: 'Syllabus parsing failed', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -32,7 +32,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        SyllabusException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -43,7 +43,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        SyllabusException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
         retry: true,
         retryCallback: () {},
@@ -58,7 +58,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        PlanGenerationException(message: 'Plan generation timeout'),
+        AppException(message: 'Plan generation timeout', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -69,7 +69,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        PlanGenerationException(message: 'No topics to plan'),
+        AppException(message: 'No topics to plan', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -80,7 +80,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        PlanGenerationException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -92,7 +92,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        PlanGenerationException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
         retry: true,
         retryCallback: () {},
@@ -108,7 +108,7 @@ void main() {
       bool tapped = false;
       AppErrorHandler.handleSyncError(
         context,
-        PlanGenerationException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
         retry: true,
         retryCallback: () {
@@ -127,7 +127,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        SchedulingException(message: 'Time slot unavailable'),
+        AppException(message: 'Time slot unavailable', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -138,7 +138,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        SchedulingException(message: 'Schedule conflict detected'),
+        AppException(message: 'Schedule conflict detected', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -149,7 +149,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        SchedulingException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -161,7 +161,7 @@ void main() {
       bool tapped = false;
       await AppErrorHandler.handleError(
         context,
-        SchedulingException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
         retry: true,
         retryCallback: () {
@@ -180,7 +180,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        AdherenceException(message: 'Study adherence below threshold'),
+        AppException(message: 'Study adherence below threshold', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -191,7 +191,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        AdherenceException(message: 'Missed too many sessions'),
+        AppException(message: 'Missed too many sessions', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -202,7 +202,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        AdherenceException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -213,7 +213,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        AdherenceException(message: 'test'),
+        AppException(message: 'test', type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -227,7 +227,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ContentGenerationException(message: 'gen error'),
+        AppException(message: 'gen error', type: ExceptionType.contentGeneration),
         'test',
       );
       await tester.pump();
@@ -238,7 +238,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiKeyMissingException(message: 'key missing'),
+        AppException(message: 'key missing', type: ExceptionType.apiKeyMissing),
         'test',
       );
       await tester.pump();
@@ -249,7 +249,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        InvalidApiKeyException(message: 'invalid key'),
+        AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'test',
       );
       await tester.pump();
@@ -260,7 +260,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        FileSystemException(message: 'file error'),
+        AppException(message: 'file error', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -274,18 +274,18 @@ void main() {
       final context = await captureContext(tester);
 
       final exceptions = [
-        (NetworkException(message: 'e'), Icons.network_check),
-        (ApiKeyMissingException(message: 'e'), Icons.key_rounded),
-        (InvalidApiKeyException(message: 'e'), Icons.key_rounded),
-        (ApiAuthException(message: 'e'), Icons.key_rounded),
-        (ApiRateLimitException(message: 'e'), Icons.pause_circle),
-        (ApiNotFoundException(message: 'e'), Icons.looks_one_outlined),
-        (ApiInternalServerError(message: 'e'), Icons.bug_report),
-        (DatabaseException(message: 'e'), Icons.storage),
-        (ValidationException(message: 'e'), Icons.info),
-        (PdfParseException(message: 'e'), Icons.picture_as_pdf),
-        (ContentGenerationException(message: 'e'), Icons.wifi_tethering_off),
-        (LlmException(message: 'e'), Icons.wifi_tethering_off),
+        (AppException(message: 'e', type: ExceptionType.network), Icons.network_check),
+        (AppException(message: 'e', type: ExceptionType.apiKeyMissing), Icons.key_rounded),
+        (AppException(message: 'e', type: ExceptionType.invalidApiKey), Icons.key_rounded),
+        (AppException(message: 'e', type: ExceptionType.apiAuth), Icons.key_rounded),
+        (AppException(message: 'e', type: ExceptionType.apiRateLimit), Icons.pause_circle),
+        (AppException(message: 'e', type: ExceptionType.apiNotFound), Icons.looks_one_outlined),
+        (AppException(message: 'e', type: ExceptionType.apiInternalServer), Icons.bug_report),
+        (AppException(message: 'e', type: ExceptionType.database), Icons.storage),
+        (AppException(message: 'e', type: ExceptionType.validation), Icons.info),
+        (AppException(message: 'e', type: ExceptionType.pdfParse), Icons.picture_as_pdf),
+        (AppException(message: 'e', type: ExceptionType.contentGeneration), Icons.wifi_tethering_off),
+        (AppException(message: 'e', type: ExceptionType.llm), Icons.wifi_tethering_off),
       ];
 
       for (final (exception, expectedIcon) in exceptions) {
@@ -303,7 +303,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -319,7 +319,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiAuthException(message: 'auth error'),
+        AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
       );
       await tester.pump();
@@ -333,7 +333,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiKeyMissingException(message: 'missing key'),
+        AppException(message: 'missing key', type: ExceptionType.apiKeyMissing),
         'test',
       );
       await tester.pump();
@@ -347,7 +347,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        InvalidApiKeyException(message: 'invalid key'),
+        AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'test',
       );
       await tester.pump();
@@ -361,7 +361,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiRateLimitException(message: 'rate limited'),
+        AppException(message: 'rate limited', type: ExceptionType.apiRateLimit),
         'test',
       );
       await tester.pump();
@@ -375,7 +375,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiNotFoundException(message: 'not found'),
+        AppException(message: 'not found', type: ExceptionType.apiNotFound),
         'test',
       );
       await tester.pump();
@@ -389,7 +389,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiInternalServerError(message: 'server error'),
+        AppException(message: 'server error', type: ExceptionType.apiInternalServer),
         'test',
       );
       await tester.pump();
@@ -403,7 +403,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        DatabaseException(message: 'db error'),
+        AppException(message: 'db error', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -417,7 +417,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ValidationException(message: 'Custom validation error'),
+        AppException(message: 'Custom validation error', type: ExceptionType.validation),
         'test',
       );
       await tester.pump();
@@ -428,7 +428,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        PdfParseException(message: 'pdf error'),
+        AppException(message: 'pdf error', type: ExceptionType.pdfParse),
         'test',
       );
       await tester.pump();
@@ -442,7 +442,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ContentGenerationException(message: 'gen error'),
+        AppException(message: 'gen error', type: ExceptionType.contentGeneration),
         'test',
       );
       await tester.pump();
@@ -456,7 +456,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        LlmException(message: 'llm error'),
+        AppException(message: 'llm error', type: ExceptionType.llm),
         'test',
       );
       await tester.pump();
@@ -470,7 +470,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        DatabaseNotFoundException(message: 'not found'),
+        AppException(message: 'not found', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -485,7 +485,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -500,7 +500,7 @@ void main() {
       bool retryCalled = false;
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -518,7 +518,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -530,7 +530,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -545,7 +545,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -561,7 +561,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiRateLimitException(message: 'rate limited'),
+        AppException(message: 'rate limited', type: ExceptionType.apiRateLimit),
         'test',
       );
       await tester.pump();
@@ -576,7 +576,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -591,7 +591,7 @@ void main() {
       bool retryCalled = false;
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -609,7 +609,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -623,7 +623,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -635,7 +635,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiAuthException(message: 'auth failed'),
+        AppException(message: 'auth failed', type: ExceptionType.apiAuth),
         'test',
       );
       await tester.pump();
@@ -647,7 +647,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiRateLimitException(message: 'rate limited'),
+        AppException(message: 'rate limited', type: ExceptionType.apiRateLimit),
         'test',
       );
       await tester.pump();
@@ -659,7 +659,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiNotFoundException(message: 'not found'),
+        AppException(message: 'not found', type: ExceptionType.apiNotFound),
         'test',
       );
       await tester.pump();
@@ -671,7 +671,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiInternalServerError(message: 'server error'),
+        AppException(message: 'server error', type: ExceptionType.apiInternalServer),
         'test',
       );
       await tester.pump();
@@ -683,7 +683,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        DatabaseException(message: 'db error'),
+        AppException(message: 'db error', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -695,7 +695,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ValidationException(message: 'validation error'),
+        AppException(message: 'validation error', type: ExceptionType.validation),
         'test',
       );
       await tester.pump();
@@ -707,7 +707,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        PdfParseException(message: 'pdf error'),
+        AppException(message: 'pdf error', type: ExceptionType.pdfParse),
         'test',
       );
       await tester.pump();
@@ -719,7 +719,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        LlmException(message: 'llm error'),
+        AppException(message: 'llm error', type: ExceptionType.llm),
         'test',
       );
       await tester.pump();
@@ -731,7 +731,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        DatabaseNotFoundException(message: 'not found'),
+        AppException(message: 'not found', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -755,7 +755,7 @@ void main() {
       final context = await captureContext(tester);
       final result = await AppErrorHandler.safely<int>(
         context,
-        () async => throw NetworkException(message: 'network error'),
+        () async => throw AppException(message: 'network error', type: ExceptionType.network),
         defaultValue: 0,
         contextName: 'test',
       );
@@ -773,7 +773,7 @@ void main() {
       final context = await captureContext(tester);
       final result = await AppErrorHandler.safely<int>(
         context,
-        () async => throw NetworkException(message: 'error'),
+        () async => throw AppException(message: 'error', type: ExceptionType.network),
         contextName: 'test',
       );
       expect(result, isNull);
@@ -796,7 +796,7 @@ void main() {
       final context = await captureContext(tester);
       final result = AppErrorHandler.safelySync<int>(
         context,
-        () => throw NetworkException(message: 'network error'),
+        () => throw AppException(message: 'network error', type: ExceptionType.network),
         defaultValue: -1,
         contextName: 'test',
       );
@@ -814,7 +814,7 @@ void main() {
       final context = await captureContext(tester);
       final result = AppErrorHandler.safelySync<int>(
         context,
-        () => throw NetworkException(message: 'error'),
+        () => throw AppException(message: 'error', type: ExceptionType.network),
         contextName: 'test',
       );
       expect(result, isNull);
@@ -827,7 +827,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: null,
@@ -842,7 +842,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiRateLimitException(message: 'rate limit'),
+        AppException(message: 'rate limit', type: ExceptionType.apiRateLimit),
         'test',
         retry: false,
         retryCallback: () {},
@@ -857,7 +857,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -874,7 +874,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        FileSystemException(message: 'file error'),
+        AppException(message: 'file error', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -889,7 +889,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiRateLimitException(message: 'rate limit'),
+        AppException(message: 'rate limit', type: ExceptionType.apiRateLimit),
         'test',
         retry: true,
         retryCallback: () {},
@@ -909,7 +909,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiAuthException(message: 'auth error'),
+        AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
         retry: false,
         retryCallback: () {},
@@ -927,7 +927,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'network error'),
+        AppException(message: 'network error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -941,7 +941,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiRateLimitException(message: 'rate limit'),
+        AppException(message: 'rate limit', type: ExceptionType.apiRateLimit),
         'test',
         retry: true,
         retryCallback: () {},
@@ -958,7 +958,7 @@ void main() {
 
       AppErrorHandler.handleSyncError(
         context,
-        LlmException(message: 'llm error'),
+        AppException(message: 'llm error', type: ExceptionType.llm),
         'op1',
       );
       await tester.pump();
@@ -967,7 +967,7 @@ void main() {
 
       AppErrorHandler.handleSyncError(
         context,
-        DatabaseNotFoundException(message: 'db not found'),
+        AppException(message: 'db not found', type: ExceptionType.database),
         'op2',
       );
       await tester.pump();
@@ -983,7 +983,7 @@ void main() {
 
       await AppErrorHandler.handleError(
         context,
-        ContentGenerationException(message: 'gen error'),
+        AppException(message: 'gen error', type: ExceptionType.contentGeneration),
         'op1',
       );
       await tester.pump();
@@ -992,7 +992,7 @@ void main() {
 
       await AppErrorHandler.handleError(
         context,
-        InvalidApiKeyException(message: 'invalid key'),
+        AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'op2',
       );
       await tester.pump();
@@ -1012,7 +1012,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiKeyMissingException(message: 'key missing'),
+        AppException(message: 'key missing', type: ExceptionType.apiKeyMissing),
         'test',
         retry: true,
         retryCallback: null,
@@ -1031,7 +1031,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        DatabaseException(message: 'db error'),
+        AppException(message: 'db error', type: ExceptionType.database),
         'test',
         retry: false,
         retryCallback: () {},
@@ -1054,7 +1054,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        InvalidApiKeyException(message: 'invalid key'),
+        AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'test',
         retry: true,
         retryCallback: null,
@@ -1078,7 +1078,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiAuthException(message: 'auth error'),
+        AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
         retry: false,
         retryCallback: () {},
@@ -1102,7 +1102,7 @@ void main() {
       final longMessage = 'A' * 500;
       await AppErrorHandler.handleError(
         context,
-        SyllabusException(message: longMessage),
+        AppException(message: longMessage, type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -1117,7 +1117,7 @@ void main() {
       final longMessage = 'B' * 300;
       await AppErrorHandler.handleError(
         context,
-        PlanGenerationException(message: longMessage),
+        AppException(message: longMessage, type: ExceptionType.unknown),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1134,7 +1134,7 @@ void main() {
       final longMessage = 'C' * 400;
       AppErrorHandler.handleSyncError(
         context,
-        SchedulingException(message: longMessage),
+        AppException(message: longMessage, type: ExceptionType.unknown),
         'test',
       );
       await tester.pump();
@@ -1150,13 +1150,13 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'first'),
+        AppException(message: 'first', type: ExceptionType.network),
         'op1',
       );
       await tester.pump();
       await AppErrorHandler.handleError(
         context,
-        InvalidApiKeyException(message: 'second'),
+        AppException(message: 'second', type: ExceptionType.invalidApiKey),
         'op2',
       );
       await tester.pump();
@@ -1176,7 +1176,7 @@ void main() {
 
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'first'),
+        AppException(message: 'first', type: ExceptionType.network),
         'op1',
         retry: true,
         retryCallback: () {
@@ -1187,7 +1187,7 @@ void main() {
 
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'second'),
+        AppException(message: 'second', type: ExceptionType.network),
         'op2',
         retry: true,
         retryCallback: () {
@@ -1209,13 +1209,13 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        ApiKeyMissingException(message: 'first'),
+        AppException(message: 'first', type: ExceptionType.apiKeyMissing),
         'op1',
       );
       await tester.pump();
       AppErrorHandler.handleSyncError(
         context,
-        ContentGenerationException(message: 'second'),
+        AppException(message: 'second', type: ExceptionType.contentGeneration),
         'op2',
       );
       await tester.pump();
@@ -1233,7 +1233,7 @@ void main() {
       int tapCount = 0;
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -1256,7 +1256,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiNotFoundException(message: 'not found'),
+        AppException(message: 'not found', type: ExceptionType.apiNotFound),
         'test',
       );
       await tester.pump();
@@ -1273,7 +1273,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        DatabaseNotFoundException(message: 'db not found'),
+        AppException(message: 'db not found', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -1289,7 +1289,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        DatabaseNotFoundException(message: 'db not found'),
+        AppException(message: 'db not found', type: ExceptionType.database),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1308,7 +1308,7 @@ void main() {
       final context = await captureContext(tester);
       final result = await AppErrorHandler.safely<int>(
         context,
-        () async => throw AdherenceException(message: 'Low adherence'),
+        () async => throw AppException(message: 'Low adherence', type: ExceptionType.unknown),
         defaultValue: 0,
         contextName: 'ADHERENCE_CHECK',
       );
@@ -1319,7 +1319,7 @@ void main() {
       final context = await captureContext(tester);
       final result = AppErrorHandler.safelySync<String>(
         context,
-        () => throw LlmException(message: 'LLM unavailable'),
+        () => throw AppException(message: 'LLM unavailable', type: ExceptionType.llm),
         defaultValue: 'FALLBACK',
         contextName: 'LLM_QUERY',
       );
@@ -1332,7 +1332,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1344,7 +1344,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1356,7 +1356,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1370,7 +1370,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1384,7 +1384,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1396,7 +1396,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1408,7 +1408,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1422,7 +1422,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1435,7 +1435,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: null,
@@ -1452,7 +1452,7 @@ void main() {
       bool retryCalled = false;
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -1469,7 +1469,7 @@ void main() {
       bool retryCalled = false;
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -1496,7 +1496,7 @@ void main() {
 
       final result2 = await AppErrorHandler.safely<int>(
         context,
-        () async => throw NetworkException(message: 'error'),
+        () async => throw AppException(message: 'error', type: ExceptionType.network),
         defaultValue: -1,
         contextName: 'op2',
       );
@@ -1514,7 +1514,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.safely(
         context,
-        () async => throw ValidationException(message: 'Field X is required'),
+        () async => throw AppException(message: 'Field X is required', type: ExceptionType.validation),
         contextName: 'test',
       );
       await tester.pump();
@@ -1535,7 +1535,7 @@ void main() {
 
       final result2 = AppErrorHandler.safelySync<int>(
         context,
-        () => throw DatabaseException(message: 'error'),
+        () => throw AppException(message: 'error', type: ExceptionType.database),
         defaultValue: -1,
         contextName: 'op2',
       );
@@ -1605,7 +1605,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         '',
       );
       await tester.pump();
@@ -1616,7 +1616,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: ''),
+        AppException(message: '', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1647,7 +1647,7 @@ void main() {
       final context = await captureContext(tester);
       final result = await AppErrorHandler.safely<String>(
         context,
-        () async => throw LlmException(message: 'LLM error'),
+        () async => throw AppException(message: 'LLM error', type: ExceptionType.llm),
         defaultValue: 'LLM_FALLBACK',
         contextName: 'LLM_OP',
       );
@@ -1658,7 +1658,7 @@ void main() {
       final context = await captureContext(tester);
       final result = AppErrorHandler.safelySync<String>(
         context,
-        () => throw LlmException(message: 'LLM error'),
+        () => throw AppException(message: 'LLM error', type: ExceptionType.llm),
         defaultValue: 'LLM_FALLBACK',
         contextName: 'LLM_OP',
       );
@@ -1679,7 +1679,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        ApiRateLimitException(message: 'rate limited'),
+        AppException(message: 'rate limited', type: ExceptionType.apiRateLimit),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1696,7 +1696,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        FileSystemException(message: 'file error'),
+        AppException(message: 'file error', type: ExceptionType.database),
         'test',
       );
       await tester.pump();
@@ -1711,7 +1711,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        FileSystemException(message: 'file error'),
+        AppException(message: 'file error', type: ExceptionType.database),
         'test',
         retry: true,
         retryCallback: () {},
@@ -1726,7 +1726,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        LlmException(message: 'llm error'),
+        AppException(message: 'llm error', type: ExceptionType.llm),
         'test',
       );
       await tester.pump();
@@ -1742,7 +1742,7 @@ void main() {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1756,7 +1756,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
       );
       await tester.pump();
@@ -1770,7 +1770,7 @@ void main() {
       bool tapped = false;
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {
@@ -1790,7 +1790,7 @@ void main() {
       final context = await captureContext(tester);
       AppErrorHandler.handleSyncError(
         context,
-        NetworkException(message: 'error'),
+        AppException(message: 'error', type: ExceptionType.network),
         'test',
         retry: true,
         retryCallback: () {},

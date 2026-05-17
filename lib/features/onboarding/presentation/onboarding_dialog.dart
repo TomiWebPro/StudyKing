@@ -86,50 +86,57 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
           ],
         ),
       ),
-      actions: [
-        CheckboxListTile(
-          value: _dontShowAgain,
-          onChanged: (v) => setState(() => _dontShowAgain = v ?? false),
-          title: Text(l10n.dontShowAgain, style: theme.textTheme.bodySmall),
-          controlAffinity: ListTileControlAffinity.leading,
-          dense: true,
-          contentPadding: EdgeInsets.zero,
+      actions: <Widget>[
+        Semantics(
+          button: true,
+          checked: _dontShowAgain,
+          label: l10n.dontShowAgain,
+          child: CheckboxListTile(
+            value: _dontShowAgain,
+            onChanged: (v) => setState(() => _dontShowAgain = v ?? false),
+            title: Text(l10n.dontShowAgain, style: theme.textTheme.bodySmall),
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () {
-                if (_dontShowAgain) {
-                  OnboardingService.markDontShowAgain();
-                } else {
+        FocusTraversalGroup(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () {
+                  if (_dontShowAgain) {
+                    OnboardingService.markDontShowAgain();
+                  } else {
+                    OnboardingService.markCompleted();
+                  }
+                  Navigator.pushNamed(context, AppRoutes.subjectSelection);
+                },
+                child: Text(l10n.addSubject),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () {
+                  if (_dontShowAgain) {
+                    OnboardingService.markDontShowAgain();
+                  } else {
+                    OnboardingService.markCompleted();
+                  }
+                  Navigator.pushNamed(context, AppRoutes.quickGuide);
+                },
+                child: Text(l10n.quickGuide),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () {
                   OnboardingService.markCompleted();
-                }
-                Navigator.pushNamed(context, AppRoutes.subjectSelection);
-              },
-              child: Text(l10n.addSubject),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                if (_dontShowAgain) {
-                  OnboardingService.markDontShowAgain();
-                } else {
-                  OnboardingService.markCompleted();
-                }
-                Navigator.pushNamed(context, AppRoutes.quickGuide);
-              },
-              child: Text(l10n.quickGuide),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: () {
-                OnboardingService.markCompleted();
-                Navigator.pop(context);
-              },
-              child: Text(l10n.getStarted),
-            ),
-          ],
+                  Navigator.pop(context);
+                },
+                child: Text(l10n.getStarted),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -137,20 +144,28 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
 
   Widget _buildFeature(String title, String description, IconData icon) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-              Text(description, style: theme.textTheme.bodySmall),
-            ],
+    return MergeSemantics(
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  label: title,
+                  child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                ),
+                Semantics(
+                  label: description,
+                  child: Text(description, style: theme.textTheme.bodySmall),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

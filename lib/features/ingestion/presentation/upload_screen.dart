@@ -44,6 +44,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   String? _success;
   bool _useUrlInput = false;
   bool _useFilePicker = false;
+  bool _generateQuestions = true;
   String? _selectedFilePath;
   String? _selectedFileName;
 
@@ -213,6 +214,13 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           final resolvedModelId = widget.fixedModelId != null
               ? widget.fixedModelId!
               : ref.read(selectedModelProvider);
+          if (_generateQuestions && resolvedModelId.isEmpty) {
+            setState(() {
+              _error = l10n.modelNotConfigured;
+              _isUploading = false;
+            });
+            return;
+          }
           final result = await pipeline.processFullPipeline(
             title: title,
             content: actualContent,
@@ -222,7 +230,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             subjectId: _selectedSubjectId ?? '',
             sourceUrl: _useUrlInput ? content : '',
             possibleTopics: [],
-            generateQuestions: false,
+            generateQuestions: _generateQuestions,
           );
           if (result.isFailure) {
             setState(() {
@@ -477,49 +485,70 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                           maxLines: 8,
                         ),
                 ),
+              const SizedBox(height: 16),
+
+              CheckboxListTile(
+                title: Text(l10n.generateQuestionsFromContent),
+                subtitle: Text(l10n.generateQuestionsFromContentHint),
+                value: _generateQuestions,
+                onChanged: (val) {
+                  setState(() => _generateQuestions = val ?? true);
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+              ),
+
               const SizedBox(height: 24),
 
               if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: Theme.of(context).colorScheme.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_error!,
-                            style:
-                                TextStyle(color: Theme.of(context).colorScheme.error)),
-                      ),
-                    ],
+                Semantics(
+                  liveRegion: true,
+                  label: 'Error: $_error',
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline,
+                            color: Theme.of(context).colorScheme.error),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_error!,
+                              style:
+                                  TextStyle(color: Theme.of(context).colorScheme.error)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               if (_success != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_success!,
-                            style:
-                                TextStyle(color: Theme.of(context).colorScheme.primary)),
-                      ),
-                    ],
+                Semantics(
+                  liveRegion: true,
+                  label: 'Success: $_success',
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_success!,
+                              style:
+                                  TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               if (_error != null || _success != null)

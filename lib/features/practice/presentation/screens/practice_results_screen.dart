@@ -7,12 +7,14 @@ class PracticeResultsScreen extends StatelessWidget {
   final int totalQuestions;
   final int correctAnswers;
   final VoidCallback onPracticeAgain;
+  final Map<String, double> topicBreakdown;
 
   const PracticeResultsScreen({
     super.key,
     required this.totalQuestions,
     required this.correctAnswers,
     required this.onPracticeAgain,
+    this.topicBreakdown = const {},
   });
 
   @override
@@ -36,16 +38,29 @@ class PracticeResultsScreen extends StatelessWidget {
               ),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               MergeSemantics(
-                child: _buildStatRow(context, l10n.totalQuestions, totalQuestions.toString()),
+                child: _buildStatRow(context, l10n.totalQuestions, formatDecimal(totalQuestions.toDouble(), l10n.localeName)),
               ),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               MergeSemantics(
-                child: _buildStatRow(context, l10n.correctAnswers, '$correctAnswers/$totalQuestions'),
+                child: _buildStatRow(context, l10n.correctAnswers, l10n.correctOf(correctAnswers, totalQuestions)),
               ),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               MergeSemantics(
                 child: _buildStatRow(context, l10n.accuracy, formatPercent(accuracy, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
               ),
+              if (topicBreakdown.isNotEmpty) ...[
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+                Text(
+                  l10n.topicBreakdown,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                ...topicBreakdown.entries.map((e) => _buildStatRow(
+                  context,
+                  e.key,
+                  formatPercent(e.value * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
+                )),
+              ],
               SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               Center(
                 child: FocusTraversalOrder(

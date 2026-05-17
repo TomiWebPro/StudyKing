@@ -181,7 +181,9 @@ void main() {
           plannedDurationMinutes: 25,
           studentId: 'student-1',
         );
-        final completed = await service.completeSession();
+        final result = await service.completeSession();
+        expect(result.isSuccess, true);
+        final completed = result.data!;
         expect(completed.completed, isTrue);
         expect(completed.endTime, isNotNull);
         expect(service.hasActiveSession, isFalse);
@@ -193,7 +195,9 @@ void main() {
           plannedDurationMinutes: 25,
           studentId: 'student-1',
         );
-        final completed = await service.completeSession();
+        final result = await service.completeSession();
+        expect(result.isSuccess, true);
+        final completed = result.data!;
         final storedResult = await repository.get(completed.id);
         expect(storedResult.data, isNotNull);
         expect(storedResult.data!.completed, isTrue);
@@ -205,7 +209,9 @@ void main() {
           captured = session;
         });
         await service.startSession(plannedDurationMinutes: 25);
-        final completed = await service.completeSession();
+        final result = await service.completeSession();
+        expect(result.isSuccess, true);
+        final completed = result.data!;
         expect(captured, isNotNull);
         expect(captured!.id, completed.id);
       });
@@ -221,7 +227,9 @@ void main() {
 
       test('cancels the active session', () async {
         await service.startSession(plannedDurationMinutes: 25);
-        final cancelled = await service.cancelSession();
+        final result = await service.cancelSession();
+        expect(result.isSuccess, true);
+        final cancelled = result.data!;
         expect(cancelled.completed, isFalse);
         expect(cancelled.endTime, isNotNull);
         expect(service.hasActiveSession, isFalse);

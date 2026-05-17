@@ -1,25 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
 void main() {
   group('lessonRepositoryProvider', () {
-    test('creates a LessonRepository', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final repo = container.read(lessonRepositoryProvider);
-      expect(repo, isA<LessonRepository>());
-    });
-
-    test('returns the same instance on multiple reads', () {
+    test('creates a LessonRepository and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final repo1 = container.read(lessonRepositoryProvider);
       final repo2 = container.read(lessonRepositoryProvider);
+      expect(repo1, isA<LessonRepository>());
       expect(repo1, same(repo2));
     });
 
@@ -45,11 +48,13 @@ void main() {
   });
 
   group('tutorSessionRepositoryProvider', () {
-    test('creates a TutorSessionRepository', () {
+    test('creates a TutorSessionRepository and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final repo = container.read(tutorSessionRepositoryProvider);
-      expect(repo, isA<TutorSessionRepository>());
+      final repo1 = container.read(tutorSessionRepositoryProvider);
+      final repo2 = container.read(tutorSessionRepositoryProvider);
+      expect(repo1, isA<TutorSessionRepository>());
+      expect(repo1, same(repo2));
     });
 
     test('can be overridden with custom repository', () {
@@ -65,47 +70,134 @@ void main() {
   });
 
   group('lessonServiceProvider', () {
-    test('creates a LessonService', () {
+    test('creates a LessonService and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final service = container.read(lessonServiceProvider);
-      expect(service, isA<LessonService>());
+      final svc1 = container.read(lessonServiceProvider);
+      final svc2 = container.read(lessonServiceProvider);
+      expect(svc1, isA<LessonService>());
+      expect(svc1, same(svc2));
     });
 
-    test('is wired to lessonRepositoryProvider', () {
-      final fakeRepo = LessonRepository();
+    test('uses database with injected session repository', () async {
+      final fakeSessionRepo = FakeSessionRepository(seed: [
+        Session(
+          id: 'wired-session',
+          studentId: 'stu1',
+          type: SessionType.tutoring,
+          startTime: DateTime.now(),
+          completed: false,
+        ),
+      ]);
+      final db = DatabaseService(
+        topicRepository: TopicRepository(),
+        questionRepository: QuestionRepository(),
+        attemptRepository: AttemptRepository(),
+        lessonRepository: LessonRepository(),
+        sessionRepository: fakeSessionRepo,
+        subjectRepository: SubjectRepository(),
+        conversationRepository: ConversationRepository(),
+        tutorSessionRepository: TutorSessionRepository(),
+      );
       final container = ProviderContainer(
         overrides: [
-          lessonRepositoryProvider.overrideWithValue(fakeRepo),
+          databaseProvider.overrideWithValue(db),
         ],
       );
       addTearDown(container.dispose);
+
       final service = container.read(lessonServiceProvider);
-      expect(service, isA<LessonService>());
+      final lessons = await service.getLessonsForStudent('stu1');
+      expect(lessons, hasLength(1));
+      expect(lessons.first.id, 'wired-session');
     });
 
-    test('is wired to tutorSessionRepositoryProvider', () {
-      final fakeRepo = TutorSessionRepository();
+    test('handles error from session repository gracefully', () async {
+      final failingRepo = FakeSessionRepository();
+      failingRepo.throwOnSave = true;
+      final db = DatabaseService(
+        topicRepository: TopicRepository(),
+        questionRepository: QuestionRepository(),
+        attemptRepository: AttemptRepository(),
+        lessonRepository: LessonRepository(),
+        sessionRepository: failingRepo,
+        subjectRepository: SubjectRepository(),
+        conversationRepository: ConversationRepository(),
+        tutorSessionRepository: TutorSessionRepository(),
+      );
       final container = ProviderContainer(
         overrides: [
-          tutorSessionRepositoryProvider.overrideWithValue(fakeRepo),
+          databaseProvider.overrideWithValue(db),
         ],
       );
       addTearDown(container.dispose);
-      final service = container.read(lessonServiceProvider);
-      expect(service, isA<LessonService>());
-    });
 
-    test('is wired to sessionRepositoryProvider', () {
-      final fakeRepo = SessionRepository();
-      final container = ProviderContainer(
-        overrides: [
-          sessionRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
       final service = container.read(lessonServiceProvider);
-      expect(service, isA<LessonService>());
+      // Should not throw; returns empty list on error
+      final lessons = await service.getLessonsForStudent('stu1');
+      expect(lessons, isEmpty);
     });
   });
+}
+
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> sessions = [];
+  bool throwOnSave = false;
+  bool throwOnDelete = false;
+
+  FakeSessionRepository({List<Session>? seed}) {
+    if (seed != null) {
+      sessions.addAll(seed);
+    }
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(List.from(sessions));
+  }
+
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
+    final allResult = await getAll();
+    if (allResult.isFailure) return Result.failure(allResult.error);
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    return Result.success(allResult.data!
+        .where((s) =>
+            s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            s.startTime.isBefore(end))
+        .toList());
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    return Result.success(
+      sessions.where((s) => s.studentId == studentId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<void>> save(Session session) async {
+    if (throwOnSave) throw Exception('save failed');
+    sessions.removeWhere((s) => s.id == session.id);
+    sessions.add(session);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> delete(String id) async {
+    if (throwOnDelete) throw Exception('delete failed');
+    sessions.removeWhere((s) => s.id == id);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    try {
+      final session = sessions.where((s) => s.id == id).firstOrNull;
+      return Result.success(session);
+    } catch (_) {
+      return Result.success(null);
+    }
+  }
 }

@@ -62,7 +62,7 @@ class SubjectStatsTab extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     l10n.sessionsLabel,
-                    totalSessions.toString(),
+                    formatDecimal(totalSessions.toDouble(), l10n.localeName),
                     Icons.how_to_vote,
                     Theme.of(context).colorScheme.primary,
                   ),
@@ -86,7 +86,7 @@ class SubjectStatsTab extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     l10n.questionsLabel,
-                    totalQuestions.toString(),
+                    formatDecimal(totalQuestions.toDouble(), l10n.localeName),
                     Icons.question_answer,
                     Theme.of(context).colorScheme.primary,
                   ),

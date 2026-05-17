@@ -1,3 +1,4 @@
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
@@ -28,7 +29,7 @@ class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
 
   Future<List<PlanAdherenceModel>> getWeekly(String studentId) async {
     final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
+    final weekAgo = now.subtract(Timeouts.week);
     return getByDateRange(studentId, weekAgo, now);
   }
 
@@ -56,7 +57,7 @@ class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
   Future<PlanAdherenceModel?> getToday(String studentId) async {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final endOfDay = startOfDay.add(Timeouts.day);
     final todayMetrics = filterBy((m) => m.studentId, studentId)
         .where((m) => m.date.isAfter(startOfDay) && m.date.isBefore(endOfDay));
     return todayMetrics.isNotEmpty ? todayMetrics.first : null;

@@ -6,13 +6,7 @@ class UiConfig {
   static const ThemeMode defaultThemeMode = ThemeMode.system;
   static const bool defaultNotificationsEnabled = true;
   static const Duration notificationReminderLeadTime = Duration(minutes: 10);
-  static const String notificationChannelId = 'study_reminders';
-  static const String notificationChannelName = 'Study Reminders';
 }
-
-const bottomSheetShape = RoundedRectangleBorder(
-  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-);
 
 class CacheConfig {
   const CacheConfig._();

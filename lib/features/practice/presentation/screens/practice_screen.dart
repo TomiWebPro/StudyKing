@@ -22,6 +22,8 @@ import 'package:studyking/features/practice/presentation/widgets/topic_selection
 import 'package:studyking/features/practice/presentation/widgets/spaced_repetition_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
+import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 
 
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   bool _isLoading = true;
   Map<String, int> _dueCounts = {};
   bool _isLoadingDueCounts = false;
+  int _totalQuestionCount = 0;
+  int _questionsToday = 0;
 
   @override
   void initState() {
@@ -67,6 +71,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         _isLoading = false;
       });
       _loadDueCounts();
+      _loadQuestionCount();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -92,9 +97,34 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     }
   }
 
-  void _startPractice(Subject subject) {
-    Navigator.pushNamed(context, AppRoutes.practiceSession,
+  Future<void> _loadQuestionCount() async {
+    try {
+      final allQuestions = await _questionRepo.getAll();
+      final studentId = _studentIdService.getStudentId();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      final attemptRepo = ref.read(attemptRepositoryProvider);
+      try {
+        final allAttempts = await attemptRepo.getByStudent(studentId);
+        _questionsToday = allAttempts
+            .where((a) => a.timestamp.isAfter(today))
+            .length;
+      } catch (_) {
+        _questionsToday = 0;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _totalQuestionCount = allQuestions.length;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _startPractice(Subject subject) async {
+    await Navigator.pushNamed(context, AppRoutes.practiceSession,
         arguments: PracticeSessionArgs(subjectId: subject.id));
+    _loadDueCounts();
   }
 
   Future<void> _startTopicPractice(String topic) async {
@@ -109,12 +139,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         return;
       }
       if (!mounted) return;
-      Navigator.pushNamed(context, AppRoutes.practiceSession,
+      await Navigator.pushNamed(context, AppRoutes.practiceSession,
           arguments: PracticeSessionArgs(
             subjectId: topicQuestions.first.subjectId,
             topicId: topicQuestions.first.topicId,
             questionCount: topicQuestions.length,
           ));
+      _loadDueCounts();
     } catch (e) {
       _logger.e('Error starting practice session', e);
       if (!mounted) return;
@@ -129,6 +160,15 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       final studentId = _studentIdService.getStudentId();
+      final attemptRepo = ref.read(attemptRepositoryProvider);
+      final allAttempts = await attemptRepo.getByStudent(studentId);
+      if (allAttempts.length < 10) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.practiceAtLeastTen)));
+        return;
+      }
+
       final weakTopicsResult =
           await masteryService.getWeakTopics(studentId);
       if (weakTopicsResult.isFailure ||
@@ -163,11 +203,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       final orderedQuestions = scored.map((s) => s.question).toList();
 
       if (!mounted) return;
-      Navigator.pushNamed(context, AppRoutes.practiceSession,
+      await Navigator.pushNamed(context, AppRoutes.practiceSession,
           arguments: PracticeSessionArgs(
             subjectId: subject.id,
             questionCount: orderedQuestions.length,
           ));
+      _loadDueCounts();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -185,12 +226,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         return;
       }
       if (!mounted) return;
-      Navigator.pushNamed(context, AppRoutes.practiceSession,
+      await Navigator.pushNamed(context, AppRoutes.practiceSession,
           arguments: PracticeSessionArgs(
             subjectId: subject.id,
             questionCount: result.data!.length,
             isSpacedRepetition: true,
           ));
+      _loadDueCounts();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -234,16 +276,18 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         }
       }
 
-      final sources = sourceMap.entries
-          .where((e) => e.value.isNotEmpty)
-          .map((e) => SourceItemData(
-                id: e.key,
-                title: e.key,
-                questionCount: e.value.length,
-              ))
-          .toList();
+      final allSources = await _getAllSources();
 
-      if (sources.isEmpty) {
+      final sourceItems = allSources.map((source) {
+        final questionCount = sourceMap[source.id]?.length ?? 0;
+        return SourceItemData(
+          id: source.id,
+          title: source.title,
+          questionCount: questionCount,
+        );
+      }).toList();
+
+      if (sourceItems.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(l10n.noSourcesAvailable)));
@@ -252,7 +296,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
       if (!mounted) return;
       SourcePracticeSheet.show(context,
-          sources: sources,
+          sources: sourceItems,
           onSourceSelected: (sourceId, sourceTitle) {
             final sourceQuestions = allQuestions
                 .where((q) => q.sourceIds.contains(sourceId))
@@ -262,7 +306,28 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                   arguments: PracticeSessionArgs(
                     subjectId: sourceQuestions.first.subjectId,
                     questionCount: sourceQuestions.length,
-                  ));
+                  )).then((_) => _loadDueCounts());
+            } else if (mounted) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(l10n.noQuestionsAvailable),
+                  content: Text(l10n.sourceWithNoQuestions),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.pushNamed(context, AppRoutes.upload);
+                      },
+                      child: Text(l10n.uploadMaterials),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(l10n.ok),
+                    ),
+                  ],
+                ),
+              );
             }
           });
     } catch (e) {
@@ -270,6 +335,16 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(l10n.noSourcesAvailable)));
       }
+    }
+  }
+
+  Future<List<Source>> _getAllSources() async {
+    try {
+      final repo = SourceRepository();
+      await repo.init();
+      return await repo.getAll();
+    } catch (e) {
+      return [];
     }
   }
 
@@ -293,8 +368,26 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       final topics = await _dataService.loadTopics(_questionRepo);
       if (topics.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noTopicsAvailable)));
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.noTopicsAvailable),
+            content: Text(l10n.uploadMaterialsToGenerateTopics),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushNamed(context, AppRoutes.upload);
+                },
+                child: Text(l10n.uploadMaterials),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.ok),
+              ),
+            ],
+          ),
+        );
         return;
       }
       if (!mounted) return;
@@ -373,6 +466,60 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     );
   }
 
+  Widget _buildSummaryRow() {
+    final l10n = AppLocalizations.of(context)!;
+    final totalDue = _dueCounts.values.fold(0, (a, b) => a + b);
+    return Card(
+      child: Padding(
+        padding: ResponsiveUtils.cardPadding(context),
+        child: Row(
+          children: [
+            Expanded(child: _buildSummaryItem(context,
+                icon: Icons.today, label: l10n.questionsToday, value: '$_questionsToday')),
+            Expanded(child: _buildSummaryItem(context,
+                icon: Icons.schedule, label: l10n.dueForReview, value: '$totalDue')),
+            Expanded(child: _buildSummaryItem(context,
+                icon: Icons.book, label: l10n.subjects, value: '${_subjects.length}')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(BuildContext context, {
+    required IconData icon, required String label, required String value,
+  }) {
+    return Column(children: [
+      Icon(icon, color: Theme.of(context).colorScheme.primary),
+      SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
+      Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+    ]);
+  }
+
+  Widget _buildNoQuestionsBanner() {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      child: Padding(
+        padding: ResponsiveUtils.cardPadding(context),
+        child: Column(children: [
+          Icon(Icons.quiz_outlined, size: 48,
+              color: Theme.of(context).colorScheme.primaryContainer),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+          Text(l10n.noQuestionsPracticeHint,
+              textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+          FilledButton.icon(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.upload),
+            icon: const Icon(Icons.upload),
+            label: Text(l10n.uploadMaterials),
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _buildBody() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_subjects.isEmpty) return const PracticeEmptyState();
@@ -381,9 +528,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       child: ListView(
         padding: ResponsiveUtils.listPadding(context),
         children: [
+          _buildSummaryRow(),
+          if (_totalQuestionCount == 0) _buildNoQuestionsBanner() else
           PracticeModeGrid(
             isLoadingDueCounts: _isLoadingDueCounts,
             dueCounts: _dueCounts,
+            totalQuestionCount: _totalQuestionCount,
             hasSubjects: _subjects.isNotEmpty,
             onQuickPractice: _showPracticeModeDialog,
             onSpacedRepetition: _showSpacedRepetitionSubjectSelector,

@@ -92,7 +92,10 @@ class CrossFeatureIntegrator {
   }) async {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) return [];
+    if (result.isFailure || result.data == null) {
+      _logger.e('cross_feature_integrator: getUnifiedTimeline failed', result.error);
+      return [];
+    }
 
     final entries = result.data!.map((s) => UnifiedTimelineEntry(
       id: s.id,
@@ -119,7 +122,10 @@ class CrossFeatureIntegrator {
   }) async {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) return 0;
+    if (result.isFailure || result.data == null) {
+      _logger.e('cross_feature_integrator: getTotalStudyDurationMs failed', result.error);
+      return 0;
+    }
 
     var sessions = result.data!;
     if (since != null) {
@@ -132,7 +138,10 @@ class CrossFeatureIntegrator {
   Future<int> getCompletedSessionCount({String? studentId}) async {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) return 0;
+    if (result.isFailure || result.data == null) {
+      _logger.e('cross_feature_integrator: getCompletedSessionCount failed', result.error);
+      return 0;
+    }
     return result.data!.where((s) => s.completed).length;
   }
 
@@ -142,7 +151,10 @@ class CrossFeatureIntegrator {
   }) async {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) return {};
+    if (result.isFailure || result.data == null) {
+      _logger.e('cross_feature_integrator: getDurationByType failed', result.error);
+      return {};
+    }
 
     var sessions = result.data!;
     if (since != null) {

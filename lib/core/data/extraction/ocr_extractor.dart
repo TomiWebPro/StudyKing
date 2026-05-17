@@ -143,12 +143,20 @@ class OcrExtractor {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.ocrUserPrompt(content);
 
-      final response = await _llmService.chat(
+      final result = await _llmService.chat(
         message: prompt,
         modelId: _modelId,
         systemPrompt: l10n.ocrSystemPrompt,
         feature: 'ocr_extraction',
       );
+      if (result.isFailure) {
+        return const OcrExtractionResult(
+          text: '',
+          extractionMethod: 'ocr_llm_failed',
+          errorMessage: 'OCR extraction failed',
+        );
+      }
+      final response = result.data!;
 
       if (response.trim().isEmpty) {
         _logger.w('LLM OCR returned empty text');

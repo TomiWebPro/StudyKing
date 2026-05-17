@@ -7,6 +7,7 @@ class PracticeModeGrid extends StatelessWidget {
   final bool isLoadingDueCounts;
   final Map<String, int> dueCounts;
   final bool hasSubjects;
+  final int totalQuestionCount;
   final VoidCallback onQuickPractice;
   final VoidCallback onSpacedRepetition;
   final VoidCallback onTopicFocus;
@@ -17,6 +18,7 @@ class PracticeModeGrid extends StatelessWidget {
     required this.isLoadingDueCounts,
     required this.dueCounts,
     required this.hasSubjects,
+    this.totalQuestionCount = 0,
     required this.onQuickPractice,
     required this.onSpacedRepetition,
     required this.onTopicFocus,
@@ -47,9 +49,9 @@ class PracticeModeGrid extends StatelessWidget {
             PracticeModeCard(
               icon: Icons.flash_on,
               title: l10n.quickPractice,
-              subtitle: l10n.randomQuestions(10),
+              subtitle: _getQuickPracticeSubtitle(l10n),
               color: Theme.of(context).colorScheme.primary,
-              onTap: onQuickPractice,
+              onTap: totalQuestionCount > 0 ? onQuickPractice : null,
             ),
             PracticeModeCard(
               icon: Icons.schedule,
@@ -80,6 +82,12 @@ class PracticeModeGrid extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _getQuickPracticeSubtitle(AppLocalizations l10n) {
+    if (totalQuestionCount == 0) return l10n.uploadMaterialsToCreateQuestions;
+    if (totalQuestionCount < 10) return l10n.questionsCount(totalQuestionCount);
+    return l10n.randomQuestions(10);
   }
 
   String _getSpacedRepetitionSubtitle(AppLocalizations l10n) {

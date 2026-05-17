@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:studyking/core/constants/app_constants.dart';
 import '../utils/logger.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../services/study_progress_tracker.dart';
@@ -14,12 +15,12 @@ import 'package:studyking/features/planner/data/models/engagement_nudge_model.da
 class EngagementSchedulerConfig {
   final int checkHour;
   final int checkMinute;
-  final List<String> studentIds;
+  final String studentId;
 
   const EngagementSchedulerConfig({
     this.checkHour = 9,
     this.checkMinute = 0,
-    this.studentIds = const ['default'],
+    this.studentId = 'default',
   });
 
   Duration get nextCheckDelay {
@@ -27,7 +28,7 @@ class EngagementSchedulerConfig {
     final nextCheck = DateTime(now.year, now.month, now.day, checkHour, checkMinute);
     return nextCheck.isAfter(now)
         ? nextCheck.difference(now)
-        : nextCheck.add(const Duration(days: 1)).difference(now);
+        : nextCheck.add(Timeouts.day).difference(now);
   }
 }
 
@@ -82,9 +83,7 @@ class EngagementScheduler {
 
   Future<void> _runDailyChecks() async {
     _scheduleDailyCheck();
-    for (final studentId in _config.studentIds) {
-      await _sendNudgeNotifications(studentId);
-    }
+    await _sendNudgeNotifications(_config.studentId);
   }
 
   Future<void> _sendNudgeNotifications(String studentId) async {

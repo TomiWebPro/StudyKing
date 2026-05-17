@@ -81,6 +81,26 @@ void main() {
         expect(model.provider, 'Unknown');
       });
 
+      test('handles null providers key in map', () {
+        final data = {
+          'id': 'test/model',
+          'name': 'Test Model',
+          'providers': null,
+        };
+        final model = AiModel.fromOpenRouter(data);
+        expect(model.provider, equals('Unknown'));
+      });
+
+      test('handles empty provider map type', () {
+        final data = {
+          'id': 'test/model',
+          'name': 'Test Model',
+          'providers': <String, String>{},
+        };
+        final model = AiModel.fromOpenRouter(data);
+        expect(model.provider, equals('Unknown'));
+      });
+
       test('sets default id to unknown when id is null', () {
         final data = <String, dynamic>{};
         final model = AiModel.fromOpenRouter(data);
@@ -107,6 +127,11 @@ void main() {
         final model = AiModel.fromId('openrouter/gpt-4-turbo');
         expect(model.id, 'openrouter/gpt-4-turbo');
         expect(model.name, 'gpt 4 turbo');
+      });
+
+      test('handles id with special characters', () {
+        final model = AiModel.fromId('provider:model-v2.0');
+        expect(model.name, equals('provider model v2 0'));
       });
     });
 
@@ -197,6 +222,23 @@ void main() {
         final result = service.getModelById('unknown-model', models);
         expect(result?.id, 'unknown-model');
         expect(result?.name, 'unknown model');
+      });
+
+      test('handles empty list', () {
+        final service = ModelListingService(apiKey: 'key');
+        final result = service.getModelById('model1', []);
+        expect(result, isNotNull);
+        expect(result!.id, equals('model1'));
+      });
+
+      test('returns first match when duplicate ids', () {
+        final models = [
+          AiModel(id: 'model1', name: 'Model 1', provider: 'Provider A'),
+          AiModel(id: 'model1', name: 'Model 1 Duplicate', provider: 'Provider B'),
+        ];
+        final service = ModelListingService(apiKey: 'key');
+        final result = service.getModelById('model1', models);
+        expect(result, isNotNull);
       });
     });
   });

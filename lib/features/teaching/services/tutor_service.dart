@@ -207,9 +207,12 @@ class TutorService {
     if (evalResult == null) return;
 
     final now = _clock.now();
+    final questionText = manager.capturedExerciseQuestion.isNotEmpty
+        ? manager.capturedExerciseQuestion
+        : 'Tutor exercise: ${session.topicTitle}';
     final question = Question(
       id: const Uuid().v4(),
-      text: 'Tutor exercise: ${session.topicTitle}',
+      text: questionText,
       type: QuestionType.typedAnswer,
       difficulty: (evalResult.score * 5).round().clamp(1, 5),
       subjectId: session.subjectId,

@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
-import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
+import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider, Timeouts;
 import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -195,7 +195,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         } else {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 100),
+            duration: Timeouts.ms100,
             curve: Curves.easeOut,
           );
         }

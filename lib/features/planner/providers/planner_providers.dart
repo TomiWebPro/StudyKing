@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/logger.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -218,46 +219,63 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
   }
 
   Future<void> loadExistingPlan() async {
+    final logger = const Logger('PlannerNotifier.loadExistingPlan');
     try {
       final plan = await _service.loadExistingPlan();
       if (plan != null) {
         state = state.copyWith(plan: plan);
       }
-    } catch (_) {}
+    } catch (e) {
+      logger.e('Failed to load existing plan', e);
+      state = state.copyWith(error: 'Failed to load plan: $e');
+    }
   }
 
   Future<void> loadRoadmaps() async {
-    state = state.copyWith(isLoadingRoadmaps: true);
+    final logger = const Logger('PlannerNotifier.loadRoadmaps');
+
+
+
     try {
       final roadmaps = await _service.loadRoadmaps();
       state = state.copyWith(
         roadmaps: roadmaps,
         isLoadingRoadmaps: false,
       );
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to load roadmaps', e);
       state = state.copyWith(isLoadingRoadmaps: false);
     }
   }
 
   Future<void> loadPendingActions() async {
+    final logger = const Logger('PlannerNotifier.loadPendingActions');
     try {
       final actions = await _service.loadPendingActions();
       state = state.copyWith(pendingActions: actions);
-    } catch (_) {}
+    } catch (e) {
+      logger.e('Failed to load pending actions', e);
+    }
   }
 
   Future<void> loadScheduledLessons() async {
+    final logger = const Logger('PlannerNotifier.loadScheduledLessons');
     try {
       final lessons = await _service.getScheduledLessons();
       state = state.copyWith(scheduledLessons: lessons);
-    } catch (_) {}
+    } catch (e) {
+      logger.e('Failed to load scheduled lessons', e);
+    }
   }
 
   Future<void> checkAdherence() async {
+    final logger = const Logger('PlannerNotifier.checkAdherence');
     try {
       final deviation = await _service.checkAdherence();
       state = state.copyWith(adherenceDeviation: deviation);
-    } catch (_) {}
+    } catch (e) {
+      logger.e('Failed to check adherence', e);
+    }
   }
 
   Future<void> generatePlan({
@@ -515,10 +533,13 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
   }
 
   Future<void> linkDailyPlanToRoadmap(List<String> completedTopicIds) async {
+    final logger = const Logger('PlannerNotifier.linkDailyPlanToRoadmap');
     try {
       await _service.linkDailyPlanToRoadmap(completedTopicIds);
       await loadRoadmaps();
-    } catch (_) {}
+    } catch (e) {
+      logger.e('Failed to link daily plan to roadmap', e);
+    }
   }
 }
 

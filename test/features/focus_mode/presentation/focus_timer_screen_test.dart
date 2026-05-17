@@ -127,7 +127,7 @@ class FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  Future<Session> completeSession() async {
+  Future<Result<Session>> completeSession() async {
     _hasActiveSession = false;
     _isPaused = false;
     _fakeCurrentSession = null;
@@ -144,15 +144,15 @@ class FakeStudyTimerService extends StudyTimerService {
     for (final cb in _sessionCompleteCallbacks) {
       cb(session);
     }
-    return session;
+    return Result.success(session);
   }
 
   @override
-  Future<Session> cancelSession() async {
+  Future<Result<Session>> cancelSession() async {
     _hasActiveSession = false;
     _isPaused = false;
     _fakeCurrentSession = null;
-    return Session(
+    return Result.success(Session(
       id: 'test_session',
       studentId: '',
       type: SessionType.focus,
@@ -161,7 +161,7 @@ class FakeStudyTimerService extends StudyTimerService {
       plannedDurationMinutes: 25,
       actualDurationMs: 0,
       completed: false,
-    );
+    ));
   }
 
   @override
@@ -553,6 +553,74 @@ void main() {
 
       expect(find.text('New Focus Session'), findsOneWidget);
       expect(find.text('Break Time!'), findsNothing);
+    });
+
+    testWidgets('shows exit confirmation dialog when back is pressed during active session', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Pause'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('End focus session?'), findsOneWidget);
+      expect(find.text('You have an active focus session. Ending it early will save your progress so far.'), findsOneWidget);
+      expect(find.text('Stay'), findsOneWidget);
+      expect(find.text('End Session'), findsOneWidget);
+    });
+
+    testWidgets('stay button keeps session active', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Stay'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Pause'), findsOneWidget);
+    });
+
+    testWidgets('end session button cancels session and returns to setup', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Focus for 25 minutes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('End Session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('New Focus Session'), findsOneWidget);
+      expect(find.byType(FocusTimerWidget), findsNothing);
     });
 
     testWidgets('cancel session returns to setup view', (tester) async {

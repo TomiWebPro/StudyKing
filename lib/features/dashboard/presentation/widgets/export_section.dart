@@ -180,7 +180,13 @@ class ExportSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     try {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
-      if (result.isFailure) throw Exception(result.error);
+      if (result.isFailure) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.exportFailed(result.error!))),
+        );
+        return;
+      }
       final data = result.data!;
       final jsonString = formatInstrumentation(data, l10n);
       final dir = await getTemporaryDirectory();

@@ -92,7 +92,9 @@ class SourcePracticeSheet extends StatelessWidget {
                       ),
                       title: Text(source.title),
                       subtitle: Text(
-                        l10n.questionsCount(source.questionCount),
+                        source.questionCount > 0
+                            ? l10n.questionsCount(source.questionCount)
+                            : l10n.sourceWithNoQuestions,
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {

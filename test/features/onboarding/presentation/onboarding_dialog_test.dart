@@ -103,5 +103,63 @@ void main() {
       final needed = await OnboardingService.isOnboardingNeeded();
       expect(needed, isTrue);
     });
+
+    test('isOnboardingNeeded returns false when only completed is true', () async {
+      final box = await Hive.openBox(HiveBoxNames.settings);
+      await box.put('onboarding_completed', true);
+      await box.put('onboarding_dont_show_again', false);
+      await box.close();
+      final needed = await OnboardingService.isOnboardingNeeded();
+      expect(needed, isFalse);
+    });
+
+    test('isOnboardingNeeded returns false when only dontShowAgain is true', () async {
+      final box = await Hive.openBox(HiveBoxNames.settings);
+      await box.put('onboarding_completed', false);
+      await box.put('onboarding_dont_show_again', true);
+      await box.close();
+      final needed = await OnboardingService.isOnboardingNeeded();
+      expect(needed, isFalse);
+    });
+
+    test('isFirstLaunch returns true when only dontShowAgain is set', () async {
+      final box = await Hive.openBox(HiveBoxNames.settings);
+      await box.put('onboarding_completed', false);
+      await box.put('onboarding_dont_show_again', true);
+      await box.close();
+      final firstLaunch = await OnboardingService.isFirstLaunch();
+      expect(firstLaunch, isTrue);
+    });
+
+    test('isOnboardingNeeded returns false when both flags are true', () async {
+      final box = await Hive.openBox(HiveBoxNames.settings);
+      await box.put('onboarding_completed', true);
+      await box.put('onboarding_dont_show_again', true);
+      await box.close();
+      final needed = await OnboardingService.isOnboardingNeeded();
+      expect(needed, isFalse);
+    });
+
+    test('isFirstLaunch returns false when completed is set in Hive directly', () async {
+      final box = await Hive.openBox(HiveBoxNames.settings);
+      await box.put('onboarding_completed', true);
+      await box.close();
+      final firstLaunch = await OnboardingService.isFirstLaunch();
+      expect(firstLaunch, isFalse);
+    });
+
+    test('multiple box open-close cycles maintain correct state', () async {
+      await OnboardingService.markCompleted();
+      var box = await Hive.openBox(HiveBoxNames.settings);
+      expect(box.get('onboarding_completed'), isTrue);
+      await box.close();
+
+      box = await Hive.openBox(HiveBoxNames.settings);
+      expect(box.get('onboarding_completed'), isTrue);
+      await box.close();
+
+      final needed = await OnboardingService.isOnboardingNeeded();
+      expect(needed, isFalse);
+    });
   });
 }

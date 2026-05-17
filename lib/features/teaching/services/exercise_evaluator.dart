@@ -59,12 +59,19 @@ class ExerciseEvaluator {
           topicTitle: topicTitle,
         );
 
-    final response = await _llmService.chat(
+    final result = await _llmService.chat(
       message: effectiveUserPrompt,
       modelId: _modelId,
       systemPrompt: effectiveSystemPrompt,
       feature: 'teaching_evaluation',
     );
+    if (result.isFailure) {
+      return EvaluationResult(
+        score: 0.5,
+        explanation: 'Could not evaluate answer: ${result.error}',
+      );
+    }
+    final response = result.data!;
 
     if (response.isEmpty) {
       return EvaluationResult(

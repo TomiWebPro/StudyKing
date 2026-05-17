@@ -28,7 +28,7 @@ class BuildConfig {
         return AppEnvironment.development;
       default:
         if (kReleaseMode) {
-          throw StateError('Unknown APP_ENV value: $env');
+          throw ArgumentError('Unknown APP_ENV value: $env');
         }
         return AppEnvironment.development;
     }
@@ -38,13 +38,13 @@ class BuildConfig {
     final env = environment;
     if (!kReleaseMode) return;
     if (appVersion == '1.0.0') {
-      throw StateError('APP_VERSION must be set in release builds.');
+      throw ArgumentError('APP_VERSION must be set in release builds.');
     }
     if (appBuildNumber == '1') {
-      throw StateError('APP_BUILD_NUMBER must be set in release builds.');
+      throw ArgumentError('APP_BUILD_NUMBER must be set in release builds.');
     }
     if (env == AppEnvironment.development) {
-      throw StateError('Release mode cannot run with development APP_ENV.');
+      throw ArgumentError('Release mode cannot run with development APP_ENV.');
     }
   }
 }

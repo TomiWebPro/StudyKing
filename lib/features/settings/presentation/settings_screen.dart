@@ -13,6 +13,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/data_backup_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
@@ -287,7 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${localSize.round()}'),
+                Text(formatDecimal(localSize.round().toDouble(), l10n.localeName, minFractionDigits: 0)),
                 const SizedBox(height: 8),
                 Semantics(
                   label: l10n.fontSize,

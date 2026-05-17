@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/student_id_service.dart';
@@ -211,7 +212,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         } else {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 100),
+            duration: Timeouts.ms100,
             curve: Curves.easeOut,
           );
         }

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -198,8 +199,8 @@ class TranscriptionExtractor {
   Future<String?> _fetchTranscript(String videoId) async {
     try {
       final urls = [
-        'https://youtubetranscript.com/?v=$videoId',
-        'https://youtubetranscript.com/api/transcript/$videoId',
+        '${ApiConfig.youtubetranscriptBaseUrl}/?v=$videoId',
+        '${ApiConfig.youtubetranscriptApiUrl}/$videoId',
       ];
 
       for (final url in urls) {
@@ -207,7 +208,7 @@ class TranscriptionExtractor {
           final response = await _httpClient.get(
             Uri.parse(url),
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; StudyKing/1.0)',
+              'User-Agent': ApiConfig.userAgent,
             },
           );
 
@@ -302,12 +303,20 @@ class TranscriptionExtractor {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.transcribeUserPrompt(content);
 
-      final response = await _llmService.chat(
+      final result = await _llmService.chat(
         message: prompt,
         modelId: _modelId,
         systemPrompt: l10n.transcribeSystemPrompt,
         feature: 'transcription',
       );
+      if (result.isFailure) {
+        return TranscriptionResult(
+          text: '',
+          extractionMethod: 'transcription_llm_failed',
+          errorMessage: result.error,
+        );
+      }
+      final response = result.data!;
 
       if (response.trim().isEmpty) {
         return const TranscriptionResult(

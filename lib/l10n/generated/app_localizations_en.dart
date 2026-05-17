@@ -680,6 +680,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examDateOptional => 'Exam Date (Optional)';
 
   @override
+  String get backupAndRestore => 'Backup & Restore';
+
+  @override
+  String get exportBackup => 'Export Backup';
+
+  @override
+  String get exportAllDataDescription => 'Export all your study data';
+
+  @override
+  String get importBackup => 'Import Backup';
+
+  @override
+  String get importFromFileDescription => 'Restore from a backup file';
+
+  @override
+  String get backupExported => 'Backup exported successfully';
+
+  @override
+  String get backupExportFailed => 'Failed to export backup';
+
+  @override
+  String get importConfirmTitle => 'Import Backup';
+
+  @override
+  String importPreview(int boxes, int records) {
+    return 'This backup contains $boxes section(s) with $records record(s). Existing data may be overwritten. Continue?';
+  }
+
+  @override
+  String get importSuccess => 'Data restored successfully';
+
+  @override
+  String get importFailed => 'Failed to restore data';
+
+  @override
+  String get invalidBackupFile => 'Invalid backup file';
+
+  @override
+  String get selectBackupFile => 'Select backup file';
+
+  @override
   String get selectDate => 'Select date';
 
   @override
@@ -798,7 +839,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String questionsCount(int count) {
-    return 'Questions: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions available',
+      one: '1 question available',
+      zero: 'No questions available',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3572,43 +3620,76 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get backupAndRestore => 'Backup & Restore';
+  String get modelNotConfigured =>
+      'No AI model is configured. Please go to Settings and select a model provider before generating questions.';
 
   @override
-  String get exportBackup => 'Export Backup';
+  String get generateQuestionsFromContent =>
+      'Generate questions from this content';
 
   @override
-  String get exportAllDataDescription => 'Export all your study data';
+  String get generateQuestionsFromContentHint =>
+      'AI will create practice questions based on the uploaded material';
 
   @override
-  String get importBackup => 'Import Backup';
+  String get uploadMaterialsToCreateQuestions =>
+      'Upload materials to create questions';
 
   @override
-  String get importFromFileDescription => 'Restore from a backup file';
+  String get noQuestionsPracticeHint =>
+      'You don\'t have any practice questions yet. Upload study materials to generate questions.';
 
   @override
-  String get backupExported => 'Backup exported successfully';
+  String get uploadMaterials => 'Upload Materials';
 
   @override
-  String get backupExportFailed => 'Failed to export backup';
+  String get questionsToday => 'Questions Today';
 
   @override
-  String get importConfirmTitle => 'Import Backup';
+  String get currentStreak => 'Current Streak';
 
   @override
-  String importPreview(int boxes, int records) {
-    return 'This backup contains $boxes section(s) with $records record(s). Existing data may be overwritten. Continue?';
-  }
+  String get dueForReview => 'Due for Review';
 
   @override
-  String get importSuccess => 'Data restored successfully';
+  String get practiceAtLeastTen =>
+      'Practice at least 10 questions to identify weak areas';
 
   @override
-  String get importFailed => 'Failed to restore data';
+  String get uploadMaterialsToGenerateTopics =>
+      'Upload materials to generate topics';
 
   @override
-  String get invalidBackupFile => 'Invalid backup file';
+  String get confirmExitPractice => 'Exit practice session?';
 
   @override
-  String get selectBackupFile => 'Select backup file';
+  String get confirmExitPracticeBody =>
+      'Your progress in this session will be saved, but you will leave before completing all questions.';
+
+  @override
+  String get stay => 'Stay';
+
+  @override
+  String get exit => 'Exit';
+
+  @override
+  String get noQuestionsForSubject =>
+      'No practice questions found for this subject. Try uploading study materials first.';
+
+  @override
+  String get confirmExitFocus => 'End focus session?';
+
+  @override
+  String get confirmExitFocusBody =>
+      'You have an active focus session. Ending it early will save your progress so far.';
+
+  @override
+  String get endSession => 'End Session';
+
+  @override
+  String get sourceWithNoQuestions =>
+      '0 questions — generate questions from this source';
+
+  @override
+  String get requiredField => 'Required field';
 }

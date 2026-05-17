@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../errors/result.dart';
 import '../conversation_memory.dart';
 export '../conversation_memory.dart' show ConversationMemory;
 import '../llm_task_manager.dart';
@@ -45,7 +46,7 @@ class LlmService {
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
 
-  Future<String> chat({
+  Future<Result<String>> chat({
     required String message,
     required String modelId,
     String? systemPrompt,
@@ -54,7 +55,7 @@ class LlmService {
     String feature = 'general',
   }) async {
     if (config.apiKey.isEmpty) {
-      return '';
+      return Result.failure('API key is empty');
     }
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPrompt;
@@ -133,7 +134,7 @@ class LlmService {
     }
   }
 
-  Future<String> _callOpenRouter(
+  Future<Result<String>> _callOpenRouter(
     String message,
     String modelId,
     String systemPrompt, {
@@ -167,10 +168,10 @@ class LlmService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
       _trackUsage(data, modelId, feature, taskId: taskId);
-      return content;
+      return Result.success(content);
     }
     _failTask(taskId, 'OpenRouter API Error: ${response.body}');
-    throw Exception('OpenRouter API Error: ${response.body}');
+    return Result.failure('OpenRouter API Error: ${response.body}');
   }
 
   Stream<String> _streamOpenRouter(
@@ -242,7 +243,7 @@ class LlmService {
     }
   }
 
-  Future<String> _callOllama(
+  Future<Result<String>> _callOllama(
     String message,
     String modelId, {
     ConversationMemory? memory,
@@ -280,10 +281,10 @@ class LlmService {
         inputTokens: _estimateInputTokens(message, ''),
         outputTokens: content.length ~/ 4,
       );
-      return content;
+      return Result.success(content);
     }
     _failTask(taskId, 'Ollama API Error: ${response.body}');
-    throw Exception('Ollama API Error: ${response.body}');
+    return Result.failure('Ollama API Error: ${response.body}');
   }
 
   Stream<String> _streamOllama(
@@ -346,7 +347,7 @@ class LlmService {
     }
   }
 
-  Future<String> _callOpenAI(
+  Future<Result<String>> _callOpenAI(
     String message,
     String modelId,
     String systemPrompt, {
@@ -379,10 +380,10 @@ class LlmService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
       _trackUsage(data, modelId, feature, taskId: taskId);
-      return content;
+      return Result.success(content);
     }
     _failTask(taskId, 'OpenAI API Error: ${response.body}');
-    throw Exception('OpenAI API Error: ${response.body}');
+    return Result.failure('OpenAI API Error: ${response.body}');
   }
 
   Stream<String> _streamOpenAI(

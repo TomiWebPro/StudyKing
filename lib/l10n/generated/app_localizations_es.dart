@@ -687,6 +687,47 @@ class AppLocalizationsEs extends AppLocalizations {
   String get examDateOptional => 'Fecha de Examen (Opcional)';
 
   @override
+  String get backupAndRestore => 'Copia de Seguridad';
+
+  @override
+  String get exportBackup => 'Exportar Copia';
+
+  @override
+  String get exportAllDataDescription => 'Exportar todos tus datos de estudio';
+
+  @override
+  String get importBackup => 'Importar Copia';
+
+  @override
+  String get importFromFileDescription => 'Restaurar desde un archivo de copia';
+
+  @override
+  String get backupExported => 'Copia exportada exitosamente';
+
+  @override
+  String get backupExportFailed => 'Error al exportar la copia';
+
+  @override
+  String get importConfirmTitle => 'Importar Copia de Seguridad';
+
+  @override
+  String importPreview(int boxes, int records) {
+    return 'Esta copia contiene $boxes sección(es) con $records registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?';
+  }
+
+  @override
+  String get importSuccess => 'Datos restaurados exitosamente';
+
+  @override
+  String get importFailed => 'Error al restaurar los datos';
+
+  @override
+  String get invalidBackupFile => 'Archivo de copia no válido';
+
+  @override
+  String get selectBackupFile => 'Seleccionar archivo de copia';
+
+  @override
   String get selectDate => 'Seleccionar fecha';
 
   @override
@@ -808,7 +849,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String questionsCount(int count) {
-    return 'Preguntas: $count';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count preguntas disponibles',
+      one: '1 pregunta disponible',
+      zero: 'No hay preguntas disponibles',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3612,43 +3660,76 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get backupAndRestore => 'Copia de Seguridad';
+  String get modelNotConfigured =>
+      'No hay un modelo de IA configurado. Vaya a Configuración y seleccione un proveedor de modelo antes de generar preguntas.';
 
   @override
-  String get exportBackup => 'Exportar Copia';
+  String get generateQuestionsFromContent =>
+      'Generar preguntas desde este contenido';
 
   @override
-  String get exportAllDataDescription => 'Exportar todos tus datos de estudio';
+  String get generateQuestionsFromContentHint =>
+      'La IA creará preguntas de práctica basadas en el material subido';
 
   @override
-  String get importBackup => 'Importar Copia';
+  String get uploadMaterialsToCreateQuestions =>
+      'Sube materiales para crear preguntas';
 
   @override
-  String get importFromFileDescription => 'Restaurar desde un archivo de copia';
+  String get noQuestionsPracticeHint =>
+      'Aún no tienes preguntas de práctica. Sube materiales de estudio para generar preguntas.';
 
   @override
-  String get backupExported => 'Copia exportada exitosamente';
+  String get uploadMaterials => 'Subir Materiales';
 
   @override
-  String get backupExportFailed => 'Error al exportar la copia';
+  String get questionsToday => 'Preguntas Hoy';
 
   @override
-  String get importConfirmTitle => 'Importar Copia de Seguridad';
+  String get currentStreak => 'Racha Actual';
 
   @override
-  String importPreview(int boxes, int records) {
-    return 'Esta copia contiene $boxes sección(es) con $records registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?';
-  }
+  String get dueForReview => 'Pendientes de Repaso';
 
   @override
-  String get importSuccess => 'Datos restaurados exitosamente';
+  String get practiceAtLeastTen =>
+      'Practica al menos 10 preguntas para identificar áreas débiles';
 
   @override
-  String get importFailed => 'Error al restaurar los datos';
+  String get uploadMaterialsToGenerateTopics =>
+      'Sube materiales para generar temas';
 
   @override
-  String get invalidBackupFile => 'Archivo de copia no válido';
+  String get confirmExitPractice => '¿Salir de la sesión de práctica?';
 
   @override
-  String get selectBackupFile => 'Seleccionar archivo de copia';
+  String get confirmExitPracticeBody =>
+      'Tu progreso en esta sesión se guardará, pero saldrás antes de completar todas las preguntas.';
+
+  @override
+  String get stay => 'Quedarse';
+
+  @override
+  String get exit => 'Salir';
+
+  @override
+  String get noQuestionsForSubject =>
+      'No se encontraron preguntas de práctica para esta materia. Intenta subir materiales de estudio primero.';
+
+  @override
+  String get confirmExitFocus => '¿Finalizar sesión de enfoque?';
+
+  @override
+  String get confirmExitFocusBody =>
+      'Tienes una sesión de enfoque activa. Al finalizarla temprano se guardará tu progreso hasta ahora.';
+
+  @override
+  String get endSession => 'Finalizar Sesión';
+
+  @override
+  String get sourceWithNoQuestions =>
+      '0 preguntas — genera preguntas desde esta fuente';
+
+  @override
+  String get requiredField => 'Campo obligatorio';
 }

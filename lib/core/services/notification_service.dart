@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../constants/app_constants.dart';
 import '../utils/number_format_utils.dart';
 
 class NotificationService {
@@ -53,7 +54,7 @@ class NotificationService {
   }) async {
     final l10n = _l10n;
     final androidDetails = AndroidNotificationDetails(
-      channelId ?? 'studyking_general',
+      channelId ?? NotificationChannelIds.general,
       channelName ?? l10n?.notifChannelGeneral ?? 'StudyKing Notifications',
       channelDescription: l10n?.notifChannelGeneralDesc ?? 'General StudyKing notifications',
       importance: Importance.high,
@@ -84,7 +85,7 @@ class NotificationService {
   }) async {
     final l10n = _l10n;
     final androidDetails = AndroidNotificationDetails(
-      'studyking_daily_reminder',
+      NotificationChannelIds.dailyReminder,
       l10n?.notifChannelDailyReminder ?? 'Daily Study Reminders',
       channelDescription: l10n?.notifChannelDailyReminderDesc ?? 'Daily reminders to study',
       importance: Importance.high,
@@ -109,7 +110,7 @@ class NotificationService {
       remindAt.minute,
     );
     if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      scheduledDate = scheduledDate.add(Timeouts.day);
     }
 
     await plugin.periodicallyShow(
@@ -134,7 +135,7 @@ class NotificationService {
       body: l10n?.notificationTimeToReviewBody(daysSinceLastPractice, topicName)
           ?? 'It\'s been $daysSinceLastPractice days since you practiced "$topicName".',
       payload: 'topic_$topicName',
-      channelId: 'studyking_revision',
+      channelId: NotificationChannelIds.revision,
       channelName: l10n?.notifChannelRevision ?? 'Revision Reminders',
     );
   }
@@ -151,7 +152,7 @@ class NotificationService {
       body: l10n?.notifBodyOverwork(hoursStr)
           ?? 'You\'ve studied $hoursStr hours today. Remember to rest!',
       payload: 'overwork_warning',
-      channelId: 'studyking_wellbeing',
+      channelId: NotificationChannelIds.wellbeing,
       channelName: l10n?.notifChannelWellbeing ?? 'Wellbeing Alerts',
     );
   }
@@ -167,7 +168,7 @@ class NotificationService {
       body: l10n?.notifBodyPlanAdjustment(consecutiveLowDays)
           ?? 'You\'ve had $consecutiveLowDays days of low adherence. Shall we adjust your plan?',
       payload: 'plan_adjustment',
-      channelId: 'studyking_planning',
+      channelId: NotificationChannelIds.planning,
       channelName: l10n?.notifChannelPlanning ?? 'Planning Suggestions',
     );
   }
@@ -185,7 +186,7 @@ class NotificationService {
       body: l10n?.notificationUpcomingLessonBody(lessonTitle, timeStr)
           ?? 'Your lesson "$lessonTitle" starts at $timeStr',
       payload: 'lesson_${startTime.millisecondsSinceEpoch}',
-      channelId: 'studyking_lessons',
+      channelId: NotificationChannelIds.lessons,
       channelName: l10n?.notifChannelLessons ?? 'Lesson Notifications',
     );
   }
@@ -204,7 +205,7 @@ class NotificationService {
       body: l10n?.notifBodyLowMastery('$topicList$suffix')
           ?? 'Low mastery detected in: $topicList$suffix',
       payload: 'weak_topics',
-      channelId: 'studyking_mastery',
+      channelId: NotificationChannelIds.mastery,
       channelName: l10n?.notifChannelMastery ?? 'Mastery Alerts',
     );
   }
@@ -221,7 +222,7 @@ class NotificationService {
       body: l10n?.notificationBadgeUnlockedBody(badgeName, badgeDescription)
           ?? 'You earned the "$badgeName" badge: $badgeDescription',
       payload: 'badge_$badgeName',
-      channelId: 'studyking_badges',
+      channelId: NotificationChannelIds.badges,
       channelName: l10n?.notifChannelBadges ?? 'Badge Notifications',
     );
   }

@@ -1244,6 +1244,84 @@ abstract class AppLocalizations {
   /// **'Exam Date (Optional)'**
   String get examDateOptional;
 
+  /// Section title for backup & restore in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupAndRestore;
+
+  /// Tile title for exporting backup
+  ///
+  /// In en, this message translates to:
+  /// **'Export Backup'**
+  String get exportBackup;
+
+  /// Tile subtitle for export backup
+  ///
+  /// In en, this message translates to:
+  /// **'Export all your study data'**
+  String get exportAllDataDescription;
+
+  /// Tile title for importing backup
+  ///
+  /// In en, this message translates to:
+  /// **'Import Backup'**
+  String get importBackup;
+
+  /// Tile subtitle for import backup
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup file'**
+  String get importFromFileDescription;
+
+  /// Snackbar message when backup export succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Backup exported successfully'**
+  String get backupExported;
+
+  /// Error message when backup export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export backup'**
+  String get backupExportFailed;
+
+  /// Title for import confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Import Backup'**
+  String get importConfirmTitle;
+
+  /// Preview message before importing a backup with box and record counts
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains {boxes} section(s) with {records} record(s). Existing data may be overwritten. Continue?'**
+  String importPreview(int boxes, int records);
+
+  /// Snackbar message when data restore succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Data restored successfully'**
+  String get importSuccess;
+
+  /// Error message when data restore fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to restore data'**
+  String get importFailed;
+
+  /// Error message when backup file format is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid backup file'**
+  String get invalidBackupFile;
+
+  /// Hint text for selecting a backup file
+  ///
+  /// In en, this message translates to:
+  /// **'Select backup file'**
+  String get selectBackupFile;
+
   /// Hint text for date picker button
   ///
   /// In en, this message translates to:
@@ -1466,10 +1544,10 @@ abstract class AppLocalizations {
   /// **'Lesson'**
   String get lesson;
 
-  /// Label showing number of questions
+  /// Shows how many questions are available for practice
   ///
   /// In en, this message translates to:
-  /// **'Questions: {count}'**
+  /// **'{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}'**
   String questionsCount(int count);
 
   /// Subtitle for practice tab showing subject name
@@ -6057,7 +6135,7 @@ abstract class AppLocalizations {
   /// User prompt for question generation
   ///
   /// In en, this message translates to:
-  /// **'Analyze the following content and extract any existing questions it contains.\nAlso generate 3-5 new practice questions based on the content.\nReturn ONLY a JSON array of question objects.\nEach object must have: \"text\" (the question), \"type\" (\"singleChoice\"), \"options\" (list of 4 answer strings), \"correctAnswer\" (the correct option text), \"explanation\" (brief explanation).\n\nContent:\n{content}'**
+  /// **'Analyze the following content and extract any existing questions it contains.\nAlso generate 3-5 new practice questions based on the content.\nReturn ONLY a JSON array of question objects.\nEach object must have: \"text\" (the question), \"type\" (one of: \"singleChoice\", \"multiChoice\", \"typedAnswer\", \"mathExpression\", \"essay\"), \"options\" (list of answer strings, required for singleChoice and multiChoice), \"correctAnswer\" (the correct option text), \"explanation\" (brief explanation).\nFor multiChoice questions, correctAnswer should be the first correct option and include an \"acceptableAnswers\" array with all correct options.\nFor typedAnswer and mathExpression, provide options as an empty list and correctAnswer as the expected answer.\n\nContent:\n{content}'**
   String generateQuestionUserPrompt(String content);
 
   /// Default system prompt for AI assistant
@@ -6090,83 +6168,131 @@ abstract class AppLocalizations {
   /// **'Extract all text visible in this image content.\nReturn only the extracted text, preserving the original formatting as much as possible.\nIf no text is visible, return an empty string.\n\nImage content (base64 or reference): {content}'**
   String ocrUserPrompt(String content);
 
-  /// Section title for backup & restore in settings
+  /// Error shown when user tries to generate questions without configuring a model
   ///
   /// In en, this message translates to:
-  /// **'Backup & Restore'**
-  String get backupAndRestore;
+  /// **'No AI model is configured. Please go to Settings and select a model provider before generating questions.'**
+  String get modelNotConfigured;
 
-  /// Tile title for exporting backup
+  /// Checkbox label to enable question generation during upload
   ///
   /// In en, this message translates to:
-  /// **'Export Backup'**
-  String get exportBackup;
+  /// **'Generate questions from this content'**
+  String get generateQuestionsFromContent;
 
-  /// Tile subtitle for export backup
+  /// Hint text for the question generation checkbox
   ///
   /// In en, this message translates to:
-  /// **'Export all your study data'**
-  String get exportAllDataDescription;
+  /// **'AI will create practice questions based on the uploaded material'**
+  String get generateQuestionsFromContentHint;
 
-  /// Tile title for importing backup
+  /// Subtitle shown when no questions exist yet
   ///
   /// In en, this message translates to:
-  /// **'Import Backup'**
-  String get importBackup;
+  /// **'Upload materials to create questions'**
+  String get uploadMaterialsToCreateQuestions;
 
-  /// Tile subtitle for import backup
+  /// Hint shown on practice tab when there are no questions
   ///
   /// In en, this message translates to:
-  /// **'Restore from a backup file'**
-  String get importFromFileDescription;
+  /// **'You don\'t have any practice questions yet. Upload study materials to generate questions.'**
+  String get noQuestionsPracticeHint;
 
-  /// Snackbar message when backup export succeeds
+  /// Button label to navigate to upload screen
   ///
   /// In en, this message translates to:
-  /// **'Backup exported successfully'**
-  String get backupExported;
+  /// **'Upload Materials'**
+  String get uploadMaterials;
 
-  /// Error message when backup export fails
+  /// Label for questions answered today count
   ///
   /// In en, this message translates to:
-  /// **'Failed to export backup'**
-  String get backupExportFailed;
+  /// **'Questions Today'**
+  String get questionsToday;
 
-  /// Title for import confirmation dialog
+  /// Label for current correct answer streak
   ///
   /// In en, this message translates to:
-  /// **'Import Backup'**
-  String get importConfirmTitle;
+  /// **'Current Streak'**
+  String get currentStreak;
 
-  /// Preview message before importing a backup with box and record counts
+  /// Label for spaced repetition due count
   ///
   /// In en, this message translates to:
-  /// **'This backup contains {boxes} section(s) with {records} record(s). Existing data may be overwritten. Continue?'**
-  String importPreview(int boxes, int records);
+  /// **'Due for Review'**
+  String get dueForReview;
 
-  /// Snackbar message when data restore succeeds
+  /// Message shown when user has too few attempts to determine weak areas
   ///
   /// In en, this message translates to:
-  /// **'Data restored successfully'**
-  String get importSuccess;
+  /// **'Practice at least 10 questions to identify weak areas'**
+  String get practiceAtLeastTen;
 
-  /// Error message when data restore fails
+  /// Message shown when no topics are available yet
   ///
   /// In en, this message translates to:
-  /// **'Failed to restore data'**
-  String get importFailed;
+  /// **'Upload materials to generate topics'**
+  String get uploadMaterialsToGenerateTopics;
 
-  /// Error message when backup file format is invalid
+  /// Title for exit confirmation dialog
   ///
   /// In en, this message translates to:
-  /// **'Invalid backup file'**
-  String get invalidBackupFile;
+  /// **'Exit practice session?'**
+  String get confirmExitPractice;
 
-  /// Hint text for selecting a backup file
+  /// Body for exit confirmation dialog
   ///
   /// In en, this message translates to:
-  /// **'Select backup file'**
-  String get selectBackupFile;
+  /// **'Your progress in this session will be saved, but you will leave before completing all questions.'**
+  String get confirmExitPracticeBody;
+
+  /// Button to stay in current session
+  ///
+  /// In en, this message translates to:
+  /// **'Stay'**
+  String get stay;
+
+  /// Button to exit current session
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get exit;
+
+  /// Message shown when a subject has no questions
+  ///
+  /// In en, this message translates to:
+  /// **'No practice questions found for this subject. Try uploading study materials first.'**
+  String get noQuestionsForSubject;
+
+  /// Title for focus session exit confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'End focus session?'**
+  String get confirmExitFocus;
+
+  /// Body for focus session exit confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'You have an active focus session. Ending it early will save your progress so far.'**
+  String get confirmExitFocusBody;
+
+  /// Button to end the current session
+  ///
+  /// In en, this message translates to:
+  /// **'End Session'**
+  String get endSession;
+
+  /// Label shown for sources that have no generated questions
+  ///
+  /// In en, this message translates to:
+  /// **'0 questions — generate questions from this source'**
+  String get sourceWithNoQuestions;
+
+  /// Semantic label for required field indicator
+  ///
+  /// In en, this message translates to:
+  /// **'Required field'**
+  String get requiredField;
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 
@@ -14,7 +15,7 @@ class FakeLlmForEvaluator extends LlmService {
         );
 
   @override
-  Future<String> chat({
+  Future<Result<String>> chat({
     required String message,
     required String modelId,
     String? systemPrompt,
@@ -22,7 +23,7 @@ class FakeLlmForEvaluator extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    return responseJson;
+    return Result.success(responseJson);
   }
 }
 

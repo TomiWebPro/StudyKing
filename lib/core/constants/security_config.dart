@@ -21,7 +21,7 @@ class SecurityConfig {
   static String encryptionKeyOrThrow() {
     final key = const String.fromEnvironment('STUDYKING_ENCRYPTION_KEY');
     if (key.isEmpty) {
-      throw StateError(
+      throw ArgumentError(
         'Missing STUDYKING_ENCRYPTION_KEY. Use platform keystore-backed provisioning.',
       );
     }
@@ -37,17 +37,17 @@ class SecurityConfig {
     };
     if (defaultLikeValues.contains(normalized) ||
         _placeholderTokenPattern.hasMatch(normalized)) {
-      throw StateError('Unsafe placeholder STUDYKING_ENCRYPTION_KEY detected.');
+      throw ArgumentError('Unsafe placeholder STUDYKING_ENCRYPTION_KEY detected.');
     }
     if (key.length < 32) {
-      throw StateError(
+      throw ArgumentError(
         'STUDYKING_ENCRYPTION_KEY is too short. Minimum length is 32 characters.',
       );
     }
     final hasLetter = RegExp(r'[A-Za-z]').hasMatch(key);
     final hasDigit = RegExp(r'\d').hasMatch(key);
     if (!hasLetter || !hasDigit) {
-      throw StateError(
+      throw ArgumentError(
         'STUDYKING_ENCRYPTION_KEY must include letters and numbers.',
       );
     }
@@ -65,7 +65,7 @@ class SecurityConfig {
     if (env == AppEnvironment.production || kReleaseMode) {
       encryptionKeyOrThrow();
       if (!requireAuthentication(env)) {
-        throw StateError('Authentication must be enabled in production.');
+        throw ArgumentError('Authentication must be enabled in production.');
       }
     }
   }

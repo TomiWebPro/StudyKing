@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -25,6 +26,29 @@ Widget _buildTestApp(Widget widget) {
           ),
     },
   );
+}
+
+/// Helper that pumps [child] shown via [showDialog] so [Navigator.pop] works.
+Future<void> pumpShowDialog(WidgetTester tester, Widget child) async {
+  await tester.pumpWidget(MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
+    home: Builder(
+      builder: (context) => Scaffold(
+        body: ElevatedButton(
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (_) => child,
+          ),
+          child: const Text('Show'),
+        ),
+      ),
+    ),
+  ));
+  await tester.pump();
+  await tester.tap(find.text('Show'));
+  await tester.pump();
 }
 
 void main() {
@@ -140,11 +164,28 @@ void main() {
       expect(checkbox.value, isFalse);
     });
 
-    testWidgets('Get Started calls markCompleted', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
-      await tester.pump();
-      await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
+    testWidgets('Get Started persists completed flag', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+        await tester.pump();
+        await tester.tap(find.text('Get Started'));
+        await tester.pump();
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_completed'), isTrue);
+      });
+    });
+
+    testWidgets('Get Started persists completed flag even when checkbox is checked', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+        await tester.pump();
+        await tester.tap(find.text("Don't show again"));
+        await tester.pump();
+        await tester.tap(find.text('Get Started'));
+        await tester.pump();
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_completed'), isTrue);
+      });
     });
 
     testWidgets('Add Subject navigates to subject selection', (tester) async {
@@ -168,6 +209,32 @@ void main() {
       expect(find.text('Subject Selection'), findsOneWidget);
     });
 
+    testWidgets('Add Subject persists completed flag when checkbox unchecked', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const OnboardingDialog(),
+          routes: {
+            AppRoutes.subjectSelection: (_) => const Scaffold(
+                  body: Center(child: Text('Subject Selection')),
+                ),
+            AppRoutes.quickGuide: (_) => const Scaffold(
+                  body: Center(child: Text('Quick Guide')),
+                ),
+          },
+        ));
+        await tester.pump();
+        await tester.tap(find.text('Add Subject'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_completed'), isTrue);
+        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
+      });
+    });
+
     testWidgets('Quick Guide navigates to quick guide screen', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -189,50 +256,187 @@ void main() {
       expect(find.text('Quick Guide'), findsOneWidget);
     });
 
-    testWidgets('Add Subject with dont-show-again checked calls markDontShowAgain', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: const OnboardingDialog(),
-        routes: {
-          AppRoutes.subjectSelection: (_) => const Scaffold(
-                body: Center(child: Text('Subject Selection')),
-              ),
-          AppRoutes.quickGuide: (_) => const Scaffold(
-                body: Center(child: Text('Quick Guide')),
-              ),
-        },
-      ));
-      await tester.pump();
-      await tester.tap(find.text("Don't show again"));
-      await tester.pump();
-      await tester.tap(find.text('Add Subject'));
-      await tester.pumpAndSettle();
-      expect(find.text('Subject Selection'), findsOneWidget);
+    testWidgets('Quick Guide persists completed flag when checkbox unchecked', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const OnboardingDialog(),
+          routes: {
+            AppRoutes.subjectSelection: (_) => const Scaffold(
+                  body: Center(child: Text('Subject Selection')),
+                ),
+            AppRoutes.quickGuide: (_) => const Scaffold(
+                  body: Center(child: Text('Quick Guide')),
+                ),
+          },
+        ));
+        await tester.pump();
+        await tester.tap(find.text('Quick Guide'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_completed'), isTrue);
+        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
+      });
     });
 
-    testWidgets('Quick Guide with dont-show-again checked calls markDontShowAgain', (tester) async {
+    testWidgets('Add Subject with dont-show-again checked persists dontShowAgain flag', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const OnboardingDialog(),
+          routes: {
+            AppRoutes.subjectSelection: (_) => const Scaffold(
+                  body: Center(child: Text('Subject Selection')),
+                ),
+            AppRoutes.quickGuide: (_) => const Scaffold(
+                  body: Center(child: Text('Quick Guide')),
+                ),
+          },
+        ));
+        await tester.pump();
+        await tester.tap(find.text("Don't show again"));
+        await tester.pump();
+        await tester.tap(find.text('Add Subject'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_dont_show_again'), isTrue);
+      });
+    });
+
+    testWidgets('Quick Guide with dont-show-again checked persists dontShowAgain flag', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const OnboardingDialog(),
+          routes: {
+            AppRoutes.subjectSelection: (_) => const Scaffold(
+                  body: Center(child: Text('Subject Selection')),
+                ),
+            AppRoutes.quickGuide: (_) => const Scaffold(
+                  body: Center(child: Text('Quick Guide')),
+                ),
+          },
+        ));
+        await tester.pump();
+        await tester.tap(find.text("Don't show again"));
+        await tester.pump();
+        await tester.tap(find.text('Quick Guide'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_dont_show_again'), isTrue);
+      });
+    });
+
+    testWidgets('feature icons use theme primary color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      final featureIcons = find.byIcon(Icons.rocket_launch);
+      final featureIcon = tester.widget<Icon>(featureIcons);
+      expect(featureIcon.color, isNotNull);
+    });
+
+    testWidgets('renders all feature icons', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      expect(find.byIcon(Icons.school), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+      expect(find.byIcon(Icons.timer), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+    });
+
+    testWidgets('each feature icon uses primary color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      for (final icon in [
+        Icons.school,
+        Icons.play_arrow,
+        Icons.auto_awesome,
+        Icons.timer,
+        Icons.settings,
+      ]) {
+        final iconWidget = tester.widget<Icon>(find.byIcon(icon));
+        expect(iconWidget.color, isNotNull, reason: '$icon should have a color');
+      }
+    });
+
+    testWidgets('feature titles use fontWeight w600', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      for (final title in ['Subjects', 'Practice', 'Mentor', 'Focus Mode', 'Settings']) {
+        final textWidget = tester.widget<Text>(find.text(title));
+        expect(textWidget.style?.fontWeight, FontWeight.w600);
+      }
+    });
+
+    testWidgets('feature descriptions have a text style applied', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      for (final desc in [
+        'Add and organize your subjects and topics',
+        'Practice with adaptive questions and spaced repetition',
+        'Get personalized study recommendations and nudges',
+        'Stay focused with Pomodoro-style study sessions',
+        'Configure API keys, appearance, and preferences',
+      ]) {
+        final textWidget = tester.widget<Text>(find.text(desc));
+        expect(textWidget.style, isNotNull);
+      }
+    });
+
+    testWidgets('API key notice uses error color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      final noticeText = tester.widget<Text>(
+        find.text('Note: AI features require an API key. Configure one in Settings.'),
+      );
+      expect(noticeText.style?.color, isNotNull);
+    });
+
+    testWidgets('Get Started never persists dontShowAgain flag', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+        await tester.pump();
+        await tester.tap(find.text("Don't show again"));
+        await tester.pump();
+        await tester.tap(find.text('Get Started'));
+        await tester.pump();
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        expect(box.get('onboarding_completed'), isTrue);
+        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
+      });
+    });
+
+    testWidgets('dialog renders rocket icon with theme primary color not null', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      final rocketIcon = tester.widget<Icon>(find.byIcon(Icons.rocket_launch));
+      expect(rocketIcon.color, isNotNull);
+    });
+
+    testWidgets('OnboardingDialog renders correctly in dark theme', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
-        home: const OnboardingDialog(),
-        routes: {
-          AppRoutes.subjectSelection: (_) => const Scaffold(
-                body: Center(child: Text('Subject Selection')),
-              ),
-          AppRoutes.quickGuide: (_) => const Scaffold(
-                body: Center(child: Text('Quick Guide')),
-              ),
-        },
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData.dark(),
+        home: Scaffold(body: const OnboardingDialog()),
       ));
       await tester.pump();
-      await tester.tap(find.text("Don't show again"));
-      await tester.pump();
-      await tester.tap(find.text('Quick Guide'));
-      await tester.pumpAndSettle();
+      expect(find.text('Welcome to StudyKing'), findsOneWidget);
+      expect(find.text('Add Subject'), findsOneWidget);
       expect(find.text('Quick Guide'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
     });
   });
 
@@ -268,12 +472,10 @@ void main() {
     });
 
     testWidgets('Configure Now navigates to api config', (tester) async {
-      final observer = NavigatorObserver();
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
-        navigatorObservers: [observer],
           home: Scaffold(
             body: ApiKeyBanner(onDismiss: () {}),
           ),
@@ -295,6 +497,46 @@ void main() {
       ));
       await tester.pump();
       expect(find.byIcon(Icons.key), findsOneWidget);
+    });
+
+    testWidgets('key icon uses orange color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        ApiKeyBanner(onDismiss: () {}),
+      ));
+      await tester.pump();
+      final keyIcon = tester.widget<Icon>(find.byIcon(Icons.key));
+      expect(keyIcon.color, Colors.orange);
+    });
+
+    testWidgets('ApiKeyBanner renders correctly in dark theme', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData.dark(),
+        home: Scaffold(
+          body: ApiKeyBanner(onDismiss: () {}),
+        ),
+      ));
+      await tester.pump();
+      expect(
+        find.text('StudyKing needs an API key to use AI features. Configure one now.'),
+        findsOneWidget,
+      );
+      expect(find.text('Configure Now'), findsOneWidget);
+      expect(find.text('Dismiss'), findsOneWidget);
+    });
+
+    testWidgets('ApiKeyBanner onDismiss is called from button callback', (tester) async {
+      int dismissCount = 0;
+      await tester.pumpWidget(_buildTestApp(
+        ApiKeyBanner(onDismiss: () => dismissCount++),
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Dismiss'));
+      expect(dismissCount, 1);
+      expect(find.byType(MaterialBanner), findsOneWidget);
     });
   });
 
@@ -321,10 +563,26 @@ void main() {
     });
 
     testWidgets('tapping I Understand pops the dialog', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const LocalDataNotice()));
+      await pumpShowDialog(tester, const LocalDataNotice());
       await tester.pump();
+      expect(find.byType(LocalDataNotice), findsOneWidget);
       await tester.tap(find.text('I Understand'));
       await tester.pumpAndSettle();
+      expect(find.byType(LocalDataNotice), findsNothing);
+    });
+
+    testWidgets('LocalDataNotice renders correctly in dark theme', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData.dark(),
+        home: Scaffold(body: const LocalDataNotice()),
+      ));
+      await tester.pump();
+      expect(find.text('Local Data Storage'), findsOneWidget);
+      expect(find.text('I Understand'), findsOneWidget);
     });
   });
 }

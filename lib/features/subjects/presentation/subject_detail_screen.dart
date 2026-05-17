@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
@@ -325,7 +326,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           children: [
             _detailRow(l10n.date, formatDateFromContext(context, session.startTime)),
             _detailRow(l10n.duration, formatDurationFromContext(context, session.actualDuration)),
-            _detailRow(l10n.questions, questions.toString()),
+            _detailRow(l10n.questions, formatDecimal(questions.toDouble(), l10n.localeName)),
             if (correct > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

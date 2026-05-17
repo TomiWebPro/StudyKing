@@ -42,10 +42,11 @@ void main() {
           text: 'Hello world',
           modelId: 'text-embedding-3-small',
         );
-        expect(result, [0.1, 0.2, 0.3, 0.4, 0.5]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.1, 0.2, 0.3, 0.4, 0.5]);
       });
 
-      test('throws on API error', () async {
+      test('returns failure on API error', () async {
         final mockClient = MockClient((_) async {
           return http.Response('Server Error', 500);
         });
@@ -54,10 +55,8 @@ void main() {
           apiKey: 'key',
           httpClient: mockClient,
         );
-        expect(
-          () => service.embed(text: 'Hi', modelId: 'm'),
-          throwsA(isA<Exception>()),
-        );
+        final result = await service.embed(text: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
       });
 
       test('handles empty embedding', () async {
@@ -78,7 +77,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'Hi', modelId: 'm');
-        expect(result, isEmpty);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -108,7 +108,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'Test', modelId: 'nomic-embed-text');
-        expect(result, [1.0, 2.0, 3.0]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [1.0, 2.0, 3.0]);
       });
 
       test('uses custom baseUrl for Ollama', () async {
@@ -133,7 +134,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'T', modelId: 'm');
-        expect(result, [0.5]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.5]);
       });
     });
 
@@ -162,7 +164,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'Hello', modelId: 'text-embedding-ada-002');
-        expect(result, [0.1, 0.2]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.1, 0.2]);
       });
 
       test('uses custom baseUrl for OpenAI', () async {
@@ -187,7 +190,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'T', modelId: 'm');
-        expect(result, [0.9]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.9]);
       });
     });
 
@@ -215,7 +219,8 @@ void main() {
           httpClient: mockClient,
         );
         final result = await service.embed(text: 'Hi', modelId: 'm');
-        expect(result, [0.3, 0.6, 0.9]);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.3, 0.6, 0.9]);
       });
     });
   });

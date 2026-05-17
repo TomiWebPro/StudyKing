@@ -65,7 +65,7 @@ class _FakeLlmService extends LlmService {
         );
 
   @override
-  Future<String> chat({
+  Future<Result<String>> chat({
     required String message,
     required String modelId,
     String? systemPrompt,
@@ -73,7 +73,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    return '';
+    return Result.success('');
   }
 }
 

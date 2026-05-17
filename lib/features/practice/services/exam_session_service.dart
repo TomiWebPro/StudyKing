@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -157,7 +158,7 @@ class ExamSessionService {
     timeRemainingNotifier.value = Duration(minutes: config.durationMinutes);
 
     _examTimer?.cancel();
-    _examTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _examTimer = Timer.periodic(Timeouts.second, (_) {
       final elapsed = _clock.now().difference(_examStartTime);
       final remaining = Duration(
         minutes: config.durationMinutes,

@@ -44,6 +44,17 @@ void main() {
       expect(find.text('Questions: 30'), findsOneWidget);
     });
 
+    testWidgets('shows zero-question message for sources without questions', (tester) async {
+      final zeroSources = [
+        const SourceItemData(id: 's1', title: 'Textbook Ch.1', questionCount: 0),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        SourcePracticeSheet(sources: zeroSources, onSourceSelected: (_, __) {}),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('0 questions — generate questions from this source'), findsOneWidget);
+    });
+
     testWidgets('shows source icon for each source item', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SourcePracticeSheet(sources: sources, onSourceSelected: (_, __) {}),

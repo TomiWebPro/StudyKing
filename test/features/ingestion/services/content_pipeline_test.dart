@@ -26,7 +26,7 @@ class _MockLlmService extends LlmService {
   ]''';
 
   @override
-  Future<String> chat({
+  Future<Result<String>> chat({
     required String message,
     required String modelId,
     String? systemPrompt,
@@ -39,16 +39,16 @@ class _MockLlmService extends LlmService {
       throw Exception('Question generation failed');
     }
     if (feature == 'content_classification') {
-      if (classifyShouldFail) return '';
-      return classifyResult;
+      if (classifyShouldFail) return Result.success('');
+      return Result.success(classifyResult);
     }
     if (feature == 'content_summarization') {
-      return summaryResult;
+      return Result.success(summaryResult);
     }
     if (feature == 'question_generation') {
-      return questionResult.isNotEmpty ? questionResult : defaultQuestions;
+      return Result.success(questionResult.isNotEmpty ? questionResult : defaultQuestions);
     }
-    return '';
+    return Result.success('');
   }
 }
 

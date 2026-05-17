@@ -223,9 +223,14 @@ class _FakePendingActionRepository extends PendingActionRepository {
 }
 
 class _FakePlanAdapter extends PlanAdapter {
+  AdherenceDeviation? customDeviation;
+
+  _FakePlanAdapter({AdherenceDeviation? adherenceDeviation})
+      : customDeviation = adherenceDeviation;
+
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
-    return Result.success(const AdherenceDeviation());
+    return Result.success(customDeviation ?? const AdherenceDeviation());
   }
 
   @override
@@ -1486,6 +1491,492 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Pending Actions'), findsNothing);
+      });
+    });
+
+    group('Multi-syllabus input', () {
+      testWidgets('toggle switches to multi-subject mode', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Course/Subject +'), findsNothing);
+
+        await tester.tap(find.text('Subjects'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Course/Subject +'), findsOneWidget);
+        expect(find.byIcon(Icons.add), findsOneWidget);
+      });
+
+      testWidgets('add and remove syllabus entries', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Subjects'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Course/Subject +'));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
+
+        await tester.tap(find.text('Course/Subject +'));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(2));
+
+        await tester.tap(find.byIcon(Icons.remove_circle_outline).first);
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
+      });
+
+      testWidgets('multi-syllabus validation shows snackbar on empty fields', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final masteryRepo = _FakeMasteryGraphRepository();
+        final topicRepo = _FakeTopicRepository();
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: masteryRepo,
+          topicRepository: topicRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Subjects'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Course/Subject +'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Generate Plan'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+      });
+
+      testWidgets('multi-syllabus with valid inputs triggers generation', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final masteryRepo = _FakeMasteryGraphRepository();
+        final topicRepo = _FakeTopicRepository();
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: masteryRepo,
+          topicRepository: topicRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Subjects'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Course/Subject +'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.enterText(find.byType(TextField).at(2), '2');
+        await tester.pump();
+
+        expect(find.text('Generate Plan'), findsOneWidget);
+
+        await tester.tap(find.text('Generate Plan'));
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      });
+    });
+
+    group('Adherence banner', () {
+      testWidgets('shows banner when deviation requires regeneration', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final deviationPlanAdapter = _FakePlanAdapter(
+          adherenceDeviation: const AdherenceDeviation(
+            requiresRegeneration: true,
+            requiresEscalation: false,
+            message: 'You are behind schedule',
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          planAdapter: deviationPlanAdapter,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Redistribute'), findsOneWidget);
+        expect(find.text('Regenerate Plan'), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline), findsOneWidget);
+      });
+
+      testWidgets('banner shows escalation styling when requiresEscalation', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final deviationPlanAdapter = _FakePlanAdapter(
+          adherenceDeviation: const AdherenceDeviation(
+            requiresRegeneration: true,
+            requiresEscalation: true,
+            message: 'Critical: you are far behind',
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          planAdapter: deviationPlanAdapter,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      });
+
+      testWidgets('banner does not show when deviation is null', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Redistribute'), findsNothing);
+      });
+    });
+
+    group('Scheduled lessons', () {
+      testWidgets('shows scheduled lessons section when lessons exist', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final sessionRepo = _FakeSessionRepository();
+        final now = DateTime.now();
+        await sessionRepo.save(Session(
+          id: 'sess-1',
+          studentId: 'test-student',
+          topicId: 'topic-1',
+          subjectId: 'subj-1',
+          startTime: now.add(const Duration(hours: 2)),
+          plannedDurationMinutes: 30,
+          status: SessionStatus.planned,
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          sessionRepository: sessionRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Scheduled Lessons'), findsOneWidget);
+        expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
+      });
+
+      testWidgets('completed lesson shows check icon and line-through title', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final sessionRepo = _FakeSessionRepository();
+        final now = DateTime.now();
+        await sessionRepo.save(Session(
+          id: 'sess-completed',
+          studentId: 'test-student',
+          topicId: 'topic-done',
+          subjectId: 'subj-1',
+          startTime: now.subtract(const Duration(hours: 4)),
+          endTime: now.subtract(const Duration(hours: 3)),
+          completed: true,
+          status: SessionStatus.completed,
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          sessionRepository: sessionRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.play_circle_filled), findsNothing);
+        expect(find.byIcon(Icons.cancel_outlined), findsNothing);
+      });
+
+      testWidgets('play button on scheduled lesson navigates to tutor', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final sessionRepo = _FakeSessionRepository();
+        final now = DateTime.now();
+        await sessionRepo.save(Session(
+          id: 'sess-2',
+          studentId: 'test-student',
+          topicId: 'topic-2',
+          subjectId: 'subj-2',
+          startTime: now.add(const Duration(hours: 2)),
+          plannedDurationMinutes: 45,
+          status: SessionStatus.planned,
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          sessionRepository: sessionRepo,
+          fixedStudentId: 'test-student',
+          onGenerateRoute: (settings) {
+            if (settings.name == '/tutor') {
+              return MaterialPageRoute(
+                builder: (_) => const Scaffold(body: Text('Tutor Screen')),
+              );
+            }
+            return null;
+          },
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.play_circle_filled));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tutor Screen'), findsOneWidget);
+      });
+
+      testWidgets('cancel lesson shows confirmation dialog and cancels', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final sessionRepo = _FakeSessionRepository();
+        final now = DateTime.now();
+        await sessionRepo.save(Session(
+          id: 'sess-cancel',
+          studentId: 'test-student',
+          topicId: 'topic-cancel',
+          subjectId: 'subj-1',
+          startTime: now.add(const Duration(hours: 2)),
+          plannedDurationMinutes: 30,
+          status: SessionStatus.planned,
+        ));
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          sessionRepository: sessionRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.cancel_outlined));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Are you sure you want to cancel this lesson?'), findsOneWidget);
+        expect(find.text('Cancel'), findsWidgets);
+
+        await tester.tap(find.text('Cancel').last);
+        await tester.pumpAndSettle();
+
+        final session = await sessionRepo.get('sess-cancel');
+        expect(session.isSuccess, isTrue);
+      });
+
+      testWidgets('shows more lessons button when > 3 scheduled lessons', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final sessionRepo = _FakeSessionRepository();
+        final now = DateTime.now();
+        for (var i = 0; i < 5; i++) {
+          await sessionRepo.save(Session(
+            id: 'sess-$i',
+            studentId: 'test-student',
+            topicId: 'topic-$i',
+            subjectId: 'subj-1',
+            startTime: now.add(Duration(hours: 2 + i)),
+            plannedDurationMinutes: 30,
+            status: SessionStatus.planned,
+          ));
+        }
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          sessionRepository: sessionRepo,
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('more...'), findsOneWidget);
+      });
+    });
+
+    group('Calendar tab', () {
+      testWidgets('shows empty state when no plan exists', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Calendar'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('No study plan yet'), findsOneWidget);
+      });
+    });
+
+    group('Error and success handling', () {
+      testWidgets('error container shows on study plan tab when error is set', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final masteryRepo = _FakeMasteryGraphRepository();
+        masteryRepo.failOnGenerate = true;
+
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: masteryRepo,
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.enterText(find.byType(TextField).at(2), '2');
+        await tester.pump();
+
+        await tester.tap(find.text('Generate Plan'));
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        expect(find.byType(SnackBar), findsOneWidget);
+      });
+
+      testWidgets('success message shows snackbar', (tester) async {
+        final planRepo = _FakePlanRepository();
+        final existingPlan = PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 30,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 10,
+        );
+        await planRepo.savePlan(existingPlan);
+
+        final masteryRepo = _FakeMasteryGraphRepository();
+        await tester.pumpWidget(_buildTestApp(
+          planRepository: planRepo,
+          masteryGraphRepository: masteryRepo,
+          topicRepository: _FakeTopicRepository(),
+          fixedStudentId: 'test-student',
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
+        await tester.enterText(find.byType(TextField).at(1), '30');
+        await tester.enterText(find.byType(TextField).at(2), '2');
+        await tester.pump();
+
+        await tester.tap(find.text('Generate Plan'));
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        expect(find.byType(SnackBar), findsOneWidget);
       });
     });
 

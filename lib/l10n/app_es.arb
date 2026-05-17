@@ -4975,5 +4975,96 @@
     "placeholders": {
       "content": { "type": "String" }
     }
+  },
+  "modelNotConfigured": "No hay un modelo de IA configurado. Vaya a Configuración y seleccione un proveedor de modelo antes de generar preguntas.",
+  "@modelNotConfigured": {
+    "description": "Error shown when user tries to generate questions without configuring a model"
+  },
+  "generateQuestionsFromContent": "Generar preguntas desde este contenido",
+  "@generateQuestionsFromContent": {
+    "description": "Checkbox label to enable question generation during upload"
+  },
+  "generateQuestionsFromContentHint": "La IA creará preguntas de práctica basadas en el material subido",
+  "@generateQuestionsFromContentHint": {
+    "description": "Hint text for the question generation checkbox"
+  },
+  "questionsCount": "{count,plural, =0{No hay preguntas disponibles} =1{1 pregunta disponible} other{{count} preguntas disponibles}}",
+  "@questionsCount": {
+    "description": "Shows how many questions are available for practice",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "uploadMaterialsToCreateQuestions": "Sube materiales para crear preguntas",
+  "@uploadMaterialsToCreateQuestions": {
+    "description": "Subtitle shown when no questions exist yet"
+  },
+  "noQuestionsPracticeHint": "Aún no tienes preguntas de práctica. Sube materiales de estudio para generar preguntas.",
+  "@noQuestionsPracticeHint": {
+    "description": "Hint shown on practice tab when there are no questions"
+  },
+  "uploadMaterials": "Subir Materiales",
+  "@uploadMaterials": {
+    "description": "Button label to navigate to upload screen"
+  },
+  "questionsToday": "Preguntas Hoy",
+  "@questionsToday": {
+    "description": "Label for questions answered today count"
+  },
+  "currentStreak": "Racha Actual",
+  "@currentStreak": {
+    "description": "Label for current correct answer streak"
+  },
+  "dueForReview": "Pendientes de Repaso",
+  "@dueForReview": {
+    "description": "Label for spaced repetition due count"
+  },
+  "practiceAtLeastTen": "Practica al menos 10 preguntas para identificar áreas débiles",
+  "@practiceAtLeastTen": {
+    "description": "Message shown when user has too few attempts to determine weak areas"
+  },
+  "uploadMaterialsToGenerateTopics": "Sube materiales para generar temas",
+  "@uploadMaterialsToGenerateTopics": {
+    "description": "Message shown when no topics are available yet"
+  },
+  "confirmExitPractice": "¿Salir de la sesión de práctica?",
+  "@confirmExitPractice": {
+    "description": "Title for exit confirmation dialog"
+  },
+  "confirmExitPracticeBody": "Tu progreso en esta sesión se guardará, pero saldrás antes de completar todas las preguntas.",
+  "@confirmExitPracticeBody": {
+    "description": "Body for exit confirmation dialog"
+  },
+  "stay": "Quedarse",
+  "@stay": {
+    "description": "Button to stay in current session"
+  },
+  "exit": "Salir",
+  "@exit": {
+    "description": "Button to exit current session"
+  },
+  "noQuestionsForSubject": "No se encontraron preguntas de práctica para esta materia. Intenta subir materiales de estudio primero.",
+  "@noQuestionsForSubject": {
+    "description": "Message shown when a subject has no questions"
+  },
+  "confirmExitFocus": "¿Finalizar sesión de enfoque?",
+  "@confirmExitFocus": {
+    "description": "Title for focus session exit confirmation dialog"
+  },
+  "confirmExitFocusBody": "Tienes una sesión de enfoque activa. Al finalizarla temprano se guardará tu progreso hasta ahora.",
+  "@confirmExitFocusBody": {
+    "description": "Body for focus session exit confirmation dialog"
+  },
+  "endSession": "Finalizar Sesión",
+  "@endSession": {
+    "description": "Button to end the current session"
+  },
+  "sourceWithNoQuestions": "0 preguntas — genera preguntas desde esta fuente",
+  "@sourceWithNoQuestions": {
+    "description": "Label shown for sources that have no generated questions"
+  },
+  "requiredField": "Campo obligatorio",
+  "@requiredField": {
+    "description": "Semantic label for required field indicator"
   }
 }

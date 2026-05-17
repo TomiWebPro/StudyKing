@@ -1,7 +1,6 @@
 library;
 
 const int _typeIdTopicModel = 0;
-const int _typeIdTopicProgressModel = 1;
 const int _typeIdQuestionModel = 2;
 const int _typeIdSettingsBox = 4;
 const int _typeIdLessonBlockModel = 6;
@@ -24,7 +23,6 @@ const int _typeIdPlanRecommendation = 23;
 const int _typeIdPendingActionModel = 5;
 const int _typeIdBadgeModel = 8;
 const int _typeIdStudentAttempt = 24;
-const int _typeIdMarkschemeLegacy = 25;
 const int _typeIdConversationMessage = 27;
 const int _typeIdTutorSession = 28;
 const int _typeIdRoadmapModel = 29;
@@ -38,7 +36,6 @@ const int _typeIdSession = 36;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
-  _typeIdTopicProgressModel,
   _typeIdQuestionModel,
   _typeIdSettingsBox,
   _typeIdPendingActionModel,
@@ -61,7 +58,6 @@ const List<int> _allTypeIds = [
   _typeIdPlanSummary,
   _typeIdPlanRecommendation,
   _typeIdStudentAttempt,
-  _typeIdMarkschemeLegacy,
   _typeIdConversationMessage,
   _typeIdTutorSession,
   _typeIdRoadmapModel,

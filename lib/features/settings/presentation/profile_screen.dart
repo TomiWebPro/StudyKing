@@ -533,7 +533,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (required) ...[
               const SizedBox(width: 4),
-               Text('*', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+               Semantics(
+                 label: AppLocalizations.of(context)!.requiredField,
+                 child: Text('*', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+               ),
             ],
           ],
         ),

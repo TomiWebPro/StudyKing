@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
@@ -99,7 +101,7 @@ class StudyTimerService {
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _timer = Timer.periodic(Timeouts.second, (_) {
       if (!_isPaused) {
         _elapsedMs += 1000;
         for (final cb in _onTick) {
@@ -126,9 +128,9 @@ class StudyTimerService {
     _logger.d('Session resumed');
   }
 
-  Future<Session> completeSession() async {
+  Future<Result<Session>> completeSession() async {
     if (_currentSession == null) {
-      throw StateError('No active session');
+      return Result.failure('No active session');
     }
 
     _timer?.cancel();
@@ -150,12 +152,12 @@ class StudyTimerService {
     }
 
     _logger.d('Session completed: ${completed.id}');
-    return completed;
+    return Result.success(completed);
   }
 
-  Future<Session> cancelSession() async {
+  Future<Result<Session>> cancelSession() async {
     if (_currentSession == null) {
-      throw StateError('No active session');
+      return Result.failure('No active session');
     }
 
     _timer?.cancel();
@@ -173,7 +175,7 @@ class StudyTimerService {
     _isPaused = false;
 
     _logger.d('Session cancelled: ${cancelled.id}');
-    return cancelled;
+    return Result.success(cancelled);
   }
 
   Future<int> getTodayDurationMs() async {

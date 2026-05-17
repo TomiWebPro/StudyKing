@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/constants/app_constants.dart';
+import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
 import 'llm_chat_service.dart' show LlmProvider;
 
@@ -20,13 +22,13 @@ class EmbeddingService {
   String get _embeddingsUrl {
     switch (provider) {
       case LlmProvider.openRouter:
-        final url = baseUrl.isNotEmpty ? baseUrl : 'https://openrouter.ai/api/v1';
+        final url = baseUrl.isNotEmpty ? baseUrl : ApiConfig.openRouterBaseUrlString;
         return '$url/embeddings';
       case LlmProvider.ollama:
-        final url = baseUrl.isNotEmpty ? baseUrl : 'http://localhost:11434';
+        final url = baseUrl.isNotEmpty ? baseUrl : ApiConfig.ollamaDefaultUrl;
         return '$url/api/embeddings';
       case LlmProvider.openAI:
-        final url = baseUrl.isNotEmpty ? baseUrl : 'https://api.openai.com/v1';
+        final url = baseUrl.isNotEmpty ? baseUrl : ApiConfig.openAIDefaultUrl;
         return '$url/embeddings';
     }
   }
@@ -49,7 +51,7 @@ class EmbeddingService {
     }
   }
 
-  Future<List<double>> embed({
+  Future<Result<List<double>>> embed({
     required String text,
     required String modelId,
   }) async {
@@ -66,12 +68,12 @@ class EmbeddingService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final embedding = data['data'][0]['embedding'] as List;
-        return embedding.map((e) => (e as num).toDouble()).toList();
+        return Result.success(embedding.map((e) => (e as num).toDouble()).toList());
       }
-      throw Exception('Embedding API Error: ${response.statusCode}');
+      return Result.failure('Embedding API Error: ${response.statusCode}');
     } catch (e) {
       _logger.e('Embedding error', e);
-      rethrow;
+      return Result.failure(e.toString());
     }
   }
 }

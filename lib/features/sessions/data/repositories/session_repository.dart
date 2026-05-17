@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -20,7 +21,7 @@ class SessionRepository {
       return Result.success(null);
     } catch (e) {
       _logger.w('Error saving session', e);
-      return Result.failure('Failed to save session: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -30,7 +31,7 @@ class SessionRepository {
       return Result.success(session);
     } catch (e) {
       _logger.w('Error getting session $id', e);
-      return Result.failure('Failed to get session: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -41,22 +42,22 @@ class SessionRepository {
       return Result.success(sessions);
     } catch (e) {
       _logger.w('Error getting all sessions', e);
-      return Result.failure('Failed to get sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     try {
       final start = DateTime(date.year, date.month, date.day);
-      final end = start.add(const Duration(days: 1));
+      final end = start.add(Timeouts.day);
       final all = _box.values.toList();
       final filtered = all.where((s) =>
-          s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+          s.startTime.isAfter(start.subtract(Timeouts.second)) &&
           s.startTime.isBefore(end)).toList();
       return Result.success(filtered);
     } catch (e) {
       _logger.w('Error getting sessions by date', e);
-      return Result.failure('Failed to get sessions by date: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -66,7 +67,7 @@ class SessionRepository {
       return Result.success(all.where((s) => s.type == type).toList());
     } catch (e) {
       _logger.w('Error getting sessions by type', e);
-      return Result.failure('Failed to get sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -76,7 +77,7 @@ class SessionRepository {
       return Result.success(all.where((s) => s.studentId == studentId).toList());
     } catch (e) {
       _logger.w('Error getting sessions by student', e);
-      return Result.failure('Failed to get sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -86,7 +87,7 @@ class SessionRepository {
       return Result.success(all.where((s) => s.subjectId == subjectId).toList());
     } catch (e) {
       _logger.w('Error getting sessions by subject', e);
-      return Result.failure('Failed to get sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -99,7 +100,7 @@ class SessionRepository {
           .toList());
     } catch (e) {
       _logger.w('Error getting sessions by student and subject', e);
-      return Result.failure('Failed to get sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -114,7 +115,7 @@ class SessionRepository {
       return Result.success(filtered.take(limit).toList());
     } catch (e) {
       _logger.w('Error getting recent sessions', e);
-      return Result.failure('Failed to get recent sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -126,7 +127,7 @@ class SessionRepository {
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
       _logger.w('Error getting total study time', e);
-      return Result.failure('Failed to get total study time: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -136,7 +137,7 @@ class SessionRepository {
       return Result.success(all.where((s) => s.isActive).toList());
     } catch (e) {
       _logger.w('Error getting active sessions', e);
-      return Result.failure('Failed to get active sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -146,7 +147,7 @@ class SessionRepository {
       return Result.success(null);
     } catch (e) {
       _logger.w('Error deleting session', e);
-      return Result.failure('Failed to delete session: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -156,7 +157,7 @@ class SessionRepository {
       return Result.success(null);
     } catch (e) {
       _logger.w('Error clearing sessions', e);
-      return Result.failure('Failed to clear sessions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -168,7 +169,7 @@ class SessionRepository {
           todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
       _logger.w('Error getting today duration', e);
-      return Result.failure('Failed to get today duration: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -179,7 +180,7 @@ class SessionRepository {
       return Result.success(todayResult.data!.length);
     } catch (e) {
       _logger.w('Error getting today session count', e);
-      return Result.failure('Failed to get session count: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -190,21 +191,21 @@ class SessionRepository {
       return Result.success(todayResult.data!.where((s) => s.completed).length);
     } catch (e) {
       _logger.w('Error getting completed session count', e);
-      return Result.failure('Failed to get completed count: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
   Future<Result<int>> getWeeklyDurationMs() async {
     try {
       final now = DateTime.now();
-      final weekAgo = now.subtract(const Duration(days: 7));
+      final weekAgo = now.subtract(Timeouts.week);
       final all = _box.values.toList();
       return Result.success(all
           .where((s) => s.startTime.isAfter(weekAgo))
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
       _logger.w('Error getting weekly duration', e);
-      return Result.failure('Failed to get weekly duration: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -228,7 +229,7 @@ class SessionRepository {
       });
     } catch (e) {
       _logger.w('Error getting today stats', e);
-      return Result.failure('Failed to get today stats: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -249,7 +250,7 @@ class SessionRepository {
       });
     } catch (e) {
       _logger.w('Error getting subject stats', e);
-      return Result.failure('Failed to get subject stats: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 }

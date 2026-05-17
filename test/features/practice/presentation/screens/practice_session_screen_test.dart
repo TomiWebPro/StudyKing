@@ -588,6 +588,80 @@ void main() {
       });
     });
 
+    group('back navigation popscope', () {
+      setUp(() {
+        Hive.init(Directory.systemTemp.createTempSync('prac_session_pop_test_').path);
+      });
+
+      testWidgets('shows exit confirmation dialog on back press during session', (tester) async {
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Q1'), findsOneWidget);
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Exit practice session?'), findsOneWidget);
+        expect(find.text('Stay'), findsOneWidget);
+        expect(find.text('Exit'), findsOneWidget);
+      });
+
+      testWidgets('stay keeps session active on back press', (tester) async {
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.text('Stay'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Q1'), findsOneWidget);
+      });
+
+      testWidgets('exit completes session and shows results without route pop', (tester) async {
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        final fakeSessionRepo = FakeSessionRepository();
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          sessionRepo: fakeSessionRepo,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.text('Exit'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Practice Complete!'), findsOneWidget);
+        expect(fakeSessionRepo.sessions.length, 1);
+      });
+    });
+
     group('session completion and navigation', () {
       testWidgets('completes session and pops back to previous route', (tester) async {
         final observer = TestNavigatorObserver();

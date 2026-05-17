@@ -1,5 +1,4 @@
 import '../errors/result.dart';
-import '../errors/exceptions.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -84,8 +83,6 @@ class PlanAdapter {
       }
 
       return Result.success(result);
-    } on AdherenceException {
-      rethrow;
     } catch (e) {
       return Result.failure('Failed to check adherence: $e');
     }

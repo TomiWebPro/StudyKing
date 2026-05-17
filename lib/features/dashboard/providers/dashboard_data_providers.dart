@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
@@ -65,7 +66,8 @@ final dashboardFocusStatsProvider =
       'totalSessions': focusToday.length,
       'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
     });
-  } catch (_) {
+  } catch (e) {
+    const Logger('dashboardFocusStatsProvider').e('Failed to get focus stats', e);
     return null;
   }
 });
@@ -115,7 +117,8 @@ final dashboardBadgesProvider =
         category: (b['category'] as String?) ?? 'general',
       );
     }).toList();
-  } catch (_) {
+  } catch (e) {
+    const Logger('dashboardBadgesProvider').e('Failed to get badges', e);
     return [];
   }
 });

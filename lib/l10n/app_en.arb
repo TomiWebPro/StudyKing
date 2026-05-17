@@ -4975,5 +4975,96 @@
     "placeholders": {
       "content": { "type": "String" }
     }
+  },
+  "modelNotConfigured": "No AI model is configured. Please go to Settings and select a model provider before generating questions.",
+  "@modelNotConfigured": {
+    "description": "Error shown when user tries to generate questions without configuring a model"
+  },
+  "generateQuestionsFromContent": "Generate questions from this content",
+  "@generateQuestionsFromContent": {
+    "description": "Checkbox label to enable question generation during upload"
+  },
+  "generateQuestionsFromContentHint": "AI will create practice questions based on the uploaded material",
+  "@generateQuestionsFromContentHint": {
+    "description": "Hint text for the question generation checkbox"
+  },
+  "questionsCount": "{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}",
+  "@questionsCount": {
+    "description": "Shows how many questions are available for practice",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "uploadMaterialsToCreateQuestions": "Upload materials to create questions",
+  "@uploadMaterialsToCreateQuestions": {
+    "description": "Subtitle shown when no questions exist yet"
+  },
+  "noQuestionsPracticeHint": "You don't have any practice questions yet. Upload study materials to generate questions.",
+  "@noQuestionsPracticeHint": {
+    "description": "Hint shown on practice tab when there are no questions"
+  },
+  "uploadMaterials": "Upload Materials",
+  "@uploadMaterials": {
+    "description": "Button label to navigate to upload screen"
+  },
+  "questionsToday": "Questions Today",
+  "@questionsToday": {
+    "description": "Label for questions answered today count"
+  },
+  "currentStreak": "Current Streak",
+  "@currentStreak": {
+    "description": "Label for current correct answer streak"
+  },
+  "dueForReview": "Due for Review",
+  "@dueForReview": {
+    "description": "Label for spaced repetition due count"
+  },
+  "practiceAtLeastTen": "Practice at least 10 questions to identify weak areas",
+  "@practiceAtLeastTen": {
+    "description": "Message shown when user has too few attempts to determine weak areas"
+  },
+  "uploadMaterialsToGenerateTopics": "Upload materials to generate topics",
+  "@uploadMaterialsToGenerateTopics": {
+    "description": "Message shown when no topics are available yet"
+  },
+  "confirmExitPractice": "Exit practice session?",
+  "@confirmExitPractice": {
+    "description": "Title for exit confirmation dialog"
+  },
+  "confirmExitPracticeBody": "Your progress in this session will be saved, but you will leave before completing all questions.",
+  "@confirmExitPracticeBody": {
+    "description": "Body for exit confirmation dialog"
+  },
+  "stay": "Stay",
+  "@stay": {
+    "description": "Button to stay in current session"
+  },
+  "exit": "Exit",
+  "@exit": {
+    "description": "Button to exit current session"
+  },
+  "noQuestionsForSubject": "No practice questions found for this subject. Try uploading study materials first.",
+  "@noQuestionsForSubject": {
+    "description": "Message shown when a subject has no questions"
+  },
+  "confirmExitFocus": "End focus session?",
+  "@confirmExitFocus": {
+    "description": "Title for focus session exit confirmation dialog"
+  },
+  "confirmExitFocusBody": "You have an active focus session. Ending it early will save your progress so far.",
+  "@confirmExitFocusBody": {
+    "description": "Body for focus session exit confirmation dialog"
+  },
+  "endSession": "End Session",
+  "@endSession": {
+    "description": "Button to end the current session"
+  },
+  "sourceWithNoQuestions": "0 questions \u2014 generate questions from this source",
+  "@sourceWithNoQuestions": {
+    "description": "Label shown for sources that have no generated questions"
+  },
+  "requiredField": "Required field",
+  "@requiredField": {
+    "description": "Semantic label for required field indicator"
   }
 }

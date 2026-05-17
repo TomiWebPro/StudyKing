@@ -187,7 +187,7 @@ void main() {
         config: const EngagementSchedulerConfig(
           checkHour: 9,
           checkMinute: 0,
-          studentIds: ['test-student'],
+          studentId: 'test-student',
         ),
       );
     });

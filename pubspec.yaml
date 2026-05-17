@@ -12,9 +12,6 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  vector_math: ^2.2.0
-
-  # State Management
   flutter_riverpod: ^2.4.11
 
   # Database
@@ -23,9 +20,6 @@ dependencies:
 
   # Networking
   dio: ^5.4.0
-
-  # UI packages
-  cupertino_icons: ^1.0.8
 
   # Storage
   path_provider: ^2.1.2
@@ -36,9 +30,6 @@ dependencies:
 
   # Date formatting
   intl: ^0.20.2
-
-  # State management (used by legacy pages)
-  provider: ^6.1.1
 
   # PDF generation
   pdf: ^3.10.4

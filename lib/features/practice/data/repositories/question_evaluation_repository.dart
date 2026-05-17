@@ -22,7 +22,7 @@ class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
       if (evaluation != null) {
         return Result.success(evaluation);
       }
-      return Result.failure('No evaluation found for question: $questionId');
+      return Result.failure('not_found');
     } catch (e) {
       _logger.e('Error getting evaluation', e);
       return Result.failure(e.toString());

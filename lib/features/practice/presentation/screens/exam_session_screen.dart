@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -93,10 +94,13 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     setState(() {});
   }
 
+  int _totalAvailableQuestions = 0;
+
   Future<void> _loadQuestions() async {
     try {
       final result = await _questionRepo.getBySubject(widget.subjectId);
       if (result.isSuccess && result.data != null && result.data!.isNotEmpty) {
+        _totalAvailableQuestions = result.data!.length;
         _config = ExamConfig(
           durationMinutes: _durationMinutes,
           questionCount: _questionCount,
@@ -112,6 +116,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           _isReloadingQuestions = false;
         });
       } else {
+        _totalAvailableQuestions = 0;
         setState(() {
           _isLoadingConfig = false;
           _isReloadingQuestions = false;
@@ -119,6 +124,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         _showNoQuestionsDialog();
       }
     } catch (e) {
+      _totalAvailableQuestions = 0;
       setState(() {
         _isLoadingConfig = false;
         _isReloadingQuestions = false;
@@ -135,6 +141,14 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         title: Text(l10n.noQuestionsAvailable),
         content: Text(l10n.noQuestionsForSelectedSubject),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.upload,
+                  arguments: widget.subjectId);
+            },
+            child: Text(l10n.uploadMaterials),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(l10n.ok),
@@ -297,7 +311,17 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     final progress = (_currentIndex + 1) / _questions.length;
     final timeRemaining = _examService.timeRemainingNotifier.value;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          navigator.pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(l10n.practiceMode),
         bottom: PreferredSize(
@@ -385,10 +409,68 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
+  Future<bool> _onWillPop() async {
+    if (!_isExamActive || _examFinished) return true;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.confirmExitPractice),
+        content: Text(l10n.confirmExitPracticeBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.stay),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.exit),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      if (_currentAnswer != null && !_isSubmitted) {
+        await _submitAnswer();
+      }
+      _finishExam();
+      return false;
+    }
+    return false;
+  }
+
   Widget _buildConfigScreen(AppLocalizations l10n) {
+    if (_totalAvailableQuestions == 0) {
+      return Scaffold(
+        appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
+        body: Center(
+          child: Padding(
+            padding: ResponsiveUtils.screenPadding(context),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.quiz_outlined, size: 48,
+                    color: Theme.of(context).colorScheme.primaryContainer),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                Text(l10n.noQuestionsPracticeHint,
+                    textAlign: TextAlign.center),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.upload,
+                      arguments: widget.subjectId),
+                  icon: const Icon(Icons.upload),
+                  label: Text(l10n.uploadMaterials),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
       body: Stack(

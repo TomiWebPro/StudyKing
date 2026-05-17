@@ -16,13 +16,6 @@ void main() {
     });
   });
 
-  group('UiConfig', () {
-    test('has valid notification channel', () {
-      expect(UiConfig.notificationChannelId, isNotEmpty);
-      expect(UiConfig.notificationChannelName, isNotEmpty);
-    });
-  });
-
   group('CacheConfig', () {
     test('cache expiration is positive', () {
       expect(CacheConfig.cacheExpiration.inHours, greaterThan(0));

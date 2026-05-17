@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/app_runtime_config.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class PracticeSheetTemplate extends StatelessWidget {
@@ -21,7 +21,7 @@ class PracticeSheetTemplate extends StatelessWidget {
   }) {
     return showModalBottomSheet(
       context: context,
-      shape: bottomSheetShape,
+      shape: AppTheme.bottomSheetShape,
       builder: (_) => PracticeSheetTemplate(
         title: title,
         children: children,

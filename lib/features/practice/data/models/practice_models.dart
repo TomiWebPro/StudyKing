@@ -19,6 +19,11 @@ class PracticeAnswerRecord {
 class PracticeSessionResult {
   final int questionsAnswered;
   final int correctAnswers;
+  final Map<String, double> topicBreakdown;
 
-  PracticeSessionResult({required this.questionsAnswered, required this.correctAnswers});
+  PracticeSessionResult({
+    required this.questionsAnswered,
+    required this.correctAnswers,
+    this.topicBreakdown = const {},
+  });
 }

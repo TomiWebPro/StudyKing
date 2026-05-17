@@ -1,39 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 
-class MockSubjectBox implements Box<Subject> {
+class FakeSubjectRepository extends SubjectRepository {
   final Map<String, Subject> _storage = {};
-  bool _isOpen = true;
 
   @override
-  Iterable<Subject> get values => _storage.values.toList();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    final memberName = invocation.memberName.toString();
-
-    if (memberName.contains('get(')) {
-      final key = invocation.positionalArguments[0] as String;
-      return _storage[key];
-    } else if (memberName.contains('put(')) {
-      final key = invocation.positionalArguments[0] as String;
-      final value = invocation.positionalArguments[1] as Subject;
-      _storage[key] = value;
-      return Future.value();
-    } else if (memberName.contains('delete(')) {
-      final key = invocation.positionalArguments[0] as String;
-      _storage.remove(key);
-      return Future.value();
-    } else if (memberName.contains('get isOpen')) {
-      return _isOpen;
-    }
-
-    return super.noSuchMethod(invocation);
-  }
+  Future<void> init() async {}
 
   void addSubject(Subject subject) {
     _storage[subject.id] = subject;
@@ -44,37 +19,61 @@ class MockSubjectBox implements Box<Subject> {
   }
 
   @override
-  Future<void> close() async {
-    _isOpen = false;
+  Future<Subject?> get(String key) async {
+    return _storage[key];
   }
 
   @override
-  bool get isOpen => _isOpen;
-
-  @override
-  String get name => 'mock-subjects-box';
-
-  @override
-  Iterable<String> get keys => _storage.keys;
-
-  @override
-  Subject? get(dynamic key, {Subject? defaultValue}) {
-    return _storage[key as String] ?? defaultValue;
+  Future<List<Subject>> getAll() async {
+    return _storage.values.toList();
   }
 
   @override
-  Future<void> put(dynamic key, Subject value) async {
-    _storage[key as String] = value;
+  Future<void> save(String key, Subject item) async {
+    _storage[key] = item;
   }
 
   @override
-  Future<void> delete(dynamic key) async {
-    _storage.remove(key as String);
+  Future<void> delete(String key) async {
+    _storage.remove(key);
   }
 
   @override
-  bool containsKey(dynamic key) {
-    return _storage.containsKey(key as String);
+  Future<void> create(Subject subject) async {
+    _storage[subject.id] = subject;
+  }
+
+  @override
+  Future<List<Subject>> getWithTopics(List<String> topicIds) async {
+    return _storage.values
+        .where((s) => s.topicIds.any((id) => topicIds.contains(id)))
+        .toList();
+  }
+
+  @override
+  Future<void> addTopicToSubject(String subjectId, String topicId) async {
+    final subject = _storage[subjectId];
+    if (subject != null) {
+      if (subject.topicIds.contains(topicId)) return;
+      _storage[subjectId] = subject.copyWith(
+        topicIds: [...subject.topicIds, topicId],
+      );
+    }
+  }
+
+  @override
+  Future<void> removeTopicFromSubject(String subjectId, String topicId) async {
+    final subject = _storage[subjectId];
+    if (subject != null) {
+      _storage[subjectId] = subject.copyWith(
+        topicIds: subject.topicIds.where((id) => id != topicId).toList(),
+      );
+    }
+  }
+
+  @override
+  Future<Subject?> getByCode(String code) async {
+    return _storage.values.where((s) => s.code == code).firstOrNull;
   }
 }
 
@@ -104,22 +103,15 @@ Subject createTestSubject({
   );
 }
 
-class MockSubjectRepository extends SubjectRepository {
-  MockSubjectRepository(MockSubjectBox subjectBox);
-
-  @override
-  Future<void> init() async {}
-}
-
 class TestSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
-  final MockSubjectBox _mockBox;
+  final FakeSubjectRepository _repo;
 
-  TestSubjectsRepositoryNotifier(this._mockBox);
+  TestSubjectsRepositoryNotifier(this._repo);
 
   @override
   Future<SubjectRepository> build() async {
     await Future.delayed(const Duration(milliseconds: 10));
-    return MockSubjectRepository(_mockBox);
+    return _repo;
   }
 }
 
@@ -135,10 +127,10 @@ void main() {
   group('SubjectsRepositoryNotifier', () {
     group('initialization', () {
       test('creates repository and returns it from build', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
 
-        final notifier = TestSubjectsRepositoryNotifier(mockBox);
+        final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
         final result = await notifier.build();
 
         expect(result, isA<SubjectRepository>());
@@ -148,10 +140,10 @@ void main() {
       });
 
       test('build returns repository withinitialized data', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Chemistry'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Chemistry'));
 
-        final notifier = TestSubjectsRepositoryNotifier(mockBox);
+        final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
         final result = await notifier.build();
 
         final allSubjects = await result.getAll();
@@ -162,12 +154,12 @@ void main() {
 
     group('subjectsRepositoryProvider', () {
       test('provider returns AsyncValue with data after build', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -182,10 +174,10 @@ void main() {
       });
 
       test('provider returns AsyncValue with loading state initially', () {
-        final mockBox = MockSubjectBox();
+        final fakeRepo = FakeSubjectRepository();
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -214,13 +206,13 @@ void main() {
 
     group('repository operations via provider', () {
       late ProviderContainer container;
-      late MockSubjectBox mockBox;
+      late FakeSubjectRepository fakeRepo;
 
       setUp(() {
-        mockBox = MockSubjectBox();
+        fakeRepo = FakeSubjectRepository();
         container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
       });
@@ -230,8 +222,8 @@ void main() {
       });
 
       test('can get all subjects', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
+        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics'));
+        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -242,7 +234,7 @@ void main() {
       });
 
       test('can get subject by id', () async {
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -266,7 +258,7 @@ void main() {
       });
 
       test('can delete subject', () async {
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -278,8 +270,8 @@ void main() {
       });
 
       test('can filter subjects by topics', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
-        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry', topicIds: ['topic-3']));
+        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
+        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry', topicIds: ['topic-3']));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -291,7 +283,7 @@ void main() {
       });
 
       test('can get subject by code', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics', code: 'IB-PHYS'));
+        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics', code: 'IB-PHYS'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -303,7 +295,7 @@ void main() {
       });
 
       test('can add topic to subject', () async {
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1']));
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1']));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -315,7 +307,7 @@ void main() {
       });
 
       test('can remove topic from subject', () async {
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;
@@ -329,12 +321,12 @@ void main() {
 
     group('AsyncNotifier behavior', () {
       test('state updates reflect in provider', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -346,11 +338,11 @@ void main() {
       });
 
       test('handles empty repository', () async {
-        final mockBox = MockSubjectBox();
+        final fakeRepo = FakeSubjectRepository();
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -366,12 +358,12 @@ void main() {
 
     group('error handling', () {
       test('handles get failure gracefully', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -385,12 +377,12 @@ void main() {
       });
 
       test('handles delete non-existent gracefully', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -405,11 +397,11 @@ void main() {
       });
 
       test('handles getWithTopics on empty repository', () async {
-        final mockBox = MockSubjectBox();
+        final fakeRepo = FakeSubjectRepository();
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -423,12 +415,12 @@ void main() {
       });
 
       test('handles getByCode for non-existent code', () async {
-        final mockBox = MockSubjectBox();
-        mockBox.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', code: 'IB-PHYS'));
+        final fakeRepo = FakeSubjectRepository();
+        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', code: 'IB-PHYS'));
         
         final container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
 
@@ -444,13 +436,13 @@ void main() {
 
     group('getAll via repository', () {
       late ProviderContainer container;
-      late MockSubjectBox mockBox;
+      late FakeSubjectRepository fakeRepo;
 
       setUp(() {
-        mockBox = MockSubjectBox();
+        fakeRepo = FakeSubjectRepository();
         container = ProviderContainer(
           overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(mockBox)),
+            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
           ],
         );
       });
@@ -460,8 +452,8 @@ void main() {
       });
 
       test('returns all subjects', () async {
-        mockBox.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        mockBox.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
+        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics'));
+        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
 
         await container.read(subjectsRepositoryProvider.future);
         final repo = container.read(subjectsRepositoryProvider).value!;

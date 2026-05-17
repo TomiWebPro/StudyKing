@@ -80,7 +80,7 @@ class _VoiceBarState extends State<VoiceBar> with SingleTickerProviderStateMixin
         if (isListening && _currentTranscription.isNotEmpty)
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsetsDirectional.only(end: 8),
               child: Text(
                 _currentTranscription,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

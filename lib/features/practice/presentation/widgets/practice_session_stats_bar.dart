@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class PracticeSessionStatsBar extends StatelessWidget {
   final String? elapsedTime;
@@ -56,8 +56,8 @@ class PracticeSessionStatsBar extends StatelessWidget {
             child: _buildMiniStat(context, l10n.score, scoreValue, Icons.star, _getColorForScore(context, currentIndex > 0 ? correctAnswers / (currentIndex + 1) : 0)),
           ),
           Semantics(
-            label: '${l10n.correct}: $correctAnswers',
-            child: _buildMiniStat(context, l10n.correct, correctAnswers.toString(), Icons.check_circle, Theme.of(context).colorScheme.primary),
+            label: '${l10n.correct}: ${formatDecimal(correctAnswers.toDouble(), l10n.localeName)}',
+            child: _buildMiniStat(context, l10n.correct, formatDecimal(correctAnswers.toDouble(), l10n.localeName), Icons.check_circle, Theme.of(context).colorScheme.primary),
           ),
         ],
       ),

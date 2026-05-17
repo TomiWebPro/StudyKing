@@ -21,10 +21,10 @@ void main() {
       expect(meter, isNotNull);
     });
 
-    test('apiKeyValueProvider mirrors apiKeyProvider default', () {
+    test('apiKeyProvider mirrors apiKeyProvider default', () {
       final container = ProviderContainer();
       addTearDown(() => container.dispose());
-      expect(container.read(apiKeyValueProvider), equals(container.read(apiKeyProvider)));
+      expect(container.read(apiKeyProvider), equals(container.read(apiKeyProvider)));
     });
   });
 
@@ -71,14 +71,14 @@ void main() {
       expect(service.config.provider, equals(LlmProvider.ollama));
     });
 
-    test('reads apiKeyValueProvider overrides', () {
+    test('reads apiKeyProvider overrides', () {
       final container = ProviderContainer(
         overrides: [
           apiKeyProvider.overrideWith((ref) => 'overridden-key'),
         ],
       );
       addTearDown(() => container.dispose());
-      expect(container.read(apiKeyValueProvider), equals('overridden-key'));
+      expect(container.read(apiKeyProvider), equals('overridden-key'));
     });
 
     test('llmServiceProvider reflects provider change to ollama', () {
@@ -167,8 +167,8 @@ void main() {
       addTearDown(() => container1.dispose());
       addTearDown(() => container2.dispose());
 
-      expect(container1.read(apiKeyValueProvider), equals('container1-key'));
-      expect(container2.read(apiKeyValueProvider), isEmpty);
+      expect(container1.read(apiKeyProvider), equals('container1-key'));
+      expect(container2.read(apiKeyProvider), isEmpty);
     });
   });
 }

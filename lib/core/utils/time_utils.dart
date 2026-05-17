@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import '../../l10n/generated/app_localizations.dart';
 
 String _getDurationDays(int count, AppLocalizations l10n) {
@@ -67,7 +68,7 @@ String formatDate(DateTime? date, {AppLocalizations? l10n}) {
     return l10n?.today ?? 'Today';
   }
   final diff = today.difference(sessionDate);
-  if (diff == const Duration(days: 1)) {
+  if (diff == Timeouts.day) {
     return l10n?.yesterday ?? 'Yesterday';
   }
   final l10nLocale = l10n != null ? l10n.localeName : 'en';
@@ -77,6 +78,23 @@ String formatDate(DateTime? date, {AppLocalizations? l10n}) {
 String formatDurationFromContext(BuildContext context, Duration duration, {bool showDays = false}) {
   final l10n = AppLocalizations.of(context);
   return formatDuration(duration, showDays: showDays, l10n: l10n);
+}
+
+String formatTimer(Duration duration, {AppLocalizations? l10n}) {
+  if (duration.isNegative) return formatTimer(-duration, l10n: l10n);
+  final sep = _getDurationSeparator(l10n);
+  final h = duration.inHours;
+  final m = duration.inMinutes.remainder(60);
+  final s = duration.inSeconds.remainder(60);
+  if (h > 0) {
+    return '${h.toString().padLeft(2, '0')}$sep${m.toString().padLeft(2, '0')}$sep${s.toString().padLeft(2, '0')}';
+  }
+  return '${m.toString().padLeft(2, '0')}$sep${s.toString().padLeft(2, '0')}';
+}
+
+String formatTimerFromContext(BuildContext context, Duration duration) {
+  final l10n = AppLocalizations.of(context);
+  return formatTimer(duration, l10n: l10n);
 }
 
 String formatDateFromContext(BuildContext context, DateTime? date) {

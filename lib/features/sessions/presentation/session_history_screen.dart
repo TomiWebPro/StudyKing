@@ -3,6 +3,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
@@ -398,7 +399,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                     runSpacing: 12,
                     alignment: WrapAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryStat(context, l10n.sessionsLabel, _filteredSessions.length.toString(), Icons.history),
+                      _buildSummaryStat(context, l10n.sessionsLabel, formatDecimal(_filteredSessions.length.toDouble(), l10n.localeName), Icons.history),
                       _buildSummaryStat(context, l10n.totalTime, formatDurationFromContext(context, Duration(minutes: totalMinutes)), Icons.access_time),
                       _buildSummaryStat(
                         context,
@@ -480,8 +481,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           background: Semantics(
             excludeSemantics: true,
             child: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
+            alignment: AlignmentDirectional.centerEnd,
+            padding: const EdgeInsetsDirectional.only(end: 16),
             color: Theme.of(context).colorScheme.error,
             child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
           ),),

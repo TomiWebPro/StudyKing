@@ -1,3 +1,4 @@
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
@@ -39,7 +40,7 @@ class StudyProgressTracker {
         : 0.0;
 
     final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
+    final weekAgo = now.subtract(Timeouts.week);
     final weeklyAttempts = attempts.where((a) => a.timestamp.isAfter(weekAgo)).length;
 
     final today = DateTime(now.year, now.month, now.day);
@@ -129,8 +130,8 @@ class StudyProgressTracker {
       final weekStart = now.subtract(Duration(days: i * 7 + 6));
 
       final weekAttempts = allAttempts.where((a) {
-        return a.timestamp.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-               a.timestamp.isBefore(now.subtract(Duration(days: i * 7)).add(const Duration(days: 1)));
+        return a.timestamp.isAfter(weekStart.subtract(Timeouts.day)) &&
+               a.timestamp.isBefore(now.subtract(Duration(days: i * 7)).add(Timeouts.day));
       }).toList();
 
       final correct = weekAttempts.where((a) => a.isCorrect).length;

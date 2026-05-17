@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
@@ -98,7 +100,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
 
   void _startBreakTimer() {
     _breakTimer?.cancel();
-    _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _breakTimer = Timer.periodic(Timeouts.second, (_) {
       if (!mounted) return;
       setState(() {
         _breakRemaining--;
@@ -186,6 +188,34 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     super.dispose();
   }
 
+  Future<bool> _onWillPop() async {
+    if (!_service.hasActiveSession) return true;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.confirmExitFocus),
+        content: Text(l10n.confirmExitFocusBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.stay),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.endSession),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      await _service.cancelSession();
+      setState(() => _showSetup = true);
+      _loadStats();
+    }
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -199,7 +229,17 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
       );
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: !_service.hasActiveSession,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          navigator.pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(l10n.focusMode),
         actions: [
@@ -231,13 +271,15 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
   Widget _buildBreakView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
-    final m = _breakRemaining ~/ 60;
-    final s = _breakRemaining % 60;
-    return Card(
+    return Semantics(
+      liveRegion: true,
+      label: 'Break remaining ${formatTimer(Duration(seconds: _breakRemaining), l10n: l10n)}',
+      child: Card(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: ResponsiveUtils.cardPadding(context),
@@ -256,7 +298,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
+                formatTimer(Duration(seconds: _breakRemaining), l10n: l10n),
                 style: theme.textTheme.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -272,6 +314,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -342,11 +385,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
               runSpacing: 8,
               children: presets.map((m) {
                 final selected = _selectedMinutes == m;
-                return ChoiceChip(
-                  label: Text(l10n.durationMinutes(m)),
+                return Semantics(
+                  button: true,
                   selected: selected,
-                  onSelected: (v) => setState(() => _selectedMinutes = m),
-                  visualDensity: VisualDensity.adaptivePlatformDensity,
+                  label: '$m minutes',
+                  child: ChoiceChip(
+                    label: Text(l10n.durationMinutes(m)),
+                    selected: selected,
+                    onSelected: (v) => setState(() => _selectedMinutes = m),
+                    visualDensity: VisualDensity.adaptivePlatformDensity,
+                  ),
                 );
               }).toList(),
             ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -36,7 +37,7 @@ class PracticeSessionService {
     _timer?.cancel();
     _sessionStartTime = _clock.now();
     elapsedNotifier.value = Duration.zero;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(Timeouts.second, (timer) {
       elapsedNotifier.value = _clock.now().difference(_sessionStartTime);
     });
   }

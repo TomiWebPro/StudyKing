@@ -7,12 +7,14 @@ import 'package:studyking/features/sessions/providers/session_providers.dart';
 
 void main() {
   group('FocusModeProviders', () {
-    test('sessionRepositoryProvider creates SessionRepository', () {
+    test('sessionRepositoryProvider creates SessionRepository and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final repo = container.read(sessionRepositoryProvider);
-      expect(repo, isA<SessionRepository>());
+      final repo1 = container.read(sessionRepositoryProvider);
+      final repo2 = container.read(sessionRepositoryProvider);
+      expect(repo1, isA<SessionRepository>());
+      expect(repo1, same(repo2));
     });
 
     test('studyTimerServiceProvider is wired to sessionRepositoryProvider', () {
@@ -28,12 +30,14 @@ void main() {
       expect(service.repository, same(overrideRepo));
     });
 
-    test('studyTimerServiceProvider returns a StudyTimerService', () {
+    test('studyTimerServiceProvider returns a StudyTimerService and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final service = container.read(studyTimerServiceProvider);
-      expect(service, isA<StudyTimerService>());
+      final svc1 = container.read(studyTimerServiceProvider);
+      final svc2 = container.read(studyTimerServiceProvider);
+      expect(svc1, isA<StudyTimerService>());
+      expect(svc1, same(svc2));
     });
 
     test('sessionRepositoryProvider can be overridden', () {
@@ -59,6 +63,22 @@ void main() {
         },
         returnsNormally,
       );
+    });
+
+    test('handles error from session repository gracefully', () async {
+      final now = DateTime.now();
+      final repo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final service = container.read(studyTimerServiceProvider);
+      final sessions = await service.repository.getByDate(now);
+      expect(sessions.isSuccess, true);
+      expect(sessions.data, isEmpty);
     });
   });
 }

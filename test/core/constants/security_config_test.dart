@@ -28,5 +28,13 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('requireAuthentication returns true for development', () {
+      expect(SecurityConfig.requireAuthentication(AppEnvironment.development), isTrue);
+    });
+
+    test('requireAuthentication returns true for staging', () {
+      expect(SecurityConfig.requireAuthentication(AppEnvironment.staging), isTrue);
+    });
   });
 }

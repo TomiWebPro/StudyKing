@@ -4,6 +4,7 @@ import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../core/data/models/session_model.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import '../providers/planner_providers.dart';
@@ -563,7 +564,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('${l10n.hoursAbbreviation(goal.targetHoursPerDay.toString())}/${l10n.days}',
+                  Text('${l10n.hoursAbbreviation(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName))}/${l10n.days}',
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),

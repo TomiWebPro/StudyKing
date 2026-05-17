@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
@@ -152,6 +153,20 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         semanticLabel: l10n.noQuestionsAvailable,
         title: Text(l10n.noQuestionsAvailable),
         content: Text(l10n.noQuestionsForSelectedSubject),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.upload,
+                  arguments: widget.args.subjectId);
+            },
+            child: Text(l10n.uploadMaterials),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.ok),
+          ),
+        ],
       ),
     );
   }
@@ -239,18 +254,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _completeSession() async {
-    _sessionService.cancelTimer();
-    if (!_sessionAutoSaved) {
-      _sessionAutoSaved = true;
-      await _sessionService.autoSaveSession(
-        questionsAnswered: _questions.length,
-        correctAnswers: _correctAnswers,
-      );
-    }
-    _recordAdherence();
+    await _finalizeSession();
     if (!mounted) return;
-    setState(() => _isSessionComplete = true);
-
     if (_mistakeQuestionIds.isNotEmpty) {
       _showMistakeReview();
     } else {
@@ -299,12 +304,33 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _sessionService.startTimer();
   }
 
+  Map<String, double> _computeTopicBreakdown() {
+    final topicMap = <String, List<bool>>{};
+    for (final record in _answerRecords) {
+      final question = _questions.where((q) => q.id == record.questionId).firstOrNull;
+      if (question == null) continue;
+      final topicKey = question.topic ?? question.topicId;
+      topicMap.putIfAbsent(topicKey, () => []);
+      topicMap[topicKey]!.add(record.isCorrect);
+    }
+    final breakdown = <String, double>{};
+    for (final entry in topicMap.entries) {
+      final correct = entry.value.where((v) => v).length;
+      breakdown[entry.key] = entry.value.isEmpty
+          ? 0.0
+          : correct / entry.value.length;
+    }
+    return breakdown;
+  }
+
   void _navigateToResults() {
-    Future.delayed(const Duration(milliseconds: 500), () {
+    final breakdown = _computeTopicBreakdown();
+    Future.delayed(Timeouts.ms500, () {
       if (mounted) {
         Navigator.pop(context, PracticeSessionResult(
           questionsAnswered: _questions.length,
           correctAnswers: _correctAnswers,
+          topicBreakdown: breakdown,
         ));
       }
     });
@@ -320,6 +346,49 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       actualQuestions: _questions.length,
       actualMinutes: elapsedMinutes.clamp(1, 480),
     );
+  }
+
+  Future<void> _finalizeSession() async {
+    if (_isSessionComplete) return;
+    _sessionService.cancelTimer();
+    if (!_sessionAutoSaved) {
+      _sessionAutoSaved = true;
+      await _sessionService.autoSaveSession(
+        questionsAnswered: _questions.length,
+        correctAnswers: _correctAnswers,
+      );
+    }
+    _recordAdherence();
+    if (mounted) {
+      setState(() => _isSessionComplete = true);
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    if (_isSessionComplete) return true;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.confirmExitPractice),
+        content: Text(l10n.confirmExitPracticeBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.stay),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.exit),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      await _finalizeSession();
+      return false;
+    }
+    return false;
   }
 
   void _restartSession() {
@@ -363,6 +432,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         totalQuestions: _questions.length,
         correctAnswers: _correctAnswers,
         onPracticeAgain: _restartSession,
+        topicBreakdown: _computeTopicBreakdown(),
       );
     }
 
@@ -370,7 +440,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final progress = (_currentIndex + 1) / _questions.length;
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          navigator.pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(widget.args.isSpacedRepetition
             ? l10n.practiceModeType(l10n.spacedRepetitionMode, question.type.localizedLabel(l10n))
@@ -453,9 +533,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                           return Semantics(
                             liveRegion: true,
                             child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 100),
-                              switchInCurve: Curves.easeIn,
-                              switchOutCurve: Curves.easeOut,
+              duration: Timeouts.ms100,
+              switchInCurve: Curves.easeIn,
+              switchOutCurve: Curves.easeOut,
                               transitionBuilder: (child, animation) {
                                 final isForward = _currentIndex > _previousIndex;
                                 final offset = isForward ? const Offset(0.15, 0.0) : const Offset(-0.15, 0.0);
@@ -479,6 +559,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

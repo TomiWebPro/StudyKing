@@ -7,6 +7,8 @@ export 'data/models/question_model.dart';
 export 'data/models/session_model.dart';
 export 'data/models/subject_model.dart';
 
+export 'extensions/build_context_extensions.dart';
 export 'extensions/iterable_extensions.dart';
+export 'extensions/string_extensions.dart';
 
 export 'utils/utils.dart';

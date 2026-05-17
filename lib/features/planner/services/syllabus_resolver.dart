@@ -1,5 +1,4 @@
 import '../../../core/errors/result.dart';
-import '../../../core/errors/exceptions.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -107,8 +106,6 @@ class SyllabusResolver {
 
       final sortedNodes = _topologicalSort(nodes, topicMap);
       return Result.success(sortedNodes);
-    } on SyllabusException {
-      rethrow;
     } catch (e) {
       return Result.failure(
         l10n?.failedToResolveSyllabus(e.toString()) ?? 'Failed to resolve syllabus: $e',

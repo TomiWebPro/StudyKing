@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 
@@ -532,6 +533,41 @@ void sharedSettingsRepositoryTests({
       expect(retrieved, isNotNull);
       expect(retrieved!.id, equals('default_profile'));
       expect(retrieved.name, equals(''));
+    });
+  });
+
+  group('saveProvider', () {
+    test('saves and retrieves openRouter provider', () async {
+      final repo = createInitialized();
+      await repo.saveProvider(LlmProvider.openRouter);
+      expect(await repo.getProvider(), LlmProvider.openRouter);
+    });
+
+    test('saves and retrieves ollama provider', () async {
+      final repo = createInitialized();
+      await repo.saveProvider(LlmProvider.ollama);
+      expect(await repo.getProvider(), LlmProvider.ollama);
+    });
+
+    test('saves and retrieves openAI provider', () async {
+      final repo = createInitialized();
+      await repo.saveProvider(LlmProvider.openAI);
+      expect(await repo.getProvider(), LlmProvider.openAI);
+    });
+
+    test('overwrites existing provider', () async {
+      final repo = createInitialized();
+      await repo.saveProvider(LlmProvider.openRouter);
+      await repo.saveProvider(LlmProvider.openAI);
+      expect(await repo.getProvider(), LlmProvider.openAI);
+    });
+  });
+
+  group('getProvider', () {
+    test('defaults to openRouter when no provider saved', () async {
+      final repo = createInitialized();
+      final provider = await repo.getProvider();
+      expect(provider, LlmProvider.openRouter);
     });
   });
 

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/routes/app_router.dart';
@@ -62,7 +63,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     } else if (state == AppLifecycleState.resumed && _isTrackingSession && _sessionStartTime != null) {
       _elapsedSeconds = DateTime.now().difference(_sessionStartTime!).inSeconds;
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateElapsed());
+      _timer = Timer.periodic(Timeouts.second, (_) => _updateElapsed());
     }
   }
 
@@ -97,7 +98,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       final hasSessionToday = _allSessions.any((s) => s.startTime.isSameDay(checkDate));
       if (hasSessionToday) {
         streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
+        checkDate = checkDate.subtract(Timeouts.day);
       } else {
         break;
       }
@@ -113,7 +114,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       _elapsedSeconds = 0;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateElapsed());
+    _timer = Timer.periodic(Timeouts.second, (_) => _updateElapsed());
   }
 
   void _updateElapsed() {
@@ -194,7 +195,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           );
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to track plan adherence after session', e);
+    }
 
     // Track mastery improvement for topics practiced
     try {
@@ -208,7 +211,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           await instrumentation.trackMasteryImprovement(studentId, state.topicId);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to track mastery improvement after session', e);
+    }
 
     if (!mounted) return;
 
@@ -343,7 +348,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                     children: [
                       if (_allSessions.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(right: 4),
+                          padding: const EdgeInsetsDirectional.only(end: 4),
                           child: Text(
                             l10n.ofLabel(_sortedSessions.take(5).length, _allSessions.length),
                             style: theme.textTheme.bodySmall,

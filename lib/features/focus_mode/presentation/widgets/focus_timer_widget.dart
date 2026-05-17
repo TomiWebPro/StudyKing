@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FocusTimerWidget extends StatefulWidget {
@@ -44,7 +46,7 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: Timeouts.second,
     );
   }
 
@@ -80,16 +82,6 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
       _pulseController.stop();
       _pulseController.reset();
     }
-  }
-
-  String _formatTime(int seconds) {
-    final h = seconds ~/ 3600;
-    final m = (seconds % 3600) ~/ 60;
-    final s = seconds % 60;
-    if (h > 0) {
-      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    }
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -162,17 +154,17 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                     Semantics(
                       liveRegion: true,
                       label: widget.isPaused
-                          ? '${l10n.timerPaused}, ${_formatTime(remaining)}'
+                          ? '${l10n.timerPaused}, ${formatTimer(Duration(seconds: remaining), l10n: l10n)}'
                           : isComplete
-                              ? '${l10n.timerDone}, ${_formatTime(remaining)}'
-                              : '${l10n.timerRemaining}, ${_formatTime(remaining)}',
+                              ? '${l10n.timerDone}, ${formatTimer(Duration(seconds: remaining), l10n: l10n)}'
+                              : '${l10n.timerRemaining}, ${formatTimer(Duration(seconds: remaining), l10n: l10n)}',
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              _formatTime(remaining),
+                              formatTimer(Duration(seconds: remaining), l10n: l10n),
                               style: theme.textTheme.displaySmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: isComplete ? cs.primary : null,
@@ -212,24 +204,36 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (widget.isPaused)
-                      FilledButton.icon(
-                        onPressed: widget.onResume,
-                        icon: const Icon(Icons.play_arrow),
-                        label: Text(l10n.resume),
+                      Semantics(
+                        button: true,
+                        label: l10n.resume,
+                        child: FilledButton.icon(
+                          onPressed: widget.onResume,
+                          icon: const Icon(Icons.play_arrow),
+                          label: Text(l10n.resume),
+                        ),
                       )
                     else
-                      FilledButton.icon(
-                        onPressed: widget.onPause,
-                        icon: const Icon(Icons.pause),
-                        label: Text(l10n.pause),
+                      Semantics(
+                        button: true,
+                        label: l10n.pause,
+                        child: FilledButton.icon(
+                          onPressed: widget.onPause,
+                          icon: const Icon(Icons.pause),
+                          label: Text(l10n.pause),
+                        ),
                       ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: widget.onCancel,
-                      icon: const Icon(Icons.stop),
-                      label: Text(l10n.end),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: cs.error,
+                    Semantics(
+                      button: true,
+                      label: l10n.endSession,
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onCancel,
+                        icon: const Icon(Icons.stop),
+                        label: Text(l10n.end),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: cs.error,
+                        ),
                       ),
                     ),
                   ],
@@ -238,34 +242,50 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (widget.isPaused)
-                      FilledButton.icon(
-                        onPressed: widget.onResume,
-                        icon: const Icon(Icons.play_arrow),
-                        label: Text(l10n.resume),
+                      Semantics(
+                        button: true,
+                        label: l10n.resume,
+                        child: FilledButton.icon(
+                          onPressed: widget.onResume,
+                          icon: const Icon(Icons.play_arrow),
+                          label: Text(l10n.resume),
+                        ),
                       )
                     else
-                      FilledButton.icon(
-                        onPressed: widget.onPause,
-                        icon: const Icon(Icons.pause),
-                        label: Text(l10n.pause),
+                      Semantics(
+                        button: true,
+                        label: l10n.pause,
+                        child: FilledButton.icon(
+                          onPressed: widget.onPause,
+                          icon: const Icon(Icons.pause),
+                          label: Text(l10n.pause),
+                        ),
                       ),
                     const SizedBox(width: 16),
-                    OutlinedButton.icon(
-                      onPressed: widget.onCancel,
-                      icon: const Icon(Icons.stop),
-                      label: Text(l10n.end),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: cs.error,
+                    Semantics(
+                      button: true,
+                      label: l10n.endSession,
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onCancel,
+                        icon: const Icon(Icons.stop),
+                        label: Text(l10n.end),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: cs.error,
+                        ),
                       ),
                     ),
                   ],
                 ),
           const SizedBox(height: 12),
           if (!widget.isPaused && remaining > 0)
-            TextButton.icon(
-              onPressed: widget.onComplete,
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(l10n.markComplete),
+            Semantics(
+              button: true,
+              label: l10n.markComplete,
+              child: TextButton.icon(
+                onPressed: widget.onComplete,
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(l10n.markComplete),
+              ),
             ),
         ],
       ],

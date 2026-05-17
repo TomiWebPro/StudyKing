@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -381,7 +382,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         } else {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 100),
+            duration: Timeouts.ms100,
             curve: Curves.easeOut,
           );
         }

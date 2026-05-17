@@ -49,7 +49,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
         actions: [
           if (activeTasks.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsetsDirectional.only(end: 12),
               child: Chip(
                 label: Text(l10n.activeCount(activeTasks.length)),
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,

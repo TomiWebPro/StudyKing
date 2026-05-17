@@ -127,7 +127,10 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    return textWidget;
+    return Semantics(
+      label: message.content,
+      child: textWidget,
+    );
   }
 
   bool _isEvaluationMessage(String content) {

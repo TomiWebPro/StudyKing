@@ -1,302 +1,173 @@
-# Internationalisation Master: Full Codebase i18n Audit
+# Internationalisation Master — i18n Audit
 
-**Target locale:** Spanish (`es`) — formal Latin American "usted" register per `l10n.yaml`
-**Audit scope:** All `.dart` presentation, service, and prompt files + `.arb` translation files
-**Audit date:** 2026-05-17
+## Scope
 
----
-
-## Severity Key
-
-| Tag | Meaning |
-|---|---|
-| **BLOCKER** | App crashes, user cannot proceed, or data is silently wrong |
-| **MAJOR** | Feature is broken or misleading for non-English users |
-| **MINOR** | Code quality, UX friction, or future-proofing |
+Audit of the StudyKing codebase (`lib/`, `test/`, `lib/l10n/`) for internationalisation (i18n) and localisation (l10n) gaps. Spanish (`es`) is the target locale; recommendations apply to all locales.
 
 ---
 
-## BLOCKER
+## BLOCKER — Bilingual error messages in repositories
 
-### B1. Hardcoded English user-facing dialog in planner_screen.dart
+**Problem:** Repository and service classes construct error messages in English and pass them as the `{error}` parameter to localized ARB strings. The result is a bilingual sentence (e.g. `"Error al guardar la sesión: Failed to save session: ..."`).
 
-**File:** `lib/features/planner/presentation/planner_screen.dart:587`
+**Root cause:** Repositories return `Result.failure('Failed to do X: ${e.toString()}')` — the English message becomes the placeholder value for a localized wrapper.
 
-```dart
-content: const Text('Are you sure you want to cancel this lesson?'),
-```
+**Affected files (24 error sites):**
+- `lib/features/sessions/data/repositories/session_repository.dart` — lines 23, 33, 44, 59, 69, 79, 89, 102, 117, 129, 139, 149, 159, 171, 182, 193, 207, 231, 252
+- `lib/features/practice/data/repositories/question_mastery_state_repository.dart` — lines 35, 47, 69, 86
+- `lib/features/practice/data/repositories/question_evaluation_repository.dart` — lines 28, 38, 64
+- `lib/features/practice/services/spaced_repetition_service.dart` — lines 100, 135, 193, 214, 232
+- `lib/core/services/instrumentation_service.dart` — lines 202, 235
+- `lib/core/data/extraction/transcription_extractor.dart` — line 261
 
-`l10n` is in scope (passed as parameter to `_confirmCancelLesson`) but the content text bypasses it. A Spanish user sees an English confirmation dialog.
+**Fix:** Define `AppLocalizations`-aware error keys in `.arb` files for each error type, or refactor repositories to accept/return error codes that the UI layer translates. **Never embed English prose in `Result.failure()` strings that are passed to localized placeholders.**
 
-**Fix:** Add `cancelLessonConfirmation` key to both ARB files and replace with `Text(l10n.cancelLessonConfirmation)`.
-
----
-
-### B2. Hardcoded English nudge/message strings in mentor_service.dart
-
-**File:** `lib/features/mentor/services/mentor_service.dart`
-
-Multiple user-facing English strings are embedded directly (lines 322, 336, 351, 361, 372–374, 441–445, 458–465, 498–501, 576–579, 600–603). These are shown to the user via the mentor chat or notification system. The system prompt method `_mentorSystemPrompt()` correctly uses `l10n.mentorSystemPrompt`, but the actual nudge messages, scheduling confirmations, and activity warnings are all hardcoded English.
-
-Key examples:
-- Line 322: `'You have studied $todayMinutes minutes today, which exceeds your daily cap...'`
-- Line 336: `'I noticed you had ${lateNight.length} late-night study session(s)...'`
-- Line 351: `'You have $atRiskCount question(s) approaching their review date...'`
-- Line 361: `'Congratulations on your $consecutiveDays-day study streak!...'`
-- Lines 441–603: All scheduling confirmation/error messages are English
-
-Most of these already have corresponding Spanish translations in the ARB files (e.g., `nudgeOverwork`, `nudgeRevision`, `nudgePlanAdjustment`, `lessonScheduled`, etc.) but the code doesn't use them.
-
-**Fix:** Replace each hardcoded message with the corresponding `l10n.xxx()` lookup. Pass `AppLocalizations` to the service or use `lookupAppLocalizations()` (already used for the system prompt).
+**Acceptance criteria:**
+- Spanish users see fully Spanish error messages.
+- No English text bleeds into any user-facing error dialog, snackbar, or toast.
 
 ---
 
-### B3. LLM context prompt is always English in mentor_service.dart
+## MAJOR — Locale-unaware timer / elapsed formatting
 
-**File:** `lib/features/mentor/services/mentor_service.dart:147–230`
+**Problem:** Three timer displays use hardcoded `mm:ss` or `HH:MM:SS` colon-separated formats. The colon separator is ASCII-only and not locale-aware; some locales use different separators (e.g. `H.mm` in some European contexts).
 
-The `_buildContextPrompt()` method constructs the student context block entirely in English:
+**Affected files:**
+- `lib/features/lessons/presentation/lesson_detail_screen.dart:180` — `'${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}'`
+- `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart:90-92` — `_formatTime()` returns `HH:MM:SS` or `MM:SS` with hardcoded colons
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart:259` — `'${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'`
+- `lib/features/focus_mode/presentation/widgets/session_summary_card.dart:119` — `'${s.startTime.hour.toString().padLeft(2, '0')}:${s.startTime.minute.toString().padLeft(2, '0')}'`
 
-```dart
-buffer.writeln('Current student context:');
-buffer.writeln('- Total attempts: ${stats['totalAttempts']}');
-buffer.writeln('- Correct attempts: ${stats['correctAttempts']}');
-// ... all English
-```
+**Fix:** Create a `formatTimer(Duration, localeName)` helper in `lib/core/utils/time_utils.dart` that uses the ARB `durationSeparator` key (already exists: `"durationSeparator": " "` in en, `"durationSeparator": " "` in es) or `NumberFormat` with locale-aware time patterns.
 
-This context is fed to the LLM even when the system prompt is in Spanish. The LLM receives mixed-language input (Spanish system prompt + English context data), which degrades response quality in Spanish.
-
-**Fix:** Either (a) localise the context template strings via ARB, or (b) keep it in `en` as LLM-internal data format but add a leading note like `"Note: context labels are in invariant English regardless of user locale"`.
-
----
-
-## MAJOR
-
-### M1. All teaching/AI tutor prompts are hardcoded English
-
-**File:** `lib/features/teaching/services/prompts/prompts.dart` (entire file, 206 lines)
-
-Every prompt string — lesson plan, tutor instruction, summary, evaluation — is hardcoded English. These are the most substantial user-facing AI interactions.
-
-Key examples:
-- Line 94: `'You are a knowledgeable AI tutor for $subjectId...'`
-- Line 112: `'You are a curriculum designer creating lesson plans...'`
-- Line 116: `'You are an AI tutor for $subjectId teaching "$topicTitle"...'`
-- Lines 119–155: `_buildTutorPrompt()` — full English with phase-based instructions like `'Start the lesson warmly.'`, `'Teach the concept step by step...'`
-- Lines 157–175: `_buildSummaryPrompt()` — English summary instructions
-- Lines 179–203: `_buildEvaluationPrompt()` — English evaluation instructions
-
-**Fix:** Add prompt template keys to ARB files with placeholders for dynamic values (`subjectId`, `topicTitle`, `durationMinutes`, `adaptivePace`, etc.). Replace all prompt builders with `l10n.lessonPlanPrompt(...)`, `l10n.tutorInstructionPrompt(...)`, etc. This is a large but mechanical task.
+**Acceptance criteria:**
+- Timer displays in lesson detail, focus mode, and session summary respect `durationSeparator`.
+- The visual colon `:` is replaced by the locale's preferred separator (currently space for both locales, but could differ for e.g. `fr` or `de`).
 
 ---
 
-### M2. Exercise evaluator prompt is hardcoded English
+## MAJOR — User-facing integer stats use `.toString()` instead of locale-aware formatting
 
-**File:** `lib/features/teaching/services/exercise_evaluator.dart:18–41`
+**Problem:** Several screens display numeric stats using Dart's `.toString()`, which produces a locale-invariant ASCII representation. This is fine for single-digit values but fails for values ≥ 1,000 (no thousands separator) and will be confusing in Spanish where `1000` should render as `1.000` (period as grouping separator).
 
-```dart
-static const String _defaultSystemPrompt = 'You are an expert academic evaluator...';
-String _buildPrompt() { return '''Evaluate this student answer...'''; }
-```
+**Affected files:**
+- `lib/features/practice/presentation/screens/practice_results_screen.dart:39` — `totalQuestions.toString()`
+- `lib/features/practice/presentation/widgets/practice_session_stats_bar.dart:60` — `correctAnswers.toString()`
+- `lib/features/sessions/presentation/session_history_screen.dart:401` — `_filteredSessions.length.toString()`
+- `lib/features/subjects/presentation/subject_detail_screen.dart:328` — `questions.toString()`
+- `lib/features/subjects/presentation/widgets/subject_stats_tab.dart:65` — `totalSessions.toString()`
+- `lib/features/subjects/presentation/widgets/subject_stats_tab.dart:89` — `totalQuestions.toString()`
 
-**Fix:** Add to ARB and use `l10n.evaluatorSystemPrompt` and `l10n.evaluatorPrompt(...)`.
+**Fix:** Replace `.toString()` with `formatDecimal(value.toDouble(), localeName)` from `lib/core/utils/number_format_utils.dart`.
 
----
-
-### M3. Content ingestion prompts are hardcoded English
-
-**File:** `lib/features/ingestion/services/content_pipeline.dart:238–331`
-
-Three prompt sets — classification (line 238), summarization (line 284), question generation (line 318) — are all English.
-
-**Fix:** Add ARB keys for each prompt template and use locale-aware lookups.
+**Acceptance criteria:**
+- Spanish users see `1.234` instead of `1234`.
+- English users continue to see `1,234`.
 
 ---
 
-### M4. LLM default system prompt is hardcoded English
+## MAJOR — Locale-unaware date formatting in Mentor service
 
-**File:** `lib/core/services/llm/llm_chat_service.dart:27`
+**Problem:** Mentor service formats dates using `toLocal().toString().substring(0, 10)` which always produces ISO 8601 format (`2026-05-17`). This is not locale-aware.
 
-```dart
-static const String defaultSystemPrompt = 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
-```
+**Affected files:**
+- `lib/features/mentor/services/mentor_service.dart` — lines 178, 195, 446, 447, 465, 607
 
-This is used as fallback whenever no system prompt is supplied. English-only.
+**Fix:** Use `DateFormat.yMd(localeName)` or `formatDate()` from `lib/core/utils/time_utils.dart` (which already does this for the UI layer, but is not used in the mentor service).
 
-**Fix:** Make `defaultSystemPrompt` accept a locale parameter or remove the default and require callers to supply a locale-appropriate prompt.
-
----
-
-### M5. Extraction prompts (transcription + OCR) are hardcoded English
-
-**Files:**
-- `lib/core/data/extraction/transcription_extractor.dart:274–284`
-- `lib/core/data/extraction/ocr_extractor.dart:116–127`
-
-Both use English-only user and system prompts for AI-powered transcription/OCR.
-
-**Fix:** Add ARB keys and localise.
+**Acceptance criteria:**
+- Spanish dates appear as `17/5/2026` rather than `2026-05-17`.
+- The `formatDate()` helper is consistently used in the mentor service.
 
 ---
 
-### M6. toStringAsFixed used in user-facing and LLM-facing contexts (locale-unsafe)
+## MAJOR — Planner screen passes raw `.toString()` to `hoursAbbreviation`
 
-**Found in 9 locations across 5 files:**
+**Problem:** `lib/features/planner/presentation/planner_screen.dart:411` passes `goal.targetHoursPerDay.toString()` to `l10n.hoursAbbreviation()`. The ARB placeholder for `hoursAbbreviation` is typed as `String` (not `int`), meaning it expects a pre-formatted string. For Spanish users, a value like `2.5` would render as `2.5h` instead of `2,5h`.
 
-| File | Lines | Context |
+**Affected files:**
+- `lib/features/planner/presentation/planner_screen.dart:411`
+
+**Fix:** Use `formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)` before passing to `hoursAbbreviation`.
+
+**Acceptance criteria:**
+- Spanish users see `2,5h` instead of `2.5h`.
+
+---
+
+## MAJOR — Hardcoded English separator in stat row
+
+**Problem:** `lib/features/practice/presentation/screens/practice_results_screen.dart:43` constructs `'$correctAnswers/$totalQuestions'` with a hardcoded `/` separator. The slash is understood in many locales but the overall pattern should be locale-aware (e.g. Spanish might prefer `"Correctas: 5/10"`).
+
+**Affected files:**
+- `lib/features/practice/presentation/screens/practice_results_screen.dart:43`
+
+**Fix:** Use the existing `l10n.correctOf(correctAnswers, totalQuestions)` ARB key instead of manual string interpolation.
+
+---
+
+## MINOR — RTL: Hardcoded `EdgeInsets.only(right: ...)` and `Alignment.centerRight`
+
+**Problem:** Four widgets use `EdgeInsets.only(right: ...)` which does not flip in RTL locales (Arabic, Hebrew, Urdu, etc.). One uses `Alignment.centerRight` instead of `AlignmentDirectional.centerEnd`. These should use `EdgeInsetsDirectional.only(end: ...)` and `AlignmentDirectional.centerEnd`.
+
+**Affected files:**
+- `lib/features/teaching/presentation/widgets/voice_bar.dart:83` — `EdgeInsets.only(right: 8)`
+- `lib/features/sessions/presentation/session_history_screen.dart:483-484` — `Alignment.centerRight` and `EdgeInsets.only(right: 16)`
+- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:52` — `EdgeInsets.only(right: 12)`
+- `lib/features/sessions/presentation/session_tracker_screen.dart:346` — `EdgeInsets.only(right: 4)`
+
+**Fix:** Replace with `EdgeInsetsDirectional.only(end: ...)` and `AlignmentDirectional.centerEnd`.
+
+**Acceptance criteria:**
+- In an RTL locale, padding and alignment properly flip to the leading edge.
+
+---
+
+## MINOR — Hardcoded invalid-region locale identifier
+
+**Problem:** `lib/l10n/generated/app_localizations.dart:66` uses `intl.Intl.canonicalizedLocale(locale.toString())`. If the locale string contains an invalid region subtag (e.g. `es_MX` where `MX` is not an official region for `es`), `canonicalizedLocale` may strip or mangle it. This can cause fallback chains to break.
+
+**Affected files:**
+- `lib/l10n/generated/app_localizations.dart:66` (generated file — review the l10n.yaml configuration)
+
+**Fix:** Ensure `l10n.yaml` sets `suppress-warnings: false` and validates locale tags. Add `es_MX` or other regional variants explicitly if supported.
+
+---
+
+## MINOR — CSV headers use localized strings but CSV is data, not display
+
+**Audit:** Project conventions (AGENTS.md) state "CSV exports should remain in invariant en format". Currently, CSV column headers ARE localised (e.g. `"csvColAccuracy"` exists in both en and es ARB files). This is **acceptable** per current design. Flagging as a potential future concern if CSV consumers (e.g. spreadsheet apps) expect English headers.
+
+**No action required at this time.** Documented for awareness.
+
+---
+
+## MINOR — Duplicate ARB key names across contexts
+
+**Audit:** The key `dismiss` appears once in both EN and ES ARB files (as button label). The key `correctCount` appears as both a session label and a correct-count label (distinct placeholders). The key `questionsCount` has both `questionsCount` and `questionsCountLabel` and `questionsCountMetric`. These duplicates are functional but add maintenance burden.
+
+**Affected keys (EN):**
+- `correctCount` (line 2816) and `correctCountLabel` (line 2794) — near-duplicate semantics
+- `questionsCount` (line 1031) and `questionsCountLabel` (line 1678) and `questionsCountMetric` (line 2391)
+
+**Fix:** Consolidate where possible. Ensure each unique semantic has exactly one key.
+
+---
+
+## Summary Table
+
+| Severity | Count | Key Areas |
 |---|---|---|
-| `lib/features/mentor/services/mentor_service.dart` | 159, 199 | LLM-facing context prompt — uses period decimals, fine for LLM but should be documented |
-| `lib/core/services/progress_export_service.dart` | 73, 88 | CSV export — CSV should stay invariant `en` format (OK per AGENTS.md) |
-| `lib/core/services/study_progress_tracker.dart` | 260, 311 | CSV export — same as above, acceptable |
-| `lib/features/sessions/services/session_export_service.dart` | 30, 32 | CSV export — acceptable |
-| `lib/features/teaching/services/prompts/prompts.dart` | 170 | LLM-facing summary prompt — uses period decimals |
+| BLOCKER | 24 sites | Repositories: hardcoded English in error strings → bilingual output |
+| MAJOR | 10 sites | Timer formatting, `.toString()` on user-facing ints, date formatting, hours abbreviation, stat separator |
+| MINOR | 5 sites | RTL directions, locale identifier, duplicate ARB keys |
 
-**Ruling:** The CSV exports are correct (should stay `en` invariant). The LLM-facing uses are acceptable if documented. However, **if any of these values are shown in UI widgets, they MUST use `number_format_utils.dart`**. Verify each call site:
+## Priority Order for Fixes
 
-- `mentor_service.dart:159`: LLM context only → **OK** (but add comment explaining)
-- `mentor_service.dart:199`: LLM context only → **OK**
-- `prompts.dart:170`: `adaptivePace.toStringAsFixed(1)` → LLM-facing, but an LLM receiving `"1.5"` will produce output referencing `"1.5"` — the Spanish LLM output will contain English-format numbers. Consider formatting with locale-aware `formatDecimal` then noting in the prompt that the comma/period is the user's decimal separator.
-
-**Fix:** For any UI-displayed use, replace with `formatDecimal()` from `number_format_utils.dart`. Add inline comments at all LLM-facing `toStringAsFixed` calls explaining they are intentionally invariant.
-
----
-
-### M7. Hardcoded English semantics/accessibility labels
-
-| File | Line | String |
-|---|---|---|
-| `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` | 160, 163 | `'Decrease duration'` |
-| `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` | 174, 177 | `'Increase duration'` |
-| `lib/features/practice/presentation/screens/practice_session_screen.dart` | 382 | `'Session progress: ${_currentIndex + 1} of ${_questions.length}'` |
-| `lib/features/practice/presentation/screens/exam_session_screen.dart` | 299 | `'Exam progress: ${_currentIndex + 1} of ${_questions.length}'` |
-| `lib/core/widgets/animated_bar_chart.dart` | 140 | `'$day: $count sessions'` (hardcoded `sessions`) |
-
-Screen-reader users in Spanish hear English labels. All of these must use `l10n` lookups.
-
-**Fix:** Add corresponding ARB keys and replace. For `animated_bar_chart.dart`, accept a `semanticsLabelBuilder` callback to avoid coupling the generic widget to `AppLocalizations`.
-
----
-
-### M8. RTL layout: zero support in the codebase
-
-Search results for `TextDirection`, `textDirection:`, `Directionality` — all zero outside of standard `Directionality.of(context)` for margin resolution.
-
-**Files checked (representative sample):**
-- All `presentation/` directories
-- All `core/widgets/` files
-- All custom layout widgets
-
-**No** `Directionality` wrappers, `textDirection:` parameters, or `TextAlign.start`/`TextAlign.end` usage. Hardcoded `TextAlign.left` and `TextAlign.center` are used throughout.
-
-This means if Arabic, Hebrew, Persian, or Urdu locales are ever added, every screen will be broken (left-aligned text in a right-to-left language).
-
-**Fix:** As a first step, convert ALL `TextAlign.left` → `TextAlign.start` and `TextAlign.right` → `TextAlign.end`. This is a mechanical find-and-replace. Add a lint rule to prevent regressions. Full RTL support is a larger effort requiring layout reviews.
-
----
-
-### M9. Inconsistent "tú" vs "usted" register in Spanish ARB
-
-Per `l10n.yaml`: `"'es' targets neutral Latin American Spanish (formal 'usted' register)."`
-
-But one translation uses informal "tú":
-
-| Key | Line | Value | Register |
-|---|---|---|---|
-| `uploadPrompt` | 851 | `"¿Deseas subir material de estudio para {subject}?"` | ❌ Informal **tú** |
-| All others | — | e.g. `"Por favor, complete todos los campos..."` | ✅ Formal **usted** |
-
-**Fix:** Change `"¿Deseas subir..."` → `"¿Desea subir..."` in `app_es.arb:851`.
-
----
-
-## MINOR
-
-### m1. Weekday abbreviation first-char truncation is locale-unsafe
-
-**File:** `lib/features/planner/presentation/widgets/calendar_view_widget.dart:130`
-
-```dart
-return DateFormat.E(l10n.localeName).format(date).substring(0, 1);
-```
-
-This works for English (`M`, `T`, `W`, `T`, `F`, `S`, `S`) and Spanish (`L`, `M`, `M`, `J`, `V`, `S`, `D`) but will produce collisions in many locales (e.g., German: `M` for both Montag and Mittwoch). For some CJK locales, the first character may not even be the abbreviation.
-
-**Fix:** Either (a) use full weekday names with truncation via `TextOverflow.ellipsis`, (b) use `DateFormat.E(localeName).format(date)` without substring and reduce font size, or (c) maintain an explicit locale→abbreviation mapping.
-
----
-
-### m2. DateFormat('E', localeName) in weekly_chart uses unlocalised fallback
-
-**File:** `lib/features/dashboard/presentation/widgets/weekly_chart.dart:14–21`
-
-```dart
-Map<String, int> _fallbackDayLabels(String localeName) {
-  final now = DateTime.now();
-  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-  return {
-    for (var i = 0; i < 7; i++)
-      DateFormat('E', localeName).format(startOfWeek.add(Duration(days: i))): 0,
-  };
-}
-```
-
-The `DateFormat` construction uses the locale correctly, but the method is called `_fallbackDayLabels` and only runs when `weeklyTrend` is empty — meaning the chart still shows empty bars with locale-aware day labels. This is **correct** in the current form, but the `'E'` pattern (not `EEE`) may not work identically across all `intl` data versions. Change to `DateFormat.EEEE` or keep `DateFormat.E` but add a comment noting it's intentionally short.
-
-**Fix:** No urgent change needed, but consider `DateFormat.EEEE` for full names with text wrapping to avoid ambiguity.
-
----
-
-### m3. Some ARB descriptions use English only (consistency issue)
-
-Many `@description` fields in the Spanish ARB (`app_es.arb`) are in English. While this doesn't affect runtime behaviour, it makes maintenance harder for Spanish-speaking translators.
-
-Example (app_es.arb:9):
-```json
-"@subjects": {
-  "description": "Bottom navigation label for subjects"
-}
-```
-
-**Fix:** Either translate all `@description` fields to Spanish, or accept that they remain English as per Flutter convention (descriptions are for developers, not users).
-
----
-
-### m4. No gender-neutral Spanish translations
-
-Spanish translations use masculine defaults in several places (e.g., `"Estudioso Diario"` for a badge name). Consider reviewing for gender neutrality or providing both masculine/feminine forms.
-
----
-
-### m5. missing_translation_keys.md / i18n_coverage script could check unused keys
-
-The `scripts/check_i18n_coverage.sh` (referenced in `l10n.yaml`) validates key parity between ARB files. Consider extending it to also warn about:
-- Keys in ARB files that are never referenced in `.dart` files (dead translations)
-- `toStringAsFixed` usages in UI code
-- Hardcoded `Text('...')` strings
-
----
-
-## Translation Quality Notes (Spanish)
-
-These are advisory recommendations, not bugs:
-
-| Key | Current ES | Suggested |
-|---|---|---|
-| `practiceMode` | `Modo de Práctica` | `Modo de práctica` (sentence case per Material Design guidelines) |
-| `studySessionTracker` | `Seguimiento de sesiones de estudio` | `Seguimiento de Sesiones de Estudio` (title case) |
-| `paceLabel` | `{pace}% ritmo` | `Ritmo: {pace}%` (natural Spanish word order) |
-| `weakAreas` | `Áreas por mejorar` | `Áreas débiles` or keep current (euphemism is fine) |
-
----
-
-## Acceptance Criteria
-
-A "fixed" state means:
-
-1. **ARB keys exist** for every user-facing string currently hardcoded in Dart files (B1, B2, M7)
-2. **AI prompts** (M1–M5) accept a locale parameter and use ARB templates with placeholders
-3. **RTL baseline** — all `TextAlign.left/right` are converted to `TextAlign.start/end` (M8)
-4. **Number formatting** — any UI widget displaying a percentage, decimal, or currency uses `number_format_utils.dart` (M6 verified)
-5. **Register consistency** — `uploadPrompt` uses formal `usted` (M9)
-6. **Weekday abbreviation** — calendar view handles CJK and multi-byte locales (m1)
-7. **Script check** — `check_i18n_coverage.sh` is extended to flag hardcoded strings and `toStringAsFixed` in presentation code (m5)
+1. **BLOCKER — Repository error messages** (bilingual output = broken UX)
+2. **MAJOR — Timer/elapsed formatting** (visible in every lesson and focus session)
+3. **MAJOR — `.toString()` on user-facing numbers** (stat screens, results)
+4. **MAJOR — Date formatting in mentor service** (AI mentor output)
+5. **MAJOR — Hours abbreviation in planner** (planning screen)
+6. **MAJOR — Stat row separator** (practice results)
+7. **MINOR — RTL directions** (future-proofing for Arabic/Hebrew)

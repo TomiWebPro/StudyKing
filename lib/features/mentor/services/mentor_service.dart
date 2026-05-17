@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -18,6 +19,7 @@ import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
@@ -175,7 +177,7 @@ class MentorService {
           final nearest = roadmap.milestones.where((m) => !m.isCompleted).firstOrNull;
           buffer.writeln('  * "${roadmap.goal}": $completedMilestones/${roadmap.milestones.length} milestones completed');
           if (nearest != null) {
-            buffer.writeln('    Next milestone: "${nearest.title}" due ${nearest.deadline.toLocal().toString().substring(0, 10)}');
+            buffer.writeln('    Next milestone: "${nearest.title}" due ${DateFormat.yMd(_localeName).format(nearest.deadline.toLocal())}');
           }
         }
       }
@@ -192,7 +194,7 @@ class MentorService {
       buffer.writeln('- Upcoming lessons (next ${upcomingLessons.length > 3 ? 3 : upcomingLessons.length}):');
       for (final lesson in upcomingLessons.take(3)) {
         final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Unknown';
-        buffer.writeln('  * "$title" at ${lesson.startTime.toLocal().toString().substring(0, 16)} (${lesson.plannedDurationMinutes ?? 30}min)');
+        buffer.writeln('  * "$title" at ${DateFormat('y-MM-dd HH:mm', _localeName).format(lesson.startTime.toLocal())} (${lesson.plannedDurationMinutes ?? 30}min)');
       }
     }
 
@@ -424,7 +426,7 @@ class MentorService {
         subjectId = match?.subjectId;
       }
 
-      final proposedTime = DateTime.now().add(const Duration(hours: 1));
+      final proposedTime = DateTime.now().add(Timeouts.hour);
       final nextHour = DateTime(
         proposedTime.year,
         proposedTime.month,
@@ -443,8 +445,8 @@ class MentorService {
         final nextFree = _findNextFreeSlot(existingLessons, 30);
         _memory.addSystemMessage(
           lookupAppLocalizations(Locale(_localeName)).mentorScheduleConflict(
-            nextHour.toLocal().toString().substring(0, 16),
-            nextFree.toLocal().toString().substring(0, 16),
+            DateFormat('y-MM-dd HH:mm', _localeName).format(nextHour.toLocal()),
+            DateFormat('y-MM-dd HH:mm', _localeName).format(nextFree.toLocal()),
           )
         );
         return;
@@ -462,7 +464,7 @@ class MentorService {
         _memory.addSystemMessage(
           lookupAppLocalizations(Locale(_localeName)).mentorScheduleSuccess(
             topicTitle,
-            nextHour.toLocal().toString().substring(0, 16),
+            DateFormat('y-MM-dd HH:mm', _localeName).format(nextHour.toLocal()),
           )
         );
       } else {
@@ -604,7 +606,7 @@ class MentorService {
     _memory.addSystemMessage(
       lookupAppLocalizations(Locale(_localeName)).mentorReschedulePending(
         session.topicTitle,
-        nextFree.toLocal().toString().substring(0, 16),
+        DateFormat('y-MM-dd HH:mm', _localeName).format(nextFree.toLocal()),
       )
     );
   }

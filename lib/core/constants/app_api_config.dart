@@ -17,7 +17,7 @@ class ApiSecrets {
     String? whisperApiKey,
   }) {
     if (openRouterApiKey.isEmpty && BuildConfig.environment == AppEnvironment.production) {
-      throw StateError('Missing OPENROUTER_API_KEY in production.');
+      throw ArgumentError('Missing OPENROUTER_API_KEY in production.');
     }
     return ApiSecrets(
       openRouterApiKey: openRouterApiKey,
@@ -34,7 +34,7 @@ class ApiSecrets {
     final whisper = const String.fromEnvironment('WHISPER_API_KEY');
 
     if (openRouter.isEmpty && BuildConfig.environment == AppEnvironment.production) {
-      throw StateError('Missing OPENROUTER_API_KEY in production.');
+      throw ArgumentError('Missing OPENROUTER_API_KEY in production.');
     }
 
     return ApiSecrets.fromRuntime(
@@ -56,6 +56,9 @@ class ApiConfig {
   static const String openRouterBaseUrlString = 'https://openrouter.ai/api/v1';
   static const String ollamaDefaultUrl = 'http://localhost:11434';
   static const String openAIDefaultUrl = 'https://api.openai.com/v1';
+  static const String youtubetranscriptBaseUrl = 'https://youtubetranscript.com';
+  static const String youtubetranscriptApiUrl = 'https://youtubetranscript.com/api/transcript';
+  static const String userAgent = 'Mozilla/5.0 (compatible; StudyKing/1.0)';
 
   final Uri openRouterBaseUrl;
   final Duration openRouterRequestTimeout;

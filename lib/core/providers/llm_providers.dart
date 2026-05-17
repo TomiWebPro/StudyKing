@@ -29,6 +29,3 @@ final llmServiceProvider = Provider<LlmService>((ref) {
   );
 });
 
-final apiKeyValueProvider = Provider<String>((ref) {
-  return ref.watch(apiKeyProvider);
-});

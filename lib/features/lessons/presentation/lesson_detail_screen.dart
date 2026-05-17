@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/time_utils.dart';
 import '../../../core/errors/handlers.dart';
 import '../../lessons/providers/lesson_providers.dart';
 import 'widgets/lesson_block_card.dart';
@@ -36,9 +38,9 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _timer = Timer.periodic(Timeouts.second, (_) {
       if (mounted) {
-        setState(() => _elapsed = _elapsed + const Duration(seconds: 1));
+        setState(() => _elapsed = _elapsed + Timeouts.second);
       }
     });
   }
@@ -177,7 +179,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
             child: Row(
               children: [
                 Text(
-                  '${_elapsed.inMinutes}:${_elapsed.inSeconds.remainder(60).toString().padLeft(2, '0')}',
+                  formatTimer(_elapsed, l10n: l10n),
                 ),
                 const Spacer(),
                 Semantics(

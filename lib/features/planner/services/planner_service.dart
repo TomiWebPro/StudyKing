@@ -15,6 +15,7 @@ import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
+import '../../../core/utils/logger.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'syllabus_resolver.dart';
 import 'action_executor.dart';
@@ -265,7 +266,8 @@ class PlannerService {
       );
       final result = await sessionRepo.save(session);
       return result.isSuccess;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.scheduleLesson').e('Failed to schedule lesson', e);
       return false;
     }
   }
@@ -278,7 +280,8 @@ class PlannerService {
       final cancelled = result.data!.copyWith(completed: true);
       final saveResult = await sessionRepo.save(cancelled);
       return saveResult.isSuccess;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.cancelLesson').e('Failed to cancel lesson', e);
       return false;
     }
   }
@@ -298,7 +301,8 @@ class PlannerService {
       );
       final saveResult = await sessionRepo.save(rescheduled);
       return saveResult.isSuccess;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.rescheduleLesson').e('Failed to reschedule lesson', e);
       return false;
     }
   }
@@ -312,7 +316,8 @@ class PlannerService {
           .where((s) => !s.completed && s.endTime == null)
           .toList()
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.getScheduledLessons').e('Failed to get scheduled lessons', e);
       return [];
     }
   }
@@ -327,7 +332,8 @@ class PlannerService {
         await pendingActionRepo.markCompleted(actionId);
       }
       return executed;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.acceptPendingAction').e('Failed to accept pending action', e);
       return false;
     }
   }
@@ -337,7 +343,8 @@ class PlannerService {
       await pendingActionRepo.init();
       await pendingActionRepo.markRejected(actionId);
       return true;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerService.dismissPendingAction').e('Failed to dismiss pending action', e);
       return false;
     }
   }

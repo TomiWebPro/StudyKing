@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/app_runtime_config.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
@@ -83,7 +83,7 @@ class SubjectSelectionSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet(
       context: context,
-      shape: bottomSheetShape,
+      shape: AppTheme.bottomSheetShape,
       builder: (_) => SubjectSelectionSheet(
         subjects: subjects,
         onSubjectSelected: onSubjectSelected,

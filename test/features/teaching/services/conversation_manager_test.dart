@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
@@ -37,7 +38,7 @@ class FakeLlmService extends LlmService {
   String summaryResponse = 'Lesson summary mock';
 
   @override
-  Future<String> chat({
+  Future<Result<String>> chat({
     required String message,
     required String modelId,
     String? systemPrompt,
@@ -46,9 +47,9 @@ class FakeLlmService extends LlmService {
     String feature = 'general',
   }) async {
     if (message.contains('Summarize what was covered')) {
-      return summaryResponse;
+      return Result.success(summaryResponse);
     }
-    return chatResponse;
+    return Result.success(chatResponse);
   }
 
   @override

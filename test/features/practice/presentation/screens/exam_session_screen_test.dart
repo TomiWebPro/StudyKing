@@ -667,6 +667,71 @@ void main() {
       });
     });
 
+    group('back navigation popscope', () {
+      testWidgets('shows exit confirmation on back press during active exam', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1'),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await tester.pump();
+        await tester.tap(find.text('Start Exam'));
+        await tester.pump();
+
+        expect(find.text('Q1'), findsOneWidget);
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Exit practice session?'), findsOneWidget);
+        expect(find.text('Stay'), findsOneWidget);
+        expect(find.text('Exit'), findsOneWidget);
+      });
+
+      testWidgets('stay keeps exam active on back press', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1'),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await tester.pump();
+        await tester.tap(find.text('Start Exam'));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('Stay'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Q1'), findsOneWidget);
+      });
+
+      testWidgets('exit finishes exam and shows results', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1', markschemeText: 'A', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await tester.pump();
+        await tester.tap(find.text('Start Exam'));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('Exit'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Practice Complete!'), findsOneWidget);
+      });
+    });
+
     group('mistake review', () {
       testWidgets('shows practice again button on results screen', (tester) async {
         final questions = [

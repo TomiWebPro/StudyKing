@@ -70,6 +70,7 @@ class ConversationManager {
         );
 
   List<ConversationMessage> get messages => _memory.getHistory();
+  String get capturedExerciseQuestion => _lastExerciseQuestion;
 
   Future<void> initialize() async {
     phase = ConversationPhase.greeting;
@@ -96,12 +97,18 @@ class ConversationManager {
       durationMinutes: durationMinutes,
     );
 
-    final response = await _llmService.chat(
+    final result = await _llmService.chat(
       message: entry.userPrompt,
       modelId: _modelId,
       systemPrompt: entry.systemPrompt,
       feature: 'teaching_lesson_plan',
     );
+    if (result.isFailure) {
+      final defaultPlan = LessonPlan.defaultPlan(durationMinutes);
+      lessonPlan = defaultPlan;
+      return defaultPlan;
+    }
+    final response = result.data!;
 
     final plan = LessonPlan.fromJson(response);
     if (plan != null) {
@@ -292,12 +299,14 @@ class ConversationManager {
       adaptivePace: adaptivePace,
     );
 
-    return await _llmService.chat(
+    final result = await _llmService.chat(
       message: entry.userPrompt,
       modelId: _modelId,
       systemPrompt: entry.systemPrompt,
       feature: 'teaching_summary',
     );
+    if (result.isFailure) return '';
+    return result.data!;
   }
 
   TutorSession toSession() {

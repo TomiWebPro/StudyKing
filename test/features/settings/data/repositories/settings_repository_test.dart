@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
@@ -36,6 +37,8 @@ abstract class MockSettingsRepository {
   Future<UserProfile?> getProfileData();
   Future<void> clearSettings();
   Future<void> clearProfile();
+  Future<void> saveProvider(LlmProvider provider);
+  Future<LlmProvider> getProvider();
 }
 
 class InMemorySettingsRepository implements MockSettingsRepository {
@@ -203,6 +206,22 @@ class InMemorySettingsRepository implements MockSettingsRepository {
   Future<void> clearProfile() async {
     _ensureInitialized();
     _profile.clear();
+  }
+
+  @override
+  Future<void> saveProvider(LlmProvider provider) async {
+    _ensureInitialized();
+    _settings['llmProvider'] = provider.name;
+  }
+
+  @override
+  Future<LlmProvider> getProvider() async {
+    _ensureInitialized();
+    final stored = _settings['llmProvider'] as String? ?? 'openRouter';
+    return LlmProvider.values.firstWhere(
+      (p) => p.name == stored,
+      orElse: () => LlmProvider.openRouter,
+    );
   }
 }
 
@@ -431,6 +450,24 @@ void main() {
         expect(settings.totalSessionCount, equals(10));
         expect(settings.totalStudyTimeMs, equals(5000));
         expect(settings.totalQuestions, equals(50));
+      });
+    });
+
+    group('saveProvider / getProvider edge cases', () {
+      test('falls back to openRouter for unknown stored provider name', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        repo._settings['llmProvider'] = 'non_existent_provider';
+        final provider = await repo.getProvider();
+        expect(provider, LlmProvider.openRouter);
+      });
+
+      test('persists provider across multiple getProvider calls', () async {
+        final repo = InMemorySettingsRepository();
+        await repo.init();
+        await repo.saveProvider(LlmProvider.ollama);
+        expect(await repo.getProvider(), LlmProvider.ollama);
+        expect(await repo.getProvider(), LlmProvider.ollama);
       });
     });
 

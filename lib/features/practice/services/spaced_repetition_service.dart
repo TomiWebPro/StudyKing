@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:hive/hive.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -13,7 +14,7 @@ class SpacedRepetitionQueries {
   static List<Question> getQuestionsDueForReview(Box<Question> box,
       {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(const Duration(hours: 1));
+    final cutover = reviewDate.subtract(Timeouts.hour);
     final all = box.values.toList();
     all.sort((a, b) =>
         (a.nextReview ?? DateTime.now())
@@ -33,14 +34,14 @@ class SpacedRepetitionQueries {
 
   static bool isQuestionDueForReview(Question question, {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final dueWindow = reviewDate.subtract(const Duration(minutes: 5));
+    final dueWindow = reviewDate.subtract(Timeouts.fiveMinutes);
     return (question.nextReview ?? DateTime.now()).isBefore(dueWindow);
   }
 
   static Map<String, String> mapQuestionsToStatus(Box<Question> box,
       {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(const Duration(hours: 1));
+    final cutover = reviewDate.subtract(Timeouts.hour);
     return {
       for (final q in box.values)
         q.id:
@@ -70,7 +71,7 @@ class SpacedRepetitionService {
   /// Get questions due for review based on next_review date
   List<Question> getQuestionsDueForReview({DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(const Duration(hours: 1));
+    final cutover = reviewDate.subtract(Timeouts.hour);
     final all = _questionRepo.box.values.toList();
     all.sort((a, b) =>
         (a.nextReview ?? DateTime.now())
@@ -83,7 +84,7 @@ class SpacedRepetitionService {
   /// Check if a question is due for review
   bool isQuestionDueForReview(Question question, {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final dueWindow = reviewDate.subtract(const Duration(minutes: 5));
+    final dueWindow = reviewDate.subtract(Timeouts.fiveMinutes);
     return (question.nextReview ?? DateTime.now()).isBefore(dueWindow);
   }
 
@@ -91,13 +92,13 @@ class SpacedRepetitionService {
   Future<Result<List<Question>>> getQuestionsDue({DateTime? asOf}) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('Question box is not open');
+        return Result.failure('box_closed');
       }
       final dueQuestions = getQuestionsDueForReview(asOf: asOf);
       return Result.success(dueQuestions);
     } catch (e) {
       _logger.e('Error getting due questions', e);
-      return Result.failure('Failed to get due questions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -110,7 +111,7 @@ class SpacedRepetitionService {
     try {
       final question = await _questionRepo.get(questionId);
       if (question == null) {
-        return Result.failure('Question not found: $questionId');
+        return Result.failure('not_found');
       }
 
       final grade = _masteryLevelToGrade(masteryLevel);
@@ -131,8 +132,7 @@ class SpacedRepetitionService {
       return Result.success(null);
     } catch (e) {
       _logger.e('Error updating next review date', e);
-      return Result.failure(
-          'Failed to update next review date: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -178,8 +178,7 @@ class SpacedRepetitionService {
     try {
       final attempt = await _attemptRepo.get(questionId);
       if (attempt == null) {
-        return Result.failure(
-            'No attempts found for question: $questionId');
+        return Result.failure('not_found');
       }
 
       final timestamps = attempt.lastDueDate != null
@@ -189,8 +188,7 @@ class SpacedRepetitionService {
       return Result.success(timestamps);
     } catch (e) {
       _logger.e('Error getting question due times', e);
-      return Result.failure(
-          'Failed to get question due times: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -199,7 +197,7 @@ class SpacedRepetitionService {
       String subjectId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('Question box is not open');
+        return Result.failure('box_closed');
       }
 
       final all = _questionRepo.box.values.toList();
@@ -210,8 +208,7 @@ class SpacedRepetitionService {
       return Result.success(practiceQuestions.toList());
     } catch (e) {
       _logger.e('Error getting practice questions', e);
-      return Result.failure(
-          'Failed to get practice questions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -219,7 +216,7 @@ class SpacedRepetitionService {
   Future<Result<List<Question>>> getTopicTimeDue(String topicId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('Question box is not open');
+        return Result.failure('box_closed');
       }
 
       final all = _questionRepo.box.values.toList();
@@ -228,8 +225,7 @@ class SpacedRepetitionService {
       return Result.success(topicQuestions.toList());
     } catch (e) {
       _logger.e('Error getting topic time due questions', e);
-      return Result.failure(
-          'Failed to get topic time due questions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -240,8 +236,7 @@ class SpacedRepetitionService {
       return Result.success(null);
     } catch (e) {
       _logger.e('Error removing question', e);
-      return Result.failure(
-          'Failed to remove question: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -249,7 +244,7 @@ class SpacedRepetitionService {
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('Question box is not open');
+        return Result.failure('box_closed');
       }
 
       final all = _questionRepo.box.values.toList();
@@ -262,8 +257,7 @@ class SpacedRepetitionService {
       return Result.success(dueCount);
     } catch (e) {
       _logger.e('Error getting subject due count', e);
-      return Result.failure(
-          'Failed to get subject due count: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 }

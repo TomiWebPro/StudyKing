@@ -245,12 +245,14 @@ class ContentPipeline {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.classifyUserPrompt(possibleTopics.join(', '), content);
 
-      final response = await _llmService.chat(
+      final result = await _llmService.chat(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.classifySystemPrompt,
         feature: 'content_classification',
       );
+      if (result.isFailure) return '';
+      final response = result.data!;
 
       final cleaned = response.trim();
       final validTopic = possibleTopics.where(
@@ -285,12 +287,14 @@ class ContentPipeline {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.summarizeUserPrompt(content);
 
-      final response = await _llmService.chat(
+      final result = await _llmService.chat(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.summarizeSystemPrompt,
         feature: 'content_summarization',
       );
+      if (result.isFailure) return '';
+      final response = result.data!;
 
       return response.trim();
     } catch (e) {
@@ -329,12 +333,14 @@ class ContentPipeline {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.generateQuestionUserPrompt(content);
 
-      final response = await _llmService.chat(
+      final result = await _llmService.chat(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
         feature: 'question_generation',
       );
+      if (result.isFailure) return [];
+      final response = result.data!;
 
       final parsed = _parseQuestionResponse(response);
       for (final qData in parsed) {

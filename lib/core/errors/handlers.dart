@@ -4,13 +4,6 @@ import '../../l10n/generated/app_localizations_en.dart';
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
 
-/// Centralized error handling utility
-/// 
-/// Handles errors throughout the application with:
-/// - User-friendly error messages
-/// - Retry mechanisms
-/// - Analytics logging
-/// - Proper error UI feedback
 class AppErrorHandler {
   @visibleForTesting
   static Logger logger = const Logger('AppErrorHandler');
@@ -22,7 +15,6 @@ class AppErrorHandler {
 
   static AppLocalizations get _defaultL10n => AppLocalizationsEn();
 
-  /// Handles an error and displays appropriate feedback
   static Future<void> handleError(
     BuildContext context,
     Object error,
@@ -34,12 +26,11 @@ class AppErrorHandler {
     final exception = convertToAppException(error);
     _showErrorUI(context, exception, retry: retry, retryCallback: retryCallback);
   }
-  
+
   static void handleSyncError(BuildContext context, Object error, String contextName, {bool retry = false, void Function()? retryCallback}) {
     handleError(context, error, contextName, retry: retry, retryCallback: retryCallback);
   }
-  
-  /// Show user-friendly error message via ScaffoldMessenger
+
   static void _showErrorUI(
     BuildContext context,
     AppException exception, {
@@ -47,7 +38,6 @@ class AppErrorHandler {
     void Function()? retryCallback,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    // Map exception types to user-friendly messages
     final errorMessage = _getErrorMessage(exception, l10n);
     final snackBar = SnackBar(
       content: retry && retryCallback != null
@@ -79,92 +69,51 @@ class AppErrorHandler {
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
-  
-  /// Get user-friendly error message based on exception type
+
   static String _getErrorMessage(AppException exception, [AppLocalizations? l10n]) {
     l10n ??= _defaultL10n;
-    switch (exception) {
-      case NetworkException _:
-        return l10n.errorNetworkConnection;
-      case ApiKeyMissingException _:
-        return l10n.errorApiKeyMissing;
-      case InvalidApiKeyException _:
-        return l10n.errorInvalidApiKey;
-      case ApiRateLimitException _:
-        return l10n.errorApiRateLimit;
-      case ApiNotFoundException _:
-        return l10n.errorApiNotFound;
-      case ApiInternalServerError _:
-        return l10n.errorApiInternalServer;
-      case DatabaseException _:
-        return l10n.errorDatabase;
-      case ValidationException _:
-        return l10n.validationFailed(exception.message);
-      case PdfParseException _:
-        return l10n.errorPdfParse;
-      case SyllabusException _:
-        return exception.message;
-      case PlanGenerationException _:
-        return exception.message;
-      case SchedulingException _:
-        return exception.message;
-      case AdherenceException _:
-        return exception.message;
-      case ContentGenerationException _:
-        return l10n.errorContentGeneration;
-      case LlmException _:
-        return l10n.errorLlmUnavailable;
-      case ApiAuthException _:
-        return l10n.errorApiAuth;
-      default:
-        return l10n.errorUnexpected;
-    }
+    return switch (exception.type) {
+      ExceptionType.network => l10n.errorNetworkConnection,
+      ExceptionType.apiKeyMissing => l10n.errorApiKeyMissing,
+      ExceptionType.invalidApiKey => l10n.errorInvalidApiKey,
+      ExceptionType.apiRateLimit => l10n.errorApiRateLimit,
+      ExceptionType.apiNotFound => l10n.errorApiNotFound,
+      ExceptionType.apiInternalServer => l10n.errorApiInternalServer,
+      ExceptionType.apiAuth => l10n.errorApiAuth,
+      ExceptionType.database => l10n.errorDatabase,
+      ExceptionType.validation => l10n.validationFailed(exception.message),
+      ExceptionType.pdfParse => l10n.errorPdfParse,
+      ExceptionType.contentGeneration => l10n.errorContentGeneration,
+      ExceptionType.llm => l10n.errorLlmUnavailable,
+      ExceptionType.unknown => l10n.errorUnexpected,
+    };
   }
-  
+
   static IconData _getErrorIcon(AppException exception) {
-    switch (exception) {
-      case NetworkException _:
-        return Icons.network_check;
-      case ApiKeyMissingException _:
-      case InvalidApiKeyException _:
-      case ApiAuthException _:
-        return Icons.key_rounded;
-      case ApiRateLimitException _:
-        return Icons.pause_circle;
-      case ApiNotFoundException _:
-        return Icons.looks_one_outlined;
-      case ApiInternalServerError _:
-        return Icons.bug_report;
-      case DatabaseException _:
-        return Icons.storage;
-      case ValidationException _:
-        return Icons.info;
-      case PdfParseException _:
-        return Icons.picture_as_pdf;
-      case ContentGenerationException _:
-      case LlmException _:
-        return Icons.wifi_tethering_off;
-      default:
-        return Icons.error_outline;
-    }
+    return switch (exception.type) {
+      ExceptionType.network => Icons.network_check,
+      ExceptionType.apiKeyMissing || ExceptionType.invalidApiKey || ExceptionType.apiAuth => Icons.key_rounded,
+      ExceptionType.apiRateLimit => Icons.pause_circle,
+      ExceptionType.apiNotFound => Icons.looks_one_outlined,
+      ExceptionType.apiInternalServer => Icons.bug_report,
+      ExceptionType.database => Icons.storage,
+      ExceptionType.validation => Icons.info,
+      ExceptionType.pdfParse => Icons.picture_as_pdf,
+      ExceptionType.contentGeneration || ExceptionType.llm => Icons.wifi_tethering_off,
+      ExceptionType.unknown => Icons.error_outline,
+    };
   }
-  
-  /// Get retry button text based on error type
+
   static String getRetryText(AppException exception, [AppLocalizations? l10n]) {
     l10n ??= _defaultL10n;
-    switch (exception) {
-      case NetworkException _:
-        return l10n.retryConnection;
-      case ApiRateLimitException _:
-        return l10n.retryAfterWait;
-      case ApiInternalServerError _:
-        return l10n.tryAgain;
-      default:
-        return l10n.retry;
-    }
+    return switch (exception.type) {
+      ExceptionType.network => l10n.retryConnection,
+      ExceptionType.apiRateLimit => l10n.retryAfterWait,
+      ExceptionType.apiInternalServer => l10n.tryAgain,
+      _ => l10n.retry,
+    };
   }
-  
-  /// Wraps an async operation with error handling
+
   static Future<T?> safely<T>(
     BuildContext context,
     Future<T> Function() operation, {
@@ -178,8 +127,7 @@ class AppErrorHandler {
       return defaultValue;
     }
   }
-  
-  /// Wraps a synchronous operation with error handling
+
   static R? safelySync<R>(
     BuildContext context,
     R Function() operation, {
@@ -193,77 +141,82 @@ class AppErrorHandler {
       return defaultValue;
     }
   }
-  
+
   static void _logError(Object error, String context) {
     logger.e('[$context] Error: $error');
   }
-  
-  
+
   @visibleForTesting
   static AppException convertToAppException(Object error, [AppLocalizations? l10n]) {
     l10n ??= _defaultL10n;
     if (error is AppException) {
       return error;
     }
-    
+
     final errorStr = error.toString();
-    
-    if (errorStr.contains('ConnectionFailedError') || 
+
+    if (errorStr.contains('ConnectionFailedError') ||
         errorStr.contains('SocketException') ||
         errorStr.contains('Network')) {
-      return NetworkException(
+      return AppException(
         message: l10n.errorNetworkConnection,
+        type: ExceptionType.network,
         originalError: error,
       );
     }
-    
+
     if (errorStr.contains('401') || errorStr.contains('unauthorized') || errorStr.contains('invalid')) {
-      return InvalidApiKeyException(
+      return AppException(
         message: l10n.errorInvalidApiKey,
+        type: ExceptionType.invalidApiKey,
         originalError: error,
       );
     }
-    
+
     if (errorStr.contains('403') || errorStr.contains('forbidden')) {
-      return ApiRateLimitException(
+      return AppException(
         message: l10n.errorApiRateLimit,
+        type: ExceptionType.apiRateLimit,
         originalError: error,
       );
     }
-    
+
     if (errorStr.contains('404') || errorStr.contains('not found')) {
-      return ApiNotFoundException(
+      return AppException(
         message: l10n.errorApiNotFound,
+        type: ExceptionType.apiNotFound,
         originalError: error,
       );
     }
-    
+
     if (errorStr.contains('500') || errorStr.contains('502') || errorStr.contains('503')) {
-      return ApiInternalServerError(
+      return AppException(
         message: l10n.errorApiInternalServer,
+        type: ExceptionType.apiInternalServer,
         originalError: error,
       );
     }
-    
+
     if (error is FormatException) {
-      return ValidationException(
+      return AppException(
         message: error.message,
+        type: ExceptionType.validation,
         originalError: error,
       );
     }
-    
+
     if (error is StateError || error is AssertionError) {
-      return DatabaseException(
+      return AppException(
         message: l10n.errorDatabase,
+        type: ExceptionType.database,
         originalError: error,
       );
     }
-    
-    return NetworkException(
+
+    return AppException(
       message: l10n.errorUnexpected,
+      type: ExceptionType.network,
       originalError: error,
     );
   }
 }
-
-
