@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class ChatBubble extends StatelessWidget {
+  static final Logger _logger = const Logger('ChatBubble');
+
   final ConversationMessage message;
   final bool showSender;
   final bool reduceMotion;
@@ -131,7 +134,8 @@ class ChatBubble extends StatelessWidget {
     try {
       final data = jsonDecode(content) as Map<String, dynamic>;
       return data['type'] == 'evaluation';
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse evaluation message', e);
       return false;
     }
   }
@@ -198,7 +202,8 @@ class ChatBubble extends StatelessWidget {
           ],
         ],
       );
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to build evaluation content', e);
       return Text(content);
     }
   }

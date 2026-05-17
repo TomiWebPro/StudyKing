@@ -3,7 +3,6 @@ library;
 const int _typeIdTopicModel = 0;
 const int _typeIdTopicProgressModel = 1;
 const int _typeIdQuestionModel = 2;
-const int _typeIdAnswerModel = 3;
 const int _typeIdSettingsBox = 4;
 const int _typeIdLessonBlockModel = 6;
 const int _typeIdLessonModel = 7;
@@ -41,7 +40,6 @@ const List<int> _allTypeIds = [
   _typeIdTopicModel,
   _typeIdTopicProgressModel,
   _typeIdQuestionModel,
-  _typeIdAnswerModel,
   _typeIdSettingsBox,
   _typeIdPendingActionModel,
   _typeIdLessonBlockModel,

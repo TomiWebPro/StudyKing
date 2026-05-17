@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/routes/tab_navigator.dart';
+import '../../helpers/navigator_observer_helper.dart';
 
 Route<dynamic>? _testRouteGenerator(RouteSettings settings) {
   return MaterialPageRoute(
@@ -15,12 +16,14 @@ Route<dynamic>? _testRouteGenerator(RouteSettings settings) {
 Widget _buildTestApp({
   required GlobalKey<NavigatorState> navigatorKey,
   required Widget rootScreen,
+  TestNavigatorObserver? observer,
 }) {
   return MaterialApp(
     home: TabNavigator(
       navigatorKey: navigatorKey,
       rootScreen: rootScreen,
       customOnGenerateRoute: _testRouteGenerator,
+      observers: observer != null ? [observer] : [],
     ),
   );
 }
@@ -44,9 +47,11 @@ void main() {
     testWidgets('pushes named route via custom route generator',
         (tester) async {
       final key = GlobalKey<NavigatorState>();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(
         _buildTestApp(
           navigatorKey: key,
+          observer: observer,
           rootScreen: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -63,15 +68,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(key.currentState?.canPop(), isTrue);
+      expect(observer.pushedRoutes.length, greaterThanOrEqualTo(1));
+      expect(
+        observer.pushedRoutes.last.settings.name,
+        equals('/test-route'),
+      );
       expect(find.text('/test-route screen'), findsOneWidget);
     });
 
     testWidgets('pops route within tab navigator', (tester) async {
       final key = GlobalKey<NavigatorState>();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(
         _buildTestApp(
           navigatorKey: key,
+          observer: observer,
           rootScreen: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -87,14 +98,14 @@ void main() {
       await tester.tap(find.text('Go to Route'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(key.currentState?.canPop(), isTrue);
+      expect(observer.pushedRoutes.length, greaterThanOrEqualTo(2));
 
       key.currentState?.pop();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
+      expect(observer.poppedRoutes, hasLength(1));
       expect(find.text('Go to Route'), findsOneWidget);
-      expect(key.currentState?.canPop(), isFalse);
     });
 
     testWidgets('multiple pushes preserve route stack', (tester) async {

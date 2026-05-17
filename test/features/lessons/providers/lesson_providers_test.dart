@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
 void main() {
@@ -88,6 +89,18 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           tutorSessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+      final service = container.read(lessonServiceProvider);
+      expect(service, isA<LessonService>());
+    });
+
+    test('is wired to sessionRepositoryProvider', () {
+      final fakeRepo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
         ],
       );
       addTearDown(container.dispose);

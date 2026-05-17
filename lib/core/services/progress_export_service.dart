@@ -11,6 +11,7 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ProgressExportService {
@@ -22,13 +23,40 @@ class ProgressExportService {
     StudyProgressTracker? tracker,
     MasteryGraphService? masteryService,
     AttemptRepository? attemptRepo,
+    SessionRepository? sessionRepo,
   })  : _tracker = tracker ??
             StudyProgressTracker(
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
+              sessionRepo: sessionRepo,
             ),
         _masteryService = masteryService ?? MasteryGraphService(),
         _attemptRepo = attemptRepo ?? AttemptRepository();
+
+  Future<String> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
+    final overallStats = await _tracker.getOverallStats(studentId);
+    final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+    final masteryStates =
+        masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
+    final attempts = await _attemptRepo.getByStudent(studentId);
+    final badges = await _tracker.getBadges(studentId);
+
+    final json = jsonEncode({
+      'exportDate': DateTime.now().toIso8601String(),
+      'studentId': studentId,
+      'overallStats': overallStats,
+      'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
+      'attempts': attempts.map((a) => {
+        'questionId': a.questionId,
+        'subjectId': a.subjectId,
+        'isCorrect': a.isCorrect,
+        'timeSpentMs': a.timeSpentMs,
+        'timestamp': a.timestamp.toIso8601String(),
+      }).toList(),
+      'badges': badges,
+    });
+    return json;
+  }
 
   Future<String> exportComprehensiveCSV(String studentId) async {
     final overallStats = await _tracker.getOverallStats(studentId);

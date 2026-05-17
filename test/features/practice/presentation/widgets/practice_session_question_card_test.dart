@@ -168,18 +168,38 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('renders fallback for unsupported type', (tester) async {
+    testWidgets('renders file upload button for fileUpload type', (tester) async {
+      String? captured;
       await tester.pumpWidget(buildApp(
         PracticeSessionQuestionCard(
           question: question(type: QuestionType.fileUpload),
           currentAnswer: null,
           isSubmitted: false,
           isFeedbackVisible: false,
-          onAnswerSelected: (_) {},
+          onAnswerSelected: (v) => captured = v,
         ),
       ));
 
-      expect(find.textContaining('Unsupported question type'), findsOneWidget);
+      expect(find.textContaining('Upload file'), findsOneWidget);
+      await tester.tap(find.textContaining('Upload file'));
+      expect(captured, 'file_uploaded');
+    });
+
+    testWidgets('renders audio recording button for audioRecording type', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.audioRecording),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+
+      expect(find.textContaining('Start recording'), findsOneWidget);
+      await tester.tap(find.textContaining('Start recording'));
+      expect(captured, 'audio_recorded');
     });
 
     testWidgets('onAnswerSelected is called for typed answer', (tester) async {

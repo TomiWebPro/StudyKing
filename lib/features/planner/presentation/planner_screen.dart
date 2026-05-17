@@ -4,6 +4,7 @@ import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/data/models/session_model.dart';
 import '../providers/planner_providers.dart';
 import 'widgets/plan_summary_card.dart';
 import 'widgets/daily_plan_card.dart';
@@ -535,9 +536,27 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               leading: const Icon(Icons.menu_book, size: 20),
               title: Text(title,
                   style: Theme.of(context).textTheme.bodyMedium),
-              subtitle: Text(lesson.topicId ?? ''),
-              trailing: Text(time,
-                  style: Theme.of(context).textTheme.bodySmall),
+              subtitle: Text(
+                '${lesson.topicId ?? ''} · $time',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.refresh, size: 18,
+                        color: Theme.of(context).colorScheme.primary),
+                    tooltip: l10n.rescheduleLesson,
+                    onPressed: () => _openRescheduleLesson(lesson, l10n),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.cancel_outlined, size: 18,
+                        color: Theme.of(context).colorScheme.error),
+                    tooltip: l10n.cancel,
+                    onPressed: () => _confirmCancelLesson(lesson, l10n),
+                  ),
+                ],
+              ),
             ),
           );
         }),
@@ -557,6 +576,58 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ),
       ],
     ),
+    );
+  }
+
+  Future<void> _confirmCancelLesson(Session lesson, AppLocalizations l10n) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.cancel),
+        content: const Text('Are you sure you want to cancel this lesson?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.noThanks),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(plannerProvider.notifier).cancelLesson(lesson.id, l10n);
+    }
+  }
+
+  Future<void> _openRescheduleLesson(Session lesson, AppLocalizations l10n) async {
+    if (!mounted) return;
+    final plannerService = ref.read(plannerServiceProvider);
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => LessonBookingSheet(
+        topicId: lesson.topicId ?? '',
+        topicTitle: lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '',
+        subjectId: lesson.subjectId ?? '',
+        plannerService: plannerService,
+        initialDate: lesson.startTime,
+        initialDuration: lesson.plannedDurationMinutes ?? 30,
+        onSchedule: (scheduledTime, durationMinutes) async {
+          await ref.read(plannerProvider.notifier).rescheduleLesson(
+                sessionId: lesson.id,
+                newStartTime: scheduledTime,
+                durationMinutes: durationMinutes,
+                l10n: l10n,
+              );
+        },
+      ),
     );
   }
 

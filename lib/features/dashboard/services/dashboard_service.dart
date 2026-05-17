@@ -30,6 +30,7 @@ class DashboardService {
             StudyProgressTracker(
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
+              sessionRepo: sessionRepo,
             ),
         _planAdapter = planAdapter ?? PlanAdapter(),
         _sessionRepo = sessionRepo ?? SessionRepository(),

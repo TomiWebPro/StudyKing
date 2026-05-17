@@ -1,8 +1,11 @@
 import 'dart:convert';
 import '../../../core/services/llm/llm_chat_service.dart';
+import '../../../core/utils/logger.dart';
 import '../data/models/evaluation_result.dart';
 
 class ExerciseEvaluator {
+  static final Logger _logger = const Logger('ExerciseEvaluator');
+
   final LlmService _llmService;
   final String _modelId;
 
@@ -10,7 +13,7 @@ class ExerciseEvaluator {
     required LlmService llmService,
     required String modelId,
   })  : _llmService = llmService,
-        _modelId = modelId;
+      _modelId = modelId;
 
   static const String _defaultSystemPrompt =
       'You are an expert academic evaluator. Assess the student\'s answer and return a JSON object with: score (0.0-1.0), explanation, partialCredit (optional), conceptBreakdown (optional map of concept->score). Be fair and encouraging. Consider partial credit for partially correct answers.';
@@ -72,7 +75,8 @@ Return a JSON object with:
     try {
       final json = jsonDecode(response) as Map<String, dynamic>;
       return EvaluationResult.fromJson(json);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse evaluation response', e);
       return EvaluationResult(
         score: 0.5,
         explanation: response,

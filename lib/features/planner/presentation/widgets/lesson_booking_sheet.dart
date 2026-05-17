@@ -12,6 +12,8 @@ class LessonBookingSheet extends StatefulWidget {
   final Future<void> Function(DateTime scheduledTime, int durationMinutes)
       onSchedule;
   final PlannerService? plannerService;
+  final DateTime? initialDate;
+  final int? initialDuration;
 
   const LessonBookingSheet({
     super.key,
@@ -20,6 +22,8 @@ class LessonBookingSheet extends StatefulWidget {
     required this.subjectId,
     required this.onSchedule,
     this.plannerService,
+    this.initialDate,
+    this.initialDuration,
   });
 
   @override
@@ -40,6 +44,13 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      _selectedDate = widget.initialDate!;
+      _selectedTime = TimeOfDay.fromDateTime(widget.initialDate!);
+    }
+    if (widget.initialDuration != null) {
+      _durationMinutes = widget.initialDuration!;
+    }
     _loadAvailability();
   }
 

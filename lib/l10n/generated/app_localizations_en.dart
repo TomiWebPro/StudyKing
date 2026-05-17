@@ -1858,6 +1858,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.';
 
   @override
+  String get mentorSystemPrompt =>
+      'You are a knowledgeable and encouraging AI mentor for a student. Your role is to guide their learning journey, provide motivation, and help them develop effective study habits. Keep responses concise, supportive, and actionable.';
+
+  @override
   String get aboutApplicationName => 'StudyKing';
 
   @override
@@ -3340,4 +3344,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tutorNeedsSubject =>
       'Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.';
+
+  @override
+  String get aiTaskMonitor => 'AI Task Monitor';
+
+  @override
+  String get viewActiveAiTasks =>
+      'View active AI inference tasks and token usage';
 }

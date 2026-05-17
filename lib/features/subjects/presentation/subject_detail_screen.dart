@@ -8,6 +8,7 @@ import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_history_tab.dart';
@@ -198,6 +199,17 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           mainAxisSize: MainAxisSize.min,
           children: [
             Semantics(
+              label: l10n.editSubject,
+              child: ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(l10n.editSubject),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editSubject();
+                },
+              ),
+            ),
+            Semantics(
               label: l10n.uploadContent,
               child: ListTile(
                 leading: const Icon(Icons.cloud_upload),
@@ -246,30 +258,55 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     );
   }
 
-  void _confirmDelete() {
+  Future<void> _editSubject() async {
+    if (!mounted) return;
+    try {
+      final repo = await ref.read(subjectsRepositoryProvider.future);
+      final subject = await repo.get(widget.args.subjectId);
+      if (subject == null || !mounted) return;
+      Navigator.pushNamed(
+        context,
+        AppRoutes.subjectSelection,
+        arguments: subject,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _confirmDelete() async {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.deleteSubject),
         content: Text(l10n.deleteSubjectConfirmation),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: Text(l10n.cancel),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (!mounted) return;
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),
           ),
         ],
       ),
     );
+    if (confirmed != true || !mounted) return;
+    try {
+      final repo = await ref.read(subjectsRepositoryProvider.future);
+      await repo.delete(widget.args.subjectId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.deleteSubject)),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorWithMessage(e.toString()))),
+      );
+    }
   }
 
   void _showSessionDetails(Session session) {

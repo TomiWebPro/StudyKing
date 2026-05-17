@@ -410,5 +410,35 @@ void main() {
       expect(find.text('Lesson B'), findsOneWidget);
       expect(find.text('Lesson C'), findsOneWidget);
     });
+
+    testWidgets('lesson title uses bold font weight', (tester) async {
+      final repo = _FakeLessonRepository([
+        _lesson(id: 'l1', subjectId: testSubjectId, title: 'Bold Title'),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final titleText = tester.widget<Text>(find.text('Bold Title'));
+      expect(titleText.style?.fontWeight, FontWeight.w600);
+    });
+
+    testWidgets('shows empty state when all lessons filtered out by subjectId', (tester) async {
+      final repo = _FakeLessonRepository([
+        _lesson(id: 'l1', subjectId: 'other', title: 'Other'),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectLessonsTab(subjectId: testSubjectId, lessonRepository: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No lessons yet'), findsOneWidget);
+      expect(find.byType(Card), findsNothing);
+    });
   });
 }

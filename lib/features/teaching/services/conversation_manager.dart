@@ -7,6 +7,8 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/utils/clock.dart';
+import '../../../core/utils/logger.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../data/models/evaluation_result.dart';
 import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
@@ -70,11 +72,15 @@ class ConversationManager {
     await _loadPersistedMessages();
   }
 
+  static final Logger _logger = const Logger('ConversationManager');
+
   Future<void> _loadPersistedMessages() async {
     if (_persistenceRepo == null) return;
     try {
       await _memory.loadFromRepository();
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to load persisted messages', e);
+    }
   }
 
   Future<LessonPlan> generateLessonPlan({
@@ -269,7 +275,7 @@ class ConversationManager {
       confidenceRating: (confidenceRating * 5).round(),
       totalMessages: msgCount,
       topicsCovered: [topicTitle],
-      tutorNotes: 'Adaptive pace: ${adaptivePace.toStringAsFixed(1)}x',
+      tutorNotes: 'Adaptive pace: ${formatDecimal(adaptivePace, 'en', minFractionDigits: 1, maxFractionDigits: 1)}x',
       lessonPlanJson: lessonPlan?.toJsonString() ?? '{}',
     );
   }

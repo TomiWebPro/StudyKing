@@ -21,7 +21,7 @@ class FakeVoiceController extends VoiceController {
   Stream<String> get transcribedText => _transcriptionCtrl.stream;
 
   @override
-  Future<void> startListening() async {
+  Future<void> startListening({String? localeName}) async {
     _fakeIsListening = true;
   }
 

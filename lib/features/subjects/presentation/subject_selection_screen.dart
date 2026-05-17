@@ -9,7 +9,11 @@ import 'package:studyking/features/subjects/presentation/subject_form_widgets.da
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectSelectionScreen extends ConsumerStatefulWidget {
-  const SubjectSelectionScreen({super.key});
+  final Subject? editingSubject;
+
+  const SubjectSelectionScreen({super.key, this.editingSubject});
+
+  bool get isEditing => editingSubject != null;
 
   @override
   ConsumerState<SubjectSelectionScreen> createState() =>
@@ -31,7 +35,17 @@ class _SubjectSelectionScreenState
   @override
   void initState() {
     super.initState();
-    _selectedColor = ColorUtils.defaultColorHex;
+    final subject = widget.editingSubject;
+    if (subject != null) {
+      _nameController.text = subject.name;
+      _codeController.text = subject.code ?? '';
+      _teacherController.text = subject.teacher ?? '';
+      _syllabusController.text = subject.syllabus ?? '';
+      _descriptionController.text = subject.description ?? '';
+      _selectedColor = subject.color;
+    } else {
+      _selectedColor = ColorUtils.defaultColorHex;
+    }
   }
 
   @override
@@ -52,7 +66,9 @@ class _SubjectSelectionScreenState
 
     try {
       final subject = Subject(
-        id: 'subject_${DateTime.now().millisecondsSinceEpoch}',
+        id: widget.isEditing
+            ? widget.editingSubject!.id
+            : 'subject_${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text.trim(),
         code: _codeController.text.trim().isEmpty
             ? null
@@ -67,12 +83,22 @@ class _SubjectSelectionScreenState
             ? null
             : _descriptionController.text.trim(),
         color: _selectedColor,
+        topicIds: widget.isEditing ? widget.editingSubject!.topicIds : null,
+        createdAt: widget.isEditing ? widget.editingSubject!.createdAt : null,
       );
 
       final repo = await ref.read(subjectsRepositoryProvider.future);
       await repo.create(subject);
 
       if (mounted) {
+        if (widget.isEditing) {
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.editSubject)),
+          );
+          return;
+        }
+
         final l10nCtx = AppLocalizations.of(context)!;
         final subjectName = subject.name;
         final shouldUpload = await showDialog<bool>(
@@ -122,7 +148,7 @@ class _SubjectSelectionScreenState
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.addSubject),
+        title: Text(widget.isEditing ? l10n.editSubject : l10n.addSubject),
         actions: [
           if (_isLoading)
             ResponsiveUtils.loaderInTouchTarget()

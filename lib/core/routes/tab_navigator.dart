@@ -6,12 +6,14 @@ class TabNavigator extends StatelessWidget {
   final Widget rootScreen;
   final GlobalKey<NavigatorState> navigatorKey;
   final Route<dynamic>? Function(RouteSettings)? customOnGenerateRoute;
+  final List<NavigatorObserver>? observers;
 
   const TabNavigator({
     super.key,
     required this.rootScreen,
     required this.navigatorKey,
     this.customOnGenerateRoute,
+    this.observers,
   });
 
   @override
@@ -29,6 +31,7 @@ class TabNavigator extends StatelessWidget {
         final generator = customOnGenerateRoute ?? onGenerateRoute;
         return generator(settings);
       },
+      observers: observers ?? [],
     );
   }
 }

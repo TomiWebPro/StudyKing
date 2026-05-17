@@ -283,6 +283,26 @@ class PlannerService {
     }
   }
 
+  Future<bool> rescheduleLesson({
+    required String sessionId,
+    required DateTime newStartTime,
+    int durationMinutes = 30,
+  }) async {
+    try {
+      await sessionRepo.init();
+      final result = await sessionRepo.get(sessionId);
+      if (result.isFailure || result.data == null) return false;
+      final rescheduled = result.data!.copyWith(
+        startTime: newStartTime,
+        plannedDurationMinutes: durationMinutes,
+      );
+      final saveResult = await sessionRepo.save(rescheduled);
+      return saveResult.isSuccess;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<Session>> getScheduledLessons() async {
     try {
       await sessionRepo.init();

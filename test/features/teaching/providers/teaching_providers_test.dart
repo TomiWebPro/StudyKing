@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/providers/teaching_providers.dart';
 import 'package:studyking/features/teaching/services/prompts/prompts.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
@@ -41,6 +43,20 @@ void main() {
       final evaluator = container.read(exerciseEvaluatorProvider);
       expect(evaluator, isA<ExerciseEvaluator>());
     });
+
+    test('is wired to llmServiceProvider', () {
+      final fakeService = LlmService(
+        config: const LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+      final evaluator = container.read(exerciseEvaluatorProvider);
+      expect(evaluator, isA<ExerciseEvaluator>());
+    });
   });
 
   group('voiceControllerProvider', () {
@@ -49,6 +65,17 @@ void main() {
       addTearDown(container.dispose);
       final controller = container.read(voiceControllerProvider);
       expect(controller, isA<VoiceController>());
+    });
+
+    test('can be overridden', () {
+      final fakeController = VoiceController();
+      final container = ProviderContainer(
+        overrides: [
+          voiceControllerProvider.overrideWithValue(fakeController),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(container.read(voiceControllerProvider), same(fakeController));
     });
   });
 
@@ -59,11 +86,53 @@ void main() {
       final clock = container.read(clockProvider);
       expect(clock, isA<SystemClock>());
     });
+
+    test('can be overridden', () {
+      final fakeClock = SystemClock();
+      final container = ProviderContainer(
+        overrides: [
+          clockProvider.overrideWithValue(fakeClock),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(container.read(clockProvider), same(fakeClock));
+    });
   });
 
   group('tutorServiceProvider', () {
     test('creates a TutorService', () {
       final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final service = container.read(tutorServiceProvider);
+      expect(service, isA<TutorService>());
+    });
+
+    test('is wired to llmServiceProvider', () {
+      final fakeService = LlmService(
+        config: const LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+      final service = container.read(tutorServiceProvider);
+      expect(service, isA<TutorService>());
+    });
+
+    test('is wired to exerciseEvaluatorProvider', () {
+      final fakeEvaluator = ExerciseEvaluator(
+        llmService: LlmService(
+          config: const LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'),
+        ),
+        modelId: 'test',
+      );
+      final container = ProviderContainer(
+        overrides: [
+          exerciseEvaluatorProvider.overrideWithValue(fakeEvaluator),
+        ],
+      );
       addTearDown(container.dispose);
       final service = container.read(tutorServiceProvider);
       expect(service, isA<TutorService>());
@@ -76,6 +145,17 @@ void main() {
       addTearDown(container.dispose);
       final prompts = container.read(promptsProvider);
       expect(prompts, isA<ConversationPromptSet>());
+    });
+
+    test('can be overridden', () {
+      final fakePrompts = const ConversationPromptSet();
+      final container = ProviderContainer(
+        overrides: [
+          promptsProvider.overrideWithValue(fakePrompts),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(container.read(promptsProvider), same(fakePrompts));
     });
   });
 }

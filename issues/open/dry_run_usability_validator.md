@@ -1,155 +1,263 @@
-# Dry-Run Usability Validation
+# Dry-Run Usability Validation: Attending an AI Tutor Lesson
 
-**Scenario:** `dry-run-test/scenario_existing_user_pace_subjects_provider.md`
-**Persona:** Existing user (weeks of use) who wants to adjust pace, switch AI provider, cancel/reschedule lessons, add a second subject, and export progress.
+**Scenario:** `dry-run-test/scenario_attending_tutor_lesson.md`
+**Date:** 2026-05-17
 
----
-
-## BLOCKER Findings (app crashes or user cannot proceed)
-
-### B1. No UI to cancel or reschedule a scheduled lesson
-
-**Files:**
-- `lib/features/planner/services/planner_service.dart:246-284` — `scheduleLesson()` and `cancelLesson()` exist, but no `rescheduleLesson()`
-- `lib/features/planner/providers/planner_providers.dart:392-466` — `scheduleLesson` and `scheduleLessonWithConflictCheck` exist, but no `cancelLesson` or `rescheduleLesson` notifier methods
-- `lib/features/planner/presentation/planner_screen.dart:512-561` — `_buildScheduledLessonsSection` renders lessons as read-only `ListTile`s with no cancel/reschedule buttons
-- `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` — only supports creating new lessons, not editing existing ones
-- `lib/features/lessons/presentation/lesson_detail_screen.dart:1-160` — lesson detail has no cancel/reschedule button
-
-**Rationale:** Users cannot cancel or reschedule a lesson they've booked. The backend `cancelLesson()` method exists but has zero UI bindings. `rescheduleLesson()` does not exist at all. To cancel a lesson, a user would need to use Session History (which also has no cancel action for planned tutoring sessions).
-
-**Acceptance criteria:**
-- [ ] Scheduled lessons in the Planner's "Scheduled Lessons" section show a cancel button and/or a reschedule button on each lesson card
-- [ ] LessonDetailScreen provides a cancel action and a reschedule action
-- [ ] `PlannerNotifier` exposes `cancelLesson()` and `rescheduleLesson()` methods
-- [ ] `PlannerService` gains a `rescheduleLesson()` method (or the LessonBookingSheet is refactored to handle editing)
-- [ ] Cancellation shows a confirmation dialog; reschedule opens a pre-filled LessonBookingSheet
-
-### B2. Subject deletion does not actually delete the subject
-
-**Files:**
-- `lib/features/subjects/presentation/subject_detail_screen.dart:249-273` — `_confirmDelete()` shows a confirmation dialog, then on "Delete" only calls `Navigator.pop(context)` twice. **Never calls `SubjectRepository.delete()` or any repository method.**
-- `lib/features/subjects/data/repositories/subject_repository.dart:5-49` — `SubjectRepository` extends `Repository<Subject>` which presumably has a `delete()` method, but it's never invoked from the UI.
-
-**Rationale:** The delete button is a lie. The subject remains in Hive permanently. The user gets no feedback that deletion failed. This is a complete no-op.
-
-**Acceptance criteria:**
-- [ ] `_confirmDelete()` actually calls `SubjectRepository.delete(subject.id)` after confirmation
-- [ ] Success/failure feedback is shown via SnackBar
-- [ ] The screen pops back to the subject list after successful deletion
-- [ ] Associated data (topics, sessions, mastery states) is cleaned up or orphaned gracefully
+A returning user who has a scheduled 30-minute IB Chemistry lesson on "Atomic Structure" tries to attend it, interact with the AI tutor, answer exercises, end the session, and verify the results in the dashboard.
 
 ---
 
-## MAJOR Findings (feature is broken or misleading)
+## BLOCKER (app crashes or user cannot proceed)
 
-### M1. Switching AI provider does not reset the selected model
-
-**Files:**
-- `lib/features/settings/presentation/api_config_screen.dart:48-97` — `_saveKeys()` saves the new provider but does not clear the selected model
-- `lib/features/settings/presentation/settings_screen.dart:289-324` — `_showAiModelSelection()` fetches models from the API but the currently selected model ID remains unchanged until the user explicitly picks a new one
-- `lib/core/providers/app_providers.dart:217` — `selectedModelProvider` is independent; provider change does not reset it
-- `lib/core/providers/llm_providers.dart:15` — `llmServiceProvider` receives the model from `selectedModelProvider` regardless of provider compatibility
-
-**Rationale:** If a user switches from OpenRouter (model: `mistralai/mixtral-8x7b-instruct`) to Ollama, the model ID remains `mistralai/mixtral-8x7b-instruct`. This model ID does not exist on Ollama, causing silent failures in the Tutor, Mentor, and any LLM-dependent feature. The user must remember to manually select a new model — but there's no warning or prompt.
-
-**Acceptance criteria:**
-- [ ] Changing the provider in ApiConfigScreen resets `selectedModelProvider` to empty string
-- [ ] After saving a provider change, a dialog prompts the user: "You changed your AI provider. Would you like to select a model for [new provider] now?"
-- [ ] OR: The model list is filtered/validated against the selected provider when the model selection screen opens
-
-### M2. Switching from Ollama back to OpenRouter does not reset the base URL
+### B1. Back-Button Exits Tutor Without Saving — Lesson Data Lost
 
 **Files:**
-- `lib/features/settings/presentation/api_config_screen.dart:307-315` — `onChanged` only auto-fills the base URL for Ollama; switching to OpenRouter or OpenAI does NOT change the base URL field
-- `lib/features/settings/presentation/api_config_screen.dart:40-46` — `_loadCurrentValues()` loads whatever base URL is stored, regardless of whether it matches the current provider
+- `lib/features/teaching/presentation/tutor_screen.dart` (no `PopScope` / `WillPopScope`)
 
-**Rationale:** If the user switches from OpenRouter to Ollama (base URL becomes `http://localhost:11434`), then switches back to OpenRouter, the base URL stays as `http://localhost:11434`. The user must know to manually change it back to `https://openrouter.ai/api/v1`. This is not obvious.
+**Rationale:** The `TutorScreen` has no `PopScope` wrapper. If the user presses the system back button (Android) or gesture-navigates back, the screen pops without calling `_endLesson()`. This means:
+- The `TutorSession` remains `inProgress` forever
+- None of the conversation messages are persisted
+- Mastery data is not recorded
+- Plan adherence is not recorded
+- The timer keeps running until the widget is garbage-collected
 
-**Acceptance criteria:**
-- [ ] Switching the provider dropdown to any provider auto-fills the default base URL for that provider
-- [ ] If the user has a custom base URL, a tooltip or indicator shows that changing provider will reset the URL
-- [ ] OR: The provider and base URL are stored as a combined setting so switching providers restores the last-used URL for that provider
-
-### M3. No edit functionality for subjects
-
-**Files:**
-- `lib/features/subjects/presentation/subject_detail_screen.dart:192-247` — `_showMoreOptions()` offers Upload, Dashboard, Delete — no Edit option
-- `lib/features/subjects/presentation/subject_selection_screen.dart:47-118` — `_saveSubject()` creates a new subject but there is no equivalent `_updateSubject()` method for editing
-- `lib/features/subjects/data/repositories/subject_repository.dart:5-49` — repository likely has an `update()` method, but it's not used from any screen
-
-**Rationale:** A user cannot correct a typo in a subject name, update a teacher name, or change the syllabus reference after creation. The only workaround is to delete and recreate, but deletion is broken (B2). This is a basic CRUD gap that creates data quality issues.
-
-**Acceptance criteria:**
-- [ ] SubjectDetailScreen "More" menu includes an "Edit Subject" option
-- [ ] SubjectSelectionScreen supports an edit mode (pre-filled fields, `_updateSubject()` instead of `_createSubject()`)
-- [ ] SubjectRepository.update() or equivalent is called with the modified subject
-- [ ] Changes are reflected immediately in the subject list and all dependent views
+**Acceptance Criteria:**
+- `TutorScreen` must wrap its scaffold in a `PopScope` that intercepts back navigation
+- Intercepted back-navigation should show a confirmation dialog: "End lesson and save progress?" with options "Cancel" (stays in lesson), "Save and Exit" (calls `_endLesson()` and then pops), "Discard and Exit" (marks session as cancelled and pops without saving)
 
 ---
 
-## PARTIAL Findings (feature works but has significant UX gaps)
+## MAJOR (feature is broken or misleading)
 
-### P1. No dedicated pace-adjustment controls
-
-**Files:**
-- `lib/features/planner/presentation/planner_screen.dart:96-121` — `_generatePlan()` only supports full regeneration with new course/days/hours
-- `lib/features/planner/presentation/planner_screen.dart:260-263` — adherence deviation banner offers "Redistribute" and "Regenerate from Adherence" but these are reactive (triggered by low adherence) not proactive
-- `lib/core/services/plan_adapter.dart:94` — `suggestRegeneration()` scales targets by adherence, but this is an automated backend function with no user-facing preview
-- `lib/features/planner/providers/planner_providers.dart:468-478` — `redistributeWorkload()` only handles missed minutes
-
-**Rationale:** To slow down from 2 hrs/day to 1 hr/day, the user must fill in the generate-plan form again and tap "Generate Plan". This replaces the entire plan without showing what will change. There is no speed/slider control, no "extend deadline" button, and no way to modify daily targets without regenerating from scratch.
-
-**Acceptance criteria:**
-- [ ] Planner provides an explicit "Adjust Pace" action (e.g., a dialog with sliders for hours-per-day and plan duration)
-- [ ] Adjustments are applied to the existing plan rather than replacing it entirely
-- [ ] A preview shows what will change (e.g., "New daily target: 1h, plan extended by 30 days")
-
-### P2. Planner cannot create multi-subject study plans
+### M1. "Scheduled Lesson" Card Has No "Join" / "Start" Button
 
 **Files:**
-- `lib/features/planner/services/planner_service.dart:89-115` — `generatePlan()` takes a single `course` string which is purely a metadata label
-- `lib/features/planner/services/planner_service.dart:117-143` — `generatePlanFromSyllabus()` accepts a list of `SyllabusGoal` objects (supports multiple subjects) but has no UI
-- `lib/features/planner/presentation/planner_screen.dart:276-283` — the generate form has a single text field for "Course/Subject"
-- `lib/core/services/personal_learning_plan_service.dart:218-306` — `_buildEmptyMasteryPlan()` only creates generic topics based on `courseName`
-- `lib/core/services/personal_learning_plan_service.dart:91-216` — `_buildPlan()` only works from existing mastery state; new subjects with no mastery data produce empty plans
+- `lib/features/planner/presentation/planner_screen.dart` lines 513-580 (`_buildScheduledLessonsSection`)
 
-**Rationale:** A user studying both Physics and Chemistry has no way to create a unified study plan that covers both. The `course` text field is cosmetic. The `generatePlanFromSyllabus` method supports multi-subject plans but has no UI. New subjects without mastery data are invisible to the plan engine.
+**Rationale:** The scheduled lessons section shows cancel and reschedule buttons, but no way to actually START the lesson the user scheduled. The user must navigate through a completely separate path (daily plan card → smart_toy icon) to begin tutoring. This is the single most important action a user wants to take from a scheduled lesson — attending it.
 
-**Acceptance criteria:**
-- [ ] The generate plan form lets users select one or more existing subjects from a multi-select list
-- [ ] `generatePlanFromSyllabus` is wired to the UI with actual `SyllabusGoal` objects derived from selected subjects
-- [ ] If a selected subject has no topics yet, the user is prompted to upload content or the plan generates time-allocated blocks for future topic discovery
-- [ ] The plan shows which subject each daily block belongs to
+**Acceptance Criteria:**
+- Each scheduled lesson card must include a "Join Now" or "Start Lesson" button (primary color, prominent)
+- Tapping it should navigate to `TutorScreen` with the correct `topicId`, `topicTitle`, `subjectId` **and** the `plannedDurationMinutes` from the scheduled `Session`
+- Bonus: the scheduled `Session` should be passed somehow so the tutor screen can mark it as attended on completion
 
-### P3. Dashboard export is CSV-only and hard to find
+### M2. Scheduled Lesson Duration Not Forwarded to TutorScreen
 
 **Files:**
-- `lib/features/dashboard/presentation/dashboard_screen.dart:171-176` — ExportSection is the last item in the dashboard, below 10+ card sections
-- `lib/features/dashboard/presentation/widgets/export_section.dart:12-49` — only offers CSV (progress), CSV (session history), and "Instrumentation" (confusing label)
-- `lib/features/sessions/presentation/session_history_screen.dart:84-181` — comprehensive export (CSV/PDF/JSON) is gated behind navigating to a separate screen
-- `lib/core/services/progress_export_service.dart:16-352` — full export service exists but is only accessible from SessionHistoryScreen
+- `lib/core/routes/app_router.dart` (`TutorArgs` has no scheduled-session reference)
+- All four entry points to `TutorScreen`:
+  - `lib/features/planner/presentation/planner_screen.dart:55-67` (`_openTutorMode`)
+  - `lib/features/planner/presentation/widgets/daily_plan_card.dart:99-106`
+  - `lib/features/lessons/presentation/lesson_detail_screen.dart:78-91`
+  - `lib/features/lessons/presentation/lesson_list_screen.dart:79`
 
-**Rationale:** Export is functionally available but fragmented. A user who wants a PDF report must: scroll past 10+ cards → tap "Session History" → tap export → select PDF. The Dashboard itself should offer at minimum a single "Export Full Report" button that provides format choice. The "Instrumentation" label is jargon.
+**Rationale:** `TutorArgs` accepts `durationMinutes` with default 45. The `LessonBookingSheet` lets the user choose a duration and saves it as `plannedDurationMinutes` on the `Session` record. But NONE of the entry points read this value and pass it to `TutorArgs`. So every tutor session defaults to 45 minutes regardless of what was scheduled.
 
-**Acceptance criteria:**
-- [ ] Dashboard export section offers PDF, CSV, and JSON options directly (not just CSV)
-- [ ] A single "Export Full Report" button generates a comprehensive report in the chosen format
-- [ ] Export section is more discoverable (e.g., a FAB or a card near the top)
-- [ ] "Instrumentation" is renamed to something user-friendly (e.g., "Diagnostic Data") or moved to a developer settings area
+**Acceptance Criteria:**
+- Add a `tutorSessionId` field to `TutorArgs` (the scheduled session ID)
+- When navigating from a scheduled lesson context, pass the `plannedDurationMinutes` as `durationMinutes`
+- The `TutorScreen` should display the correct planned duration in the progress bar
+
+### M3. Scheduled Session Never Transitions to "Attended"
+
+**Files:**
+- `lib/features/teaching/services/tutor_service.dart` (no reference to scheduled `Session` records)
+
+**Rationale:** The TutorScreen creates a completely new `TutorSession` with ID `tutor_<timestamp>`. The scheduled `Session` (created by `LessonBookingSheet`) has status `SessionStatus.planned` and is stored separately. There is no code that links the two: when a tutor session ends, the corresponding scheduled session (if any) is never updated to `completed` or `inProgress`.
+
+**Acceptance Criteria:**
+- Either `TutorService.endLesson()` should accept an optional `scheduledSessionId` and update the corresponding `Session` to `completed` status
+- Or the scheduled `Session` status should transition to `inProgress` when the user starts the tutor and `completed` when the tutor session ends
+- The `PlannerScreen` should stop showing completed/attended lessons in the scheduled section
+
+### M4. Exercise Evaluation Lacks Question Context
+
+**Files:**
+- `lib/features/teaching/services/conversation_manager.dart` line 174
+
+**Rationale:** When the user answers an exercise question, `_evaluateExerciseResponse()` calls:
+```dart
+final result = await _exerciseEvaluator.evaluate(
+  question: '',  // Empty — the actual question is lost
+  studentAnswer: content,
+  subjectId: subjectId,
+  topicTitle: topicTitle,
+);
+```
+
+The evaluator only receives the subject name and topic title, and must infer what question was asked from the student's answer alone. This dramatically reduces evaluation accuracy, especially for partially correct answers where understanding the exact question is critical.
+
+**Acceptance Criteria:**
+- The `ConversationManager` must track the last exercise question asked by the AI (the last assistant message in `exercise` phase)
+- `_evaluateExerciseResponse()` must pass this actual question text instead of an empty string
+- Bonus: include the evaluation rubric or expected answer components in the prompt if the lesson plan defines them
+
+### M5. Mid-Lesson Crash Loses All Conversation Data
+
+**Files:**
+- `lib/features/teaching/services/conversation_manager.dart` line 60-64 — `ConversationMemory` created without `persistenceRepo`
+- `lib/features/teaching/services/tutor_service.dart` line 65-75 — `ConversationManager` instantiated without `persistenceRepo`
+
+**Rationale:** The `ConversationManager` is created with `persistenceRepo: null` (the optional parameter is never passed by `TutorService`). This means `ConversationMemory._persistMessage()` is a no-op throughout the entire lesson. ALL conversation messages are saved in one batch at `endLesson()`. If the app crashes, the system kills the process, or the user force-quits, every message is lost. The `TutorSession` record (which was saved at `startLesson()`) remains as an orphaned `inProgress` entry.
+
+**Acceptance Criteria:**
+- Inject `ConversationRepository` into `TutorService` and pass it to `ConversationManager`
+- Each message should be persisted individually as it's added (both user and assistant messages)
+- On app restart, check for orphaned `inProgress` sessions and offer to resume or discard them
+
+### M6. Confidence Rating Calculation Overflow Bug
+
+**Files:**
+- `lib/features/teaching/services/tutor_service.dart` line 109
+
+**Rationale:**
+```dart
+confidence: (session.confidenceRating * 20).clamp(0, 5).round(),
+```
+
+`session.confidenceRating` is already in 0-5 range (computed in `ConversationManager.toSession()` as `(confidenceRating * 5).round()` where `confidenceRating` is 0.0-1.0). Multiplying by 20 produces 0-100, then `clamp(0, 5)` maps everything >= 5 to 5. This means for any non-zero session confidence, the stored confidence is always 5 (maximum). The mastery system receives inflated confidence values, skewing mastery calculations.
+
+Example trace:
+- Real confidence = 0.4 (40% correct, below average)
+- `toSession()` → `(0.4 * 5).round() = 2`
+- endLesson() → `(2 * 20).clamp(0, 5).round() = 5` (max!)
+- Mastery system records confidence = 5/5 (excellent), which is wrong
+
+**Acceptance Criteria:**
+- Fix the formula to `session.confidenceRating` (no multiplication) or `(session.confidenceRating / 5 * 5).round()` (no-op identity)
+- Add a test that verifies confidence is preserved correctly end-to-end
 
 ---
 
-## MINOR Findings (UX friction)
+## MINOR (UX friction)
 
-### m1. Focus mode has no subject context from navigation
+### m1. First 1-2 Characters of Streaming Responses Clipped
 
 **Files:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:15-29` — accepts `preselectedSubjectId` and `preselectedTopicId` but these are not passed from any navigator call site
-- `lib/features/settings/presentation/settings_screen.dart:136-137` — "Focus Time" tile navigates with `Navigator.pushNamed(context, AppRoutes.focusMode)` with no arguments
+- `lib/features/teaching/services/conversation_manager.dart` line 147
 
-**Rationale:** When starting a focus session, the user might want to associate it with a specific subject or topic for better tracking. The FocusTimerScreen supports this through parameters, but no navigation path passes these parameters. The session gets recorded with empty `subjectId`, making subject-specific reporting less accurate.
+**Rationale:**
+```dart
+if (buffer.length > 2) {
+  yield* _buildAdaptiveChunks(buffer.toString());
+}
+```
 
-**Acceptance criteria:**
-- [ ] Subject picker added to focus timer setup screen
-- [ ] Subject is passed through to the session recording (PlanAdapter.recordFromFocusSession)
+The condition `buffer.length > 2` means the first 1-2 characters of every LLM response are never sent to the UI stream. Short responses like "OK", "Hi", or "No" may never render at all. The user sees responses starting mid-word, which looks broken.
+
+**Acceptance Criteria:**
+- Remove the length guard entirely, or change it to `buffer.isNotEmpty` (yield immediately with first character)
+- The `_buildAdaptiveChunks` method should handle single-character chunks gracefully (it currently chunks by adaptive pace, which will work with 1-char input)
+
+### m2. "End Lesson" Button Has No Confirmation Dialog
+
+**Files:**
+- `lib/features/teaching/presentation/tutor_screen.dart` line 267-271 (`TextButton.icon` calls `_endLesson` directly)
+- `lib/features/teaching/presentation/tutor_screen.dart` line 144-178 (`_endLesson` method)
+
+**Rationale:** Tapping "End Lesson" immediately terminates the session, generates a summary, and shows the dialog. There is no confirmation step. An accidental tap (especially on mobile where buttons are small) means the user loses their current lesson context with no way to cancel.
+
+**Acceptance Criteria:**
+- Before calling `_endLesson()`, show an `AlertDialog` with: "End your lesson? Your progress will be saved."
+- Buttons: "Continue Lesson" (dismisses dialog, stays in lesson) and "End Lesson" (proceeds with `_endLesson()`)
+
+### m3. Summary Dialog Pops Two Screens Disorientingly
+
+**Files:**
+- `lib/features/teaching/presentation/tutor_screen.dart` lines 167-171
+
+**Rationale:**
+```dart
+onPressed: () {
+  Navigator.of(ctx).pop();     // pop the dialog
+  Navigator.of(context).pop(); // pop the tutor screen
+}
+```
+
+Tapping "Done" on the summary dialog pops the dialog AND then immediately pops the tutor screen. This double-pop can be disorienting — the user goes from summary → Planner/Dashboard in one tap with no visual transition between the dialog being dismissed and the screen being popped.
+
+**Acceptance Criteria:**
+- After popping the dialog, add a short delay (e.g., 200ms) before popping the tutor screen so the user sees the underlying screen briefly before transitioning
+- Or replace the AlertDialog with a bottom-sheet or full-screen summary that has a more gradual dismissal
+- Or keep the user on the tutor screen but in a "completed" state, with a "Back to Planner" button
+
+### m4. Errors in Satellite Persistence Are Silently Swallowed
+
+**Files:**
+- `lib/features/teaching/services/tutor_service.dart` lines 116-121 and 123-148
+
+**Rationale:**
+```dart
+try {
+  await _planAdapter.recordFromTutorSession(...);
+} catch (_) {}
+
+try {
+  await _database.sessionRepository.save(...);
+} catch (_) {}
+```
+
+Failures in plan adherence recording and session repository persistence are completely silenced. The user has no way to know that adherence data or session history was not saved. This leads to confusing dashboard inconsistencies (lesson done but dashboard doesn't reflect it).
+
+**Acceptance Criteria:**
+- Log the error details instead of silently swallowing
+- Consider showing a non-blocking snackbar: "Lesson saved, but some stats couldn't be synced"
+- At minimum, collect these failures and report them in a single error message at the end
+
+### m5. Voice Input Locale Hardcoded to en_US
+
+**Files:**
+- `lib/features/teaching/services/voice_controller.dart`
+
+**Rationale:** Speech-to-text is hardcoded to `en_US` locale, and TTS is hardcoded to `en-US`. For users with Spanish, French, German, or other system languages, voice input produces gibberish because the speech recognizer is expecting English phonemes. There's no microphone permission handling in the UI — `requestPermission()` exists but is never called from `VoiceBar`.
+
+**Acceptance Criteria:**
+- Read the STT locale from the app's current locale setting or system locale
+- Read the TTS locale from the same source
+- Proactively request microphone permission when the VoiceBar is first shown (not on first mic tap)
+- Handle denial gracefully with an explanation
+
+### m6. Lesson-Time-Ended Warning Is Disconnected from Chat State
+
+**Files:**
+- `lib/features/teaching/presentation/tutor_screen.dart` lines 258-259, 320-346
+
+**Rationale:** When `remaining <= 0`, the message list shows an "invisible" info message "Lesson time has ended" at the bottom of the list (it's a text widget inserted after the messages). But the user can continue typing indefinitely. The LLM is NOT informed that the lesson should be wrapping up — it continues teaching as normal. The time-end warning is purely cosmetic and disconnected from the actual conversation flow.
+
+**Acceptance Criteria:**
+- When planned time expires, inject a system message into the conversation (e.g., "The lesson time has ended. Please wrap up and end the session.") so the LLM can transition to closing phase
+- Consider auto-triggering `transitionToClosing()` on the `ConversationManager`
+- The "Lesson time has ended" text should be more prominent (a banner, not a line item in the chat)
+
+### m7. No Auto-Locale for Conversation Prompts
+
+**Files:**
+- `lib/features/teaching/services/prompts/prompts.dart` (tutor prompts)
+
+**Rationale:** LLM prompts for the tutor, lesson plan generation, and summary are all in English. There is no localization mechanism for prompting the LLM in the user's language. A Spanish-speaking user gets English lesson plans, English teaching, and English summaries.
+
+**Acceptance Criteria:**
+- Add a `localeName` parameter to `TutorScreen` / `ConversationManager` / `ConversationPromptSet`
+- System prompts should include "Respond in the same language as the student" or inject the user's locale explicitly when generating prompts
+- This is already partially tracked in `issues/open/internationalisation_master.md` — link to that issue
+
+---
+
+## Previous Scenario Findings (Cross-Reference)
+
+The following findings from `scenario_first_launch_ib_chemistry.md` and `scenario_existing_user_pace_subjects_provider.md` remain unaddressed:
+
+| Scenario | Finding | Status | Severity |
+|---|---|---|---|
+| `first_launch` | No onboarding tour; dropped into 5-tab shell | Unresolved | FAIL |
+| `first_launch` | Dashboard checklist items not tappable (add subject works, others questionable) | Partially fixed (add subject works) | MAJOR |
+| `first_launch` | "Learn IB Chemistry in 90 days" — course input ignored by plan engine | Unresolved | FAIL |
+| `first_launch` | API key setup not prompted on first AI use; silent fallback | Unresolved | MAJOR |
+| `first_launch` | Adding subject does not prompt for materials | Unresolved | MINOR |
+| `existing_user` | No pace adjustment slider — must regenerate entire plan | Unresolved | PARTIAL |
+| `existing_user` | Switching providers preserves old model ID | Unresolved | MAJOR |
+| `existing_user` | Editing subject not available in subject menu | Unresolved | MAJOR |
+| `existing_user` | Deleting subject doesn't actually delete | Unresolved | BLOCKER |
+| `existing_user` | Cancel/reschedule scheduled lessons | **RESOLVED** — buttons now exist | Fixed |
+| `existing_user` | Planner doesn't support multi-subject plans via UI | Unresolved | PARTIAL |
+| `existing_user` | Export section buried at bottom of dashboard | Unresolved | MINOR |

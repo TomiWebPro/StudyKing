@@ -64,11 +64,6 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildFallbackWidget(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Text(l10n.unsupportedQuestionType(question.type.localizedLabel(l10n)));
-  }
-
   Widget _buildMultiChoiceContent(BuildContext context) {
     final options = question.options;
     if (options.isEmpty) {
@@ -180,6 +175,7 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         return MathExpressionWidget(expression: question.text, isSolution: false);
 
       case QuestionType.canvas:
+      case QuestionType.graphDrawing:
         return CanvasDrawingWidget(
           instruction: question.text,
           onDrawingComplete: (data) => onAnswerSelected(AppLocalizations.of(context)!.drawingSubmitted),
@@ -188,13 +184,47 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         );
 
       case QuestionType.typedAnswer:
+      case QuestionType.stepByStep:
         return _buildTypedAnswerWidget(context);
 
       case QuestionType.essay:
         return _buildEssayWidget(context);
 
-      default:
-        return _buildFallbackWidget(context);
+      case QuestionType.fileUpload:
+        return _buildFileUploadWidget(context);
+
+      case QuestionType.audioRecording:
+        return _buildAudioRecordingWidget(context);
     }
+  }
+
+  Widget _buildFileUploadWidget(BuildContext context) {
+    final hasFile = currentAnswer != null && currentAnswer!.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: 'Upload file',
+      child: OutlinedButton.icon(
+        onPressed: isSubmitted
+            ? null
+            : () => onAnswerSelected('file_uploaded'),
+        icon: Icon(hasFile ? Icons.check_circle : Icons.upload_file),
+        label: Text(hasFile ? 'File attached' : 'Upload file'),
+      ),
+    );
+  }
+
+  Widget _buildAudioRecordingWidget(BuildContext context) {
+    final hasRecording = currentAnswer != null && currentAnswer!.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: 'Record audio',
+      child: OutlinedButton.icon(
+        onPressed: isSubmitted
+            ? null
+            : () => onAnswerSelected('audio_recorded'),
+        icon: Icon(hasRecording ? Icons.mic : Icons.mic_none),
+        label: Text(hasRecording ? 'Recording complete' : 'Start recording'),
+      ),
+    );
   }
 }

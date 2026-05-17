@@ -2519,6 +2519,10 @@
   "@quickGuideSystemPrompt": {
     "description": "System prompt for Quick Guide AI in the current locale"
   },
+  "mentorSystemPrompt": "Eres un mentor de IA conocedor y alentador para un estudiante. Tu función es guiar su viaje de aprendizaje, proporcionar motivación y ayudarlos a desarrollar hábitos de estudio efectivos. Mantén las respuestas concisas, solidarias y procesables.",
+  "@mentorSystemPrompt": {
+    "description": "System prompt for Mentor AI in the current locale"
+  },
   "aboutApplicationName": "StudyKing",
   "@aboutApplicationName": {
     "description": "Application name for About dialog"
@@ -4618,5 +4622,13 @@
   "tutorNeedsSubject": "Por favor, crea primero una materia y un plan de estudio antes de usar el Tutor de IA. El tutor necesita el contexto de un tema para proporcionar lecciones efectivas.",
   "@tutorNeedsSubject": {
     "description": "Message when AI Tutor is accessed without a subject context"
+  },
+  "aiTaskMonitor": "Monitor de Tareas de IA",
+  "@aiTaskMonitor": {
+    "description": "Title for AI task monitor / token usage screen"
+  },
+  "viewActiveAiTasks": "Ver tareas activas de inferencia de IA y uso de tokens",
+  "@viewActiveAiTasks": {
+    "description": "Subtitle for AI task monitor settings entry"
   }
 }

@@ -673,6 +673,50 @@ void main() {
       },
     );
 
+    testWidgets('shows 0% and fraction for zero correct answers', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(
+          id: 's1',
+          subjectId: testSubjectId,
+          correctAnswers: 0,
+          questionsAnswered: 5,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectHistoryTab(
+            subjectId: testSubjectId,
+            onSessionTap: (_) {},
+            sessionRepository: repo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0%'), findsOneWidget);
+      expect(find.text('0/5'), findsOneWidget);
+    });
+
+    testWidgets('shows only matching sessions and empty state when none filtered', (tester) async {
+      final repo = _FakeSessionRepository([
+        _session(id: 's1', subjectId: 'other-subject'),
+        _session(id: 's2', subjectId: 'another-subject'),
+      ]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectHistoryTab(
+            subjectId: testSubjectId,
+            onSessionTap: (_) {},
+            sessionRepository: repo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No sessions yet'), findsOneWidget);
+      expect(find.byType(Card), findsNothing);
+    });
+
     testWidgets('card has proper margin', (tester) async {
       final repo = _FakeSessionRepository([
         _session(id: 's1', subjectId: testSubjectId),

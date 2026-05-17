@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
+import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -23,24 +24,62 @@ class ExportSection extends ConsumerWidget {
     final instrumentation = ref.watch(dashboardInstrumentationServiceProvider);
     final l10n = AppLocalizations.of(context)!;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Text(
+          l10n.exportComprehensiveReport,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             TextButton.icon(
-              onPressed: () => _exportProgressCSV(context, tracker),
-              icon: const Icon(Icons.download),
+              onPressed: () => _exportCSV(context),
+              icon: const Icon(Icons.table_chart, size: 18),
               label: Text(l10n.exportCsv),
             ),
             TextButton.icon(
-              onPressed: () => _exportSessionHistoryCSV(context, tracker),
-              icon: const Icon(Icons.history),
-              label: Text(l10n.sessionHistory),
+              onPressed: () => _exportPDF(context),
+              icon: const Icon(Icons.picture_as_pdf, size: 18),
+              label: Text(l10n.exportPdf),
             ),
             TextButton.icon(
-              onPressed: () => _exportInstrumentation(context, instrumentation),
-              icon: const Icon(Icons.analytics),
-              label: Text(l10n.instrumentation),
+              onPressed: () => _exportJSON(context),
+              icon: const Icon(Icons.code, size: 18),
+              label: Text(l10n.labelJson),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => _exportProgressCSV(context, tracker),
+              icon: Icon(Icons.download, size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              label: Text(
+                l10n.sessionHistory,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            TextButton.icon(
+              onPressed: () =>
+                  _exportInstrumentation(context, instrumentation),
+              icon: Icon(Icons.analytics, size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              label: Text(
+                l10n.instrumentation,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12),
+              ),
             ),
           ],
         ),
@@ -48,12 +87,80 @@ class ExportSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _exportProgressCSV(BuildContext context, StudyProgressTracker tracker) async {
+  Future<void> _exportCSV(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final service = ProgressExportService();
+      final csv = await service.exportComprehensiveCSV(studentId);
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csv);
+      if (!context.mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: l10n.comprehensiveReportExported,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _exportPDF(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final service = ProgressExportService();
+      final pdfBytes = await service.exportComprehensivePDF(studentId, l10n);
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      await file.writeAsBytes(pdfBytes);
+      if (!context.mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: l10n.comprehensiveReportExported,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _exportJSON(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final service = ProgressExportService();
+      final jsonStr = await service.exportComprehensiveJSON(studentId, l10n);
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json');
+      await file.writeAsString(jsonStr);
+      if (!context.mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: l10n.comprehensiveReportExported,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _exportProgressCSV(
+      BuildContext context, StudyProgressTracker tracker) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final csv = await tracker.exportProgressCSV(studentId);
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv');
+      final file = File(
+          '${dir.path}/studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(csv);
       if (!context.mounted) return;
       await Share.shareXFiles(
@@ -68,27 +175,8 @@ class ExportSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportSessionHistoryCSV(BuildContext context, StudyProgressTracker tracker) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final csv = await tracker.exportSessionHistoryCSV(studentId);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/studyking_sessions_${DateTime.now().millisecondsSinceEpoch}.csv');
-      await file.writeAsString(csv);
-      if (!context.mounted) return;
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: l10n.shareSessionHistory,
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
-      );
-    }
-  }
-
-  Future<void> _exportInstrumentation(BuildContext context, InstrumentationService instrumentation) async {
+  Future<void> _exportInstrumentation(
+      BuildContext context, InstrumentationService instrumentation) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
@@ -96,7 +184,8 @@ class ExportSection extends ConsumerWidget {
       final data = result.data!;
       final jsonString = formatInstrumentation(data, l10n);
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json');
+      final file = File(
+          '${dir.path}/studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
       if (!context.mounted) return;
       await Share.shareXFiles(
@@ -112,7 +201,8 @@ class ExportSection extends ConsumerWidget {
   }
 
   @visibleForTesting
-  String formatInstrumentation(Map<String, dynamic> data, AppLocalizations l10n) {
+  String formatInstrumentation(
+      Map<String, dynamic> data, AppLocalizations l10n) {
     final buffer = StringBuffer();
     buffer.writeln(l10n.instrumentationDashboard);
     buffer.writeln(l10n.instrumentationGenerated(data['generatedAt'] ?? ''));

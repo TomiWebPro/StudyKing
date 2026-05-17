@@ -649,18 +649,18 @@ void main() {
         expect(checkboxes.every((cb) => cb.value == false), isTrue);
       });
 
-      testWidgets('handles unknown question type', (tester) async {
+      testWidgets('handles fileUpload type', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
         await tester.pumpWidget(buildWidget(question: question));
 
-        expect(find.text('This question type is not yet supported in this view.'), findsOneWidget);
+        expect(find.textContaining('Upload file'), findsOneWidget);
       });
 
       testWidgets('handles audioRecording type', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
         await tester.pumpWidget(buildWidget(question: question));
 
-        expect(find.text('This question type is not yet supported in this view.'), findsOneWidget);
+        expect(find.textContaining('Start recording'), findsOneWidget);
       });
 
       testWidgets('difficulty 0 uses default color', (tester) async {
@@ -924,10 +924,10 @@ void main() {
     });
 
     group('type color default', () {
-      testWidgets('unsupported type uses surfaceContainerHighest color', (tester) async {
+      testWidgets('fileUpload type renders upload button', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
         await tester.pumpWidget(buildWidget(question: question));
-        expect(find.text('This question type is not yet supported in this view.'), findsOneWidget);
+        expect(find.textContaining('Upload file'), findsOneWidget);
       });
 
       testWidgets('difficulty default color for value 0 uses surfaceContainerHighest', (tester) async {

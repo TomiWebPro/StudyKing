@@ -1877,6 +1877,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Es la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.';
 
   @override
+  String get mentorSystemPrompt =>
+      'Eres un mentor de IA conocedor y alentador para un estudiante. Tu función es guiar su viaje de aprendizaje, proporcionar motivación y ayudarlos a desarrollar hábitos de estudio efectivos. Mantén las respuestas concisas, solidarias y procesables.';
+
+  @override
   String get aboutApplicationName => 'StudyKing';
 
   @override
@@ -3377,4 +3381,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get tutorNeedsSubject =>
       'Por favor, crea primero una materia y un plan de estudio antes de usar el Tutor de IA. El tutor necesita el contexto de un tema para proporcionar lecciones efectivas.';
+
+  @override
+  String get aiTaskMonitor => 'Monitor de Tareas de IA';
+
+  @override
+  String get viewActiveAiTasks =>
+      'Ver tareas activas de inferencia de IA y uso de tokens';
 }

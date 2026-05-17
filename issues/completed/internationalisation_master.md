@@ -1,93 +1,41 @@
-# Internationalisation: CSV Headers Localised (Breaks Data Portability) + ~25 Untranslated Spanish Keys + Hardcoded `$` Sign
+# MentorService lacks locale support — AI mentor ignores user's language preference
 
 ## Context
 
-The project uses Flutter's ARB-based `AppLocalizations` for i18n with `en` and `es` locales. 920 translation keys exist in both languages. The AGENTS.md conventions explicitly state:
+The app has two AI chat features: **Quick Guide** (`lib/features/teaching/`) and **Mentor** (`lib/features/mentor/`). Quick Guide correctly uses a locale-aware system prompt via the ARB key `quickGuideSystemPrompt` (translated in both `app_en.arb` and `app_es.arb`). The Mentor, however, hardcodes an English-only system prompt and never receives locale information, so it always responds in English regardless of the user's selected language.
 
-> **CSV exports** should remain in invariant `en` format (CSV is data, not display).
-> **PDF exports** should use the user's locale (they are user-facing documents).
+A Spanish-speaking user sees the entire UI in Spanish but gets English responses from the AI Mentor — a broken experience.
 
-Three issues violate these conventions.
+## Affected files
 
----
+| File | Issue |
+|---|---|
+| `lib/features/mentor/services/mentor_service.dart:26-29` | `_mentorSystemPromptText` is hardcoded English. No locale parameter exists on the class. |
+| `lib/features/mentor/services/mentor_service.dart:531-551` | `suggestNextAction()` returns hardcoded English messages (`"You haven't added any subjects yet..."`, `"You're doing well!..."`). |
+| `lib/features/mentor/services/mentor_service.dart:571-574` | System message for rescheduling conflict is hardcoded English. |
+| `lib/features/mentor/services/mentor_service.dart:595-598` | System message for pending reschedule confirmation is hardcoded English. |
+| `lib/features/mentor/presentation/mentor_screen.dart:60-70` | `MentorService` is instantiated without locale — no way to pass `localeName` from `AppLocalizations`. |
+| `lib/l10n/app_en.arb` | Missing `mentorSystemPrompt` key (only `quickGuideSystemPrompt` exists). |
+| `lib/l10n/app_es.arb` | Missing `mentorSystemPrompt` key. |
 
-## Issue 1: CSV Column Headers Are Localised — Architectural Anti-Pattern
+## Rationale
 
-**Affected file:** `lib/core/services/progress_export_service.dart:44-87`
+1. **Bilingual inconsistency**: Quick Guide already respects locale (`quickGuideSystemPrompt` at ES line 2505); Mentor does not. Users who switch to Spanish get a mixed-language experience.
+2. **Blocking future languages**: Since MentorService has no locale plumbing, adding French, German, etc. will require revisiting this same code. Fixing it now for Spanish establishes a reusable pattern.
+3. **Hardcoded fallback strings**: `suggestNextAction()` is a user-facing method (`MentorAction.message` is eventually shown in the UI) but returns English-only text that bypasses `AppLocalizations` entirely.
 
-The CSV writer reads column headers from `l10n` ARB keys (`csvColTotalAttempts`, `csvColAccuracy`, etc.). This means:
+## Acceptance criteria
 
-- A user with locale `es` exports a CSV with Spanish column headers (`"Intentos Totales"`, `"Precisión (%)"`).
-- A user with locale `en` exports a CSV with English headers (`"Total Attempts"`, `"Accuracy (%)"`).
-- **Result:** CSV files from Spanish users cannot be merged or processed programmatically with English CSVs. Spreadsheet scripts, data pipelines, and `pandas.read_csv()` break because column names differ per locale.
+1. Add a `mentorSystemPrompt` key to both `app_en.arb` and `app_es.arb` (mirroring the pattern of `quickGuideSystemPrompt`).
+2. Add an optional `localeName` parameter to `MentorService` (defaulting to `'en'`).
+3. Pass `localeName` from `MentorScreen` using `AppLocalizations.of(context)!.localeName` when constructing `MentorService`.
+4. Replace the hardcoded `_mentorSystemPromptText` with the localized value from the ARB bundle (using a static helper or injection so the service can access the translation without a `BuildContext`).
+5. Replace hardcoded English strings in `suggestNextAction()` with translated ARB lookups conditional on the stored `localeName`.
+6. Verify that with the device locale set to Spanish (`es`), the AI Mentor greets and responds in Spanish.
+7. Run `flutter gen-l10n` to regenerate localizations.
+8. Update `test/features/mentor/services/mentor_service_test.dart` to cover the locale-aware path (e.g., inject `localeName: 'es'` and assert the prompt uses the Spanish ARB value).
 
-Meanwhile, `lib/features/sessions/services/session_export_service.dart` uses **hardcoded English column names** (no locale at all), creating a second inconsistency — the two CSV exports use different approaches.
+## Prior art
 
-**Fix:** Hard-code CSV column headers to invariant English strings (or a fixed set of keys) regardless of locale. PDF exports (`progress_export_service.dart:126-200`) correctly use `l10n` ARB keys and locale-aware `formatDecimal` — that's the right pattern for PDFs, the wrong pattern for CSVs.
-
-| Export | Current | Required |
-|---|---|---|
-| CSV (progress) | Localised headers via `l10n.csvCol*` | Invariant English headers |
-| CSV (sessions) | Hardcoded English headers | Invariant English headers (already correct) |
-| PDF | Localised headers + locale-aware formatting | Already correct |
-
----
-
-## Issue 2: ~25 Spanish ARB Keys Untranslated (Identical to English)
-
-**Affected file:** `lib/l10n/app_es.arb`
-
-The following keys have identical values in both `app_en.arb` and `app_es.arb`. Several should differ for genuine Spanish localisation:
-
-| Key | English value | Spanish value (identical) | Should differ? |
-|---|---|---|---|
-| `mentor` | `"Mentor"` | `"Mentor"` | Yes → `"Mentor/a"` or keep as-is (arguable) |
-| `senderTutor` | `"Tutor"` | `"Tutor"` | Yes → `"Tutor/a"` or `"Tutor"` (same but worth noting) |
-| `ok` | `"OK"` | `"OK"` | Yes → `"Aceptar"` or keep English (arguable) |
-| `total` | `"Total"` | `"Total"` | Fine (same word) |
-| `labelJson` | `"JSON"` | `"JSON"` | Fine (acronym) |
-| `minutesCountMetric` | `"{count} min"` | `"{count} min"` | Fine (universal abbreviation) |
-| `hoursAbbreviation` | `"{hours}h"` | `"{hours}h"` | Fine (universal abbreviation) |
-| `tokensAndCost` | `"Tokens: {count} (${cost})"` | `"Tokens: {count} (${cost})"` | **See Issue 3** |
-| `durationDays` | `"{count,plural, =1{1d} other{{count}d}}"` | `"{count,plural, =1{1d} other{{count}d}}"` | Fine (abbreviations) |
-| `durationHours` | `"{count,plural, =1{1h} other{{count}h}}"` | `"{count,plural, =1{1h} other{{count}h}}"` | Fine (abbreviations) |
-| `durationSeconds` | `"{count,plural, =1{1s} other{{count}s}}"` | `"{count,plural, =1{1s} other{{count}s}}"` | Fine (abbreviations) |
-| `durationSeparator` | `" "` | `" "` | Fine (space is universal) |
-| `apiKeyHint` | `"sk-or-v1-..."` | `"sk-or-v1-..."` | Fine (technical value) |
-| `apiBaseUrlHint` | `"https://openrouter.ai/api/v1"` | `"https://openrouter.ai/api/v1"` | Fine (technical value) |
-| `aboutApplicationName` | `"StudyKing"` | `"StudyKing"` | Fine (brand name) |
-| `aboutVersion` | `"v0.1.0"` | `"v0.1.0"` | Fine (version string) |
-| `aboutLegalese` | `"© 2026 StudyKing."` | `"© 2026 StudyKing."` | Fine (legal text often kept as-is) |
-| `unknownModelId` | `"unknown-model"` | `"unknown-model"` | Fine (data value) |
-| `errorWithMessage` | `"Error: {error}"` | `"Error: {error}"` | Yes → `"Error: {error}"` is fine for ES |
-
-**Actionable items:**
-- Translate `ok` → `"Aceptar"` or `"De acuerdo"` (Spanish users expect native confirmation labels)
-- Translate `mentor` → could keep `"Mentor"` (it's the same in Spanish) — low priority
-- The truly problematic keys are `tokensAndCost` (see Issue 3)
-
----
-
-## Issue 3: Hardcoded `$` Sign in `tokensAndCost` (Locale-Unaware Currency)
-
-**Affected file:** `lib/l10n/app_en.arb` line 1969, `lib/l10n/app_es.arb` line 1969
-
-```arb
-"tokensAndCost": "Tokens: {count} (${cost})"
-```
-
-The `$` is hardcoded into the translation template. The `cost` parameter is passed as a pre-formatted string (via `formatCurrency` in `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:275`), so the `$` in the template is redundant and misleading. If the `formatCurrency` call is ever changed to use a non-USD symbol, the `$` in the template will be a visual double-currency bug.
-
-**Fix:** Remove `$` from both ARB files. The `cost` placeholder already contains the currency symbol from `formatCurrency`.
-
----
-
-## Acceptance Criteria
-
-- [ ] `progress_export_service.dart` CSV headers use invariant English strings, not `l10n` keys — CSV files are locale-independent
-- [ ] `session_export_service.dart` CSV approach remains consistent (already uses invariant English)
-- [ ] PDF exports in `progress_export_service.dart` continue using `l10n` keys and locale-aware number formatting (no regression)
-- [ ] `ok` in `app_es.arb` is translated to `"Aceptar"`
-- [ ] `tokensAndCost` in both EN and ES ARB files removes the hardcoded `$` prefix from the template
-- [ ] All other ~25 keys reviewed and confirmed appropriate for Spanish (most are fine, no change needed)
-- [ ] `csvOverallStats`, `csvTopicMastery`, `csvAllAttempts`, `csvWeeklyTrend`, `csvBadges` and all `csvCol*` keys remain in ARB files for PDF use, but are **not used** for CSV column construction (or are used only for PDFs)
+- `quickGuideSystemPrompt` in `app_es.arb` (line 2505) shows the correct pattern: the system prompt is stored as an ARB string and the generated `AppLocalizations` class provides it per locale.
+- The Mentor Service's `_memory.addSystemMessage(...)` calls on lines 571-574 and 595-598 can be refactored the same way.

@@ -465,6 +465,43 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     }
   }
 
+  Future<bool> cancelLesson(String sessionId, AppLocalizations l10n) async {
+    try {
+      final success = await _service.cancelLesson(sessionId);
+      if (success) {
+        await loadScheduledLessons();
+        state = state.copyWith(successMessage: l10n.sessionDeleted);
+      }
+      return success;
+    } catch (_) {
+      state = state.copyWith(error: l10n.failedToScheduleLesson);
+      return false;
+    }
+  }
+
+  Future<bool> rescheduleLesson({
+    required String sessionId,
+    required DateTime newStartTime,
+    required int durationMinutes,
+    required AppLocalizations l10n,
+  }) async {
+    try {
+      final success = await _service.rescheduleLesson(
+        sessionId: sessionId,
+        newStartTime: newStartTime,
+        durationMinutes: durationMinutes,
+      );
+      if (success) {
+        await loadScheduledLessons();
+        state = state.copyWith(successMessage: l10n.lessonScheduled);
+      }
+      return success;
+    } catch (_) {
+      state = state.copyWith(error: l10n.failedToScheduleLesson);
+      return false;
+    }
+  }
+
   Future<void> redistributeWorkload(int missedMinutes, AppLocalizations l10n) async {
     try {
       await _service.redistributeWorkload(missedMinutes);

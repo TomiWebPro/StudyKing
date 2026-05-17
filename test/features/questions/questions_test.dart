@@ -58,5 +58,27 @@ void main() {
     test('exports EvaluationType', () {
       expect(EvaluationType, isA<Type>());
     });
+
+    test('can construct Markscheme', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'Paris');
+      expect(markscheme.questionId, 'q1');
+      expect(markscheme.correctAnswer, 'Paris');
+    });
+
+    test('can construct QuestionEvaluation', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1',
+        correctAnswer: 'Paris',
+      );
+      expect(evaluation.questionId, 'q1');
+      expect(evaluation.correctAnswer, 'Paris');
+    });
+
+    test('can construct EvaluationStep', () {
+      final step = EvaluationStep(stepNumber: '1', requiredAnswer: 'A', points: 2);
+      expect(step.stepNumber, '1');
+      expect(step.requiredAnswer, 'A');
+      expect(step.points, 2);
+    });
   });
 }

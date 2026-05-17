@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
 class MockAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
@@ -60,14 +63,34 @@ class MockAttemptRepository extends AttemptRepository {
   }
 }
 
+class FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions = [];
+
+  void setSessions(List<Session> sessions) {
+    _sessions.clear();
+    _sessions.addAll(sessions);
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    return Result.success(
+        _sessions.where((s) => s.studentId == studentId).toList());
+  }
+}
+
 void main() {
   group('StudyProgressTracker', () {
     late StudyProgressTracker tracker;
     late MockAttemptRepository mockRepo;
+    late FakeSessionRepository mockSessionRepo;
 
     setUp(() {
       mockRepo = MockAttemptRepository();
-      tracker = StudyProgressTracker(attemptRepo: mockRepo);
+      mockSessionRepo = FakeSessionRepository();
+      tracker = StudyProgressTracker(
+        attemptRepo: mockRepo,
+        sessionRepo: mockSessionRepo,
+      );
     });
 
     group('getOverallStats', () {
@@ -146,6 +169,34 @@ void main() {
         final stats = await tracker.getOverallStats('student1');
 
         expect(stats['dailyActivity'], equals(2));
+      });
+
+      test('includes session study time in total study time', () async {
+        mockRepo.setAttempts([]);
+        final now = DateTime.now();
+        mockSessionRepo.setSessions([
+          Session(
+            id: 's1',
+            studentId: 'student1',
+            type: SessionType.focus,
+            startTime: now,
+            actualDurationMs: 3600000,
+          ),
+          Session(
+            id: 's2',
+            studentId: 'student1',
+            type: SessionType.tutoring,
+            startTime: now,
+            actualDurationMs: 1800000,
+          ),
+        ]);
+
+        final stats = await tracker.getOverallStats('student1');
+
+        expect(stats['totalStudyTimeHours'], equals(1.5));
+        expect(stats['sessionCount'], equals(2));
+        expect(stats['focusSessionCount'], equals(1));
+        expect(stats['tutorSessionCount'], equals(1));
       });
 
       test('counts unique topics studied', () async {

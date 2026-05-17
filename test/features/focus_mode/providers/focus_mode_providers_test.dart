@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 
@@ -25,6 +26,26 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       expect(service.repository, same(overrideRepo));
+    });
+
+    test('studyTimerServiceProvider returns a StudyTimerService', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final service = container.read(studyTimerServiceProvider);
+      expect(service, isA<StudyTimerService>());
+    });
+
+    test('sessionRepositoryProvider can be overridden', () {
+      final fakeRepo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(sessionRepositoryProvider), same(fakeRepo));
     });
 
     test('all providers resolve without throwing', () {

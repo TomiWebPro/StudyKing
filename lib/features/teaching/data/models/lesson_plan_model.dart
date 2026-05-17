@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../../../core/utils/logger.dart';
 
 enum LessonSectionType { explanation, exercise, review, summary, quiz }
 
@@ -32,6 +33,8 @@ class LessonSection {
 }
 
 class LessonPlan {
+  static final Logger _logger = const Logger('LessonPlan');
+
   final List<String> goals;
   final List<LessonSection> sections;
   final List<String> checkpoints;
@@ -60,7 +63,8 @@ class LessonPlan {
         checkpoints: List<String>.from(data['checkpoints'] ?? []),
         estimatedDifficulty: data['estimatedDifficulty'] as int? ?? 3,
       );
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse lesson plan JSON', e);
       return null;
     }
   }

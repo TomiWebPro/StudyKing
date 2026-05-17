@@ -1,7 +1,9 @@
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
@@ -11,14 +13,17 @@ class StudyProgressTracker {
   final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
+  final SessionRepository? _sessionRepo;
   final AppLocalizations? _l10n;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
+    SessionRepository? sessionRepo,
     AppLocalizations? l10n,
   })  : _attemptRepo = attemptRepo,
         _masteryService = masteryService ?? MasteryGraphService(),
+        _sessionRepo = sessionRepo,
         _l10n = l10n;
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
@@ -43,18 +48,44 @@ class StudyProgressTracker {
       return date == today;
     }).length;
 
+    var sessionTimeMs = 0;
+    var sessionCount = 0;
+    var tutorSessionCount = 0;
+    var focusSessionCount = 0;
+
+    if (_sessionRepo != null) {
+      final sessionsResult = await _sessionRepo.getByStudent(studentId);
+      if (sessionsResult.isSuccess) {
+        final sessions = sessionsResult.data!;
+        sessionCount = sessions.length;
+        for (final s in sessions) {
+          if (s.type == SessionType.tutoring) {
+            tutorSessionCount++;
+          } else if (s.type == SessionType.focus) {
+            focusSessionCount++;
+          }
+          sessionTimeMs += s.actualDurationMs;
+        }
+      }
+    }
+
+    final totalStudyTimeMs = totalTimeMs + sessionTimeMs;
+
     return {
       'totalAttempts': totalAttempts,
       'correctAttempts': correctAttempts,
       'accuracy': (accuracy * 100).round(),
       'avgTimePerQuestion': (avgTimePerQuestion / 1000).round(),
-      'totalStudyTimeHours': totalTimeMs / 3600000,
+      'totalStudyTimeHours': totalStudyTimeMs / 3600000,
       'weeklyActivity': weeklyAttempts,
       'dailyActivity': dailyAttempts,
       'topicsStudied': attempts
         .map((a) => a.questionId.split('_').first)
         .toSet()
         .length,
+      'sessionCount': sessionCount,
+      'tutorSessionCount': tutorSessionCount,
+      'focusSessionCount': focusSessionCount,
     };
   }
 

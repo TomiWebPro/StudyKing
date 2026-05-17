@@ -87,6 +87,7 @@ void main() async {
         tracker: StudyProgressTracker(
           attemptRepo: AttemptRepository(),
           masteryService: MasteryGraphService(),
+          sessionRepo: SessionRepository(),
         ),
         masteryService: MasteryGraphService(),
         nudgeRepository: EngagementNudgeRepository(),

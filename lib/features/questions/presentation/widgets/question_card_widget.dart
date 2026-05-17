@@ -211,15 +211,11 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
       case QuestionType.stepByStep:
         return _buildTextAnswerContent(context);
 
-      default:
-        final l10n = AppLocalizations.of(context)!;
-        return Row(
-          children: [
-            const Icon(Icons.info_outline),
-            const SizedBox(width: 8),
-            Expanded(child: Text(l10n.questionTypeNotSupported)),
-          ],
-        );
+      case QuestionType.fileUpload:
+        return _buildFileUploadContent(context);
+
+      case QuestionType.audioRecording:
+        return _buildAudioRecordingContent(context);
     }
   }
 
@@ -335,6 +331,36 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
         _updateAnswer(base64Encode(data));
       },
       largeTouchTargets: widget.largeTouchTargets,
+    );
+  }
+
+  Widget _buildFileUploadContent(BuildContext context) {
+    final hasFile = _localAnswer != null && _localAnswer!.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: 'Upload file',
+      child: OutlinedButton.icon(
+        onPressed: widget.isSubmitted
+            ? null
+            : () => _updateAnswer('file_uploaded'),
+        icon: Icon(hasFile ? Icons.check_circle : Icons.upload_file),
+        label: Text(hasFile ? 'File attached' : 'Upload file'),
+      ),
+    );
+  }
+
+  Widget _buildAudioRecordingContent(BuildContext context) {
+    final hasRecording = _localAnswer != null && _localAnswer!.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: 'Record audio',
+      child: OutlinedButton.icon(
+        onPressed: widget.isSubmitted
+            ? null
+            : () => _updateAnswer('audio_recorded'),
+        icon: Icon(hasRecording ? Icons.mic : Icons.mic_none),
+        label: Text(hasRecording ? 'Recording complete' : 'Start recording'),
+      ),
     );
   }
 

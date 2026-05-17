@@ -6,7 +6,8 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
-    show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, settingsProvider;
+    show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
+import 'package:studyking/core/constants/app_api_config.dart';
 
 class ApiConfigScreen extends ConsumerStatefulWidget {
   const ApiConfigScreen({super.key});
@@ -73,6 +74,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             llmProvider: _selectedProvider,
           );
 
+      ref.read(selectedModelProvider.notifier).state = '';
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -80,6 +83,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           backgroundColor: successColor,
         ),
       );
+
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
@@ -308,8 +313,16 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             if (value == null) return;
             setState(() {
               _selectedProvider = value;
-              if (value == LlmProvider.ollama && _baseUrlController.text.isEmpty) {
-                _baseUrlController.text = 'http://localhost:11434';
+              switch (value) {
+                case LlmProvider.openRouter:
+                  _baseUrlController.text = ApiConfig.openRouterBaseUrlString;
+                  break;
+                case LlmProvider.ollama:
+                  _baseUrlController.text = ApiConfig.ollamaDefaultUrl;
+                  break;
+                case LlmProvider.openAI:
+                  _baseUrlController.text = ApiConfig.openAIDefaultUrl;
+                  break;
               }
             });
           },

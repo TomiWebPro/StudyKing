@@ -227,5 +227,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(spacedCalls, 2);
     });
+
+    testWidgets('column uses center mainAxisAlignment', (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectPracticeTab(
+            onStartPractice: () {},
+            onStartSpacedRepetition: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final column = tester.widget<Column>(find.byType(Column));
+      expect(column.mainAxisAlignment, MainAxisAlignment.center);
+    });
+
+    testWidgets('large play icon is rendered with smaller opacity', (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          SubjectPracticeTab(
+            onStartPractice: () {},
+            onStartSpacedRepetition: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final icons = find.byIcon(Icons.play_arrow);
+      expect(icons, findsAtLeastNWidgets(2));
+    });
   });
 }

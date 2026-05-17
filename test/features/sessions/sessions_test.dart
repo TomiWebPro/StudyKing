@@ -11,6 +11,14 @@ void main() {
       expect(sessionRepositoryProvider, isNotNull);
     });
 
+    test('exports allSessionsProvider', () {
+      expect(allSessionsProvider, isNotNull);
+    });
+
+    test('exports todayStatsProvider', () {
+      expect(todayStatsProvider, isNotNull);
+    });
+
     test('exports SessionHistoryScreen', () {
       expect(SessionHistoryScreen, isA<Type>());
     });

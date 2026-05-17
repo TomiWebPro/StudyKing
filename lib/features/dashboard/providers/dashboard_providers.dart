@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
@@ -13,9 +14,14 @@ final dashboardAttemptRepositoryProvider = Provider<AttemptRepository>((ref) {
   return AttemptRepository();
 });
 
+final dashboardSessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  return SessionRepository();
+});
+
 final dashboardStudyProgressTrackerProvider = Provider<StudyProgressTracker>((ref) {
   return StudyProgressTracker(
     attemptRepo: ref.read(dashboardAttemptRepositoryProvider),
+    sessionRepo: ref.read(dashboardSessionRepositoryProvider),
   );
 });
 

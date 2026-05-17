@@ -210,20 +210,16 @@ void main() {
 
       test('is wired to sub-providers', () {
         final fakeSourceRepo = SourceRepository();
-        final fakePipeline = ContentPipeline(
-          llmService: LlmService(
-            config: const LlmConfiguration(
-              provider: LlmProvider.openRouter,
-              apiKey: 'test-key',
-            ),
-          ),
-          sourceRepository: fakeSourceRepo,
-          topicRepository: TopicRepository(),
-          questionRepository: QuestionRepository(),
-        );
         final container = ProviderContainer(
           overrides: [
-            contentPipelineProvider.overrideWithValue(fakePipeline),
+            llmServiceProvider.overrideWithValue(
+              LlmService(
+                config: const LlmConfiguration(
+                  provider: LlmProvider.openRouter,
+                  apiKey: 'test-key',
+                ),
+              ),
+            ),
             ingestionSourceRepositoryProvider.overrideWithValue(fakeSourceRepo),
           ],
         );
@@ -233,7 +229,25 @@ void main() {
         expect(pipeline, isA<ContentPipeline>());
       });
 
-      test('all providers resolve without throwing', () {
+      test('contentPipelineProvider uses llmService from overridden provider', () {
+        final fakeLlm = LlmService(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'override-key',
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            llmServiceProvider.overrideWithValue(fakeLlm),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final pipeline = container.read(contentPipelineProvider);
+        expect(pipeline, isA<ContentPipeline>());
+      });
+
+      test('all providers resolve without throwing with proper overrides', () {
         final container = ProviderContainer(
           overrides: [
             llmServiceProvider.overrideWithValue(

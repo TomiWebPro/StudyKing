@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -20,13 +21,10 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorService {
   final Logger _logger = const Logger('MentorService');
-  static const String _mentorSystemPromptText = 'You are a knowledgeable and encouraging AI mentor for a student. '
-      'Your role is to guide their learning journey, provide motivation, '
-      'and help them develop effective study habits. '
-      'Keep responses concise, supportive, and actionable.';
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
@@ -38,6 +36,7 @@ class MentorService {
   final PlannerService _plannerService;
   final EngagementNudgeRepository _nudgeRepo;
   final SessionRepository _sessionRepository;
+  final String _localeName;
 
   MentorService({
     required DatabaseService database,
@@ -51,6 +50,7 @@ class MentorService {
     EngagementNudgeRepository? nudgeRepo,
     SessionRepository? sessionRepository,
     ConversationRepository? conversationRepo,
+    String localeName = 'en',
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
@@ -61,6 +61,7 @@ class MentorService {
         _pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         _nudgeRepo = nudgeRepo ?? EngagementNudgeRepository(),
         _sessionRepository = sessionRepository ?? SessionRepository(),
+        _localeName = localeName,
         _memory = ConversationMemory(
           maxTurns: 50,
           sessionId: 'mentor_$studentId',
@@ -230,7 +231,8 @@ class MentorService {
   }
 
   String _mentorSystemPrompt() {
-    return _mentorSystemPromptText;
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    return l10n.mentorSystemPrompt;
   }
 
   String _extractTopic(String message) {
@@ -539,16 +541,17 @@ class MentorService {
       );
     }
 
+    final l10n = lookupAppLocalizations(Locale(_localeName));
     final subjects = await _database.subjectRepository.getAll();
     if (subjects.isEmpty) {
-      return const MentorAction(
-        message: "You haven't added any subjects yet. Start by setting up your subjects!",
+      return MentorAction(
+        message: l10n.mentorNoSubjects,
         type: 'setup',
       );
     }
 
-    return const MentorAction(
-      message: "You're doing well! Keep up the good work and consider reviewing your recent topics.",
+    return MentorAction(
+      message: l10n.mentorDoingWell,
       type: 'generic',
     );
   }

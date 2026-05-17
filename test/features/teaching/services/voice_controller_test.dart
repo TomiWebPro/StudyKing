@@ -62,5 +62,15 @@ void main() {
       controller.dispose();
       controller.dispose();
     });
+
+    test('startListening accepts localeName parameter', () async {
+      await controller.startListening(localeName: 'es');
+      expect(controller.isListening, isFalse);
+    });
+
+    test('speak accepts localeName parameter', () async {
+      await controller.speak('Hola', localeName: 'es');
+      expect(controller.isSpeaking, isFalse);
+    });
   });
 }

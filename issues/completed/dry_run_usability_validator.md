@@ -1,177 +1,155 @@
-# Dry-Run Usability Validation: First Launch — Learning IB Chemistry
+# Dry-Run Usability Validation
 
-## Scenario
-
-`dry-run-test/scenario_first_launch_ib_chemistry.md`
-
-A new user installs StudyKing for the first time, wanting to learn IB Chemistry. The tracing exposes 12 distinct usability gaps that prevent a new user from successfully adopting the app without external guidance or trial-and-error.
+**Scenario:** `dry-run-test/scenario_existing_user_pace_subjects_provider.md`
+**Persona:** Existing user (weeks of use) who wants to adjust pace, switch AI provider, cancel/reschedule lessons, add a second subject, and export progress.
 
 ---
 
-## BLOCKER (app crashes or user cannot proceed)
+## BLOCKER Findings (app crashes or user cannot proceed)
 
-### B1. Empty Dashboard Checklist items are not tappable / actionable
+### B1. No UI to cancel or reschedule a scheduled lesson
 
-The `EmptyDashboardChecklist` widget shows 4 onboarding steps (Add Subject, Upload Material, Take Practice Quiz, Schedule AI Tutor) but none of the items can be tapped. The `ChecklistItem` is a plain data class with no callback, and items are rendered as static `Row` widgets with no `GestureDetector`/`InkWell`.
+**Files:**
+- `lib/features/planner/services/planner_service.dart:246-284` — `scheduleLesson()` and `cancelLesson()` exist, but no `rescheduleLesson()`
+- `lib/features/planner/providers/planner_providers.dart:392-466` — `scheduleLesson` and `scheduleLessonWithConflictCheck` exist, but no `cancelLesson` or `rescheduleLesson` notifier methods
+- `lib/features/planner/presentation/planner_screen.dart:512-561` — `_buildScheduledLessonsSection` renders lessons as read-only `ListTile`s with no cancel/reschedule buttons
+- `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` — only supports creating new lessons, not editing existing ones
+- `lib/features/lessons/presentation/lesson_detail_screen.dart:1-160` — lesson detail has no cancel/reschedule button
 
-**Affected files:**
-- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:12-33` — `ChecklistItem` class has no `onTap`/`onPressed` field
-- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:61-103` — Items rendered as `Row` children with no tap handler
-
-**Acceptance criteria:**
-- Each `ChecklistItem` must have an `onTap` callback that navigates to the corresponding screen (`AppRoutes.subjectSelection`, `AppRoutes.upload`, `AppRoutes.practiceSession`, `AppRoutes.planner`).
-- Alternatively, wrap each item row in `InkWell`/`GestureDetector` with the appropriate navigation route.
-
-### B2. Plan generation for new users produces empty daily plans (zero topics, zero questions)
-
-When a new user creates a study plan ("IB Chemistry, 90 days"), `PersonalLearningPlanService._buildPlan()` calls `_repository.getAllMasteryStates()` which returns an empty list. `_buildRecommendations()` iterates over the empty list and produces zero `PlanRecommendation` items. `_generateDailyPlans()` then loops `planDurationDays` times (e.g. 90), but each day's `priorityTopics` remains empty because the inner `while` loop condition `recommendationIndex < sortedRecs.length` is immediately false. The result is 90 daily plans with `targetQuestions: 0`, `targetMinutes: 0`, and focus label `"General review"`.
-
-Additionally, the `course` parameter entered by the user is silently discarded — `PlannerService.generatePlan()` accepts `course` but never passes it to the plan generation engine.
-
-**Affected files:**
-- `lib/features/planner/services/planner_service.dart:89-112` — `generatePlan()` takes `course` parameter but never forwards it to `PersonalLearningPlanService`
-- `lib/core/services/personal_learning_plan_service.dart:74-76` — `generatePlan()` calls `_buildPlan(studentId: studentId)` with no course/subject reference
-- `lib/core/services/personal_learning_plan_service.dart:88-199` — `_buildPlan()` requires non-empty `masteryStates` to generate meaningful recommendations
-- `lib/core/services/personal_learning_plan_service.dart:201-245` — `_buildRecommendations()` returns empty list when `topicMastery` is empty
-- `lib/core/services/personal_learning_plan_service.dart:470-591` — `_generateDailyPlans()` produces zero-content days when `recommendations` is empty
+**Rationale:** Users cannot cancel or reschedule a lesson they've booked. The backend `cancelLesson()` method exists but has zero UI bindings. `rescheduleLesson()` does not exist at all. To cancel a lesson, a user would need to use Session History (which also has no cancel action for planned tutoring sessions).
 
 **Acceptance criteria:**
-- When no mastery state data exists, the planner must create a plan based on the course/subject name alone (e.g. by prompting the LLM to generate a syllabus structure for "IB Chemistry" and distribute topics across the requested duration).
-- The `course` parameter in `PlannerService.generatePlan()` must either be forwarded to the plan engine or the screen should prevent plan generation until at least one subject with topics exists.
-- The user must receive a clear message: "You need to add a subject and its topics before generating a plan" OR the plan generation must work from an LLM-generated syllabus when no data exists.
+- [ ] Scheduled lessons in the Planner's "Scheduled Lessons" section show a cancel button and/or a reschedule button on each lesson card
+- [ ] LessonDetailScreen provides a cancel action and a reschedule action
+- [ ] `PlannerNotifier` exposes `cancelLesson()` and `rescheduleLesson()` methods
+- [ ] `PlannerService` gains a `rescheduleLesson()` method (or the LessonBookingSheet is refactored to handle editing)
+- [ ] Cancellation shows a confirmation dialog; reschedule opens a pre-filled LessonBookingSheet
+
+### B2. Subject deletion does not actually delete the subject
+
+**Files:**
+- `lib/features/subjects/presentation/subject_detail_screen.dart:249-273` — `_confirmDelete()` shows a confirmation dialog, then on "Delete" only calls `Navigator.pop(context)` twice. **Never calls `SubjectRepository.delete()` or any repository method.**
+- `lib/features/subjects/data/repositories/subject_repository.dart:5-49` — `SubjectRepository` extends `Repository<Subject>` which presumably has a `delete()` method, but it's never invoked from the UI.
+
+**Rationale:** The delete button is a lie. The subject remains in Hive permanently. The user gets no feedback that deletion failed. This is a complete no-op.
+
+**Acceptance criteria:**
+- [ ] `_confirmDelete()` actually calls `SubjectRepository.delete(subject.id)` after confirmation
+- [ ] Success/failure feedback is shown via SnackBar
+- [ ] The screen pops back to the subject list after successful deletion
+- [ ] Associated data (topics, sessions, mastery states) is cleaned up or orphaned gracefully
 
 ---
 
-## MAJOR (feature is broken or misleading)
+## MAJOR Findings (feature is broken or misleading)
 
-### M1. No onboarding experience on first launch
+### M1. Switching AI provider does not reset the selected model
 
-The app initializes silently (Hive, UUID) and jumps directly to the 5-tab `MainScreen`. There is no welcome dialog, onboarding walkthrough, or coachmarks. The user must discover all features through trial and error. The closest thing to onboarding is `QuickGuideScreen`, but it's buried 2 navigation levels deep (Settings → Quick Guide) and is never shown automatically.
+**Files:**
+- `lib/features/settings/presentation/api_config_screen.dart:48-97` — `_saveKeys()` saves the new provider but does not clear the selected model
+- `lib/features/settings/presentation/settings_screen.dart:289-324` — `_showAiModelSelection()` fetches models from the API but the currently selected model ID remains unchanged until the user explicitly picks a new one
+- `lib/core/providers/app_providers.dart:217` — `selectedModelProvider` is independent; provider change does not reset it
+- `lib/core/providers/llm_providers.dart:15` — `llmServiceProvider` receives the model from `selectedModelProvider` regardless of provider compatibility
 
-**Affected files:**
-- `lib/main.dart:39-89` — `main()` completes initialization and calls `runApp(StudyKingApp())` with zero user-facing guidance
-- `lib/main.dart:220-398` — `MainScreen` renders immediately with 5 tabs and a Dashboard FAB
-- `lib/features/quickguide/presentation/quick_guide_screen.dart` — QuickGuide exists but is never triggered on first launch
-
-**Acceptance criteria:**
-- On first launch (detecting zero subjects, zero plans, zero practice data), show a welcome dialog or full-screen onboarding that:
-  - Explains what StudyKing is ("your AI-native learning companion")
-  - Highlights the 5 main tabs and what each does
-  - Proactively points to API Key configuration
-  - Offers to create a first subject or start the QuickGuide
-- The onboarding should have a "Don't show again" checkbox and be dismissible.
-- Alternatively, route to `QuickGuideScreen` automatically on first launch.
-
-### M2. No proactive API key configuration prompt
-
-AI-dependent features (Mentor, QuickGuide, AI Tutor) silently degrade or fail when no API key is configured. QuickGuide falls back to canned responses (`_fallbackResponse()`). The Mentor may display errors. The Settings screen shows "Not configured" in small text for the API Keys row, but there is no proactive banner/dialog anywhere telling the user to configure their API key before using AI features.
-
-**Affected files:**
-- `lib/features/settings/presentation/settings_screen.dart:84-85` — Shows "Not configured" text non-prominently
-- `lib/features/quickguide/presentation/quick_guide_screen.dart:125-127` — Silently falls back to canned responses when `apiKey.isEmpty`
-- `lib/features/mentor/presentation/mentor_screen.dart:55-89` — `_initializeMentor()` does not check API key availability before attempting LLM calls
-- `lib/core/providers/app_providers.dart` — `apiKeyProvider` starts as empty string
+**Rationale:** If a user switches from OpenRouter (model: `mistralai/mixtral-8x7b-instruct`) to Ollama, the model ID remains `mistralai/mixtral-8x7b-instruct`. This model ID does not exist on Ollama, causing silent failures in the Tutor, Mentor, and any LLM-dependent feature. The user must remember to manually select a new model — but there's no warning or prompt.
 
 **Acceptance criteria:**
-- On first app launch, if no API key is detected, show a prominent banner/dialog: "StudyKing needs an API key to use AI features. Configure one now." with a button linking to `AppRoutes.apiConfig`.
-- The banner should persist (dismissible but re-appear on next launch) until the user configures a valid API key.
-- The Mentor screen should show a helpful message when API key is missing instead of silently failing.
-- The QuickGuide welcome message should include a note about API configuration if no key is set.
+- [ ] Changing the provider in ApiConfigScreen resets `selectedModelProvider` to empty string
+- [ ] After saving a provider change, a dialog prompts the user: "You changed your AI provider. Would you like to select a model for [new provider] now?"
+- [ ] OR: The model list is filtered/validated against the selected provider when the model selection screen opens
 
-### M3. No well-known syllabus database for international curricula
+### M2. Switching from Ollama back to OpenRouter does not reset the base URL
 
-Users who want to study a specific curriculum (IB, A-Levels, AP, GCSE, etc.) must manually type everything: subject name, code, teacher, syllabus, description. There is no pre-populated database or LLM-based auto-complete for well-known courses. Even after creating "IB Chemistry", no topics are generated — the process is entirely manual.
+**Files:**
+- `lib/features/settings/presentation/api_config_screen.dart:307-315` — `onChanged` only auto-fills the base URL for Ollama; switching to OpenRouter or OpenAI does NOT change the base URL field
+- `lib/features/settings/presentation/api_config_screen.dart:40-46` — `_loadCurrentValues()` loads whatever base URL is stored, regardless of whether it matches the current provider
 
-**Affected files:**
-- `lib/features/subjects/presentation/subject_selection_screen.dart:20-25` — All subject fields are manual text inputs
-- `lib/features/subjects/presentation/subject_form_widgets.dart` — Form fields with no auto-complete
-
-**Acceptance criteria:**
-- Add an LLM-powered "Suggest from curriculum" feature: when the user enters "IB Chemistry", the app queries the LLM (or a local database) to generate a list of standard IB Chemistry topics and populate them automatically.
-- Alternatively, bundle a starter JSON file of common international curricula topics.
-
-### M4. No follow-up prompt after adding a subject
-
-After the user creates a subject (`_saveSubject()`), the screen just calls `Navigator.pop(context, true)`. There is no dialog suggesting the next logical step: "Great! Would you like to upload your IB Chemistry textbook or syllabus now?"
-
-**Affected files:**
-- `lib/features/subjects/presentation/subject_selection_screen.dart:70-75` — Saves subject then navigates back silently
+**Rationale:** If the user switches from OpenRouter to Ollama (base URL becomes `http://localhost:11434`), then switches back to OpenRouter, the base URL stays as `http://localhost:11434`. The user must know to manually change it back to `https://openrouter.ai/api/v1`. This is not obvious.
 
 **Acceptance criteria:**
-- After successful subject creation, show a brief snackbar or dialog with an action button: "Upload study material for [subject name]?" → navigates to `AppRoutes.upload` with `preselectedSubjectId` set.
-- Add option: "Generate topics from LLM for [subject name]?" if no topics exist yet.
+- [ ] Switching the provider dropdown to any provider auto-fills the default base URL for that provider
+- [ ] If the user has a custom base URL, a tooltip or indicator shows that changing provider will reset the URL
+- [ ] OR: The provider and base URL are stored as a combined setting so switching providers restores the last-used URL for that provider
 
-### M5. Course name accepted but silently discarded during plan generation
+### M3. No edit functionality for subjects
 
-The planner screen's `_generatePlan()` reads `_courseController.text` and passes it to `PlannerService.generatePlan(course: course, ...)`, but `PlannerService` never forwards this value. The user is shown a success message "Plan generated successfully" even though their course name was completely ignored.
+**Files:**
+- `lib/features/subjects/presentation/subject_detail_screen.dart:192-247` — `_showMoreOptions()` offers Upload, Dashboard, Delete — no Edit option
+- `lib/features/subjects/presentation/subject_selection_screen.dart:47-118` — `_saveSubject()` creates a new subject but there is no equivalent `_updateSubject()` method for editing
+- `lib/features/subjects/data/repositories/subject_repository.dart:5-49` — repository likely has an `update()` method, but it's not used from any screen
 
-(Duplicates part of B2's technical findings but focuses on the misleading user experience.)
-
-**Affected files:**
-- Same as B2
-
-**Acceptance criteria:**
-- See B2 acceptance criteria.
-- Additionally: if the `course` parameter is not used by the plan engine, the input field must be removed or clearly labeled as optional/display-only.
-
-### M6. Lesson content not auto-generated; requires multi-step manual booking
-
-After a plan is generated, each daily plan card shows a "Schedule Lesson" button that opens a time-picker bottom sheet. Even after scheduling, the lesson content is not pre-generated — the AI Tutor session happens in real-time with no preview. There is no one-click "Start Lesson Now" option, and lesson plans are not pre-built from the syllabus.
-
-**Affected files:**
-- `lib/features/planner/presentation/planner_screen.dart:68-94` — `_openLessonBooking()` opens a bottom sheet for time selection
-- `lib/features/planner/presentation/widgets/daily_plan_card.dart` — Card has "Schedule Lesson" but no "Start Now" option
-- `lib/features/teaching/presentation/tutor_screen.dart` — Tutor initializes and generates lesson plan dynamically
+**Rationale:** A user cannot correct a typo in a subject name, update a teacher name, or change the syllabus reference after creation. The only workaround is to delete and recreate, but deletion is broken (B2). This is a basic CRUD gap that creates data quality issues.
 
 **Acceptance criteria:**
-- Daily plan cards should include a "Start Lesson Now" button that immediately opens the AI Tutor with the day's topic pre-loaded.
-- When scheduling is needed, the system should optionally pre-generate a lesson plan (using LLM) that the user can preview before the scheduled time.
-
-### M7. Uploaded content does not automatically generate questions/lessons
-
-After uploading a PDF or other material via `UploadScreen`, the content is stored as a `SourceModel` source chunk. But the `processFullPipeline()` method (which calls question generation via LLM) is opt-in, not automatic. The user doesn't know they need to take additional steps to derive learning value from their uploaded materials.
-
-**Affected files:**
-- `lib/features/ingestion/services/content_pipeline.dart` — `processUpload()` stores material but only `processFullPipeline()` generates questions
-- `lib/features/ingestion/presentation/upload_screen.dart` — UI doesn't clearly distinguish between "just store" and "analyze + generate questions"
-
-**Acceptance criteria:**
-- After uploading material, automatically queue question generation in the background via `processFullPipeline()`.
-- Show a progress indicator: "Generating questions from your material..."
-- If the user doesn't want auto-generation, add a toggle "Auto-generate questions from uploaded material" in settings.
+- [ ] SubjectDetailScreen "More" menu includes an "Edit Subject" option
+- [ ] SubjectSelectionScreen supports an edit mode (pre-filled fields, `_updateSubject()` instead of `_createSubject()`)
+- [ ] SubjectRepository.update() or equivalent is called with the modified subject
+- [ ] Changes are reflected immediately in the subject list and all dependent views
 
 ---
 
-## MINOR (UX friction)
+## PARTIAL Findings (feature works but has significant UX gaps)
 
-### m1. QuickGuide AI Tutor navigates with empty args
+### P1. No dedicated pace-adjustment controls
 
-`ModeNavigationWidget` in the QuickGuide has an "AI Tutor" card that navigates to `AppRoutes.tutor` with `TutorArgs(topicId: '', topicTitle: '', subjectId: '')`. The `TutorScreen` expects valid IDs. Navigating with empty IDs will likely cause errors or a broken tutoring experience.
+**Files:**
+- `lib/features/planner/presentation/planner_screen.dart:96-121` — `_generatePlan()` only supports full regeneration with new course/days/hours
+- `lib/features/planner/presentation/planner_screen.dart:260-263` — adherence deviation banner offers "Redistribute" and "Regenerate from Adherence" but these are reactive (triggered by low adherence) not proactive
+- `lib/core/services/plan_adapter.dart:94` — `suggestRegeneration()` scales targets by adherence, but this is an automated backend function with no user-facing preview
+- `lib/features/planner/providers/planner_providers.dart:468-478` — `redistributeWorkload()` only handles missed minutes
 
-**Affected file:**
-- `lib/features/quickguide/presentation/widgets/mode_navigation_widget.dart:42-51` — Navigation call passes empty `TutorArgs`
-
-**Acceptance criteria:**
-- Remove or disable the "AI Tutor" navigation button from QuickGuide until a real subject/topic context exists.
-- Alternatively, show a dialog explaining that the user needs to create a subject and plan first before using the AI Tutor.
-
-### m2. No "Getting Started" unified entry point
-
-Each screen has its own empty state (Subjects shows empty icon + text, Practice shows empty state, Planner shows empty state, Dashboard shows checklist). But there's no single "Start Here" button or flow that appears globally to unify the first-run experience.
-
-**Affected files:**
-- All feature empty state widgets
+**Rationale:** To slow down from 2 hrs/day to 1 hr/day, the user must fill in the generate-plan form again and tap "Generate Plan". This replaces the entire plan without showing what will change. There is no speed/slider control, no "extend deadline" button, and no way to modify daily targets without regenerating from scratch.
 
 **Acceptance criteria:**
-- A single "Get Started" CTA that either opens the onboarding flow or directly opens the subject creation screen should be accessible from every tab's empty state.
+- [ ] Planner provides an explicit "Adjust Pace" action (e.g., a dialog with sliders for hours-per-day and plan duration)
+- [ ] Adjustments are applied to the existing plan rather than replacing it entirely
+- [ ] A preview shows what will change (e.g., "New daily target: 1h, plan extended by 30 days")
 
-### m3. No multi-device sync or backup indication
+### P2. Planner cannot create multi-subject study plans
 
-The app generates a UUID silently (`StudentIdService`) and stores all data in local Hive boxes. A reinstall means total data loss. There is no indication to the user that their data is device-local and will not survive reinstallation.
+**Files:**
+- `lib/features/planner/services/planner_service.dart:89-115` — `generatePlan()` takes a single `course` string which is purely a metadata label
+- `lib/features/planner/services/planner_service.dart:117-143` — `generatePlanFromSyllabus()` accepts a list of `SyllabusGoal` objects (supports multiple subjects) but has no UI
+- `lib/features/planner/presentation/planner_screen.dart:276-283` — the generate form has a single text field for "Course/Subject"
+- `lib/core/services/personal_learning_plan_service.dart:218-306` — `_buildEmptyMasteryPlan()` only creates generic topics based on `courseName`
+- `lib/core/services/personal_learning_plan_service.dart:91-216` — `_buildPlan()` only works from existing mastery state; new subjects with no mastery data produce empty plans
 
-**Affected files:**
-- `lib/core/services/student_id_service.dart` — UUID generation without export/recovery mechanism
+**Rationale:** A user studying both Physics and Chemistry has no way to create a unified study plan that covers both. The `course` text field is cosmetic. The `generatePlanFromSyllabus` method supports multi-subject plans but has no UI. New subjects without mastery data are invisible to the plan engine.
 
 **Acceptance criteria:**
-- Add a one-time notice on first launch: "StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard."
-- Consider adding a settings toggle for cloud backup (future feature).
+- [ ] The generate plan form lets users select one or more existing subjects from a multi-select list
+- [ ] `generatePlanFromSyllabus` is wired to the UI with actual `SyllabusGoal` objects derived from selected subjects
+- [ ] If a selected subject has no topics yet, the user is prompted to upload content or the plan generates time-allocated blocks for future topic discovery
+- [ ] The plan shows which subject each daily block belongs to
+
+### P3. Dashboard export is CSV-only and hard to find
+
+**Files:**
+- `lib/features/dashboard/presentation/dashboard_screen.dart:171-176` — ExportSection is the last item in the dashboard, below 10+ card sections
+- `lib/features/dashboard/presentation/widgets/export_section.dart:12-49` — only offers CSV (progress), CSV (session history), and "Instrumentation" (confusing label)
+- `lib/features/sessions/presentation/session_history_screen.dart:84-181` — comprehensive export (CSV/PDF/JSON) is gated behind navigating to a separate screen
+- `lib/core/services/progress_export_service.dart:16-352` — full export service exists but is only accessible from SessionHistoryScreen
+
+**Rationale:** Export is functionally available but fragmented. A user who wants a PDF report must: scroll past 10+ cards → tap "Session History" → tap export → select PDF. The Dashboard itself should offer at minimum a single "Export Full Report" button that provides format choice. The "Instrumentation" label is jargon.
+
+**Acceptance criteria:**
+- [ ] Dashboard export section offers PDF, CSV, and JSON options directly (not just CSV)
+- [ ] A single "Export Full Report" button generates a comprehensive report in the chosen format
+- [ ] Export section is more discoverable (e.g., a FAB or a card near the top)
+- [ ] "Instrumentation" is renamed to something user-friendly (e.g., "Diagnostic Data") or moved to a developer settings area
+
+---
+
+## MINOR Findings (UX friction)
+
+### m1. Focus mode has no subject context from navigation
+
+**Files:**
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart:15-29` — accepts `preselectedSubjectId` and `preselectedTopicId` but these are not passed from any navigator call site
+- `lib/features/settings/presentation/settings_screen.dart:136-137` — "Focus Time" tile navigates with `Navigator.pushNamed(context, AppRoutes.focusMode)` with no arguments
+
+**Rationale:** When starting a focus session, the user might want to associate it with a specific subject or topic for better tracking. The FocusTimerScreen supports this through parameters, but no navigation path passes these parameters. The session gets recorded with empty `subjectId`, making subject-specific reporting less accurate.
+
+**Acceptance criteria:**
+- [ ] Subject picker added to focus timer setup screen
+- [ ] Subject is passed through to the session recording (PlanAdapter.recordFromFocusSession)

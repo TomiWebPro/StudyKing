@@ -3290,6 +3290,12 @@ abstract class AppLocalizations {
   /// **'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.'**
   String get quickGuideSystemPrompt;
 
+  /// System prompt for Mentor AI in the current locale
+  ///
+  /// In en, this message translates to:
+  /// **'You are a knowledgeable and encouraging AI mentor for a student. Your role is to guide their learning journey, provide motivation, and help them develop effective study habits. Keep responses concise, supportive, and actionable.'**
+  String get mentorSystemPrompt;
+
   /// Application name for About dialog
   ///
   /// In en, this message translates to:
@@ -5761,6 +5767,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.'**
   String get tutorNeedsSubject;
+
+  /// Title for AI task monitor / token usage screen
+  ///
+  /// In en, this message translates to:
+  /// **'AI Task Monitor'**
+  String get aiTaskMonitor;
+
+  /// Subtitle for AI task monitor settings entry
+  ///
+  /// In en, this message translates to:
+  /// **'View active AI inference tasks and token usage'**
+  String get viewActiveAiTasks;
 }
 
 class _AppLocalizationsDelegate

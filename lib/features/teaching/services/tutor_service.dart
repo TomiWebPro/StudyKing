@@ -5,6 +5,7 @@ import '../../../core/data/enums.dart';
 import '../../../core/data/models/question_model.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/utils/clock.dart';
+import '../../../core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
@@ -14,6 +15,7 @@ import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 
 class TutorService {
+  static final Logger _logger = const Logger('TutorService');
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
@@ -118,7 +120,9 @@ class TutorService {
         studentId: session.studentId,
         actualMinutes: _elapsedMinutes(session).clamp(1, 480),
       );
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to record tutor session to plan adapter', e);
+    }
 
     try {
       final now = _clock.now();
@@ -128,6 +132,7 @@ class TutorService {
         studentId: session.studentId,
         subjectId: session.subjectId,
         topicId: session.topicId,
+        sourceId: session.id,
         type: SessionType.tutoring,
         startTime: session.startTime,
         endTime: session.endTime ?? now,
@@ -145,7 +150,9 @@ class TutorService {
           totalTokensUsed: session.totalTokensUsed,
         ),
       ));
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to save tutor session as Session', e);
+    }
 
     _currentManager = null;
   }

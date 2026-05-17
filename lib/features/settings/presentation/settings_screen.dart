@@ -87,6 +87,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   () => _showAiModelSelection(settings.selectedModel, apiKey)),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
+              _tile(l10n.aiTaskMonitor, l10n.viewActiveAiTasks, Icons.monitor_heart,
+                  () => Navigator.pushNamed(context, AppRoutes.llmTasks)),
             ]),
             _section(l10n.notificationPreferences, [
               SwitchListTile(

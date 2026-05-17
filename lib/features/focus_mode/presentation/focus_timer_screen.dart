@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -39,6 +41,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
   int _breakRemaining = 0;
   final int _breakDuration = 300;
   Timer? _breakTimer;
+  String _selectedSubjectId = '';
 
   Map<String, dynamic>? _todayStats;
   int _weeklyMs = 0;
@@ -156,7 +159,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
       await _service.startSession(
         plannedDurationMinutes: _selectedMinutes,
         type: SessionType.focus,
-        subjectId: widget.preselectedSubjectId,
+        subjectId: _selectedSubjectId.isNotEmpty
+            ? _selectedSubjectId
+            : widget.preselectedSubjectId,
         topicId: widget.preselectedTopicId,
       );
       if (mounted) {
@@ -321,7 +326,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            _buildSubjectPicker(),
+            const SizedBox(height: 16),
             Text(
               l10n.duration,
               style: theme.textTheme.titleSmall?.copyWith(
@@ -369,6 +376,43 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSubjectPicker() {
+    final l10n = AppLocalizations.of(context)!;
+    final subjectsAsync = ref.watch(subjectsRepositoryProvider);
+    return subjectsAsync.when(
+      data: (repo) {
+        return FutureBuilder<List<Subject>>(
+          future: repo.getAll(),
+          builder: (context, snapshot) {
+            final subjects = snapshot.data ?? [];
+            if (subjects.isEmpty) return const SizedBox.shrink();
+            return DropdownButtonFormField<String>(
+              initialValue: _selectedSubjectId.isEmpty ? null : _selectedSubjectId,
+              decoration: InputDecoration(
+                labelText: l10n.selectSubjectLabel,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: '',
+                  child: Text(l10n.subjectOptional),
+                ),
+                ...subjects.map((s) => DropdownMenuItem(
+                  value: s.id,
+                  child: Text(s.name),
+                )),
+              ],
+              onChanged: (v) => setState(() => _selectedSubjectId = v ?? ''),
+            );
+          },
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

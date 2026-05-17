@@ -19,6 +19,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 
 class FakePlanRepository extends PlanRepository {
   final Map<String, PersonalLearningPlan> _storage = {};
@@ -355,5 +356,105 @@ class FakeQuestionRepository extends QuestionRepository {
   Future<Result<void>> create(Question question) async {
     _questions.add(question);
     return Result.success(null);
+  }
+}
+
+/// Fake for PlannerService used across mentor and planner tests.
+class FakeStudentIdService extends StudentIdService {
+  String _studentId = 'test-student';
+  bool initCalled = false;
+
+  @override
+  Future<void> init() async {
+    initCalled = true;
+  }
+
+  @override
+  String getStudentId() => _studentId;
+
+  @override
+  void setStudentId(String id) {
+    _studentId = id;
+  }
+}
+
+class FakePlannerService {
+  bool loadExistingPlanCalled = false;
+  bool loadRoadmapsCalled = false;
+  bool loadPendingActionsCalled = false;
+  bool getScheduledLessonsCalled = false;
+  bool checkAdherenceCalled = false;
+  bool hasSchedulingConflictCalled = false;
+  bool scheduleLessonCalled = false;
+
+  Future<dynamic> loadExistingPlan(String studentId) async {
+    loadExistingPlanCalled = true;
+    return null;
+  }
+
+  Future<List<dynamic>> loadRoadmaps(String studentId) async {
+    loadRoadmapsCalled = true;
+    return [];
+  }
+
+  Future<List<dynamic>> loadPendingActions(String studentId) async {
+    loadPendingActionsCalled = true;
+    return [];
+  }
+
+  Future<List<dynamic>> getScheduledLessons(String studentId) async {
+    getScheduledLessonsCalled = true;
+    return [];
+  }
+
+  Future<double> checkAdherence(String studentId) async {
+    checkAdherenceCalled = true;
+    return 1.0;
+  }
+
+  Future<bool> hasSchedulingConflict(String studentId, DateTime start, DateTime end) async {
+    hasSchedulingConflictCalled = true;
+    return false;
+  }
+
+  Future<dynamic> scheduleLesson(String studentId, Map<String, dynamic> lesson) async {
+    scheduleLessonCalled = true;
+    return null;
+  }
+}
+
+class FakeMasteryGraphService {
+  bool getWeakTopicsCalled = false;
+  bool getAtRiskQuestionsCalled = false;
+
+  Future<List<dynamic>> getWeakTopics(String studentId) async {
+    getWeakTopicsCalled = true;
+    return [];
+  }
+
+  Future<List<dynamic>> getAtRiskQuestions(String studentId) async {
+    getAtRiskQuestionsCalled = true;
+    return [];
+  }
+}
+
+class FakeProgressTracker {
+  bool getOverallStatsCalled = false;
+  bool getRecommendationsCalled = false;
+  bool getBadgesCalled = false;
+
+  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+    getOverallStatsCalled = true;
+    return {'accuracy': 0.0, 'totalAttempts': 0};
+  }
+
+  Future<List<dynamic>> getRecommendations(String studentId) async {
+    getRecommendationsCalled = true;
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
+    getBadgesCalled = true;
+    return [];
   }
 }

@@ -15,6 +15,7 @@ import 'package:studyking/features/sessions/presentation/session_tracker_screen.
 import 'package:studyking/features/settings/presentation/api_config_screen.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
@@ -152,7 +153,13 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
         routeSettings,
       );
     case AppRoutes.subjectSelection:
-      return _materialPageRoute(const SubjectSelectionScreen(), routeSettings);
+      final subject = routeSettings.arguments;
+      return _materialPageRoute(
+        SubjectSelectionScreen(
+          editingSubject: subject is Subject ? subject : null,
+        ),
+        routeSettings,
+      );
     case AppRoutes.sessionTracker:
       return _materialPageRoute(const SessionTrackerScreen(), routeSettings);
     case AppRoutes.sessionHistory:

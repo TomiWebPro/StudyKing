@@ -547,22 +547,42 @@ void main() {
       expect(result.isCorrect, isFalse);
     });
 
-    test('graphDrawing question type returns special handling message', () {
+    test('graphDrawing question type returns incorrect for empty answer', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
       final result = QuestionAnswerValidator.validateStatic('', QuestionType.graphDrawing, markscheme);
       expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('No drawing'));
     });
 
-    test('fileUpload question type returns special handling message', () {
+    test('graphDrawing question type returns incorrect for invalid base64', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('not-base64', QuestionType.graphDrawing, markscheme);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('Invalid drawing'));
+    });
+
+    test('fileUpload question type returns incorrect for empty answer', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
       final result = QuestionAnswerValidator.validateStatic('', QuestionType.fileUpload, markscheme);
       expect(result.isCorrect, isFalse);
     });
 
-    test('audioRecording question type returns special handling message', () {
+    test('fileUpload question type returns correct when answer provided', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('file_uploaded', QuestionType.fileUpload, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('audioRecording question type returns incorrect for empty answer', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
       final result = QuestionAnswerValidator.validateStatic('', QuestionType.audioRecording, markscheme);
       expect(result.isCorrect, isFalse);
+    });
+
+    test('audioRecording question type returns correct when answer provided', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('audio_recorded', QuestionType.audioRecording, markscheme);
+      expect(result.isCorrect, isTrue);
     });
 
     test('validateWithMarkscheme multiChoice with null markscheme returns incorrect', () {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
 import 'package:studyking/features/questions/data/models/markscheme_model.dart';
@@ -302,12 +304,11 @@ class QuestionAnswerValidator {
       case QuestionType.stepByStep:
         return validateStepByStep(answer, markscheme, messages: msgs);
       case QuestionType.graphDrawing:
+        return validateGraphDrawing(answer, markscheme, messages: msgs);
       case QuestionType.fileUpload:
+        return validateFileUpload(answer, markscheme, messages: msgs);
       case QuestionType.audioRecording:
-        return ValidationResult(
-          isCorrect: false,
-          explanation: msgs.specialHandlingRequired,
-        );
+        return validateAudioRecording(answer, markscheme, messages: msgs);
     }
   }
 
@@ -423,7 +424,10 @@ class QuestionAnswerValidator {
   static ValidationResult validateStepByStep(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
     final msgs = messages ?? ValidationMessages.english;
     if (markscheme == null) {
-      return ValidationResult(isCorrect: false, explanation: msgs.markschemeUnavailable);
+      return ValidationResult(
+        isCorrect: false,
+        explanation: msgs.markschemeUnavailable,
+      );
     }
     final hasRequiredSteps = markscheme.steps.every((step) {
       return answer.toLowerCase().contains(step.requiredAnswer.toLowerCase());
@@ -432,5 +436,42 @@ class QuestionAnswerValidator {
       isCorrect: hasRequiredSteps,
       explanation: hasRequiredSteps ? msgs.allStepsIdentified : msgs.allRequiredStepsMissing(),
     );
+  }
+
+  static ValidationResult validateGraphDrawing(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
+    final msgs = messages ?? ValidationMessages.english;
+    if (answer.trim().isEmpty) {
+      return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
+    }
+    try {
+      final decoded = base64Decode(answer);
+      if (decoded.isEmpty) {
+        return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
+      }
+      final jsonStr = utf8.decode(decoded);
+      final data = jsonDecode(jsonStr);
+      if (data is! List || data.isEmpty) {
+        return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
+      }
+      return ValidationResult(isCorrect: true, explanation: msgs.drawingDetected);
+    } catch (_) {
+      return ValidationResult(isCorrect: false, explanation: msgs.invalidDrawingData);
+    }
+  }
+
+  static ValidationResult validateFileUpload(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
+    final msgs = messages ?? ValidationMessages.english;
+    if (answer.trim().isEmpty) {
+      return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
+    }
+    return ValidationResult(isCorrect: true, explanation: msgs.correct);
+  }
+
+  static ValidationResult validateAudioRecording(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
+    final msgs = messages ?? ValidationMessages.english;
+    if (answer.trim().isEmpty) {
+      return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
+    }
+    return ValidationResult(isCorrect: true, explanation: msgs.correct);
   }
 }

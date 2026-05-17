@@ -265,6 +265,7 @@ MentorService createMentorService({
   SessionRepository? sessionRepository,
   String modelId = 'test-model',
   String studentId = 'test-student',
+  String localeName = 'en',
 }) {
   final db = database ??
       DatabaseService(
@@ -294,6 +295,7 @@ MentorService createMentorService({
     sessionRepository: sessionRepository ?? _FakeSessionRepo(),
     modelId: modelId,
     studentId: studentId,
+    localeName: localeName,
     pendingActionRepo: pendingActionRepo,
   );
 }
@@ -530,7 +532,7 @@ void main() {
       test('returns subject setup message when no subjects', () async {
         final service = createMentorService();
         final action = await service.suggestNextAction();
-        expect(action.message, contains("haven't added any subjects"));
+        expect(action.message, contains("added any subjects"));
       });
 
       test('returns generic message when recommendations and subjects exist',
@@ -553,7 +555,7 @@ void main() {
         final service = createMentorService(database: db);
 
         final action = await service.suggestNextAction();
-        expect(action.message, contains("You're doing well"));
+        expect(action.message, contains("doing well"));
       });
     });
 
@@ -887,6 +889,63 @@ void main() {
           llm.capturedSystemPrompt,
           contains('encouraging AI mentor'),
         );
+      });
+    });
+
+    group('locale-awareness', () {
+      test('uses Spanish system prompt when localeName is es', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(
+          llmService: llm,
+          localeName: 'es',
+        );
+        await service.chat('hola').toList();
+        expect(
+          llm.capturedSystemPrompt,
+          contains('mentor de IA'),
+        );
+      });
+
+      test('uses English system prompt by default', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('hello').toList();
+        expect(
+          llm.capturedSystemPrompt,
+          contains('encouraging AI mentor'),
+        );
+      });
+
+      test('returns Spanish suggestNextAction message when localeName is es',
+          () async {
+        final service = createMentorService(localeName: 'es');
+        final action = await service.suggestNextAction();
+        expect(action.message, contains('materia'));
+      });
+
+      test('returns Spanish generic message with es locale', () async {
+        final subjectRepo = FakeSubjectRepository();
+        subjectRepo.addSubject(Subject(
+          id: 'math',
+          name: 'Mathematics',
+        ));
+        final db = DatabaseService(
+          topicRepository: TopicRepository(),
+          questionRepository: QuestionRepository(),
+          attemptRepository: AttemptRepository(),
+          lessonRepository: LessonRepository(),
+          sessionRepository: FakeSessionRepository(),
+          subjectRepository: subjectRepo,
+          conversationRepository: ConversationRepository(),
+          tutorSessionRepository: FakeTutorSessionRepository(),
+        );
+        final service = createMentorService(
+          database: db,
+          localeName: 'es',
+        );
+
+        final action = await service.suggestNextAction();
+        expect(action.message, contains('bien'));
       });
     });
 

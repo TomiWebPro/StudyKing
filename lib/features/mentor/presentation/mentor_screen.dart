@@ -57,6 +57,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     final masteryService = ref.read(masteryGraphServiceProvider);
     final progressTracker = ref.read(mentorProgressTrackerProvider);
     final studentId = StudentIdService().getStudentId();
+    final l10n = AppLocalizations.of(context)!;
     _mentorService = MentorService(
       database: ref.read(databaseProvider),
       llmService: llmService,
@@ -67,6 +68,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       sessionRepository: ref.read(mentorSessionRepositoryProvider),
       modelId: ref.read(mentorModelIdProvider),
       studentId: studentId,
+      localeName: l10n.localeName,
     );
 
     await _mentorService.initialize();
