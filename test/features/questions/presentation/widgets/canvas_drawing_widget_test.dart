@@ -446,6 +446,27 @@ void main() {
 
         expect(find.text('Draw here...'), findsNothing);
       });
+
+      testWidgets('handles strokes that are maps instead of lists', (tester) async {
+        final initialDrawing = '[{"x":10,"y":20}]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsOneWidget);
+      });
+
+      testWidgets('loads drawing with very large coordinates', (tester) async {
+        final initialDrawing = '[[{"x":9999,"y":8888}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
+
+      testWidgets('handles negative coordinates in initial drawing', (tester) async {
+        final initialDrawing = '[[{"x":-10,"y":-20}]]';
+        await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
+
+        expect(find.text('Draw here...'), findsNothing);
+      });
     });
 
     group('GridPainter', () {

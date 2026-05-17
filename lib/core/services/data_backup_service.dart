@@ -39,4 +39,40 @@ class DataBackupService {
       filename: '${boxName}_backup',
     );
   }
+
+  Future<Result<Map<String, List<Map<String, dynamic>>>>> restoreData(
+    String filePath,
+  ) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return Result.failure('Backup file not found: $filePath');
+      }
+      final json = await file.readAsString();
+      final data = jsonDecode(json) as Map<String, dynamic>;
+
+      if (!data.containsKey('version') ||
+          !data.containsKey('exportedAt') ||
+          !data.containsKey('boxes')) {
+        return Result.failure('Invalid backup file format');
+      }
+
+      final boxes = data['boxes'] as Map<String, dynamic>;
+      final result = <String, List<Map<String, dynamic>>>{};
+      for (final entry in boxes.entries) {
+        final list = entry.value as List;
+        result[entry.key] = list.cast<Map<String, dynamic>>();
+      }
+
+      final totalRecords =
+          result.values.fold(0, (int s, l) => s + l.length);
+      _logger.i(
+        'Backup loaded from $filePath (${result.length} boxes, $totalRecords records)',
+      );
+      return Result.success(result);
+    } catch (e) {
+      _logger.e('Failed to restore backup', e);
+      return Result.failure('Failed to restore backup: $e');
+    }
+  }
 }

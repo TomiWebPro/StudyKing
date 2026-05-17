@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Shared model used by 4 features (subjects, practice, ingestion, questions).
@@ -34,6 +35,9 @@ class Subject extends HiveObject {
   @HiveField(9)
   final DateTime? examDate;
 
+  @HiveField(10)
+  final String? iconName;
+
   Subject({
     required this.id,
     required this.name,
@@ -45,8 +49,49 @@ class Subject extends HiveObject {
     this.color = '#2196F3',
     DateTime? createdAt,
     this.examDate,
+    this.iconName,
   })  : topicIds = topicIds ?? [],
         createdAt = createdAt ?? DateTime.now();
+
+  IconData get icon {
+    if (iconName == null || iconName!.isEmpty) return Icons.school;
+    switch (iconName) {
+      case 'Icons.science':
+        return Icons.science;
+      case 'Icons.language':
+        return Icons.language;
+      case 'Icons.calculate':
+        return Icons.calculate;
+      case 'Icons.history_edu':
+        return Icons.history_edu;
+      case 'Icons.art_track':
+        return Icons.art_track;
+      case 'Icons.music_note':
+        return Icons.music_note;
+      case 'Icons.code':
+        return Icons.code;
+      case 'Icons.book':
+        return Icons.book;
+      case 'Icons.menu_book':
+        return Icons.menu_book;
+      case 'Icons.biotech':
+        return Icons.biotech;
+      case 'Icons.public':
+        return Icons.public;
+      case 'Icons.psychology':
+        return Icons.psychology;
+      case 'Icons.euro':
+        return Icons.euro;
+      case 'Icons.palette':
+        return Icons.palette;
+      case 'Icons.fitness_center':
+        return Icons.fitness_center;
+      case 'Icons.computer':
+        return Icons.computer;
+      default:
+        return Icons.school;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -59,6 +104,7 @@ class Subject extends HiveObject {
         'color': color,
         'createdAt': createdAt.toIso8601String(),
         'examDate': examDate?.toIso8601String(),
+        'iconName': iconName,
       };
 
   factory Subject.fromJson(Map<String, dynamic> json) => Subject(
@@ -72,6 +118,7 @@ class Subject extends HiveObject {
         color: json['color'] ?? '#2196F3',
         createdAt: DateTime.parse(json['createdAt']),
         examDate: json['examDate'] != null ? DateTime.parse(json['examDate']) : null,
+        iconName: json['iconName'] as String?,
       );
 
   Subject copyWith({
@@ -85,6 +132,7 @@ class Subject extends HiveObject {
     String? color,
     DateTime? createdAt,
     DateTime? examDate,
+    String? iconName,
   }) {
     return Subject(
       id: id ?? this.id,
@@ -97,6 +145,7 @@ class Subject extends HiveObject {
       color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       examDate: examDate ?? this.examDate,
+      iconName: iconName ?? this.iconName,
     );
   }
 

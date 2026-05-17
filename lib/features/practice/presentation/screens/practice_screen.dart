@@ -274,11 +274,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   void _showSubjectSelector() {
-    final l10n = AppLocalizations.of(context)!;
     SubjectSelectionSheet.show(context,
         subjects: _subjects,
         onSubjectSelected: (subject) {
-          _showStartingPracticeDialog(l10n.practiceMode);
           _startPractice(subject);
         });
   }
@@ -361,12 +359,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         onPressed: _subjects.isEmpty
             ? null
             : () {
-                if (_subjects.length == 1) {
-                  _showStartingPracticeDialog(AppLocalizations.of(context)!.practiceMode);
-                  _startPractice(_subjects.first);
-                } else {
-                  _showSubjectSelector();
-                }
+                _showSubjectSelector();
               },
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.play_arrow),
@@ -437,27 +430,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                   .toList(),
             ),
     );
-  }
-
-  Future<void> _showStartingPracticeDialog(String modeName) async {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: SingleChildScrollView(
-          child: Row(
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(width: 16),
-              Text(l10n.startingPractice(modeName)),
-            ],
-          ),
-        ),
-      ),
-    );
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildSubjectSection(BuildContext context) {

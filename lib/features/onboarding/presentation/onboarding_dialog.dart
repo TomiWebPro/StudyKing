@@ -73,10 +73,12 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Text(
-                  l10n.needApiKeyNotice,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
+                Expanded(
+                  child: Text(
+                    l10n.needApiKeyNotice,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                 ),
               ],

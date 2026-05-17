@@ -98,6 +98,9 @@ void main() {
           studentId: 'student-1', language: 'en', summary: 'Summary',
           processingStatus: 'completed', extractedText: 'Extracted',
           generatedQuestionIds: ['q-1'],
+          extractionMethod: 'ocr',
+          chunks: '[{"index":0}]',
+          extractionMeta: '{"pages":3}',
         );
         final json = source.toJson();
         expect(json['id'], id);
@@ -114,6 +117,9 @@ void main() {
         expect(json['processingStatus'], 'completed');
         expect(json['extractedText'], 'Extracted');
         expect(json['generatedQuestionIds'], ['q-1']);
+        expect(json['extractionMethod'], 'ocr');
+        expect(json['chunks'], '[{"index":0}]');
+        expect(json['extractionMeta'], '{"pages":3}');
       });
 
       test('serializes all SourceType values as name strings', () {
@@ -129,6 +135,14 @@ void main() {
         final json = source.toJson();
         expect(json['generatedQuestionIds'], []);
       });
+
+      test('serializes empty extraction fields', () {
+        final source = Source(id: id, title: title, type: SourceType.pdf);
+        final json = source.toJson();
+        expect(json['extractionMethod'], '');
+        expect(json['chunks'], '');
+        expect(json['extractionMeta'], '');
+      });
     });
 
     group('fromJson', () {
@@ -140,17 +154,28 @@ void main() {
           'studentId': 'student-1', 'language': 'en', 'summary': 'Summary',
           'processingStatus': 'completed', 'extractedText': 'Extracted',
           'generatedQuestionIds': ['q-1'],
+          'extractionMethod': 'ocr',
+          'chunks': '[{"index":0}]',
+          'extractionMeta': '{"pages":3}',
         };
         final source = Source.fromJson(json);
         expect(source.id, id);
+        expect(source.title, title);
         expect(source.type, SourceType.textbook);
         expect(source.content, content);
         expect(source.subjectId, 'sub-1');
+        expect(source.topicId, 'topic-1');
+        expect(source.syllabusId, 'syl-1');
+        expect(source.sourceUrl, 'https://example.com');
+        expect(source.studentId, 'student-1');
         expect(source.language, 'en');
         expect(source.summary, 'Summary');
         expect(source.processingStatus, 'completed');
         expect(source.extractedText, 'Extracted');
         expect(source.generatedQuestionIds, ['q-1']);
+        expect(source.extractionMethod, 'ocr');
+        expect(source.chunks, '[{"index":0}]');
+        expect(source.extractionMeta, '{"pages":3}');
       });
 
       test('handles missing optional fields', () {
@@ -167,12 +192,16 @@ void main() {
         expect(source.processingStatus, 'pending');
         expect(source.extractedText, '');
         expect(source.generatedQuestionIds, []);
+        expect(source.extractionMethod, '');
+        expect(source.chunks, '');
+        expect(source.extractionMeta, '');
       });
 
       test('handles null values', () {
         final json = {
           'id': null, 'title': null, 'type': 'invalid',
           'content': null, 'subjectId': null,
+          'extractionMethod': null, 'chunks': null, 'extractionMeta': null,
         };
         final source = Source.fromJson(json);
         expect(source.id, '');
@@ -180,6 +209,9 @@ void main() {
         expect(source.type, SourceType.pdf);
         expect(source.content, '');
         expect(source.subjectId, '');
+        expect(source.extractionMethod, '');
+        expect(source.chunks, '');
+        expect(source.extractionMeta, '');
       });
 
       test('handles null generatedQuestionIds', () {
@@ -189,6 +221,33 @@ void main() {
         };
         final source = Source.fromJson(json);
         expect(source.generatedQuestionIds, []);
+      });
+
+      test('handles empty list generatedQuestionIds', () {
+        final json = {
+          'id': id, 'title': title, 'type': 'pdf',
+          'generatedQuestionIds': <String>[],
+        };
+        final source = Source.fromJson(json);
+        expect(source.generatedQuestionIds, []);
+      });
+
+      test('handles null extractionMethod with default empty string', () {
+        final json = {'id': id, 'title': title, 'type': 'pdf', 'extractionMethod': null};
+        final source = Source.fromJson(json);
+        expect(source.extractionMethod, '');
+      });
+
+      test('handles null chunks with default empty string', () {
+        final json = {'id': id, 'title': title, 'type': 'pdf', 'chunks': null};
+        final source = Source.fromJson(json);
+        expect(source.chunks, '');
+      });
+
+      test('handles null extractionMeta with default empty string', () {
+        final json = {'id': id, 'title': title, 'type': 'pdf', 'extractionMeta': null};
+        final source = Source.fromJson(json);
+        expect(source.extractionMeta, '');
       });
 
       test('handles missing type field', () {
@@ -241,12 +300,17 @@ void main() {
         final original = Source(
           id: id, title: title, type: SourceType.lectureNotes,
           content: content, subjectId: 'sub-1', summary: 'Notes summary',
+          extractionMethod: 'ocr', chunks: '[]', extractionMeta: '{}',
         );
         final restored = Source.fromJson(original.toJson());
         expect(restored.id, original.id);
         expect(restored.title, original.title);
         expect(restored.type, original.type);
         expect(restored.subjectId, original.subjectId);
+        expect(restored.summary, original.summary);
+        expect(restored.extractionMethod, original.extractionMethod);
+        expect(restored.chunks, original.chunks);
+        expect(restored.extractionMeta, original.extractionMeta);
       });
 
       test('roundtrip preserves all SourceType values', () {
@@ -312,6 +376,31 @@ void main() {
         expect(copy.generatedQuestionIds, ['q-1']);
       });
 
+      test('copyWith updates extraction-specific fields', () {
+        final source = Source(id: id, title: title, type: SourceType.pdf);
+        final copy = source.copyWith(
+          extractionMethod: 'ai',
+          chunks: '[{"index":0}]',
+          extractionMeta: '{"pages":2}',
+        );
+        expect(copy.extractionMethod, 'ai');
+        expect(copy.chunks, '[{"index":0}]');
+        expect(copy.extractionMeta, '{"pages":2}');
+        expect(copy.id, id);
+      });
+
+      test('copyWith preserves source instance when fields not specified', () {
+        final source = Source(
+          id: id, title: title, type: SourceType.pdf,
+          extractionMethod: 'ocr', chunks: 'old', extractionMeta: 'old',
+        );
+        final copy = source.copyWith(title: 'New Title');
+        expect(copy.extractionMethod, 'ocr');
+        expect(copy.chunks, 'old');
+        expect(copy.extractionMeta, 'old');
+        expect(copy.title, 'New Title');
+      });
+
       test('updates all fields', () {
         final source = Source(id: id, title: title, type: SourceType.pdf);
         final copy = source.copyWith(
@@ -329,6 +418,9 @@ void main() {
           processingStatus: 'failed',
           extractedText: 'New extracted',
           generatedQuestionIds: ['new-q1'],
+          extractionMethod: 'ai',
+          chunks: '[{"index":0}]',
+          extractionMeta: '{"pages":5}',
         );
         expect(copy.id, 'new-id');
         expect(copy.title, 'New Title');
@@ -344,6 +436,9 @@ void main() {
         expect(copy.processingStatus, 'failed');
         expect(copy.extractedText, 'New extracted');
         expect(copy.generatedQuestionIds, ['new-q1']);
+        expect(copy.extractionMethod, 'ai');
+        expect(copy.chunks, '[{"index":0}]');
+        expect(copy.extractionMeta, '{"pages":5}');
       });
 
       test('does not mutate original instance', () {

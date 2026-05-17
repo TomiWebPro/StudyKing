@@ -7,6 +7,7 @@ class ExtractionResult {
   final double? ocrConfidence;
   final int? durationSeconds;
   final String? mimeType;
+  final String? errorMessage;
   final List<SourceChunk> chunks;
 
   ExtractionResult({
@@ -16,8 +17,11 @@ class ExtractionResult {
     this.ocrConfidence,
     this.durationSeconds,
     this.mimeType,
+    this.errorMessage,
     this.chunks = const [],
   });
+
+  bool get isError => errorMessage != null;
 
   Map<String, dynamic> toMetaJson() {
     final meta = <String, dynamic>{
@@ -27,6 +31,7 @@ class ExtractionResult {
     if (ocrConfidence != null) meta['ocrConfidence'] = ocrConfidence;
     if (durationSeconds != null) meta['durationSeconds'] = durationSeconds;
     if (mimeType != null) meta['mimeType'] = mimeType;
+    if (errorMessage != null) meta['errorMessage'] = errorMessage;
     return meta;
   }
 

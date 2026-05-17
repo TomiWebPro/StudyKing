@@ -35,6 +35,26 @@ void main() {
       expect(picture, isA<ui.Picture>());
     });
 
+    test('paint with very small size draws at least one line', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(5, 5);
+      final painter = GridPainter();
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with non-square size draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(200, 300);
+      final painter = GridPainter();
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
     test('shouldRepaint returns true for different color', () {
       final p1 = GridPainter(gridColor: Colors.red);
       final p2 = GridPainter(gridColor: Colors.blue);

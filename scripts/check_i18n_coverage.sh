@@ -98,7 +98,63 @@ if [ "$HARDCODED" = true ]; then
   echo ""
   echo "WARNING: Potential hardcoded user-facing strings found (see above)."
   echo "These should use l10n.* or AppLocalizations.of(context)!.* instead."
-  echo "(Not failing the build — heuristic check may have false positives.)"
 fi
 
+# ──────────────────────────────────────────────
+# Section 3: Detect toStringAsFixed in presentation UI code
+# (CSV exports and LLM-facing code are exempt)
+# ──────────────────────────────────────────────
+echo ""
+echo "Checking for toStringAsFixed in presentation code..."
+TOSFI_FOUND=false
+while IFS=':' read -r file line content; do
+  [ -z "$file" ] && continue
+  # Skip CSV export files
+  case "$file" in
+    *export*|*progress_tracker*) continue ;;
+  esac
+  # Skip LLM-facing code (mentor context, prompts)
+  case "$file" in
+    *mentor_service*|*prompts*) continue ;;
+  esac
+  # Only check presentation directories and screens
+  case "$file" in
+    */presentation/*|*/screens/*|*/widgets/*)
+      echo "  WARN: $file:$line — toStringAsFixed in UI code: $content"
+      TOSFI_FOUND=true
+      ;;
+  esac
+done < <(grep -rn 'toStringAsFixed' lib/ features/ 2>/dev/null || true)
+
+if [ "$TOSFI_FOUND" = true ]; then
+  echo ""
+  echo "WARNING: toStringAsFixed found in UI code — use formatDecimal/formatPercent from number_format_utils.dart instead."
+fi
+
+# ──────────────────────────────────────────────
+# Section 4: Detect dead ARB keys (unreferenced in .dart)
+# ──────────────────────────────────────────────
+echo ""
+echo "Checking for unused ARB keys (dead translations)..."
+DEAD_KEYS=false
+while IFS= read -r key; do
+  [ -z "$key" ] && continue
+  # Skip metadata keys starting with @
+  case "$key" in
+    @*) continue ;;
+  esac
+  # Count references in .dart files (l10n.keyName or l10n[keyName] or "keyName" in ARB context)
+  ref_count=$(grep -r "l10n\.$key\b" lib/ 2>/dev/null | wc -l)
+  if [ "$ref_count" -eq 0 ]; then
+    echo "  UNUSED: $key (no l10n.$key reference in lib/)"
+    DEAD_KEYS=true
+  fi
+done <<< "$TEMPLATE_KEYS"
+
+if [ "$DEAD_KEYS" = true ]; then
+  echo ""
+  echo "WARNING: Some ARB keys have no corresponding l10n.* usage in Dart code (may be dead translations)."
+fi
+
+echo ""
 echo "i18n coverage check complete."

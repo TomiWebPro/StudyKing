@@ -6,6 +6,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -61,7 +62,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               title: Text(
                                     widget.args.subjectName,
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                  color: theme.colorScheme.onPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -107,7 +108,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                       Text(
                 widget.args.subjectName,
                                         style: theme.textTheme.titleLarge?.copyWith(
-                                          color: Colors.white,
+                                          color: theme.colorScheme.onPrimary,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -115,7 +116,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                         Text(
                                           widget.args.subjectCode!,
                                           style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: Colors.white.withValues(alpha: 0.8),
+                                            color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
                                           ),
                                         ),
                                     ],
@@ -125,7 +126,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   label: l10n.settings,
                                   child: IconButton(
                                     icon: const Icon(Icons.more_vert),
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onPrimary,
                                     onPressed: () => _showMoreOptions(),
                                   ),
                                 ),
@@ -234,9 +235,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Navigator.pushNamed(
                     context,
                     AppRoutes.dashboard,
-                    arguments: {
-                      'studentId': StudentIdService().getStudentId(),
-                    },
+                    arguments: DashboardArgs(
+                      studentId: StudentIdService().getStudentId(),
+                    ),
                   );
                 },
               ),

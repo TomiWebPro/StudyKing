@@ -138,7 +138,7 @@ class SubjectListScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.school,
+                    subject.icon,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),

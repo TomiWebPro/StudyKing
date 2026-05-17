@@ -25,10 +25,12 @@ class DocumentExtractor {
     OcrExtractor? ocrExtractor,
     TranscriptionExtractor? transcriptionExtractor,
     LlmService? llmService,
+    String? modelId,
+    String localeName = 'en',
   })  : _pdfExtractor = pdfExtractor ?? PdfExtractor(),
-        _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService),
+        _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId ?? '', localeName: localeName),
         _transcriptionExtractor = transcriptionExtractor ??
-            TranscriptionExtractor(llmService: llmService);
+            TranscriptionExtractor(llmService: llmService, modelId: modelId ?? '', localeName: localeName);
 
   Future<ExtractionResult> extractText({
     required String rawContent,
@@ -158,6 +160,14 @@ class DocumentExtractor {
         mimeType: rawContent.startsWith('file://')
             ? _detectMimeType(rawContent.substring(7))
             : null,
+      );
+    }
+
+    if (ocrResult.isError) {
+      return ExtractionResult(
+        text: rawContent,
+        extractionMethod: ocrResult.extractionMethod,
+        errorMessage: ocrResult.errorMessage,
       );
     }
 

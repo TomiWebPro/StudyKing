@@ -139,5 +139,37 @@ void main() {
       final painter2 = DrawingPainter(strokes: strokes);
       expect(painter1.shouldRepaint(painter2), isFalse);
     });
+
+    test('paint with pressure data in points draws correctly', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(points: [
+          DrawingPoint(point: const Offset(10, 10), pressure: 0.3),
+          DrawingPoint(point: const Offset(20, 20), pressure: 0.6),
+          DrawingPoint(point: const Offset(30, 30), pressure: 0.9),
+        ]),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with empty stroke between non-empty strokes', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10))]),
+        Stroke(points: []),
+        Stroke(points: [DrawingPoint(point: const Offset(20, 20))]),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
   });
 }

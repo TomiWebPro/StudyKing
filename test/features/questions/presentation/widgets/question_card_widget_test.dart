@@ -614,6 +614,104 @@ void main() {
       });
     });
 
+    group('audio recording states', () {
+      testWidgets('audioRecording type initially shows Start recording', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.textContaining('Start recording'), findsOneWidget);
+        expect(find.byIcon(Icons.mic_none), findsOneWidget);
+      });
+
+      testWidgets('audioRecording uploaded state shows Recording complete', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'audio_recorded',
+        ));
+
+        expect(find.textContaining('Recording complete'), findsOneWidget);
+        expect(find.byIcon(Icons.mic), findsOneWidget);
+      });
+
+      testWidgets('audioRecording tap updates answer', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.tap(find.textContaining('Start recording'));
+        await tester.pump();
+
+        expect(changedAnswer, 'audio_recorded');
+      });
+
+      testWidgets('audioRecording button disabled when submitted', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          isSubmitted: true,
+          currentAnswer: 'audio_recorded',
+        ));
+
+        final button = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Recording complete'),
+        );
+        expect(button.onPressed, isNull);
+      });
+    });
+
+    group('file upload states', () {
+      testWidgets('fileUpload type initially shows Upload file', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(question: question));
+
+        expect(find.textContaining('Upload file'), findsOneWidget);
+        expect(find.byIcon(Icons.upload_file), findsOneWidget);
+      });
+
+      testWidgets('fileUpload uploaded state shows File attached', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          currentAnswer: 'file_uploaded',
+        ));
+
+        expect(find.textContaining('File attached'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      });
+
+      testWidgets('fileUpload tap updates answer', (tester) async {
+        String? changedAnswer;
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          onAnswerChanged: (value) => changedAnswer = value,
+        ));
+
+        await tester.tap(find.textContaining('Upload file'));
+        await tester.pump();
+
+        expect(changedAnswer, 'file_uploaded');
+      });
+
+      testWidgets('fileUpload button disabled when submitted', (tester) async {
+        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
+        await tester.pumpWidget(buildWidget(
+          question: question,
+          isSubmitted: true,
+          currentAnswer: 'file_uploaded',
+        ));
+
+        final button = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'File attached'),
+        );
+        expect(button.onPressed, isNull);
+      });
+    });
+
     group('edge cases', () {
       testWidgets('handles no options for single choice', (tester) async {
         final question = _questionWithOptions(

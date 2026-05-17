@@ -236,6 +236,7 @@ void main() {
         masteryService: masteryService,
         modelId: 'test-model',
         exerciseEvaluator: exerciseEvaluator,
+        conversationRepository: conversationRepo,
         planAdapter: FakePlanAdapter(),
       );
     });
@@ -349,6 +350,30 @@ void main() {
         expect(masteryService.recordedAttempts.first['studentId'], equals('student-1'));
         expect(masteryService.recordedAttempts.first['topicId'], equals('topic-1'));
         expect(masteryService.recordedAttempts.first['isCorrect'], isTrue);
+      });
+
+      test('preserves confidence rating correctly without overflow', () async {
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+        );
+        await manager.sendMessage('Hello').toList();
+        manager.recordCorrectAnswer();
+        manager.recordIncorrectAnswer();
+
+        await tutorService.endLesson();
+
+        final recordedConfidence = masteryService.recordedAttempts.first['confidence'] as int;
+        // confidenceRating should be 0-5 range, not multiplied by 20
+        // With 1/2 = 0.5 accuracy, confidence = (0.5 * 1.0).clamp(0,1) = 0.5
+        // toSession: (0.5 * 5).round() = 3 (or 2)
+        // endLesson: should use session.confidenceRating directly (no * 20)
+        expect(recordedConfidence, inInclusiveRange(0, 5));
+        // The old bug would produce confidence = 100 when there were 0 questions,
+        // or with our test setup, the confidence should never exceed 5
+        expect(recordedConfidence, lessThanOrEqualTo(5));
       });
 
       test('clears current manager', () async {

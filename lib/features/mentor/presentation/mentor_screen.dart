@@ -32,6 +32,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   final List<ChatMessageData> _messages = [];
   bool _isSending = false;
   bool _isInitialized = false;
+  bool _initError = false;
+  String _initErrorMessage = '';
 
   bool _didInit = false;
 
@@ -53,39 +55,50 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   }
 
   Future<void> _initializeMentor() async {
-    final llmService = ref.read(llmServiceProvider);
-    final masteryService = ref.read(masteryGraphServiceProvider);
-    final progressTracker = ref.read(mentorProgressTrackerProvider);
-    final studentId = StudentIdService().getStudentId();
-    final l10n = AppLocalizations.of(context)!;
-    _mentorService = MentorService(
-      database: ref.read(databaseProvider),
-      llmService: llmService,
-      masteryService: masteryService,
-      progressTracker: progressTracker,
-      plannerService: ref.read(plannerServiceProvider),
-      nudgeRepo: ref.read(mentorEngagementNudgeRepoProvider),
-      sessionRepository: ref.read(mentorSessionRepositoryProvider),
-      modelId: ref.read(mentorModelIdProvider),
-      studentId: studentId,
-      localeName: l10n.localeName,
-    );
+    try {
+      final llmService = ref.read(llmServiceProvider);
+      final masteryService = ref.read(masteryGraphServiceProvider);
+      final progressTracker = ref.read(mentorProgressTrackerProvider);
+      final studentId = StudentIdService().getStudentId();
+      final l10n = AppLocalizations.of(context)!;
+      _mentorService = MentorService(
+        database: ref.read(databaseProvider),
+        llmService: llmService,
+        masteryService: masteryService,
+        progressTracker: progressTracker,
+        plannerService: ref.read(plannerServiceProvider),
+        nudgeRepo: ref.read(mentorEngagementNudgeRepoProvider),
+        sessionRepository: ref.read(mentorSessionRepositoryProvider),
+        modelId: ref.read(mentorModelIdProvider),
+        studentId: studentId,
+        localeName: l10n.localeName,
+      );
 
-    await _mentorService.initialize();
+      await _mentorService.initialize();
 
-    final history = _mentorService.memory.getHistory();
-    final loadedMessages = history
-        .where((m) => m.role == MessageRole.mentor || m.role == MessageRole.student)
-        .map((m) => ChatMessageData(message: m, isComplete: true))
-        .toList();
+      final history = _mentorService.memory.getHistory();
+      final loadedMessages = history
+          .where((m) => m.role == MessageRole.mentor || m.role == MessageRole.student)
+          .map((m) => ChatMessageData(message: m, isComplete: true))
+          .toList();
 
-    if (mounted) {
-      setState(() {
-        _isInitialized = true;
-        _messages.addAll(loadedMessages);
-      });
-      if (loadedMessages.isEmpty) {
-        _sendWelcomeMessage();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _initError = false;
+          _messages.addAll(loadedMessages);
+        });
+        if (loadedMessages.isEmpty) {
+          _sendWelcomeMessage();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        setState(() {
+          _initError = true;
+          _initErrorMessage = l10n.mentorInitFailed(e.toString());
+        });
       }
     }
   }
@@ -239,11 +252,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       body: FocusTraversalGroup(
         child: Column(
           children: [
-            Expanded(
-              child: _messages.isEmpty
-                  ? _buildEmptyState(l10n)
-                  : _buildMessageList(ref.watch(settingsProvider).reduceMotion),
-            ),
+            if (_initError)
+              _buildInitErrorCard(l10n)
+            else
+              Expanded(
+                child: _messages.isEmpty
+                    ? _buildEmptyState(l10n)
+                    : _buildMessageList(ref.watch(settingsProvider).reduceMotion),
+              ),
             FocusTraversalOrder(
               order: const NumericFocusOrder(1),
               child: ConversationInput(
@@ -251,12 +267,67 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 focusNode: _inputFocusNode,
                 isEnabled: _isInitialized,
                 isLoading: _isSending,
-                hintText: l10n.askMentorAnything,
+                hintText: _initError ? l10n.mentorInitFailedHint : l10n.askMentorAnything,
                 sendTooltip: l10n.send,
                 onSend: _sendMessage,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInitErrorCard(AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: ResponsiveUtils.screenPadding(context),
+        child: Card(
+          color: Theme.of(context).colorScheme.errorContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _initErrorMessage,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.pushNamed(context, AppRoutes.apiConfig),
+                      icon: const Icon(Icons.settings),
+                      label: Text(l10n.goToSettings),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _initError = false;
+                          _initErrorMessage = '';
+                        });
+                        _initializeMentor();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

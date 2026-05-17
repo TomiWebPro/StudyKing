@@ -125,12 +125,14 @@ class TutorArgs {
   final String topicTitle;
   final String subjectId;
   final int durationMinutes;
+  final String? scheduledSessionId;
 
   const TutorArgs({
     required this.topicId,
     required this.topicTitle,
     required this.subjectId,
     this.durationMinutes = 45,
+    this.scheduledSessionId,
   });
 }
 
@@ -149,7 +151,10 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
     case AppRoutes.upload:
       final preselectedSubjectId = routeSettings.arguments as String?;
       return _materialPageRoute(
-        UploadScreen(preselectedSubjectId: preselectedSubjectId),
+        UploadScreen(
+          preselectedSubjectId: preselectedSubjectId,
+          fixedStudentId: StudentIdService().getStudentId(),
+        ),
         routeSettings,
       );
     case AppRoutes.subjectSelection:
@@ -225,6 +230,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
             topicTitle: args.topicTitle,
             subjectId: args.subjectId,
             durationMinutes: args.durationMinutes,
+            scheduledSessionId: args.scheduledSessionId,
           ),
           routeSettings,
         );
@@ -253,7 +259,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
         routeSettings,
       );
     default:
-      return null;
+      return _materialPageRoute(const SettingsScreen(), routeSettings);
   }
 }
 

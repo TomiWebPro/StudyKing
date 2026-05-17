@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/providers/app_providers.dart' show localeProvider;
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
@@ -9,7 +10,8 @@ import 'package:studyking/features/subjects/data/repositories/topic_repository.d
 
 final documentExtractorProvider = Provider<DocumentExtractor>((ref) {
   final llmService = ref.watch(llmServiceProvider);
-  return DocumentExtractor(llmService: llmService);
+  final locale = ref.watch(localeProvider);
+  return DocumentExtractor(llmService: llmService, localeName: locale.languageCode);
 });
 
 final webScraperProvider = Provider<WebScraper>((ref) {
@@ -35,6 +37,7 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
   final questionRepository = ref.watch(ingestionQuestionRepositoryProvider);
   final documentExtractor = ref.watch(documentExtractorProvider);
   final webScraper = ref.watch(webScraperProvider);
+  final locale = ref.watch(localeProvider);
   return ContentPipeline(
     llmService: llmService,
     sourceRepository: sourceRepository,
@@ -42,5 +45,6 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
     questionRepository: questionRepository,
     documentExtractor: documentExtractor,
     webScraper: webScraper,
+    localeName: locale.languageCode,
   );
 });

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/utils/logger.dart';
 import '../data/models/evaluation_result.dart';
@@ -8,15 +10,18 @@ class ExerciseEvaluator {
 
   final LlmService _llmService;
   final String _modelId;
+  final String _localeName;
 
   ExerciseEvaluator({
     required LlmService llmService,
     required String modelId,
+    String localeName = 'en',
   })  : _llmService = llmService,
-      _modelId = modelId;
+      _modelId = modelId,
+      _localeName = localeName;
 
-  static const String _defaultSystemPrompt =
-      'You are an expert academic evaluator. Assess the student\'s answer and return a JSON object with: score (0.0-1.0), explanation, partialCredit (optional), conceptBreakdown (optional map of concept->score). Be fair and encouraging. Consider partial credit for partially correct answers.';
+  String get _defaultSystemPrompt =>
+      lookupAppLocalizations(Locale(_localeName)).evaluatorSystemPrompt;
 
   String _buildPrompt({
     required String question,
@@ -24,21 +29,17 @@ class ExerciseEvaluator {
     required String subjectId,
     required String topicTitle,
   }) {
-    return '''
-Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".
-
-Question: $question
-
-Student Answer: $studentAnswer
-
-Return a JSON object with:
-{
-  "score": <0.0 to 1.0>,
-  "explanation": "<detailed feedback explaining what was correct/incorrect>",
-  "partialCredit": <optional 0.0-1.0 for partially correct parts>,
-  "conceptBreakdown": {<optional map of concept name to mastery score 0.0-1.0>}
-}
-''';
+    // Invariant prompt format with JSON template
+    return 'Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".\n'
+        '\nQuestion: $question\n'
+        '\nStudent Answer: $studentAnswer\n'
+        '\nReturn a JSON object with:\n'
+        '{\n'
+        '  "score": <0.0 to 1.0>,\n'
+        '  "explanation": "<detailed feedback explaining what was correct/incorrect>",\n'
+        '  "partialCredit": <optional 0.0-1.0 for partially correct parts>,\n'
+        '  "conceptBreakdown": {<optional map of concept name to mastery score 0.0-1.0>}\n'
+        '}';
   }
 
   Future<EvaluationResult> evaluate({

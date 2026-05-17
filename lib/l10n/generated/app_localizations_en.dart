@@ -618,6 +618,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to load models. Please try again.';
 
   @override
+  String mentorInitFailed(String error) {
+    return 'Mentor initialization failed: $error. Go to Settings to configure your AI provider, or retry.';
+  }
+
+  @override
+  String get contentPipelineNotAvailable => 'Content pipeline not available';
+
+  @override
+  String get mentorInitFailedHint =>
+      'Connectivity issue — configure AI provider in Settings';
+
+  @override
+  String tutorInitFailed(String error) {
+    return 'Tutor initialization failed: $error. Go to Settings to configure your AI provider, or retry.';
+  }
+
+  @override
+  String get goBack => 'Go Back';
+
+  @override
+  String get tapToRefreshSection => 'Tap to refresh this section';
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -2001,7 +2024,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionHistoryExportedPdf => 'Session history exported to PDF';
 
   @override
+  String get sessionHistoryExportedJson => 'Session history exported to JSON';
+
+  @override
   String get labelJson => 'JSON';
+
+  @override
+  String get goToSettings => 'Go to Settings';
+
+  @override
+  String get failedToLoadLesson =>
+      'Failed to load lesson. Please check your connection and try again.';
 
   @override
   String get failedToStartPractice => 'Failed to start practice session';
@@ -3351,4 +3384,231 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get viewActiveAiTasks =>
       'View active AI inference tasks and token usage';
+
+  @override
+  String get endLessonConfirmation =>
+      'End your lesson? Your progress will be saved.';
+
+  @override
+  String get continueLesson => 'Continue Lesson';
+
+  @override
+  String get backNavigationConfirm => 'End lesson and save progress?';
+
+  @override
+  String get discardAndExit => 'Discard and Exit';
+
+  @override
+  String get saveAndExit => 'Save and Exit';
+
+  @override
+  String get lessonSavedMessage => 'Your lesson has been saved successfully.';
+
+  @override
+  String get cancelLessonConfirmation =>
+      'Are you sure you want to cancel this lesson?';
+
+  @override
+  String sessionProgressLabel(int current, int total) {
+    return 'Session progress: $current of $total';
+  }
+
+  @override
+  String examProgressLabel(int current, int total) {
+    return 'Exam progress: $current of $total';
+  }
+
+  @override
+  String get decreaseDuration => 'Decrease duration';
+
+  @override
+  String get increaseDuration => 'Increase duration';
+
+  @override
+  String nudgeOverworkMinutes(int minutes, int cap) {
+    return 'You have studied $minutes minutes today, which exceeds your daily cap of $cap minutes. Consider taking a break!';
+  }
+
+  @override
+  String nudgeLateNight(int count) {
+    return 'I noticed you had $count late-night study session(s). Remember that rest is important for effective learning!';
+  }
+
+  @override
+  String nudgeRevisionNeeded(int count) {
+    return 'You have $count question(s) approaching their review date. Time for a revision session!';
+  }
+
+  @override
+  String nudgeStreakDays(int count) {
+    return 'Congratulations on your $count-day study streak! Keep up the amazing consistency!';
+  }
+
+  @override
+  String get nudgeInactive48h =>
+      'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?';
+
+  @override
+  String mentorScheduleConflict(String time, String freeSlot) {
+    return 'The proposed time ($time) conflicts with an existing lesson. Suggested free slot: $freeSlot. Shall I book it there?';
+  }
+
+  @override
+  String mentorScheduleSuccess(String topic, String time) {
+    return 'Lesson on \"$topic\" scheduled for $time (30 min). You can review or reschedule anytime.';
+  }
+
+  @override
+  String get mentorScheduleFail =>
+      'I was unable to schedule the lesson. Please try again or check your planner.';
+
+  @override
+  String mentorRescheduleNoFreeSlot(String topic) {
+    return 'Unable to find a free slot for rescheduling \"$topic\". Please check your availability in the planner.';
+  }
+
+  @override
+  String mentorReschedulePending(String topic, String time) {
+    return 'Suggested rescheduling \"$topic\" to $time - pending confirmation stored in repository.';
+  }
+
+  @override
+  String mentorPlanDaysPrompt(int days) {
+    return 'I can help create a study plan. Would you like me to set up a $days-day learning roadmap? Please confirm and provide the subject or goal you\'d like to focus on.';
+  }
+
+  @override
+  String get lessonPlanSystemPrompt =>
+      'You are a curriculum designer creating lesson plans. Respond only with valid JSON.';
+
+  @override
+  String lessonPlanUserPrompt(
+    String subjectId,
+    String topicTitle,
+    int durationMinutes,
+  ) {
+    return 'You are a knowledgeable AI tutor for $subjectId. Create a structured lesson plan for the topic \"$topicTitle\".\n\nThe lesson should be $durationMinutes minutes long.\n\nReturn a JSON object.';
+  }
+
+  @override
+  String tutorSystemPrompt(String subjectId, String topicTitle) {
+    return 'You are an AI tutor for $subjectId teaching \"$topicTitle\". Be conversational, warm, and educational.';
+  }
+
+  @override
+  String tutorInstructionPrompt(String timeContext, String paceContext) {
+    return 'Guidelines:\n- $timeContext\n- $paceContext\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning';
+  }
+
+  @override
+  String get summarySystemPrompt => 'You are a tutor writing lesson notes.';
+
+  @override
+  String summaryUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String adaptivePace,
+  ) {
+    return 'Summarize what was covered in this lesson about \"$topicTitle\".\nInclude:\n1. Key concepts explained\n2. Questions answered ($exerciseCount exercises, $correctCount correct)\n3. Student\'s apparent understanding level (confidence: $confidencePercent%)\n4. Adaptive pace used (${adaptivePace}x)\n5. Recommendations for next lesson\n\nKeep it concise and constructive.';
+  }
+
+  @override
+  String get evaluationSystemPrompt =>
+      'You are an expert academic evaluator. Return only valid JSON.';
+
+  @override
+  String get evaluatorSystemPrompt =>
+      'You are an expert academic evaluator. Assess the student\'s answer and return a JSON object with: score (0.0-1.0), explanation, partialCredit (optional), conceptBreakdown (optional map of concept->score). Be fair and encouraging. Consider partial credit for partially correct answers.';
+
+  @override
+  String get classifySystemPrompt =>
+      'You are a content classifier. Respond only with the topic name.';
+
+  @override
+  String classifyUserPrompt(String topics, String content) {
+    return 'Classify the following content into one of these topics: $topics.\n\nContent:\n$content\n\nReturn only the single most relevant topic name from the list. Do not explain. Do not add extra text.';
+  }
+
+  @override
+  String get summarizeSystemPrompt =>
+      'You are a summarization assistant. Provide concise summaries.';
+
+  @override
+  String summarizeUserPrompt(String content) {
+    return 'Summarize the following content in 3-5 concise sentences.\n\nContent:\n$content\n\nProvide only the summary text.';
+  }
+
+  @override
+  String get generateQuestionSystemPrompt =>
+      'You are a question generator. Return only valid JSON array.';
+
+  @override
+  String generateQuestionUserPrompt(String content) {
+    return 'Analyze the following content and extract any existing questions it contains.\nAlso generate 3-5 new practice questions based on the content.\nReturn ONLY a JSON array of question objects.\nEach object must have: \"text\" (the question), \"type\" (one of: \"singleChoice\", \"multiChoice\", \"typedAnswer\", \"mathExpression\", \"essay\"), \"options\" (list of answer strings, required for singleChoice and multiChoice), \"correctAnswer\" (the correct option text), \"explanation\" (brief explanation).\nFor multiChoice questions, correctAnswer should be the first correct option and include an \"acceptableAnswers\" array with all correct options.\nFor typedAnswer and mathExpression, provide options as an empty list and correctAnswer as the expected answer.\n\nContent:\n$content';
+  }
+
+  @override
+  String get aiDefaultSystemPrompt =>
+      'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+
+  @override
+  String get transcribeSystemPrompt =>
+      'You are a transcription assistant. Transcribe audio/video content accurately.';
+
+  @override
+  String transcribeUserPrompt(String content) {
+    return 'Transcribe the following audio/video content.\nReturn only the transcribed text. Preserve the natural language and formatting.\n\nContent: $content';
+  }
+
+  @override
+  String get ocrSystemPrompt =>
+      'You are an OCR assistant. Extract text from images accurately.';
+
+  @override
+  String ocrUserPrompt(String content) {
+    return 'Extract all text visible in this image content.\nReturn only the extracted text, preserving the original formatting as much as possible.\nIf no text is visible, return an empty string.\n\nImage content (base64 or reference): $content';
+  }
+
+  @override
+  String get backupAndRestore => 'Backup & Restore';
+
+  @override
+  String get exportBackup => 'Export Backup';
+
+  @override
+  String get exportAllDataDescription => 'Export all your study data';
+
+  @override
+  String get importBackup => 'Import Backup';
+
+  @override
+  String get importFromFileDescription => 'Restore from a backup file';
+
+  @override
+  String get backupExported => 'Backup exported successfully';
+
+  @override
+  String get backupExportFailed => 'Failed to export backup';
+
+  @override
+  String get importConfirmTitle => 'Import Backup';
+
+  @override
+  String importPreview(int boxes, int records) {
+    return 'This backup contains $boxes section(s) with $records record(s). Existing data may be overwritten. Continue?';
+  }
+
+  @override
+  String get importSuccess => 'Data restored successfully';
+
+  @override
+  String get importFailed => 'Failed to restore data';
+
+  @override
+  String get invalidBackupFile => 'Invalid backup file';
+
+  @override
+  String get selectBackupFile => 'Select backup file';
 }

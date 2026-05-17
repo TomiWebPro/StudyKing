@@ -784,9 +784,43 @@
   "@unableToLoadModelsTryAgain": {
     "description": "Error message when models cannot be loaded"
   },
+  "mentorInitFailed": "Inicialización del mentor falló: {error}. Ve a Configuración para configurar tu proveedor de IA, o reintenta.",
+  "@mentorInitFailed": {
+    "description": "Error message when mentor initialisation fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "contentPipelineNotAvailable": "Pipeline de contenido no disponible",
+  "@contentPipelineNotAvailable": {
+    "description": "Message shown when content pipeline is null"
+  },
+  "mentorInitFailedHint": "Problema de conexión — configura el proveedor de IA en Configuración",
+  "@mentorInitFailedHint": {
+    "description": "Hint text in the input field when mentor init failed"
+  },
+  "tutorInitFailed": "Inicialización del tutor falló: {error}. Ve a Configuración para configurar tu proveedor de IA, o reintenta.",
+  "@tutorInitFailed": {
+    "description": "Error message when tutor initialisation fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "goBack": "Volver",
+  "@goBack": {
+    "description": "Button label to navigate back"
+  },
+  "tapToRefreshSection": "Toque para actualizar esta sección",
+  "@tapToRefreshSection": {
+    "description": "Accessibility hint for collapsible cards in dashboard"
+  },
   "retry": "Reintentar",
   "@retry": {
-    "description": "Retry button label"
+    "description": "Button label to retry an operation"
   },
   "signOutConfirmation": "¿Está seguro de que desea cerrar sesión?",
   "@signOutConfirmation": {
@@ -836,6 +870,66 @@
   "@examDateOptional": {
     "description": "Label for exam date picker"
   },
+  "backupAndRestore": "Copia de Seguridad",
+  "@backupAndRestore": {
+    "description": "Section title for backup & restore in settings"
+  },
+  "exportBackup": "Exportar Copia",
+  "@exportBackup": {
+    "description": "Tile title for exporting backup"
+  },
+  "exportAllDataDescription": "Exportar todos tus datos de estudio",
+  "@exportAllDataDescription": {
+    "description": "Tile subtitle for export backup"
+  },
+  "importBackup": "Importar Copia",
+  "@importBackup": {
+    "description": "Tile title for importing backup"
+  },
+  "importFromFileDescription": "Restaurar desde un archivo de copia",
+  "@importFromFileDescription": {
+    "description": "Tile subtitle for import backup"
+  },
+  "backupExported": "Copia exportada exitosamente",
+  "@backupExported": {
+    "description": "Snackbar message when backup export succeeds"
+  },
+  "backupExportFailed": "Error al exportar la copia",
+  "@backupExportFailed": {
+    "description": "Error message when backup export fails"
+  },
+  "importConfirmTitle": "Importar Copia de Seguridad",
+  "@importConfirmTitle": {
+    "description": "Title for import confirmation dialog"
+  },
+  "importPreview": "Esta copia contiene {boxes} sección(es) con {records} registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?",
+  "@importPreview": {
+    "description": "Preview message before importing a backup with box and record counts",
+    "placeholders": {
+      "boxes": {
+        "type": "int"
+      },
+      "records": {
+        "type": "int"
+      }
+    }
+  },
+  "importSuccess": "Datos restaurados exitosamente",
+  "@importSuccess": {
+    "description": "Snackbar message when data restore succeeds"
+  },
+  "importFailed": "Error al restaurar los datos",
+  "@importFailed": {
+    "description": "Error message when data restore fails"
+  },
+  "invalidBackupFile": "Archivo de copia no válido",
+  "@invalidBackupFile": {
+    "description": "Error message when backup file format is invalid"
+  },
+  "selectBackupFile": "Seleccionar archivo de copia",
+  "@selectBackupFile": {
+    "description": "Hint text for selecting a backup file"
+  },
   "selectDate": "Seleccionar fecha",
   "@selectDate": {
     "description": "Hint text for date picker button"
@@ -848,7 +942,7 @@
   "@subjectCreatedSuccessfully": {
     "description": "Snackbar message when subject is created"
   },
-  "uploadPrompt": "¿Deseas subir material de estudio para {subject}?",
+  "uploadPrompt": "¿Desea subir material de estudio para {subject}?",
   "@uploadPrompt": {
     "description": "Prompt after creating a subject",
     "placeholders": {
@@ -2696,9 +2790,21 @@
   "@sessionHistoryExportedPdf": {
     "description": "Snackbar message when session history PDF is exported"
   },
+  "sessionHistoryExportedJson": "Historial de sesiones exportado a JSON",
+  "@sessionHistoryExportedJson": {
+    "description": "Snackbar message when session history JSON is exported"
+  },
   "labelJson": "JSON",
   "@labelJson": {
     "description": "Label for JSON export format"
+  },
+  "goToSettings": "Ir a Configuración",
+  "@goToSettings": {
+    "description": "Button label to navigate to settings"
+  },
+  "failedToLoadLesson": "Error al cargar la lección. Verifica tu conexión e intenta de nuevo.",
+  "@failedToLoadLesson": {
+    "description": "Error message when lesson fails to load"
   },
   "failedToStartPractice": "Error al iniciar la sesión de práctica",
   "@failedToStartPractice": {
@@ -4630,5 +4736,244 @@
   "viewActiveAiTasks": "Ver tareas activas de inferencia de IA y uso de tokens",
   "@viewActiveAiTasks": {
     "description": "Subtitle for AI task monitor settings entry"
+  },
+  "endLessonConfirmation": "¿Finalizar tu lección? Tu progreso se guardará.",
+  "@endLessonConfirmation": {
+    "description": "Confirmation dialog text when ending a lesson"
+  },
+  "continueLesson": "Continuar Lección",
+  "@continueLesson": {
+    "description": "Button to dismiss end lesson dialog and continue the lesson"
+  },
+  "backNavigationConfirm": "¿Finalizar lección y guardar progreso?",
+  "@backNavigationConfirm": {
+    "description": "Confirmation text when user presses back during a lesson"
+  },
+  "discardAndExit": "Descartar y Salir",
+  "@discardAndExit": {
+    "description": "Button to discard lesson progress and exit"
+  },
+  "saveAndExit": "Guardar y Salir",
+  "@saveAndExit": {
+    "description": "Button to save lesson progress and exit"
+  },
+  "lessonSavedMessage": "Tu lección se ha guardado correctamente.",
+  "@lessonSavedMessage": {
+    "description": "Message shown after lesson is saved successfully"
+  },
+  "cancelLessonConfirmation": "¿Está seguro de que desea cancelar esta lección?",
+  "@cancelLessonConfirmation": {
+    "description": "Confirmation dialog when cancelling a lesson"
+  },
+  "sessionProgressLabel": "Progreso de la sesión: {current} de {total}",
+  "@sessionProgressLabel": {
+    "description": "Semantic label for session progress bar",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "examProgressLabel": "Progreso del examen: {current} de {total}",
+  "@examProgressLabel": {
+    "description": "Semantic label for exam progress bar",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "decreaseDuration": "Disminuir duración",
+  "@decreaseDuration": {
+    "description": "Semantic label for decrease duration button"
+  },
+  "increaseDuration": "Aumentar duración",
+  "@increaseDuration": {
+    "description": "Semantic label for increase duration button"
+  },
+  "nudgeOverworkMinutes": "Ha estudiado {minutes} minutos hoy, lo que excede su límite diario de {cap} minutos. ¡Considere tomar un descanso!",
+  "@nudgeOverworkMinutes": {
+    "description": "Overwork nudge showing minutes",
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "cap": { "type": "int" }
+    }
+  },
+  "nudgeLateNight": "Noté que tuvo {count} sesión(es) de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!",
+  "@nudgeLateNight": {
+    "description": "Late-night study warning nudge",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "nudgeRevisionNeeded": "Tiene {count} pregunta(s) próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!",
+  "@nudgeRevisionNeeded": {
+    "description": "Revision reminder nudge",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "nudgeStreakDays": "¡Felicidades por su racha de estudio de {count} días! ¡Siga con esa consistencia tan increíble!",
+  "@nudgeStreakDays": {
+    "description": "Study streak celebration message",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "nudgeInactive48h": "Han pasado más de 48 horas desde su última sesión de estudio. ¿Se encuentra bien? ¿Le gustaría programar una revisión corta?",
+  "@nudgeInactive48h": {
+    "description": "Message when student hasn't studied for 48+ hours"
+  },
+  "mentorScheduleConflict": "La hora propuesta ({time}) entra en conflicto con una lección existente. Espacio libre sugerido: {freeSlot}. ¿Lo reservo allí?",
+  "@mentorScheduleConflict": {
+    "description": "Message when scheduling conflicts with existing lesson",
+    "placeholders": {
+      "time": { "type": "String" },
+      "freeSlot": { "type": "String" }
+    }
+  },
+  "mentorScheduleSuccess": "Lección \"{topic}\" programada para {time} (30 min). Puede revisarla o reprogramarla en cualquier momento.",
+  "@mentorScheduleSuccess": {
+    "description": "Success message after scheduling a lesson",
+    "placeholders": {
+      "topic": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "mentorScheduleFail": "No pude programar la lección. Por favor, inténtelo de nuevo o revise su planificador.",
+  "@mentorScheduleFail": {
+    "description": "Failure message when lesson cannot be scheduled"
+  },
+  "mentorRescheduleNoFreeSlot": "No se pudo encontrar un espacio libre para reprogramar \"{topic}\". Por favor, verifique su disponibilidad en el planificador.",
+  "@mentorRescheduleNoFreeSlot": {
+    "description": "Message when no free slot found for rescheduling",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "mentorReschedulePending": "Reprogramación sugerida de \"{topic}\" para {time} - confirmación pendiente almacenada en el repositorio.",
+  "@mentorReschedulePending": {
+    "description": "Message when rescheduling suggestion is pending",
+    "placeholders": {
+      "topic": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "mentorPlanDaysPrompt": "Puedo ayudar a crear un plan de estudio. ¿Le gustaría que configure una hoja de ruta de {days} días? Por favor, confirme y proporcione la materia o el objetivo en el que le gustaría enfocarse.",
+  "@mentorPlanDaysPrompt": {
+    "description": "Prompt asking user to confirm study plan creation",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "lessonPlanSystemPrompt": "Usted es un diseñador curricular que crea planes de lección. Responda solo con JSON válido.",
+  "@lessonPlanSystemPrompt": {
+    "description": "System prompt for lesson plan generation"
+  },
+  "lessonPlanUserPrompt": "Usted es un tutor de IA experto en {subjectId}. Cree un plan de lección estructurado para el tema \"{topicTitle}\".\n\nLa lección debe durar {durationMinutes} minutos.\n\nDevuelva un objeto JSON.",
+  "@lessonPlanUserPrompt": {
+    "description": "User prompt for lesson plan generation",
+    "placeholders": {
+      "subjectId": { "type": "String" },
+      "topicTitle": { "type": "String" },
+      "durationMinutes": { "type": "int" }
+    }
+  },
+  "tutorSystemPrompt": "Usted es un tutor de IA para {subjectId} enseñando \"{topicTitle}\". Sea conversacional, cálido y educativo.",
+  "@tutorSystemPrompt": {
+    "description": "System prompt for AI tutor",
+    "placeholders": {
+      "subjectId": { "type": "String" },
+      "topicTitle": { "type": "String" }
+    }
+  },
+  "tutorInstructionPrompt": "Directrices:\n- {timeContext}\n- {paceContext}\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto",
+  "@tutorInstructionPrompt": {
+    "description": "Instruction prompt for AI tutor",
+    "placeholders": {
+      "timeContext": { "type": "String" },
+      "paceContext": { "type": "String" }
+    }
+  },
+  "summarySystemPrompt": "Usted es un tutor escribiendo notas de lección.",
+  "@summarySystemPrompt": {
+    "description": "System prompt for lesson summary generation"
+  },
+  "summaryUserPrompt": "Resuma lo cubierto en esta lección sobre \"{topicTitle}\".\nIncluya:\n1. Conceptos clave explicados\n2. Preguntas respondidas ({exerciseCount} ejercicios, {correctCount} correctas)\n3. Nivel de comprensión aparente del estudiante (confianza: {confidencePercent}%)\n4. Ritmo adaptativo utilizado ({adaptivePace}x)\n5. Recomendaciones para la próxima lección\n\nManténgalo conciso y constructivo.",
+  "@summaryUserPrompt": {
+    "description": "User prompt for lesson summary",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "exerciseCount": { "type": "int" },
+      "correctCount": { "type": "int" },
+      "confidencePercent": { "type": "int" },
+      "adaptivePace": { "type": "String" }
+    }
+  },
+  "evaluationSystemPrompt": "Usted es un evaluador académico experto. Devuelva solo JSON válido.",
+  "@evaluationSystemPrompt": {
+    "description": "System prompt for answer evaluation"
+  },
+  "evaluatorSystemPrompt": "Usted es un evaluador académico experto. Evalúe la respuesta del estudiante y devuelva un objeto JSON con: score (0.0-1.0), explanation, partialCredit (opcional), conceptBreakdown (mapa opcional de concepto->puntaje). Sea justo y alentador. Considere crédito parcial para respuestas parcialmente correctas.",
+  "@evaluatorSystemPrompt": {
+    "description": "System prompt for exercise evaluator"
+  },
+  "classifySystemPrompt": "Usted es un clasificador de contenido. Responda solo con el nombre del tema.",
+  "@classifySystemPrompt": {
+    "description": "System prompt for content classification"
+  },
+  "classifyUserPrompt": "Clasifique el siguiente contenido en uno de estos temas: {topics}.\n\nContenido:\n{content}\n\nDevuelva solo el nombre del tema más relevante de la lista. No explique. No añada texto adicional.",
+  "@classifyUserPrompt": {
+    "description": "User prompt for content classification",
+    "placeholders": {
+      "topics": { "type": "String" },
+      "content": { "type": "String" }
+    }
+  },
+  "summarizeSystemPrompt": "Usted es un asistente de resumen. Proporcione resúmenes concisos.",
+  "@summarizeSystemPrompt": {
+    "description": "System prompt for content summarization"
+  },
+  "summarizeUserPrompt": "Resuma el siguiente contenido en 3-5 oraciones concisas.\n\nContenido:\n{content}\n\nProporcione solo el texto del resumen.",
+  "@summarizeUserPrompt": {
+    "description": "User prompt for content summarization",
+    "placeholders": {
+      "content": { "type": "String" }
+    }
+  },
+  "generateQuestionSystemPrompt": "Usted es un generador de preguntas. Devuelva solo un array JSON válido.",
+  "@generateQuestionSystemPrompt": {
+    "description": "System prompt for question generation"
+  },
+  "generateQuestionUserPrompt": "Analice el siguiente contenido y extraiga cualquier pregunta existente que contenga.\nTambién genere 3-5 nuevas preguntas de práctica basadas en el contenido.\nDevuelva SOLO un array JSON de objetos de pregunta.\nCada objeto debe tener: \"text\" (la pregunta), \"type\" (uno de: \"singleChoice\", \"multiChoice\", \"typedAnswer\", \"mathExpression\", \"essay\"), \"options\" (lista de opciones de respuesta, requerido para singleChoice y multiChoice), \"correctAnswer\" (el texto de la opción correcta), \"explanation\" (explicación breve).\nPara preguntas multiChoice, correctAnswer debe ser la primera opción correcta e incluya un array \"acceptableAnswers\" con todas las opciones correctas.\nPara typedAnswer y mathExpression, proporcione options como lista vacía y correctAnswer como la respuesta esperada.\n\nContenido:\n{content}",
+  "@generateQuestionUserPrompt": {
+    "description": "User prompt for question generation",
+    "placeholders": {
+      "content": { "type": "String" }
+    }
+  },
+  "aiDefaultSystemPrompt": "Usted es un asistente de estudio de IA útil llamado StudyKing. Mantenga las respuestas concisas y educativas.",
+  "@aiDefaultSystemPrompt": {
+    "description": "Default system prompt for AI assistant"
+  },
+  "transcribeSystemPrompt": "Usted es un asistente de transcripción. Transcriba contenido de audio/video con precisión.",
+  "@transcribeSystemPrompt": {
+    "description": "System prompt for transcription"
+  },
+  "transcribeUserPrompt": "Transcriba el siguiente contenido de audio/video.\nDevuelva solo el texto transcrito. Preserve el lenguaje natural y el formato.\n\nContenido: {content}",
+  "@transcribeUserPrompt": {
+    "description": "User prompt for transcription",
+    "placeholders": {
+      "content": { "type": "String" }
+    }
+  },
+  "ocrSystemPrompt": "Usted es un asistente de OCR. Extraiga texto de imágenes con precisión.",
+  "@ocrSystemPrompt": {
+    "description": "System prompt for OCR extraction"
+  },
+  "ocrUserPrompt": "Extraiga todo el texto visible en el contenido de esta imagen.\nDevuelva solo el texto extraído, preservando el formato original tanto como sea posible.\nSi no hay texto visible, devuelva una cadena vacía.\n\nContenido de la imagen (base64 o referencia): {content}",
+  "@ocrUserPrompt": {
+    "description": "User prompt for OCR extraction",
+    "placeholders": {
+      "content": { "type": "String" }
+    }
   }
 }

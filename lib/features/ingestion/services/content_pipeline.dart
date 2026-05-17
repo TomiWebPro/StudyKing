@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -23,6 +25,7 @@ class ContentPipeline {
   final QuestionRepository _questionRepository;
   final DocumentExtractor _documentExtractor;
   final WebScraper _webScraper;
+  final String _localeName;
   final Logger _logger = const Logger('ContentPipeline');
 
   ContentPipeline({
@@ -32,13 +35,15 @@ class ContentPipeline {
     required QuestionRepository questionRepository,
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
+    String localeName = 'en',
   })  : _llmService = llmService,
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
         _documentExtractor =
             documentExtractor ?? DocumentExtractor(llmService: llmService),
-        _webScraper = webScraper ?? WebScraper();
+        _webScraper = webScraper ?? WebScraper(),
+        _localeName = localeName;
 
   Future<Result<Source>> processUpload({
     required String title,
@@ -89,6 +94,7 @@ class ContentPipeline {
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
     QuestionValidator? validator,
+    List<String> allowedQuestionTypes = _defaultAllowedTypes,
   }) async {
     final sourceId = IdGenerator.generate('src');
     Source source;
@@ -167,6 +173,7 @@ class ContentPipeline {
           studentId,
           modelId,
           validator: validator,
+          allowedTypes: allowedQuestionTypes,
         );
         if (questionIds.isNotEmpty) {
           updated = updated.copyWith(
@@ -235,19 +242,13 @@ class ContentPipeline {
   ) async {
     if (possibleTopics.isEmpty) return '';
     try {
-      final prompt = '''
-Classify the following content into one of these topics: ${possibleTopics.join(', ')}.
-
-Content:
-$content
-
-Return only the single most relevant topic name from the list. Do not explain. Do not add extra text.''';
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      final prompt = l10n.classifyUserPrompt(possibleTopics.join(', '), content);
 
       final response = await _llmService.chat(
         message: prompt,
         modelId: modelId,
-        systemPrompt:
-            'You are a content classifier. Respond only with the topic name.',
+        systemPrompt: l10n.classifySystemPrompt,
         feature: 'content_classification',
       );
 
@@ -281,19 +282,13 @@ Return only the single most relevant topic name from the list. Do not explain. D
     String modelId,
   ) async {
     try {
-      final prompt = '''
-Summarize the following content in 3-5 concise sentences.
-
-Content:
-$content
-
-Provide only the summary text.''';
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      final prompt = l10n.summarizeUserPrompt(content);
 
       final response = await _llmService.chat(
         message: prompt,
         modelId: modelId,
-        systemPrompt:
-            'You are a summarization assistant. Provide concise summaries.',
+        systemPrompt: l10n.summarizeSystemPrompt,
         feature: 'content_summarization',
       );
 
@@ -304,6 +299,21 @@ Provide only the summary text.''';
     }
   }
 
+  QuestionType? _parseQuestionType(String typeStr) {
+    for (final t in QuestionType.values) {
+      if (t.name == typeStr) return t;
+    }
+    return null;
+  }
+
+  static const List<String> _defaultAllowedTypes = [
+    'singleChoice',
+    'multiChoice',
+    'typedAnswer',
+    'mathExpression',
+    'essay',
+  ];
+
   Future<List<String>> _generateQuestions(
     String content,
     String subjectId,
@@ -312,45 +322,48 @@ Provide only the summary text.''';
     String studentId,
     String modelId, {
     QuestionValidator? validator,
+    List<String> allowedTypes = _defaultAllowedTypes,
   }) async {
     final questionIds = <String>[];
     try {
-      final prompt = '''
-Analyze the following content and extract any existing questions it contains.
-Also generate 3-5 new practice questions based on the content.
-Return ONLY a JSON array of question objects.
-Each object must have: "text" (the question), "type" ("singleChoice"), "options" (list of 4 answer strings), "correctAnswer" (the correct option text), "explanation" (brief explanation).
-
-Content:
-$content''';
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      final prompt = l10n.generateQuestionUserPrompt(content);
 
       final response = await _llmService.chat(
         message: prompt,
         modelId: modelId,
-        systemPrompt:
-            'You are a question generator. Return only valid JSON array.',
+        systemPrompt: l10n.generateQuestionSystemPrompt,
         feature: 'question_generation',
       );
 
       final parsed = _parseQuestionResponse(response);
       for (final qData in parsed) {
-        if (!_isValidGeneratedQuestion(qData, validator: validator)) {
+        if (!_isValidGeneratedQuestion(qData, validator: validator, allowedTypes: allowedTypes)) {
           _logger.w('Skipping invalid question: ${qData['text']}');
           continue;
         }
         final qId = IdGenerator.generate('q');
+        final typeStr = qData['type'] as String? ?? 'singleChoice';
+        final questionType = _parseQuestionType(typeStr) ?? QuestionType.singleChoice;
+        final options = (qData['options'] as List<dynamic>?)?.cast<String>() ?? [];
+        final correctAnswer = qData['correctAnswer'] as String? ?? '';
+        final acceptableAnswers = qData['acceptableAnswers'] != null
+            ? List<String>.from(qData['acceptableAnswers'] as List)
+            : (correctAnswer.isNotEmpty ? [correctAnswer] : <String>[]);
+
         final question = Question(
           id: qId,
           text: qData['text'] as String? ?? '',
-          type: QuestionType.singleChoice,
+          type: questionType,
           subjectId: subjectId,
           topicId: topicId,
           sourceIds: [sourceId],
-          options: (qData['options'] as List<dynamic>?)?.cast<String>() ?? [],
+          options: options,
           markscheme: Markscheme(
             questionId: qId,
-            correctAnswer: qData['correctAnswer'] as String? ?? '',
+            correctAnswer: correctAnswer,
             explanation: qData['explanation'] as String?,
+            acceptableAnswers: acceptableAnswers,
           ),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
@@ -369,18 +382,40 @@ $content''';
   bool _isValidGeneratedQuestion(
     Map<String, dynamic> qData, {
     QuestionValidator? validator,
+    List<String> allowedTypes = _defaultAllowedTypes,
   }) {
     final text = qData['text'] as String? ?? '';
     if (text.isEmpty) return false;
 
-    final options = (qData['options'] as List<dynamic>?)
-            ?.cast<String>() ??
-        [];
-    if (options.length < 2) return false;
+    final typeStr = qData['type'] as String? ?? 'singleChoice';
+    if (!allowedTypes.contains(typeStr)) return false;
 
-    final correctAnswer = qData['correctAnswer'] as String? ?? '';
-    if (correctAnswer.isEmpty) return false;
-    if (!options.contains(correctAnswer)) return false;
+    final questionType = _parseQuestionType(typeStr);
+    if (questionType == null) return false;
+
+    switch (questionType) {
+      case QuestionType.singleChoice:
+      case QuestionType.multiChoice:
+        final options = (qData['options'] as List<dynamic>?)?.cast<String>() ?? [];
+        if (options.length < 2) return false;
+        final correctAnswer = qData['correctAnswer'] as String? ?? '';
+        if (correctAnswer.isEmpty) return false;
+        if (!options.contains(correctAnswer)) return false;
+        break;
+      case QuestionType.typedAnswer:
+      case QuestionType.mathExpression:
+      case QuestionType.essay:
+        final correctAnswer = qData['correctAnswer'] as String? ?? '';
+        if (correctAnswer.isEmpty) return false;
+        break;
+      case QuestionType.canvas:
+      case QuestionType.graphDrawing:
+        break;
+      case QuestionType.stepByStep:
+      case QuestionType.fileUpload:
+      case QuestionType.audioRecording:
+        break;
+    }
 
     final explanation = qData['explanation'] as String? ?? '';
     if (explanation.isEmpty) return false;

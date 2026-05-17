@@ -60,6 +60,16 @@ void main() {
         expect(json['tokenCount'], 10);
         expect(json['isStreaming'], isFalse);
       });
+
+      test('serializes null metadataJson', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: content, timestamp: now,
+        );
+        final json = msg.toJson();
+        expect(json['metadataJson'], isNull);
+      });
     });
 
     group('fromJson', () {
@@ -105,6 +115,16 @@ void main() {
         expect(restored.type, original.type);
         expect(restored.tokenCount, original.tokenCount);
       });
+
+      test('roundtrip with null metadataJson', () {
+        final original = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: content, timestamp: now,
+        );
+        final restored = ConversationMessage.fromJson(original.toJson());
+        expect(restored.metadataJson, isNull);
+      });
     });
 
     group('copyWith', () {
@@ -133,6 +153,44 @@ void main() {
         expect(copy.content, 'Updated');
         expect(copy.timestamp, later);
         expect(copy.id, id);
+      });
+
+      test('copyWith updates all fields', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: content, timestamp: now,
+        );
+        final later = DateTime(2026, 5, 18);
+        final copy = msg.copyWith(
+          id: 'new-id',
+          sessionId: 'new-session',
+          role: MessageRole.system,
+          type: MessageType.quiz,
+          content: 'New content',
+          metadataJson: '{"meta": true}',
+          timestamp: later,
+          tokenCount: 99,
+          isStreaming: true,
+        );
+        expect(copy.id, 'new-id');
+        expect(copy.sessionId, 'new-session');
+        expect(copy.role, MessageRole.system);
+        expect(copy.type, MessageType.quiz);
+        expect(copy.metadataJson, '{"meta": true}');
+        expect(copy.tokenCount, 99);
+        expect(copy.isStreaming, isTrue);
+      });
+
+      test('copyWith preserves metadataJson when not provided', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: content, timestamp: now,
+          metadataJson: '{"old": "data"}',
+        );
+        final copy = msg.copyWith();
+        expect(copy.metadataJson, '{"old": "data"}');
       });
     });
 
@@ -180,6 +238,21 @@ void main() {
         MessageRole.mentor,
       ]);
     });
+
+    test('every role serializes and deserializes correctly', () {
+      for (final role in MessageRole.values) {
+        final msg = ConversationMessage(
+          id: 'role-test',
+          sessionId: 'session',
+          role: role,
+          type: MessageType.text,
+          content: 'Test',
+          timestamp: DateTime(2026, 1, 1),
+        );
+        final restored = ConversationMessage.fromJson(msg.toJson());
+        expect(restored.role, role, reason: 'Failed for role: $role');
+      }
+    });
   });
 
   group('MessageType enum', () {
@@ -192,6 +265,21 @@ void main() {
         MessageType.plan,
         MessageType.system,
       ]);
+    });
+
+    test('every type serializes and deserializes correctly', () {
+      for (final type in MessageType.values) {
+        final msg = ConversationMessage(
+          id: 'type-test',
+          sessionId: 'session',
+          role: MessageRole.student,
+          type: type,
+          content: 'Test $type',
+          timestamp: DateTime(2026, 1, 1),
+        );
+        final restored = ConversationMessage.fromJson(msg.toJson());
+        expect(restored.type, type, reason: 'Failed for type: $type');
+      }
     });
   });
 }

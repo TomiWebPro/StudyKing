@@ -118,6 +118,30 @@ void main() {
         expect(copy.correctAnswer, 'New');
         expect(copy.explanation, 'Exp');
       });
+
+      test('copyWith replaces steps', () {
+        final originalSteps = [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'A', points: 1.0),
+        ];
+        final newSteps = [
+          MarkSchemeStep(stepNumber: '2', requiredAnswer: 'B', points: 2.0),
+        ];
+        final ms = Markscheme(correctAnswer: 'Ans', steps: originalSteps);
+        final copy = ms.copyWith(steps: newSteps);
+        expect(copy.steps.length, 1);
+        expect(copy.steps.first.stepNumber, '2');
+        expect(copy.steps.first.points, 2.0);
+      });
+
+      test('copyWith preserves steps when not provided', () {
+        final steps = [
+          MarkSchemeStep(stepNumber: '1', requiredAnswer: 'A', points: 1.0),
+        ];
+        final ms = Markscheme(correctAnswer: 'Ans', steps: steps);
+        final copy = ms.copyWith(correctAnswer: 'New');
+        expect(copy.steps.length, 1);
+        expect(copy.steps.first.requiredAnswer, 'A');
+      });
     });
 
     group('isMatch', () {
@@ -168,6 +192,28 @@ void main() {
           acceptableAnswers: ['capital'],
         );
         expect(ms.isMatch('  CAPITAL  '), isTrue);
+      });
+
+      test('isMatch with empty correctAnswer matches everything via contains', () {
+        final ms = Markscheme(correctAnswer: '');
+        expect(ms.isMatch('Paris'), isTrue);
+        expect(ms.isMatch(''), isTrue);
+        expect(ms.isMatch('anything'), isTrue);
+      });
+
+      test('isMatch with empty acceptableAnswers list falls back to contains', () {
+        final ms = Markscheme(
+          correctAnswer: 'Paris',
+          acceptableAnswers: [],
+        );
+        expect(ms.isMatch('Capital is Paris'), isTrue);
+        expect(ms.isMatch('London'), isFalse);
+      });
+
+      test('isMatch with non-matching answer returns false', () {
+        final ms = Markscheme(correctAnswer: 'Paris');
+        expect(ms.isMatch('Berlin'), isFalse);
+        expect(ms.isMatch(''), isFalse);
       });
     });
   });

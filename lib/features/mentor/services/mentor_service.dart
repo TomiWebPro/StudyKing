@@ -145,6 +145,9 @@ class MentorService {
     final consecutiveDays = await _getConsecutiveStudyDays();
 
     final buffer = StringBuffer();
+    // Note: Context labels are in invariant English regardless of user locale.
+    // This context data is fed to the LLM. The labels are a data-formatting
+    // convention, not user-facing text.
     buffer.writeln('Current student context:');
     buffer.writeln('- Total attempts: ${stats['totalAttempts']}');
     buffer.writeln('- Correct attempts: ${stats['correctAttempts']}');
@@ -156,7 +159,7 @@ class MentorService {
     if (plan != null) {
       buffer.writeln('- Plan exists: current phase (day ${_getPlanDay(plan)} of ${plan.dailyPlans.length})');
       if (adherenceDeviation != null) {
-        buffer.writeln('- Plan adherence: ${adherenceDeviation.averageAdherence.toStringAsFixed(1)}%');
+        buffer.writeln('- Plan adherence: ${adherenceDeviation.averageAdherence.toStringAsFixed(1)}%'); // LLM-facing: invariant period format OK
         if (adherenceDeviation.consecutiveLowDays > 0) {
           buffer.writeln('- Low adherence for ${adherenceDeviation.consecutiveLowDays} consecutive days');
         }
@@ -196,7 +199,7 @@ class MentorService {
     if (weakTopics.isNotEmpty) {
       buffer.writeln('- Weak topics needing attention:');
       for (final topic in weakTopics.take(5)) {
-        buffer.writeln('  * ${topic.topicId} (accuracy: ${(topic.accuracy * 100).toStringAsFixed(0)}%)');
+        buffer.writeln('  * ${topic.topicId} (accuracy: ${(topic.accuracy * 100).toStringAsFixed(0)}%)'); // LLM-facing: invariant period format OK
       }
     }
 
@@ -319,7 +322,7 @@ class MentorService {
           id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
           studentId: _studentId,
           nudgeType: NudgeType.overwork.name,
-          message: 'You have studied $todayMinutes minutes today, which exceeds your daily cap of $dailyCap minutes. Consider taking a break!',
+          message: lookupAppLocalizations(Locale(_localeName)).nudgeOverworkMinutes(todayMinutes, dailyCap),
           severity: NudgeSeverity.medium.name,
         );
         await _nudgeRepo.create(nudge);
@@ -333,7 +336,7 @@ class MentorService {
             id: 'wellbeing_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
             studentId: _studentId,
             nudgeType: NudgeType.overwork.name,
-            message: 'I noticed you had ${lateNight.length} late-night study session(s). Remember that rest is important for effective learning!',
+            message: lookupAppLocalizations(Locale(_localeName)).nudgeLateNight(lateNight.length),
             severity: NudgeSeverity.low.name,
           );
           await _nudgeRepo.create(nudge);
@@ -348,7 +351,7 @@ class MentorService {
             id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
             studentId: _studentId,
             nudgeType: NudgeType.revision.name,
-            message: 'You have $atRiskCount question(s) approaching their review date. Time for a revision session!',
+            message: lookupAppLocalizations(Locale(_localeName)).nudgeRevisionNeeded(atRiskCount),
             severity: NudgeSeverity.low.name,
           );
           await _nudgeRepo.create(nudge);
@@ -358,7 +361,7 @@ class MentorService {
       final consecutiveDays = await _getConsecutiveStudyDays();
       if (consecutiveDays >= 7) {
         _memory.addSystemMessage(
-          'Congratulations on your $consecutiveDays-day study streak! Keep up the amazing consistency!'
+          lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays)
         );
       } else if (consecutiveDays == 0) {
         final allResult = await _sessionRepository.getAll();
@@ -370,7 +373,7 @@ class MentorService {
             });
           if (lastStudy != null && DateTime.now().difference(lastStudy).inHours >= 48) {
             _memory.addSystemMessage(
-              'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?'
+              lookupAppLocalizations(Locale(_localeName)).nudgeInactive48h
             );
           }
         }
@@ -439,9 +442,10 @@ class MentorService {
         final existingLessons = await _plannerService.getScheduledLessons();
         final nextFree = _findNextFreeSlot(existingLessons, 30);
         _memory.addSystemMessage(
-          'The proposed time ($nextHour) conflicts with an existing lesson. '
-          'Suggested free slot: ${nextFree.toLocal().toString().substring(0, 16)}. '
-          'Shall I book it there?'
+          lookupAppLocalizations(Locale(_localeName)).mentorScheduleConflict(
+            nextHour.toLocal().toString().substring(0, 16),
+            nextFree.toLocal().toString().substring(0, 16),
+          )
         );
         return;
       }
@@ -456,12 +460,14 @@ class MentorService {
 
       if (success) {
         _memory.addSystemMessage(
-          'Lesson on "$topicTitle" scheduled for ${nextHour.toLocal().toString().substring(0, 16)} (30 min). '
-          'You can review or reschedule anytime.'
+          lookupAppLocalizations(Locale(_localeName)).mentorScheduleSuccess(
+            topicTitle,
+            nextHour.toLocal().toString().substring(0, 16),
+          )
         );
       } else {
         _memory.addSystemMessage(
-          'I was unable to schedule the lesson. Please try again or check your planner.'
+          lookupAppLocalizations(Locale(_localeName)).mentorScheduleFail
         );
       }
     } catch (e) {
@@ -496,8 +502,7 @@ class MentorService {
       final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 30;
 
       _memory.addSystemMessage(
-        'I can help create a study plan. Would you like me to set up a $days-day learning roadmap? '
-        'Please confirm and provide the subject or goal you\'d like to focus on.'
+        lookupAppLocalizations(Locale(_localeName)).mentorPlanDaysPrompt(days)
       );
     } catch (e) {
       _logger.w('Failed to handle plan intent: $e');
@@ -574,8 +579,7 @@ class MentorService {
 
     if (hasConflict) {
       _memory.addSystemMessage(
-        'Unable to find a free slot for rescheduling "${session.topicTitle}". '
-        'Please check your availability in the planner.'
+        lookupAppLocalizations(Locale(_localeName)).mentorRescheduleNoFreeSlot(session.topicTitle),
       );
       return;
     }
@@ -598,8 +602,10 @@ class MentorService {
     await _pendingActionRepo.create(action);
 
     _memory.addSystemMessage(
-      'Suggested rescheduling "${session.topicTitle}" to ${nextFree.toLocal().toString().substring(0, 16)} '
-      '- pending confirmation stored in repository.'
+      lookupAppLocalizations(Locale(_localeName)).mentorReschedulePending(
+        session.topicTitle,
+        nextFree.toLocal().toString().substring(0, 16),
+      )
     );
   }
 

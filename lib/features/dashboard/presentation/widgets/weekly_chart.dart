@@ -11,12 +11,14 @@ class WeeklyChart extends ConsumerWidget {
 
   const WeeklyChart({super.key, required this.weeklyTrend});
 
+  /// Fallback labels used when [weeklyTrend] is empty.
+  /// Uses locale-aware short day names via DateFormat.E (invariant, OK for chart labels).
   Map<String, int> _fallbackDayLabels(String localeName) {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     return {
       for (var i = 0; i < 7; i++)
-        DateFormat('E', localeName).format(startOfWeek.add(Duration(days: i))): 0,
+        DateFormat.E(localeName).format(startOfWeek.add(Duration(days: i))): 0,
     };
   }
 
@@ -56,6 +58,8 @@ class WeeklyChart extends ConsumerWidget {
               : _fallbackDayLabels(l10n.localeName),
           accentColor: Theme.of(context).colorScheme.primary,
           reduceMotion: ref.watch(settingsProvider).reduceMotion,
+          semanticsLabelBuilder: (day, count) =>
+              '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
         ),
       ],
     );

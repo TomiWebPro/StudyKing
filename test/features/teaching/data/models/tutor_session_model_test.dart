@@ -81,6 +81,16 @@ void main() {
         );
         expect(session.accuracy, 0.0);
       });
+
+      test('computes accuracy with high precision', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          questionsAsked: 3, questionsCorrect: 1,
+        );
+        expect(session.accuracy, closeTo(0.333333, 0.0001));
+      });
     });
 
     group('elapsedMinutes', () {
@@ -117,6 +127,17 @@ void main() {
         );
         expect(session.remainingMinutes, 0);
       });
+
+      test('does not exceed planned duration', () {
+        final future = DateTime.now().add(const Duration(hours: 1));
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: future,
+          plannedDurationMinutes: 45,
+        );
+        expect(session.remainingMinutes, 45);
+      });
     });
 
     group('isOverTime', () {
@@ -141,6 +162,17 @@ void main() {
         );
         expect(session.isOverTime, isTrue);
       });
+
+      test('returns false at exact boundary', () {
+        final now = DateTime.now();
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: now.subtract(const Duration(minutes: 45)),
+          plannedDurationMinutes: 45,
+        );
+        expect(session.isOverTime, isFalse);
+      });
     });
 
     group('toJson', () {
@@ -164,6 +196,16 @@ void main() {
         expect(json['plannedDurationMinutes'], 30);
         expect(json['questionsAsked'], 5);
         expect(json['totalTokensUsed'], 2000);
+      });
+
+      test('serializes null endTime', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+        );
+        final json = session.toJson();
+        expect(json['endTime'], isNull);
       });
     });
 
@@ -207,6 +249,42 @@ void main() {
         expect(session.totalMessages, 0);
         expect(session.totalTokensUsed, 0);
       });
+
+      test('handles null endTime', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle, 'status': 'planned',
+          'startTime': startTime.toIso8601String(),
+          'endTime': null,
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.endTime, isNull);
+      });
+
+      test('handles null topicsCovered', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle, 'status': 'planned',
+          'startTime': startTime.toIso8601String(),
+          'topicsCovered': null,
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.topicsCovered, []);
+      });
+
+      test('handles null tutorNotes', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle, 'status': 'planned',
+          'startTime': startTime.toIso8601String(),
+          'tutorNotes': null,
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.tutorNotes, isNull);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -225,6 +303,16 @@ void main() {
         expect(restored.status, original.status);
         expect(restored.questionsCorrect, original.questionsCorrect);
         expect(restored.totalMessages, original.totalMessages);
+      });
+
+      test('roundtrip without endTime', () {
+        final original = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+        );
+        final restored = TutorSession.fromJson(original.toJson());
+        expect(restored.endTime, isNull);
       });
     });
 
@@ -253,6 +341,41 @@ void main() {
         expect(copy.status, SessionStatus.inProgress);
         expect(copy.questionsAsked, 5);
         expect(copy.tutorNotes, 'Going well');
+      });
+
+      test('updates all mutable fields', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+        );
+        final future = DateTime(2026, 5, 17);
+        final copy = session.copyWith(
+          id: 'new-id',
+          studentId: 'new-student',
+          subjectId: 'new-subject',
+          topicId: 'new-topic',
+          topicTitle: 'New Title',
+          status: SessionStatus.cancelled,
+          startTime: future,
+          endTime: future,
+          plannedDurationMinutes: 30,
+          lessonPlanJson: '{"plan": true}',
+          questionsAsked: 5,
+          questionsCorrect: 3,
+          confidenceRating: 2,
+          tutorNotes: 'Notes',
+          topicsCovered: ['Topic A', 'Topic B'],
+          totalMessages: 10,
+          totalTokensUsed: 1000,
+        );
+        expect(copy.id, 'new-id');
+        expect(copy.studentId, 'new-student');
+        expect(copy.status, SessionStatus.cancelled);
+        expect(copy.endTime, future);
+        expect(copy.lessonPlanJson, '{"plan": true}');
+        expect(copy.topicsCovered, ['Topic A', 'Topic B']);
+        expect(copy.totalTokensUsed, 1000);
       });
     });
 

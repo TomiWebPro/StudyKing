@@ -127,14 +127,16 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
     final days = List.generate(7, (i) {
       final date = weekStart.add(Duration(days: i));
-      return DateFormat.E(l10n.localeName).format(date).substring(0, 1);
+      return DateFormat.EEEE(l10n.localeName).format(date);
     });
     return Row(
       children: days
           .map((d) => Expanded(
                 child: Center(
                   child: Text(d,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   )),
                 ),

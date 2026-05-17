@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -145,6 +146,39 @@ class _FakeContentPipeline extends ContentPipeline {
   }
 
   @override
+  Future<Result<Source>> processFullPipeline({
+    required String title,
+    required String content,
+    required SourceType type,
+    required String studentId,
+    required String modelId,
+    String subjectId = '',
+    String topicId = '',
+    String syllabusId = '',
+    String sourceUrl = '',
+    String language = '',
+    List<String> possibleTopics = const [],
+    bool generateQuestions = false,
+    QuestionValidator? validator,
+    List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
+  }) async {
+    if (processUploadShouldThrow) {
+      throw Exception('Network error');
+    }
+    processUploadCalled = true;
+    lastTitle = title;
+    lastContent = content;
+    lastSourceUrl = sourceUrl;
+    return Result.success(Source(
+      id: 'src_test',
+      title: title,
+      type: type,
+      content: content,
+      studentId: studentId,
+    ));
+  }
+
+  @override
   Future<Result<String>> fetchAndScrapeUrl(String url) async {
     fetchAndScrapeUrlCalled = true;
     lastFetchUrl = url;
@@ -169,6 +203,26 @@ class _FailingPipeline extends _FakeContentPipeline {
     String syllabusId = '',
     String sourceUrl = '',
     String language = '',
+  }) async {
+    return Result.failure('Upload failed: server error');
+  }
+
+  @override
+  Future<Result<Source>> processFullPipeline({
+    required String title,
+    required String content,
+    required SourceType type,
+    required String studentId,
+    required String modelId,
+    String subjectId = '',
+    String topicId = '',
+    String syllabusId = '',
+    String sourceUrl = '',
+    String language = '',
+    List<String> possibleTopics = const [],
+    bool generateQuestions = false,
+    QuestionValidator? validator,
+    List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
   }) async {
     return Result.failure('Upload failed: server error');
   }
@@ -199,6 +253,34 @@ class _DelayedPipeline extends _FakeContentPipeline {
       studentId: studentId,
     ));
   }
+
+  @override
+  Future<Result<Source>> processFullPipeline({
+    required String title,
+    required String content,
+    required SourceType type,
+    required String studentId,
+    required String modelId,
+    String subjectId = '',
+    String topicId = '',
+    String syllabusId = '',
+    String sourceUrl = '',
+    String language = '',
+    List<String> possibleTopics = const [],
+    bool generateQuestions = false,
+    QuestionValidator? validator,
+    List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
+  }) async {
+    processUploadCalled = true;
+    await completer.future;
+    return Result.success(Source(
+      id: 'src_test',
+      title: title,
+      type: type,
+      content: content,
+      studentId: studentId,
+    ));
+  }
 }
 
 class _ThrowingFetchPipeline extends _FakeContentPipeline {
@@ -209,11 +291,13 @@ class _ThrowingFetchPipeline extends _FakeContentPipeline {
 }
 
 Widget _buildWidget({ContentPipeline? pipeline}) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: UploadScreen(pipeline: pipeline),
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: UploadScreen(pipeline: pipeline),
+    ),
   );
 }
 

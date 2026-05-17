@@ -4,7 +4,9 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class PracticeEmptyState extends StatelessWidget {
-  const PracticeEmptyState({super.key});
+  final VoidCallback? onAddSubject;
+
+  const PracticeEmptyState({super.key, this.onAddSubject});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +47,7 @@ class PracticeEmptyState extends StatelessWidget {
               button: true,
               label: l10n.addSubject,
               child: ElevatedButton.icon(
-                onPressed: () {
+                onPressed: onAddSubject ?? () {
                   Navigator.pushNamed(context, AppRoutes.subjectSelection);
                 },
                 icon: const Icon(Icons.add),

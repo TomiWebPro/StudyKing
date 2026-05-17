@@ -92,6 +92,7 @@ class _FakeTutorService extends TutorService {
           masteryService: MasteryGraphService(),
           modelId: 'test-model',
           exerciseEvaluator: _FakeExerciseEvaluator(),
+          conversationRepository: ConversationRepository(),
         );
 
   @override
@@ -101,6 +102,8 @@ class _FakeTutorService extends TutorService {
     required String topicId,
     required String topicTitle,
     int durationMinutes = 45,
+    String? scheduledSessionId,
+    String localeName = 'en',
   }) async {
     final manager = ConversationManager(
       llmService: _FakeLlmService(),
@@ -268,7 +271,7 @@ void main() {
       expect(find.text('Hello tutor'), findsOneWidget);
     });
 
-    testWidgets('end lesson button shows summary dialog', (tester) async {
+    testWidgets('end lesson button shows confirmation then summary dialog', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
           topicId: 'topic-1',
@@ -280,6 +283,12 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.stop_circle_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('End your lesson? Your progress will be saved.'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'End Lesson'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);

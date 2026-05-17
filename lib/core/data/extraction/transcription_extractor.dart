@@ -1,32 +1,48 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class TranscriptionResult {
   final String text;
   final int? durationSeconds;
   final String extractionMethod;
+  final String? errorMessage;
 
   const TranscriptionResult({
     required this.text,
     this.durationSeconds,
     required this.extractionMethod,
+    this.errorMessage,
   });
+
+  bool get isError => errorMessage != null;
 }
 
 class TranscriptionExtractor {
   final LlmService? _llmService;
+  final String _modelId;
   final http.Client _httpClient;
+  final String _localeName;
   final Logger _logger = const Logger('TranscriptionExtractor');
 
   TranscriptionExtractor({
     LlmService? llmService,
+    String modelId = '',
     http.Client? httpClient,
+    String localeName = 'en',
   })  : _llmService = llmService,
-        _httpClient = httpClient ?? http.Client();
+        _modelId = modelId,
+        _httpClient = httpClient ?? http.Client(),
+        _localeName = localeName {
+    if (modelId.isEmpty) {
+      _logger.w('TranscriptionExtractor created with empty modelId - LLM transcription will fail');
+    }
+  }
 
   Future<TranscriptionResult> transcribeAudio({
     required String rawContent,
@@ -267,21 +283,29 @@ class TranscriptionExtractor {
       return const TranscriptionResult(
         text: '',
         extractionMethod: 'llm_not_available',
+        errorMessage: 'No LLM service configured',
+      );
+    }
+
+    if (_modelId.isEmpty) {
+      const errorMsg = 'No transcription-capable model configured. '
+          'Please select a model in Settings > AI Configuration.';
+      _logger.w(errorMsg);
+      return const TranscriptionResult(
+        text: '',
+        extractionMethod: 'model_id_empty',
+        errorMessage: errorMsg,
       );
     }
 
     try {
-      final prompt = '''
-Transcribe the following audio/video content.
-Return only the transcribed text. Preserve the natural language and formatting.
-
-Content: $content''';
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      final prompt = l10n.transcribeUserPrompt(content);
 
       final response = await _llmService.chat(
         message: prompt,
-        modelId: '',
-        systemPrompt:
-            'You are a transcription assistant. Transcribe audio/video content accurately.',
+        modelId: _modelId,
+        systemPrompt: l10n.transcribeSystemPrompt,
         feature: 'transcription',
       );
 
@@ -289,6 +313,8 @@ Content: $content''';
         return const TranscriptionResult(
           text: '',
           extractionMethod: 'transcription_empty',
+          errorMessage: 'Transcription returned empty result. '
+              'The model may not support transcription tasks.',
         );
       }
 
@@ -298,9 +324,10 @@ Content: $content''';
       );
     } catch (e) {
       _logger.e('LLM transcription failed', e);
-      return const TranscriptionResult(
+      return TranscriptionResult(
         text: '',
         extractionMethod: 'transcription_llm_failed',
+        errorMessage: 'Transcription failed: $e',
       );
     }
   }

@@ -85,6 +85,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
         topicId: widget.args.topicId,
         topicTitle: widget.args.topicTitle,
         subjectId: widget.args.subjectId,
+        durationMinutes: 45,
       ),
     );
   }

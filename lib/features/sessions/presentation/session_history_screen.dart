@@ -124,7 +124,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
+              SnackBar(content: Text(l10n.sessionHistoryExportedJson)),
             );
           }
         case 'comprehensive_csv':
@@ -315,7 +315,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 PopupMenuItem(
                   value: 'comprehensive_csv',
                   child: ListTile(
-                    leading: const Icon(Icons.assessment),
+                    leading: const Icon(Icons.assignment),
                     title: Text(l10n.comprehensiveCsv),
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -323,7 +323,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 PopupMenuItem(
                   value: 'comprehensive_pdf',
                   child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf),
+                    leading: const Icon(Icons.description),
                     title: Text(l10n.comprehensivePdf),
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -331,7 +331,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 PopupMenuItem(
                   value: 'comprehensive_json',
                   child: ListTile(
-                    leading: const Icon(Icons.code),
+                    leading: const Icon(Icons.assignment),
                     title: Text(l10n.comprehensiveJson),
                     contentPadding: EdgeInsets.zero,
                   ),

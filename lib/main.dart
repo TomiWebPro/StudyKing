@@ -38,6 +38,7 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/screens/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
+import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
 import 'features/onboarding/presentation/onboarding_dialog.dart';
 
@@ -256,7 +257,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _showApiKeyBanner = false;
   bool _apiKeyBannerDismissed = false;
 
-  final _navigatorKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
+  final _navigatorKeys = List.generate(6, (_) => GlobalKey<NavigatorState>());
   late final List<Widget> _tabNavigators;
 
   @override
@@ -297,37 +298,36 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> _buildTabNavigators() {
     return [
       TabNavigator(
+        key: const ValueKey('tab_dashboard'),
+        rootScreen: DashboardScreen(studentId: StudentIdService().getStudentId()),
+        navigatorKey: _navigatorKeys[0],
+      ),
+      TabNavigator(
         key: const ValueKey('tab_subjects'),
         rootScreen: const SubjectListScreen(),
-        navigatorKey: _navigatorKeys[0],
+        navigatorKey: _navigatorKeys[1],
       ),
       TabNavigator(
         key: const ValueKey('tab_practice'),
         rootScreen: const PracticeScreen(),
-        navigatorKey: _navigatorKeys[1],
+        navigatorKey: _navigatorKeys[2],
       ),
       TabNavigator(
         key: const ValueKey('tab_mentor'),
         rootScreen: const MentorScreen(),
-        navigatorKey: _navigatorKeys[2],
+        navigatorKey: _navigatorKeys[3],
       ),
       TabNavigator(
         key: const ValueKey('tab_focus_mode'),
         rootScreen: const FocusTimerScreen(),
-        navigatorKey: _navigatorKeys[3],
+        navigatorKey: _navigatorKeys[4],
       ),
       TabNavigator(
         key: const ValueKey('tab_settings'),
         rootScreen: const SettingsScreen(),
-        navigatorKey: _navigatorKeys[4],
+        navigatorKey: _navigatorKeys[5],
       ),
     ];
-  }
-
-  void _openDashboard() {
-    _navigatorKeys[_selectedIndex].currentState?.pushNamed(
-      AppRoutes.dashboard,
-    );
   }
 
   @override
@@ -368,13 +368,13 @@ class _MainScreenState extends State<MainScreen> {
                               _selectedIndex = index;
                             });
                           },
-                          leading: FloatingActionButton.small(
-                            onPressed: () => _openDashboard(),
-                            tooltip: l10n.dashboard,
-                            child: const Icon(Icons.dashboard),
-                          ),
                           labelType: NavigationRailLabelType.all,
                           destinations: [
+                            NavigationRailDestination(
+                              icon: Icon(Icons.dashboard_outlined),
+                              selectedIcon: Icon(Icons.dashboard),
+                              label: Text(l10n.dashboard),
+                            ),
                             NavigationRailDestination(
                               icon: Icon(Icons.school_outlined),
                               selectedIcon: Icon(Icons.school),
@@ -410,17 +410,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-        floatingActionButton: isWideScreen
-            ? null
-            : Semantics(
-                button: true,
-                label: l10n.dashboard,
-                child: FloatingActionButton.small(
-                  onPressed: () => _openDashboard(),
-                  tooltip: l10n.dashboard,
-                  child: const Icon(Icons.dashboard),
-                ),
-              ),
         bottomNavigationBar: isWideScreen
             ? null
             : NavigationBar(
@@ -431,6 +420,11 @@ class _MainScreenState extends State<MainScreen> {
                   });
                 },
                 destinations: [
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: l10n.dashboard,
+                  ),
                   NavigationDestination(
                     icon: Icon(Icons.school_outlined),
                     selectedIcon: Icon(Icons.school),

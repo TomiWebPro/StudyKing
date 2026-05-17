@@ -8,6 +8,7 @@ import '../../../core/utils/clock.dart';
 import '../../../core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
@@ -23,7 +24,9 @@ class TutorService {
   final PlanAdapter _planAdapter;
   final ExerciseEvaluator _exerciseEvaluator;
   final Clock _clock;
+  final ConversationRepository _conversationRepository;
   ConversationManager? _currentManager;
+  String? _scheduledSessionId;
 
   TutorService({
     required DatabaseService database,
@@ -31,6 +34,7 @@ class TutorService {
     required MasteryGraphService masteryService,
     required String modelId,
     required ExerciseEvaluator exerciseEvaluator,
+    required ConversationRepository conversationRepository,
     PlanAdapter? planAdapter,
     Clock? clock,
   })  : _database = database,
@@ -38,6 +42,7 @@ class TutorService {
         _masteryService = masteryService,
         _modelId = modelId,
         _exerciseEvaluator = exerciseEvaluator,
+        _conversationRepository = conversationRepository,
         _planAdapter = planAdapter ?? PlanAdapter(),
         _clock = clock ?? SystemClock();
 
@@ -49,7 +54,10 @@ class TutorService {
     required String topicId,
     required String topicTitle,
     int durationMinutes = 45,
+    String? scheduledSessionId,
+    String localeName = 'en',
   }) async {
+    _scheduledSessionId = scheduledSessionId;
     final sessionId = 'tutor_${_clock.now().millisecondsSinceEpoch}';
 
     final session = TutorSession(
@@ -64,6 +72,19 @@ class TutorService {
     );
     await _database.tutorSessionRepository.saveSession(session);
 
+    if (scheduledSessionId != null) {
+      try {
+        final existingResult = await _database.sessionRepository.get(scheduledSessionId);
+        if (existingResult.isSuccess && existingResult.data != null) {
+          await _database.sessionRepository.save(
+            existingResult.data!.copyWith(status: SessionStatus.inProgress),
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to update scheduled session to inProgress', e);
+      }
+    }
+
     final manager = ConversationManager(
       llmService: _llmService,
       modelId: _modelId,
@@ -73,7 +94,9 @@ class TutorService {
       subjectId: subjectId,
       topicId: topicId,
       exerciseEvaluator: _exerciseEvaluator,
+      persistenceRepo: _conversationRepository,
       clock: _clock,
+      localeName: localeName,
     );
 
     await manager.initialize();
@@ -94,11 +117,6 @@ class TutorService {
     if (_currentManager == null) return;
 
     final session = _currentManager!.toSession();
-    final messages = _currentManager!.messages;
-
-    for (final msg in messages) {
-      await _database.conversationRepository.saveMessage(msg);
-    }
 
     await _database.tutorSessionRepository.saveSession(session);
 
@@ -108,7 +126,7 @@ class TutorService {
         topicId: session.topicId,
         questionId: 'tutor_${session.id}',
         isCorrect: session.accuracy > 0.5,
-        confidence: (session.confidenceRating * 20).clamp(0, 5).round(),
+        confidence: session.confidenceRating.clamp(0, 5).round(),
         timeSpentMs: _elapsedMinutes(session) * 60000,
       );
     }
@@ -154,7 +172,26 @@ class TutorService {
       _logger.w('Failed to save tutor session as Session', e);
     }
 
+    if (_scheduledSessionId != null) {
+      try {
+        final existingResult = await _database.sessionRepository.get(_scheduledSessionId!);
+        if (existingResult.isSuccess && existingResult.data != null) {
+          await _database.sessionRepository.save(
+            existingResult.data!.copyWith(
+              status: SessionStatus.completed,
+              completed: true,
+              endTime: session.endTime ?? _clock.now(),
+              tutorSessionId: session.id,
+            ),
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to update scheduled session to completed', e);
+      }
+    }
+
     _currentManager = null;
+    _scheduledSessionId = null;
   }
 
   int _elapsedMinutes(TutorSession session) {

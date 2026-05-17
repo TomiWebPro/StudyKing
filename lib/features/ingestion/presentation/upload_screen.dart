@@ -1,8 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -10,21 +13,25 @@ import 'package:studyking/features/subjects/data/repositories/subject_repository
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class UploadScreen extends StatefulWidget {
+class UploadScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
   final ContentPipeline? pipeline;
+  final String? fixedStudentId;
+  final String? fixedModelId;
 
   const UploadScreen({
     super.key,
     this.preselectedSubjectId,
     this.pipeline,
+    this.fixedStudentId,
+    this.fixedModelId,
   });
 
   @override
-  State<UploadScreen> createState() => _UploadScreenState();
+  ConsumerState<UploadScreen> createState() => _UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
+class _UploadScreenState extends ConsumerState<UploadScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _urlController = TextEditingController();
@@ -64,7 +71,10 @@ class _UploadScreenState extends State<UploadScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'txt', 'md', 'jpg', 'jpeg', 'png', 'docx', 'epub'],
+        allowedExtensions: [
+          'pdf', 'txt', 'md', 'jpg', 'jpeg', 'png', 'docx', 'epub',
+          'mp3', 'mp4', 'wav', 'm4a', 'ogg', 'webm',
+        ],
         withData: false,
       );
 
@@ -124,7 +134,15 @@ class _UploadScreenState extends State<UploadScreen> {
 
   Future<void> _fetchUrlContent(String url) async {
     final pipeline = widget.pipeline;
-    if (pipeline == null) return;
+    if (pipeline == null) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.contentPipelineNotAvailable)),
+        );
+      }
+      return;
+    }
 
     try {
       final result = await pipeline.fetchAndScrapeUrl(url);
@@ -192,12 +210,15 @@ class _UploadScreenState extends State<UploadScreen> {
             : content;
 
         if (fullPipeline) {
+          final resolvedModelId = widget.fixedModelId != null
+              ? widget.fixedModelId!
+              : ref.read(selectedModelProvider);
           final result = await pipeline.processFullPipeline(
             title: title,
             content: actualContent,
             type: sourceType,
-            studentId: '',
-            modelId: '',
+            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
+            modelId: resolvedModelId,
             subjectId: _selectedSubjectId ?? '',
             sourceUrl: _useUrlInput ? content : '',
             possibleTopics: [],
@@ -215,7 +236,7 @@ class _UploadScreenState extends State<UploadScreen> {
             title: title,
             content: actualContent,
             type: sourceType,
-            studentId: '',
+            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
             subjectId: _selectedSubjectId ?? '',
             sourceUrl: _useUrlInput ? content : '',
           );
@@ -237,7 +258,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 ? 'file://$_selectedFilePath'
                 : content,
             type: sourceType,
-            studentId: '',
+            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
             subjectId: _selectedSubjectId ?? '',
             sourceUrl: _useUrlInput ? content : '',
           ),
@@ -275,6 +296,14 @@ class _UploadScreenState extends State<UploadScreen> {
       case 'jpeg':
       case 'png':
         return SourceType.image;
+      case 'mp3':
+      case 'wav':
+      case 'm4a':
+      case 'ogg':
+        return SourceType.audio;
+      case 'mp4':
+      case 'webm':
+        return SourceType.video;
       case 'txt':
         return SourceType.externalResource;
       default:
@@ -297,7 +326,7 @@ class _UploadScreenState extends State<UploadScreen> {
             children: [
               Text(
                 l10n.addStudyMaterials,
-                style: const TextStyle(fontSize: 16),
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
 

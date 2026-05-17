@@ -5,6 +5,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/data/models/session_model.dart';
+import '../data/models/personal_learning_plan_model.dart';
 import '../providers/planner_providers.dart';
 import 'widgets/plan_summary_card.dart';
 import 'widgets/daily_plan_card.dart';
@@ -23,6 +24,23 @@ class PlannerScreen extends ConsumerStatefulWidget {
   ConsumerState<PlannerScreen> createState() => _PlannerScreenState();
 }
 
+class _SyllabusEntry {
+  final TextEditingController subjectController;
+  final TextEditingController daysController;
+  final TextEditingController hoursController;
+
+  _SyllabusEntry()
+      : subjectController = TextEditingController(),
+        daysController = TextEditingController(),
+        hoursController = TextEditingController();
+
+  void dispose() {
+    subjectController.dispose();
+    daysController.dispose();
+    hoursController.dispose();
+  }
+}
+
 class _PlannerScreenState extends ConsumerState<PlannerScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -30,6 +48,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   final TextEditingController _courseController = TextEditingController();
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
+  final List<_SyllabusEntry> _syllabusEntries = [];
+  bool _useMultiSyllabus = false;
 
   @override
   void initState() {
@@ -49,10 +69,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     _courseController.dispose();
     _daysController.dispose();
     _hoursController.dispose();
+    for (final entry in _syllabusEntries) {
+      entry.dispose();
+    }
     super.dispose();
   }
 
-  void _openTutorMode(String topicId, String topicTitle, String subjectId) {
+  void _openTutorMode(String topicId, String topicTitle, String subjectId,
+      {int durationMinutes = 45, String? scheduledSessionId}) {
     if (topicId.isEmpty) return;
     if (!mounted) return;
     Navigator.pushNamed(
@@ -62,6 +86,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         topicId: topicId,
         topicTitle: topicTitle,
         subjectId: subjectId,
+        durationMinutes: durationMinutes,
+        scheduledSessionId: scheduledSessionId,
       ),
     );
   }
@@ -95,6 +121,43 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   }
 
   Future<void> _generatePlan() async {
+    final l10nGen = AppLocalizations.of(context)!;
+
+    if (_useMultiSyllabus) {
+      final validEntries = _syllabusEntries.where((e) =>
+          e.subjectController.text.trim().isNotEmpty &&
+          int.tryParse(e.daysController.text) != null &&
+          int.tryParse(e.hoursController.text) != null &&
+          int.parse(e.daysController.text) > 0 &&
+          int.parse(e.hoursController.text) > 0).toList();
+
+      if (validEntries.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10nGen.fillAllFieldsCorrectly)),
+        );
+        return;
+      }
+
+      final syllabusGoals = validEntries.map((e) => SyllabusGoal(
+        subjectId: '',
+        subjectTitle: e.subjectController.text.trim(),
+        targetDays: int.parse(e.daysController.text),
+        targetHoursPerDay: int.parse(e.hoursController.text),
+      )).toList();
+
+      final overallDays = syllabusGoals.fold<int>(0, (sum, g) => sum + g.targetDays) ~/ syllabusGoals.length;
+      final overallHours = syllabusGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
+
+      await ref.read(plannerProvider.notifier).generatePlanFromSyllabus(
+        syllabusGoals: syllabusGoals,
+        daysValue: overallDays.clamp(1, 365),
+        hoursValue: overallHours.clamp(1, 24),
+        l10n: l10nGen,
+      );
+      return;
+    }
+
     final course = _courseController.text.trim();
     final daysValue = int.tryParse(_daysController.text);
     final hoursValue = int.tryParse(_hoursController.text);
@@ -105,14 +168,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         daysValue <= 0 ||
         hoursValue <= 0) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.fillAllFieldsCorrectly)),
+        SnackBar(content: Text(l10nGen.fillAllFieldsCorrectly)),
       );
       return;
     }
 
-    final l10nGen = AppLocalizations.of(context)!;
     await ref.read(plannerProvider.notifier).generatePlan(
           course: course,
           daysValue: daysValue,
@@ -271,71 +332,86 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               _buildScheduledLessonsSection(l10n, state),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
-            Text(l10n.createStudyPlan,
-                style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-            TextField(
-              controller: _courseController,
-              decoration: InputDecoration(
-                labelText: l10n.courseSubject,
-                hintText: l10n.courseHint,
-                border: const OutlineInputBorder(),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(l10n.createStudyPlan,
+                      style: Theme.of(context).textTheme.titleLarge),
+                ),
+                TextButton.icon(
+                  icon: Icon(_useMultiSyllabus ? Icons.subject : Icons.menu_book),
+                  label: Text(_useMultiSyllabus ? l10n.courseSubject : l10n.subjects),
+                  onPressed: () => setState(() => _useMultiSyllabus = !_useMultiSyllabus),
+                ),
+              ],
             ),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
-                if (narrow) {
-                  return Column(
+            if (_useMultiSyllabus)
+              _buildMultiSyllabusInput(l10n)
+            else ...[
+              TextField(
+                controller: _courseController,
+                decoration: InputDecoration(
+                  labelText: l10n.courseSubject,
+                  hintText: l10n.courseHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
+                  if (narrow) {
+                    return Column(
+                      children: [
+                        TextField(
+                          controller: _daysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.days,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                        TextField(
+                          controller: _hoursController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.hoursPerDay,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
                     children: [
-                      TextField(
-                        controller: _daysController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.days,
-                          border: const OutlineInputBorder(),
+                      Expanded(
+                        child: TextField(
+                          controller: _daysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.days,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
                       ),
-                      SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-                      TextField(
-                        controller: _hoursController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.hoursPerDay,
-                          border: const OutlineInputBorder(),
+                      SizedBox(width: ResponsiveUtils.horizontalSpacing(context)),
+                      Expanded(
+                        child: TextField(
+                          controller: _hoursController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.hoursPerDay,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
                       ),
                     ],
                   );
-                }
-                return Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _daysController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.days,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: ResponsiveUtils.horizontalSpacing(context)),
-                    Expanded(
-                      child: TextField(
-                        controller: _hoursController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.hoursPerDay,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                },
+              ),
+            ],
             SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Semantics(
               button: true,
@@ -375,6 +451,88 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMultiSyllabusInput(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ..._syllabusEntries.asMap().entries.map((entry) {
+          final index = entry.key;
+          final e = entry.value;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: e.subjectController,
+                          decoration: InputDecoration(
+                            labelText: '${l10n.courseSubject} ${index + 1}',
+                            hintText: l10n.courseHint,
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                        onPressed: _syllabusEntries.length > 1
+                            ? () {
+                                setState(() {
+                                  e.dispose();
+                                  _syllabusEntries.removeAt(index);
+                                });
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: e.daysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.days,
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: e.hoursController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.hoursPerDay,
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        TextButton.icon(
+          icon: const Icon(Icons.add),
+          label: Text('${l10n.courseSubject} +'),
+          onPressed: () => setState(() => _syllabusEntries.add(_SyllabusEntry())),
+        ),
+      ],
     );
   }
 
@@ -529,32 +687,64 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ...state.scheduledLessons.take(3).map((lesson) {
           final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
           final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '';
+          final isCompleted = lesson.status == SessionStatus.completed || lesson.completed;
           return Card(
             margin: const EdgeInsets.only(bottom: 4),
             child: ListTile(
               dense: true,
-              leading: const Icon(Icons.menu_book, size: 20),
+              leading: Icon(
+                isCompleted ? Icons.check_circle : Icons.menu_book,
+                size: 20,
+                color: isCompleted
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
               title: Text(title,
-                  style: Theme.of(context).textTheme.bodyMedium),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  )),
               subtitle: Text(
-                '${lesson.topicId ?? ''} · $time',
+                '${lesson.topicId ?? ''} · $time${isCompleted ? ' · ${l10n.completed}' : ''}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.refresh, size: 18,
-                        color: Theme.of(context).colorScheme.primary),
-                    tooltip: l10n.rescheduleLesson,
-                    onPressed: () => _openRescheduleLesson(lesson, l10n),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.cancel_outlined, size: 18,
-                        color: Theme.of(context).colorScheme.error),
-                    tooltip: l10n.cancel,
-                    onPressed: () => _confirmCancelLesson(lesson, l10n),
-                  ),
+                  if (!isCompleted)
+                    Semantics(
+                      button: true,
+                      label: l10n.startTutoring,
+                      child: IconButton(
+                        icon: Icon(Icons.play_circle_filled, size: 20,
+                            color: Theme.of(context).colorScheme.primary),
+                        tooltip: l10n.startTutoring,
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.tutor,
+                          arguments: TutorArgs(
+                            topicId: lesson.topicId ?? '',
+                            topicTitle: title,
+                            subjectId: lesson.subjectId ?? '',
+                            durationMinutes: lesson.plannedDurationMinutes ?? 45,
+                            scheduledSessionId: lesson.id,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (!isCompleted)
+                    IconButton(
+                      icon: Icon(Icons.refresh, size: 18,
+                          color: Theme.of(context).colorScheme.primary),
+                      tooltip: l10n.rescheduleLesson,
+                      onPressed: () => _openRescheduleLesson(lesson, l10n),
+                    ),
+                  if (!isCompleted)
+                    IconButton(
+                      icon: Icon(Icons.cancel_outlined, size: 18,
+                          color: Theme.of(context).colorScheme.error),
+                      tooltip: l10n.cancel,
+                      onPressed: () => _confirmCancelLesson(lesson, l10n),
+                    ),
                 ],
               ),
             ),
@@ -584,7 +774,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.cancel),
-        content: const Text('Are you sure you want to cancel this lesson?'),
+        content: Text(l10n.cancelLessonConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

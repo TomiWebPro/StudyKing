@@ -379,7 +379,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           preferredSize: const Size.fromHeight(4),
           child: Semantics(
             liveRegion: true,
-            label: 'Session progress: ${(_currentIndex + 1)} of ${_questions.length}',
+            label: l10n.sessionProgressLabel(_currentIndex + 1, _questions.length),
             child: LinearProgressIndicator(value: progress),
           ),
         ),

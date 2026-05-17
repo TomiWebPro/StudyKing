@@ -9,9 +9,9 @@ void main() {
         durationMinutes: 10,
         type: LessonSectionType.explanation,
       );
-      expect(section.title, equals('Introduction'));
-      expect(section.durationMinutes, equals(10));
-      expect(section.type, equals(LessonSectionType.explanation));
+      expect(section.title, 'Introduction');
+      expect(section.durationMinutes, 10);
+      expect(section.type, LessonSectionType.explanation);
     });
 
     test('serializes to JSON and back', () {
@@ -22,16 +22,40 @@ void main() {
       );
       final json = section.toJson();
       final restored = LessonSection.fromJson(json);
-      expect(restored.title, equals(section.title));
-      expect(restored.durationMinutes, equals(section.durationMinutes));
-      expect(restored.type, equals(section.type));
+      expect(restored.title, section.title);
+      expect(restored.durationMinutes, section.durationMinutes);
+      expect(restored.type, section.type);
     });
 
     test('fromJson handles missing fields with defaults', () {
       final section = LessonSection.fromJson({});
-      expect(section.title, equals(''));
-      expect(section.durationMinutes, equals(10));
-      expect(section.type, equals(LessonSectionType.explanation));
+      expect(section.title, '');
+      expect(section.durationMinutes, 10);
+      expect(section.type, LessonSectionType.explanation);
+    });
+
+    test('fromJson handles invalid type name with default', () {
+      final section = LessonSection.fromJson({
+        'title': 'Test',
+        'duration': 20,
+        'type': 'invalid_type_name',
+      });
+      expect(section.type, LessonSectionType.explanation);
+    });
+
+    test('supports all LessonSectionType values', () {
+      for (final type in LessonSectionType.values) {
+        final section = LessonSection(
+          title: 'Section ${type.name}',
+          durationMinutes: 10,
+          type: type,
+        );
+        final json = section.toJson();
+        final restored = LessonSection.fromJson(json);
+        expect(restored.title, section.title);
+        expect(restored.durationMinutes, section.durationMinutes);
+        expect(restored.type, type);
+      }
     });
   });
 
@@ -50,17 +74,30 @@ void main() {
       ''';
       final plan = LessonPlan.fromJson(json);
       expect(plan, isNotNull);
-      expect(plan!.goals.length, equals(2));
-      expect(plan.sections.length, equals(2));
-      expect(plan.checkpoints.length, equals(2));
-      expect(plan.estimatedDifficulty, equals(3));
-      expect(plan.totalDurationMinutes, equals(30));
+      expect(plan!.goals.length, 2);
+      expect(plan.sections.length, 2);
+      expect(plan.checkpoints.length, 2);
+      expect(plan.estimatedDifficulty, 3);
+      expect(plan.totalDurationMinutes, 30);
     });
 
     test('returns null for JSON with empty goals', () {
       final json = '''
       {
         "goals": [],
+        "sections": [
+          {"title": "Intro", "duration": 10, "type": "explanation"}
+        ],
+        "checkpoints": [],
+        "estimatedDifficulty": 2
+      }
+      ''';
+      expect(LessonPlan.fromJson(json), isNull);
+    });
+
+    test('returns null for JSON with null goals', () {
+      final json = '''
+      {
         "sections": [
           {"title": "Intro", "duration": 10, "type": "explanation"}
         ],
@@ -83,6 +120,17 @@ void main() {
       expect(LessonPlan.fromJson(json), isNull);
     });
 
+    test('returns null for JSON with null sections', () {
+      final json = '''
+      {
+        "goals": ["Goal 1"],
+        "checkpoints": [],
+        "estimatedDifficulty": 2
+      }
+      ''';
+      expect(LessonPlan.fromJson(json), isNull);
+    });
+
     test('returns null for JSON with zero-duration section', () {
       final json = '''
       {
@@ -97,16 +145,51 @@ void main() {
       expect(LessonPlan.fromJson(json), isNull);
     });
 
+    test('returns null for JSON with negative-duration section', () {
+      final json = '''
+      {
+        "goals": ["Goal 1"],
+        "sections": [
+          {"title": "Intro", "duration": -5, "type": "explanation"}
+        ],
+        "checkpoints": [],
+        "estimatedDifficulty": 2
+      }
+      ''';
+      expect(LessonPlan.fromJson(json), isNull);
+    });
+
     test('returns null for malformed JSON', () {
       expect(LessonPlan.fromJson('not json'), isNull);
     });
 
-    test('defaultPlan generates valid plan', () {
+    test('defaultPlan generates valid plan with 45 min', () {
       final plan = LessonPlan.defaultPlan(45);
       expect(plan.goals, isNotEmpty);
       expect(plan.sections, isNotEmpty);
       expect(plan.checkpoints, isNotEmpty);
-      expect(plan.totalDurationMinutes, equals(45));
+      expect(plan.totalDurationMinutes, 45);
+    });
+
+    test('defaultPlan clamps to minimum when duration is 0', () {
+      final plan = LessonPlan.defaultPlan(0);
+      expect(plan.totalDurationMinutes, 20);
+      expect(plan.sections.length, 3);
+    });
+
+    test('defaultPlan clamps to minimum when duration is very small', () {
+      final plan = LessonPlan.defaultPlan(3);
+      expect(plan.sections[1].durationMinutes, 5);
+    });
+
+    test('defaultPlan clamps to maximum when duration is very large', () {
+      final plan = LessonPlan.defaultPlan(300);
+      expect(plan.sections[1].durationMinutes, 120);
+    });
+
+    test('defaultPlan handles negative duration', () {
+      final plan = LessonPlan.defaultPlan(-10);
+      expect(plan.sections[1].durationMinutes, 5);
     });
 
     test('serializes to JSON string', () {
@@ -117,8 +200,8 @@ void main() {
 
       final restored = LessonPlan.fromJson(jsonStr);
       expect(restored, isNotNull);
-      expect(restored!.goals.length, equals(plan.goals.length));
-      expect(restored.totalDurationMinutes, equals(plan.totalDurationMinutes));
+      expect(restored!.goals.length, plan.goals.length);
+      expect(restored.totalDurationMinutes, plan.totalDurationMinutes);
     });
 
     test('estimatedDifficulty defaults to 3 when missing', () {
@@ -133,7 +216,58 @@ void main() {
       ''';
       final plan = LessonPlan.fromJson(json);
       expect(plan, isNotNull);
-      expect(plan!.estimatedDifficulty, equals(3));
+      expect(plan!.estimatedDifficulty, 3);
+    });
+
+    test('checkpoints default to empty list when missing', () {
+      final json = '''
+      {
+        "goals": ["Goal"],
+        "sections": [
+          {"title": "Intro", "duration": 10, "type": "explanation"}
+        ]
+      }
+      ''';
+      final plan = LessonPlan.fromJson(json);
+      expect(plan, isNotNull);
+      expect(plan!.checkpoints, isEmpty);
+    });
+
+    test('constructor computes totalDurationMinutes', () {
+      final plan = LessonPlan(
+        goals: ['Goal A', 'Goal B'],
+        sections: [
+          LessonSection(title: 'S1', durationMinutes: 15, type: LessonSectionType.explanation),
+          LessonSection(title: 'S2', durationMinutes: 25, type: LessonSectionType.exercise),
+        ],
+        checkpoints: ['C1', 'C2'],
+        estimatedDifficulty: 4,
+      );
+      expect(plan.totalDurationMinutes, 40);
+      expect(plan.goals, ['Goal A', 'Goal B']);
+      expect(plan.estimatedDifficulty, 4);
+    });
+
+    test('toJsonString roundtrip preserves all fields', () {
+      final plan = LessonPlan(
+        goals: ['Learn Topic'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Quiz', durationMinutes: 10, type: LessonSectionType.quiz),
+          LessonSection(title: 'Summary', durationMinutes: 5, type: LessonSectionType.summary),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 5,
+      );
+      final jsonStr = plan.toJsonString();
+      expect(jsonStr, contains('"quiz"'));
+      expect(jsonStr, contains('"summary"'));
+
+      final restored = LessonPlan.fromJson(jsonStr);
+      expect(restored, isNotNull);
+      expect(restored!.sections.length, 3);
+      expect(restored.sections[1].type, LessonSectionType.quiz);
+      expect(restored.totalDurationMinutes, 20);
     });
   });
 }

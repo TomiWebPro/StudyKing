@@ -1,311 +1,327 @@
-# Future Functionality Plan: Updated Vision Gaps & Next Phase
+# Future Functionality Plan: Delta Audit & Next Phase
 
 ## Context
 
-Re-audit of the ~550+ source file codebase comparing the product vision (`agent_must_read.md`) against actual implementation. The previous `issues/completed/future_functionality_planner.md` identified 2 BLOCKERs, 7 MAJORs, and 4 MINORs. This report provides an updated delta — items resolved, still open, or regressed — plus **new findings** discovered during deep exploration. Since the last audit, the codebase has significantly matured in localization, session tracking, and LLM task monitoring. However, several foundational vision gaps remain untouched.
+Re-audit following commit `aaf5caf` which resolved **9 of 16** previously identified gaps from the completed `issues/completed/future_functionality_planner.md`. The codebase now stands at 14/15 features fully implemented with ~310 test files. This report documents: (1) progress since the previous plan, (2) 7 remaining open items, (3) 9 new findings discovered during deep exploration, and (4) a prioritised phase plan.
 
-**User-reported issues (further_issues directory):** Not present. This analysis is entirely vision-vs-implementation.
+**Further issues (`issues/further_issues/`):** Not present. No user-reported issues to integrate.
 
 ---
 
 ## Progress Since Previous Report
 
-| Previous Item | Status | Notes |
-|---|---|---|
-| **B1** Tutor image capture stubbed | **❌ STILL BROKEN** | Lines 133-136 unchanged |
-| **B2** OCR `modelId: ''` | **❌ STILL BROKEN** | Line 125 unchanged |
-| **M1** Background notifications | **❌ STILL MISSING** | `EngagementScheduler` still `Timer`-only |
-| **M2** Multi-syllabus (model+service) | **⚠️ PARTIAL** | Model `syllabusGoals` exists; `generatePlanFromSyllabus` works — but **planner UI only accepts single course name** |
-| **M3** Unused question types | **⚠️ REVISED** | All 10 types now have validation (basic) + rendering (some stubs). Previous report overstated the gap |
-| **M4** `suggestNextAction()` | **⚠️ IMPROVED** | Now calls `getRecommendations()` (rule-based) instead of raw hardcoded English. Still **not LLM-driven** |
-| **M5** `StudyProgressTracker` ignores sessions | **✅ RESOLVED** | `SessionRepository` injected; session time merged into `totalStudyTimeHours` |
-| **M6** LLM Task Manager inaccessible | **✅ RESOLVED** | Settings now has "AI Task Monitor" tile at `settings_screen.dart:90-91` |
-| **M7** VoiceController hardcoded en_US | **✅ RESOLVED** | `_localeForSpeech()` / `_localeForTts()` locale mapping methods added |
-| **m1** DataBackupService no restore | **❌ STILL MISSING** | No `restoreData()` method |
-| **m2** Focus mode not tracked | **✅ RESOLVED** | `SessionRepository` captures focus sessions; `StudyProgressTracker` reads them |
-| **m3** Dashboard hidden discovery | **⚠️ UNCHANGED** | Still only accessible via FAB (mobile) / NavigationRail leader (tablet). No bottom tab. |
+| Previous ID | Description | Status | Notes |
+|---|---|---|---|
+| **B1** | Tutor image capture stubbed "Coming Soon" | ✅ FIXED | `_pickImage()` now uses `ImagePicker` + `ConversationManager.processImage()` (tutor_screen.dart:158-206) |
+| **B2** | OCR/transcription empty `modelId` silent data loss | ✅ FIXED | Both extractors now validate `modelId.isEmpty` and return typed error results (ocr_extractor.dart:131-139, transcription_extractor.dart:290-294) |
+| **B3** | Question auto-generation hardcodes `singleChoice` only | ✅ FIXED | `_defaultAllowedTypes` includes `multiChoice`, `typedAnswer`, `mathExpression`, `essay`; ARB prompt instructs varied types; validation handles all types (content_pipeline.dart:331-418) |
+| **M1** | Background notifications only while app running | ❌ STILL OPEN | `EngagementScheduler` still `Timer`-based (engagement_scheduler.dart:80) |
+| **M2** | Multi-syllabus plan creation blocked by single-course UI | ✅ FIXED | Planner screen now has `SyllabusGoalEntry` list with add/remove, calls `generatePlanFromSyllabus(List<SyllabusGoal>)` (planner_screen.dart:130-158) |
+| **M3** | `suggestNextAction()` still rule-based, not LLM-driven | ❌ STILL OPEN | Calls `_progressTracker.getRecommendations()` — rule-based thresholds (mentor_service.dart:535-557) |
+| **M4** | TutorScreen has no voice conversation flow | ⚠️ PARTIAL | VoiceBar integrated (tutor_screen.dart:458-463) but no auto-send on silence, no TTS playback loop, no conversational voice toggle |
+| **M5** | Upload screen blocks audio/video file types | ✅ FIXED | `allowedExtensions` now includes `mp3`, `mp4`, `wav`, `m4a`, `ogg`, `webm` (upload_screen.dart:67-78) |
+| **M6** | VoiceBar widget not rendered in TutorScreen | ✅ FIXED | `VoiceBar` rendered as leading widget in `ConversationInput` (tutor_screen.dart:458) |
+| **m1** | DataBackupService export-only, no restore | ❌ STILL OPEN | No `restoreData()`, no Settings UI entry |
+| **m2** | CSV uses `toStringAsFixed` (correct per convention) | ✅ NO ACTION NEEDED | Confirmed correct convention for CSV exports |
+| **m3** | Dashboard not in bottom navigation | ❌ STILL OPEN | FAB (mobile) / NavigationRail leading (tablet) only |
+| **m4** | No `RemainingWorkloadEstimator` service exists | ❌ STILL OPEN | Service file exists (147 lines) but not integrated into any UI flow |
+| **m5** | Upload flow passes empty `studentId`/`modelId` | ✅ FIXED | Resolves from `fixedStudentId`/`StudentIdService` + `selectedModelProvider` (upload_screen.dart:203-207) |
+| **—** | LLM Task Manager inaccessible from UI | ✅ FIXED | Settings now has "AI Task Monitor" tile |
+| **—** | Focus mode not tracked in progress | ✅ FIXED | `SessionRepository` captures focus sessions |
+| **—** | VoiceController hardcoded en_US | ✅ FIXED | `_localeForSpeech()` / `_localeForTts()` locale mapping added |
 
 ---
 
 ## BLOCKER — App crashes or user cannot proceed
 
-### B1. Tutor image capture still stubbed "Coming Soon"
+### B1. No background notification scheduling — proactive engagement only works while app is running
 
-**Context:** `TutorScreen._pickImage()` at `lib/features/teaching/presentation/tutor_screen.dart:133-136` still shows a SnackBar with `comingSoon`. The vision requires the AI tutor to "interpret handwritten work" via camera/gallery.
+**Context:** `EngagementScheduler` (engagement_scheduler.dart:80) uses `Timer` which is tied to the app process. `flutter_local_notifications` is used only for foreground-triggered delivery. No background scheduling package (`workmanager`, `android_alarm_manager`) is in `pubspec.yaml`. When the app is killed, notifications stop entirely.
+
+This is the **single biggest gap in the product vision**: StudyKing is meant to be a "persistent mentor" that "proactively engage[s] students with reminders, prompts, revision nudges, lesson notifications, accountability messaging, and practice encouragement." Currently it can only do this while the student is already using the app.
 
 **Affected files:**
-| File | Change |
-|---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart:133-136` | Replace stub with real image picker → LLM vision interpretation |
-| `lib/features/teaching/services/conversation_manager.dart` | Add `processImage()` accepting image bytes and sending to LLM with appropriate tutor context |
-| `lib/features/teaching/presentation/widgets/voice_bar.dart` | Coordinate image capture UI alongside voice bar |
-
-**Dependencies:** `image_picker` package is **not imported** in tutor_screen.dart (exists in upload_screen.dart only — needs dependency audit or reuse).
+| File | Lines | Issue |
+|---|---|---|
+| `lib/core/services/engagement_scheduler.dart` | 80, 88 | `Timer` — lost on app close |
+| `lib/main.dart` | 84-99 | Scheduler started per-launch, no headless task |
+| `lib/core/services/notification_service.dart` | — | `flutter_local_notifications` exists but not wired to background scheduling |
+| `pubspec.yaml` | — | Missing `workmanager` or `android_alarm_manager` dependency |
 
 **Acceptance criteria:**
-1. `_pickImage()` opens camera/gallery and passes captured image to `ConversationManager.processImage()`
-2. The LLM receives the image with context "The student submitted this work. Analyze and provide feedback."
-3. The response appears in the chat flow
-4. No new package imports needed if image_picker is uplifted to pubspec.yaml dependency
+1. Nudge checks run at least once every 6h even when the app is closed (platform-permitted)
+2. On app reopen after >24h closed, missed nudges are caught up and displayed
+3. Lesson reminders fire 15min before scheduled lesson time
+4. Practice nudges fire if no practice session recorded in the last 48h
+5. All notification scheduling uses platform-native APIs, not app-process `Timer`
+6. Existing foreground notification behavior is preserved
 
 ---
 
-### B2. OCR pipeline passes empty `modelId` — silent data loss
+### B2. OCR/Transcription constructors still default `modelId` to `''`
 
-**Context:** `OcrExtractor._extractWithLlm()` at `lib/core/data/extraction/ocr_extractor.dart:125` still passes `modelId: ''` to `_llmService.chat()`. Most LLM providers will reject an empty model ID or silently return empty. Additionally, when no LLM is available, the result silently returns `OcrExtractionResult(text: '')` with no user-facing error.
-
-**Affected files:**
-| File | Line | Issue |
-|---|---|---|
-| `lib/core/data/extraction/ocr_extractor.dart` | 125 | `modelId: ''` |
-| `lib/core/data/extraction/ocr_extractor.dart` | 47-51 | Silent empty return when no LLM |
-| `lib/features/ingestion/services/document_extractor.dart` | 147-178 | Image extraction continues with empty text |
-| `lib/core/data/extraction/transcription_extractor.dart` | 284 | Also passes `modelId: ''` at transcription — same pattern |
-| `lib/features/ingestion/services/content_pipeline.dart` | 200 | Upload flow passes `modelId: ''` and `studentId: ''` — parent caller should provide these |
-
-**Fix:**
-1. Require `modelId` parameter in `OcrExtractor` and `TranscriptionExtractor` constructors
-2. When LLM returns empty, propagate `Result.failure()` instead of silent empty `OcrExtractionResult`
-3. Fix `content_pipeline.dart` upload flow to pass actual modelId and studentId from context
-
-**Acceptance criteria:**
-1. Uploading an image without a vision-capable model shows a clear error
-2. Uploading an image with a vision-capable model returns extracted text
-3. `modelId` is never empty when passed to `_llmService.chat()`
-
----
-
-### B3. Question auto-generation pipeline hardcodes ALL questions as singleChoice
-
-**NEW FINDING.** Context: `ContentPipeline._generateQuestions()` at `lib/features/ingestion/services/content_pipeline.dart:345` explicitly hardcodes `"type": "singleChoice"` in the LLM prompt. The ingestion pipeline can never auto-generate multiChoice, typedAnswer, mathExpression, essay, canvas, or any other type. This means:
-- All auto-generated content from uploaded PDFs, URLs, images, and YouTube transcripts results in single-choice questions only
-- The vision's "question system is central" promise is severely limited
-- Workaround requires manual question creation, which most students won't do
+**Context:** While the previous B2 (empty modelId causing silent data loss) was fixed by adding validation checks inside `_extractWithLlm()` and `_transcribeWithLlm()`, the constructors still default to `modelId = ''`. This means any caller that doesn't explicitly pass a modelId will trigger the "no model configured" error path even when a model IS configured in settings. The root cause (constructor default) was not addressed.
 
 **Affected files:**
-| File | Line | Issue |
+| File | Lines | Issue |
 |---|---|---|
-| `lib/features/ingestion/services/content_pipeline.dart` | 318-325, 345 | LLM prompt hardcodes `"type": "singleChoice"` |
-
-**Fix:**
-1. Update the LLM prompt to instruct generation of varied question types: `singleChoice`, `multiChoice`, `typedAnswer`, `mathExpression`, `essay`
-2. Add `allowedTypes` parameter to let students (or the system) choose which types to generate
-3. Validate generated questions parse into the declared type
+| `lib/core/data/extraction/ocr_extractor.dart` | 20-25 | `OcrExtractor({... String modelId = ''})` — default should be removed/required |
+| `lib/core/data/extraction/transcription_extractor.dart` | 25-30 | `TranscriptionExtractor({... String modelId = ''})` — same issue |
+| `lib/features/ingestion/services/document_extractor.dart` | 147-178 | Creates extractors without explicit modelId in some code paths |
 
 **Acceptance criteria:**
-1. Auto-generated questions include at least `typedAnswer` and `mathExpression` types alongside `singleChoice`
-2. Generated questions of each type are correctly parsed and stored
-3. Existing singleChoice-only behavior remains default when no type preference is specified
+1. `OcrExtractor` constructor requires `modelId` (or removes default, forcing caller to supply it)
+2. `TranscriptionExtractor` constructor requires `modelId` (same)
+3. All callers in `DocumentExtractor` and `ContentPipeline` provide the modelId
+4. Clear error if modelId is still empty at extraction time (the validation gate already exists)
 
 ---
 
 ## MAJOR — Features broken, misleading, or critically incomplete
 
-### M1. Proactive engagement notifications only fire while app is running
+### M1. Mentor/service/text-to-speech has no voice conversation flow
 
-**Context:** `EngagementScheduler` at `lib/core/services/engagement_scheduler.dart:80` still uses `Timer` — tied to the app's process lifecycle. When the app is backgrounded or killed, no nudges fire. The `flutter_local_notifications` package (v0.9.3+2) is present but used only for foreground-triggered notifications. No background scheduling package (`workmanager`, `android_alarm_manager`) is listed in `pubspec.yaml`.
+**Context:** VoiceBar is now rendered in TutorScreen and `_onTranscriptionSubmitted()` puts recognized text into `_textController` and calls `_sendMessage()`. However:
 
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/core/services/engagement_scheduler.dart:80` | Timer-based — lost on app close |
-| `lib/main.dart:84-99` | Scheduler per-launch, no headless task |
-| `pubspec.yaml` | Missing background scheduling package |
-
-**Acceptance criteria:**
-1. Nudge checks run at least once every 24h even when app is closed (platform-dependent)
-2. On app reopen after >24h, missed nudges are caught up
-3. No existing functionality regressed
-
----
-
-### M2. Multi-syllabus plan creation UI blocks the feature
-
-**Context:** The data model (`PersonalLearningPlan.syllabusGoals`), service layer (`PlannerService.generatePlanFromSyllabus` accepting `List<SyllabusGoal>`), and display code (`_buildSubjectProgressTabs`) all support multi-subject plans. However, the **planner screen UI** at `lib/features/planner/presentation/planner_screen.dart:97-121` only has a single `_courseController` text field and calls `generatePlan(course: ..., ...)` — the single-course path. There is no UI for adding multiple syllabi before generating a plan.
-
-**Affected files:**
-| File | Change |
-|---|---|
-| `lib/features/planner/presentation/planner_screen.dart:97-121` | Add multi-syllabus input UI (list of subject/syllabus pairs with add/remove) |
-| `lib/features/planner/providers/planner_providers.dart:263-295` | `generatePlan()` still takes single `course` — needs `List<SyllabusGoal>` path exposed to UI |
-| `lib/features/planner/services/planner_service.dart:89-115` | `generatePlan()` still single-course — callers should use `generatePlanFromSyllabus` |
-| `lib/features/planner/data/models/personal_learning_plan_model.dart:68-73` | `syllabusGoals` getter reads from metadata — should be a top-level Hive field for queryability |
-| **New:** `lib/core/services/remaining_workload_estimator.dart` | Not yet created — calculate "lessons remaining to mastery" per subject |
-
-**Acceptance criteria:**
-1. Plan creation UI allows adding 1+ syllabi with subject, days, hours per day
-2. Plan generation calls `generatePlanFromSyllabus(List<SyllabusGoal>)` when multiple syllabi present
-3. Dashboard shows per-subject stats alongside aggregated stats
-4. `RemainingWorkloadEstimator` computes "lessons remaining" per topic
-5. Single-course plan creation still works unchanged
-
----
-
-### M3. `MentorService.suggestNextAction()` still rule-based, not LLM-driven
-
-**Context:** `MentorService.suggestNextAction()` at `lib/features/mentor/services/mentor_service.dart:535-557` calls `_progressTracker.getRecommendations()` which returns **rule-based** messages (accuracy thresholds, study hours). The vision requires the AI mentor to dynamically decide what to study next based on student context. The `_buildContextPrompt()` method already exists for the chat path but is not used here.
+- There is no auto-send on silence detection — user must tap send manually
+- There is no TTS playback of AI responses — user must read them
+- There is no voice conversation mode toggle — always text-first
+- There is no "interrupt AI speaking with new voice input"
+- The Mentor screen has **no voice support at all** despite the vision stating "The student should be able to speak naturally with the AI tutor" and the mentor being the "persistent companion"
 
 **Affected files:**
 | File | Lines | Issue |
 |---|---|---|
-| `lib/features/mentor/services/mentor_service.dart` | 535-557 | Rule-based recommendations, not LLM-generated |
-| `lib/core/services/study_progress_tracker.dart` | 166-223 | `getRecommendations()` is purely rule-based |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 455-463 | VoiceBar present but no conversational voice mode |
+| `lib/features/teaching/services/voice_controller.dart` | 1-195 | `startListening()` exists but auto-stop + auto-send not wired |
+| `lib/features/teaching/presentation/widgets/voice_bar.dart` | — | Widget exists but works in "transcribe and send" mode, not conversation mode |
+| `lib/features/mentor/presentation/mentor_screen.dart` | — | No VoiceBar, no voice controller, no voice input at all |
+| `lib/core/widgets/conversation_input.dart` | — | Shared widget used by both tutor and mentor; could host voice button |
 
 **Acceptance criteria:**
-1. `suggestNextAction()` composes an LLM prompt with current student context (weak topics, adherence, recent sessions)
-2. Returns an AI-generated contextual recommendation
-3. Falls back gracefully if LLM is unavailable (cached last recommendation)
-4. Existing `getRecommendations()` rule-based path used as fallback only
+1. Tap-to-talk button triggers speech recognition with auto-send on silence detection (1.5s silence timeout)
+2. After AI response arrives, it is read aloud via TTS
+3. User can interrupt AI speaking by tapping microphone again (triggers new recognition, stops current TTS)
+4. Voice conversation mode toggle appears in tutor screen (voice-only, text-only, mixed)
+5. Mentor screen also has VoiceBar integration (at minimum, a "hold to speak" button)
+6. Voice mode respects `settingsProvider.locale` for both STT and TTS
 
 ---
 
-### M4. TutorScreen has no active voice conversation flow
+### M2. Mentor `suggestNextAction()` purely rule-based, not LLM-driven
 
-**NEW FINDING.** Context: While `VoiceController` (195 lines) is fully implemented with speech recognition, TTS, and locale support, and `VoiceBar` widget exists with a microphone button, the `TutorScreen` does not integrate these into an active conversational flow. `_onTranscriptionSubmitted` puts recognized text into `_textController` but the user must still manually press send. There is no back-and-forth voice conversation mode where the AI speaks and listens in turn.
+**Context:** `MentorService.suggestNextAction()` (mentor_service.dart:535-557) calls `_progressTracker.getRecommendations()` which returns rule-based messages based on accuracy thresholds, study hours, etc. The vision requires an AI mentor that "dynamically decide[s] what to study next based on student context." The `_buildContextPrompt()` method exists but is not used here.
+
+**Affected files:**
+| File | Lines | Issue |
+|---|---|---|
+| `lib/features/mentor/services/mentor_service.dart` | 535-557 | Rule-based recommendations |
+| `lib/core/services/study_progress_tracker.dart` | 166-223 | `getRecommendations()` is purely rule-based thresholds |
+
+**Acceptance criteria:**
+1. `suggestNextAction()` composes an LLM prompt with student context (weak topics, adherence %, recent sessions, upcoming lessons)
+2. Returns AI-generated contextual recommendation (e.g., "You've been avoiding stoichiometry — let's tackle 10 practice questions today")
+3. Falls back gracefully to rule-based `getRecommendations()` if LLM unavailable
+4. LLM recommendation is cached and reused for 15min to avoid redundant API calls
+5. Recommendation includes an actionable `MentorAction.type` that the student can tap to execute
+
+---
+
+### M3. No handwriting recognition or ink-to-text for canvas questions
+
+**Context:** The drawing canvas widget (`canvas_drawing_widget.dart`) exists with `DrawingPainter` and `GridPainter`. However, there is no handwriting recognition pipeline. Strokes are stored as raw point data but never interpreted into text or math expressions. The vision requires "handwritten/drawn responses on canvas" and "vision-based interpretation of student work."
 
 **Affected files:**
 | File | Issue |
 |---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart` | No voice conversation mode — microphone only inputs text, doesn't trigger auto-send |
-| `lib/features/teaching/presentation/widgets/voice_bar.dart` | Voice bar exists but tutor screen doesn't activate conversational mode |
-| `lib/features/teaching/services/voice_controller.dart` | `startListening()` with auto-stop + auto-send not connected |
+| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | Drawing exists but no recognition layer |
+| `lib/features/questions/presentation/painters/drawing_painter.dart` | Only renders strokes, no analysis |
+| `lib/core/data/extraction/ocr_extractor.dart` | Has OCR capabilities but not wired to canvas drawings |
+| `lib/features/teaching/services/exercise_evaluator.dart` | Evaluates typed answers only, not canvas submissions |
 
 **Acceptance criteria:**
-1. Tap-to-talk button triggers speech recognition, auto-sends on silence detection
-2. AI response is read aloud via TTS after text response arrives
-3. User can interrupt AI speaking with new voice input
-4. Toggle between voice-only and text-only modes in tutor screen
-5. Voice mode respects user's selected app locale
+1. Canvas strokes can be submitted for LLM-based interpretation (sent as image bytes via vision API)
+2. Recognized text/math is shown to the student for confirmation before submission
+3. Handwritten math expressions are evaluated for correctness via `ExerciseEvaluator`
+4. Canvas questions appear alongside typed questions in practice sessions
 
 ---
 
-### M5. Upload screen does not support audio/video file types despite having extraction pipeline
+### M4. No spaced repetition review dashboard
 
-**NEW FINDING.** Context: `UploadScreen._pickFile()` at `lib/features/ingestion/presentation/upload_screen.dart:67` restricts file types to `['pdf', 'txt', 'md', 'jpg', 'jpeg', 'png', 'docx', 'epub']`. The `DocumentExtractor` and `TranscriptionExtractor` fully support video (YouTube transcripts, LLM transcription) and audio (file transcription, LLM transcription), but **there's no UI path to upload mp3, mp4, wav, m4a, or other media files**. Audio/video content must be pasted as URLs only.
+**Context:** `SpacedRepetitionService` (269 lines) + `SpacedRepetitionEngine` implement a full SM-2 algorithm with proper scheduling. However, there is **no UI** showing students their due reviews, overdue cards, or review queue. Students cannot see "10 cards due for review today" or prioritize overdue topics. The spaced repetition engine is invisible to the student.
 
 **Affected files:**
 | File | Issue |
 |---|---|
-| `lib/features/ingestion/presentation/upload_screen.dart:67` | `allowedExtensions` missing `mp3`, `mp4`, `wav`, `ogg`, `webm`, `m4a` |
-| `lib/core/data/extraction/transcription_extractor.dart:37-58` | Audio file extraction exists but unreachable from upload UI |
+| `lib/features/practice/services/spaced_repetition_service.dart` | Engine exists but no UI exposes it |
+| `lib/features/practice/services/practice_session_service.dart` | Uses SR internally but doesn't surface due cards |
+| `lib/features/dashboard/services/dashboard_service.dart` | Doesn't pull spaced repetition due counts |
+| `lib/features/practice/presentation/screens/practice_screen.dart` | No "Review Due Cards" section |
 
 **Acceptance criteria:**
-1. File picker allows selecting audio/video files (mp3, mp4, wav, m4a, ogg, webm)
-2. Selected media files are passed through `DocumentExtractor._extractAudio()` or `_extractVideo()`
-3. Transcribed text is stored as source content
-4. User sees transcription progress indicator
+1. Practice screen shows "X cards due for review" section with count and topics
+2. Tapping opens a review session filtered to due cards only
+3. After each review attempt, the SR engine is updated and next review date shown
+4. Dashboard shows "Due Reviews" count alongside other stats
+5. Adherence includes "spaced repetition adherence" (ratio of completed to due reviews)
 
 ---
 
-### M6. VoiceBar widget disconnected from TutorScreen lesson flow
+### M5. Remaining workload estimator not surfaced in any UI
 
-**NEW FINDING.** Context: `VoiceBar` (`lib/features/teaching/presentation/widgets/voice_bar.dart`) is a standalone widget with microphone button and transcribed text display. However, `TutorScreen.build()` does not include it in the main input area. The `VoiceController` instance is not shared between `TutorScreen` and `VoiceBar`. There is `_voiceController` in `TutorScreen` state but no `VoiceBar` is rendered.
+**Context:** `RemainingWorkloadEstimator` exists (147 lines) with topic-level estimation logic. However, no screen or widget uses it to show "lessons remaining to mastery" — a key vision requirement ("A relative remaining lesson count should be given by the system towards mastery").
 
 **Affected files:**
 | File | Issue |
 |---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart` | `VoiceBar` widget not rendered in layout |
-| `lib/features/teaching/presentation/tutor_screen.dart` | `_voiceController` exists (likely) but not plumbed to VoiceBar |
+| `lib/core/services/remaining_workload_estimator.dart` | Service exists but unreferenced by any UI |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | Could show "~X lessons to mastery" per subject |
+| `lib/features/subjects/presentation/subject_detail_screen.dart` | Could show workload breakdown per topic |
+| `lib/features/planner/presentation/planner_screen.dart` | Could show "estimated lessons needed" during planning |
 
 **Acceptance criteria:**
-1. `VoiceBar` appears in tutor screen input area alongside/below text input
-2. Tapping microphone activates speech recognition
-3. Recognized text appears and can be sent as a message
-4. VoiceBar respects `VoiceController` lifecycle (disposed when leaving screen)
+1. Dashboard shows "~X lessons remaining to mastery" for each active subject
+2. Subject detail screen shows per-topic workload estimates
+3. Planner screen shows workload estimate during plan creation/adjustment
+4. Estimate updates as student progresses (fewer lessons remaining after practice)
+
+---
+
+### M6. DataBackupService has no restore function
+
+**Context:** `DataBackupService` only has `exportAllData()` and `exportSingleBox()`. No `restoreData(path)` method exists. No Settings UI entry for backup/restore. Students who export their data cannot import it again.
+
+**Affected files:**
+| File | Issue |
+|---|---|
+| `lib/core/services/data_backup_service.dart` | Export-only, no restore |
+| `lib/features/settings/presentation/settings_screen.dart` | No backup/restore UI entry |
+
+**Acceptance criteria:**
+1. `restoreData(String filePath)` reads JSON backup, validates format, overwrites Hive boxes
+2. Settings has "Backup & Restore" section with export and import actions
+3. Import shows confirmation dialog with data summary (date, size, box count)
+4. Existing data is backed up before overwrite (restore creates a pre-restore snapshot)
 
 ---
 
 ## MINOR — Code quality, UX friction, or technical debt
 
-### m1. `DataBackupService` has export-only — no restore function
+### m1. Dashboard still not in bottom navigation bar
 
-**Context:** `DataBackupService` at `lib/core/services/data_backup_service.dart` only has `exportAllData()` and `exportSingleBox()`. No `importBackup()`/`restoreData()` exists. No Settings UI entry for backup/restore.
+**Context:** Dashboard accessible only via `FloatingActionButton.small` (mobile) or `NavigationRail` leading (tablet). Not a tab in the bottom `NavigationBar`. Users may not discover it.
 
 **Acceptance criteria:**
-1. `restoreData(String filePath)` method reads a previously exported JSON backup
-2. Restore validates format, warns about data overwrite, then imports
-3. Settings has "Backup & Restore" section with export and import actions
-4. Import shows confirmation dialog with data size preview
+1. Dashboard is accessible from the bottom navigation bar on mobile
+2. Dashboard is accessible from the navigation rail on tablet
+3. No existing navigation behavior is broken
 
 ---
 
-### m2. CSV export uses `toStringAsFixed()` for hours — correct per convention but redundant
+### m2. No voice interaction in Mentor or Quick Guide screens
 
-**Context:** `StudyProgressTracker.exportProgressCSV()` at `lib/core/services/study_progress_tracker.dart:291` uses `toStringAsFixed(1)` for totalStudyTimeHours. Per AGENTS.md: "CSV exports should remain in invariant en format (CSV is data, not display)." This is **correct**. Not a bug, just noting consistency is maintained.
-
-✅ No action needed.
-
----
-
-### m3. Dashboard still not in bottom navigation bar
-
-**Context:** Dashboard accessible only via `FloatingActionButton.small` (mobile) or `NavigationRail` leading (tablet). Not a tab in the `NavigationBar` bottom destinations. Users may not discover it.
-
-**Fix:** Either promote dashboard to its own tab, or add a "Dashboard" entry in the existing settings overflow menu.
-
----
-
-### m4. No `RemainingWorkloadEstimator` service exists
-
-**Context:** The vision requires: "A relative remaining lesson count should be given by the system towards mastery, so not all lessons must be planned at once." No such service exists. Noted in M2 as a required new file.
-
----
-
-### m5. Content pipeline passes empty `studentId` and `modelId` in UI upload flow
-
-**Context:** `upload_screen.dart:200-203` passes `studentId: ''` and `modelId: ''` to `processFullPipeline()`. This means uploaded content is not associated with any student in the extraction pipeline. The `ContentPipeline` eventually delegates to `OcrExtractor` and `TranscriptionExtractor` which also receive empty modelId.
+**Context:** VoiceBar is now in TutorScreen. But the Mentor screen and Quick Guide screen have no voice input. Students can't speak to their mentor even though the vision says "The student should be able to speak naturally with the AI tutor" and the mentor is the "always-available" companion.
 
 **Affected files:**
-| File | Line | Issue |
-|---|---|---|
-| `lib/features/ingestion/presentation/upload_screen.dart` | 200-203 | `studentId: ''`, `modelId: ''` |
+| File | Issue |
+|---|---|
+| `lib/features/mentor/presentation/mentor_screen.dart` | No VoiceBar, no voice controller |
+| `lib/features/quickguide/presentation/quick_guide_screen.dart` | No VoiceBar, no voice controller |
 
 **Acceptance criteria:**
-1. Upload screen gets studentId from `StudentIdService`
-2. Upload screen gets modelId from Settings/selectedModelProvider
-3. These values flow through to `ContentPipeline`, `OcrExtractor`, `TranscriptionExtractor`
+1. Mentor screen has microphone button alongside text input
+2. Quick Guide screen has microphone button alongside text input
+3. Both use the same `VoiceController` pattern as TutorScreen
+
+---
+
+### m3. No cross-feature voice state management
+
+**Context:** `VoiceController` is created per-screen via `voiceControllerProvider` (a simple `Provider`, not `KeepAlive`). This means voice state is lost when navigating between screens. If a student is speaking to the tutor and switches to the mentor, the voice session is dropped.
+
+**Acceptance criteria:**
+1. Voice state persists across navigation (or cleanly stops when leaving)
+2. Only one voice controller is active at a time
+3. Platform mic resource is properly released/granted
+
+---
+
+### m4. Tutor screen sends image bytes via base64 — no compression
+
+**Context:** `_pickImage()` reads the picked image as full-resolution bytes and base64-encodes them before sending to the LLM. A 12MP phone camera image can be 3-6MB, which as base64 becomes 4-8MB of text. This will be slow and expensive for both the student (mobile data) and API costs.
+
+**Affected files:**
+| File | Lines | Issue |
+|---|---|---|
+| `lib/features/teaching/presentation/tutor_screen.dart` | 196 | `readAsBytes()` → no resize/compression |
+
+**Acceptance criteria:**
+1. Images are resized to max 1024px on the longest edge before base64 encoding
+2. JPEG compression at 80% quality is applied to reduce payload size
+3. Processing runs in an isolate to avoid UI jank on large images
+
+---
+
+### m5. No LLM token usage tracking exposed to user
+
+**Context:** `LlmUsageMeter` exists in core services but there's no UI showing students their token consumption, costs, or usage trends. The vision requires "track LLM token usage for different tasks."
+
+**Acceptance criteria:**
+1. Settings has a "Token Usage" section showing total tokens used (input/output)
+2. Usage is broken down by feature (teaching, mentor, ingestion, practice)
+3. Estimated cost is shown based on `token_pricing_config.dart`
+4. Student can set a monthly token budget and get warned when approaching it
+
+---
+
+### m6. No activity pub/sub for cross-feature reactivity
+
+**Context:** Cross-feature integration currently uses direct repository calls (e.g., `PracticeService` writes to `SessionRepository` directly). There is no event bus or pub/sub system for loosely coupled cross-feature communication. Adding new cross-feature behaviors (e.g., "after practice session, update spaced repetition AND check if a mentor nudge should fire") requires modifying multiple existing services.
+
+**Acceptance criteria (investigation, not implementation):**
+1. Document all current cross-feature coupling points
+2. Propose an event system design (could be as simple as a Riverpod StreamProvider)
+3. No implementation required — design doc only
 
 ---
 
 ## Dependency Graph & Ordering
 
 ```
-Phase 1 — Fix BLOCKERS (immediate)
-├── B1: Tutor image capture unblock
-├── B2: OCR/transcription modelId empty fix
-├── B3: Question auto-generation diversity
-│
-Phase 2 — Critical MAJOR features
-├── M1: Background notification scheduling
-├── M2: Multi-syllabus plan creation UI + RemainingWorkloadEstimator
-├── M3: AI-powered mentor suggestions
-│
-Phase 3 — Voice & media interaction
-├── M4: Voice conversation flow in tutor
-├── M5: Audio/video file upload support
-├── M6: VoiceBar integration in tutor screen
-│
-Phase 4 — Data accuracy & polish
-├── m1: Data backup/restore
-├── m3: Dashboard discoverability
-├── m4: RemainingWorkloadEstimator (if not done in Phase 2)
-├── m5: StudentId/modelId in upload pipeline
+Phase 1 — Fix BLOCKER (immediate)
+├── B1: Background notification scheduling (workmanager integration)
+├── B2: OCR/Transcription constructor modelId required
+
+Phase 2 — Voice interaction overhaul (highest student impact)
+├── M1: Voice conversation flow (auto-send, TTS, interrupt)
+├── m2: Mentor/Quick Guide voice integration
+├── m3: Cross-feature voice state management
+├── m4: Image compression in tutor screen
+
+Phase 3 — AI-driven mentor & content
+├── M2: LLM-powered suggestNextAction()
+├── M3: Handwriting recognition for canvas questions
+
+Phase 4 — Student-facing analytics
+├── M4: Spaced repetition review dashboard
+├── M5: Remaining workload estimator surfaced in UI
+├── m5: Token usage tracking exposed in Settings
+
+Phase 5 — Data safety & discoverability
+├── M6: Backup/restore implementation
+├── m1: Dashboard in bottom navigation
+├── m6: Cross-feature pub/sub design doc
 ```
 
 ## Rationale Summary
 
-The codebase has made measurable progress since the previous planner:
-- **5 of 13 issues resolved** (M5, M6, M7, m2, and the LLM task manager accessibility)
-- **3 new BLOCKERs discovered** (B3: singleChoice-only generation; plus the existing B1/B2 unresolved)
-- **2 new MAJOR gaps identified** (M4: no voice conversation in tutor; M5: no audio/video upload UI; M6: VoiceBar not wired into tutor)
+**9 of 16** previously identified issues were resolved in commit `aaf5caf`. The codebase is remarkably mature for a solo project with 14/15 features fully implemented and ~310 test files. However, several high-impact vision gaps remain:
 
-The critical remaining gaps in order of student impact:
+1. **Proactive engagement gap (B1):** The #1 deferred vision feature — a "persistent mentor" that engages outside the app. This is the single biggest remaining gap between the vision and reality.
+2. **Voice interaction gap (M1/m2/m3):** Voice infrastructure exists but is not wired into a true conversational loop. The tutor image capture fix (B1 ✅) and VoiceBar integration (M6 ✅) provide the foundation but the conversational flow is missing.
+3. **AI mentor gap (M2):** The mentor's `suggestNextAction()` is still rule-based, not AI-driven. The LLM context builder exists (`_buildContextPrompt()`) but is not used for recommendations.
+4. **Spaced repetition invisibility (M4):** One of the most powerful features (SM-2 algorithm) is completely invisible to students. No "10 cards due" counter anywhere.
+5. **Workload visibility (M5):** The "lessons remaining to mastery" concept — a core vision requirement — has a service but no UI.
 
-1. **Vision-interaction gap (B1/B2):** The tutor cannot see/interpreter student work. Still the #1 promised feature not delivered.
-2. **Auto-generation monoculture (B3):** The ingestion pipeline only creates singleChoice questions. Uploading any content yields only multiple-choice — severely limiting practice depth.
-3. **Proactive mentor gap (M1):** The "persistent mentor" only exists while app is open. No 24/7 engagement.
-4. **Multi-subject gap (M2):** The vision's core claim — multi-syllabus learning — has backend support but no UI to use it.
-5. **Voice interaction gap (M4/M6):** VoiceController infrastructure exists but is disconnected from the actual tutoring experience.
-6. **Media ingestion gap (M5):** Video/audio extraction pipeline exists but users can only paste URLs — no file upload path.
-
-**further_issues directory:** Not present. No user-reported issues to integrate.
+No `issues/further_issues/` directory exists. This analysis is entirely vision-vs-implementation.

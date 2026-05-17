@@ -157,10 +157,10 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
               children: [
                 Semantics(
                   button: true,
-                  label: 'Decrease duration',
+                  label: l10n.decreaseDuration,
                   child: IconButton(
                     icon: const Icon(Icons.remove_circle_outline),
-                    tooltip: 'Decrease duration',
+                    tooltip: l10n.decreaseDuration,
                     onPressed: _durationMinutes > 15
                         ? () {
                             setState(() => _durationMinutes -= 15);
@@ -171,10 +171,10 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                 ),
                 Semantics(
                   button: true,
-                  label: 'Increase duration',
+                  label: l10n.increaseDuration,
                   child: IconButton(
                     icon: const Icon(Icons.add_circle_outline),
-                    tooltip: 'Increase duration',
+                    tooltip: l10n.increaseDuration,
                     onPressed: _durationMinutes < 120
                         ? () {
                             setState(() => _durationMinutes += 15);

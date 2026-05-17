@@ -1130,7 +1130,43 @@ abstract class AppLocalizations {
   /// **'Unable to load models. Please try again.'**
   String get unableToLoadModelsTryAgain;
 
-  /// Retry button label
+  /// Error message when mentor initialisation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor initialization failed: {error}. Go to Settings to configure your AI provider, or retry.'**
+  String mentorInitFailed(String error);
+
+  /// Message shown when content pipeline is null
+  ///
+  /// In en, this message translates to:
+  /// **'Content pipeline not available'**
+  String get contentPipelineNotAvailable;
+
+  /// Hint text in the input field when mentor init failed
+  ///
+  /// In en, this message translates to:
+  /// **'Connectivity issue — configure AI provider in Settings'**
+  String get mentorInitFailedHint;
+
+  /// Error message when tutor initialisation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor initialization failed: {error}. Go to Settings to configure your AI provider, or retry.'**
+  String tutorInitFailed(String error);
+
+  /// Button label to navigate back
+  ///
+  /// In en, this message translates to:
+  /// **'Go Back'**
+  String get goBack;
+
+  /// Accessibility hint for collapsible cards in dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to refresh this section'**
+  String get tapToRefreshSection;
+
+  /// Button label to retry an operation
   ///
   /// In en, this message translates to:
   /// **'Retry'**
@@ -3548,11 +3584,29 @@ abstract class AppLocalizations {
   /// **'Session history exported to PDF'**
   String get sessionHistoryExportedPdf;
 
+  /// Snackbar message when session history JSON is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Session history exported to JSON'**
+  String get sessionHistoryExportedJson;
+
   /// Label for JSON export format
   ///
   /// In en, this message translates to:
   /// **'JSON'**
   String get labelJson;
+
+  /// Button label to navigate to settings
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get goToSettings;
+
+  /// Error message when lesson fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load lesson. Please check your connection and try again.'**
+  String get failedToLoadLesson;
 
   /// Error message when practice session fails to start
   ///
@@ -5779,6 +5833,340 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View active AI inference tasks and token usage'**
   String get viewActiveAiTasks;
+
+  /// Confirmation dialog text when ending a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'End your lesson? Your progress will be saved.'**
+  String get endLessonConfirmation;
+
+  /// Button to dismiss end lesson dialog and continue the lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Lesson'**
+  String get continueLesson;
+
+  /// Confirmation text when user presses back during a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'End lesson and save progress?'**
+  String get backNavigationConfirm;
+
+  /// Button to discard lesson progress and exit
+  ///
+  /// In en, this message translates to:
+  /// **'Discard and Exit'**
+  String get discardAndExit;
+
+  /// Button to save lesson progress and exit
+  ///
+  /// In en, this message translates to:
+  /// **'Save and Exit'**
+  String get saveAndExit;
+
+  /// Message shown after lesson is saved successfully
+  ///
+  /// In en, this message translates to:
+  /// **'Your lesson has been saved successfully.'**
+  String get lessonSavedMessage;
+
+  /// Confirmation dialog when cancelling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel this lesson?'**
+  String get cancelLessonConfirmation;
+
+  /// Semantic label for session progress bar
+  ///
+  /// In en, this message translates to:
+  /// **'Session progress: {current} of {total}'**
+  String sessionProgressLabel(int current, int total);
+
+  /// Semantic label for exam progress bar
+  ///
+  /// In en, this message translates to:
+  /// **'Exam progress: {current} of {total}'**
+  String examProgressLabel(int current, int total);
+
+  /// Semantic label for decrease duration button
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease duration'**
+  String get decreaseDuration;
+
+  /// Semantic label for increase duration button
+  ///
+  /// In en, this message translates to:
+  /// **'Increase duration'**
+  String get increaseDuration;
+
+  /// Overwork nudge showing minutes
+  ///
+  /// In en, this message translates to:
+  /// **'You have studied {minutes} minutes today, which exceeds your daily cap of {cap} minutes. Consider taking a break!'**
+  String nudgeOverworkMinutes(int minutes, int cap);
+
+  /// Late-night study warning nudge
+  ///
+  /// In en, this message translates to:
+  /// **'I noticed you had {count} late-night study session(s). Remember that rest is important for effective learning!'**
+  String nudgeLateNight(int count);
+
+  /// Revision reminder nudge
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} question(s) approaching their review date. Time for a revision session!'**
+  String nudgeRevisionNeeded(int count);
+
+  /// Study streak celebration message
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations on your {count}-day study streak! Keep up the amazing consistency!'**
+  String nudgeStreakDays(int count);
+
+  /// Message when student hasn't studied for 48+ hours
+  ///
+  /// In en, this message translates to:
+  /// **'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?'**
+  String get nudgeInactive48h;
+
+  /// Message when scheduling conflicts with existing lesson
+  ///
+  /// In en, this message translates to:
+  /// **'The proposed time ({time}) conflicts with an existing lesson. Suggested free slot: {freeSlot}. Shall I book it there?'**
+  String mentorScheduleConflict(String time, String freeSlot);
+
+  /// Success message after scheduling a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson on \"{topic}\" scheduled for {time} (30 min). You can review or reschedule anytime.'**
+  String mentorScheduleSuccess(String topic, String time);
+
+  /// Failure message when lesson cannot be scheduled
+  ///
+  /// In en, this message translates to:
+  /// **'I was unable to schedule the lesson. Please try again or check your planner.'**
+  String get mentorScheduleFail;
+
+  /// Message when no free slot found for rescheduling
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to find a free slot for rescheduling \"{topic}\". Please check your availability in the planner.'**
+  String mentorRescheduleNoFreeSlot(String topic);
+
+  /// Message when rescheduling suggestion is pending
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested rescheduling \"{topic}\" to {time} - pending confirmation stored in repository.'**
+  String mentorReschedulePending(String topic, String time);
+
+  /// Prompt asking user to confirm study plan creation
+  ///
+  /// In en, this message translates to:
+  /// **'I can help create a study plan. Would you like me to set up a {days}-day learning roadmap? Please confirm and provide the subject or goal you\'d like to focus on.'**
+  String mentorPlanDaysPrompt(int days);
+
+  /// System prompt for lesson plan generation
+  ///
+  /// In en, this message translates to:
+  /// **'You are a curriculum designer creating lesson plans. Respond only with valid JSON.'**
+  String get lessonPlanSystemPrompt;
+
+  /// User prompt for lesson plan generation
+  ///
+  /// In en, this message translates to:
+  /// **'You are a knowledgeable AI tutor for {subjectId}. Create a structured lesson plan for the topic \"{topicTitle}\".\n\nThe lesson should be {durationMinutes} minutes long.\n\nReturn a JSON object.'**
+  String lessonPlanUserPrompt(
+    String subjectId,
+    String topicTitle,
+    int durationMinutes,
+  );
+
+  /// System prompt for AI tutor
+  ///
+  /// In en, this message translates to:
+  /// **'You are an AI tutor for {subjectId} teaching \"{topicTitle}\". Be conversational, warm, and educational.'**
+  String tutorSystemPrompt(String subjectId, String topicTitle);
+
+  /// Instruction prompt for AI tutor
+  ///
+  /// In en, this message translates to:
+  /// **'Guidelines:\n- {timeContext}\n- {paceContext}\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning'**
+  String tutorInstructionPrompt(String timeContext, String paceContext);
+
+  /// System prompt for lesson summary generation
+  ///
+  /// In en, this message translates to:
+  /// **'You are a tutor writing lesson notes.'**
+  String get summarySystemPrompt;
+
+  /// User prompt for lesson summary
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize what was covered in this lesson about \"{topicTitle}\".\nInclude:\n1. Key concepts explained\n2. Questions answered ({exerciseCount} exercises, {correctCount} correct)\n3. Student\'s apparent understanding level (confidence: {confidencePercent}%)\n4. Adaptive pace used ({adaptivePace}x)\n5. Recommendations for next lesson\n\nKeep it concise and constructive.'**
+  String summaryUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String adaptivePace,
+  );
+
+  /// System prompt for answer evaluation
+  ///
+  /// In en, this message translates to:
+  /// **'You are an expert academic evaluator. Return only valid JSON.'**
+  String get evaluationSystemPrompt;
+
+  /// System prompt for exercise evaluator
+  ///
+  /// In en, this message translates to:
+  /// **'You are an expert academic evaluator. Assess the student\'s answer and return a JSON object with: score (0.0-1.0), explanation, partialCredit (optional), conceptBreakdown (optional map of concept->score). Be fair and encouraging. Consider partial credit for partially correct answers.'**
+  String get evaluatorSystemPrompt;
+
+  /// System prompt for content classification
+  ///
+  /// In en, this message translates to:
+  /// **'You are a content classifier. Respond only with the topic name.'**
+  String get classifySystemPrompt;
+
+  /// User prompt for content classification
+  ///
+  /// In en, this message translates to:
+  /// **'Classify the following content into one of these topics: {topics}.\n\nContent:\n{content}\n\nReturn only the single most relevant topic name from the list. Do not explain. Do not add extra text.'**
+  String classifyUserPrompt(String topics, String content);
+
+  /// System prompt for content summarization
+  ///
+  /// In en, this message translates to:
+  /// **'You are a summarization assistant. Provide concise summaries.'**
+  String get summarizeSystemPrompt;
+
+  /// User prompt for content summarization
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize the following content in 3-5 concise sentences.\n\nContent:\n{content}\n\nProvide only the summary text.'**
+  String summarizeUserPrompt(String content);
+
+  /// System prompt for question generation
+  ///
+  /// In en, this message translates to:
+  /// **'You are a question generator. Return only valid JSON array.'**
+  String get generateQuestionSystemPrompt;
+
+  /// User prompt for question generation
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze the following content and extract any existing questions it contains.\nAlso generate 3-5 new practice questions based on the content.\nReturn ONLY a JSON array of question objects.\nEach object must have: \"text\" (the question), \"type\" (\"singleChoice\"), \"options\" (list of 4 answer strings), \"correctAnswer\" (the correct option text), \"explanation\" (brief explanation).\n\nContent:\n{content}'**
+  String generateQuestionUserPrompt(String content);
+
+  /// Default system prompt for AI assistant
+  ///
+  /// In en, this message translates to:
+  /// **'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.'**
+  String get aiDefaultSystemPrompt;
+
+  /// System prompt for transcription
+  ///
+  /// In en, this message translates to:
+  /// **'You are a transcription assistant. Transcribe audio/video content accurately.'**
+  String get transcribeSystemPrompt;
+
+  /// User prompt for transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe the following audio/video content.\nReturn only the transcribed text. Preserve the natural language and formatting.\n\nContent: {content}'**
+  String transcribeUserPrompt(String content);
+
+  /// System prompt for OCR extraction
+  ///
+  /// In en, this message translates to:
+  /// **'You are an OCR assistant. Extract text from images accurately.'**
+  String get ocrSystemPrompt;
+
+  /// User prompt for OCR extraction
+  ///
+  /// In en, this message translates to:
+  /// **'Extract all text visible in this image content.\nReturn only the extracted text, preserving the original formatting as much as possible.\nIf no text is visible, return an empty string.\n\nImage content (base64 or reference): {content}'**
+  String ocrUserPrompt(String content);
+
+  /// Section title for backup & restore in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupAndRestore;
+
+  /// Tile title for exporting backup
+  ///
+  /// In en, this message translates to:
+  /// **'Export Backup'**
+  String get exportBackup;
+
+  /// Tile subtitle for export backup
+  ///
+  /// In en, this message translates to:
+  /// **'Export all your study data'**
+  String get exportAllDataDescription;
+
+  /// Tile title for importing backup
+  ///
+  /// In en, this message translates to:
+  /// **'Import Backup'**
+  String get importBackup;
+
+  /// Tile subtitle for import backup
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup file'**
+  String get importFromFileDescription;
+
+  /// Snackbar message when backup export succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Backup exported successfully'**
+  String get backupExported;
+
+  /// Error message when backup export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export backup'**
+  String get backupExportFailed;
+
+  /// Title for import confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Import Backup'**
+  String get importConfirmTitle;
+
+  /// Preview message before importing a backup with box and record counts
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains {boxes} section(s) with {records} record(s). Existing data may be overwritten. Continue?'**
+  String importPreview(int boxes, int records);
+
+  /// Snackbar message when data restore succeeds
+  ///
+  /// In en, this message translates to:
+  /// **'Data restored successfully'**
+  String get importSuccess;
+
+  /// Error message when data restore fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to restore data'**
+  String get importFailed;
+
+  /// Error message when backup file format is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid backup file'**
+  String get invalidBackupFile;
+
+  /// Hint text for selecting a backup file
+  ///
+  /// In en, this message translates to:
+  /// **'Select backup file'**
+  String get selectBackupFile;
 }
 
 class _AppLocalizationsDelegate

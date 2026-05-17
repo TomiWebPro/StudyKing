@@ -38,6 +38,9 @@ class _VoiceBarState extends State<VoiceBar> with SingleTickerProviderStateMixin
         if (mounted) setState(() => _currentTranscription = text);
       },
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.controller.requestPermission();
+    });
   }
 
   @override
@@ -57,7 +60,9 @@ class _VoiceBarState extends State<VoiceBar> with SingleTickerProviderStateMixin
         _currentTranscription = '';
       }
     } else {
-      widget.controller.startListening();
+      final l10n = AppLocalizations.of(context);
+      final localeName = l10n?.localeName ?? 'en';
+      widget.controller.startListening(localeName: localeName);
       if (!widget.reduceMotion) {
         _waveController.repeat();
       }

@@ -49,6 +49,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   bool _isCorrect = false;
   bool _examFinished = false;
   bool _isLoadingConfig = true;
+  bool _isReloadingQuestions = false;
   bool _isExamActive = false;
 
   final List<ExamQuestionResult> _results = [];
@@ -108,13 +109,20 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         setState(() {
           _questions = selected;
           _isLoadingConfig = false;
+          _isReloadingQuestions = false;
         });
       } else {
-        setState(() => _isLoadingConfig = false);
+        setState(() {
+          _isLoadingConfig = false;
+          _isReloadingQuestions = false;
+        });
         _showNoQuestionsDialog();
       }
     } catch (e) {
-      setState(() => _isLoadingConfig = false);
+      setState(() {
+        _isLoadingConfig = false;
+        _isReloadingQuestions = false;
+      });
       _showNoQuestionsDialog();
     }
   }
@@ -296,7 +304,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           preferredSize: const Size.fromHeight(4),
           child: Semantics(
             liveRegion: true,
-            label: 'Exam progress: ${_currentIndex + 1} of ${_questions.length}',
+            label: l10n.examProgressLabel(_currentIndex + 1, _questions.length),
             child: LinearProgressIndicator(value: progress),
           ),
         ),
@@ -383,7 +391,9 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   Widget _buildConfigScreen(AppLocalizations l10n) {
     return Scaffold(
       appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
-      body: SingleChildScrollView(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,14 +410,24 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: _questions.isEmpty ? null : _startExam,
-                icon: const Icon(Icons.play_arrow),
+                onPressed: _questions.isEmpty || _isReloadingQuestions ? null : _startExam,
+                icon: _isReloadingQuestions
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_arrow),
                 label: Text(l10n.startExam),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               ),
             ),
           ],
         ),
+      ),
+          if (_isReloadingQuestions)
+            const LinearProgressIndicator(),
+        ],
       ),
     );
   }
@@ -447,7 +467,10 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
             label: Text('$c'),
             selected: _questionCount == c,
             onSelected: (_) => {
-              setState(() => _questionCount = c),
+              setState(() {
+                _questionCount = c;
+                _isReloadingQuestions = true;
+              }),
               _loadQuestions(),
             },
             visualDensity: VisualDensity.compact,

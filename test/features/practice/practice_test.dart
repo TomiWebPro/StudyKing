@@ -25,4 +25,40 @@ void main() {
   test('practice barrel exports SpacedRepetitionService', () {
     expect(SpacedRepetitionService, isNotNull);
   });
+
+  test('practice barrel exports SpacedRepetitionEngine', () {
+    expect(SpacedRepetitionEngine, isNotNull);
+  });
+
+  test('practice barrel exports ReadinessScorer', () {
+    expect(ReadinessScorer, isNotNull);
+  });
+
+  test('practice barrel exports MasteryRecorder', () {
+    expect(MasteryRecorder, isNotNull);
+  });
+
+  test('practice barrel exports MistakeReviewService', () {
+    expect(MistakeReviewService, isNotNull);
+  });
+
+  test('practice barrel exports DifficultyAdapter', () {
+    expect(DifficultyAdapter, isNotNull);
+  });
+
+  test('practice barrel exports ExamSessionService', () {
+    expect(ExamSessionService, isNotNull);
+  });
+
+  test('practice barrel exports ExamSessionScreen', () {
+    expect(ExamSessionScreen, isNotNull);
+  });
+
+  test('practice barrel exports PracticeAnswerRecord', () {
+    expect(PracticeAnswerRecord, isNotNull);
+  });
+
+  test('practice barrel exports PracticeSessionResult', () {
+    expect(PracticeSessionResult, isNotNull);
+  });
 }

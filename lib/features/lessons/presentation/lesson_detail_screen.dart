@@ -86,6 +86,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
         subjectId: (widget.args.subjectId ?? '').isNotEmpty
             ? (widget.args.subjectId ?? '')
             : _lesson?.subjectId ?? '',
+        durationMinutes: 45,
       ),
     );
   }
@@ -94,8 +95,46 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     if (_loadError) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.args.topicTitle)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.failedToLoadLesson,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back),
+                      label: Text(l10n.goBack),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _retryLoadLesson,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     if (_lesson == null) {

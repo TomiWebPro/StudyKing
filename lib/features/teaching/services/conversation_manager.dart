@@ -39,6 +39,9 @@ class ConversationManager {
   double adaptivePace = 1.0;
   LessonPlan? lessonPlan;
   EvaluationResult? lastEvaluationResult;
+  String _lastExerciseQuestion = '';
+  bool _pendingExerciseQuestionCapture = false;
+  String localeName = 'en';
 
   ConversationManager({
     required LlmService llmService,
@@ -52,11 +55,12 @@ class ConversationManager {
     ConversationRepository? persistenceRepo,
     ConversationPromptSet? prompts,
     Clock? clock,
+    this.localeName = 'en',
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
         _exerciseEvaluator = exerciseEvaluator,
-        _prompts = prompts ?? const ConversationPromptSet(),
+        _prompts = prompts ?? ConversationPromptSet(localeName: localeName),
         _clock = clock ?? SystemClock(),
         sessionStartTime = (clock ?? SystemClock()).now(),
         _memory = ConversationMemory(
@@ -150,14 +154,49 @@ class ConversationManager {
       systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
     )) {
       buffer.write(chunk);
-      if (buffer.length > 2) {
+      if (buffer.length > 0) {
         yield* _buildAdaptiveChunks(buffer.toString());
       }
     }
 
-    _memory.addAssistantMessage(buffer.toString());
+    final assistantContent = buffer.toString();
+    _memory.addAssistantMessage(assistantContent);
+
+    if (_pendingExerciseQuestionCapture) {
+      _lastExerciseQuestion = assistantContent;
+      _pendingExerciseQuestionCapture = false;
+    }
 
     _detectExerciseRequest(content);
+  }
+
+  Stream<String> processImage(String base64Image) async* {
+    _memory.addUserMessage('[Image submitted for analysis]');
+
+    if (phase == ConversationPhase.greeting) {
+      phase = ConversationPhase.teaching;
+    }
+
+    final imageData = 'data:image/jpeg;base64,$base64Image';
+    final message = 'The student submitted handwritten work / an image. '
+        'Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n'
+        '$imageData';
+
+    final buffer = StringBuffer();
+    await for (final chunk in _llmService.chatStream(
+      message: message,
+      modelId: _modelId,
+      memory: _memory,
+      systemPrompt: 'The student submitted this work. Analyze and provide feedback.',
+    )) {
+      buffer.write(chunk);
+      if (buffer.length > 0) {
+        yield chunk;
+      }
+    }
+
+    final assistantContent = buffer.toString();
+    _memory.addAssistantMessage(assistantContent);
   }
 
   Stream<String> _buildAdaptiveChunks(String fullContent) async* {
@@ -178,7 +217,7 @@ class ConversationManager {
     exerciseCount++;
 
     final result = await _exerciseEvaluator.evaluate(
-      question: '',
+      question: _lastExerciseQuestion,
       studentAnswer: content,
       subjectId: subjectId,
       topicTitle: topicTitle,
@@ -207,6 +246,7 @@ class ConversationManager {
     final exerciseKeywords = ['exercise', 'practice', 'quiz'];
     if (exerciseKeywords.any((k) => lower.contains(k))) {
       phase = ConversationPhase.exercise;
+      _pendingExerciseQuestionCapture = true;
       return;
     }
 
@@ -217,6 +257,7 @@ class ConversationManager {
 
   void transitionToExercise() {
     phase = ConversationPhase.exercise;
+    _pendingExerciseQuestionCapture = true;
   }
 
   void transitionToClosing() {

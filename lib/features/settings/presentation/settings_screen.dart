@@ -1,14 +1,33 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/services/data_backup_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiKeyProvider, selectedModelProvider, settingsProvider;
@@ -152,6 +171,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Duration(milliseconds: settings.totalStudyTimeMs),
                     showDays: true)),
               ),
+            ]),
+            _section(l10n.backupAndRestore, [
+              _tile(l10n.exportBackup, l10n.exportAllDataDescription,
+                  Icons.backup, _exportBackup),
+              _tile(l10n.importBackup, l10n.importFromFileDescription,
+                  Icons.restore_page, _importBackup),
             ]),
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
@@ -436,6 +461,219 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ]),
       ),
     );
+  }
+
+  Future<void> _exportBackup() async {
+    final l10n = AppLocalizations.of(context)!;
+    final backupService = DataBackupService();
+    try {
+      final boxData = _collectAllBoxData();
+      final result = await backupService.exportAllData(boxData: boxData);
+      if (result.isSuccess) {
+        final file = File(result.data!);
+        await Share.shareXFiles([XFile(file.path)],
+            text: 'StudyKing Backup');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.backupExported)),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('${l10n.backupExportFailed}: ${result.error}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.backupExportFailed}: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _importBackup() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final pickResult = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        dialogTitle: l10n.selectBackupFile,
+      );
+      if (pickResult == null || pickResult.files.isEmpty) return;
+      final filePath = pickResult.files.single.path;
+      if (filePath == null) return;
+
+      final backupService = DataBackupService();
+      final result = await backupService.restoreData(filePath);
+      if (result.isFailure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content:
+                    Text('${l10n.invalidBackupFile}: ${result.error}')),
+          );
+        }
+        return;
+      }
+
+      final data = result.data!;
+      final totalBoxes = data.length;
+      final totalRecords = data.values.fold(0, (int s, l) => s + l.length);
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.importConfirmTitle),
+          content: Text(l10n.importPreview(totalBoxes, totalRecords)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.importBackup),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      await _writeBoxData(data);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.importSuccess)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.importFailed}: $e')),
+        );
+      }
+    }
+  }
+
+  Map<String, List<Map<String, dynamic>>> _collectAllBoxData() {
+    final data = <String, List<Map<String, dynamic>>>{};
+    final boxNames = [
+      HiveBoxNames.subjects,
+      HiveBoxNames.topics,
+      HiveBoxNames.questions,
+      HiveBoxNames.answers,
+      HiveBoxNames.sources,
+      HiveBoxNames.attempts,
+      HiveBoxNames.lessons,
+      HiveBoxNames.lessonBlocks,
+      HiveBoxNames.sessions,
+      HiveBoxNames.sessionsTyped,
+      HiveBoxNames.progress,
+      HiveBoxNames.tasks,
+      HiveBoxNames.conversations,
+      HiveBoxNames.tutorSessions,
+      HiveBoxNames.masteryStates,
+      HiveBoxNames.questionMasteryStates,
+      HiveBoxNames.questionEvaluations,
+      HiveBoxNames.learningPlans,
+      HiveBoxNames.planAdherence,
+      HiveBoxNames.planAdherenceMetrics,
+      HiveBoxNames.masteryImprovementMetrics,
+      HiveBoxNames.roadmaps,
+      HiveBoxNames.pendingActions,
+      HiveBoxNames.engagementNudges,
+      HiveBoxNames.badges,
+      HiveBoxNames.focusSessions,
+      HiveBoxNames.studentAvailability,
+      HiveBoxNames.topicDependencies,
+      HiveBoxNames.settings,
+      HiveBoxNames.profile,
+    ];
+
+    for (final boxName in boxNames) {
+      if (!Hive.isBoxOpen(boxName)) continue;
+      final box = Hive.box(boxName);
+      final records = <Map<String, dynamic>>[];
+      for (final value in box.values) {
+        final map = _toMap(value);
+        if (map != null) records.add(map);
+      }
+      if (records.isNotEmpty) data[boxName] = records;
+    }
+    return data;
+  }
+
+  Map<String, dynamic>? _toMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    try {
+      final obj = value as dynamic;
+      return obj.toJson() as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writeBoxData(
+      Map<String, List<Map<String, dynamic>>> data) async {
+    for (final entry in data.entries) {
+      final boxName = entry.key;
+      final records = entry.value;
+      if (!Hive.isBoxOpen(boxName)) continue;
+      final box = Hive.box(boxName);
+      await box.clear();
+      for (final record in records) {
+        final obj = _deserializeRecord(boxName, record);
+        final key = record['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+        await box.put(key, obj);
+      }
+    }
+  }
+
+  dynamic _deserializeRecord(String boxName, Map<String, dynamic> json) {
+    switch (boxName) {
+      case HiveBoxNames.subjects:
+        return Subject.fromJson(json);
+      case HiveBoxNames.topics:
+        return Topic.fromJson(json);
+      case HiveBoxNames.questions:
+        return Question.fromJson(json);
+      case HiveBoxNames.sources:
+        return Source.fromJson(json);
+      case HiveBoxNames.lessons:
+        return Lesson.fromJson(json);
+      case HiveBoxNames.sessionsTyped:
+        return Session.fromJson(json);
+      case HiveBoxNames.masteryStates:
+        return MasteryState.fromJson(json);
+      case HiveBoxNames.questionMasteryStates:
+        return QuestionMasteryState.fromJson(json);
+      case HiveBoxNames.questionEvaluations:
+        return QuestionEvaluation.fromJson(json);
+      case HiveBoxNames.learningPlans:
+        return PersonalLearningPlan.fromJson(json);
+      case HiveBoxNames.planAdherence:
+        return PlanAdherenceModel.fromJson(json);
+      case HiveBoxNames.planAdherenceMetrics:
+        return json;
+      case HiveBoxNames.masteryImprovementMetrics:
+        return json;
+      case HiveBoxNames.conversations:
+        return ConversationMessage.fromJson(json);
+      case HiveBoxNames.tutorSessions:
+        return TutorSession.fromJson(json);
+      case HiveBoxNames.topicDependencies:
+        return TopicDependency.fromJson(json);
+      case HiveBoxNames.lessonBlocks:
+        return LessonBlock.fromJson(json);
+      default:
+        return json;
+    }
   }
 
   void _showSignOutDialog() {

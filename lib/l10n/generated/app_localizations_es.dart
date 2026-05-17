@@ -624,6 +624,30 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pueden cargar los modelos. Intente de nuevo.';
 
   @override
+  String mentorInitFailed(String error) {
+    return 'Inicialización del mentor falló: $error. Ve a Configuración para configurar tu proveedor de IA, o reintenta.';
+  }
+
+  @override
+  String get contentPipelineNotAvailable =>
+      'Pipeline de contenido no disponible';
+
+  @override
+  String get mentorInitFailedHint =>
+      'Problema de conexión — configura el proveedor de IA en Configuración';
+
+  @override
+  String tutorInitFailed(String error) {
+    return 'Inicialización del tutor falló: $error. Ve a Configuración para configurar tu proveedor de IA, o reintenta.';
+  }
+
+  @override
+  String get goBack => 'Volver';
+
+  @override
+  String get tapToRefreshSection => 'Toque para actualizar esta sección';
+
+  @override
   String get retry => 'Reintentar';
 
   @override
@@ -673,7 +697,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String uploadPrompt(String subject) {
-    return '¿Deseas subir material de estudio para $subject?';
+    return '¿Desea subir material de estudio para $subject?';
   }
 
   @override
@@ -2025,7 +2049,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Historial de sesiones exportado a PDF';
 
   @override
+  String get sessionHistoryExportedJson =>
+      'Historial de sesiones exportado a JSON';
+
+  @override
   String get labelJson => 'JSON';
+
+  @override
+  String get goToSettings => 'Ir a Configuración';
+
+  @override
+  String get failedToLoadLesson =>
+      'Error al cargar la lección. Verifica tu conexión e intenta de nuevo.';
 
   @override
   String get failedToStartPractice => 'Error al iniciar la sesión de práctica';
@@ -3388,4 +3423,232 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get viewActiveAiTasks =>
       'Ver tareas activas de inferencia de IA y uso de tokens';
+
+  @override
+  String get endLessonConfirmation =>
+      '¿Finalizar tu lección? Tu progreso se guardará.';
+
+  @override
+  String get continueLesson => 'Continuar Lección';
+
+  @override
+  String get backNavigationConfirm => '¿Finalizar lección y guardar progreso?';
+
+  @override
+  String get discardAndExit => 'Descartar y Salir';
+
+  @override
+  String get saveAndExit => 'Guardar y Salir';
+
+  @override
+  String get lessonSavedMessage => 'Tu lección se ha guardado correctamente.';
+
+  @override
+  String get cancelLessonConfirmation =>
+      '¿Está seguro de que desea cancelar esta lección?';
+
+  @override
+  String sessionProgressLabel(int current, int total) {
+    return 'Progreso de la sesión: $current de $total';
+  }
+
+  @override
+  String examProgressLabel(int current, int total) {
+    return 'Progreso del examen: $current de $total';
+  }
+
+  @override
+  String get decreaseDuration => 'Disminuir duración';
+
+  @override
+  String get increaseDuration => 'Aumentar duración';
+
+  @override
+  String nudgeOverworkMinutes(int minutes, int cap) {
+    return 'Ha estudiado $minutes minutos hoy, lo que excede su límite diario de $cap minutos. ¡Considere tomar un descanso!';
+  }
+
+  @override
+  String nudgeLateNight(int count) {
+    return 'Noté que tuvo $count sesión(es) de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!';
+  }
+
+  @override
+  String nudgeRevisionNeeded(int count) {
+    return 'Tiene $count pregunta(s) próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!';
+  }
+
+  @override
+  String nudgeStreakDays(int count) {
+    return '¡Felicidades por su racha de estudio de $count días! ¡Siga con esa consistencia tan increíble!';
+  }
+
+  @override
+  String get nudgeInactive48h =>
+      'Han pasado más de 48 horas desde su última sesión de estudio. ¿Se encuentra bien? ¿Le gustaría programar una revisión corta?';
+
+  @override
+  String mentorScheduleConflict(String time, String freeSlot) {
+    return 'La hora propuesta ($time) entra en conflicto con una lección existente. Espacio libre sugerido: $freeSlot. ¿Lo reservo allí?';
+  }
+
+  @override
+  String mentorScheduleSuccess(String topic, String time) {
+    return 'Lección \"$topic\" programada para $time (30 min). Puede revisarla o reprogramarla en cualquier momento.';
+  }
+
+  @override
+  String get mentorScheduleFail =>
+      'No pude programar la lección. Por favor, inténtelo de nuevo o revise su planificador.';
+
+  @override
+  String mentorRescheduleNoFreeSlot(String topic) {
+    return 'No se pudo encontrar un espacio libre para reprogramar \"$topic\". Por favor, verifique su disponibilidad en el planificador.';
+  }
+
+  @override
+  String mentorReschedulePending(String topic, String time) {
+    return 'Reprogramación sugerida de \"$topic\" para $time - confirmación pendiente almacenada en el repositorio.';
+  }
+
+  @override
+  String mentorPlanDaysPrompt(int days) {
+    return 'Puedo ayudar a crear un plan de estudio. ¿Le gustaría que configure una hoja de ruta de $days días? Por favor, confirme y proporcione la materia o el objetivo en el que le gustaría enfocarse.';
+  }
+
+  @override
+  String get lessonPlanSystemPrompt =>
+      'Usted es un diseñador curricular que crea planes de lección. Responda solo con JSON válido.';
+
+  @override
+  String lessonPlanUserPrompt(
+    String subjectId,
+    String topicTitle,
+    int durationMinutes,
+  ) {
+    return 'Usted es un tutor de IA experto en $subjectId. Cree un plan de lección estructurado para el tema \"$topicTitle\".\n\nLa lección debe durar $durationMinutes minutos.\n\nDevuelva un objeto JSON.';
+  }
+
+  @override
+  String tutorSystemPrompt(String subjectId, String topicTitle) {
+    return 'Usted es un tutor de IA para $subjectId enseñando \"$topicTitle\". Sea conversacional, cálido y educativo.';
+  }
+
+  @override
+  String tutorInstructionPrompt(String timeContext, String paceContext) {
+    return 'Directrices:\n- $timeContext\n- $paceContext\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto';
+  }
+
+  @override
+  String get summarySystemPrompt =>
+      'Usted es un tutor escribiendo notas de lección.';
+
+  @override
+  String summaryUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String adaptivePace,
+  ) {
+    return 'Resuma lo cubierto en esta lección sobre \"$topicTitle\".\nIncluya:\n1. Conceptos clave explicados\n2. Preguntas respondidas ($exerciseCount ejercicios, $correctCount correctas)\n3. Nivel de comprensión aparente del estudiante (confianza: $confidencePercent%)\n4. Ritmo adaptativo utilizado (${adaptivePace}x)\n5. Recomendaciones para la próxima lección\n\nManténgalo conciso y constructivo.';
+  }
+
+  @override
+  String get evaluationSystemPrompt =>
+      'Usted es un evaluador académico experto. Devuelva solo JSON válido.';
+
+  @override
+  String get evaluatorSystemPrompt =>
+      'Usted es un evaluador académico experto. Evalúe la respuesta del estudiante y devuelva un objeto JSON con: score (0.0-1.0), explanation, partialCredit (opcional), conceptBreakdown (mapa opcional de concepto->puntaje). Sea justo y alentador. Considere crédito parcial para respuestas parcialmente correctas.';
+
+  @override
+  String get classifySystemPrompt =>
+      'Usted es un clasificador de contenido. Responda solo con el nombre del tema.';
+
+  @override
+  String classifyUserPrompt(String topics, String content) {
+    return 'Clasifique el siguiente contenido en uno de estos temas: $topics.\n\nContenido:\n$content\n\nDevuelva solo el nombre del tema más relevante de la lista. No explique. No añada texto adicional.';
+  }
+
+  @override
+  String get summarizeSystemPrompt =>
+      'Usted es un asistente de resumen. Proporcione resúmenes concisos.';
+
+  @override
+  String summarizeUserPrompt(String content) {
+    return 'Resuma el siguiente contenido en 3-5 oraciones concisas.\n\nContenido:\n$content\n\nProporcione solo el texto del resumen.';
+  }
+
+  @override
+  String get generateQuestionSystemPrompt =>
+      'Usted es un generador de preguntas. Devuelva solo un array JSON válido.';
+
+  @override
+  String generateQuestionUserPrompt(String content) {
+    return 'Analice el siguiente contenido y extraiga cualquier pregunta existente que contenga.\nTambién genere 3-5 nuevas preguntas de práctica basadas en el contenido.\nDevuelva SOLO un array JSON de objetos de pregunta.\nCada objeto debe tener: \"text\" (la pregunta), \"type\" (uno de: \"singleChoice\", \"multiChoice\", \"typedAnswer\", \"mathExpression\", \"essay\"), \"options\" (lista de opciones de respuesta, requerido para singleChoice y multiChoice), \"correctAnswer\" (el texto de la opción correcta), \"explanation\" (explicación breve).\nPara preguntas multiChoice, correctAnswer debe ser la primera opción correcta e incluya un array \"acceptableAnswers\" con todas las opciones correctas.\nPara typedAnswer y mathExpression, proporcione options como lista vacía y correctAnswer como la respuesta esperada.\n\nContenido:\n$content';
+  }
+
+  @override
+  String get aiDefaultSystemPrompt =>
+      'Usted es un asistente de estudio de IA útil llamado StudyKing. Mantenga las respuestas concisas y educativas.';
+
+  @override
+  String get transcribeSystemPrompt =>
+      'Usted es un asistente de transcripción. Transcriba contenido de audio/video con precisión.';
+
+  @override
+  String transcribeUserPrompt(String content) {
+    return 'Transcriba el siguiente contenido de audio/video.\nDevuelva solo el texto transcrito. Preserve el lenguaje natural y el formato.\n\nContenido: $content';
+  }
+
+  @override
+  String get ocrSystemPrompt =>
+      'Usted es un asistente de OCR. Extraiga texto de imágenes con precisión.';
+
+  @override
+  String ocrUserPrompt(String content) {
+    return 'Extraiga todo el texto visible en el contenido de esta imagen.\nDevuelva solo el texto extraído, preservando el formato original tanto como sea posible.\nSi no hay texto visible, devuelva una cadena vacía.\n\nContenido de la imagen (base64 o referencia): $content';
+  }
+
+  @override
+  String get backupAndRestore => 'Copia de Seguridad';
+
+  @override
+  String get exportBackup => 'Exportar Copia';
+
+  @override
+  String get exportAllDataDescription => 'Exportar todos tus datos de estudio';
+
+  @override
+  String get importBackup => 'Importar Copia';
+
+  @override
+  String get importFromFileDescription => 'Restaurar desde un archivo de copia';
+
+  @override
+  String get backupExported => 'Copia exportada exitosamente';
+
+  @override
+  String get backupExportFailed => 'Error al exportar la copia';
+
+  @override
+  String get importConfirmTitle => 'Importar Copia de Seguridad';
+
+  @override
+  String importPreview(int boxes, int records) {
+    return 'Esta copia contiene $boxes sección(es) con $records registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?';
+  }
+
+  @override
+  String get importSuccess => 'Datos restaurados exitosamente';
+
+  @override
+  String get importFailed => 'Error al restaurar los datos';
+
+  @override
+  String get invalidBackupFile => 'Archivo de copia no válido';
+
+  @override
+  String get selectBackupFile => 'Seleccionar archivo de copia';
 }

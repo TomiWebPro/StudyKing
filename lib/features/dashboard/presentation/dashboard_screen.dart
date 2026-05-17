@@ -57,13 +57,14 @@ class DashboardScreen extends ConsumerWidget {
         topicNamesData.isEmpty &&
         badgesData.isEmpty;
 
-    final isLoading = overallStatsAsync.isLoading ||
-        snapshotAsync.isLoading ||
-        weeklyTrendAsync.isLoading ||
-        focusStatsAsync.isLoading ||
-        adherenceAsync.isLoading ||
-        topicNamesAsync.isLoading ||
-        badgesAsync.isLoading;
+    final isFirstLoad = overallStatsAsync.isLoading &&
+        snapshotAsync.isLoading &&
+        weeklyTrendAsync.isLoading &&
+        focusStatsAsync.isLoading &&
+        adherenceAsync.isLoading &&
+        topicNamesAsync.isLoading &&
+        badgesAsync.isLoading &&
+        allEmpty;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -79,8 +80,8 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildPlannerCard(context),
             const SizedBox(height: 16),
-            if (allEmpty && isLoading)
-              const Center(child: CircularProgressIndicator())
+            if (isFirstLoad)
+              _buildSkeletonLoading(context)
             else if (allEmpty)
               const EmptyDashboardChecklist()
             else ...[
@@ -179,6 +180,41 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       ),
+    );
+  }
+
+  Widget _buildSkeletonLoading(BuildContext context) {
+    return Column(
+      children: List.generate(6, (_) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      )),
     );
   }
 

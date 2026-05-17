@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/constants/app_constants.dart';
 import '../conversation_memory.dart';
 export '../conversation_memory.dart' show ConversationMemory;
@@ -24,7 +26,8 @@ class LlmConfiguration {
 }
 
 class LlmService {
-  static const String defaultSystemPrompt = 'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+  static String get defaultSystemPrompt =>
+      lookupAppLocalizations(const Locale('en')).aiDefaultSystemPrompt;
 
   final LlmConfiguration config;
   final http.Client _httpClient;

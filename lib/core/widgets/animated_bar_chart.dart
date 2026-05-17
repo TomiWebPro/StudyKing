@@ -12,6 +12,7 @@ class AnimatedBarChart extends StatefulWidget {
   final bool showValueTooltips;
   final bool reduceMotion;
   final double maxBarWidth;
+  final String Function(String day, int count)? semanticsLabelBuilder;
 
   const AnimatedBarChart({
     super.key,
@@ -25,6 +26,7 @@ class AnimatedBarChart extends StatefulWidget {
     this.showValueTooltips = true,
     this.reduceMotion = false,
     this.maxBarWidth = 48,
+    this.semanticsLabelBuilder,
   });
 
   static const double minBarWidth = 24;
@@ -137,7 +139,9 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                       (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
                   return Semantics(
-                    label: '$day: $count sessions',
+                    label: widget.semanticsLabelBuilder != null
+                        ? widget.semanticsLabelBuilder!(day, count)
+                        : '$day: $count sessions',
                     value: '$count',
                     child: Column(
                       key: ValueKey('bar_$day'),

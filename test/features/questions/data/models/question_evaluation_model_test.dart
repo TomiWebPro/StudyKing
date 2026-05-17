@@ -60,6 +60,16 @@ void main() {
         expect(json['maxPoints'], 3.0);
         expect(json['version'], 1);
       });
+
+      test('toJson with null steps and null metadata', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: correctAnswer,
+        );
+        final json = eval.toJson();
+        expect(json['steps'], isNull);
+        expect(json['metadata'], isNull);
+        expect(json['maxPoints'], isNull);
+      });
     });
 
     group('fromJson', () {
@@ -100,6 +110,30 @@ void main() {
         final eval = QuestionEvaluation.fromJson(json);
         expect(eval.steps, isNull);
       });
+
+      test('deserializes steps from json', () {
+        final json = {
+          'questionId': questionId,
+          'correctAnswer': correctAnswer,
+          'steps': [
+            {'stepNumber': '1', 'requiredAnswer': 'Step1', 'points': 1.0},
+          ],
+          'metadata': {'key': 'value'},
+        };
+        final eval = QuestionEvaluation.fromJson(json);
+        expect(eval.steps, isNotNull);
+        expect(eval.steps!.length, 1);
+        expect(eval.steps!.first.stepNumber, '1');
+        expect(eval.metadata, {'key': 'value'});
+      });
+
+      test('deserializes metadata as null when absent', () {
+        final json = {
+          'questionId': questionId, 'correctAnswer': correctAnswer,
+        };
+        final eval = QuestionEvaluation.fromJson(json);
+        expect(eval.metadata, isNull);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -137,6 +171,42 @@ void main() {
         expect(copy.maxPoints, 10.0);
         expect(copy.questionId, questionId);
       });
+
+      test('copyWith replaces steps', () {
+        final steps = [
+          EvaluationStep(stepNumber: '1', requiredAnswer: 'A', points: 1.0),
+        ];
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: correctAnswer,
+        );
+        final copy = eval.copyWith(steps: steps);
+        expect(copy.steps, isNotNull);
+        expect(copy.steps!.length, 1);
+      });
+
+      test('copyWith replaces metadata and acceptableAnswers', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: correctAnswer,
+          acceptableAnswers: ['old'],
+        );
+        final copy = eval.copyWith(
+          acceptableAnswers: ['new1', 'new2'],
+          metadata: {'key': 42},
+        );
+        expect(copy.acceptableAnswers, ['new1', 'new2']);
+        expect(copy.metadata, {'key': 42});
+      });
+
+      test('copyWith preserves fields when not provided', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: correctAnswer,
+          version: 3,
+        );
+        final copy = eval.copyWith(correctAnswer: 'Updated');
+        expect(copy.version, 3);
+        expect(copy.questionId, questionId);
+        expect(copy.correctAnswer, 'Updated');
+      });
     });
 
     group('fromLegacy', () {
@@ -155,6 +225,23 @@ void main() {
           questionId: questionId, correctAnswer: 'Ans',
         );
         expect(eval.correctAnswer, 'Ans');
+      });
+
+      test('passes options as acceptableAnswers', () {
+        final eval = QuestionEvaluation.fromLegacy(
+          questionId: questionId,
+          markscheme: 'Correct',
+          options: ['Opt1', 'Opt2'],
+        );
+        expect(eval.acceptableAnswers, ['Opt1', 'Opt2']);
+      });
+
+      test('fromLegacy with all null optionals', () {
+        final eval = QuestionEvaluation.fromLegacy(
+          questionId: questionId, correctAnswer: 'Ans',
+        );
+        expect(eval.explanation, isNull);
+        expect(eval.acceptableAnswers, []);
       });
     });
 
@@ -179,6 +266,25 @@ void main() {
         );
         expect(eval.evaluationType, EvaluationType.exactMatch);
         expect(eval.steps, isNull);
+      });
+
+      test('creates with exactMatch when steps is empty list', () {
+        final eval = QuestionEvaluation.fromLegacyMarkscheme(
+          questionId: questionId,
+          correctAnswer: 'Ans',
+          steps: [],
+        );
+        expect(eval.evaluationType, EvaluationType.exactMatch);
+        expect(eval.steps, isEmpty);
+      });
+
+      test('fromLegacyMarkscheme with acceptableAnswers', () {
+        final eval = QuestionEvaluation.fromLegacyMarkscheme(
+          questionId: questionId,
+          correctAnswer: 'Ans',
+          acceptableAnswers: ['Alt1', 'Alt2'],
+        );
+        expect(eval.acceptableAnswers, ['Alt1', 'Alt2']);
       });
     });
 
@@ -293,6 +399,46 @@ void main() {
           evaluationType: EvaluationType.fuzzyMatch,
         );
         expect(eval.isMatch('a b x y'), isFalse);
+      });
+
+      test('stepBased with empty steps list returns false', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Ans',
+          evaluationType: EvaluationType.stepBased,
+          steps: [],
+        );
+        expect(eval.isMatch('anything'), isFalse);
+      });
+
+      test('isMatch with non-matching evaluationType returns false', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+          evaluationType: EvaluationType.acceptableMatch,
+        );
+        expect(eval.isMatch('Chicago'), isFalse);
+      });
+
+      test('isMatch with extra whitespace in answer', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+        );
+        expect(eval.isMatch('  Paris  '), isTrue);
+      });
+
+      test('isMatch case insensitive', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+        );
+        expect(eval.isMatch('paris'), isTrue);
+        expect(eval.isMatch('PARIS'), isTrue);
+      });
+
+      test('stepBased with null steps returns false for non-exact match', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'Paris',
+          evaluationType: EvaluationType.stepBased,
+        );
+        expect(eval.isMatch('London'), isFalse);
       });
     });
   });

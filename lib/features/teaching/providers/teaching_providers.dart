@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, llmProviderProvider, selectedModelProvider;
+import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, llmProviderProvider, selectedModelProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
@@ -19,9 +19,11 @@ final teachingModelIdProvider = Provider<String>((ref) {
 final clockProvider = Provider<Clock>((ref) => SystemClock());
 
 final exerciseEvaluatorProvider = Provider<ExerciseEvaluator>((ref) {
+  final locale = ref.watch(localeProvider);
   return ExerciseEvaluator(
     llmService: ref.watch(llmServiceProvider),
     modelId: ref.watch(teachingModelIdProvider),
+    localeName: locale.languageCode,
   );
 });
 
@@ -30,16 +32,19 @@ final voiceControllerProvider = Provider<VoiceController>((ref) {
 });
 
 final tutorServiceProvider = Provider<TutorService>((ref) {
+  final database = ref.watch(databaseProvider);
   return TutorService(
-    database: ref.watch(databaseProvider),
+    database: database,
     llmService: ref.watch(llmServiceProvider),
     masteryService: ref.watch(masteryGraphServiceProvider),
     modelId: ref.watch(teachingModelIdProvider),
     exerciseEvaluator: ref.watch(exerciseEvaluatorProvider),
+    conversationRepository: database.conversationRepository,
     clock: ref.watch(clockProvider),
   );
 });
 
 final promptsProvider = Provider<ConversationPromptSet>((ref) {
-  return const ConversationPromptSet();
+  final locale = ref.watch(localeProvider);
+  return ConversationPromptSet(localeName: locale.languageCode);
 });

@@ -306,7 +306,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
   }
 
   Widget _buildSetupView(ThemeData theme, AppLocalizations l10n) {
-    final presets = [5, 15, 25, 30, 45, 60];
+    final presets = [10, 15, 25, 30, 45, 60];
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
