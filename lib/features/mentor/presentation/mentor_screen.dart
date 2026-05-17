@@ -267,7 +267,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         children: [
           Icon(
             Icons.auto_awesome,
-            size: 64,
+            size: ResponsiveUtils.emptyStateIconSize(context),
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
@@ -277,7 +277,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           ),
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: ResponsiveUtils.screenPadding(context),
             child: Text(
               l10n.mentorSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -349,10 +349,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                       backgroundColor: theme.colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation(
                         report.accuracy >= 70
-                            ? Colors.green
+                            ? theme.colorScheme.primary
                             : report.accuracy >= 40
-                                ? Colors.orange
-                                : Colors.red,
+                                ? theme.colorScheme.tertiary
+                                : theme.colorScheme.error,
                       ),
                     ),
                   ),
@@ -394,7 +394,6 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                     const SizedBox(height: 4),
                     ...report.weakTopics.take(3).map((topic) => ListTile(
                           contentPadding: EdgeInsets.zero,
-                          dense: true,
                           leading: Icon(Icons.error_outline,
                               color: theme.colorScheme.error, size: 20),
                           title: Text(topic.topicId,
@@ -433,11 +432,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
-                      children: report.badges.map((badge) => Chip(
-                        avatar: Icon(Icons.emoji_events,
-                            size: 18, color: Colors.amber.shade700),
-                        label: Text(badge['name'] as String,
-                            style: theme.textTheme.bodySmall),
+                      children: report.badges.map((badge) => Semantics(
+                        label: badge['name'] as String,
+                        child: Chip(
+                          avatar: Icon(Icons.emoji_events,
+                              size: 18, color: theme.colorScheme.secondary),
+                          label: Text(badge['name'] as String,
+                              style: theme.textTheme.bodySmall),
+                        ),
                       )).toList(),
                     ),
                   ],

@@ -80,5 +80,27 @@ void main() {
       expect(find.text('Sat'), findsOneWidget);
       expect(find.text('Sun'), findsOneWidget);
     });
+
+    testWidgets('renders weekly activity header with semantics', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const WeeklyChart(weeklyTrend: []),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Weekly Activity'), findsOneWidget);
+      expect(find.byType(Semantics), findsAtLeast(1));
+    });
+
+    testWidgets('single trend entry renders with W1 label', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeeklyChart(weeklyTrend: [
+          WeeklyTrendEntry(attempts: 42),
+        ]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('W1'), findsOneWidget);
+      expect(find.byType(AnimatedBarChart), findsOneWidget);
+    });
   });
 }

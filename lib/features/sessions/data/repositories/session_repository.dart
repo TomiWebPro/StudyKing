@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -7,12 +6,17 @@ import 'package:studyking/core/utils/logger.dart';
 
 class SessionRepository {
   final Logger _logger = const Logger('SessionRepository');
+  late Box<Session> _box;
 
-  Box<String> get _box => Hive.box<String>(HiveBoxNames.sessions);
+  Future<void> init() async {
+    _box = await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+  }
+
+  Box<Session> get box => _box;
 
   Future<Result<void>> save(Session session) async {
     try {
-      await _box.put(session.id, jsonEncode(session.toJson()));
+      await _box.put(session.id, session);
       return Result.success(null);
     } catch (e) {
       _logger.w('Error saving session', e);
@@ -22,25 +26,17 @@ class SessionRepository {
 
   Future<Result<Session?>> get(String id) async {
     try {
-      final raw = _box.get(id);
-      if (raw == null) return Result.success(null);
-      return Result.success(Session.fromJson(jsonDecode(raw)));
+      final session = _box.get(id);
+      return Result.success(session);
     } catch (e) {
-      _logger.w('Error decoding session $id', e);
+      _logger.w('Error getting session $id', e);
       return Result.failure('Failed to get session: ${e.toString()}');
     }
   }
 
   Future<Result<List<Session>>> getAll() async {
     try {
-      final sessions = <Session>[];
-      for (final raw in _box.values) {
-        try {
-          sessions.add(Session.fromJson(jsonDecode(raw)));
-        } catch (e) {
-          _logger.w('Error decoding session', e);
-        }
-      }
+      final sessions = _box.values.toList();
       sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
       return Result.success(sessions);
     } catch (e) {
@@ -53,12 +49,11 @@ class SessionRepository {
     try {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      final all = allResult.data!;
-      return Result.success(all.where((s) =>
+      final all = _box.values.toList();
+      final filtered = all.where((s) =>
           s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
-          s.startTime.isBefore(end)).toList());
+          s.startTime.isBefore(end)).toList();
+      return Result.success(filtered);
     } catch (e) {
       _logger.w('Error getting sessions by date', e);
       return Result.failure('Failed to get sessions by date: ${e.toString()}');
@@ -67,9 +62,8 @@ class SessionRepository {
 
   Future<Result<List<Session>>> getByType(SessionType type) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!.where((s) => s.type == type).toList());
+      final all = _box.values.toList();
+      return Result.success(all.where((s) => s.type == type).toList());
     } catch (e) {
       _logger.w('Error getting sessions by type', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
@@ -78,9 +72,8 @@ class SessionRepository {
 
   Future<Result<List<Session>>> getByStudent(String studentId) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!.where((s) => s.studentId == studentId).toList());
+      final all = _box.values.toList();
+      return Result.success(all.where((s) => s.studentId == studentId).toList());
     } catch (e) {
       _logger.w('Error getting sessions by student', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
@@ -89,9 +82,8 @@ class SessionRepository {
 
   Future<Result<List<Session>>> getBySubject(String subjectId) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!.where((s) => s.subjectId == subjectId).toList());
+      final all = _box.values.toList();
+      return Result.success(all.where((s) => s.subjectId == subjectId).toList());
     } catch (e) {
       _logger.w('Error getting sessions by subject', e);
       return Result.failure('Failed to get sessions: ${e.toString()}');
@@ -101,9 +93,8 @@ class SessionRepository {
   Future<Result<List<Session>>> getByStudentAndSubject(
       String studentId, String subjectId) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!
+      final all = _box.values.toList();
+      return Result.success(all
           .where((s) => s.studentId == studentId && s.subjectId == subjectId)
           .toList());
     } catch (e) {
@@ -115,9 +106,8 @@ class SessionRepository {
   Future<Result<List<Session>>> getRecentSessionsForSubject(String subjectId,
       {int limit = 10}) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      final filtered = allResult.data!.where((s) => s.subjectId == subjectId).toList();
+      final all = _box.values.toList();
+      final filtered = all.where((s) => s.subjectId == subjectId).toList();
       filtered.sort((a, b) =>
           b.startTime.millisecondsSinceEpoch
               .compareTo(a.startTime.millisecondsSinceEpoch));
@@ -130,9 +120,8 @@ class SessionRepository {
 
   Future<Result<int>> getTotalStudyTimeForSubject(String subjectId) async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!
+      final all = _box.values.toList();
+      return Result.success(all
           .where((s) => s.subjectId == subjectId)
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {
@@ -143,9 +132,8 @@ class SessionRepository {
 
   Future<Result<List<Session>>> getActive() async {
     try {
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!.where((s) => s.isActive).toList());
+      final all = _box.values.toList();
+      return Result.success(all.where((s) => s.isActive).toList());
     } catch (e) {
       _logger.w('Error getting active sessions', e);
       return Result.failure('Failed to get active sessions: ${e.toString()}');
@@ -210,9 +198,8 @@ class SessionRepository {
     try {
       final now = DateTime.now();
       final weekAgo = now.subtract(const Duration(days: 7));
-      final allResult = await getAll();
-      if (allResult.isFailure) return Result.failure(allResult.error);
-      return Result.success(allResult.data!
+      final all = _box.values.toList();
+      return Result.success(all
           .where((s) => s.startTime.isAfter(weekAgo))
           .fold<int>(0, (sum, s) => sum + s.actualDurationMs));
     } catch (e) {

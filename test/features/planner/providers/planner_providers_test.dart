@@ -11,14 +11,14 @@ import 'package:studyking/features/practice/data/repositories/mastery_graph_repo
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
@@ -130,28 +130,29 @@ class _MockRoadmapRepository extends RoadmapRepository {
   }
 }
 
-class _MockTutorRepo extends TutorSessionRepository {
-  final Map<String, TutorSession> _sessions = {};
+class _MockSessionRepo extends SessionRepository {
+  final Map<String, Session> _sessions = {};
   bool _throwOnGetSessions = false;
 
   void setThrowOnGetSessions() => _throwOnGetSessions = true;
-  void addSession(TutorSession s) => _sessions[s.id] = s;
+  void addSession(Session s) => _sessions[s.id] = s;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> save(Session session) async {
     _sessions[session.id] = session;
+    return Result.success(null);
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async => _sessions[id];
+  Future<Result<Session?>> get(String id) async => Result.success(_sessions[id]);
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+  Future<Result<List<Session>>> getAll() async {
     if (_throwOnGetSessions) throw Exception('get sessions error');
-    return _sessions.values.where((s) => s.studentId == studentId).toList();
+    return Result.success(_sessions.values.toList());
   }
 }
 
@@ -239,13 +240,14 @@ class _FakeErrorPlannerService extends PlannerService {
   final bool throwOnScheduleLesson;
   final bool throwOnAcceptPendingAction;
   final bool throwOnDismissPendingAction;
+  final bool throwOnRedistribute;
 
   _FakeErrorPlannerService({
     required PlanRepository planRepo,
     required MasteryGraphService masteryService,
     required TopicRepository topicRepository,
     required RoadmapRepository roadmapRepo,
-    required TutorSessionRepository tutorRepo,
+    required SessionRepository sessionRepo,
     required PendingActionRepository pendingActionRepo,
     required PlanAdapter planAdapter,
     super.fixedStudentId,
@@ -253,12 +255,13 @@ class _FakeErrorPlannerService extends PlannerService {
     this.throwOnScheduleLesson = false,
     this.throwOnAcceptPendingAction = false,
     this.throwOnDismissPendingAction = false,
+    this.throwOnRedistribute = false,
   }) : super(
     planRepo: planRepo,
     masteryService: masteryService,
     topicRepository: topicRepository,
     roadmapRepo: roadmapRepo,
-    tutorRepo: tutorRepo,
+    sessionRepo: sessionRepo,
     pendingActionRepo: pendingActionRepo,
     planAdapter: planAdapter,
   );
@@ -291,6 +294,12 @@ class _FakeErrorPlannerService extends PlannerService {
   Future<bool> dismissPendingAction(String actionId) async {
     if (throwOnDismissPendingAction) throw Exception('dismiss error');
     return super.dismissPendingAction(actionId);
+  }
+
+  @override
+  Future<void> redistributeWorkload(int missedMinutes) async {
+    if (throwOnRedistribute) throw Exception('redistribute error');
+    return super.redistributeWorkload(missedMinutes);
   }
 }
 
@@ -340,7 +349,7 @@ void main() {
     late AppLocalizationsEn l10n;
     late _MockTopicRepository topicRepo;
     late _MockRoadmapRepository roadmapRepo;
-    late _MockTutorRepo tutorRepo;
+    late _MockSessionRepo sessionRepo;
     late _MockPendingActionRepo pendingActionRepo;
     late _MockPlanAdapter planAdapter;
     late PlannerService service;
@@ -353,7 +362,7 @@ void main() {
       l10n = AppLocalizationsEn();
       topicRepo = _MockTopicRepository();
       roadmapRepo = _MockRoadmapRepository();
-      tutorRepo = _MockTutorRepo();
+      sessionRepo = _MockSessionRepo();
       pendingActionRepo = _MockPendingActionRepo();
       planAdapter = _MockPlanAdapter();
 
@@ -363,7 +372,7 @@ void main() {
         repository: masteryRepo,
         topicRepository: topicRepo,
         roadmapRepo: roadmapRepo,
-        tutorRepo: tutorRepo,
+        sessionRepo: sessionRepo,
         pendingActionRepo: pendingActionRepo,
         planAdapter: planAdapter,
         fixedStudentId: 'test-student',
@@ -679,7 +688,7 @@ void main() {
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
-          tutorRepo: tutorRepo,
+          sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planAdapter: planAdapter,
           fixedStudentId: 'test-student',
@@ -766,7 +775,7 @@ void main() {
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
-          tutorRepo: tutorRepo,
+          sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planAdapter: planAdapter,
           fixedStudentId: 'test-student',
@@ -793,7 +802,7 @@ void main() {
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
-          tutorRepo: tutorRepo,
+          sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planAdapter: planAdapter,
           fixedStudentId: 'test-student',
@@ -955,14 +964,15 @@ void main() {
 
     group('loadScheduledLessons', () {
       test('loads scheduled lessons into state', () async {
-        tutorRepo.addSession(TutorSession(
+        sessionRepo.addSession(Session(
           id: 'ts-1',
           studentId: 'test-student',
           subjectId: 'sub_physics',
           topicId: 'topic-1',
-          topicTitle: 'Kinematics',
-          status: SessionStatus.planned,
           startTime: DateTime.now().add(const Duration(days: 1)),
+          type: SessionType.tutoring,
+          status: SessionStatus.planned,
+          tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
         ));
 
         await notifier.loadScheduledLessons();
@@ -1056,14 +1066,15 @@ void main() {
           actionType: 'practice',
           status: 'pending',
         ));
-        tutorRepo.addSession(TutorSession(
+        sessionRepo.addSession(Session(
           id: 'ts-add',
           studentId: 'test-student',
           subjectId: 'sub_physics',
           topicId: 'topic-2',
-          topicTitle: 'Vectors',
-          status: SessionStatus.planned,
           startTime: DateTime.now().add(const Duration(days: 2)),
+          type: SessionType.tutoring,
+          status: SessionStatus.planned,
+          tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
         ));
         planAdapter.setDeviation(const AdherenceDeviation(
           consecutiveLowDays: 3,
@@ -1077,6 +1088,99 @@ void main() {
         expect(notifier.currentState.pendingActions, hasLength(1));
         expect(notifier.currentState.scheduledLessons, hasLength(1));
         expect(notifier.currentState.adherenceDeviation, isNotNull);
+      });
+    });
+
+    group('scheduleLessonWithConflictCheck', () {
+      test('schedules lesson when no conflict', () async {
+        final success = await notifier.scheduleLessonWithConflictCheck(
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          subjectId: 'sub_physics',
+          scheduledTime: DateTime.now().add(const Duration(days: 1)),
+          l10n: l10n,
+        );
+        expect(success, true);
+        expect(notifier.currentState.scheduledLessons, hasLength(1));
+        expect(notifier.currentState.successMessage, 'Lesson scheduled');
+      });
+
+      test('rejects when time conflict exists', () async {
+        final baseTime = DateTime.now().add(const Duration(days: 1));
+        await notifier.scheduleLesson(
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          subjectId: 'sub_physics',
+          scheduledTime: baseTime,
+          durationMinutes: 60,
+          l10n: l10n,
+        );
+        final success = await notifier.scheduleLessonWithConflictCheck(
+          topicId: 'topic-2',
+          topicTitle: 'Vectors',
+          subjectId: 'sub_physics',
+          scheduledTime: baseTime.add(const Duration(minutes: 30)),
+          durationMinutes: 30,
+          l10n: l10n,
+        );
+        expect(success, false);
+        expect(notifier.currentState.error, 'Time conflict with existing scheduled lesson');
+      });
+
+      test('sets error when service throws', () async {
+        sessionRepo.setThrowOnGetSessions();
+        final result = await notifier.scheduleLessonWithConflictCheck(
+          topicId: 'topic-1',
+          topicTitle: 'Kinematics',
+          subjectId: 'sub_physics',
+          scheduledTime: DateTime.now().add(const Duration(days: 1)),
+          l10n: l10n,
+        );
+        expect(result, false);
+        expect(notifier.currentState.error, 'Failed to schedule lesson');
+      });
+    });
+
+    group('redistributeWorkload', () {
+      test('redistributes successfully and sets success message', () async {
+        await notifier.redistributeWorkload(30, l10n);
+        expect(notifier.currentState.successMessage, 'Missed workload redistributed over next 3 days');
+      });
+
+      test('sets error on failure', () async {
+        final failingService = _FakeErrorPlannerService(
+          planRepo: planRepo,
+          masteryService: MasteryGraphService(repository: masteryRepo),
+          repository: masteryRepo,
+          topicRepository: topicRepo,
+          roadmapRepo: roadmapRepo,
+          sessionRepo: sessionRepo,
+          pendingActionRepo: pendingActionRepo,
+          planAdapter: planAdapter,
+          fixedStudentId: 'test-student',
+          throwOnRedistribute: true,
+        );
+        final failingNotifier = PlannerNotifier(failingService);
+        await failingNotifier.redistributeWorkload(30, l10n);
+        expect(failingNotifier.currentState.error, 'Failed to redistribute workload');
+      });
+    });
+
+    group('linkDailyPlanToRoadmap', () {
+      test('completes without error when called', () async {
+        await notifier.linkDailyPlanToRoadmap(['topic-1', 'topic-2']);
+        expect(notifier.currentState.roadmaps, isEmpty);
+      });
+
+      test('updates roadmaps when roadmaps exist', () async {
+        roadmapRepo.addRoadmap(RoadmapModel(
+          id: 'rm-1',
+          studentId: 'test-student',
+          goal: 'Learn Physics',
+          createdAt: DateTime.now(),
+        ));
+        await notifier.linkDailyPlanToRoadmap(['topic-1']);
+        expect(notifier.currentState.roadmaps, hasLength(1));
       });
     });
   });
@@ -1108,7 +1212,7 @@ void main() {
               repository: _MockMasteryRepository(),
               topicRepository: _MockTopicRepository(),
               roadmapRepo: _MockRoadmapRepository(),
-              tutorRepo: _MockTutorRepo(),
+              sessionRepo: _MockSessionRepo(),
               pendingActionRepo: _MockPendingActionRepo(),
               planAdapter: _MockPlanAdapter(),
               fixedStudentId: 'test-student',
@@ -1138,7 +1242,7 @@ void main() {
               repository: _MockMasteryRepository(),
               topicRepository: _MockTopicRepository(),
               roadmapRepo: _MockRoadmapRepository(),
-              tutorRepo: _MockTutorRepo(),
+              sessionRepo: _MockSessionRepo(),
               pendingActionRepo: _MockPendingActionRepo(),
               planAdapter: _MockPlanAdapter(),
               fixedStudentId: 'test-student',

@@ -47,7 +47,7 @@ class SubjectSelectionSheet extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             ...subjects.map((subject) {
               final subtitle = subtitleBuilder?.call(subject) ?? subject.code;
               return Semantics(
@@ -69,7 +69,7 @@ class SubjectSelectionSheet extends StatelessWidget {
                 ),
               );
             }),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
           ],
         ),
       ),

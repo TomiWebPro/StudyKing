@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
-import 'package:studyking/features/teaching/models/evaluation_result.dart';
+import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 
 class FakeConversationRepo extends ConversationRepository {
   final List<ConversationMessage> _messages = [];

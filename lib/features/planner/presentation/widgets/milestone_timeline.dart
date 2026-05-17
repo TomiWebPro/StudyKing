@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
@@ -23,9 +24,9 @@ class MilestoneTimeline extends StatelessWidget {
               .titleSmall
               ?.copyWith(fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         SizedBox(
-          height: 60,
+          height: ResponsiveUtils.verticalSpacing(context) * 5,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final totalWidth = constraints.maxWidth;
@@ -67,29 +68,33 @@ class MilestoneTimeline extends StatelessWidget {
                     return Positioned(
                       left: left - 6,
                       top: 0,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 2,
+                      child: Semantics(
+                        label: l10n.milestoneOfWithDeadline(
+                            milestone.title, DateFormat.yMMMd(l10n.localeName).format(milestone.deadline)),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  width: 2,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.milestoneShort(milestone.order),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: color,
-                              fontWeight: FontWeight.w500,
+                            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 0.5),
+                            Text(
+                              l10n.milestoneShort(milestone.order),
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }),
@@ -98,7 +103,7 @@ class MilestoneTimeline extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         Wrap(
           spacing: 8,
           runSpacing: 4,

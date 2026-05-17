@@ -23,4 +23,19 @@ void main() {
       expect(UiConfig.notificationChannelName, 'Study Reminders');
     });
   });
+
+  group('CacheConfig', () {
+    test('cache expiration is 24 hours', () {
+      expect(CacheConfig.cacheExpiration, const Duration(hours: 24));
+    });
+
+    test('max cache size is positive', () {
+      expect(CacheConfig.maxCacheSizeMb, greaterThan(0));
+      expect(CacheConfig.databaseCacheSizeMb, greaterThan(0));
+    });
+
+    test('database cache matches max cache', () {
+      expect(CacheConfig.databaseCacheSizeMb, CacheConfig.maxCacheSizeMb);
+    });
+  });
 }

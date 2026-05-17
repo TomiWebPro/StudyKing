@@ -368,15 +368,20 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
     final question = _questions[_currentIndex];
     final progress = (_currentIndex + 1) / _questions.length;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.args.isSpacedRepetition
-            ? AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.spacedRepetitionMode, question.type.localizedLabel(AppLocalizations.of(context)!))
-            : AppLocalizations.of(context)!.practiceModeType(AppLocalizations.of(context)!.practice, question.type.localizedLabel(AppLocalizations.of(context)!))),
+            ? l10n.practiceModeType(l10n.spacedRepetitionMode, question.type.localizedLabel(l10n))
+            : l10n.practiceModeType(l10n.practice, question.type.localizedLabel(l10n))),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(value: progress),
+          child: Semantics(
+            liveRegion: true,
+            label: 'Session progress: ${(_currentIndex + 1)} of ${_questions.length}',
+            child: LinearProgressIndicator(value: progress),
+          ),
         ),
       ),
       body: SafeArea(
@@ -413,16 +418,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                   onAnswerSelected: _onAnswerSelected,
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
                               if (!_isSubmitted)
                                 FocusTraversalOrder(
                                   order: const NumericFocusOrder(3),
                                   child: Semantics(
-                                    label: AppLocalizations.of(context)!.submitAnswer,
+                                    label: l10n.submitAnswer,
                                     child: FilledButton(
                                       onPressed: _currentAnswer != null ? _submitAnswer : null,
                                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                                      child: Text(AppLocalizations.of(context)!.submitAnswer),
+                                      child: Text(l10n.submitAnswer),
                                     ),
                                   ),
                                 ),
@@ -433,9 +438,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                       isCorrect: _isCorrect,
                                       explanation: question.explanation,
                                     ),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                                     _buildConfidenceSelector(),
-                                    const SizedBox(height: 16),
+                                    SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                                     PracticeSessionNavButtons(
                                       onPrevious: _previousQuestion,
                                       onNext: _nextQuestion,
@@ -448,12 +453,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                           return Semantics(
                             liveRegion: true,
                             child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 100),
                               switchInCurve: Curves.easeIn,
                               switchOutCurve: Curves.easeOut,
                               transitionBuilder: (child, animation) {
                                 final isForward = _currentIndex > _previousIndex;
-                                final offset = isForward ? const Offset(0.3, 0.0) : const Offset(-0.3, 0.0);
+                                final offset = isForward ? const Offset(0.15, 0.0) : const Offset(-0.15, 0.0);
                                 return SlideTransition(
                                   position: Tween<Offset>(
                                     begin: offset,
@@ -490,11 +495,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
         Semantics(
           label: '${l10n.howConfident}: $_currentConfidence ${l10n.confidenceRatingOf} 5, $currentLabel',
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Wrap(
+            spacing: ResponsiveUtils.horizontalSpacing(context),
+            runSpacing: ResponsiveUtils.verticalSpacing(context) / 2,
+            alignment: WrapAlignment.center,
             children: List.generate(5, (index) {
               final rating = index + 1;
               final isSelected = _currentConfidence == rating;
@@ -505,8 +512,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                   borderRadius: BorderRadius.circular(24),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 48,
-                    height: 48,
+                    width: ResponsiveUtils.minTouchTarget,
+                    height: ResponsiveUtils.minTouchTarget,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? _getConfidenceColor(rating).withValues(alpha: 0.2)
@@ -536,7 +543,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             }),
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
         Center(
           child: Text(
             currentLabel,

@@ -164,5 +164,47 @@ void main() {
       expect(result, contains(l10n.instrumentationPlanAdherence));
       expect(result, contains(l10n.instrumentationMasteryImprovement));
     });
+
+    test('formats instrumentation with generatedAt as empty string', () {
+      final l10n = _testL10n();
+      final Map<String, dynamic> data = {
+        'generatedAt': '',
+        'planAdherence': <String, dynamic>{'metric': 'value'},
+        'masteryImprovement': <String, dynamic>{'topic': 'improvement'},
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data, l10n);
+
+      expect(result, contains(l10n.instrumentationDashboard));
+      expect(result, contains(l10n.instrumentationGenerated('')));
+    });
+
+    test('formats instrumentation with missing generatedAt', () {
+      final l10n = _testL10n();
+      final Map<String, dynamic> data = {
+        'planAdherence': <String, dynamic>{'overall': '80%'},
+        'masteryImprovement': <String, dynamic>{},
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data, l10n);
+
+      expect(result, contains(l10n.instrumentationDashboard));
+      expect(result, contains(l10n.instrumentationPlanAdherence));
+    });
+
+    test('formats instrumentation with generatedAt as null', () {
+      final l10n = _testL10n();
+      final Map<String, dynamic> data = {
+        'generatedAt': null,
+        'planAdherence': null,
+        'masteryImprovement': null,
+      };
+
+      final result = ExportSection(studentId: 'test').formatInstrumentation(data, l10n);
+
+      expect(result, contains(l10n.instrumentationDashboard));
+      expect(result, contains(l10n.instrumentationPlanAdherence));
+      expect(result, contains(l10n.instrumentationMasteryImprovement));
+    });
   });
 }

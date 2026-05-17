@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../models/lesson_plan_model.dart';
+import '../../data/models/lesson_plan_model.dart';
 
 class LessonProgressBar extends StatelessWidget {
   final int elapsedMinutes;

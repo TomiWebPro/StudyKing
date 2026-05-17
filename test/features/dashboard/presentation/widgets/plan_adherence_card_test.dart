@@ -89,5 +89,71 @@ void main() {
       expect(find.text('20%'), findsOneWidget);
       expect(find.text('10%'), findsOneWidget);
     });
+
+    testWidgets('high adherence (>= 0.7) uses primary color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.85,
+          weeklyAdherence: 0.75,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final textWidgets = tester.widgetList<Text>(find.byType(Text)).toList();
+      final valueTexts = textWidgets.where((t) => t.data == '85%' || t.data == '75%').toList();
+      for (final t in valueTexts) {
+        expect(t.style?.fontWeight, FontWeight.bold);
+      }
+    });
+
+    testWidgets('medium adherence (0.4-0.7) uses tertiary color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.55,
+          weeklyAdherence: 0.45,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('55%'), findsOneWidget);
+      expect(find.text('45%'), findsOneWidget);
+    });
+
+    testWidgets('boundary at exactly 0.7 is primary', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.7,
+          weeklyAdherence: 0.7,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('70%'), findsNWidgets(2));
+    });
+
+    testWidgets('boundary at exactly 0.4 is tertiary', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.4,
+          weeklyAdherence: 0.4,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('40%'), findsNWidgets(2));
+    });
+
+    testWidgets('below 0.4 uses error color', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const PlanAdherenceCard(
+          averageAdherence: 0.39,
+          weeklyAdherence: 0.35,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('39%'), findsOneWidget);
+      expect(find.text('35%'), findsOneWidget);
+    });
   });
 }

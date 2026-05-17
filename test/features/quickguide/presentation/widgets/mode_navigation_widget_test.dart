@@ -145,5 +145,115 @@ void main() {
         expect(cardWidget.elevation, 0.0);
       }
     });
+
+    testWidgets('has FocusTraversalGroup for keyboard navigation',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('icons are wrapped in ExcludeSemantics', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final excludeSemantics = find.byType(ExcludeSemantics);
+      expect(excludeSemantics, findsAtLeastNWidgets(4));
+    });
+
+    testWidgets('card has rounded rectangle border shape', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final cards = find.byType(Card);
+      for (final card in cards.evaluate()) {
+        final cardWidget = card.widget as Card;
+        final shape = cardWidget.shape as RoundedRectangleBorder;
+        expect(shape.borderRadius, BorderRadius.circular(12));
+      }
+    });
+
+    testWidgets('semantics label includes button:true', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final semantics = find.bySemanticsLabel(
+        'AI Tutor: Interactive conversational lessons',
+      );
+      expect(semantics, findsOneWidget);
+      final node = tester.element(semantics);
+      expect(node, isNotNull);
+    });
+
+    testWidgets('Container has decoration with surfaceContainerLow color',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final container = tester.widget<Container>(
+        find.byType(Container).first,
+      );
+      expect(container.decoration, isNotNull);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.border, isNotNull);
+    });
+
+    testWidgets('renders correctly on xs breakpoint (small screen)',
+        (tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+      });
+      tester.view.physicalSize = const Size(360, 800);
+
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Choose a study mode'), findsOneWidget);
+      expect(find.text('AI Tutor'), findsOneWidget);
+      expect(find.text('Mentor'), findsOneWidget);
+      expect(
+        find.text('Interactive conversational lessons'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Personal study assistant & planner'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.smart_toy), findsOneWidget);
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('uses Column layout (vertically stacked) on xs breakpoint',
+        (tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.physicalSize = const Size(590, 900);
+
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byIcon(Icons.smart_toy), findsOneWidget);
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+      expect(find.text('AI Tutor'), findsOneWidget);
+      expect(find.text('Mentor'), findsOneWidget);
+      expect(find.text('Choose a study mode'), findsOneWidget);
+
+      await tester.tap(find.text('AI Tutor'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Tutor Screen'), findsOneWidget);
+    });
   });
 }

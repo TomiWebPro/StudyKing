@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
@@ -14,10 +15,14 @@ class PracticeEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.book_online_outlined,
-              size: ResponsiveUtils.emptyStateIconSize(context),
-              color: Theme.of(context).colorScheme.primaryContainer,
+            Semantics(
+              label: l10n.noPracticeSessionsYet,
+              excludeSemantics: true,
+              child: Icon(
+                Icons.book_online_outlined,
+                size: ResponsiveUtils.emptyStateIconSize(context),
+                color: Theme.of(context).colorScheme.primaryContainer,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -35,15 +40,24 @@ class PracticeEmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
+            const SizedBox(height: 16),
+            Semantics(
+              button: true,
+              label: l10n.addSubject,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.subjectSelection);
+                },
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addSubject),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.addSubjectsFromSubjectsTab)),
-                );
+                Navigator.pushNamed(context, AppRoutes.upload);
               },
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addSubject),
+              child: Text(l10n.uploadMaterial),
             ),
           ],
         ),

@@ -1226,6 +1226,18 @@ abstract class AppLocalizations {
   /// **'Subject created successfully'**
   String get subjectCreatedSuccessfully;
 
+  /// Prompt after creating a subject
+  ///
+  /// In en, this message translates to:
+  /// **'Would you like to upload study material for {subject}?'**
+  String uploadPrompt(String subject);
+
+  /// Decline offer button
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get noThanks;
+
   /// Error message when creating subject fails
   ///
   /// In en, this message translates to:
@@ -2669,7 +2681,7 @@ abstract class AppLocalizations {
   /// Label showing token count and cost
   ///
   /// In en, this message translates to:
-  /// **'Tokens: {count} (\${cost})'**
+  /// **'Tokens: {count} ({cost})'**
   String tokensAndCost(int count, String cost);
 
   /// Button to cancel a task
@@ -2732,7 +2744,7 @@ abstract class AppLocalizations {
   /// **'Adjust Plan'**
   String get adjustPlan;
 
-  /// Button to dismiss a nudge
+  /// Dismiss button label
   ///
   /// In en, this message translates to:
   /// **'Dismiss'**
@@ -4526,11 +4538,17 @@ abstract class AppLocalizations {
   /// **'Create your first subject to organize your study material'**
   String get addSubjectDesc;
 
-  /// Checklist item for uploading study material
+  /// Label for uploading study materials
   ///
   /// In en, this message translates to:
   /// **'Upload Study Material'**
   String get uploadMaterial;
+
+  /// Button label to upload and auto-generate questions
+  ///
+  /// In en, this message translates to:
+  /// **'Upload & Analyze'**
+  String get uploadAndAnalyze;
 
   /// Description for upload material checklist item
   ///
@@ -5647,6 +5665,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spanish'**
   String get localeEs;
+
+  /// Onboarding dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to StudyKing'**
+  String get welcomeToStudyKing;
+
+  /// Onboarding description
+  ///
+  /// In en, this message translates to:
+  /// **'Your AI-native learning companion. StudyKing helps you master any subject with intelligent planning, adaptive practice, and AI tutoring.'**
+  String get onboardingDescription;
+
+  /// Subjects tab description in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Add and organize your subjects and topics'**
+  String get onboardingSubjectsDesc;
+
+  /// Practice tab description in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Practice with adaptive questions and spaced repetition'**
+  String get onboardingPracticeDesc;
+
+  /// Mentor tab description in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Get personalized study recommendations and nudges'**
+  String get onboardingMentorDesc;
+
+  /// Focus mode description in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Stay focused with Pomodoro-style study sessions'**
+  String get onboardingFocusDesc;
+
+  /// Settings tab description in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Configure API keys, appearance, and preferences'**
+  String get onboardingSettingsDesc;
+
+  /// Checkbox label to suppress recurring dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t show again'**
+  String get dontShowAgain;
+
+  /// API key notice in onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'Note: AI features require an API key. Configure one in Settings.'**
+  String get needApiKeyNotice;
+
+  /// Main CTA button
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get getStarted;
+
+  /// API key banner message
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing needs an API key to use AI features. Configure one now.'**
+  String get apiKeyNeeded;
+
+  /// Button to configure API key
+  ///
+  /// In en, this message translates to:
+  /// **'Configure Now'**
+  String get configureNow;
+
+  /// Data storage notice title
+  ///
+  /// In en, this message translates to:
+  /// **'Local Data Storage'**
+  String get dataStorageNotice;
+
+  /// Data storage explanation
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.'**
+  String get dataStorageDescription;
+
+  /// Acknowledgement button
+  ///
+  /// In en, this message translates to:
+  /// **'I Understand'**
+  String get iUnderstand;
+
+  /// Message when AI Tutor is accessed without a subject context
+  ///
+  /// In en, this message translates to:
+  /// **'Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.'**
+  String get tutorNeedsSubject;
 }
 
 class _AppLocalizationsDelegate

@@ -764,7 +764,7 @@
   "@pleaseConfigureApiKey": {
     "description": "Dialog content when API key is missing"
   },
-  "ok": "OK",
+  "ok": "Aceptar",
   "@ok": {
     "description": "OK button label"
   },
@@ -847,6 +847,19 @@
   "subjectCreatedSuccessfully": "Materia creada exitosamente",
   "@subjectCreatedSuccessfully": {
     "description": "Snackbar message when subject is created"
+  },
+  "uploadPrompt": "¿Deseas subir material de estudio para {subject}?",
+  "@uploadPrompt": {
+    "description": "Prompt after creating a subject",
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "noThanks": "No, gracias",
+  "@noThanks": {
+    "description": "Decline offer button"
   },
   "errorCreatingSubject": "Error al crear la materia: {error}",
   "@errorCreatingSubject": {
@@ -1966,7 +1979,7 @@
       }
     }
   },
-  "tokensAndCost": "Tokens: {count} (${cost})",
+  "tokensAndCost": "Tokens: {count} ({cost})",
   "@tokensAndCost": {
     "description": "Label showing token count and cost",
     "placeholders": {
@@ -3558,7 +3571,11 @@
   },
   "uploadMaterial": "Subir Material de Estudio",
   "@uploadMaterial": {
-    "description": "Checklist item for uploading study material"
+    "description": "Label for uploading study materials"
+  },
+  "uploadAndAnalyze": "Subir y Analizar",
+  "@uploadAndAnalyze": {
+    "description": "Button label to upload and auto-generate questions"
   },
   "uploadMaterialDesc": "Suba PDFs, notas y bancos de preguntas para comenzar",
   "@uploadMaterialDesc": {
@@ -4533,5 +4550,73 @@
   "localeEs": "Español",
   "@localeEs": {
     "description": "Label for Spanish language option"
+  },
+  "welcomeToStudyKing": "Bienvenido a StudyKing",
+  "@welcomeToStudyKing": {
+    "description": "Onboarding dialog title"
+  },
+  "onboardingDescription": "Tu compañero de aprendizaje con IA. StudyKing te ayuda a dominar cualquier materia con planificación inteligente, práctica adaptativa y tutoría con IA.",
+  "@onboardingDescription": {
+    "description": "Onboarding description"
+  },
+  "onboardingSubjectsDesc": "Añade y organiza tus materias y temas",
+  "@onboardingSubjectsDesc": {
+    "description": "Subjects tab description in onboarding"
+  },
+  "onboardingPracticeDesc": "Practica con preguntas adaptativas y repaso espaciado",
+  "@onboardingPracticeDesc": {
+    "description": "Practice tab description in onboarding"
+  },
+  "onboardingMentorDesc": "Recibe recomendaciones de estudio personalizadas",
+  "@onboardingMentorDesc": {
+    "description": "Mentor tab description in onboarding"
+  },
+  "onboardingFocusDesc": "Mantén el enfoque con sesiones de estudio estilo Pomodoro",
+  "@onboardingFocusDesc": {
+    "description": "Focus mode description in onboarding"
+  },
+  "onboardingSettingsDesc": "Configura claves API, apariencia y preferencias",
+  "@onboardingSettingsDesc": {
+    "description": "Settings tab description in onboarding"
+  },
+  "dontShowAgain": "No mostrar de nuevo",
+  "@dontShowAgain": {
+    "description": "Checkbox label to suppress recurring dialog"
+  },
+  "needApiKeyNotice": "Nota: Las funciones de IA requieren una clave API. Configúrala en Ajustes.",
+  "@needApiKeyNotice": {
+    "description": "API key notice in onboarding"
+  },
+  "getStarted": "Comenzar",
+  "@getStarted": {
+    "description": "Main CTA button"
+  },
+  "apiKeyNeeded": "StudyKing necesita una clave API para usar funciones de IA. Configúrala ahora.",
+  "@apiKeyNeeded": {
+    "description": "API key banner message"
+  },
+  "configureNow": "Configurar Ahora",
+  "@configureNow": {
+    "description": "Button to configure API key"
+  },
+  "dismiss": "Descartar",
+  "@dismiss": {
+    "description": "Dismiss button label"
+  },
+  "dataStorageNotice": "Almacenamiento Local de Datos",
+  "@dataStorageNotice": {
+    "description": "Data storage notice title"
+  },
+  "dataStorageDescription": "StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Exportación en el Tablero.",
+  "@dataStorageDescription": {
+    "description": "Data storage explanation"
+  },
+  "iUnderstand": "Entiendo",
+  "@iUnderstand": {
+    "description": "Acknowledgement button"
+  },
+  "tutorNeedsSubject": "Por favor, crea primero una materia y un plan de estudio antes de usar el Tutor de IA. El tutor necesita el contexto de un tema para proporcionar lecciones efectivas.",
+  "@tutorNeedsSubject": {
+    "description": "Message when AI Tutor is accessed without a subject context"
   }
 }

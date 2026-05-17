@@ -1,6 +1,6 @@
 import 'dart:convert';
 import '../../../core/services/llm/llm_chat_service.dart';
-import '../models/evaluation_result.dart';
+import '../data/models/evaluation_result.dart';
 
 class ExerciseEvaluator {
   final LlmService _llmService;

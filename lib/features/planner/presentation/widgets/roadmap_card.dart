@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import 'milestone_timeline.dart';
@@ -39,7 +40,7 @@ class RoadmapCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -110,33 +111,34 @@ class RoadmapCard extends StatelessWidget {
               const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 8),
-              ...roadmap.milestones.map((milestone) => CheckboxListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    title: Text(milestone.title,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: milestone.isCompleted
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                          decoration: milestone.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                        )),
-                    subtitle: milestone.topicsCovered.isNotEmpty
-                        ? Text(
-                            l10n.topicCount(milestone.topicsCovered.length),
-                            style: theme.textTheme.bodySmall,
-                          )
-                        : null,
-                    value: milestone.isCompleted,
-                    onChanged: milestone.isCompleted
-                        ? null
-                        : (val) => onToggleMilestone!(
-                              roadmap.id,
-                              milestone.id,
-                              val ?? false,
-                            ),
+              ...roadmap.milestones.map((milestone) => SizedBox(
+                    height: 48,
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(milestone.title,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: milestone.isCompleted
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                            decoration: milestone.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                          )),
+                      subtitle: milestone.topicsCovered.isNotEmpty
+                          ? Text(
+                              l10n.topicCount(milestone.topicsCovered.length),
+                              style: theme.textTheme.bodySmall,
+                            )
+                          : null,
+                      value: milestone.isCompleted,
+                      onChanged: milestone.isCompleted
+                          ? null
+                          : (val) => onToggleMilestone!(
+                                roadmap.id,
+                                milestone.id,
+                                val ?? false,
+                              ),
+                    ),
                   )),
             ],
             const SizedBox(height: 8),

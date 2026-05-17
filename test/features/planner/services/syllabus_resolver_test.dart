@@ -12,14 +12,19 @@ import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 
 class _MockTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
+  bool throwOnGetBySubject = false;
+  bool throwOnInit = false;
 
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 
   @override
-  Future<void> init() async {}
+  Future<void> init() async {
+    if (throwOnInit) throw Exception('init error');
+  }
 
   @override
   Future<List<Topic>> getBySubject(String subjectId) async {
+    if (throwOnGetBySubject) throw Exception('get by subject error');
     return _topics.values.where((t) => t.subjectId == subjectId).toList();
   }
 
@@ -64,11 +69,14 @@ class _MockMasteryRepository extends MasteryGraphRepository {
 
 class _MockQuestionRepository extends QuestionRepository {
   final List<Question> _questions = [];
+  bool throwOnInit = false;
 
   void addQuestion(Question q) => _questions.add(q);
 
   @override
-  Future<void> init() async {}
+  Future<void> init() async {
+    if (throwOnInit) throw Exception('init error');
+  }
 
   @override
   Future<List<Question>> getAll() async {
@@ -311,6 +319,69 @@ void main() {
           hoursPerDay: 8,
         );
         expect(workload, 3.0);
+      });
+    });
+
+    group('resolveSyllabus error cases', () {
+      test('catches generic exception and returns failure', () async {
+        topicRepo.throwOnGetBySubject = true;
+        final result = await resolver.resolveSyllabus(subjectId: 'sub_physics');
+        expect(result.isFailure, true);
+      });
+
+      test('rethrows SyllabusException', () async {
+        final throwingResolver = SyllabusResolver(
+          topicRepository: _MockTopicRepository()..throwOnGetBySubject = true,
+          masteryRepository: masteryRepo,
+          questionRepository: questionRepo,
+        );
+        final result = await throwingResolver.resolveSyllabus(subjectId: 'sub_physics');
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('getQuestionsForTopic edge cases', () {
+      test('returns failure when questionRepo init throws', () async {
+        questionRepo.throwOnInit = true;
+        final result = await resolver.getQuestionsForTopic('topic-1');
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('getQuestionsForTopics edge cases', () {
+      test('returns failure when questionRepo init throws', () async {
+        questionRepo.throwOnInit = true;
+        final result = await resolver.getQuestionsForTopics(['topic-1']);
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('buildLearningLevels edge cases', () {
+      test('returns empty list when no level can be formed', () async {
+        topicRepo.addTopic(Topic(
+          id: 'topic-a', subjectId: 'sub', title: 'A', description: '',
+          syllabusText: '',
+        ));
+        topicRepo.addTopic(Topic(
+          id: 'topic-b', subjectId: 'sub', title: 'B', description: '',
+          syllabusText: '',
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'topic-a',
+          prerequisites: ['topic-b'],
+          downstreamTopics: [],
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'topic-b',
+          prerequisites: ['topic-a'],
+          downstreamTopics: [],
+        ));
+        final result = await resolver.resolveSyllabus(
+          subjectId: 'sub',
+          studentId: 'student-1',
+        );
+        final levels = resolver.buildLearningLevels(result.data!);
+        expect(levels, isEmpty);
       });
     });
   });

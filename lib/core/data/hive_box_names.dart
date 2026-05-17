@@ -21,6 +21,7 @@ class HiveBoxNames {
   static const String questionEvaluations = 'question_evaluations';
   static const String roadmaps = 'roadmaps';
   static const String sessions = 'sessions';
+  static const String sessionsTyped = 'sessions_typed';
   static const String settings = 'settings';
   static const String profile = 'profile';
   static const String sources = 'sources';

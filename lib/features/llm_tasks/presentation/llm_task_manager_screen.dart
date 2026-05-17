@@ -5,6 +5,7 @@ import '../../../core/providers/llm_providers.dart';
 import '../../../core/services/llm_task_manager.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/number_format_utils.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class LlmTaskManagerScreen extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                 if (hasTokenData) const Divider(height: 1),
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: ResponsiveUtils.listPadding(context),
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
                       final task = tasks[tasks.length - 1 - index];
@@ -98,7 +99,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     final failedTasks = tasks.where((t) => t.status == LlmTaskStatus.failed).length;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveUtils.cardPadding(context),
       color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,17 +118,45 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
-              const SizedBox(width: 16),
-              _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
-              const SizedBox(width: 16),
-              _buildUsageStat(context, l10n.done, '$completedTasks'),
-              const SizedBox(width: 16),
-              _buildUsageStat(context, l10n.failed, '$failedTasks'),
-            ],
-          ),
+          if (ResponsiveUtils.breakpointOf(context).isMobile)
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width -
+                      ResponsiveUtils.cardPadding(context).horizontal - 32) / 2,
+                  child: _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
+                ),
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width -
+                      ResponsiveUtils.cardPadding(context).horizontal - 32) / 2,
+                  child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
+                ),
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width -
+                      ResponsiveUtils.cardPadding(context).horizontal - 32) / 2,
+                  child: _buildUsageStat(context, l10n.done, '$completedTasks'),
+                ),
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width -
+                      ResponsiveUtils.cardPadding(context).horizontal - 32) / 2,
+                  child: _buildUsageStat(context, l10n.failed, '$failedTasks'),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
+                const SizedBox(width: 16),
+                _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
+                const SizedBox(width: 16),
+                _buildUsageStat(context, l10n.done, '$completedTasks'),
+                const SizedBox(width: 16),
+                _buildUsageStat(context, l10n.failed, '$failedTasks'),
+              ],
+            ),
           if (totalTokens > 0) ...[
             const SizedBox(height: 12),
             ClipRRect(
@@ -188,7 +217,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -212,7 +241,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                   ),
                   child: Text(
                     task.status.name,
-                    style: TextStyle(fontSize: 12, color: statusColor, fontWeight: FontWeight.w500),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -265,7 +294,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                     const SizedBox(width: 4),
                     Text(
                       l10n.tokensLabel(_formatTokens(task.tokensUsed, l10n.localeName)),
-                      style: TextStyle(fontSize: 11, color: cs.primary),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.primary),
                     ),
                     if (task.estimatedCost > 0) ...[
                       const SizedBox(width: 12),
@@ -273,7 +302,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                       const SizedBox(width: 4),
                       Text(
                         formatCurrency(task.estimatedCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4),
-                        style: TextStyle(fontSize: 11, color: cs.tertiary),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.tertiary),
                       ),
                     ],
                   ],
@@ -295,8 +324,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(task.error!,
-                            style: TextStyle(
-                              fontSize: 12,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.error,
                             )),
                       ),

@@ -186,7 +186,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final bp = ResponsiveUtils.breakpointOf(context);
 
     if (!_initialized) {
       return Scaffold(
@@ -215,9 +214,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
             else if (_service.hasActiveSession)
               _buildActiveSessionView(theme, l10n)
             else if (_showSetup)
-              _buildSetupView(theme, l10n, bp)
+              _buildSetupView(theme, l10n)
             else
-              _buildSetupView(theme, l10n, bp),
+              _buildSetupView(theme, l10n),
             const SizedBox(height: 24),
             SessionSummaryCard(
               todayStats: _todayStats,
@@ -236,10 +235,10 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           children: [
-            Icon(Icons.self_improvement, size: 64, color: cs.tertiary),
+            Icon(Icons.self_improvement, size: ResponsiveUtils.emptyStateIconSize(context), color: cs.tertiary),
             const SizedBox(height: 16),
             Text(
               l10n.breakTime,
@@ -249,10 +248,13 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
-              style: theme.textTheme.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}',
+                style: theme.textTheme.displayLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -272,7 +274,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           children: [
             FocusTimerWidget(
@@ -298,12 +300,12 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     );
   }
 
-  Widget _buildSetupView(ThemeData theme, AppLocalizations l10n, ScreenBreakpoint bp) {
+  Widget _buildSetupView(ThemeData theme, AppLocalizations l10n) {
     final presets = [5, 15, 25, 30, 45, 60];
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -337,21 +339,20 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
                   label: Text(l10n.durationMinutes(m)),
                   selected: selected,
                   onSelected: (v) => setState(() => _selectedMinutes = m),
+                  visualDensity: VisualDensity.adaptivePlatformDensity,
                 );
               }).toList(),
             ),
             ),
-            if (bp.isTablet) ...[
-              const SizedBox(height: 8),
-              Slider(
-                value: _selectedMinutes.toDouble(),
-                min: 1,
-                max: 180,
-                divisions: 179,
-                label: l10n.minutesValue(_selectedMinutes),
-                onChanged: (v) => setState(() => _selectedMinutes = v.round()),
-              ),
-            ],
+            const SizedBox(height: 8),
+            Slider(
+              value: _selectedMinutes.toDouble(),
+              min: 1,
+              max: 180,
+              divisions: 179,
+              label: l10n.minutesValue(_selectedMinutes),
+              onChanged: (v) => setState(() => _selectedMinutes = v.round()),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,

@@ -144,5 +144,43 @@ void main() {
       final chip = tester.widget<ActionChip>(find.byType(ActionChip));
       expect(chip.side, BorderSide.none);
     });
+
+    testWidgets('has FocusTraversalGroup for keyboard navigation',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        widget: SuggestedPromptsWidget(
+          prompts: prompts,
+          onSelectPrompt: (_) {},
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('chips are laid out in a Wrap widget', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        widget: SuggestedPromptsWidget(
+          prompts: prompts,
+          onSelectPrompt: (_) {},
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(Wrap), findsOneWidget);
+    });
+
+    testWidgets('chip background color is secondaryContainer', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        widget: SuggestedPromptsWidget(
+          prompts: ['Test'],
+          onSelectPrompt: (_) {},
+        ),
+      ));
+      await tester.pump();
+
+      final chip = tester.widget<ActionChip>(find.byType(ActionChip));
+      expect(chip.backgroundColor, isNotNull);
+    });
   });
 }

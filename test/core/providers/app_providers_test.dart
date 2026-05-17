@@ -56,5 +56,41 @@ void main() {
       addTearDown(() => container.dispose());
       expect(container.read(apiBaseUrlProvider), isNotEmpty);
     });
+
+    test('override wiring reads back overridden value', () {
+      final container = ProviderContainer(
+        overrides: [
+          themeModeProvider.overrideWith((ref) => ThemeMode.dark),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      expect(container.read(themeModeProvider), equals(ThemeMode.dark));
+    });
+
+    test('override wiring does not affect other providers', () {
+      final container = ProviderContainer(
+        overrides: [
+          fontSizeProvider.overrideWith((ref) => 20.0),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      expect(container.read(fontSizeProvider), equals(20.0));
+      expect(container.read(themeModeProvider), equals(ThemeMode.light));
+    });
+
+    test('StateProvider returns same instance from same container', () {
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+      final theme1 = container.read(themeModeProvider);
+      final theme2 = container.read(themeModeProvider);
+      expect(theme1, theme2);
+    });
+
+    test('localeProvider falls back to en for unsupported locale', () {
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+      final locale = container.read(localeProvider);
+      expect(locale.languageCode, anyOf('en', 'en_US', 'en_GB'));
+    });
   });
 }

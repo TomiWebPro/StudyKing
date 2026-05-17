@@ -1,50 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 
 void main() {
-  group('app_constants barrel', () {
-    test('exports ApiSecrets', () {
-      expect(ApiSecrets, isA<Type>());
+  group('BuildConfig', () {
+    test('has meaningful values', () {
+      expect(BuildConfig.appName, isNotEmpty);
+      expect(BuildConfig.appVersion, isNotEmpty);
     });
+  });
 
-    test('exports ApiConfig', () {
-      expect(ApiConfig, isA<Type>());
+  group('ApiConfig', () {
+    test('has valid base URL', () {
+      expect(ApiConfig.openRouterBaseUrlString, startsWith('http'));
     });
+  });
 
-    test('exports BuildConfig', () {
-      expect(BuildConfig, isA<Type>());
+  group('UiConfig', () {
+    test('has valid notification channel', () {
+      expect(UiConfig.notificationChannelId, isNotEmpty);
+      expect(UiConfig.notificationChannelName, isNotEmpty);
     });
+  });
 
-    test('exports AppEnvironment', () {
-      expect(AppEnvironment, isA<Type>());
+  group('CacheConfig', () {
+    test('cache expiration is positive', () {
+      expect(CacheConfig.cacheExpiration.inHours, greaterThan(0));
     });
+  });
 
-    test('exports AppConfig', () {
-      expect(AppConfig, isA<Type>());
-    });
-
-    test('exports AppConstants', () {
-      expect(AppConstants, isA<Type>());
-    });
-
-    test('exports UiConfig', () {
-      expect(UiConfig, isA<Type>());
-    });
-
-    test('exports CacheConfig', () {
-      expect(CacheConfig, isA<Type>());
-    });
-
-    test('exports StorageConfig', () {
-      expect(StorageConfig, isA<Type>());
-    });
-
-    test('exports SecurityConfig', () {
-      expect(SecurityConfig, isA<Type>());
-    });
-
-    test('exports defaultModelForProvider', () {
-      expect(defaultModelForProvider, isA<Function>());
+  group('defaultModelForProvider', () {
+    test('returns non-empty model for every provider', () {
+      for (final provider in LlmProvider.values) {
+        expect(defaultModelForProvider(provider), isNotEmpty);
+      }
     });
   });
 }

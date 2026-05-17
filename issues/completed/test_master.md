@@ -1,101 +1,86 @@
-# Test Coverage Audit: 5 Untested Files, 3 Orphaned Tests, and Structural Gaps
+# Test Quality & Coverage Gaps
 
 ## Context
 
-A comprehensive audit of the test directory against `lib/features/` source files reveals several coverage gaps and structural issues. The project has ~213 source files and ~206 test files (excluding `.g.dart`), which is strong overall, but 5 source files have **zero test coverage**, 3 test files are **orphaned** (no source counterpart), and at least one category of tests (provider-level) is systematically **too thin** to catch regressions.
+The codebase achieves ~98% structural test coverage (matching source-to-test file pairs). However, **depth and behavioral quality** vary significantly. Four source files have **zero** test coverage, seven core test files contain only trivial assertions (violating the AGENTS.md provider/ behavioral bar), and one test directory is orphaned. The subjects feature (`lib/features/subjects/presentation`) demonstrates the standard we should hold everywhere — its tests cover behavioral flows, error states, edge cases, and navigation — but other areas fall short.
 
-## Issues Identified
+---
 
-### 1. Untested source files (highest risk)
+## Issue 1: Untested Source Files (4 files)
 
-| File | Lines | Risk | Reason |
-|---|---|---|---|
-| `lib/features/dashboard/providers/dashboard_layout_providers.dart` | 53 | **High** | `DashboardLayoutNotifier` is a `StateNotifier` that opens a Hive box, reads/writes state as JSON-like lists, and exposes `toggleCollapsed()` with mutation + persistence. State management with I/O is easy to break silently. |
-| `lib/features/planner/data/adapters/plan_adherence_model_adapter.dart` | 52 | **Medium** | Hive `TypeAdapter` for `PlanAdherenceModel` — binary serialization with 10 fields. A field-order mismatch or type change in the model that isn't reflected in the adapter will cause silent data corruption at runtime. |
-| `lib/features/ingestion/data/models/source_chunk.dart` | 31 | **Low** | Pure data class with `toJson`/`fromJson`. Straightforward but uncovered. |
-| `lib/features/ingestion/services/extraction_result.dart` | 37 | **Low** | Data class with `toMetaJson`/`chunksToJson`. Straightforward but uncovered. |
-| `lib/features/ingestion/providers/ingestion_providers.dart` | 46 | **Medium** | Defines 6 Riverpod providers wiring together services and repositories. A provider change that breaks the dependency graph won't be caught. |
+The following source files have **no corresponding test file**:
 
-**Affected tests**: None exist — all 5 files need new test files.
+| Source | Expected Test Location |
+|---|---|
+| `lib/features/questions/data/models/drawing_models.dart` (`Stroke`, `DrawingPoint`) | `test/features/questions/data/models/drawing_models_test.dart` |
+| `lib/features/questions/presentation/painters/drawing_painter.dart` (`DrawingPainter`) | `test/features/questions/presentation/painters/drawing_painter_test.dart` |
+| `lib/features/questions/presentation/painters/grid_painter.dart` (`GridPainter`) | `test/features/questions/presentation/painters/grid_painter_test.dart` |
+| `lib/features/mentor/data/models/chat_message_data.dart` | `test/features/mentor/data/models/chat_message_data_test.dart` |
 
-**Acceptance criteria**:
-- [ ] `dashboard_layout_providers_test.dart` covering: `DashboardLayoutPreferences.copyWith`, `isCollapsed`, `DashboardLayoutNotifier.init` (with mocked Hive box), `toggleCollapsed` (add/remove/persist), and provider creation via `ProviderContainer`.
-- [ ] `plan_adherence_model_adapter_test.dart` covering: `typeId == 33`, `read` returns correct fields, `write` produces correct bytes, round-trip fidelity for all 10 fields, null `planId` and `metadata` fields.
-- [ ] `source_chunk_test.dart` covering: constructor, `toJson`/`fromJson` round-trip, equality, `hashCode`.
-- [ ] `extraction_result_test.dart` covering: `toMetaJson`, `chunksToJson`, default values.
-- [ ] `ingestion_providers_test.dart` covering: all 6 providers instantiate correctly, dependency overrides work (smoke tests per `teaching_providers_test.dart` pattern).
+**Rationale:** These are non-trivial classes with serialization (`Stroke`, `DrawingPoint`), custom painting logic (`DrawingPainter.paint` with multi-stroke pathing and single-point fallback), grid-line math (`GridPainter.paint`), and data-model semantics (`ChatMessageData`). Leaving them untested creates blind spots for regressions in math-input and mentor-chat features.
 
-### 2. Orphaned / dead test files
+---
 
-| File | Lines | Problem |
+## Issue 2: Overly Basic Test Files (7 files)
+
+These files contain **only** construction checks (`isA<Type>()`, `isNotNull`) or plain default-value assertions with **no** behavioral assertions as required by AGENTS.md:
+
+| Test File | Current Scope | Missing Behavioral Assertions |
 |---|---|---|
-| `test/features/settings/presentation/simple_list_test.dart` | 32 | Debug-only script that prints to stdout — no assertions, no source file, no value. Dead code. |
-| `test/features/settings/data/adapters/settings_box_adapter_test.dart` | 83 | `SettingsBoxAdapter` and `UserProfileAdapter` no longer live in `lib/features/settings/data/adapters/` — they are embedded in their respective model files. The adapter tests are duplicated in `models_test.dart` (lines 200–249). |
-| `test/features/settings/data/adapters/user_profile_adapter_test.dart` | 75 | Same as above — orphaned and redundant. |
-| `test/features/settings/data/models_test.dart` | 268 | **Partially** orphaned: the Hive adapter sub-tests (lines 200–249) duplicate the same adapter tests in the orphaned adapter test files. The `SettingsBox` and `UserProfile` model tests here also overlap with dedicated per-model test files (`settings_box_test.dart`, `user_profile_model_test.dart`). |
+| `test/core/providers/app_providers_test.dart` | 7 `container.read(...)` checks for default values (`isFalse`, `equals(16.0)`, `isEmpty`) | Override wiring, fallback logic, singleton identity, error handling |
+| `test/core/constants/app_constants_test.dart` | 11 barrel-export type checks (`isA<Type>()`, `isA<Function>()`) | No actual value/integration tests |
+| `test/core/constants/app_runtime_config_test.dart` | Border radius value check + 5 default-value checks | No behavioral logic, no `UiConfig` method testing |
+| `test/core/constants/llm_defaults_test.dart` | 3 return-value checks for `defaultModelForProvider()` | No edge-case providers, no empty/fallback paths |
+| `test/core/data/enums_test.dart` | Enum value counts + `.index` checks | No serialization, no fromIndex/fromString parsing |
+| `test/core/data/hive_type_ids_test.dart` | Single "does not throw" check | No conflict detection, no duplicate-ID scenarios |
+| `test/core/data/hive_box_names_test.dart` | 27 string-literal equality checks | No integration with actual box open logic |
 
-**Affected tests**: 4 files that should be removed or consolidated.
+**Rationale:** AGENTS.md mandates that every provider test file include **at least one behavioral assertion** (override wiring, fallback logic, singleton verification, or error-state handling). `test/core/providers/app_providers_test.dart` fails this bar outright. The other 6 files have no behavioral testing at all — they are brittle documentation, not tests.
 
-**Acceptance criteria**:
-- [ ] Delete `simple_list_test.dart` — it tests no source code.
-- [ ] Delete `settings_box_adapter_test.dart` and `user_profile_adapter_test.dart` — their content is duplicated in `models_test.dart`.
-- [ ] Audit `models_test.dart` against `settings_box_test.dart` and `user_profile_model_test.dart` for overlap; remove or deduplicate the overlapping test cases.
+---
 
-### 3. Thin provider-level tests (systematic weakness)
+## Issue 3: Orphaned Test Directory
 
-`test/features/teaching/providers/teaching_providers_test.dart` (81 lines) covers 6 providers with 7 tests, but every test is a single-assertion construction check (e.g., `expect(provider.read(...), isA<TutorService>())`). This pattern is repeated in other provider test files across the project. These tests confirm the provider *creates* something but never verify that the created object has the expected dependencies injected, nor that provider logic (e.g., fallbacks, computed values) behaves correctly under edge conditions.
+`test/features/settings/data/adapters/` exists but is **empty**. There is no corresponding `lib/features/settings/data/adapters/` directory.
 
-The same thin pattern is observable across provider tests in most features — they verify instantiation but not behavior or dependency wiring.
+**Action:** Either populate the directory with adapter tests if adapters are planned for settings, or remove the empty directory to avoid confusion.
 
-**Affected patterns**: All `test/features/*/providers/*_test.dart` files that only assert `isA<...>()`.
+---
 
-**Acceptance criteria**:
-- [ ] Audit provider tests across all features — flag any that only test construction (`isA<...>()` or `isNotNull`).
-- [ ] Add at least one behavioral assertion per provider group. For example:
-  - `teachingModelIdProvider`: verify fallback logic when `selectedModel` is empty, when `llmProvider` changes.
-  - `tutorServiceProvider`: verify it is the same instance across reads (auto-dispose behavior).
-  - `voiceControllerProvider`: verify it is correctly disposed.
-- [ ] Document the minimum bar for provider tests in `AGENTS.md`.
+## Issue 4: Missing Test Scenarios in Subject Tests
 
-### 4. Test file placement inconsistencies
+While the subject presentation tests are **strong** overall, notable gaps exist:
 
-A small number of files break the convention in `AGENTS.md`:
+| Screen | Missing Scenario |
+|---|---|
+| `subject_detail_screen_test.dart` | No test for when `sessionRepository` throws during History tab interaction. The screen accepts an optional `sessionRepository` param that is used in the History tab, but error propagation is untested. |
+| `subject_detail_screen_test.dart` | No test for the "more options" bottom sheet when routes `upload` / `dashboard` are **not** registered (navigation edge case that could crash). |
+| `subject_list_screen_test.dart` | Loading state (centered `CircularProgressIndicator`) is never asserted. The screen has two loading layers (provider async + `FutureBuilder`) but only error/data states are tested. |
 
-- `test/features/teaching/models/evaluation_result_test.dart` — tests `lib/features/teaching/models/evaluation_result.dart`, which is under `models/` in the source, so this is correct.
-- But `test/features/teaching/providers/teaching_providers_test.dart` tests providers that *depend on* services — the test could also validate that wiring is correct, which it currently doesn't.
+---
 
-More generally, the convention table in `AGENTS.md` is incomplete: it doesn't cover `data/adapters/`, `data/teaching_data.dart`-style data files, or `core/`-level files.
+## Acceptance Criteria
 
-**Acceptance criteria**:
-- [ ] Extend the `AGENTS.md` convention table to cover all subdirectory patterns found in the codebase (adapters, data files, core utilities).
-- [ ] Verify every source file matches the expected test location; fix any mismatches (none found in this audit, but the convention should be explicit to prevent future drift).
+1. **Drawing models & painters** (`drawing_models_test.dart`, `drawing_painter_test.dart`, `grid_painter_test.dart`):
+   - `Stroke` and `DrawingPoint` cover construction, default values (color=black, strokeWidth=3, pressure=null), and equality.
+   - `DrawingPainter` verifies `shouldRepaint` returns true/false for different/same strokes, and `paint` handles empty stroke lists gracefully (no crash).
+   - `GridPainter` verifies `shouldRepaint` for same/different colors, and `paint` produces expected line count for a given canvas size.
+   - Directory `test/features/questions/presentation/painters/` is created.
 
-## Rationale
+2. **Chat message data model** (`chat_message_data_test.dart`):
+   - Covers construction, JSON serialization roundtrip, missing/null fields, and role enum values.
 
-- The `DashboardLayoutNotifier` is UI-adjacent state with persistence — exactly the kind of code where a missing `.put()` or a stale Hive key silently breaks the user experience. It's the highest-ROI file to test.
-- The `PlanAdherenceModelAdapter` is binary serialization: if the model gains a field and the adapter doesn't, old data is read as garbage. A round-trip test catches this instantly.
-- The orphaned tests (`simple_list_test.dart`, duplicate adapter tests) create confusion — a developer adding or changing adapter code doesn't know which test file to update.
-- Provider tests that only check creation give a false sense of coverage. A provider whose dependency was accidentally removed (making construction throw) would still be caught, but incorrect wiring (wrong implementation injected) would not.
+3. **Core providers** (`app_providers_test.dart`):
+   - At least one behavioral assertion per AGENTS.md: override wiring (e.g., inject a fake value and verify it reads back), singleton identity, or error fallback.
 
-## Affected Files
+4. **Core constants** (`app_constants_test.dart`, `app_runtime_config_test.dart`, `llm_defaults_test.dart`):
+   - Replace barrel-export type checks with at least one meaningful behavioral assertion per group, or remove the file if the exports are trivial (convention: barrel-only files don't need tests).
 
-**New test files needed (5)**:
-- `test/features/dashboard/providers/dashboard_layout_providers_test.dart`
-- `test/features/planner/data/adapters/plan_adherence_model_adapter_test.dart`
-- `test/features/ingestion/data/models/source_chunk_test.dart`
-- `test/features/ingestion/services/extraction_result_test.dart`
-- `test/features/ingestion/providers/ingestion_providers_test.dart`
+5. **Core data enums, hive type IDs, box names**:
+   - `enums_test.dart`: Add fromIndex/fromString parsing or serialization tests.
+   - `hive_type_ids_test.dart`: Add duplicate-ID conflict detection test.
+   - `hive_box_names_test.dart`: Remove or replace with integration-oriented test.
 
-**Files to remove (3)**:
-- `test/features/settings/presentation/simple_list_test.dart`
-- `test/features/settings/data/adapters/settings_box_adapter_test.dart`
-- `test/features/settings/data/adapters/user_profile_adapter_test.dart`
+6. **Orphaned directory**: Remove `test/features/settings/data/adapters/` or populate it with meaningful tests.
 
-**Files to audit for deduplication (1)**:
-- `test/features/settings/data/models_test.dart`
-
-**Files to raise quality bar (all provider tests)**:
-- `test/features/*/providers/*_test.dart` — systematically add behavioral assertions beyond `isA<...>()`.
-
-**Documentation**:
-- `AGENTS.md` — extend test placement convention table.
+7. **Subject screen gaps**: Add tests for (a) sessionRepository throw in detail screen History tab, (b) unregistered route edge case in bottom sheet, (c) loading state in list screen.

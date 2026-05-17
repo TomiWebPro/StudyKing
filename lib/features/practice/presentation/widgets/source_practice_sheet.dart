@@ -52,19 +52,19 @@ class SourcePracticeSheet extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             Text(
               l10n.practiceBySource,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Text(
               l10n.practiceBySourceDescription,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             if (sources.isEmpty)
               Expanded(
                 child: Center(

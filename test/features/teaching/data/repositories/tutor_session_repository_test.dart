@@ -1,99 +1,73 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 
-class _MockTutorSessionRepository extends TutorSessionRepository {
-  final Map<String, TutorSession> _storage = {};
-
-  @override
-  Future<void> init() async {}
+class _FakeTutorSessionBox implements Box<TutorSession> {
+  final Map<dynamic, TutorSession> _storage = {};
 
   @override
-  Future<void> saveSession(TutorSession session) async {
-    _storage[session.id] = session;
+  Iterable<TutorSession> get values => _storage.values;
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'tutor_sessions';
+
+  @override
+  TutorSession? get(dynamic key, {TutorSession? defaultValue}) =>
+      _storage[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, TutorSession value) async {
+    _storage[key] = value;
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async {
-    return _storage[id];
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key);
   }
 
   @override
-  Future<List<TutorSession>> getAllSessions() async {
-    final all = _storage.values.toList();
-    all.sort((a, b) => b.startTime.compareTo(a.startTime));
-    return all;
+  Future<void> deleteAll(Iterable<dynamic> keys) async {
+    for (final key in keys) {
+      _storage.remove(key);
+    }
   }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    final sessions = _storage.values
-        .where((s) => s.studentId == studentId)
-        .toList();
-    sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
-    return sessions;
-  }
-
-  @override
-  Future<List<TutorSession>> getSubjectSessions(
-    String studentId,
-    String subjectId,
-  ) async {
-    return _storage.values
-        .where((s) => s.studentId == studentId && s.subjectId == subjectId)
-        .toList();
-  }
-
-  @override
-  Future<List<TutorSession>> getActiveSessions() async {
-    return _storage.values
-        .where((s) => s.status == SessionStatus.inProgress)
-        .toList();
-  }
-
-  @override
-  Future<List<TutorSession>> getCompletedSessions(String studentId) async {
-    return _storage.values
-        .where((s) =>
-            s.studentId == studentId && s.status == SessionStatus.completed)
-        .toList();
-  }
-
-  @override
-  Future<void> deleteSession(String id) async {
-    _storage.remove(id);
-  }
-
-  @override
-  Future<void> clearAll() async {
+  Future<int> clear() async {
+    final count = _storage.length;
     _storage.clear();
+    return count;
   }
 
   @override
-  Future<Map<String, dynamic>> getSessionStats(String studentId) async {
-    final sessions = _storage.values
-        .where((s) => s.studentId == studentId)
-        .toList();
-    final completed =
-        sessions.where((s) => s.status == SessionStatus.completed);
+  bool containsKey(dynamic key) => _storage.containsKey(key);
 
-    return {
-      'totalSessions': sessions.length,
-      'completedSessions': completed.length,
-      'totalHours': completed.fold<double>(
-          0, (sum, s) => sum + (s.elapsedMinutes / 60.0)),
-      'totalQuestions': completed.fold<int>(
-          0, (sum, s) => sum + s.questionsAsked),
-      'averageAccuracy': completed.isEmpty
-          ? 0.0
-          : completed.fold<double>(0, (sum, s) => sum + s.accuracy) /
-              completed.length,
-    };
-  }
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  Map<dynamic, TutorSession> toMap() => Map.from(_storage);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 TutorSession createSession({
@@ -121,11 +95,14 @@ TutorSession createSession({
 }
 
 void main() {
-  group('TutorSessionRepository', () {
-    late _MockTutorSessionRepository repository;
+  group('TutorSessionRepository (attached to fake box)', () {
+    late _FakeTutorSessionBox fakeBox;
+    late TutorSessionRepository repository;
 
     setUp(() {
-      repository = _MockTutorSessionRepository();
+      fakeBox = _FakeTutorSessionBox();
+      repository = TutorSessionRepository();
+      repository.attachBox(fakeBox);
     });
 
     group('saveSession', () {
@@ -174,6 +151,13 @@ void main() {
 
       test('returns empty when no sessions', () async {
         expect(await repository.getAllSessions(), isEmpty);
+      });
+
+      test('returns single session', () async {
+        await repository.saveSession(createSession(id: 's1'));
+        final all = await repository.getAllSessions();
+        expect(all.length, 1);
+        expect(all[0].id, 's1');
       });
     });
 
@@ -259,6 +243,11 @@ void main() {
         await repository.clearAll();
         expect(await repository.getAllSessions(), isEmpty);
       });
+
+      test('works on empty repository', () async {
+        await repository.clearAll();
+        expect(await repository.getAllSessions(), isEmpty);
+      });
     });
 
     group('getSessionStats', () {
@@ -275,12 +264,12 @@ void main() {
         await repository.saveSession(createSession(
           id: 's1', studentId: 'stu1', status: SessionStatus.completed,
           questionsAsked: 10, questionsCorrect: 8,
-          startTime: DateTime.now().subtract(const Duration(hours: 1)),
+          startTime: DateTime(2025, 1, 15, 9, 0, 0),
         ));
         await repository.saveSession(createSession(
           id: 's2', studentId: 'stu1', status: SessionStatus.completed,
           questionsAsked: 5, questionsCorrect: 3,
-          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          startTime: DateTime(2025, 1, 15, 8, 0, 0),
         ));
         await repository.saveSession(createSession(
           id: 's3', studentId: 'stu1', status: SessionStatus.inProgress,
@@ -303,6 +292,14 @@ void main() {
         ));
         final stats = await repository.getSessionStats('stu1');
         expect(stats['totalSessions'], 1);
+      });
+
+      test('averageAccuracy is 0 when no completed sessions', () async {
+        await repository.saveSession(createSession(
+          id: 's1', studentId: 'stu1', status: SessionStatus.inProgress,
+        ));
+        final stats = await repository.getSessionStats('stu1');
+        expect(stats['averageAccuracy'], 0.0);
       });
     });
   });

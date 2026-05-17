@@ -666,6 +666,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subjectCreatedSuccessfully => 'Subject created successfully';
 
   @override
+  String uploadPrompt(String subject) {
+    return 'Would you like to upload study material for $subject?';
+  }
+
+  @override
+  String get noThanks => 'No thanks';
+
+  @override
   String errorCreatingSubject(String error) {
     return 'Error creating subject: $error';
   }
@@ -1469,7 +1477,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tokensAndCost(int count, String cost) {
-    return 'Tokens: $count (\$$cost)';
+    return 'Tokens: $count ($cost)';
   }
 
   @override
@@ -2610,6 +2618,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadMaterial => 'Upload Study Material';
 
   @override
+  String get uploadAndAnalyze => 'Upload & Analyze';
+
+  @override
   String get uploadMaterialDesc =>
       'Upload PDFs, notes, and question banks to get started';
 
@@ -3271,4 +3282,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localeEs => 'Spanish';
+
+  @override
+  String get welcomeToStudyKing => 'Welcome to StudyKing';
+
+  @override
+  String get onboardingDescription =>
+      'Your AI-native learning companion. StudyKing helps you master any subject with intelligent planning, adaptive practice, and AI tutoring.';
+
+  @override
+  String get onboardingSubjectsDesc =>
+      'Add and organize your subjects and topics';
+
+  @override
+  String get onboardingPracticeDesc =>
+      'Practice with adaptive questions and spaced repetition';
+
+  @override
+  String get onboardingMentorDesc =>
+      'Get personalized study recommendations and nudges';
+
+  @override
+  String get onboardingFocusDesc =>
+      'Stay focused with Pomodoro-style study sessions';
+
+  @override
+  String get onboardingSettingsDesc =>
+      'Configure API keys, appearance, and preferences';
+
+  @override
+  String get dontShowAgain => 'Don\'t show again';
+
+  @override
+  String get needApiKeyNotice =>
+      'Note: AI features require an API key. Configure one in Settings.';
+
+  @override
+  String get getStarted => 'Get Started';
+
+  @override
+  String get apiKeyNeeded =>
+      'StudyKing needs an API key to use AI features. Configure one now.';
+
+  @override
+  String get configureNow => 'Configure Now';
+
+  @override
+  String get dataStorageNotice => 'Local Data Storage';
+
+  @override
+  String get dataStorageDescription =>
+      'StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.';
+
+  @override
+  String get iUnderstand => 'I Understand';
+
+  @override
+  String get tutorNeedsSubject =>
+      'Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.';
 }

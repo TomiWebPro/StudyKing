@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/teaching/models/lesson_plan_model.dart';
+import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
 import 'package:studyking/features/teaching/presentation/widgets/lesson_progress_bar.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 

@@ -31,70 +31,74 @@ class SubjectPracticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _getSubjectColor(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: ResponsiveUtils.cardPadding(context),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+    final bp = ResponsiveUtils.breakpointOf(context);
+    final iconContainerSize = bp.isXs ? 48.0 : 56.0;
+    return Semantics(
+      button: true,
+      label: subject.name,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: ResponsiveUtils.cardPadding(context),
+            child: Row(
+              children: [
+                Container(
+                  width: iconContainerSize,
+                  height: iconContainerSize,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.school, color: color, size: 32),
                 ),
-                child: Icon(Icons.school, color: color, size: 32),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subject.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (subject.code != null)
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        subject.code ?? '',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 12,
+                        subject.name,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.quiz,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
+                      if (subject.code != null)
                         Text(
-                          AppLocalizations.of(context)!.practiceAvailable,
-                          style: TextStyle(
+                          subject.code ?? '',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.quiz,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            AppLocalizations.of(context)!.practiceAvailable,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.play_circle,
-                color: Theme.of(context).colorScheme.primary,
-                size: 32,
-              ),
-            ],
+                Icon(
+                  Icons.play_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 32,
+                ),
+              ],
+            ),
           ),
         ),
       ),

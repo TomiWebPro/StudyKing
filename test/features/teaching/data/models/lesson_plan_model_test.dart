@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/teaching/models/lesson_plan_model.dart';
+import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
 
 void main() {
   group('LessonSection', () {

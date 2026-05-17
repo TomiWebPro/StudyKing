@@ -27,8 +27,7 @@ class SuggestedPromptsWidget extends StatelessWidget {
             ),
             child: Text(
               l10n.suggestedPrompts,
-              style: TextStyle(
-                fontSize: 12,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -45,11 +44,12 @@ class SuggestedPromptsWidget extends StatelessWidget {
                 child: ActionChip(
                   label: Text(
                     prompt,
-                    style: const TextStyle(fontSize: 13),
+                    style: Theme.of(context).textTheme.labelLarge,
                   ),
                   onPressed: () => onSelectPrompt(prompt),
                   backgroundColor: colorScheme.secondaryContainer,
                   side: BorderSide.none,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
               );
             }            ).toList(),

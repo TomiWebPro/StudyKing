@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/teaching/models/evaluation_result.dart';
+import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 
 void main() {
   group('EvaluationResult', () {

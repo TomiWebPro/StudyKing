@@ -25,7 +25,7 @@ class PracticeResultsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.sessionResults)),
       body: FocusTraversalGroup(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: ResponsiveUtils.screenPadding(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,13 +34,19 @@ class PracticeResultsScreen extends StatelessWidget {
                 l10n.practiceComplete,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-              _buildStatRow(context, l10n.totalQuestions, totalQuestions.toString()),
-              const SizedBox(height: 12),
-              _buildStatRow(context, l10n.correctAnswers, '$correctAnswers/$totalQuestions'),
-              const SizedBox(height: 12),
-              _buildStatRow(context, l10n.accuracy, formatPercent(accuracy, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
-              const SizedBox(height: 24),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+              MergeSemantics(
+                child: _buildStatRow(context, l10n.totalQuestions, totalQuestions.toString()),
+              ),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+              MergeSemantics(
+                child: _buildStatRow(context, l10n.correctAnswers, '$correctAnswers/$totalQuestions'),
+              ),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+              MergeSemantics(
+                child: _buildStatRow(context, l10n.accuracy, formatPercent(accuracy, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
+              ),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               Center(
                 child: FocusTraversalOrder(
                   order: const NumericFocusOrder(1),

@@ -9,12 +9,18 @@ import 'package:studyking/features/subjects/presentation/subject_detail_screen.d
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  final List<Session> _sessions;
+  final List<Session>? _sessions;
+  final bool _shouldThrow;
 
-  _FakeSessionRepository(this._sessions);
+  _FakeSessionRepository(this._sessions) : _shouldThrow = false;
+
+  _FakeSessionRepository.throwing() : _sessions = null, _shouldThrow = true;
 
   @override
-  Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
+  Future<Result<List<Session>>> getAll() async {
+    if (_shouldThrow) throw Exception('Failed to load sessions');
+    return Result.success(_sessions!);
+  }
 }
 
 Session _session({
@@ -529,6 +535,23 @@ void main() {
       expect(find.text('Date'), findsOneWidget);
       expect(find.text('Duration'), findsOneWidget);
       expect(find.text('Questions'), findsOneWidget);
+    });
+
+    testWidgets('history tab shows empty state when sessionRepository throws', (tester) async {
+      final repo = _FakeSessionRepository.throwing();
+      await tester.pumpWidget(_buildTestAppWithSessionRepo(repo));
+      await tester.pump();
+
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No sessions yet'), findsOneWidget);
+    });
+
+    testWidgets('bottom sheet upload navigates gracefully when only practiceSession is registered', (tester) async {
+      await tester.tap(find.byIcon(Icons.upload_file));
+      await tester.pumpAndSettle();
+      expect(find.text('Practice Mock'), findsOneWidget);
     });
   });
 }

@@ -16,8 +16,8 @@ import threading
 import time
 
 PROJECT_DIR = "/home/tomi/StudyKing"
-OPencode_BIN = "/home/tomi/.opencode/bin/opencode"
-FLUTTER_BIN = "/home/tomi/flutter_sdk/bin/flutter"
+OPencode_BIN = "opencode"
+FLUTTER_BIN = "flutter"
 REPORT_DIR = os.path.join(PROJECT_DIR, ".auto_improve_reports")
 ISSUES_DIR = os.path.join(PROJECT_DIR, "issues")
 ISSUES_OPEN_DIR = os.path.join(ISSUES_DIR, "open")
@@ -29,6 +29,7 @@ CYCLE_COUNT = 0
 MASTER_LOOP_DELAY_SECONDS = 20
 MAIN_LOOP_DELAY_SECONDS = 5
 MASTER_TIMEOUT_SECONDS = 600
+SCENARIO_TIMEOUT_SECONDS = 900
 IDLE_TIMEOUT_SECONDS = 300
 CONNECTION_RETRY_DELAYS = [5, 15, 45]
 
@@ -57,39 +58,153 @@ MASTERS = [
         "id": "internationalisation_master",
         "title": "Internationalisation Master",
         "focus": (
-            "Identify where internationalisation can be improved. Find translation mistakes, "
-            "inappropriate localization, missing language support, and better translation opportunities. Currently, focus on localisation of Spanish as an exampel so later more languages can be added easily. "
+            "Identify internationalisation issues across the entire codebase. Explore freely without "
+            "limiting yourself to a predetermined set of files. Look for:\n"
+            "- Hardcoded user-facing strings that should be localised via AppLocalizations\n"
+            "- Translation errors or missing translations in .arb files\n"
+            "- Locale-unaware number/date formatting (toStringAsFixed, manual date strings) "
+            "that should use number_format_utils.dart\n"
+            "- RTL layout issues (no Directionality support, hardcoded left/right alignments)\n"
+            "- Pluralisation gaps in .arb files\n"
+            "- Missing locale-specific formatting for currencies, percentages, compact numbers\n"
+            "- UI layouts that break with longer translated strings (e.g. German compound words)\n"
+            "- LLM prompts that are hardcoded in English without locale support\n"
+            "Focus on Spanish as the target locale so other languages can follow the same pattern."
         ),
     },
     {
         "id": "code_refactor_master",
         "title": "Code Refactor Master & Quality",
         "focus": (
-            "Identify readability, maintainability, file placement structure issues, hardcoded components, "
-            "dead code, outdated components, inappropriate comment/log levels."
+            "Explore the codebase freely without being constrained to a predetermined set of files. "
+            "Identify:\n"
+            "- Dead or unreachable code (unused imports, parameters, classes, functions)\n"
+            "- Circular dependencies between modules or features\n"
+            "- Overly long or complex functions that violate single-responsibility principle\n"
+            "- Inconsistent error handling (some places use Result type, others throw raw exceptions)\n"
+            "- Redundant abstractions or unnecessary wrappers\n"
+            "- File placement violations (e.g. a core concept buried inside a feature folder)\n"
+            "- Outdated or misleading comments, wrong log levels (debug vs info vs error)\n"
+            "- Hardcoded configuration values that should be environment-driven\n"
+            "- Repeated code patterns that could be extracted into shared utilities"
         ),
     },
     {
         "id": "test_master",
         "title": "Test Master",
         "focus": (
-            "Identify test coverage gaps, missing test scenarios, and outdated or overly basic tests. Identify improvement oppotunities in the structure of test file placements. "
+            "Explore the codebase freely and cross-reference against the test conventions in AGENTS.md. "
+            "Identify:\n"
+            "- Source files in lib/features/*/ with no corresponding test file (see AGENTS.md for exact mapping)\n"
+            "- Test files that only contain construction checks (isNotNull, isA) without behavioral assertions\n"
+            "- Missing error-state tests (what happens when a service throws?)\n"
+            "- Provider tests that don't verify dependency wiring via overrides\n"
+            "- Unit tests mixed with widget tests in the same file\n"
+            "- Integration gaps: features that have no test coverage at all\n"
+            "- Tests that use mockito/mocktail instead of hand-written fakes\n"
+            "- Widget tests that don't verify navigation behaviour with NavigatorObserver\n"
+            "- Tests that depend on Hive I/O instead of using fixedStudentId or fake repos"
         ),
     },
     {
         "id": "future_functionality_planner",
         "title": "Future Functionality Planner",
         "focus": (
-            "Propose future functionality plans and feature suggestions. You must read agent_must_read.md ; Identify currently redundant or confusing components, "
-            "lack of functionality, and high-level roadmap opportunities."
+            "First read agent_must_read.md to understand the full product vision. Then explore the codebase "
+            "freely without being constrained to a predetermined set of files. Compare the vision against "
+            "what is actually implemented. Identify:\n"
+            "- Major vision features that have zero implementation (e.g. voice interaction, handwriting recognition, "
+            "video/audio ingestion, proactive engagement/notifications)\n"
+            "- Features that exist but in a stub/incomplete state\n"
+            "- Redundant or confusing components that don't serve the vision\n"
+            "- Architectural gaps that block implementing vision features (e.g. no notification service, "
+            "no token usage tracker, no task manager for LLM inference)\n"
+            "- High-value roadmap items ordered by impact on the student experience\n"
+            "Propose specific, actionable plans for the next development phase."
+            "If available, the human coder himself would put md files in issues/further_issues/open, these are issues raised by real user beta testing and suggestions, if its present, write the md file so that the coder would prioritise on fixing those issues. When done fixing those issues, md file must be removed and acknowledged in issues/further_issues/completed"
         ),
     },
     {
         "id": "ui_ux_master",
         "title": "UI/UX Master",
         "focus": (
-            "Identify accessibility, widget sizing/placement, responsive layout issues, design language inconsistency, "
-            "confusing navigation, and problematic animation choices."
+            "Explore the codebase freely without being constrained to a predetermined set of files. "
+            "Open screens and trace navigation flows. Identify:\n"
+            "- Confusing or dead-end navigation paths (user clicks something and nothing happens)\n"
+            "- Missing UI states: no loading indicator, no empty state, no error state on screens\n"
+            "- Inconsistent design language: different button styles, colour mismatches, font inconsistencies\n"
+            "- Responsive/layout issues: widgets that overflow, don't adapt to screen size\n"
+            "- Accessibility problems: low contrast, missing semantics, no TalkBack/voiceover labels, "
+            "small touch targets\n"
+            "- Animation issues: jarring transitions, excessive or missing motion\n"
+            "- Screens that show raw technical data instead of user-friendly information\n"
+            "- Missing onboarding or first-launch guidance for new users\n"
+            "- Any components can use refractored and reused\n"
+            "- Anything else. "
+        ),
+    },
+    {
+        "id": "dry_run_usability_validator",
+        "title": "Dry-Run Usability Validator",
+        "focus": "",
+        "timeout": 900,
+        "scenario_prompt": (
+            "You are the Dry-Run Usability Validator for the StudyKing project. "
+            "Your job is NOT to edit source code. Your ONLY output is: "
+            "1. A new dry-run test scenario markdown file in `dry-run-test/` describing a real user journey. "
+            "2. An issue markdown file in `issues/open/dry_run_usability_validator.md` listing problems found. First read agent_must_read.md to understand the full product vision."
+            "\n\n"
+            "=== PHASE 1: CREATE A SCENARIO ===\n"
+            "Generate ONE concrete user scenario that has NOT yet been described in `dry-run-test/` "
+            "(read existing files first to avoid duplicates). Write it to: "
+            "`dry-run-test/scenario_<topic>.md`\n"
+            "The scenario must be written from the perspective of a real user, for example:\n"
+            "\"I'm a new user opening StudyKing for the first time. I want to learn IB Chemistry. "
+            "I don't know what this program is about or what it can do.\"\n"
+            "\n"
+            "\"I'm a longterm user, I want to speed up my pace to learn in Physics. "
+            "\n"
+            "I was learning about physics but now I want to learn about another subject. \"\n"
+            "I want to change API provider now. \"\n"
+            "I want to reschedule a class to another time. \"\n"
+            "\n"
+            "Describe the user's goal step by step in plain language — what they expect to happen at each stage. "
+            "Include expectations like:\n"
+            "- On first launch, does the app explain itself or just show a blank screen?\n"
+            "- Does it nudge me to upload content (PDFs, notes, question banks), or do I have to hunt for the feature?\n"
+            "- Can I just tell the planner 'I want to learn IB Chemistry in 90 days' and have everything generated automatically?\n"
+            "- Are lesson plans, lesson content, and practice questions auto-generated from the syllabus, "
+            "or do I need to manually create everything?\n"
+            "- Does the system detect missing materials (no textbook uploaded, no syllabus, no questions) "
+            "and guide me to fix that, or does it silently break?\n"
+            "- Can I easily find where to configure my API key, and if it's missing, does the app show a clear error message?\n"
+            "- Does navigation make it obvious where to find my lessons, my practice, my progress?\n"
+            "- Are settings applied immediately and saved across restart?\n"
+            "- Does the app require me to give it things that are totally not central to the program itself and add no value?\n"
+            "(and any expectations beyond what were listed)\n"
+            "=== PHASE 2: DRY-RUN VALIDATE ===\n"
+            "Now trace through the actual source code to validate the scenario. Explore the codebase freely "
+            "without being constrained to a predetermined set of files. Look at startup flow, navigation routes, "
+            "screens, state management, data dependencies, and any other relevant parts you discover. "
+            "The goal is to independently trace each user expectation against the actual implementation.\n"
+            "\n"
+            "For each step in the scenario, determine:\n"
+            " - Does the code support this user expectation? (PASS / FAIL / PARTIAL)\n"
+            " - If FAIL or PARTIAL, what exactly is missing or broken in the navigation?\n"
+            " - What specific screens, files and lines are responsible?\n"
+            "\n"
+            "=== PHASE 3: WRITE ISSUE ===\n"
+            "Write all findings into `issues/open/dry_run_usability_validator.md`. "
+            "The issue must include:\n"
+            "- The scenario summary\n"
+            "- For every FAIL/PARTIAL finding: affected files, rationale, and concrete acceptance criteria for what 'fixed' looks like\n"
+            "- Group findings by severity (BLOCKER = app crashes or user cannot proceed, MAJOR = feature is broken or misleading, MINOR = UX friction)\n"
+            "\n"
+            "IMPORTANT:\n"
+            "- Do NOT edit any source code files.\n"
+            "- If the issue file already exists, read it first and add NEW findings or refine existing ones — don't overwrite.\n"
+            "- If all scenarios in `dry-run-test/` already have matching issues resolved, pick a new scenario.\n"
+            "- This is a non-delete zone: never delete previous dry-run test files."
         ),
     },
 ]
@@ -528,10 +643,10 @@ def step6_review_changes():
         "邮件必须严格遵守以下要求：\n"
         "一 邮件开头必须严格如下 一字不可差 一行不可差：\n"
         "尊敬的投资人刘女士：\n"
-        "我是杨子轩的小龙虾，\n\n"
+        "我是杨子轩的小龙虾，... \n"
         "二 正文必须全部使用中文 不得出现任何英文单词 英文文件名 代码片段 或技术术语\n"
-        "三 正文不得使用任何标记符号和LLM格式标记 包括但不限于星号井号减号下划线反引号中括号小括号尖括号斜线句点逗号分号冒号感叹号问号at符号百分号and符号美元符号波浪号等号加号竖线花括号at符号等 任何用于加粗斜体标题列表代码块引用的格式字符一律禁止\n"
-        "四 正文必须使用纯段落形式 不得分点列举 不得使用编号 不得使用横线分隔\n"
+        "三 正文不得使用任何标记符号和LLM格式标记 任何用于加粗斜体标题列表代码块引用的格式字符一律禁止\n"
+        "四 正文必须使用纯段落形式 \n"
         "五 语气正式 礼貌 简洁 面向非技术背景的投资人 不使用任何技术行话或项目文件名\n"
         "六 正文必须包含三个段落 顺序如下：\n"
         "第一段 说明本次完成了哪些修复和改进 突出重点 让投资人清楚了解进展\n"
@@ -564,23 +679,33 @@ def should_retry(rc):
 
 def run_master_once(master):
     open_file = master_issue_file(master["id"])
-    if os.path.exists(open_file):
+    is_scenario = bool(master.get("scenario_prompt"))
+    if not is_scenario and os.path.exists(open_file):
         return False
 
-    random_hint = pick_random_subdir("lib")
-    prompt = (
-        f"You are `{master['title']}` for the StudyKing project. "
-        f"You must NOT edit any source code or files outside the issue output file. "
-        f"Your only allowed write action is to create exactly one markdown issue file at `{open_file}`. "
-        f"If this issue file already exists, do nothing and exit. "
-        f"Read the codebase and identify high-value issues only (not surface-level bug fixing). "
-        f"Focus: {master['focus']} "
-        f"Hint: start inspecting `{random_hint}` (or other folders if needed). "
-        f"Write a single actionable issue with context, affected files, rationale, and acceptance criteria."
-    )
-    rc, _ = run_opencode(prompt, timeout_seconds=MASTER_TIMEOUT_SECONDS)
-    if rc == 0 and os.path.exists(open_file):
-        log(f"Master created issue: {open_file}")
+    if is_scenario:
+        prompt = master["scenario_prompt"]
+        timeout = master.get("timeout", SCENARIO_TIMEOUT_SECONDS)
+    else:
+        prompt = (
+            f"You are `{master['title']}` for the StudyKing project. "
+            f"Your ONLY allowed write actions are: create exactly one markdown issue file at `{open_file}`. "
+            f"Do NOT edit any source code files. Do NOT modify other issue files. "
+            f"If `{open_file}` already exists, read it first then add NEW findings or refine existing ones — don't overwrite. "
+            f"Explore the codebase freely without being constrained to a predetermined set of files. "
+            f"Focus: {master['focus']} "
+            f"Write a single actionable issue with context, affected files, rationale, "
+            f"and concrete acceptance criteria for what 'fixed' looks like. "
+            f"Group findings by severity (BLOCKER = app crashes or user cannot proceed, "
+            f"MAJOR = feature is broken or misleading, MINOR = code quality / UX friction)."
+        )
+        timeout = MASTER_TIMEOUT_SECONDS
+    rc, _ = run_opencode(prompt, timeout_seconds=timeout)
+    if rc == 0:
+        if is_scenario:
+            log(f"Master updated issue + scenario: {open_file}")
+        else:
+            log(f"Master created issue: {open_file}")
         return True
     log(f"Master `{master['title']}` did not create issue this round", "WARN")
     return False

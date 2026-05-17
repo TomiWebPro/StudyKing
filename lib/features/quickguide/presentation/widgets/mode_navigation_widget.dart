@@ -22,51 +22,96 @@ class ModeNavigationWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.chooseStudyMode,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+          Semantics(
+            headingLevel: 2,
+            child: Text(
+              l10n.chooseStudyMode,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(height: 12),
           FocusTraversalGroup(
-            child: Row(
-            children: [
-              Expanded(
-                child: _buildModeCard(
-                  context,
-                  icon: Icons.smart_toy,
-                  title: l10n.aiTutor,
-                  subtitle: l10n.interactiveConversationalLessons,
-                  color: colorScheme.primary,
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.tutor,
-                      arguments: const TutorArgs(
-                        topicId: '',
-                        topicTitle: '',
-                        subjectId: '',
+            child: ResponsiveUtils.breakpointOf(context).isXs
+                ? Column(
+                    children: [
+                      _buildModeCard(
+                        context,
+                        icon: Icons.smart_toy,
+                        title: l10n.aiTutor,
+                        subtitle: l10n.interactiveConversationalLessons,
+                        color: colorScheme.primary,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(l10n.aiTutor),
+                              content: Text(l10n.tutorNeedsSubject),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text(l10n.ok),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                      const SizedBox(height: 12),
+                      _buildModeCard(
+                        context,
+                        icon: Icons.auto_awesome,
+                        title: l10n.mentor,
+                        subtitle: l10n.personalStudyAssistantPlanner,
+                        color: colorScheme.secondary,
+                        onTap: () {
+                          Navigator.pushNamed(context, AppRoutes.mentor);
+                        },
+                      ),
+                    ],
+                  )
+                : Row(
+                children: [
+                  Expanded(
+                    child: _buildModeCard(
+                      context,
+                      icon: Icons.smart_toy,
+                      title: l10n.aiTutor,
+                      subtitle: l10n.interactiveConversationalLessons,
+                      color: colorScheme.primary,
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.aiTutor),
+                            content: Text(l10n.tutorNeedsSubject),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: Text(l10n.ok),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildModeCard(
+                      context,
+                      icon: Icons.auto_awesome,
+                      title: l10n.mentor,
+                      subtitle: l10n.personalStudyAssistantPlanner,
+                      color: colorScheme.secondary,
+                      onTap: () {
+                        Navigator.pushNamed(context, AppRoutes.mentor);
+                      },
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildModeCard(
-                  context,
-                  icon: Icons.auto_awesome,
-                  title: l10n.mentor,
-                  subtitle: l10n.personalStudyAssistantPlanner,
-                  color: colorScheme.secondary,
-                  onTap: () {
-                    Navigator.pushNamed(context, AppRoutes.mentor);
-                  },
-                ),
-              ),
-            ],
-          ),
           ),
           const SizedBox(height: 12),
         ],

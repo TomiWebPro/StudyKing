@@ -15,5 +15,16 @@ void main() {
     test('returns gpt-4o-mini for OpenAI', () {
       expect(defaultModelForProvider(LlmProvider.openAI), equals('gpt-4o-mini'));
     });
+
+    test('each provider gets a distinct model', () {
+      final models = LlmProvider.values.map(defaultModelForProvider).toSet();
+      expect(models.length, LlmProvider.values.length);
+    });
+
+    test('returns non-empty string for every provider', () {
+      for (final provider in LlmProvider.values) {
+        expect(defaultModelForProvider(provider), isNotEmpty);
+      }
+    });
   });
 }

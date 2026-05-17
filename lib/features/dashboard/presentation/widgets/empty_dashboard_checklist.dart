@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class EmptyDashboardChecklist extends StatelessWidget {
@@ -14,21 +15,28 @@ class EmptyDashboardChecklist extends StatelessWidget {
         icon: Icons.library_add,
         title: l10n.addSubject,
         subtitle: l10n.addSubjectDesc,
+        onTap: () =>
+            Navigator.pushNamed(context, AppRoutes.subjectSelection),
       ),
       ChecklistItem(
         icon: Icons.upload_file,
         title: l10n.uploadMaterial,
         subtitle: l10n.uploadMaterialDesc,
+        onTap: () => Navigator.pushNamed(context, AppRoutes.upload),
       ),
       ChecklistItem(
         icon: Icons.quiz,
         title: l10n.takePracticeQuiz,
         subtitle: l10n.takePracticeQuizDesc,
+        onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession,
+            arguments: const PracticeSessionArgs(
+                subjectId: '', questionCount: 10)),
       ),
       ChecklistItem(
         icon: Icons.smart_toy,
         title: l10n.scheduleAiTutor,
         subtitle: l10n.scheduleAiTutorDesc,
+        onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
       ),
     ];
 
@@ -63,42 +71,51 @@ class EmptyDashboardChecklist extends StatelessWidget {
               final item = entry.value;
               return Padding(
                 padding: EdgeInsets.only(bottom: i < items.length - 1 ? 16 : 0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        item.icon,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                child: InkWell(
+                  onTap: item.onTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                          child: Icon(
+                            item.icon,
+                            color: theme.colorScheme.onPrimaryContainer,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item.subtitle,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
             }),
@@ -113,10 +130,12 @@ class ChecklistItem {
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
 
   const ChecklistItem({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.onTap,
   });
 }

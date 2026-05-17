@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 
 void main() {
   group('TutorSession', () {

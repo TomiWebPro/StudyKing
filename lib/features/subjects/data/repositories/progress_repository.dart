@@ -2,6 +2,7 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
+@Deprecated('Use MasteryStateRepository instead')
 class ProgressRepository extends Repository<TopicProgress> {
   Future<void> init() async {
     await openBox(HiveBoxNames.progress);

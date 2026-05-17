@@ -13,9 +13,9 @@ import 'package:studyking/features/practice/data/repositories/mastery_graph_repo
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
@@ -157,27 +157,26 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   }
 }
 
-class _FakeTutorSessionRepository extends TutorSessionRepository {
-  final Map<String, TutorSession> _storage = {};
+class _FakeSessionRepository extends SessionRepository {
+  final Map<String, Session> _storage = {};
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> save(Session session) async {
     _storage[session.id] = session;
+    return Result.success(null);
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async {
-    return _storage[id];
+  Future<Result<Session?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _storage.values
-        .where((s) => s.studentId == studentId)
-        .toList();
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 }
 
@@ -264,7 +263,7 @@ Widget _buildTestApp({
   MasteryGraphRepository? masteryGraphRepository,
   TopicRepository? topicRepository,
   RoadmapRepository? roadmapRepository,
-  TutorSessionRepository? tutorSessionRepository,
+  SessionRepository? sessionRepository,
   PendingActionRepository? pendingActionRepository,
   PlanAdapter? planAdapter,
   String? fixedStudentId,
@@ -280,7 +279,7 @@ Widget _buildTestApp({
     repository: repo,
     topicRepository: topicRepository ?? _FakeTopicRepository(),
     roadmapRepo: roadmapRepository ?? _FakeRoadmapRepository(),
-    tutorRepo: tutorSessionRepository ?? _FakeTutorSessionRepository(),
+    sessionRepo: sessionRepository ?? _FakeSessionRepository(),
     pendingActionRepo: pendingActionRepository ?? _FakePendingActionRepository(),
     planAdapter: planAdapter ?? _FakePlanAdapter(),
     fixedStudentId: id,

@@ -144,5 +144,45 @@ void main() {
       final chatBubble = tester.widget<ChatBubble>(find.byType(ChatBubble));
       expect(chatBubble.reduceMotion, isTrue);
     });
+
+    testWidgets('renders nothing for empty messages list', (tester) async {
+      await tester.pumpWidget(_buildTestApp(messages: []));
+      await tester.pump();
+
+      expect(find.byType(ChatBubble), findsNothing);
+      expect(find.byType(ListView), findsOneWidget);
+    });
+
+    testWidgets('renders streaming message ChatBubble', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        messages: [
+          _tutorMessage(content: 'Typing...', isStreaming: true),
+        ],
+      ));
+      await tester.pump();
+
+      expect(find.byType(ChatBubble), findsOneWidget);
+      expect(find.text('Typing...'), findsOneWidget);
+    });
+
+    testWidgets('renders mixed streaming and completed messages',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        messages: [
+          _studentMessage(content: 'Hello'),
+          _tutorMessage(
+            content: 'Working on it...',
+            isStreaming: true,
+          ),
+          _tutorMessage(content: 'Here is the full answer.'),
+        ],
+      ));
+      await tester.pump();
+
+      expect(find.text('Hello'), findsOneWidget);
+      expect(find.text('Working on it...'), findsOneWidget);
+      expect(find.text('Here is the full answer.'), findsOneWidget);
+      expect(find.byType(ChatBubble), findsNWidgets(3));
+    });
   });
 }

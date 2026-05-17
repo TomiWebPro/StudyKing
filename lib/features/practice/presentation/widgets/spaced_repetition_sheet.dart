@@ -34,40 +34,51 @@ class SpacedRepetitionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return SafeArea(
-      child: Container(
-        padding: ResponsiveUtils.screenPadding(context),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.selectSubject,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...subjectsWithDue.map((subject) => Semantics(
-              label: '${l10n.selectSubject} ${subject.name}',
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getSubjectColor(context, subject.name).withValues(alpha: 0.1),
-                  child: Icon(
-                    Icons.school,
-                    color: _getSubjectColor(context, subject.name),
-                  ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      maxChildSize: 0.85,
+      minChildSize: 0.3,
+      expand: false,
+      builder: (context, scrollController) => SafeArea(
+        child: Container(
+          padding: ResponsiveUtils.screenPadding(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.selectSubject,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                title: Text(subject.name),
-                subtitle: Text(l10n.dueQuestionsCount(dueCounts[subject.id] ?? 0)),
-                onTap: () {
-                  Navigator.pop(context);
-                  onSubjectSelected(subject);
-                },
               ),
-            )),
-            const SizedBox(height: 16),
-          ],
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: subjectsWithDue.map((subject) => Semantics(
+                    label: '${l10n.selectSubject} ${subject.name}',
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getSubjectColor(context, subject.name).withValues(alpha: 0.1),
+                        child: Icon(
+                          Icons.school,
+                          color: _getSubjectColor(context, subject.name),
+                        ),
+                      ),
+                      title: Text(subject.name),
+                      subtitle: Text(l10n.dueQuestionsCount(dueCounts[subject.id] ?? 0)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSubjectSelected(subject);
+                      },
+                    ),
+                  )).toList(),
+                ),
+              ),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+            ],
+          ),
         ),
       ),
     );
@@ -77,37 +88,40 @@ class SpacedRepetitionSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: bottomSheetShape,
       builder: (sheetContext) => SafeArea(
-        child: Container(
-          padding: ResponsiveUtils.screenPadding(sheetContext),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.check_circle,
-                size: 64,
-                color: Theme.of(sheetContext).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.allCaughtUp,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: ResponsiveUtils.screenPadding(sheetContext),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: ResponsiveUtils.emptyStateIconSize(sheetContext),
+                  color: Theme.of(sheetContext).colorScheme.primary,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.noReviewsScheduled,
-                style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.pop(sheetContext),
-                child: Text(l10n.backToPractice),
-              ),
-              const SizedBox(height: 8),
-            ],
+                SizedBox(height: ResponsiveUtils.verticalSpacing(sheetContext) * 2),
+                Text(
+                  l10n.allCaughtUp,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(sheetContext)),
+                Text(
+                  l10n.noReviewsScheduled,
+                  style: TextStyle(color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
+                ),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(sheetContext) * 2),
+                FilledButton(
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: Text(l10n.backToPractice),
+                ),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(sheetContext)),
+              ],
+            ),
           ),
         ),
       ),
@@ -121,6 +135,7 @@ class SpacedRepetitionSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: bottomSheetShape,
       builder: (_) => SpacedRepetitionSheet(
         subjectsWithDue: subjectsWithDue,

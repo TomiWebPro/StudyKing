@@ -13,7 +13,7 @@ import 'core/constants/app_constants.dart';
 import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
-import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
+import 'package:studyking/core/data/session_adapter.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -26,6 +26,12 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 
 import 'core/routes/app_router.dart';
 import 'core/routes/tab_navigator.dart';
+import 'core/services/engagement_scheduler.dart';
+import 'core/services/study_progress_tracker.dart';
+import 'core/services/mastery_graph_service.dart';
+import 'core/services/plan_adapter.dart';
+import 'features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'features/planner/data/repositories/plan_adherence_repository.dart';
 import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/settings_screen.dart';
@@ -33,6 +39,7 @@ import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/screens/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
+import 'features/onboarding/presentation/onboarding_dialog.dart';
 
 final Logger _mainLogger = const Logger('App');
 
@@ -49,8 +56,8 @@ void main() async {
     // Register adapters
     Hive.registerAdapter(AccessibilityPreferencesAdapter());
     Hive.registerAdapter(UserProfileAdapter());
-    Hive.registerAdapter(PlanAdherenceMetricAdapter());
     Hive.registerAdapter(MasteryImprovementMetricAdapter());
+    Hive.registerAdapter(SessionAdapter());
     
       // Run database migrations and open all boxes
     await HiveInitializer.initialize();
@@ -74,6 +81,23 @@ void main() async {
     // Initialize student ID service (generates UUID on first launch)
     StudentIdService(); // ensure singleton is initialized
     await StudentIdService().init();
+
+    try {
+      final engagementScheduler = EngagementScheduler(
+        tracker: StudyProgressTracker(
+          attemptRepo: AttemptRepository(),
+          masteryService: MasteryGraphService(),
+        ),
+        masteryService: MasteryGraphService(),
+        nudgeRepository: EngagementNudgeRepository(),
+        adherenceRepository: PlanAdherenceRepository(),
+        planAdapter: PlanAdapter(),
+        sessionRepository: SessionRepository(),
+      );
+      await engagementScheduler.init();
+    } catch (e) {
+      _mainLogger.w('Failed to init EngagementScheduler: $e');
+    }
     
     // Load initial settings to sync with providers
     try {
@@ -228,6 +252,8 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  bool _showApiKeyBanner = false;
+  bool _apiKeyBannerDismissed = false;
 
   final _navigatorKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
   late final List<Widget> _tabNavigators;
@@ -236,6 +262,35 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _tabNavigators = _buildTabNavigators();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleFirstLaunch());
+  }
+
+  Future<void> _handleFirstLaunch() async {
+    try {
+      final isFirst = await OnboardingService.isOnboardingNeeded();
+      if (isFirst && mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const OnboardingDialog(),
+        );
+
+        if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (_) => const LocalDataNotice(),
+          );
+        }
+      }
+
+      if (mounted) {
+        final settingsBox = await Hive.openBox('settings');
+        final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
+        if (apiKey.isEmpty) {
+          setState(() => _showApiKeyBanner = true);
+        }
+      }
+    } catch (_) {}
   }
 
   List<Widget> _buildTabNavigators() {
@@ -295,55 +350,65 @@ class _MainScreenState extends State<MainScreen> {
     return Semantics(
       explicitChildNodes: true,
       child: Scaffold(
-        body: isWideScreen
-            ? Row(
-                children: [
-                  NavigationRail(
-                    selectedIndex: _selectedIndex,
-                    onDestinationSelected: (index) {
-                      setState(() {
-                        _selectedIndex = index;
-                      });
-                    },
-                    leading: FloatingActionButton.small(
-                      onPressed: () => _openDashboard(),
-                      tooltip: l10n.dashboard,
-                      child: const Icon(Icons.dashboard),
-                    ),
-                    labelType: NavigationRailLabelType.all,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.school_outlined),
-                        selectedIcon: Icon(Icons.school),
-                        label: Text(l10n.subjects),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.play_arrow_outlined),
-                        selectedIcon: Icon(Icons.play_arrow),
-                        label: Text(l10n.practice),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.auto_awesome_outlined),
-                        selectedIcon: Icon(Icons.auto_awesome),
-                        label: Text(l10n.mentor),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.timer_outlined),
-                        selectedIcon: Icon(Icons.timer),
-                        label: Text(l10n.focusMode),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings),
-                        label: Text(l10n.settings),
-                      ),
-                    ],
-                  ),
-                  const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(child: bodyContent),
-                ],
-              )
-            : bodyContent,
+        body: Column(
+          children: [
+            if (_showApiKeyBanner && !_apiKeyBannerDismissed)
+              ApiKeyBanner(onDismiss: () {
+                setState(() => _apiKeyBannerDismissed = true);
+              }),
+            Expanded(
+              child: isWideScreen
+                  ? Row(
+                      children: [
+                        NavigationRail(
+                          selectedIndex: _selectedIndex,
+                          onDestinationSelected: (index) {
+                            setState(() {
+                              _selectedIndex = index;
+                            });
+                          },
+                          leading: FloatingActionButton.small(
+                            onPressed: () => _openDashboard(),
+                            tooltip: l10n.dashboard,
+                            child: const Icon(Icons.dashboard),
+                          ),
+                          labelType: NavigationRailLabelType.all,
+                          destinations: [
+                            NavigationRailDestination(
+                              icon: Icon(Icons.school_outlined),
+                              selectedIcon: Icon(Icons.school),
+                              label: Text(l10n.subjects),
+                            ),
+                            NavigationRailDestination(
+                              icon: Icon(Icons.play_arrow_outlined),
+                              selectedIcon: Icon(Icons.play_arrow),
+                              label: Text(l10n.practice),
+                            ),
+                            NavigationRailDestination(
+                              icon: Icon(Icons.auto_awesome_outlined),
+                              selectedIcon: Icon(Icons.auto_awesome),
+                              label: Text(l10n.mentor),
+                            ),
+                            NavigationRailDestination(
+                              icon: Icon(Icons.timer_outlined),
+                              selectedIcon: Icon(Icons.timer),
+                              label: Text(l10n.focusMode),
+                            ),
+                            NavigationRailDestination(
+                              icon: Icon(Icons.settings_outlined),
+                              selectedIcon: Icon(Icons.settings),
+                              label: Text(l10n.settings),
+                            ),
+                          ],
+                        ),
+                        const VerticalDivider(width: 1, thickness: 1),
+                        Expanded(child: bodyContent),
+                      ],
+                    )
+                  : bodyContent,
+            ),
+          ],
+        ),
         floatingActionButton: isWideScreen
             ? null
             : Semantics(

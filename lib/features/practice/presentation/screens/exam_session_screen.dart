@@ -294,7 +294,11 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         title: Text(l10n.practiceMode),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(value: progress),
+          child: Semantics(
+            liveRegion: true,
+            label: 'Exam progress: ${_currentIndex + 1} of ${_questions.length}',
+            child: LinearProgressIndicator(value: progress),
+          ),
         ),
       ),
       body: SafeArea(
@@ -346,7 +350,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                     isFeedbackVisible: _isFeedbackVisible,
                     onAnswerSelected: _onAnswerSelected,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
                   if (!_isSubmitted)
                     FilledButton(
                       onPressed: _currentAnswer != null ? _submitAnswer : null,
@@ -360,7 +364,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                           isCorrect: _isCorrect,
                           explanation: question.explanation,
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                         PracticeSessionNavButtons(
                           onPrevious: null,
                           onNext: _nextQuestion,
@@ -379,7 +383,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   Widget _buildConfigScreen(AppLocalizations l10n) {
     return Scaffold(
       appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,11 +392,11 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               l10n.examConfiguration,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             _buildDurationSelector(),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             _buildQuestionCountSelector(),
-            const SizedBox(height: 32),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 3),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -415,13 +419,14 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l10n.examDuration, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         Wrap(
           spacing: 8,
           children: durations.map((d) => ChoiceChip(
             label: Text(l10n.durationMinutes(d)),
             selected: _durationMinutes == d,
             onSelected: (_) => setState(() => _durationMinutes = d),
+            visualDensity: VisualDensity.compact,
           )).toList(),
         ),
       ],
@@ -435,7 +440,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l10n.numberOfQuestions, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         Wrap(
           spacing: 8,
           children: counts.map((c) => ChoiceChip(
@@ -445,6 +450,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               setState(() => _questionCount = c),
               _loadQuestions(),
             },
+            visualDensity: VisualDensity.compact,
           )).toList(),
         ),
       ],
@@ -455,7 +461,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     final result = _examResult!;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.sessionResults)),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,7 +470,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               l10n.practiceComplete,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             _buildResultRow(l10n.totalQuestions, formatDecimal(result.questionResults.length.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
             _buildResultRow(l10n.correctAnswers, formatDecimal(result.totalCorrect.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
             _buildResultRow(l10n.incorrectLabel, formatDecimal(result.totalIncorrect.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
@@ -481,18 +487,18 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             if (result.topicBreakdown.isNotEmpty) ...[
               Text(
                 l10n.topicBreakdown,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               ...result.topicBreakdown.entries.map((e) => _buildResultRow(
                 e.key,
                 formatPercent(e.value * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
               )),
-              const SizedBox(height: 24),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             ],
             Row(
               children: [

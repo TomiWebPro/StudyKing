@@ -1,6 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-
-enum SessionStatus { planned, inProgress, completed, cancelled }
+import 'package:studyking/core/data/models/session_model.dart';
 
 @HiveType(typeId: 28)
 class TutorSession extends HiveObject {

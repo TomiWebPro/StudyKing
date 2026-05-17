@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
@@ -22,7 +23,7 @@ class PendingActionCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Row(
           children: [
             Icon(
@@ -52,17 +53,25 @@ class PendingActionCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: Icon(Icons.check_circle_outline,
-                  color: theme.colorScheme.primary),
-              tooltip: l10n.accept,
-              onPressed: onAccept,
+            Semantics(
+              button: true,
+              label: l10n.accept,
+              child: IconButton(
+                icon: Icon(Icons.check_circle_outline,
+                    color: theme.colorScheme.primary),
+                tooltip: l10n.accept,
+                onPressed: onAccept,
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.cancel_outlined,
-                  color: theme.colorScheme.error),
-              tooltip: l10n.dismiss,
-              onPressed: onDismiss,
+            Semantics(
+              button: true,
+              label: l10n.dismiss,
+              child: IconButton(
+                icon: Icon(Icons.cancel_outlined,
+                    color: theme.colorScheme.error),
+                tooltip: l10n.dismiss,
+                onPressed: onDismiss,
+              ),
             ),
           ],
         ),

@@ -14,6 +14,21 @@ Widget _buildTestApp(Widget child) {
   );
 }
 
+Widget _buildTestAppWithRoutes(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
+    theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+    home: Scaffold(body: child),
+    routes: {
+      '/practice-session': (_) => const Scaffold(
+        body: Text('Practice Session'),
+      ),
+    },
+  );
+}
+
 MasteryState _state({
   required String topicId,
   double accuracy = 0.0,
@@ -116,6 +131,82 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.warning_amber), findsOneWidget);
+    });
+
+    testWidgets('renders weak area accuracy percentage', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.35),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('35%'), findsOneWidget);
+    });
+
+    testWidgets('practice button icon has tooltip', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.35),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.play_arrow), findsWidgets);
+    });
+
+    testWidgets('tapping practice icon navigates to practice session', (tester) async {
+      await tester.pumpWidget(_buildTestAppWithRoutes(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.35),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice Session'), findsOneWidget);
+    });
+
+    testWidgets('tapping practice all button navigates to practice session', (tester) async {
+      await tester.pumpWidget(_buildTestAppWithRoutes(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.35),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice Session'), findsOneWidget);
+    });
+
+    testWidgets('renders divider when weak areas present', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.35),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Divider), findsOneWidget);
     });
   });
 }

@@ -240,7 +240,7 @@ void main() {
           'avgTimePerQuestion': 30.0, 'totalStudyTimeHours': 5.0,
           'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
         };
-        final csv = await service.exportComprehensiveCSV('student1', l10n as dynamic);
+        final csv = await service.exportComprehensiveCSV('student1');
         expect(csv, contains('Overall Statistics'));
         expect(csv, contains('10'));
       });

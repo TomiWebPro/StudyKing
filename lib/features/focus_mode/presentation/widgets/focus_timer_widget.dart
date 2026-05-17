@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FocusTimerWidget extends StatefulWidget {
@@ -107,7 +108,9 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = constraints.maxWidth * 0.8;
-              final size = maxWidth.clamp(200.0, 260.0);
+              final bp = ResponsiveUtils.breakpointOf(context);
+              final maxRingSize = bp.isLg ? 320.0 : bp.isMd ? 280.0 : 260.0;
+              final size = maxWidth.clamp(200.0, maxRingSize);
               return AnimatedBuilder(
                 animation: _pulseController,
                 builder: (context, child) {
@@ -120,15 +123,17 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
                     alignment: Alignment.center,
                     children: [
                       child!,
-                      IgnorePointer(
-                        child: Container(
-                          width: size,
-                          height: size,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: progressColor.withValues(alpha: ringOpacity),
-                              width: 4,
+                      ExcludeSemantics(
+                        child: IgnorePointer(
+                          child: Container(
+                            width: size,
+                            height: size,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: progressColor.withValues(alpha: ringOpacity),
+                                width: 4,
+                              ),
                             ),
                           ),
                         ),
@@ -202,32 +207,59 @@ class _FocusTimerWidgetState extends State<FocusTimerWidget>
         ),
         const SizedBox(height: 32),
         if (widget.isActive) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.isPaused)
-                FilledButton.icon(
-                  onPressed: widget.onResume,
-                  icon: const Icon(Icons.play_arrow),
-                  label: Text(l10n.resume),
+          ResponsiveUtils.breakpointOf(context).isMobile
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.isPaused)
+                      FilledButton.icon(
+                        onPressed: widget.onResume,
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(l10n.resume),
+                      )
+                    else
+                      FilledButton.icon(
+                        onPressed: widget.onPause,
+                        icon: const Icon(Icons.pause),
+                        label: Text(l10n.pause),
+                      ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: widget.onCancel,
+                      icon: const Icon(Icons.stop),
+                      label: Text(l10n.end),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cs.error,
+                      ),
+                    ),
+                  ],
                 )
-              else
-                FilledButton.icon(
-                  onPressed: widget.onPause,
-                  icon: const Icon(Icons.pause),
-                  label: Text(l10n.pause),
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (widget.isPaused)
+                      FilledButton.icon(
+                        onPressed: widget.onResume,
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(l10n.resume),
+                      )
+                    else
+                      FilledButton.icon(
+                        onPressed: widget.onPause,
+                        icon: const Icon(Icons.pause),
+                        label: Text(l10n.pause),
+                      ),
+                    const SizedBox(width: 16),
+                    OutlinedButton.icon(
+                      onPressed: widget.onCancel,
+                      icon: const Icon(Icons.stop),
+                      label: Text(l10n.end),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cs.error,
+                      ),
+                    ),
+                  ],
                 ),
-              const SizedBox(width: 16),
-              OutlinedButton.icon(
-                onPressed: widget.onCancel,
-                icon: const Icon(Icons.stop),
-                label: Text(l10n.end),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: cs.error,
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 12),
           if (!widget.isPaused && remaining > 0)
             TextButton.icon(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/number_format_utils.dart';
 import '../../providers/planner_providers.dart';
@@ -30,11 +31,11 @@ class ProgressOverlayWidget extends StatelessWidget {
                     style: theme.textTheme.titleMedium),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             _buildTodayProgress(context, theme, l10n),
-            const SizedBox(height: 16),
-            _buildWeeklyChart(theme, l10n),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+            _buildWeeklyChart(context, theme, l10n),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             _buildCumulativeProgress(theme, l10n),
           ],
         ),
@@ -98,7 +99,7 @@ class ProgressOverlayWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildWeeklyChart(ThemeData theme, AppLocalizations l10n) {
+  Widget _buildWeeklyChart(BuildContext context, ThemeData theme, AppLocalizations l10n) {
     if (data.weeklyProgress.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -108,7 +109,7 @@ class ProgressOverlayWidget extends StatelessWidget {
             style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         SizedBox(
-          height: 120,
+          height: ResponsiveUtils.verticalSpacing(context) * 8,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: data.weeklyProgress.map((day) {
@@ -130,26 +131,32 @@ class ProgressOverlayWidget extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Container(
-                        width: 12,
-                        height: actualH,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                      Semantics(
+                        label: '${l10n.actual} ${day.actualMinutes} min',
+                        child: Container(
+                          width: 12,
+                          height: actualH,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Container(
-                        width: 12,
-                        height: plannedH,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                      Semantics(
+                        label: '${l10n.planned} ${day.plannedMinutes} min',
+                        child: Container(
+                          width: 12,
+                          height: plannedH,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(dayLabel,
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
+                          style: theme.textTheme.labelSmall),
                     ],
                   ),
                 ),
@@ -163,11 +170,11 @@ class ProgressOverlayWidget extends StatelessWidget {
           children: [
             Container(width: 8, height: 8, color: theme.colorScheme.primary),
             const SizedBox(width: 4),
-            Text(l10n.actual, style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
+            Text(l10n.actual, style: theme.textTheme.labelSmall),
             const SizedBox(width: 12),
             Container(width: 8, height: 8, color: theme.colorScheme.primaryContainer),
             const SizedBox(width: 4),
-            Text(l10n.planned, style: theme.textTheme.bodySmall?.copyWith(fontSize: 9)),
+            Text(l10n.planned, style: theme.textTheme.labelSmall),
           ],
         ),
       ],

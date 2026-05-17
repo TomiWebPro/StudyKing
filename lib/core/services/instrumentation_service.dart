@@ -3,7 +3,6 @@ import '../errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
@@ -204,19 +203,9 @@ class InstrumentationService {
     }
   }
 
-  Future<List<PlanAdherenceMetric>> getAdherenceHistory(String studentId) async {
+  Future<List<PlanAdherenceModel>> getAdherenceHistory(String studentId) async {
     if (_adherenceRepository == null) return [];
-    final models = await _adherenceRepository.getByStudent(studentId);
-    return models.map((m) => PlanAdherenceMetric(
-      date: m.date,
-      studentId: m.studentId,
-      plannedQuestions: m.plannedQuestions,
-      actualQuestions: m.actualQuestions,
-      plannedMinutes: m.plannedMinutes,
-      actualMinutes: m.actualMinutes,
-      adherenceScore: m.adherenceScore,
-      metadata: m.metadata,
-    )).toList();
+    return _adherenceRepository.getByStudent(studentId);
   }
 
   List<MasteryImprovementMetric> getImprovementHistory(String studentId) {

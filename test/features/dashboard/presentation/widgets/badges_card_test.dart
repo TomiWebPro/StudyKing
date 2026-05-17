@@ -83,5 +83,39 @@ void main() {
       expect(find.byIcon(Icons.emoji_events), findsAtLeast(1));
       expect(find.byType(Semantics), findsAtLeast(1));
     });
+
+    testWidgets('renders Semantics wrapper when badges present', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        BadgesCard(badges: [
+          const BadgeDisplay(name: 'Test Badge', description: ''),
+        ]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Semantics), findsAtLeast(1));
+    });
+
+    testWidgets('renders Wrap when badges present', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        BadgesCard(badges: [
+          const BadgeDisplay(name: 'First', description: ''),
+          const BadgeDisplay(name: 'Second', description: ''),
+          const BadgeDisplay(name: 'Third', description: ''),
+        ]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Wrap), findsOneWidget);
+      expect(find.byType(Chip), findsNWidgets(3));
+    });
+
+    testWidgets('empty badges does not render Wrap', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        BadgesCard(badges: []),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Chip), findsNothing);
+    });
   });
 }

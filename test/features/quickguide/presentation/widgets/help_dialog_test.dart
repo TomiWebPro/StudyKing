@@ -69,5 +69,35 @@ void main() {
 
       expect(find.byType(AlertDialog), findsNothing);
     });
+
+    testWidgets('QuickGuideHelpDialog has semanticLabel on AlertDialog',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Show Help'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect(dialog.semanticLabel, 'Quick Guide Help');
+    });
+  });
+
+  group('QuickGuideHelpDialog widget', () {
+    testWidgets('can be created directly', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: QuickGuideHelpDialog(),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.text('Quick Guide Help'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
   });
 }

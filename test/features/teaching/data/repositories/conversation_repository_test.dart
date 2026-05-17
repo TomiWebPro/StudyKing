@@ -1,70 +1,104 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 
-class _MockConversationRepository extends ConversationRepository {
-  final Map<String, ConversationMessage> _storage = {};
+/// Fake Box of ConversationMessage with in-memory storage.
+class _FakeConversationBox implements Box<ConversationMessage> {
+  final Map<dynamic, ConversationMessage> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Iterable<ConversationMessage> get values => _storage.values;
 
   @override
-  Future<void> saveMessage(ConversationMessage message) async {
-    _storage[message.id] = message;
+  int get length => _storage.length;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'conversations';
+
+  @override
+  ConversationMessage? get(dynamic key, {ConversationMessage? defaultValue}) =>
+      _storage[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, ConversationMessage value) async {
+    _storage[key] = value;
   }
 
   @override
-  Future<ConversationMessage?> getMessage(String id) async {
-    return _storage[id];
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key);
   }
 
   @override
-  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
-    final all = _storage.values.toList();
-    all.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return all.where((m) => m.sessionId == sessionId).toList();
+  Future<void> deleteAll(Iterable<dynamic> keys) async {
+    for (final key in keys) {
+      _storage.remove(key);
+    }
   }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
+  bool containsKey(dynamic key) => _storage.containsKey(key);
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  Map<dynamic, ConversationMessage> toMap() => Map.from(_storage);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Test subclass that overrides only [deleteSessionMessages] because
+/// the real implementation relies on `HiveObject.key` which the fake box
+/// cannot set (it's internal to the `hive` library).
+/// All other methods use the real [ConversationRepository] implementation.
+class _TestConversationRepository extends ConversationRepository {
+  final _FakeConversationBox _fakeBox;
+
+  _TestConversationRepository(this._fakeBox);
 
   @override
   Future<void> deleteSessionMessages(String sessionId) async {
-    _storage.removeWhere((key, m) => m.sessionId == sessionId);
-  }
-
-  @override
-  Future<void> deleteMessage(String id) async {
-    _storage.remove(id);
-  }
-
-  @override
-  Future<List<ConversationMessage>> getRecentMessages({
-    int limit = 10,
-    String? sessionId,
-  }) async {
-    var messages = _storage.values.toList();
-    messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    if (sessionId != null) {
-      messages = messages.where((m) => m.sessionId == sessionId).toList();
-    }
-    return messages.take(limit).toList();
-  }
-
-  @override
-  Future<void> clearAll() async {
-    _storage.clear();
+    final toDelete = _fakeBox.toMap().entries
+        .where((e) => e.value.sessionId == sessionId)
+        .map((e) => e.key)
+        .toList();
+    await box.deleteAll(toDelete);
   }
 }
 
 void main() {
-  group('ConversationRepository', () {
-    late _MockConversationRepository repository;
+  group('ConversationRepository (attached to fake box)', () {
+    late _FakeConversationBox fakeBox;
+    late ConversationRepository repository;
     final now = DateTime(2025, 1, 15, 10, 0, 0);
 
     setUp(() {
-      repository = _MockConversationRepository();
+      fakeBox = _FakeConversationBox();
+      repository = ConversationRepository();
+      repository.attachBox(fakeBox);
     });
 
     ConversationMessage createMessage({
@@ -142,24 +176,6 @@ void main() {
       });
     });
 
-    group('deleteSessionMessages', () {
-      test('deletes all messages for a session', () async {
-        await repository.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
-        await repository.saveMessage(createMessage(id: 'm2', sessionId: 's1'));
-        await repository.saveMessage(createMessage(id: 'm3', sessionId: 's2'));
-        await repository.deleteSessionMessages('s1');
-        expect(await repository.getMessage('m1'), isNull);
-        expect(await repository.getMessage('m2'), isNull);
-        expect(await repository.getMessage('m3'), isNotNull);
-      });
-
-      test('does nothing for non-existent session', () async {
-        await repository.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
-        await repository.deleteSessionMessages('non-existent');
-        expect(await repository.getMessage('m1'), isNotNull);
-      });
-    });
-
     group('deleteMessage', () {
       test('deletes a single message', () async {
         final msg = createMessage();
@@ -216,6 +232,21 @@ void main() {
       test('returns empty when no messages', () async {
         expect(await repository.getRecentMessages(), isEmpty);
       });
+
+      test('sorts most recent first within sessionId filter', () async {
+        await repository.saveMessage(createMessage(
+          id: 'm1', sessionId: 's1', content: 'Old',
+          timestamp: now.subtract(const Duration(hours: 2)),
+        ));
+        await repository.saveMessage(createMessage(
+          id: 'm2', sessionId: 's1', content: 'New',
+          timestamp: now,
+        ));
+        final recent = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(recent.length, 2);
+        expect(recent[0].content, 'New');
+        expect(recent[1].content, 'Old');
+      });
     });
 
     group('clearAll', () {
@@ -225,6 +256,36 @@ void main() {
         await repository.clearAll();
         expect(await repository.getMessage('m1'), isNull);
         expect(await repository.getMessage('m2'), isNull);
+      });
+
+      test('works on empty repository', () async {
+        await repository.clearAll();
+        expect(await repository.getRecentMessages(), isEmpty);
+      });
+    });
+
+    group('deleteSessionMessages', () {
+      late _TestConversationRepository testRepo;
+
+      setUp(() {
+        testRepo = _TestConversationRepository(fakeBox);
+        testRepo.attachBox(fakeBox);
+      });
+
+      test('deletes all messages for a session', () async {
+        await testRepo.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
+        await testRepo.saveMessage(createMessage(id: 'm2', sessionId: 's1'));
+        await testRepo.saveMessage(createMessage(id: 'm3', sessionId: 's2'));
+        await testRepo.deleteSessionMessages('s1');
+        expect(await testRepo.getMessage('m1'), isNull);
+        expect(await testRepo.getMessage('m2'), isNull);
+        expect(await testRepo.getMessage('m3'), isNotNull);
+      });
+
+      test('does nothing for non-existent session', () async {
+        await testRepo.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
+        await testRepo.deleteSessionMessages('non-existent');
+        expect(await testRepo.getMessage('m1'), isNotNull);
       });
     });
   });
@@ -273,7 +334,6 @@ void main() {
     test('init initializes successfully', () async {
       final repo = ConversationRepository();
       await repo.init();
-      // No exception means success
     });
 
     test('init can be called multiple times without error', () async {

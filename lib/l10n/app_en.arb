@@ -848,6 +848,19 @@
   "@subjectCreatedSuccessfully": {
     "description": "Snackbar message when subject is created"
   },
+  "uploadPrompt": "Would you like to upload study material for {subject}?",
+  "@uploadPrompt": {
+    "description": "Prompt after creating a subject",
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "noThanks": "No thanks",
+  "@noThanks": {
+    "description": "Decline offer button"
+  },
   "errorCreatingSubject": "Error creating subject: {error}",
   "@errorCreatingSubject": {
     "description": "Error message when creating subject fails",
@@ -1966,7 +1979,7 @@
       }
     }
   },
-  "tokensAndCost": "Tokens: {count} (${cost})",
+  "tokensAndCost": "Tokens: {count} ({cost})",
   "@tokensAndCost": {
     "description": "Label showing token count and cost",
     "placeholders": {
@@ -3558,7 +3571,11 @@
   },
   "uploadMaterial": "Upload Study Material",
   "@uploadMaterial": {
-    "description": "Checklist item for uploading study material"
+    "description": "Label for uploading study materials"
+  },
+  "uploadAndAnalyze": "Upload & Analyze",
+  "@uploadAndAnalyze": {
+    "description": "Button label to upload and auto-generate questions"
   },
   "uploadMaterialDesc": "Upload PDFs, notes, and question banks to get started",
   "@uploadMaterialDesc": {
@@ -4533,5 +4550,73 @@
   "localeEs": "Spanish",
   "@localeEs": {
     "description": "Label for Spanish language option"
+  },
+  "welcomeToStudyKing": "Welcome to StudyKing",
+  "@welcomeToStudyKing": {
+    "description": "Onboarding dialog title"
+  },
+  "onboardingDescription": "Your AI-native learning companion. StudyKing helps you master any subject with intelligent planning, adaptive practice, and AI tutoring.",
+  "@onboardingDescription": {
+    "description": "Onboarding description"
+  },
+  "onboardingSubjectsDesc": "Add and organize your subjects and topics",
+  "@onboardingSubjectsDesc": {
+    "description": "Subjects tab description in onboarding"
+  },
+  "onboardingPracticeDesc": "Practice with adaptive questions and spaced repetition",
+  "@onboardingPracticeDesc": {
+    "description": "Practice tab description in onboarding"
+  },
+  "onboardingMentorDesc": "Get personalized study recommendations and nudges",
+  "@onboardingMentorDesc": {
+    "description": "Mentor tab description in onboarding"
+  },
+  "onboardingFocusDesc": "Stay focused with Pomodoro-style study sessions",
+  "@onboardingFocusDesc": {
+    "description": "Focus mode description in onboarding"
+  },
+  "onboardingSettingsDesc": "Configure API keys, appearance, and preferences",
+  "@onboardingSettingsDesc": {
+    "description": "Settings tab description in onboarding"
+  },
+  "dontShowAgain": "Don't show again",
+  "@dontShowAgain": {
+    "description": "Checkbox label to suppress recurring dialog"
+  },
+  "needApiKeyNotice": "Note: AI features require an API key. Configure one in Settings.",
+  "@needApiKeyNotice": {
+    "description": "API key notice in onboarding"
+  },
+  "getStarted": "Get Started",
+  "@getStarted": {
+    "description": "Main CTA button"
+  },
+  "apiKeyNeeded": "StudyKing needs an API key to use AI features. Configure one now.",
+  "@apiKeyNeeded": {
+    "description": "API key banner message"
+  },
+  "configureNow": "Configure Now",
+  "@configureNow": {
+    "description": "Button to configure API key"
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Dismiss button label"
+  },
+  "dataStorageNotice": "Local Data Storage",
+  "@dataStorageNotice": {
+    "description": "Data storage notice title"
+  },
+  "dataStorageDescription": "StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.",
+  "@dataStorageDescription": {
+    "description": "Data storage explanation"
+  },
+  "iUnderstand": "I Understand",
+  "@iUnderstand": {
+    "description": "Acknowledgement button"
+  },
+  "tutorNeedsSubject": "Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.",
+  "@tutorNeedsSubject": {
+    "description": "Message when AI Tutor is accessed without a subject context"
   }
 }

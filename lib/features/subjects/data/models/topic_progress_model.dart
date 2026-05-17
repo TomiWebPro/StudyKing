@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+@Deprecated('Use MasteryState and MasteryStateRepository instead')
 @HiveType(typeId: 1)
 class TopicProgress extends HiveObject {
   @HiveField(0)

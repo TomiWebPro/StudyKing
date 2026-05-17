@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -33,7 +34,7 @@ class PlanSummaryCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -49,7 +50,7 @@ class PlanSummaryCard extends StatelessWidget {
             const Divider(),
             Wrap(
               spacing: 16,
-              runSpacing: 8,
+              runSpacing: ResponsiveUtils.verticalSpacing(context),
               children: [
                 buildSummaryChip(l10n.questionsAbbreviation(summary.totalQuestions), l10n.total),
                 buildSummaryChip(

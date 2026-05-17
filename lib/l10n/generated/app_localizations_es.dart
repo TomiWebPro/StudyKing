@@ -606,7 +606,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Por favor configure su clave API primero.';
 
   @override
-  String get ok => 'OK';
+  String get ok => 'Aceptar';
 
   @override
   String get unableToLoadModels =>
@@ -670,6 +670,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get subjectCreatedSuccessfully => 'Materia creada exitosamente';
+
+  @override
+  String uploadPrompt(String subject) {
+    return '¿Deseas subir material de estudio para $subject?';
+  }
+
+  @override
+  String get noThanks => 'No, gracias';
 
   @override
   String errorCreatingSubject(String error) {
@@ -1487,7 +1495,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String tokensAndCost(int count, String cost) {
-    return 'Tokens: $count (\$$cost)';
+    return 'Tokens: $count ($cost)';
   }
 
   @override
@@ -2640,6 +2648,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get uploadMaterial => 'Subir Material de Estudio';
 
   @override
+  String get uploadAndAnalyze => 'Subir y Analizar';
+
+  @override
   String get uploadMaterialDesc =>
       'Suba PDFs, notas y bancos de preguntas para comenzar';
 
@@ -3309,4 +3320,61 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get localeEs => 'Español';
+
+  @override
+  String get welcomeToStudyKing => 'Bienvenido a StudyKing';
+
+  @override
+  String get onboardingDescription =>
+      'Tu compañero de aprendizaje con IA. StudyKing te ayuda a dominar cualquier materia con planificación inteligente, práctica adaptativa y tutoría con IA.';
+
+  @override
+  String get onboardingSubjectsDesc => 'Añade y organiza tus materias y temas';
+
+  @override
+  String get onboardingPracticeDesc =>
+      'Practica con preguntas adaptativas y repaso espaciado';
+
+  @override
+  String get onboardingMentorDesc =>
+      'Recibe recomendaciones de estudio personalizadas';
+
+  @override
+  String get onboardingFocusDesc =>
+      'Mantén el enfoque con sesiones de estudio estilo Pomodoro';
+
+  @override
+  String get onboardingSettingsDesc =>
+      'Configura claves API, apariencia y preferencias';
+
+  @override
+  String get dontShowAgain => 'No mostrar de nuevo';
+
+  @override
+  String get needApiKeyNotice =>
+      'Nota: Las funciones de IA requieren una clave API. Configúrala en Ajustes.';
+
+  @override
+  String get getStarted => 'Comenzar';
+
+  @override
+  String get apiKeyNeeded =>
+      'StudyKing necesita una clave API para usar funciones de IA. Configúrala ahora.';
+
+  @override
+  String get configureNow => 'Configurar Ahora';
+
+  @override
+  String get dataStorageNotice => 'Almacenamiento Local de Datos';
+
+  @override
+  String get dataStorageDescription =>
+      'StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Exportación en el Tablero.';
+
+  @override
+  String get iUnderstand => 'Entiendo';
+
+  @override
+  String get tutorNeedsSubject =>
+      'Por favor, crea primero una materia y un plan de estudio antes de usar el Tutor de IA. El tutor necesita el contexto de un tema para proporcionar lecciones efectivas.';
 }

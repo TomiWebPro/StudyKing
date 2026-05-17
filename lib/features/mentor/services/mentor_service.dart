@@ -17,7 +17,7 @@ import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 
@@ -126,7 +126,7 @@ class MentorService {
       pendingActions = [];
     }
 
-    List<TutorSession> upcomingLessons;
+    List<Session> upcomingLessons;
     try {
       upcomingLessons = await _plannerService.getScheduledLessons();
     } catch (_) {
@@ -187,7 +187,8 @@ class MentorService {
     if (upcomingLessons.isNotEmpty) {
       buffer.writeln('- Upcoming lessons (next ${upcomingLessons.length > 3 ? 3 : upcomingLessons.length}):');
       for (final lesson in upcomingLessons.take(3)) {
-        buffer.writeln('  * "${lesson.topicTitle}" at ${lesson.startTime.toLocal().toString().substring(0, 16)} (${lesson.plannedDurationMinutes}min)');
+        final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Unknown';
+        buffer.writeln('  * "$title" at ${lesson.startTime.toLocal().toString().substring(0, 16)} (${lesson.plannedDurationMinutes ?? 30}min)');
       }
     }
 
@@ -466,15 +467,16 @@ class MentorService {
     }
   }
 
-  DateTime _findNextFreeSlot(List<TutorSession> existingLessons, int durationMinutes) {
+  DateTime _findNextFreeSlot(List<Session> existingLessons, int durationMinutes) {
     final now = DateTime.now();
     var candidate = DateTime(now.year, now.month, now.day, now.hour + 1, 0);
-    final sorted = List<TutorSession>.from(existingLessons)
+    final sorted = List<Session>.from(existingLessons)
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     for (final lesson in sorted) {
-      if (lesson.status != SessionStatus.planned) continue;
-      final end = lesson.startTime.add(Duration(minutes: lesson.plannedDurationMinutes));
+      if (lesson.completed || lesson.endTime != null) continue;
+      final plannedDur = lesson.plannedDurationMinutes ?? durationMinutes;
+      final end = lesson.startTime.add(Duration(minutes: plannedDur));
       if (candidate.isBefore(lesson.startTime) &&
           lesson.startTime.difference(candidate).inMinutes >= durationMinutes) {
         return candidate;

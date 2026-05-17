@@ -1,24 +1,19 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
-class QuestionMasteryStateRepository {
+class QuestionMasteryStateRepository extends Repository<QuestionMasteryState> {
   final Logger _logger = const Logger('QuestionMasteryStateRepository');
-  late Box<QuestionMasteryState> _box;
 
   Future<void> init() async {
     try {
-      _box = await Hive.openBox<QuestionMasteryState>(HiveBoxNames.questionMasteryStates);
+      await openBox(HiveBoxNames.questionMasteryStates);
     } catch (e) {
       _logger.e('Error initializing QuestionMasteryStateRepository', e);
       rethrow;
     }
-  }
-
-  void attachBox(Box<QuestionMasteryState> box) {
-    _box = box;
   }
 
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(
@@ -27,13 +22,13 @@ class QuestionMasteryStateRepository {
   ) async {
     try {
       final key = '${studentId}_$questionId';
-      final state = _box.get(key);
+      final state = box.get(key);
       if (state != null) {
         return Result.success(state);
       }
       final newState = QuestionMasteryState.initial(
           studentId: studentId, questionId: questionId, now: DateTime.now());
-      await _box.put(key, newState);
+      await box.put(key, newState);
       return Result.success(newState);
     } catch (e) {
       _logger.e('Error getting question mastery state', e);
@@ -45,7 +40,7 @@ class QuestionMasteryStateRepository {
       QuestionMasteryState state) async {
     try {
       final key = '${state.studentId}_${state.questionId}';
-      await _box.put(key, state);
+      await box.put(key, state);
       return Result.success(null);
     } catch (e) {
       _logger.e('Error updating question mastery state', e);
@@ -59,7 +54,7 @@ class QuestionMasteryStateRepository {
   }) async {
     try {
       final now = asOf ?? DateTime.now();
-      final states = _box.values
+      final states = box.values
           .where((s) =>
               s.studentId == studentId &&
               s.nextReview != null &&
@@ -80,7 +75,7 @@ class QuestionMasteryStateRepository {
     double threshold = 0.5,
   }) async {
     try {
-      final states = _box.values
+      final states = box.values
           .where((s) =>
               s.studentId == studentId && s.masteryLevel < threshold)
           .toList();

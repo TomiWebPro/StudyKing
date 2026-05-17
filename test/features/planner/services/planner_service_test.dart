@@ -7,18 +7,19 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
+import 'package:studyking/features/planner/services/action_executor.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
@@ -100,28 +101,39 @@ class _MockRoadmapRepository extends RoadmapRepository {
   Future<List<RoadmapModel>> getAllRoadmaps() async => _roadmaps.values.toList();
 }
 
-class _MockTutorSessionRepository extends TutorSessionRepository {
-  final Map<String, TutorSession> _sessions = {};
+class _MockSessionRepository extends SessionRepository {
+  final Map<String, Session> _sessions = {};
+  bool throwOnGet = false;
+  bool throwOnSave = false;
+  bool throwOnGetAll = false;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> save(Session session) async {
+    if (throwOnSave) throw Exception('save session error');
     _sessions[session.id] = session;
+    return Result.success(null);
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async => _sessions[id];
+  Future<Result<Session?>> get(String id) async {
+    if (throwOnGet) throw Exception('get session error');
+    return Result.success(_sessions[id]);
+  }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _sessions.values.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<Session>>> getAll() async {
+    if (throwOnGetAll) throw Exception('get all sessions error');
+    return Result.success(_sessions.values.toList());
   }
 }
 
 class _MockPendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _actions = {};
+  bool throwOnMarkCompleted = false;
+  bool throwOnMarkRejected = false;
 
   @override
   Future<void> init() async {}
@@ -138,6 +150,7 @@ class _MockPendingActionRepository extends PendingActionRepository {
 
   @override
   Future<void> markCompleted(String id) async {
+    if (throwOnMarkCompleted) throw Exception('mark completed error');
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'completed');
@@ -146,6 +159,7 @@ class _MockPendingActionRepository extends PendingActionRepository {
 
   @override
   Future<void> markRejected(String id) async {
+    if (throwOnMarkRejected) throw Exception('mark rejected error');
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'rejected');
@@ -163,14 +177,28 @@ class _MockPendingActionRepository extends PendingActionRepository {
 class _MockPlanAdapter extends PlanAdapter {
   _MockPlanAdapter() : super();
 
+  bool returnFailureForAdherence = false;
+  bool returnFailureForCheck = false;
+  PersonalLearningPlan? _regeneratedPlan;
+
+  void setRegeneratedPlan(PersonalLearningPlan p) => _regeneratedPlan = p;
+
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    if (returnFailureForCheck) return Result.failure('adherence check failed');
     return Result.success(const AdherenceDeviation());
   }
 
   @override
   Future<Result<Map<String, dynamic>>> getAdherenceReport(String studentId) async {
+    if (returnFailureForAdherence) return Result.failure('report failed');
     return Result.success({'totalDays': 0, 'averageAdherence': 1.0, 'lowAdherenceDays': 0, 'weeklyTrend': <double>[]});
+  }
+
+  @override
+  Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
+    if (_regeneratedPlan != null) return Result.success(_regeneratedPlan);
+    return Result.success(null);
   }
 
   @override
@@ -189,7 +217,7 @@ void main() {
   late _MockTopicRepository topicRepo;
   late _MockPlanRepository planRepo;
   late _MockRoadmapRepository roadmapRepo;
-  late _MockTutorSessionRepository tutorRepo;
+  late _MockSessionRepository sessionRepo;
   late _MockPendingActionRepository pendingActionRepo;
   late _MockPlanAdapter planAdapter;
   late AppLocalizations l10n;
@@ -200,7 +228,7 @@ void main() {
     topicRepo = _MockTopicRepository();
     planRepo = _MockPlanRepository();
     roadmapRepo = _MockRoadmapRepository();
-    tutorRepo = _MockTutorSessionRepository();
+    sessionRepo = _MockSessionRepository();
     pendingActionRepo = _MockPendingActionRepository();
     planAdapter = _MockPlanAdapter();
     l10n = AppLocalizationsEn();
@@ -216,7 +244,7 @@ void main() {
       topicRepository: topicRepo,
       planRepo: planRepo,
       roadmapRepo: roadmapRepo,
-      tutorRepo: tutorRepo,
+      sessionRepo: sessionRepo,
       pendingActionRepo: pendingActionRepo,
       planAdapter: planAdapter,
       syllabusResolver: syllabusResolver,
@@ -591,6 +619,204 @@ void main() {
         durationMinutes: 30,
       );
       expect(conflict, false);
+    });
+
+    test('hasSchedulingConflict returns true when sessions overlap', () async {
+      final now = DateTime.now();
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: now,
+        durationMinutes: 60,
+      );
+      final conflict = await service.hasSchedulingConflict(
+        startTime: now.add(const Duration(minutes: 30)),
+        durationMinutes: 30,
+      );
+      expect(conflict, true);
+    });
+
+    test('getAdherenceReport returns empty map on failure', () async {
+      planAdapter.returnFailureForAdherence = true;
+      final report = await service.getAdherenceReport();
+      expect(report, isEmpty);
+    });
+
+    test('checkAdherence returns null on failure', () async {
+      planAdapter.returnFailureForCheck = true;
+      final deviation = await service.checkAdherence();
+      expect(deviation, isNull);
+    });
+  });
+
+  group('generatePlan edge cases', () {
+    // The internal service generates a plan for any valid input
+    test('generates plan even with minimal params', () async {
+      final plan = await service.generatePlan(
+        course: 'Test',
+        daysValue: 1,
+        hoursValue: 1,
+      );
+      expect(plan, isNotNull);
+    });
+  });
+
+  group('createRoadmapFromGoal', () {
+    test('creates roadmap with milestones', () async {
+      final roadmap = await service.createRoadmapFromGoal(
+        'Learn Physics',
+        14,
+        l10n,
+      );
+      expect(roadmap, isNotNull);
+      expect(roadmap!.goal, 'Learn Physics');
+      expect(roadmap.milestones, isNotEmpty);
+    });
+
+    test('creates roadmap with subject ID', () async {
+      topicRepo.addTopic(Topic(
+        id: 'topic-1',
+        subjectId: 'sub_physics',
+        title: 'Kinematics',
+        description: 'Motion',
+        syllabusText: 'IB Physics topic',
+      ));
+      final roadmap = await service.createRoadmapFromGoal(
+        'Learn Physics',
+        14,
+        l10n,
+        subjectId: 'sub_physics',
+      );
+      expect(roadmap, isNotNull);
+      expect(roadmap!.subjectId, 'sub_physics');
+      expect(roadmap.milestones.first.topicsCovered, isNotEmpty);
+    });
+  });
+
+  group('toggleMilestoneCompletion null roadmap', () {
+    test('returns null when roadmap does not exist', () async {
+      final result = await service.toggleMilestoneCompletion(
+        roadmapId: 'nonexistent',
+        milestoneId: 'ms-1',
+        isCompleted: true,
+      );
+      expect(result, isNull);
+    });
+  });
+
+  group('cancelLesson edge cases', () {
+    test('returns false when session does not exist', () async {
+      final result = await service.cancelLesson('nonexistent-session');
+      expect(result, isFalse);
+    });
+
+    test('returns false when tutorRepo throws', () async {
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      sessionRepo.throwOnGet = true;
+      final result = await service.cancelLesson('nonexistent');
+      expect(result, isFalse);
+    });
+  });
+
+  group('getScheduledLessons edge cases', () {
+    test('returns empty list when tutorRepo throws', () async {
+      sessionRepo.throwOnGetAll = true;
+      final lessons = await service.getScheduledLessons();
+      expect(lessons, isEmpty);
+    });
+  });
+
+  group('acceptPendingAction edge cases', () {
+    test('returns false when action is null', () async {
+      final result = await service.acceptPendingAction('nonexistent');
+      expect(result, isFalse);
+    });
+
+    test('returns false when actionExecutor execute returns false', () async {
+      pendingActionRepo.addAction(PendingActionModel(
+        id: 'action-fail',
+        studentId: 'test-student',
+        actionType: 'schedule',
+        status: 'pending',
+        payload: {
+          'topicId': 'topic-1',
+          'subjectId': 'subject-1',
+          'scheduledTime': '2026-06-01T10:00:00.000',
+        },
+      ));
+      sessionRepo.throwOnSave = true;
+      final result = await service.acceptPendingAction('action-fail');
+      expect(result, isFalse);
+    });
+  });
+
+  group('dismissPendingAction edge cases', () {
+    test('returns false when repo throws', () async {
+      pendingActionRepo.throwOnMarkRejected = true;
+      final result = await service.dismissPendingAction('action-1');
+      expect(result, isFalse);
+    });
+  });
+
+  group('regeneratePlanFromAdherence', () {
+    test('returns null when adapter has no regeneration plan', () async {
+      final plan = await service.regeneratePlanFromAdherence();
+      expect(plan, isNull);
+    });
+
+    test('returns plan when adapter provides regeneration', () async {
+      final testPlan = PersonalLearningPlan(
+        studentId: 'test-student',
+        generatedAt: DateTime.now(),
+        dailyPlans: [],
+        summary: PlanSummary(
+          totalQuestions: 0, totalMinutes: 0,
+          newTopics: 0, reviewTopics: 0,
+          estimatedCoverage: 0.0, focusAreas: [],
+        ),
+        recommendations: [],
+      );
+      planAdapter.setRegeneratedPlan(testPlan);
+      final plan = await service.regeneratePlanFromAdherence();
+      expect(plan, isNotNull);
+      expect(plan!.studentId, 'test-student');
+    });
+  });
+
+  group('getAdherenceMetrics', () {
+    test('aggregates metrics from multiple records', () async {
+      final metrics = await service.getAdherenceMetrics();
+      expect(metrics['actualMinutesToday'], 0);
+      expect(metrics['actualQuestionsToday'], 0);
+    });
+  });
+
+  group('redistributeWorkload', () {
+    test('completes without error', () async {
+      await service.redistributeWorkload(30);
+      // No exception means success
+    });
+  });
+
+  group('linkDailyPlanToRoadmap', () {
+    test('completes without error', () async {
+      await service.linkDailyPlanToRoadmap(['topic-1', 'topic-2']);
+      // No exception means success
+    });
+  });
+
+  group('actionExecutor lazy initialization', () {
+    test('lazily initializes and returns same instance', () {
+      final executor1 = service.actionExecutor;
+      final executor2 = service.actionExecutor;
+      expect(executor1, same(executor2));
+      expect(executor1, isA<ActionExecutor>());
     });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/repositories/student_availability_repository.dart';
 import '../../services/planner_service.dart';
@@ -69,10 +70,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
+      ).add(ResponsiveUtils.screenPadding(context)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,23 +144,33 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.remove_circle_outline),
-                  onPressed: _durationMinutes > 15
-                      ? () {
-                          setState(() => _durationMinutes -= 15);
-                          _checkConflicts(_buildScheduledTime());
-                        }
-                      : null,
+                Semantics(
+                  button: true,
+                  label: 'Decrease duration',
+                  child: IconButton(
+                    icon: const Icon(Icons.remove_circle_outline),
+                    tooltip: 'Decrease duration',
+                    onPressed: _durationMinutes > 15
+                        ? () {
+                            setState(() => _durationMinutes -= 15);
+                            _checkConflicts(_buildScheduledTime());
+                          }
+                        : null,
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  onPressed: _durationMinutes < 120
-                      ? () {
-                          setState(() => _durationMinutes += 15);
-                          _checkConflicts(_buildScheduledTime());
-                        }
-                      : null,
+                Semantics(
+                  button: true,
+                  label: 'Increase duration',
+                  child: IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Increase duration',
+                    onPressed: _durationMinutes < 120
+                        ? () {
+                            setState(() => _durationMinutes += 15);
+                            _checkConflicts(_buildScheduledTime());
+                          }
+                        : null,
+                  ),
                 ),
               ],
             ),
@@ -193,18 +201,17 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                 ),
               ),
             ),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _isScheduling || _isCheckingConflict ? null : _schedule,
-              icon: _isScheduling
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check),
-              label: Text(_isScheduling ? l10n.scheduling : l10n.scheduleLesson),
+          Semantics(
+            liveRegion: true,
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isScheduling || _isCheckingConflict ? null : _schedule,
+                icon: _isScheduling
+                    ? ResponsiveUtils.loaderInTouchTarget(size: 18)
+                    : const Icon(Icons.check),
+                label: Text(_isScheduling ? l10n.scheduling : l10n.scheduleLesson),
+              ),
             ),
           ),
           const SizedBox(height: 24),

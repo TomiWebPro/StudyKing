@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
@@ -47,7 +48,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              childAspectRatio: 1.0,
+              childAspectRatio: _aspectRatio(context),
             ),
             itemCount: startWeekday + lastDay.day,
             itemBuilder: (context, index) {
@@ -64,29 +65,58 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
     );
   }
 
+  double _aspectRatio(BuildContext context) {
+    final bp = ResponsiveUtils.breakpointOf(context);
+    switch (bp) {
+      case ScreenBreakpoint.xs:
+        return 0.85;
+      case ScreenBreakpoint.sm:
+        return 1.0;
+      case ScreenBreakpoint.md:
+        return 1.0;
+      case ScreenBreakpoint.lg:
+        return 1.0;
+    }
+  }
+
   Widget _buildMonthHeader(ThemeData theme, AppLocalizations l10n) {
+    final monthLabel = DateFormat.yMMM(l10n.localeName).format(_currentMonth);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () {
-            setState(() {
-              _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-            });
-          },
+        Semantics(
+          button: true,
+          label: l10n.previous,
+          child: IconButton(
+            icon: const Icon(Icons.chevron_left),
+            tooltip: l10n.previous,
+            onPressed: () {
+              setState(() {
+                _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+              });
+            },
+          ),
         ),
-        Text(
-          DateFormat.yMMM(l10n.localeName).format(_currentMonth),
-          style: theme.textTheme.titleMedium,
+        Semantics(
+          header: true,
+          label: monthLabel,
+          child: Text(
+            monthLabel,
+            style: theme.textTheme.titleMedium,
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () {
-            setState(() {
-              _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
-            });
-          },
+        Semantics(
+          button: true,
+          label: l10n.next,
+          child: IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: l10n.next,
+            onPressed: () {
+              setState(() {
+                _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+              });
+            },
+          ),
         ),
       ],
     );
@@ -126,51 +156,58 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
 
     final isRestDay = dailyPlan?.isRestDay ?? false;
     final hasTopics = (dailyPlan?.priorityTopics.length ?? 0) > 0;
+    final isTappable = dailyPlan != null && dailyPlan.priorityTopics.isNotEmpty && widget.onDayTap != null;
+    final dayLabel = '${DateFormat.MMMMd(l10n.localeName).format(date)}${isToday ? ', ${l10n.today}' : ''}';
 
-    return GestureDetector(
-      onTap: () {
-        if (dailyPlan != null && dailyPlan.priorityTopics.isNotEmpty && widget.onDayTap != null) {
-          final first = dailyPlan.priorityTopics.first;
-          widget.onDayTap!(first.topicId, first.topicTitle, first.subjectId);
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: isToday
-              ? theme.colorScheme.primaryContainer
-              : isRestDay
-                  ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                  : hasTopics
-                      ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                      : null,
-          borderRadius: BorderRadius.circular(8),
-          border: isToday
-              ? Border.all(color: theme.colorScheme.primary, width: 2)
-              : null,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                  color: isRestDay
-                      ? theme.colorScheme.onSurfaceVariant
-                      : null,
-                ),
-              ),
-              if (dailyPlan != null && !dailyPlan.isRestDay)
+    return Semantics(
+      button: isTappable,
+      label: dayLabel,
+      child: InkWell(
+        onTap: isTappable
+            ? () {
+                final first = dailyPlan.priorityTopics.first;
+                widget.onDayTap!(first.topicId, first.topicTitle, first.subjectId);
+              }
+            : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: isToday
+                ? theme.colorScheme.primaryContainer
+                : isRestDay
+                    ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                    : hasTopics
+                        ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                        : null,
+            borderRadius: BorderRadius.circular(8),
+            border: isToday
+                ? Border.all(color: theme.colorScheme.primary, width: 2)
+                : null,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
                 Text(
-                  l10n.minutesCountMetric(dailyPlan.targetMinutes),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  '$day',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                    color: isRestDay
+                        ? theme.colorScheme.onSurfaceVariant
+                        : null,
                   ),
                 ),
-            ],
+                if (dailyPlan != null && !dailyPlan.isRestDay)
+                  Text(
+                    l10n.minutesCountMetric(dailyPlan.targetMinutes),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

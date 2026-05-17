@@ -124,16 +124,26 @@ class TutorService {
       final now = _clock.now();
       final elapsedMs = _elapsedMinutes(session) * 60000;
       await _database.sessionRepository.save(Session(
-        id: 'tutor_${session.id}_${now.millisecondsSinceEpoch}',
+        id: session.id,
         studentId: session.studentId,
         subjectId: session.subjectId,
         topicId: session.topicId,
         type: SessionType.tutoring,
-        startTime: now.subtract(Duration(milliseconds: elapsedMs)),
-        endTime: now,
+        startTime: session.startTime,
+        endTime: session.endTime ?? now,
         actualDurationMs: elapsedMs,
-        completed: true,
-        sourceId: session.id,
+        questionsAnswered: session.questionsAsked,
+        correctAnswers: session.questionsCorrect,
+        completed: session.status == SessionStatus.completed,
+        tutorMetadata: TutorMetadata(
+          topicTitle: session.topicTitle,
+          lessonPlanJson: session.lessonPlanJson,
+          confidenceRating: session.confidenceRating,
+          tutorNotes: session.tutorNotes,
+          topicsCovered: session.topicsCovered,
+          totalMessages: session.totalMessages,
+          totalTokensUsed: session.totalTokensUsed,
+        ),
       ));
     } catch (_) {}
 

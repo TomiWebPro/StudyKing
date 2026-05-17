@@ -20,7 +20,6 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviation;
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -33,7 +32,7 @@ class FakePlannerService extends PlannerService {
   @override
   Future<List<PendingActionModel>> loadPendingActions() async => [];
   @override
-  Future<List<TutorSession>> getScheduledLessons() async => [];
+  Future<List<Session>> getScheduledLessons() async => [];
   @override
   Future<AdherenceDeviation?> checkAdherence() async => null;
   @override

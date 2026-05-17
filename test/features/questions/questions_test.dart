@@ -1,9 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/questions/data/models/drawing_models.dart';
-import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
-import 'package:studyking/features/questions/presentation/painters/drawing_painter.dart';
-import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
 import 'package:studyking/features/questions/questions.dart';
 
 void main() {

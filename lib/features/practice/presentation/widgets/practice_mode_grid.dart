@@ -35,14 +35,14 @@ class PracticeModeGrid extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: ResponsiveUtils.gridCrossAxisCount(context),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: (1.2 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(0.6, 2.0),
+          childAspectRatio: (1.2 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(0.8, 1.5),
           children: [
             PracticeModeCard(
               icon: Icons.flash_on,

@@ -24,6 +24,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
             order: const NumericFocusOrder(5),
             child: Semantics(
               label: l10n.previous,
+              enabled: onPrevious != null,
               child: ElevatedButton.icon(
                 onPressed: onPrevious,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
@@ -56,6 +57,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
             order: const NumericFocusOrder(5),
             child: Semantics(
               label: l10n.previous,
+              enabled: onPrevious != null,
               child: ElevatedButton.icon(
                 onPressed: onPrevious,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),

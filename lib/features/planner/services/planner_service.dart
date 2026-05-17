@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import '../../../core/services/personal_learning_plan_service.dart';
 import '../../../core/services/student_id_service.dart';
@@ -26,7 +26,7 @@ class PlannerService {
   final TopicRepository topicRepository;
   final RoadmapRepository roadmapRepo;
   final PersonalLearningPlanService planService;
-  final TutorSessionRepository tutorRepo;
+  final SessionRepository sessionRepo;
   final PendingActionRepository pendingActionRepo;
   final PlanAdapter planAdapter;
   final SyllabusResolver syllabusResolver;
@@ -46,7 +46,7 @@ class PlannerService {
     TopicRepository? topicRepository,
     RoadmapRepository? roadmapRepo,
     PersonalLearningPlanService? planService,
-    TutorSessionRepository? tutorRepo,
+    SessionRepository? sessionRepo,
     PendingActionRepository? pendingActionRepo,
     PlanAdapter? planAdapter,
     SyllabusResolver? syllabusResolver,
@@ -61,7 +61,7 @@ class PlannerService {
             PersonalLearningPlanService(
               masteryService: masteryService ?? MasteryGraphService(),
             ),
-        tutorRepo = tutorRepo ?? TutorSessionRepository(),
+        sessionRepo = sessionRepo ?? SessionRepository(),
         pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         planAdapter = planAdapter ?? PlanAdapter(),
         syllabusResolver = syllabusResolver ?? SyllabusResolver(),
@@ -107,7 +107,10 @@ class PlannerService {
       ),
     );
 
-    final result = await svc.generatePlan(studentId);
+    final result = await svc.generatePlan(
+      studentId,
+      courseName: course,
+    );
     return result.isSuccess ? result.data : null;
   }
 
@@ -248,19 +251,20 @@ class PlannerService {
     int durationMinutes = 30,
   }) async {
     try {
-      await tutorRepo.init();
-      final session = TutorSession(
+      await sessionRepo.init();
+      final session = Session(
         id: const Uuid().v4(),
         studentId: studentId,
         subjectId: subjectId,
         topicId: topicId,
-        topicTitle: topicTitle,
-        status: SessionStatus.planned,
+        type: SessionType.tutoring,
         startTime: scheduledTime,
         plannedDurationMinutes: durationMinutes,
+        completed: false,
+        tutorMetadata: TutorMetadata(topicTitle: topicTitle),
       );
-      await tutorRepo.saveSession(session);
-      return true;
+      final result = await sessionRepo.save(session);
+      return result.isSuccess;
     } catch (_) {
       return false;
     }
@@ -268,25 +272,24 @@ class PlannerService {
 
   Future<bool> cancelLesson(String sessionId) async {
     try {
-      await tutorRepo.init();
-      final session = await tutorRepo.getSession(sessionId);
-      if (session == null) return false;
-      final cancelled = session.copyWith(
-        status: SessionStatus.cancelled,
-      );
-      await tutorRepo.saveSession(cancelled);
-      return true;
+      await sessionRepo.init();
+      final result = await sessionRepo.get(sessionId);
+      if (result.isFailure || result.data == null) return false;
+      final cancelled = result.data!.copyWith(completed: true);
+      final saveResult = await sessionRepo.save(cancelled);
+      return saveResult.isSuccess;
     } catch (_) {
       return false;
     }
   }
 
-  Future<List<TutorSession>> getScheduledLessons() async {
+  Future<List<Session>> getScheduledLessons() async {
     try {
-      await tutorRepo.init();
-      final sessions = await tutorRepo.getStudentSessions(studentId);
-      return sessions
-          .where((s) => s.status == SessionStatus.planned)
+      await sessionRepo.init();
+      final result = await sessionRepo.getAll();
+      if (result.isFailure) return [];
+      return result.data!
+          .where((s) => !s.completed && s.endTime == null)
           .toList()
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
     } catch (_) {
@@ -339,14 +342,17 @@ class PlannerService {
     required int durationMinutes,
     String? excludeSessionId,
   }) async {
-    await tutorRepo.init();
-    final sessions = await tutorRepo.getStudentSessions(studentId);
+    await sessionRepo.init();
+    final result = await sessionRepo.getAll();
+    if (result.isFailure) return false;
+    final sessions = result.data!;
     final proposedEnd = startTime.add(Duration(minutes: durationMinutes));
     for (final session in sessions) {
-      if (session.status != SessionStatus.planned) continue;
+      if (session.completed || session.endTime != null) continue;
       if (session.id == excludeSessionId) continue;
+      final plannedDur = session.plannedDurationMinutes ?? durationMinutes;
       final sessionEnd = session.startTime
-          .add(Duration(minutes: session.plannedDurationMinutes));
+          .add(Duration(minutes: plannedDur));
       if (startTime.isBefore(sessionEnd) && proposedEnd.isAfter(session.startTime)) {
         return true;
       }

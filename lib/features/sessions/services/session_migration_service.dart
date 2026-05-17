@@ -26,7 +26,7 @@ class SessionMigrationService {
     final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
     if (focusBox.isEmpty) return;
 
-    final sessionsBox = Hive.box<String>(HiveBoxNames.sessions);
+    final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
     int migrated = 0;
     int skipped = 0;
 
@@ -34,14 +34,13 @@ class SessionMigrationService {
       try {
         final json = jsonDecode(entry.value) as Map<String, dynamic>;
         final session = _convertFocusSession(json);
-        final sessionKey = 'focus_${session.id}';
 
-        if (sessionsBox.containsKey(sessionKey)) {
+        if (sessionsBox.containsKey(session.id)) {
           skipped++;
           continue;
         }
 
-        sessionsBox.put(sessionKey, jsonEncode(session.toJson()));
+        sessionsBox.put(session.id, session);
         migrated++;
       } catch (e) {
         _logger.e('Error migrating focus session ${entry.key}', e);

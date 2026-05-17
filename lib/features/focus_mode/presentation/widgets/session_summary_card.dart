@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -29,7 +30,7 @@ class SessionSummaryCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -100,10 +101,12 @@ class SessionSummaryCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      Icon(
-                        s.completed ? Icons.check_circle : Icons.cancel,
-                        size: 16,
-                        color: s.completed ? cs.primary : cs.error,
+                      ExcludeSemantics(
+                        child: Icon(
+                          s.completed ? Icons.check_circle : Icons.cancel,
+                          size: 16,
+                          color: s.completed ? cs.primary : cs.error,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

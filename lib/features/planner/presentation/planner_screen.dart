@@ -131,37 +131,39 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       builder: (ctx) => AlertDialog(
         semanticLabel: l10n.createRoadmap,
         title: Text(l10n.createRoadmap),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: goalController,
-              decoration: InputDecoration(
-                labelText: l10n.roadmapGoal,
-                hintText: l10n.roadmapGoalHint,
-                border: const OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: goalController,
+                decoration: InputDecoration(
+                  labelText: l10n.roadmapGoal,
+                  hintText: l10n.roadmapGoalHint,
+                  border: const OutlineInputBorder(),
+                ),
+                maxLines: 2,
               ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: daysController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.days,
-                border: const OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: daysController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.days,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              decoration: InputDecoration(
-                labelText: l10n.studentIdOptional,
-                hintText: l10n.subjectIdHint,
-                border: const OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: l10n.studentIdOptional,
+                  hintText: l10n.subjectIdHint,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (v) => selectedSubjectId = v.trim(),
               ),
-              onChanged: (v) => selectedSubjectId = v.trim(),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -227,9 +229,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: l10n.studyPlanner),
-            Tab(text: l10n.calendar),
-            Tab(text: l10n.roadmaps),
+            Semantics(label: l10n.studyPlanner, child: Tab(text: l10n.studyPlanner)),
+            Semantics(label: l10n.calendar, child: Tab(text: l10n.calendar)),
+            Semantics(label: l10n.roadmaps, child: Tab(text: l10n.roadmaps)),
           ],
         ),
       ),
@@ -253,24 +255,24 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           children: [
             if (state.pendingActions.isNotEmpty) ...[
               _buildPendingActionsSection(l10n, state),
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
             if (state.adherenceDeviation != null &&
                 state.adherenceDeviation!.requiresRegeneration) ...[
               _buildAdherenceBanner(l10n, state),
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
             if (state.plan != null) ...[
               _buildProgressOverlay(),
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
             if (state.scheduledLessons.isNotEmpty) ...[
               _buildScheduledLessonsSection(l10n, state),
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
             Text(l10n.createStudyPlan,
                 style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             TextField(
               controller: _courseController,
               decoration: InputDecoration(
@@ -279,7 +281,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 border: const OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             LayoutBuilder(
               builder: (context, constraints) {
                 final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
@@ -294,7 +296,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                           border: const OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                       TextField(
                         controller: _hoursController,
                         keyboardType: TextInputType.number,
@@ -318,7 +320,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: ResponsiveUtils.horizontalSpacing(context)),
                     Expanded(
                       child: TextField(
                         controller: _hoursController,
@@ -333,28 +335,24 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 );
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Semantics(
               button: true,
               label: state.isGenerating ? l10n.generating : l10n.generatePlan,
               child: ElevatedButton.icon(
                 onPressed: state.isGenerating ? null : _generatePlan,
                 icon: state.isGenerating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? ResponsiveUtils.loaderInTouchTarget(size: 20)
                     : const Icon(Icons.calendar_today),
                 label: Text(state.isGenerating
                     ? l10n.generating
                     : l10n.generatePlan),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             if (state.error != null && _tabController.index == 0)
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: ResponsiveUtils.cardPadding(context),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
@@ -363,13 +361,13 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error)),
               ),
-            const SizedBox(height: 24),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             if (state.plan != null) ...[
               if (state.plan!.syllabusGoals.isNotEmpty)
                 _buildSubjectProgressTabs(l10n, state)
               else ...[
                 PlanSummaryCard(summary: state.plan!.summary),
-                const SizedBox(height: 16),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               ],
               _buildDailyPlans(state, l10n),
             ],
@@ -386,7 +384,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           children: [
         Text(l10n.subjectProgress,
             style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         ...goals.map((goal) {
           final subjectPlans = state.plan!.subjectPlans;
           final topicCount = subjectPlans[goal.subjectId]?.length ?? 0;
@@ -413,9 +411,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             ),
           );
         }),
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         PlanSummaryCard(summary: state.plan!.summary),
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
       ],
     );
   }
@@ -455,7 +453,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     final missedMinutes = state.plan?.targetMinutesPerDay.toInt() ?? 60;
     return FocusTraversalGroup(
       child: Container(
-      padding: const EdgeInsets.all(12),
+      padding: ResponsiveUtils.cardPadding(context),
       decoration: BoxDecoration(
         color: deviation.requiresEscalation
             ? Theme.of(context).colorScheme.errorContainer
@@ -527,16 +525,17 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ],
         ),
         const SizedBox(height: 8),
-        ...state.scheduledLessons.take(3).map((lesson) {
+          ...state.scheduledLessons.take(3).map((lesson) {
           final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
+          final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '';
           return Card(
             margin: const EdgeInsets.only(bottom: 4),
             child: ListTile(
               dense: true,
               leading: const Icon(Icons.menu_book, size: 20),
-              title: Text(lesson.topicTitle,
+              title: Text(title,
                   style: Theme.of(context).textTheme.bodyMedium),
-              subtitle: Text(lesson.topicId),
+              subtitle: Text(lesson.topicId ?? ''),
               trailing: Text(time,
                   style: Theme.of(context).textTheme.bodySmall),
             ),
@@ -545,11 +544,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         if (state.scheduledLessons.length > 3)
           TextButton(
             onPressed: () {
+              final first = state.scheduledLessons.first;
               Navigator.pushNamed(context, AppRoutes.lessonList,
                   arguments: LessonListArgs(
-                    topicId: state.scheduledLessons.first.topicId,
+                    topicId: first.topicId ?? '',
                     topicTitle: l10n.scheduledLessons,
-                    subjectId: state.scheduledLessons.first.subjectId,
+                    subjectId: first.subjectId ?? '',
                   ));
             },
             child: Text(l10n.moreLessonsCount(
@@ -567,7 +567,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       children: [
         Text(l10n.yourStudySchedule,
             style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         ...state.plan!.dailyPlans.map(
           (day) => DailyPlanCard(
             day: day,
@@ -599,7 +599,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.calendar_month,
-                size: 64,
+                size: ResponsiveUtils.emptyStateIconSize(context),
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(l10n.noStudyPlanYet, style: Theme.of(context).textTheme.titleMedium),
@@ -620,7 +620,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: ResponsiveUtils.screenPadding(context),
             child:             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -641,7 +641,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.map,
-                        size: 64,
+                        size: ResponsiveUtils.emptyStateIconSize(context),
                         color: Theme.of(context)
                             .colorScheme
                             .onSurfaceVariant
@@ -659,7 +659,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           else
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: ResponsiveUtils.screenPadding(context),
                 itemCount: state.roadmaps.length,
                 itemBuilder: (context, index) {
                   return RoadmapCard(

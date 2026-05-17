@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import '../../../core/data/models/session_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/services/student_id_service.dart';
@@ -60,14 +61,14 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
 
   Future<void> _loadTutorSessionStatuses() async {
     try {
-      final repo = ref.read(tutorSessionRepositoryProvider);
-      final sessions = await repo
-          .getStudentSessions(StudentIdService().getStudentId());
+      final repo = ref.read(sessionRepositoryProvider);
+      final result = await repo.getByStudent(StudentIdService().getStudentId());
+      final sessions = result.data ?? [];
       for (final session in sessions) {
-        final lessonId = session.topicId;
-        if (session.status.toString().contains('completed')) {
+        final lessonId = session.topicId ?? '';
+        if (session.completed) {
           _statusCache[lessonId] = LessonStatusDisplay.completed;
-        } else if (session.status.toString().contains('inProgress')) {
+        } else if (session.type == SessionType.tutoring && !session.completed && session.endTime == null) {
           _statusCache[lessonId] = LessonStatusDisplay.inProgress;
         }
       }

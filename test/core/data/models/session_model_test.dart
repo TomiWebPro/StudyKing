@@ -13,6 +13,349 @@ void main() {
     });
   });
 
+  group('SessionStatus', () {
+    test('has expected values', () {
+      expect(SessionStatus.values, [
+        SessionStatus.planned,
+        SessionStatus.inProgress,
+        SessionStatus.completed,
+        SessionStatus.cancelled,
+      ]);
+    });
+  });
+
+  group('TutorMetadata', () {
+    group('constructor', () {
+      test('creates with default values', () {
+        final meta = const TutorMetadata();
+        expect(meta.topicTitle, isNull);
+        expect(meta.lessonPlanJson, isNull);
+        expect(meta.confidenceRating, 0);
+        expect(meta.tutorNotes, isNull);
+        expect(meta.topicsCovered, []);
+        expect(meta.totalMessages, 0);
+        expect(meta.totalTokensUsed, 0);
+      });
+
+      test('creates with all values', () {
+        final meta = const TutorMetadata(
+          topicTitle: 'Algebra',
+          lessonPlanJson: '{"steps": []}',
+          confidenceRating: 4,
+          tutorNotes: 'Good progress',
+          topicsCovered: ['Linear equations', 'Quadratic'],
+          totalMessages: 15,
+          totalTokensUsed: 2500,
+        );
+        expect(meta.topicTitle, 'Algebra');
+        expect(meta.lessonPlanJson, '{"steps": []}');
+        expect(meta.confidenceRating, 4);
+        expect(meta.tutorNotes, 'Good progress');
+        expect(meta.topicsCovered, ['Linear equations', 'Quadratic']);
+        expect(meta.totalMessages, 15);
+        expect(meta.totalTokensUsed, 2500);
+      });
+    });
+
+    group('toJson', () {
+      test('serializes all fields', () {
+        final meta = const TutorMetadata(
+          topicTitle: 'Algebra',
+          lessonPlanJson: '{}',
+          confidenceRating: 3,
+          tutorNotes: 'Notes',
+          topicsCovered: ['Topic1'],
+          totalMessages: 5,
+          totalTokensUsed: 100,
+        );
+        final json = meta.toJson();
+        expect(json['topicTitle'], 'Algebra');
+        expect(json['lessonPlanJson'], '{}');
+        expect(json['confidenceRating'], 3);
+        expect(json['tutorNotes'], 'Notes');
+        expect(json['topicsCovered'], ['Topic1']);
+        expect(json['totalMessages'], 5);
+        expect(json['totalTokensUsed'], 100);
+      });
+
+      test('serializes null fields as null', () {
+        final meta = const TutorMetadata();
+        final json = meta.toJson();
+        expect(json['topicTitle'], isNull);
+        expect(json['lessonPlanJson'], isNull);
+        expect(json['tutorNotes'], isNull);
+        expect(json['topicsCovered'], []);
+      });
+    });
+
+    group('fromJson', () {
+      test('deserializes all fields', () {
+        final json = {
+          'topicTitle': 'Algebra',
+          'lessonPlanJson': '{}',
+          'confidenceRating': 3,
+          'tutorNotes': 'Notes',
+          'topicsCovered': ['Topic1'],
+          'totalMessages': 5,
+          'totalTokensUsed': 100,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.topicTitle, 'Algebra');
+        expect(meta.lessonPlanJson, '{}');
+        expect(meta.confidenceRating, 3);
+        expect(meta.tutorNotes, 'Notes');
+        expect(meta.topicsCovered, ['Topic1']);
+        expect(meta.totalMessages, 5);
+        expect(meta.totalTokensUsed, 100);
+      });
+
+      test('deserializes with missing fields using defaults', () {
+        final json = <String, dynamic>{};
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.topicTitle, isNull);
+        expect(meta.lessonPlanJson, isNull);
+        expect(meta.confidenceRating, 0);
+        expect(meta.tutorNotes, isNull);
+        expect(meta.topicsCovered, []);
+        expect(meta.totalMessages, 0);
+        expect(meta.totalTokensUsed, 0);
+      });
+
+      test('deserializes with null topicsCovered', () {
+        final json = {
+          'topicsCovered': null,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.topicsCovered, []);
+      });
+
+      test('deserializes with null confidenceRating defaults to 0', () {
+        final json = {
+          'confidenceRating': null,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.confidenceRating, 0);
+      });
+
+      test('deserializes with null totalMessages defaults to 0', () {
+        final json = {
+          'totalMessages': null,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.totalMessages, 0);
+      });
+
+      test('deserializes with null totalTokensUsed defaults to 0', () {
+        final json = {
+          'totalTokensUsed': null,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        expect(meta.totalTokensUsed, 0);
+      });
+    });
+
+    group('copyWith', () {
+      test('returns identical copy with no args', () {
+        const meta = TutorMetadata(
+          topicTitle: 'Title',
+          lessonPlanJson: '{}',
+          confidenceRating: 4,
+          tutorNotes: 'Notes',
+          topicsCovered: ['T1'],
+          totalMessages: 10,
+          totalTokensUsed: 500,
+        );
+        final copy = meta.copyWith();
+        expect(copy.topicTitle, meta.topicTitle);
+        expect(copy.lessonPlanJson, meta.lessonPlanJson);
+        expect(copy.confidenceRating, meta.confidenceRating);
+        expect(copy.tutorNotes, meta.tutorNotes);
+        expect(copy.topicsCovered, meta.topicsCovered);
+        expect(copy.totalMessages, meta.totalMessages);
+        expect(copy.totalTokensUsed, meta.totalTokensUsed);
+      });
+
+      test('updates specified fields', () {
+        const meta = TutorMetadata();
+        final copy = meta.copyWith(
+          topicTitle: 'New title',
+          confidenceRating: 5,
+          totalMessages: 20,
+        );
+        expect(copy.topicTitle, 'New title');
+        expect(copy.confidenceRating, 5);
+        expect(copy.totalMessages, 20);
+      });
+
+      test('clearTopicTitle sets topicTitle to null', () {
+        const meta = TutorMetadata(topicTitle: 'Title');
+        final copy = meta.copyWith(clearTopicTitle: true);
+        expect(copy.topicTitle, isNull);
+      });
+
+      test('clearLessonPlan sets lessonPlanJson to null', () {
+        const meta = TutorMetadata(lessonPlanJson: '{}');
+        final copy = meta.copyWith(clearLessonPlan: true);
+        expect(copy.lessonPlanJson, isNull);
+      });
+
+      test('clearTutorNotes sets tutorNotes to null', () {
+        const meta = TutorMetadata(tutorNotes: 'Notes');
+        final copy = meta.copyWith(clearTutorNotes: true);
+        expect(copy.tutorNotes, isNull);
+      });
+
+      test('preserves fields when null passed without clear flag', () {
+        const meta = TutorMetadata(
+          topicTitle: 'Title',
+          lessonPlanJson: '{}',
+          tutorNotes: 'Notes',
+        );
+        final copy = meta.copyWith(
+          topicTitle: null,
+          lessonPlanJson: null,
+          tutorNotes: null,
+        );
+        expect(copy.topicTitle, 'Title');
+        expect(copy.lessonPlanJson, '{}');
+        expect(copy.tutorNotes, 'Notes');
+      });
+    });
+
+    group('equality', () {
+      test('same values are equal', () {
+        const a = TutorMetadata(topicTitle: 'T', confidenceRating: 3);
+        const b = TutorMetadata(topicTitle: 'T', confidenceRating: 3);
+        expect(a == b, isTrue);
+      });
+
+      test('different values are not equal', () {
+        const a = TutorMetadata(topicTitle: 'T');
+        const b = TutorMetadata(topicTitle: 'Different');
+        expect(a == b, isFalse);
+      });
+
+      test('identical instances are equal', () {
+        const a = TutorMetadata();
+        expect(a == a, isTrue);
+      });
+
+      test('different runtime types are not equal', () {
+        const a = TutorMetadata();
+        expect(a == Object(), isFalse);
+      });
+
+      test('hashCode is consistent', () {
+        const a = TutorMetadata(topicTitle: 'T', confidenceRating: 3);
+        const b = TutorMetadata(topicTitle: 'T', confidenceRating: 3);
+        expect(a.hashCode, b.hashCode);
+      });
+
+      test('hashCode differs for different values', () {
+        final a = TutorMetadata(topicTitle: 'A', totalMessages: 1);
+        final b = TutorMetadata(topicTitle: 'B', totalMessages: 2);
+        expect(a.hashCode, isNot(b.hashCode));
+      });
+
+      test('== compares all fields for non-identical instances', () {
+        final a = TutorMetadata(
+          topicTitle: 'T',
+          lessonPlanJson: '{}',
+          tutorNotes: 'N',
+        );
+        final b = TutorMetadata(
+          topicTitle: 'T',
+          lessonPlanJson: '{}',
+          tutorNotes: 'N',
+        );
+        expect(identical(a, b), isFalse);
+        expect(a == b, isTrue);
+        expect(a.hashCode, b.hashCode);
+      });
+
+      test('== detects differing topicTitle', () {
+        final a = TutorMetadata(topicTitle: 'A');
+        final b = TutorMetadata(topicTitle: 'B');
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing confidenceRating', () {
+        final a = TutorMetadata(confidenceRating: 1);
+        final b = TutorMetadata(confidenceRating: 2);
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing lessonPlanJson', () {
+        final a = TutorMetadata(lessonPlanJson: '{"a":1}');
+        final b = TutorMetadata(lessonPlanJson: '{"b":2}');
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing tutorNotes', () {
+        final a = TutorMetadata(tutorNotes: 'Good');
+        final b = TutorMetadata(tutorNotes: 'Bad');
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing topicsCovered length', () {
+        final a = TutorMetadata(topicsCovered: ['A']);
+        final b = TutorMetadata(topicsCovered: ['A', 'B']);
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing totalMessages', () {
+        final a = TutorMetadata(totalMessages: 1);
+        final b = TutorMetadata(totalMessages: 2);
+        expect(a == b, isFalse);
+      });
+
+      test('== detects differing totalTokensUsed', () {
+        final a = TutorMetadata(totalTokensUsed: 100);
+        final b = TutorMetadata(totalTokensUsed: 200);
+        expect(a == b, isFalse);
+      });
+    });
+
+    group('serialization roundtrip', () {
+      test('toJson then fromJson preserves data', () {
+        const original = TutorMetadata(
+          topicTitle: 'Algebra',
+          lessonPlanJson: '{}',
+          confidenceRating: 4,
+          tutorNotes: 'Good',
+          topicsCovered: ['T1', 'T2'],
+          totalMessages: 10,
+          totalTokensUsed: 500,
+        );
+        final json = original.toJson();
+        final restored = TutorMetadata.fromJson(json);
+        expect(restored.topicTitle, original.topicTitle);
+        expect(restored.lessonPlanJson, original.lessonPlanJson);
+        expect(restored.confidenceRating, original.confidenceRating);
+        expect(restored.tutorNotes, original.tutorNotes);
+        expect(restored.topicsCovered, original.topicsCovered);
+        expect(restored.totalMessages, original.totalMessages);
+        expect(restored.totalTokensUsed, original.totalTokensUsed);
+      });
+
+      test('fromJson then toJson preserves data', () {
+        final json = {
+          'topicTitle': 'Geometry',
+          'lessonPlanJson': '{"plan": true}',
+          'confidenceRating': 2,
+          'tutorNotes': 'Needs improvement',
+          'topicsCovered': ['Angles'],
+          'totalMessages': 3,
+          'totalTokensUsed': 150,
+        };
+        final meta = TutorMetadata.fromJson(json);
+        final outputJson = meta.toJson();
+        expect(outputJson['topicTitle'], 'Geometry');
+        expect(outputJson['totalTokensUsed'], 150);
+      });
+    });
+  });
+
   group('Session', () {
     late DateTime now;
 
@@ -85,6 +428,36 @@ void main() {
         final after = DateTime.now().add(const Duration(seconds: 1));
         expect(session.createdAt.isAfter(before), isTrue);
         expect(session.createdAt.isBefore(after), isTrue);
+      });
+
+      test('creates with tutorSessionId', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorSessionId: 'tutor-abc',
+        );
+        expect(session.tutorSessionId, 'tutor-abc');
+      });
+
+      test('creates with session status', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          status: SessionStatus.inProgress,
+        );
+        expect(session.status, SessionStatus.inProgress);
+      });
+
+      test('defaults status to planned', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        expect(session.status, SessionStatus.planned);
+      });
+
+      test('creates with tutorMetadata', () {
+        final meta = const TutorMetadata(topicTitle: 'Algebra');
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorMetadata: meta,
+        );
+        expect(session.tutorMetadata?.topicTitle, 'Algebra');
       });
     });
 
@@ -206,6 +579,36 @@ void main() {
         expect(json['tutorSessionId'], 'tutor-1');
         expect(json['sourceIds'], ['src-1', 'src-2']);
         expect(json['lessonIds'], ['lesson-1']);
+      });
+
+      test('serializes status field', () {
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          status: SessionStatus.inProgress,
+        );
+        final json = session.toJson();
+        expect(json['status'], 'inProgress');
+      });
+
+      test('serializes tutorMetadata field', () {
+        final meta = const TutorMetadata(
+          topicTitle: 'Algebra',
+          totalMessages: 5,
+        );
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorMetadata: meta,
+        );
+        final json = session.toJson();
+        expect(json['tutorMetadata'], isNotNull);
+        expect(json['tutorMetadata']['topicTitle'], 'Algebra');
+        expect(json['tutorMetadata']['totalMessages'], 5);
+      });
+
+      test('serializes tutorMetadata as null when not set', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final json = session.toJson();
+        expect(json['tutorMetadata'], isNull);
       });
     });
 
@@ -454,6 +857,91 @@ void main() {
         final session = Session.fromJson(json);
         expect(session.lessonIds, isEmpty);
       });
+
+      test('deserializes status from name', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'status': 'completed',
+        };
+        final session = Session.fromJson(json);
+        expect(session.status, SessionStatus.completed);
+      });
+
+      test('handles null status defaults to planned', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'status': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.status, SessionStatus.planned);
+      });
+
+      test('handles invalid status string defaults to planned', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'status': 'invalid_status',
+        };
+        final session = Session.fromJson(json);
+        expect(session.status, SessionStatus.planned);
+      });
+
+      test('deserializes all SessionStatus values by name', () {
+        for (final status in SessionStatus.values) {
+          final json = {
+            'id': 's1',
+            'studentId': 's1',
+            'startTime': now.toIso8601String(),
+            'status': status.name,
+          };
+          final session = Session.fromJson(json);
+          expect(session.status, status);
+        }
+      });
+
+      test('deserializes tutorMetadata from JSON', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'tutorMetadata': {
+            'topicTitle': 'Algebra',
+            'confidenceRating': 4,
+            'totalMessages': 10,
+          },
+        };
+        final session = Session.fromJson(json);
+        expect(session.tutorMetadata, isNotNull);
+        expect(session.tutorMetadata?.topicTitle, 'Algebra');
+        expect(session.tutorMetadata?.confidenceRating, 4);
+        expect(session.tutorMetadata?.totalMessages, 10);
+      });
+
+      test('handles null tutorMetadata', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+          'tutorMetadata': null,
+        };
+        final session = Session.fromJson(json);
+        expect(session.tutorMetadata, isNull);
+      });
+
+      test('handles missing tutorMetadata key', () {
+        final json = {
+          'id': 's1',
+          'studentId': 's1',
+          'startTime': now.toIso8601String(),
+        };
+        final session = Session.fromJson(json);
+        expect(session.tutorMetadata, isNull);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -668,6 +1156,45 @@ void main() {
         );
         final copy = session.copyWith(endTime: null);
         expect(copy.endTime, now);
+      });
+
+      test('updates tutorMetadata', () {
+        final meta = const TutorMetadata(topicTitle: 'Algebra');
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final copy = session.copyWith(tutorMetadata: meta);
+        expect(copy.tutorMetadata?.topicTitle, 'Algebra');
+      });
+
+      test('clearTutorMetadata sets tutorMetadata to null', () {
+        final meta = const TutorMetadata(topicTitle: 'Algebra');
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorMetadata: meta,
+        );
+        final copy = session.copyWith(clearTutorMetadata: true);
+        expect(copy.tutorMetadata, isNull);
+      });
+
+      test('preserves tutorMetadata when null passed without clear flag', () {
+        final meta = const TutorMetadata(topicTitle: 'Algebra');
+        final session = Session(
+          id: 's1', studentId: 's1', startTime: now,
+          tutorMetadata: meta,
+        );
+        final copy = session.copyWith(tutorMetadata: null);
+        expect(copy.tutorMetadata?.topicTitle, 'Algebra');
+      });
+
+      test('updates status', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final copy = session.copyWith(status: SessionStatus.completed);
+        expect(copy.status, SessionStatus.completed);
+      });
+
+      test('updates tutorSessionId', () {
+        final session = Session(id: 's1', studentId: 's1', startTime: now);
+        final copy = session.copyWith(tutorSessionId: 'tutor-new');
+        expect(copy.tutorSessionId, 'tutor-new');
       });
     });
 

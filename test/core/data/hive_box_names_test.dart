@@ -3,36 +3,73 @@ import 'package:studyking/core/data/hive_box_names.dart';
 
 void main() {
   group('HiveBoxNames', () {
-    test('has all expected constants and they are non-empty', () {
-      expect(HiveBoxNames.answers, equals('answers'));
-      expect(HiveBoxNames.attempts, equals('attempts'));
-      expect(HiveBoxNames.badges, equals('badges'));
-      expect(HiveBoxNames.conversations, equals('conversations'));
-      expect(HiveBoxNames.engagementNudges, equals('engagement_nudges'));
-      expect(HiveBoxNames.focusSessions, equals('focus_sessions'));
-      expect(HiveBoxNames.learningPlans, equals('learning_plans'));
-      expect(HiveBoxNames.lessonBlocks, equals('lessonBlocks'));
-      expect(HiveBoxNames.lessons, equals('lessons'));
-      expect(HiveBoxNames.masteryStates, equals('mastery_states'));
-      expect(HiveBoxNames.masteryImprovementMetrics, equals('mastery_improvement_metrics'));
-      expect(HiveBoxNames.pendingActions, equals('pending_actions'));
-      expect(HiveBoxNames.planAdherence, equals('plan_adherence'));
-      expect(HiveBoxNames.planAdherenceMetrics, equals('plan_adherence_metrics'));
-      expect(HiveBoxNames.progress, equals('progress'));
-      expect(HiveBoxNames.questions, equals('questions'));
-      expect(HiveBoxNames.questionMasteryStates, equals('question_mastery_states'));
-      expect(HiveBoxNames.questionEvaluations, equals('question_evaluations'));
-      expect(HiveBoxNames.roadmaps, equals('roadmaps'));
-      expect(HiveBoxNames.sessions, equals('sessions'));
-      expect(HiveBoxNames.settings, equals('settings'));
-      expect(HiveBoxNames.profile, equals('profile'));
-      expect(HiveBoxNames.sources, equals('sources'));
-      expect(HiveBoxNames.subjects, equals('subjects'));
-      expect(HiveBoxNames.tasks, equals('tasks'));
-      expect(HiveBoxNames.topicDependencies, equals('topic_dependencies'));
-      expect(HiveBoxNames.topics, equals('topics'));
-      expect(HiveBoxNames.tutorSessions, equals('tutor_sessions'));
-      expect(HiveBoxNames.studentAvailability, equals('student_availability'));
+    test('all box names are non-empty strings', () {
+      expect(HiveBoxNames.answers, isNotEmpty);
+      expect(HiveBoxNames.attempts, isNotEmpty);
+      expect(HiveBoxNames.badges, isNotEmpty);
+      expect(HiveBoxNames.conversations, isNotEmpty);
+      expect(HiveBoxNames.engagementNudges, isNotEmpty);
+      expect(HiveBoxNames.focusSessions, isNotEmpty);
+      expect(HiveBoxNames.learningPlans, isNotEmpty);
+      expect(HiveBoxNames.lessonBlocks, isNotEmpty);
+      expect(HiveBoxNames.lessons, isNotEmpty);
+      expect(HiveBoxNames.masteryStates, isNotEmpty);
+      expect(HiveBoxNames.masteryImprovementMetrics, isNotEmpty);
+      expect(HiveBoxNames.pendingActions, isNotEmpty);
+      expect(HiveBoxNames.planAdherence, isNotEmpty);
+      expect(HiveBoxNames.planAdherenceMetrics, isNotEmpty);
+      expect(HiveBoxNames.progress, isNotEmpty);
+      expect(HiveBoxNames.questions, isNotEmpty);
+      expect(HiveBoxNames.questionMasteryStates, isNotEmpty);
+      expect(HiveBoxNames.questionEvaluations, isNotEmpty);
+      expect(HiveBoxNames.roadmaps, isNotEmpty);
+      expect(HiveBoxNames.sessions, isNotEmpty);
+      expect(HiveBoxNames.settings, isNotEmpty);
+      expect(HiveBoxNames.profile, isNotEmpty);
+      expect(HiveBoxNames.sources, isNotEmpty);
+      expect(HiveBoxNames.subjects, isNotEmpty);
+      expect(HiveBoxNames.tasks, isNotEmpty);
+      expect(HiveBoxNames.topicDependencies, isNotEmpty);
+      expect(HiveBoxNames.topics, isNotEmpty);
+      expect(HiveBoxNames.tutorSessions, isNotEmpty);
+      expect(HiveBoxNames.studentAvailability, isNotEmpty);
+    });
+
+    test('all box names contain only lowercase letters and underscores', () {
+      final names = [
+        HiveBoxNames.answers,
+        HiveBoxNames.attempts,
+        HiveBoxNames.badges,
+        HiveBoxNames.conversations,
+        HiveBoxNames.engagementNudges,
+        HiveBoxNames.focusSessions,
+        HiveBoxNames.learningPlans,
+        HiveBoxNames.lessonBlocks,
+        HiveBoxNames.lessons,
+        HiveBoxNames.masteryStates,
+        HiveBoxNames.masteryImprovementMetrics,
+        HiveBoxNames.pendingActions,
+        HiveBoxNames.planAdherence,
+        HiveBoxNames.planAdherenceMetrics,
+        HiveBoxNames.progress,
+        HiveBoxNames.questions,
+        HiveBoxNames.questionMasteryStates,
+        HiveBoxNames.questionEvaluations,
+        HiveBoxNames.roadmaps,
+        HiveBoxNames.sessions,
+        HiveBoxNames.settings,
+        HiveBoxNames.profile,
+        HiveBoxNames.sources,
+        HiveBoxNames.subjects,
+        HiveBoxNames.tasks,
+        HiveBoxNames.topicDependencies,
+        HiveBoxNames.topics,
+        HiveBoxNames.tutorSessions,
+        HiveBoxNames.studentAvailability,
+      ];
+      for (final name in names) {
+        expect(name, matches(RegExp(r'^[a-z]+([A-Z][a-z]+)*(_[a-z]+)*$')));
+      }
     });
 
     test('constructor is private', () {

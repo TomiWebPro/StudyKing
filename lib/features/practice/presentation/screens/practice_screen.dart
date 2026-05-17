@@ -370,8 +370,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               },
         backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.play_arrow),
-        label: Text(
-            _subjects.isEmpty ? l10n.noSubjects : l10n.practice),
+        label: Flexible(
+          child: Text(
+            _subjects.isEmpty ? l10n.noSubjects : l10n.practice,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ),
     );
   }
@@ -393,9 +397,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
             onTopicFocus: _showTopicSelector,
             onWeakAreas: _startWeakAreasPractice,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
           _buildExtraModes(),
-          const SizedBox(height: 16),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
           _buildSubjectSection(context),
         ],
       ),
@@ -441,12 +445,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            Text(l10n.startingPractice(modeName)),
-          ],
+        content: SingleChildScrollView(
+          child: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text(l10n.startingPractice(modeName)),
+            ],
+          ),
         ),
       ),
     );
@@ -466,7 +472,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         ],
         ..._subjects.map((subject) => SubjectPracticeCard(
             subject: subject,
@@ -496,27 +502,31 @@ class _ExtraModeCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(icon, size: 32, color: iconColor),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
+        child: Semantics(
+          button: true,
+          label: '$title, $description',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: ResponsiveUtils.cardPadding(context),
+              child: Column(
+                children: [
+                  Icon(icon, size: 32, color: iconColor),
+                  SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

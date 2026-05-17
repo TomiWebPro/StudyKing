@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/utils/clock.dart';
-import '../models/evaluation_result.dart';
-import '../models/lesson_plan_model.dart';
+import '../data/models/evaluation_result.dart';
+import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
 export 'conversation_phase.dart';
 import 'exercise_evaluator.dart';

@@ -106,5 +106,66 @@ void main() {
       );
       expect(progress.value, 1.0);
     });
+
+    testWidgets('shows correct inProgress count', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 4,
+          weakTopics: 2,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      // inProgress = 10 - 4 - 2 = 4
+      expect(find.text('4'), findsAtLeast(1));
+      expect(find.text('10'), findsOneWidget);
+    });
+
+    testWidgets('shows zero inProgress when all mastered', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 5,
+          weakTopics: 0,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      // inProgress = 5 - 5 - 0 = 0
+      // 0 appears many times (for inProgress, weakTopics, avgAccuracy)
+      expect(find.text('0'), findsAtLeast(1));
+    });
+
+    testWidgets('shows 40% progress bar for 2/5 mastered', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+          weakTopics: 1,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.4, 0.01));
+    });
+
+    testWidgets('shows names for all stat columns', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 3,
+          weakTopics: 2,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total Topics'), findsOneWidget);
+      expect(find.text('Mastered'), findsOneWidget);
+      expect(find.text('In Progress'), findsOneWidget);
+    });
   });
 }

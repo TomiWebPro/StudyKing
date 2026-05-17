@@ -8,6 +8,7 @@ class QuickGuideHelpDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
+      scrollable: true,
       semanticLabel: l10n.quickGuideHelpTitle,
       title: Text(l10n.quickGuideHelpTitle),
       content: Text(l10n.quickGuideHelpContent),

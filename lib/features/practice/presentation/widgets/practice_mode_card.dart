@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class PracticeModeCard extends StatelessWidget {
   final IconData icon;
@@ -35,7 +36,7 @@ class PracticeModeCard extends StatelessWidget {
           child: Stack(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: ResponsiveUtils.cardPadding(context),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: isAvailable ? color.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -62,8 +63,7 @@ class PracticeModeCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,

@@ -45,7 +45,7 @@ class WeakAreasSheet extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             ...subjects.map((subject) => Semantics(
               label: '${l10n.selectSubject} ${subject.name}',
               child: ListTile(
@@ -60,7 +60,7 @@ class WeakAreasSheet extends StatelessWidget {
                 },
               ),
             )),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
           ],
         ),
       ),

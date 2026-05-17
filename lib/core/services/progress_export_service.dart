@@ -30,7 +30,7 @@ class ProgressExportService {
         _masteryService = masteryService ?? MasteryGraphService(),
         _attemptRepo = attemptRepo ?? AttemptRepository();
 
-  Future<String> exportComprehensiveCSV(String studentId, AppLocalizations l10n) async {
+  Future<String> exportComprehensiveCSV(String studentId) async {
     final overallStats = await _tracker.getOverallStats(studentId);
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
@@ -41,50 +41,50 @@ class ProgressExportService {
 
     final buffer = StringBuffer();
 
-    buffer.writeln('=== ${l10n.csvOverallStats} ===');
+    buffer.writeln('=== Overall Statistics ===');
     buffer.writeln(
-        '${l10n.csvColTotalAttempts},${l10n.csvColCorrect},${l10n.csvColAccuracy},${l10n.csvColAvgTime},${l10n.csvColTotalHours},${l10n.csvColWeeklyActivity},${l10n.csvColDailyActivity},${l10n.csvColTopicsStudied}');
+        'Total Attempts,Correct,Accuracy (%),Avg Time (s),Total Hours,Weekly Activity,Daily Activity,Topics Studied');
     buffer.writeln(
         '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${(overallStats['totalStudyTimeHours'] as num).toStringAsFixed(1)},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
 
     buffer.writeln();
-    buffer.writeln('=== ${l10n.csvTopicMastery} ===');
+    buffer.writeln('=== Topic Mastery ===');
     buffer.writeln(
-        '${l10n.csvColTopicId},${l10n.csvColTotalAttempts},${l10n.csvColCorrect},${l10n.csvColAccuracy},${l10n.csvColMasteryLevel},${l10n.csvColLastPracticed},${l10n.csvColReviewUrgency}');
+        'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency (%)');
     for (final ms in masteryStates) {
       final level = switch (ms.masteryLevel) {
-        MasteryLevel.novice => l10n.masteryLevelNovice,
-        MasteryLevel.browsing => l10n.masteryLevelBrowsing,
-        MasteryLevel.developing => l10n.masteryLevelDeveloping,
-        MasteryLevel.proficient => l10n.masteryLevelProficient,
-        MasteryLevel.expert => l10n.masteryLevelExpert,
+        MasteryLevel.novice => 'Novice',
+        MasteryLevel.browsing => 'Browsing',
+        MasteryLevel.developing => 'Developing',
+        MasteryLevel.proficient => 'Proficient',
+        MasteryLevel.expert => 'Expert',
       };
       buffer.writeln(
           '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
     }
 
     buffer.writeln();
-    buffer.writeln('=== ${l10n.csvAllAttempts} ===');
+    buffer.writeln('=== All Attempts ===');
     buffer.writeln(
-        '${l10n.csvColQuestionId},${l10n.csvColSubjectId},${l10n.csvColCorrect},${l10n.csvColTime},${l10n.csvColTimestamp}');
+        'Question ID,Subject ID,Correct,Time (s),Timestamp');
     for (final a in attempts) {
       buffer.writeln(
           '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ 1000},${a.timestamp.toIso8601String()}');
     }
 
     buffer.writeln();
-    buffer.writeln('=== ${l10n.csvWeeklyTrend} ===');
+    buffer.writeln('=== Weekly Trend ===');
     buffer.writeln(
-        '${l10n.csvColWeek},${l10n.csvColAttempts},${l10n.csvColAccuracy},${l10n.csvColImprovement}');
+        'Week,Attempts,Accuracy (%),Improvement (%)');
     for (final t in trend) {
       buffer.writeln(
           '${t['week']}-W${t['month']},${t['attempts']},${t['accuracy']},${t['improvement']}');
     }
 
     buffer.writeln();
-    buffer.writeln('=== ${l10n.csvBadges} ===');
+    buffer.writeln('=== Badges ===');
     buffer.writeln(
-        '${l10n.csvColBadgeName},${l10n.csvColBadgeDescription},${l10n.csvColDateUnlocked}');
+        'Badge Name,Description,Date Unlocked');
     for (final b in badges) {
       buffer.writeln(
           '"${b['name']}","${b['description']}","${b['unlockedAt']}"');
@@ -289,7 +289,7 @@ class ProgressExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    final csv = await exportComprehensiveCSV(studentId, l10n);
+    final csv = await exportComprehensiveCSV(studentId);
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);

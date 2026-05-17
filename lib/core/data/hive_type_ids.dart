@@ -35,6 +35,7 @@ const int _typeIdEngagementNudgeModel = 32;
 const int _typeIdPlanAdherenceModel = 33;
 const int _typeIdAccessibilityPreferences = 34;
 const int _typeIdStudentAvailability = 35;
+const int _typeIdSession = 36;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -72,6 +73,7 @@ const List<int> _allTypeIds = [
   _typeIdPlanAdherenceModel,
   _typeIdAccessibilityPreferences,
   _typeIdStudentAvailability,
+  _typeIdSession,
 ];
 
 bool _checkUniqueIds() {

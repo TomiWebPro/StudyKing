@@ -501,7 +501,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _isUploading ? null : () => _submitContent(),
+                    onPressed: _isUploading ? null : () => _submitContent(fullPipeline: true),
                     icon: _isUploading
                         ? const SizedBox(
                             width: 20,
@@ -511,7 +511,7 @@ class _UploadScreenState extends State<UploadScreen> {
                         : const Icon(Icons.cloud_upload),
                     label: Text(_isUploading
                         ? l10n.uploading
-                        : l10n.uploadContent),
+                        : l10n.uploadAndAnalyze),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),

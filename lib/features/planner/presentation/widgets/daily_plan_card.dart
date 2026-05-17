@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
@@ -22,7 +23,7 @@ class DailyPlanCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: ResponsiveUtils.cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,10 +35,7 @@ class DailyPlanCard extends StatelessWidget {
                       Theme.of(context).colorScheme.primaryContainer,
                   child: Text(
                     '${day.dayNumber}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -50,7 +48,7 @@ class DailyPlanCard extends StatelessWidget {
                 if (day.isRestDay)
                   Chip(
                     label:
-                        Text(l10n.rest, style: const TextStyle(fontSize: 10)),
+                        Text(l10n.rest, style: Theme.of(context).textTheme.labelSmall),
                     padding: EdgeInsets.zero,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -64,51 +62,53 @@ class DailyPlanCard extends StatelessWidget {
             ),
             if (!day.isRestDay && day.priorityTopics.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ...day.priorityTopics.map((topic) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    leading: Icon(Icons.school,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary),
-                    title: Text(topic.topicTitle,
-                        style: Theme.of(context).textTheme.bodyMedium),
-                    subtitle: Text(
-                      l10n.topicQuestionsAndMinutes(
-                          topic.estimatedQuestions, topic.estimatedMinutes),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    trailing: topic.topicId.isNotEmpty
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (onScheduleLesson != null)
+              ...day.priorityTopics.map((topic) => SizedBox(
+                    height: 48,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.school,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary),
+                      title: Text(topic.topicTitle,
+                          style: Theme.of(context).textTheme.bodyMedium),
+                      subtitle: Text(
+                        l10n.topicQuestionsAndMinutes(
+                            topic.estimatedQuestions, topic.estimatedMinutes),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      trailing: topic.topicId.isNotEmpty
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (onScheduleLesson != null)
+                                  Semantics(
+                                    button: true,
+                                    label: l10n.scheduleLesson,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.event,
+                                          size: 20),
+                                      tooltip: l10n.scheduleLesson,
+                                      onPressed: () => onScheduleLesson!(
+                                          topic.topicId,
+                                          topic.topicTitle,
+                                          topic.subjectId),
+                                    ),
+                                  ),
                                 Semantics(
                                   button: true,
-                                  label: l10n.scheduleLesson,
+                                  label: l10n.startTutoring,
                                   child: IconButton(
-                                    icon: const Icon(Icons.event,
+                                    icon: const Icon(Icons.smart_toy_outlined,
                                         size: 20),
-                                    tooltip: l10n.scheduleLesson,
-                                    onPressed: () => onScheduleLesson!(
-                                        topic.topicId,
-                                        topic.topicTitle,
-                                        topic.subjectId),
+                                    tooltip: l10n.startTutoring,
+                                    onPressed: () => onStartTutoring(
+                                        topic.topicId, topic.topicTitle, topic.subjectId),
                                   ),
                                 ),
-                              Semantics(
-                                button: true,
-                                label: l10n.startTutoring,
-                                child: IconButton(
-                                  icon: const Icon(Icons.smart_toy_outlined,
-                                      size: 20),
-                                  tooltip: l10n.startTutoring,
-                                  onPressed: () => onStartTutoring(
-                                      topic.topicId, topic.topicTitle, topic.subjectId),
-                                ),
-                              ),
-                            ],
-                          )
-                        : null,
+                              ],
+                            )
+                          : null,
+                    ),
                   )),
             ],
           ],

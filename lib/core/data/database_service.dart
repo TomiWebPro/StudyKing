@@ -36,6 +36,7 @@ class DatabaseService {
       await questionRepository.init();
       await attemptRepository.init();
       await lessonRepository.init();
+      await sessionRepository.init();
       await subjectRepository.init();
       await conversationRepository.init();
       await tutorSessionRepository.init();

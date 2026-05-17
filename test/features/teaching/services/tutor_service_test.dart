@@ -21,7 +21,7 @@ import 'package:studyking/features/subjects/data/repositories/subject_repository
 import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
-import 'package:studyking/features/teaching/models/evaluation_result.dart';
+import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 
 class FakeConversationRepository extends ConversationRepository {
   final List<ConversationMessage> _messages = [];

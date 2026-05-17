@@ -1,9 +1,95 @@
-/// Shared model used by 5 features (sessions, dashboard, focus_mode, practice, subjects).
-/// Retained in core because it is shared across >=3 features.
 enum SessionType { practice, focus, tutoring, manual }
+enum SessionStatus { planned, inProgress, completed, cancelled }
 
-/// Shared model used by 5 features (sessions, dashboard, focus_mode, practice, subjects).
-/// Retained in core because it is shared across >=3 features.
+class TutorMetadata {
+  final String? topicTitle;
+  final String? lessonPlanJson;
+  final int confidenceRating;
+  final String? tutorNotes;
+  final List<String> topicsCovered;
+  final int totalMessages;
+  final int totalTokensUsed;
+
+  const TutorMetadata({
+    this.topicTitle,
+    this.lessonPlanJson,
+    this.confidenceRating = 0,
+    this.tutorNotes,
+    this.topicsCovered = const [],
+    this.totalMessages = 0,
+    this.totalTokensUsed = 0,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'topicTitle': topicTitle,
+    'lessonPlanJson': lessonPlanJson,
+    'confidenceRating': confidenceRating,
+    'tutorNotes': tutorNotes,
+    'topicsCovered': topicsCovered,
+    'totalMessages': totalMessages,
+    'totalTokensUsed': totalTokensUsed,
+  };
+
+  factory TutorMetadata.fromJson(Map<String, dynamic> json) => TutorMetadata(
+    topicTitle: json['topicTitle'] as String?,
+    lessonPlanJson: json['lessonPlanJson'] as String?,
+    confidenceRating: json['confidenceRating'] as int? ?? 0,
+    tutorNotes: json['tutorNotes'] as String?,
+    topicsCovered: json['topicsCovered'] != null
+        ? List<String>.from(json['topicsCovered'])
+        : const [],
+    totalMessages: json['totalMessages'] as int? ?? 0,
+    totalTokensUsed: json['totalTokensUsed'] as int? ?? 0,
+  );
+
+  TutorMetadata copyWith({
+    String? topicTitle,
+    String? lessonPlanJson,
+    int? confidenceRating,
+    String? tutorNotes,
+    List<String>? topicsCovered,
+    int? totalMessages,
+    int? totalTokensUsed,
+    bool clearTopicTitle = false,
+    bool clearLessonPlan = false,
+    bool clearTutorNotes = false,
+  }) {
+    return TutorMetadata(
+      topicTitle: clearTopicTitle ? null : (topicTitle ?? this.topicTitle),
+      lessonPlanJson: clearLessonPlan ? null : (lessonPlanJson ?? this.lessonPlanJson),
+      confidenceRating: confidenceRating ?? this.confidenceRating,
+      tutorNotes: clearTutorNotes ? null : (tutorNotes ?? this.tutorNotes),
+      topicsCovered: topicsCovered ?? this.topicsCovered,
+      totalMessages: totalMessages ?? this.totalMessages,
+      totalTokensUsed: totalTokensUsed ?? this.totalTokensUsed,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TutorMetadata &&
+          runtimeType == other.runtimeType &&
+          topicTitle == other.topicTitle &&
+          lessonPlanJson == other.lessonPlanJson &&
+          confidenceRating == other.confidenceRating &&
+          tutorNotes == other.tutorNotes &&
+          topicsCovered == other.topicsCovered &&
+          totalMessages == other.totalMessages &&
+          totalTokensUsed == other.totalTokensUsed;
+
+  @override
+  int get hashCode => Object.hash(
+    topicTitle,
+    lessonPlanJson,
+    confidenceRating,
+    tutorNotes,
+    Object.hashAll(topicsCovered),
+    totalMessages,
+    totalTokensUsed,
+  );
+}
+
 class Session {
   final String id;
   final String studentId;
@@ -18,11 +104,13 @@ class Session {
   final int correctAnswers;
   final bool completed;
   final String? sourceId;
-  final String? tutorSessionId;
   final List<String> sourceIds;
   final List<String> lessonIds;
   final List<String> tags;
   final DateTime createdAt;
+  final String? tutorSessionId;
+  final SessionStatus status;
+  final TutorMetadata? tutorMetadata;
 
   Session({
     required this.id,
@@ -38,11 +126,13 @@ class Session {
     this.correctAnswers = 0,
     this.completed = false,
     this.sourceId,
-    this.tutorSessionId,
     this.sourceIds = const [],
     this.lessonIds = const [],
     this.tags = const [],
     DateTime? createdAt,
+    this.tutorSessionId,
+    this.status = SessionStatus.planned,
+    this.tutorMetadata,
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get isActive => !completed && endTime == null;
@@ -67,10 +157,12 @@ class Session {
     'completed': completed,
     'sourceId': sourceId,
     'tutorSessionId': tutorSessionId,
+    'status': status.name,
     'sourceIds': sourceIds,
     'lessonIds': lessonIds,
     'tags': tags,
     'createdAt': createdAt.toIso8601String(),
+    'tutorMetadata': tutorMetadata?.toJson(),
   };
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -92,12 +184,20 @@ class Session {
     completed: json['completed'] ?? false,
     sourceId: json['sourceId'],
     tutorSessionId: json['tutorSessionId'],
+    status: json['status'] != null
+        ? SessionStatus.values.firstWhere(
+            (e) => e.name == json['status'],
+            orElse: () => SessionStatus.planned)
+        : SessionStatus.planned,
     sourceIds: json['sourceIds'] != null ? List<String>.from(json['sourceIds']) : [],
     lessonIds: json['lessonIds'] != null ? List<String>.from(json['lessonIds']) : [],
     tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'])
         : DateTime.now(),
+    tutorMetadata: json['tutorMetadata'] != null
+        ? TutorMetadata.fromJson(json['tutorMetadata'])
+        : null,
   );
 
   Session copyWith({
@@ -115,16 +215,19 @@ class Session {
     bool? completed,
     String? sourceId,
     String? tutorSessionId,
+    SessionStatus? status,
     List<String>? sourceIds,
     List<String>? lessonIds,
     List<String>? tags,
     DateTime? createdAt,
+    TutorMetadata? tutorMetadata,
     bool clearEndTime = false,
     bool clearSubjectId = false,
     bool clearTopicId = false,
     bool clearSourceId = false,
     bool clearTutorSessionId = false,
     bool clearPlannedDuration = false,
+    bool clearTutorMetadata = false,
   }) {
     return Session(
       id: id ?? this.id,
@@ -143,10 +246,12 @@ class Session {
       completed: completed ?? this.completed,
       sourceId: clearSourceId ? null : (sourceId ?? this.sourceId),
       tutorSessionId: clearTutorSessionId ? null : (tutorSessionId ?? this.tutorSessionId),
+      status: status ?? this.status,
       sourceIds: sourceIds ?? this.sourceIds,
       lessonIds: lessonIds ?? this.lessonIds,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
+      tutorMetadata: clearTutorMetadata ? null : (tutorMetadata ?? this.tutorMetadata),
     );
   }
 

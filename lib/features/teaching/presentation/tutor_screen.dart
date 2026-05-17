@@ -9,7 +9,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
 import '../services/tutor_service.dart';
-import '../models/lesson_plan_model.dart';
+import '../data/models/lesson_plan_model.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/lesson_progress_bar.dart';
 import 'widgets/voice_bar.dart';

@@ -12,6 +12,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 
 class _FakeLessonRepository extends LessonRepository {
   final List<Lesson> _lessons;

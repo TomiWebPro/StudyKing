@@ -3,7 +3,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import '../../../core/services/plan_adapter.dart';
 import '../services/planner_service.dart';
 import '../services/action_executor.dart';
@@ -142,7 +142,7 @@ class PlannerState {
   final String? error;
   final String? successMessage;
   final List<PendingActionModel> pendingActions;
-  final List<TutorSession> scheduledLessons;
+  final List<Session> scheduledLessons;
   final AdherenceDeviation? adherenceDeviation;
   final int activeTab;
 
@@ -167,7 +167,7 @@ class PlannerState {
     String? error,
     String? successMessage,
     List<PendingActionModel>? pendingActions,
-    List<TutorSession>? scheduledLessons,
+    List<Session>? scheduledLessons,
     AdherenceDeviation? adherenceDeviation,
     int? activeTab,
   }) {

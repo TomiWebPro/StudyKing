@@ -2,8 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeLlmService extends LlmService {
@@ -42,6 +45,72 @@ class FakeLlmService extends LlmService {
   }
 }
 
+class FakeSettingsRepository extends SettingsRepository {
+  SettingsBox _box;
+
+  FakeSettingsRepository(this._box);
+
+  @override
+  Future<SettingsBox> getSettings() async => _box;
+
+  @override
+  Future<void> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
+  }) async {
+    final current = _box;
+    _box = SettingsBox(
+      apiKey: apiKey ?? current.apiKey,
+      apiBaseUrl: apiBaseUrl ?? current.apiBaseUrl,
+      selectedModel: selectedModel ?? current.selectedModel,
+      themeMode: themeMode?.index ?? current.themeMode,
+      fontSize: fontSize ?? current.fontSize,
+      totalSessionCount: current.totalSessionCount,
+      totalStudyTimeMs: current.totalStudyTimeMs,
+      totalQuestions: current.totalQuestions,
+      studyRemindersEnabled:
+          studyRemindersEnabled ?? current.studyRemindersEnabled,
+      requestTimeoutSeconds:
+          requestTimeoutSeconds ?? current.requestTimeoutSeconds,
+      sessionDurationMinutes:
+          sessionDurationMinutes ?? current.sessionDurationMinutes,
+      highContrastEnabled:
+          highContrastEnabled ?? current.highContrastEnabled,
+      largeTouchTargets: largeTouchTargets ?? current.largeTouchTargets,
+      reduceMotion: reduceMotion ?? current.reduceMotion,
+      revisionRemindersEnabled:
+          revisionRemindersEnabled ?? current.revisionRemindersEnabled,
+      lessonNotificationsEnabled:
+          lessonNotificationsEnabled ?? current.lessonNotificationsEnabled,
+      overworkAlertsEnabled:
+          overworkAlertsEnabled ?? current.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled:
+          planAdjustmentNotificationsEnabled ??
+              current.planAdjustmentNotificationsEnabled,
+    );
+  }
+}
+
+class FakeSettingsController extends SettingsController {
+  FakeSettingsController(SettingsBox box)
+      : super(FakeSettingsRepository(box)) {
+    state = box;
+  }
+}
+
 class TestNavigatorObserver extends NavigatorObserver {
   final List<Route<dynamic>> pushedRoutes = [];
 
@@ -56,10 +125,16 @@ Widget buildTestApp({
   NavigatorObserver? observer,
   LlmService? llmService,
   Locale? locale,
+  SettingsBox? settingsBox,
 }) {
   final overrides = <Override>[];
   if (llmService != null) {
     overrides.add(llmServiceProvider.overrideWith((ref) => llmService));
+  }
+  if (settingsBox != null) {
+    overrides.add(
+      settingsProvider.overrideWith((ref) => FakeSettingsController(settingsBox)),
+    );
   }
   return ProviderScope(
     overrides: overrides,
@@ -69,6 +144,9 @@ Widget buildTestApp({
       locale: locale ?? const Locale('en'),
       navigatorObservers: observer != null ? [observer] : [],
       routes: {
+        '/tutor': (_) => const Scaffold(
+              body: Center(child: Text('Tutor Screen')),
+            ),
         '/mentor': (_) => const Scaffold(
               body: Center(child: Text('Mentor Screen')),
             ),
@@ -81,11 +159,18 @@ Widget buildTestApp({
 Widget buildTestAppWithProvider({
   required LlmService llmService,
   NavigatorObserver? observer,
+  SettingsBox? settingsBox,
 }) {
+  final overrides = <Override>[
+    llmServiceProvider.overrideWith((ref) => llmService),
+  ];
+  if (settingsBox != null) {
+    overrides.add(
+      settingsProvider.overrideWith((ref) => FakeSettingsController(settingsBox)),
+    );
+  }
   return ProviderScope(
-    overrides: [
-      llmServiceProvider.overrideWith((ref) => llmService),
-    ],
+    overrides: overrides,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,

@@ -4,12 +4,14 @@ import '../utils/logger.dart';
 import 'database_migration.dart';
 import 'hive_box_names.dart';
 import 'hive_type_ids.dart';
+import 'models/session_model.dart';
 import 'package:studyking/features/questions/data/questions_data.dart';
 import 'package:studyking/features/practice/data/practice_data.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/planner_data.dart';
 import 'package:studyking/features/subjects/data/subjects_data.dart';
 import 'package:studyking/features/teaching/data/teaching_data.dart';
+import 'package:studyking/core/data/session_adapter.dart';
 import 'package:studyking/features/sessions/services/session_migration_service.dart';
 
 class HiveInitializer {
@@ -33,6 +35,7 @@ class HiveInitializer {
     await Hive.openBox(HiveBoxNames.attempts);
     await Hive.openBox(HiveBoxNames.lessons);
     await Hive.openBox<String>(HiveBoxNames.sessions);
+    await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
     await Hive.openBox(HiveBoxNames.progress);
     await Hive.openBox(HiveBoxNames.tasks);
 
@@ -49,6 +52,9 @@ class HiveInitializer {
   static Future<void> _registerAdapters() async {
     if (!Hive.isAdapterRegistered(24)) {
       Hive.registerAdapter(StudentAttemptAdapter());
+    }
+    if (!Hive.isAdapterRegistered(36)) {
+      Hive.registerAdapter(SessionAdapter());
     }
     registerQuestionAdapters();
     registerPracticeAdapters();

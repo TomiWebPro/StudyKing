@@ -71,8 +71,11 @@ class PersonalLearningPlanService {
         config = config ?? PlanGenerationConfig(),
         _l10n = l10n;
 
-  Future<Result<PersonalLearningPlan>> generatePlan(String studentId) async {
-    return _buildPlan(studentId: studentId);
+  Future<Result<PersonalLearningPlan>> generatePlan(
+    String studentId, {
+    String courseName = '',
+  }) async {
+    return _buildPlan(studentId: studentId, courseName: courseName);
   }
 
   Future<Result<PersonalLearningPlan>> generatePlanFromSyllabus({
@@ -88,6 +91,7 @@ class PersonalLearningPlanService {
   Future<Result<PersonalLearningPlan>> _buildPlan({
     required String studentId,
     List<SyllabusGoal>? syllabusGoals,
+    String courseName = '',
   }) async {
     try {
       await _repository.init();
@@ -118,6 +122,19 @@ class PersonalLearningPlanService {
         .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
         .map((s) => s.topicId)
         .toSet();
+
+    if (topicMastery.isEmpty && courseName.isNotEmpty) {
+      return _buildEmptyMasteryPlan(
+        studentId: studentId,
+        courseName: courseName,
+      );
+    }
+
+    if (topicMastery.isEmpty) {
+      return Result.failure(
+        'You need to add a subject and its topics before generating a plan.',
+      );
+    }
 
     final allTopics = <String, Topic>{};
     if (syllabusGoals != null) {
@@ -188,6 +205,96 @@ class PersonalLearningPlanService {
       targetMinutesPerDay: config.targetMinutesPerDay,
       targetQuestionsPerDay: config.targetQuestionsPerDay,
       metadata: metadata,
+    );
+
+    try {
+      await _planRepository.init();
+      await _planRepository.savePlan(plan);
+    } catch (_) {}
+
+    return Result.success(plan);
+  }
+
+  Future<Result<PersonalLearningPlan>> _buildEmptyMasteryPlan({
+    required String studentId,
+    required String courseName,
+  }) async {
+    final now = DateTime.now();
+    final dailyPlans = <DailyPlan>[];
+    final totalDays = config.planDurationDays;
+
+    final defaultTopicCount = (totalDays / 7).ceil().clamp(3, 20);
+    final topicNames = <String>[];
+    for (var i = 1; i <= defaultTopicCount; i++) {
+      topicNames.add('$courseName - Topic $i');
+    }
+
+    for (var day = 1; day <= totalDays; day++) {
+      final isRestDay = config.includeRestDays && day % config.restDayFrequency == 0;
+
+      if (isRestDay) {
+        dailyPlans.add(DailyPlan(
+          date: now.add(Duration(days: day - 1)),
+          dayNumber: day,
+          priorityTopics: [],
+          reviewQuestionIds: [],
+          stretchGoalQuestionIds: [],
+          targetQuestions: 0,
+          targetMinutes: 0,
+          focus: 'Rest and review',
+          isRestDay: true,
+        ));
+        continue;
+      }
+
+      final topicIndex = (day - 1) % topicNames.length;
+      dailyPlans.add(DailyPlan(
+        date: now.add(Duration(days: day - 1)),
+        dayNumber: day,
+        priorityTopics: [
+          PlannedTopic(
+            topicId: 'generated_${day}_$studentId',
+            topicTitle: topicNames[topicIndex],
+            priority: 1.0,
+            reason: 'New topic from $courseName',
+            readinessScore: 0.5,
+            reviewUrgency: 0.0,
+            estimatedQuestions: config.targetQuestionsPerDay,
+            estimatedMinutes: config.targetMinutesPerDay.toInt(),
+            reasons: ['Part of $courseName curriculum'],
+            subjectId: '',
+          ),
+        ],
+        reviewQuestionIds: [],
+        stretchGoalQuestionIds: [],
+        targetQuestions: config.targetQuestionsPerDay,
+        targetMinutes: config.targetMinutesPerDay.round(),
+        focus: 'Study: ${topicNames[topicIndex]}',
+      ));
+    }
+
+    final summary = PlanSummary(
+      totalQuestions: config.targetQuestionsPerDay * totalDays,
+      totalMinutes: (config.targetMinutesPerDay * totalDays).round(),
+      newTopics: topicNames.length,
+      reviewTopics: 0,
+      estimatedCoverage: 0.3,
+      focusAreas: topicNames.take(3).toList(),
+    );
+
+    final plan = PersonalLearningPlan(
+      studentId: studentId,
+      generatedAt: now,
+      dailyPlans: dailyPlans,
+      summary: summary,
+      recommendations: [],
+      planDurationDays: config.planDurationDays,
+      targetMinutesPerDay: config.targetMinutesPerDay,
+      targetQuestionsPerDay: config.targetQuestionsPerDay,
+      metadata: {
+        'course_name': courseName,
+        'empty_mastery_fallback': true,
+      },
     );
 
     try {

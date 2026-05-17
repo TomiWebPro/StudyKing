@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -72,7 +73,36 @@ class _SubjectSelectionScreenState
       await repo.create(subject);
 
       if (mounted) {
-        Navigator.pop(context, true);
+        final l10nCtx = AppLocalizations.of(context)!;
+        final subjectName = subject.name;
+        final shouldUpload = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10nCtx.subjectCreatedSuccessfully),
+            content: Text(l10nCtx.uploadPrompt(subjectName)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10nCtx.noThanks),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10nCtx.uploadMaterial),
+              ),
+            ],
+          ),
+        );
+
+        if (mounted) {
+          Navigator.pop(context, true);
+          if (shouldUpload == true) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.upload,
+              arguments: subject.id,
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {

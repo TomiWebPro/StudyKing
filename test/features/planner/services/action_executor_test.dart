@@ -180,6 +180,25 @@ void main() {
         });
       });
 
+      group('reschedule without sessionId', () {
+        test('schedules new lesson when no sessionId in payload', () async {
+          final action = createAction(
+            actionType: 'reschedule',
+            payload: {
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-02T14:00:00.000',
+              'durationMinutes': 45,
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result, isTrue);
+          expect(plannerService.cancelCalled, isFalse);
+          expect(plannerService.scheduleCalled, isTrue);
+          expect(plannerService.lastDurationMinutes, 45);
+        });
+      });
+
       group('reschedule', () {
         test('executes reschedule with sessionId, cancels old then schedules new', () async {
           final action = createAction(

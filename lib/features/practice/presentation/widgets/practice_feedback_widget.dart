@@ -29,22 +29,24 @@ class PracticeFeedbackWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  isCorrect ? Icons.check_circle : Icons.error_outline,
-                  color: isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  isCorrect ? l10n.correctFeedback : l10n.incorrectFeedback,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+            MergeSemantics(
+              child: Row(
+                children: [
+                  Icon(
+                    isCorrect ? Icons.check_circle : Icons.error_outline,
                     color: isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
+                    size: 28,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text(
+                    isCorrect ? l10n.correctFeedback : l10n.incorrectFeedback,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isCorrect ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             if (explanation != null && explanation!.isNotEmpty)

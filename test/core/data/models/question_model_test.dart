@@ -691,6 +691,65 @@ void main() {
         final copy = question.copyWith(createdAt: later);
         expect(copy.createdAt, later);
       });
+
+      test('clearSrData sets srDataJson to null', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          srDataJson: '{"repetitions": 3}',
+        );
+        final copy = question.copyWith(clearSrData: true);
+        expect(copy.srDataJson, isNull);
+      });
+
+      test('preserves srDataJson when clearSrData is false', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          srDataJson: '{"repetitions": 3}',
+        );
+        final copy = question.copyWith(clearSrData: false);
+        expect(copy.srDataJson, '{"repetitions": 3}');
+      });
+
+      test('updates srDataJson when provided without clear flag', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          srDataJson: '{"repetitions": 3}',
+        );
+        final copy = question.copyWith(srDataJson: '{"repetitions": 5}');
+        expect(copy.srDataJson, '{"repetitions": 5}');
+      });
+
+      test('updates srDataJson from null', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+        );
+        final copy = question.copyWith(srDataJson: '{"repetitions": 1}');
+        expect(copy.srDataJson, '{"repetitions": 1}');
+      });
     });
 
     group('Hive type annotation', () {

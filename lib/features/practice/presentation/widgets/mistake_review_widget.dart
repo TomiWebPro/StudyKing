@@ -57,7 +57,7 @@ class MistakeReviewWidget extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             Row(
               children: [
                 Icon(Icons.refresh, color: Theme.of(context).colorScheme.error),
@@ -68,22 +68,22 @@ class MistakeReviewWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Text(
               l10n.reviewMistakesDescription(mistakes.length),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             if (mistakes.isEmpty)
               Expanded(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle, size: 64, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(height: 16),
+                      Icon(Icons.check_circle, size: ResponsiveUtils.emptyStateIconSize(context), color: Theme.of(context).colorScheme.primary),
+                      SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
                       Text(l10n.noMistakesToReview, style: Theme.of(context).textTheme.bodyLarge),
                     ],
                   ),
@@ -94,7 +94,7 @@ class MistakeReviewWidget extends StatelessWidget {
                 child: ListView.separated(
                   controller: scrollController,
                   itemCount: mistakes.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                   itemBuilder: (context, index) {
                     final mistake = mistakes[index];
                     return _MistakeCard(mistake: mistake, index: index);
@@ -102,7 +102,7 @@ class MistakeReviewWidget extends StatelessWidget {
                 ),
               ),
             if (mistakes.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               Row(
                 children: [
                   Expanded(
@@ -146,13 +146,12 @@ class _MistakeCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  radius: 12,
+                  radius: 14,
                   backgroundColor: Theme.of(context).colorScheme.errorContainer,
                   child: Text(
                     '${index + 1}',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onErrorContainer,
-                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -166,7 +165,7 @@ class _MistakeCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             _buildAnswerRow(
               context,
               l10n.yourAnswer,
@@ -175,7 +174,7 @@ class _MistakeCard extends StatelessWidget {
                   : l10n.noAnswerProvided,
               isIncorrect: true,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             _buildAnswerRow(
               context,
               l10n.correctAnswer,
@@ -183,7 +182,7 @@ class _MistakeCard extends StatelessWidget {
               isCorrect: true,
             ),
             if (mistake.explanation != null && mistake.explanation!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               _buildExplanationRow(context, l10n, mistake.explanation!),
             ],
           ],
@@ -207,8 +206,7 @@ class _MistakeCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 100,
+        IntrinsicWidth(
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -216,6 +214,7 @@ class _MistakeCard extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,

@@ -160,7 +160,7 @@ class FakePlannerService extends PlannerService {
   PersonalLearningPlan? _plan;
   List<RoadmapModel> _roadmaps = [];
   List<PendingActionModel> _pendingActions = [];
-  List<TutorSession> _scheduledLessons = [];
+  List<Session> _scheduledLessons = [];
   AdherenceDeviation? _deviation;
   bool _hasConflict = false;
   bool _scheduleResult = true;
@@ -171,7 +171,7 @@ class FakePlannerService extends PlannerService {
   void setPlan(PersonalLearningPlan? plan) => _plan = plan;
   void setRoadmaps(List<RoadmapModel> roadmaps) => _roadmaps = roadmaps;
   void setPendingActions(List<PendingActionModel> actions) => _pendingActions = actions;
-  void setScheduledLessons(List<TutorSession> lessons) => _scheduledLessons = lessons;
+  void setScheduledLessons(List<Session> lessons) => _scheduledLessons = lessons;
   void setAdherenceDeviation(AdherenceDeviation? d) => _deviation = d;
   void setHasConflict(bool v) => _hasConflict = v;
   void setScheduleResult(bool v) => _scheduleResult = v;
@@ -186,7 +186,7 @@ class FakePlannerService extends PlannerService {
   Future<List<PendingActionModel>> loadPendingActions() async => _pendingActions;
 
   @override
-  Future<List<TutorSession>> getScheduledLessons() async => _scheduledLessons;
+  Future<List<Session>> getScheduledLessons() async => _scheduledLessons;
 
   @override
   Future<AdherenceDeviation?> checkAdherence() async => _deviation;

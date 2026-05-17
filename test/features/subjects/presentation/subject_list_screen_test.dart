@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +30,11 @@ class _FakeSubjectRepository extends SubjectRepository {
 
   @override
   Future<void> create(Subject subject) async => _box.put(subject.id, subject);
+}
+
+class _LoadingNotifier extends SubjectsRepositoryNotifier {
+  @override
+  Future<SubjectRepository> build() => Completer<SubjectRepository>().future;
 }
 
 class _ErrorSubjectRepository extends SubjectRepository {
@@ -168,6 +175,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.timer), findsOneWidget);
+    });
+
+    testWidgets('shows loading indicator while data is loading', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _LoadingNotifier()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const SubjectListScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('shows error state when repository fails', (tester) async {
