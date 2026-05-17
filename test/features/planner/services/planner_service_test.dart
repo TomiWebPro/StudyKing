@@ -10,6 +10,8 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -20,10 +22,11 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
-class _MockMasteryGraphRepository extends MasteryGraphRepository {
+class _FakeMasteryGraphRepository extends MasteryGraphRepository {
   @override
   Future<void> init() async {}
 
@@ -43,7 +46,7 @@ class _MockMasteryGraphRepository extends MasteryGraphRepository {
   }
 }
 
-class _MockTopicRepository extends TopicRepository {
+class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
 
   void addTopic(Topic topic) => _topics[topic.id] = topic;
@@ -60,7 +63,7 @@ class _MockTopicRepository extends TopicRepository {
   }
 }
 
-class _MockPlanRepository extends PlanRepository {
+class _FakePlanRepository extends PlanRepository {
   PersonalLearningPlan? _plan;
 
   @override
@@ -78,7 +81,7 @@ class _MockPlanRepository extends PlanRepository {
   Future<bool> hasPlan(String studentId) async => _plan != null;
 }
 
-class _MockRoadmapRepository extends RoadmapRepository {
+class _FakeRoadmapRepository extends RoadmapRepository {
   final Map<String, RoadmapModel> _roadmaps = {};
 
   @override
@@ -101,11 +104,12 @@ class _MockRoadmapRepository extends RoadmapRepository {
   Future<List<RoadmapModel>> getAllRoadmaps() async => _roadmaps.values.toList();
 }
 
-class _MockSessionRepository extends SessionRepository {
+class _FakeSessionRepository extends SessionRepository {
   final Map<String, Session> _sessions = {};
   bool throwOnGet = false;
   bool throwOnSave = false;
   bool throwOnGetAll = false;
+  bool returnFailureOnGetAll = false;
 
   @override
   Future<void> init() async {}
@@ -125,12 +129,13 @@ class _MockSessionRepository extends SessionRepository {
 
   @override
   Future<Result<List<Session>>> getAll() async {
+    if (returnFailureOnGetAll) return Result.failure('get all failure');
     if (throwOnGetAll) throw Exception('get all sessions error');
     return Result.success(_sessions.values.toList());
   }
 }
 
-class _MockPendingActionRepository extends PendingActionRepository {
+class _FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _actions = {};
   bool throwOnMarkCompleted = false;
   bool throwOnMarkRejected = false;
@@ -174,8 +179,18 @@ class _MockPendingActionRepository extends PendingActionRepository {
   void addAction(PendingActionModel action) => _actions[action.id] = action;
 }
 
-class _MockPlanAdapter extends PlanAdapter {
-  _MockPlanAdapter() : super();
+class _FakeAdherenceRepo extends PlanAdherenceRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
+    return [];
+  }
+}
+
+class _FakePlanAdapter extends PlanAdapter {
+  _FakePlanAdapter() : super();
 
   bool returnFailureForAdherence = false;
   bool returnFailureForCheck = false;
@@ -213,24 +228,24 @@ class _MockPlanAdapter extends PlanAdapter {
 
 void main() {
   late PlannerService service;
-  late _MockMasteryGraphRepository masteryRepo;
-  late _MockTopicRepository topicRepo;
-  late _MockPlanRepository planRepo;
-  late _MockRoadmapRepository roadmapRepo;
-  late _MockSessionRepository sessionRepo;
-  late _MockPendingActionRepository pendingActionRepo;
-  late _MockPlanAdapter planAdapter;
+  late _FakeMasteryGraphRepository masteryRepo;
+  late _FakeTopicRepository topicRepo;
+  late _FakePlanRepository planRepo;
+  late _FakeRoadmapRepository roadmapRepo;
+  late _FakeSessionRepository sessionRepo;
+  late _FakePendingActionRepository pendingActionRepo;
+  late _FakePlanAdapter planAdapter;
   late AppLocalizations l10n;
 
   setUp(() {
     Hive.init(Directory.systemTemp.createTempSync('planner_svc_test_').path);
-    masteryRepo = _MockMasteryGraphRepository();
-    topicRepo = _MockTopicRepository();
-    planRepo = _MockPlanRepository();
-    roadmapRepo = _MockRoadmapRepository();
-    sessionRepo = _MockSessionRepository();
-    pendingActionRepo = _MockPendingActionRepository();
-    planAdapter = _MockPlanAdapter();
+    masteryRepo = _FakeMasteryGraphRepository();
+    topicRepo = _FakeTopicRepository();
+    planRepo = _FakePlanRepository();
+    roadmapRepo = _FakeRoadmapRepository();
+    sessionRepo = _FakeSessionRepository();
+    pendingActionRepo = _FakePendingActionRepository();
+    planAdapter = _FakePlanAdapter();
     l10n = AppLocalizationsEn();
 
     final syllabusResolver = SyllabusResolver(
@@ -637,6 +652,71 @@ void main() {
       expect(conflict, true);
     });
 
+    test('hasSchedulingConflict returns false when excludeSessionId matches overlapping session', () async {
+      final now = DateTime.now();
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: now,
+        durationMinutes: 60,
+      );
+      final lessons = await service.getScheduledLessons();
+      final conflict = await service.hasSchedulingConflict(
+        startTime: now.add(const Duration(minutes: 30)),
+        durationMinutes: 30,
+        excludeSessionId: lessons.first.id,
+      );
+      expect(conflict, false);
+    });
+
+    test('hasSchedulingConflict returns false with completed sessions', () async {
+      final now = DateTime.now();
+      final sessionRepo2 = _FakeSessionRepository();
+      final existingSession = Session(
+        id: 'completed-session',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-1',
+        startTime: now,
+        plannedDurationMinutes: 60,
+        completed: true,
+        type: SessionType.tutoring,
+        status: SessionStatus.completed,
+        tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
+      );
+      await sessionRepo2.save(existingSession);
+
+      final service2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(repository: masteryRepo),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planAdapter: planAdapter,
+        fixedStudentId: 'test-student',
+      );
+
+      final conflict = await service2.hasSchedulingConflict(
+        startTime: now.add(const Duration(minutes: 30)),
+        durationMinutes: 30,
+      );
+      expect(conflict, false);
+    });
+
+    test('hasSchedulingConflict propagates exception from getAll', () async {
+      sessionRepo.throwOnGetAll = true;
+      expect(
+        () => service.hasSchedulingConflict(
+          startTime: DateTime.now(),
+          durationMinutes: 30,
+        ),
+        throwsException,
+      );
+    });
+
     test('getAdherenceReport returns empty map on failure', () async {
       planAdapter.returnFailureForAdherence = true;
       final report = await service.getAdherenceReport();
@@ -705,6 +785,58 @@ void main() {
     });
   });
 
+  group('rescheduleLesson', () {
+    test('reschedules a lesson successfully', () async {
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+
+      final lessons = await service.getScheduledLessons();
+      expect(lessons, hasLength(1));
+
+      final newTime = DateTime.now().add(const Duration(days: 3));
+      final success = await service.rescheduleLesson(
+        sessionId: lessons.first.id,
+        newStartTime: newTime,
+        durationMinutes: 45,
+      );
+
+      expect(success, true);
+
+      final updatedLessons = await service.getScheduledLessons();
+      expect(updatedLessons.first.startTime, newTime);
+    });
+
+    test('returns false when session does not exist', () async {
+      final result = await service.rescheduleLesson(
+        sessionId: 'nonexistent',
+        newStartTime: DateTime.now(),
+        durationMinutes: 30,
+      );
+      expect(result, isFalse);
+    });
+
+    test('returns false when get session throws', () async {
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      final lessons = await service.getScheduledLessons();
+      sessionRepo.throwOnGet = true;
+      final result = await service.rescheduleLesson(
+        sessionId: lessons.first.id,
+        newStartTime: DateTime.now(),
+        durationMinutes: 30,
+      );
+      expect(result, isFalse);
+    });
+  });
+
   group('cancelLesson edge cases', () {
     test('returns false when session does not exist', () async {
       final result = await service.cancelLesson('nonexistent-session');
@@ -722,6 +854,19 @@ void main() {
       final result = await service.cancelLesson('nonexistent');
       expect(result, isFalse);
     });
+
+    test('returns false when save throws', () async {
+      await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      final lessons = await service.getScheduledLessons();
+      sessionRepo.throwOnSave = true;
+      final result = await service.cancelLesson(lessons.first.id);
+      expect(result, isFalse);
+    });
   });
 
   group('getScheduledLessons edge cases', () {
@@ -729,6 +874,91 @@ void main() {
       sessionRepo.throwOnGetAll = true;
       final lessons = await service.getScheduledLessons();
       expect(lessons, isEmpty);
+    });
+
+    test('filters out completed sessions', () async {
+      final now = DateTime.now();
+      final sessionRepo2 = _FakeSessionRepository();
+      await sessionRepo2.save(Session(
+        id: 'completed-1',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-1',
+        startTime: now.add(const Duration(hours: 1)),
+        completed: true,
+        type: SessionType.tutoring,
+        status: SessionStatus.completed,
+        tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
+      ));
+      await sessionRepo2.save(Session(
+        id: 'planned-1',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-2',
+        startTime: now.add(const Duration(hours: 2)),
+        type: SessionType.tutoring,
+        status: SessionStatus.planned,
+        tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
+      ));
+
+      final service2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(repository: masteryRepo),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planAdapter: planAdapter,
+        fixedStudentId: 'test-student',
+      );
+
+      final lessons = await service2.getScheduledLessons();
+      expect(lessons, hasLength(1));
+      expect(lessons.first.id, 'planned-1');
+    });
+
+    test('filters out sessions with endTime', () async {
+      final now = DateTime.now();
+      final sessionRepo2 = _FakeSessionRepository();
+      await sessionRepo2.save(Session(
+        id: 'ended-1',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-1',
+        startTime: now.subtract(const Duration(hours: 2)),
+        endTime: now.subtract(const Duration(hours: 1)),
+        completed: false,
+        type: SessionType.tutoring,
+        status: SessionStatus.planned,
+        tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
+      ));
+      await sessionRepo2.save(Session(
+        id: 'planned-2',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-2',
+        startTime: now.add(const Duration(hours: 2)),
+        type: SessionType.tutoring,
+        status: SessionStatus.planned,
+        tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
+      ));
+
+      final service2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(repository: masteryRepo),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planAdapter: planAdapter,
+        fixedStudentId: 'test-student',
+      );
+
+      final lessons = await service2.getScheduledLessons();
+      expect(lessons, hasLength(1));
+      expect(lessons.first.id, 'planned-2');
     });
   });
 
@@ -795,6 +1025,44 @@ void main() {
       expect(metrics['actualMinutesToday'], 0);
       expect(metrics['actualQuestionsToday'], 0);
     });
+
+    test('aggregates adherence metrics across records', () async {
+      registerPlannerAdapters();
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+
+      final adherenceRepo2 = PlanAdherenceRepository();
+      await adherenceRepo2.init();
+      await adherenceRepo2.create(PlanAdherenceModel(
+        id: 'metric-1', studentId: 'test-student', date: todayStart,
+        plannedMinutes: 60, actualMinutes: 45,
+        plannedQuestions: 15, actualQuestions: 10,
+        adherenceScore: 0.75,
+      ));
+      await adherenceRepo2.create(PlanAdherenceModel(
+        id: 'metric-2', studentId: 'test-student', date: todayStart,
+        plannedMinutes: 30, actualMinutes: 20,
+        plannedQuestions: 10, actualQuestions: 5,
+        adherenceScore: 0.67,
+      ));
+
+      final service2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(repository: masteryRepo),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planAdapter: planAdapter,
+        adherenceRepo: adherenceRepo2,
+        fixedStudentId: 'test-student',
+      );
+
+      final metrics = await service2.getAdherenceMetrics();
+      expect(metrics['actualMinutesToday'], 65);
+      expect(metrics['actualQuestionsToday'], 15);
+    });
   });
 
   group('redistributeWorkload', () {
@@ -817,6 +1085,72 @@ void main() {
       final executor2 = service.actionExecutor;
       expect(executor1, same(executor2));
       expect(executor1, isA<ActionExecutor>());
+    });
+  });
+
+  group('scheduleLesson catch block', () {
+    test('returns false when sessionRepo.save throws', () async {
+      sessionRepo.throwOnSave = true;
+      final result = await service.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now(),
+      );
+      expect(result, isFalse);
+    });
+  });
+
+  group('acceptPendingAction catch block', () {
+    test('returns false when sessionRepo.save throws during execution', () async {
+      pendingActionRepo.addAction(PendingActionModel(
+        id: 'action-catch',
+        studentId: 'test-student',
+        actionType: 'schedule',
+        status: 'pending',
+        payload: {
+          'topicId': 'topic-1',
+          'subjectId': 'subject-1',
+          'scheduledTime': DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+          'durationMinutes': 30,
+        },
+      ));
+      sessionRepo.throwOnSave = true;
+      final result = await service.acceptPendingAction('action-catch');
+      expect(result, isFalse);
+    });
+  });
+
+  group('hasSchedulingConflict failure path', () {
+    test('returns false when getAll returns failure', () async {
+      sessionRepo.returnFailureOnGetAll = true;
+      final conflict = await service.hasSchedulingConflict(
+        startTime: DateTime.now(),
+        durationMinutes: 30,
+      );
+      expect(conflict, false);
+    });
+  });
+
+  group('getAdherenceMetrics edge cases', () {
+    test('returns zero when no records exist for student', () async {
+      final mockAdherenceRepo = _FakeAdherenceRepo();
+      final freshService = PlannerService(
+        planRepo: _FakePlanRepository(),
+        masteryService: MasteryGraphService(repository: _FakeMasteryGraphRepository()),
+        repository: _FakeMasteryGraphRepository(),
+        topicRepository: _FakeTopicRepository(),
+        roadmapRepo: _FakeRoadmapRepository(),
+        sessionRepo: _FakeSessionRepository(),
+        pendingActionRepo: _FakePendingActionRepository(),
+        planAdapter: planAdapter,
+        adherenceRepo: mockAdherenceRepo,
+        fixedStudentId: 'test-student',
+      );
+
+      final metrics = await freshService.getAdherenceMetrics();
+      expect(metrics['actualMinutesToday'], 0);
+      expect(metrics['actualQuestionsToday'], 0);
     });
   });
 }

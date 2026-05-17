@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
@@ -25,6 +23,7 @@ import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviati
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
@@ -32,6 +31,50 @@ import 'package:studyking/features/practice/providers/practice_providers.dart' s
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class _FakeSettingsRepository extends SettingsRepository {
+  final Map<String, dynamic> _store = {};
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
+  }) async {
+    if (reduceMotion != null) _store['reduceMotion'] = reduceMotion;
+    if (highContrastEnabled != null) _store['highContrastEnabled'] = highContrastEnabled;
+    if (largeTouchTargets != null) _store['largeTouchTargets'] = largeTouchTargets;
+  }
+
+  @override
+  Future<SettingsBox> getSettings() async {
+    return SettingsBox(
+      reduceMotion: _store['reduceMotion'] as bool? ?? false,
+      highContrastEnabled: _store['highContrastEnabled'] as bool? ?? false,
+      largeTouchTargets: _store['largeTouchTargets'] as bool? ?? false,
+    );
+  }
+}
 
 class FakePlannerService extends PlannerService {
   @override
@@ -189,7 +232,7 @@ Widget _buildTestApp({
         llmService ?? FakeLlmService(),
       ),
       settingsProvider.overrideWith(
-        (ref) => SettingsController(SettingsRepository()),
+        (ref) => SettingsController(_FakeSettingsRepository()),
       ),
       plannerServiceProvider.overrideWithValue(FakePlannerService()),
       mentorEngagementNudgeRepoProvider.overrideWithValue(
@@ -213,19 +256,6 @@ Widget _buildTestApp({
 }
 
 void main() {
-  setUp(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('mentor_hive_test_');
-    Hive.init(dir.path);
-    await Hive.openBox('settings');
-  });
-
-  tearDown(() async {
-    if (Hive.isBoxOpen('student_id')) {
-      await Hive.deleteBoxFromDisk('student_id');
-    }
-  });
-
   group('MentorScreen', () {
     testWidgets('renders app bar with mentor greeting', (tester) async {
       await tester.pumpWidget(_buildTestApp());
@@ -546,7 +576,7 @@ void main() {
           overrides: [
             llmServiceProvider.overrideWithValue(FakeLlmService()),
             settingsProvider.overrideWith(
-              (ref) => SettingsController(SettingsRepository()),
+              (ref) => SettingsController(_FakeSettingsRepository()),
             ),
             plannerServiceProvider.overrideWithValue(FakePlannerService()),
             mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
@@ -643,7 +673,7 @@ void main() {
     });
 
     testWidgets('uses jump scroll with reduce motion enabled', (tester) async {
-      final repo = SettingsRepository();
+      final repo = _FakeSettingsRepository();
       await repo.init();
       final ctrl = SettingsController(repo);
       await ctrl.updateSettings(reduceMotion: true);
@@ -688,7 +718,7 @@ void main() {
       final commonOverrides = [
         llmServiceProvider.overrideWithValue(FakeLlmService()),
         settingsProvider.overrideWith(
-          (ref) => SettingsController(SettingsRepository()),
+          (ref) => SettingsController(_FakeSettingsRepository()),
         ),
         plannerServiceProvider.overrideWithValue(FakePlannerService()),
         mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
@@ -810,7 +840,7 @@ void main() {
           overrides: [
             llmServiceProvider.overrideWithValue(FakeLlmService()),
             settingsProvider.overrideWith(
-              (ref) => SettingsController(SettingsRepository()),
+              (ref) => SettingsController(_FakeSettingsRepository()),
             ),
             plannerServiceProvider.overrideWithValue(FakePlannerService()),
             mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
@@ -962,7 +992,7 @@ void main() {
           overrides: [
             llmServiceProvider.overrideWithValue(FakeLlmService()),
             settingsProvider.overrideWith(
-              (ref) => SettingsController(SettingsRepository()),
+              (ref) => SettingsController(_FakeSettingsRepository()),
             ),
             plannerServiceProvider.overrideWithValue(FakePlannerService()),
             mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),

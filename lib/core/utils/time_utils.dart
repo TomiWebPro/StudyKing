@@ -62,8 +62,8 @@ String formatDate(DateTime? date, {AppLocalizations? l10n}) {
   final unknown = l10n?.unknown ?? 'Unknown';
   if (date == null) return unknown;
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final sessionDate = DateTime(date.year, date.month, date.day);
+  final today = now.dateOnly;
+  final sessionDate = date.dateOnly;
   if (sessionDate.isSameDay(today)) {
     return l10n?.today ?? 'Today';
   }
@@ -105,4 +105,6 @@ String formatDateFromContext(BuildContext context, DateTime? date) {
 extension DateTimeX on DateTime {
   bool isSameDay(DateTime other) =>
       year == other.year && month == other.month && day == other.day;
+
+  DateTime get dateOnly => DateTime(year, month, day);
 }

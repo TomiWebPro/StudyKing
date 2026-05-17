@@ -27,10 +27,6 @@ class AppErrorHandler {
     _showErrorUI(context, exception, retry: retry, retryCallback: retryCallback);
   }
 
-  static void handleSyncError(BuildContext context, Object error, String contextName, {bool retry = false, void Function()? retryCallback}) {
-    handleError(context, error, contextName, retry: retry, retryCallback: retryCallback);
-  }
-
   static void _showErrorUI(
     BuildContext context,
     AppException exception, {
@@ -137,7 +133,7 @@ class AppErrorHandler {
     try {
       return operation();
     } catch (error) {
-      handleSyncError(context, error, contextName);
+      handleError(context, error, contextName);
       return defaultValue;
     }
   }

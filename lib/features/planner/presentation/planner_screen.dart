@@ -530,7 +530,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         }),
         TextButton.icon(
           icon: const Icon(Icons.add),
-          label: Text('${l10n.courseSubject} +'),
+          label: Text(l10n.addCourseSubject),
           onPressed: () => setState(() => _syllabusEntries.add(_SyllabusEntry())),
         ),
       ],
@@ -564,7 +564,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('${l10n.hoursAbbreviation(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName))}/${l10n.days}',
+                  Text(l10n.hoursPerDayAbbrev(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)),
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -705,7 +705,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   )),
               subtitle: Text(
-                '${lesson.topicId ?? ''} · $time${isCompleted ? ' · ${l10n.completed}' : ''}',
+                l10n.lessonTimeStatus(lesson.topicId ?? '', time, isCompleted ? ' · ${l10n.completed}' : ''),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               trailing: Row(

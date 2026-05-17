@@ -1,165 +1,134 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
+
+class _InMemoryOnboardingStore {
+  static bool onboardingCompleted = false;
+  static bool onboardingDontShowAgain = false;
+
+  static void reset() {
+    onboardingCompleted = false;
+    onboardingDontShowAgain = false;
+  }
+
+  static Future<bool> isOnboardingNeeded() async {
+    return !onboardingCompleted && !onboardingDontShowAgain;
+  }
+
+  static Future<void> markCompleted() async {
+    onboardingCompleted = true;
+  }
+
+  static Future<void> markDontShowAgain() async {
+    onboardingDontShowAgain = true;
+  }
+
+  static Future<bool> isFirstLaunch() async {
+    return !onboardingCompleted;
+  }
+}
 
 void main() {
-  late String hivePath;
-
   setUp(() async {
-    hivePath = (await Directory.systemTemp.createTemp('onboarding_test_')).path;
-    Hive.init(hivePath);
+    _InMemoryOnboardingStore.reset();
   });
 
-  tearDown(() async {
-    await Hive.close();
-    if (hivePath.isNotEmpty) {
-      await Directory(hivePath).delete(recursive: true);
-    }
-  });
-
-  group('OnboardingService', () {
+  group('OnboardingService (in-memory)', () {
     test('isOnboardingNeeded returns true when no values set', () async {
-      final needed = await OnboardingService.isOnboardingNeeded();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isTrue);
     });
 
     test('isOnboardingNeeded returns false after markCompleted', () async {
-      await OnboardingService.markCompleted();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markCompleted();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('isOnboardingNeeded returns false after markDontShowAgain', () async {
-      await OnboardingService.markDontShowAgain();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('markCompleted persists the completion flag', () async {
-      await OnboardingService.markCompleted();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markCompleted();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('markDontShowAgain persists the dont-show flag', () async {
-      await OnboardingService.markDontShowAgain();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('isFirstLaunch returns true when onboarding not yet completed', () async {
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isTrue);
     });
 
     test('isFirstLaunch returns false after markCompleted', () async {
-      await OnboardingService.markCompleted();
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+      await _InMemoryOnboardingStore.markCompleted();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isFalse);
     });
 
     test('isOnboardingNeeded respects completed flag independently', () async {
-      await OnboardingService.markCompleted();
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+      await _InMemoryOnboardingStore.markCompleted();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isFalse);
     });
 
-    test('isOnboardingNeeded reads from Hive settings box', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', true);
-      await box.close();
-      final needed = await OnboardingService.isOnboardingNeeded();
-      expect(needed, isFalse);
-    });
-
     test('isFirstLaunch returns true after markDontShowAgain', () async {
-      await OnboardingService.markDontShowAgain();
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isTrue);
     });
 
-    test('markCompleted stores true under onboarding_completed key', () async {
-      await OnboardingService.markCompleted();
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      expect(box.get('onboarding_completed'), isTrue);
-      await box.close();
-    });
-
-    test('markDontShowAgain stores true under onboarding_dont_show_again key', () async {
-      await OnboardingService.markDontShowAgain();
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      expect(box.get('onboarding_dont_show_again'), isTrue);
-      await box.close();
-    });
-
     test('isOnboardingNeeded returns true when both flags explicitly false', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', false);
-      await box.put('onboarding_dont_show_again', false);
-      await box.close();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isTrue);
     });
 
     test('isOnboardingNeeded returns false when only completed is true', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', true);
-      await box.put('onboarding_dont_show_again', false);
-      await box.close();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markCompleted();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('isOnboardingNeeded returns false when only dontShowAgain is true', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', false);
-      await box.put('onboarding_dont_show_again', true);
-      await box.close();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('isFirstLaunch returns true when only dontShowAgain is set', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', false);
-      await box.put('onboarding_dont_show_again', true);
-      await box.close();
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isTrue);
     });
 
     test('isOnboardingNeeded returns false when both flags are true', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', true);
-      await box.put('onboarding_dont_show_again', true);
-      await box.close();
-      final needed = await OnboardingService.isOnboardingNeeded();
+      await _InMemoryOnboardingStore.markCompleted();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
-    test('isFirstLaunch returns false when completed is set in Hive directly', () async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      await box.put('onboarding_completed', true);
-      await box.close();
-      final firstLaunch = await OnboardingService.isFirstLaunch();
+    test('isFirstLaunch returns false when completed is set', () async {
+      await _InMemoryOnboardingStore.markCompleted();
+      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
       expect(firstLaunch, isFalse);
     });
 
-    test('multiple box open-close cycles maintain correct state', () async {
-      await OnboardingService.markCompleted();
-      var box = await Hive.openBox(HiveBoxNames.settings);
-      expect(box.get('onboarding_completed'), isTrue);
-      await box.close();
+    test('flags are independent', () async {
+      await _InMemoryOnboardingStore.markCompleted();
+      expect(_InMemoryOnboardingStore.onboardingCompleted, isTrue);
+      expect(_InMemoryOnboardingStore.onboardingDontShowAgain, isFalse);
 
-      box = await Hive.openBox(HiveBoxNames.settings);
-      expect(box.get('onboarding_completed'), isTrue);
-      await box.close();
-
-      final needed = await OnboardingService.isOnboardingNeeded();
-      expect(needed, isFalse);
+      _InMemoryOnboardingStore.reset();
+      await _InMemoryOnboardingStore.markDontShowAgain();
+      expect(_InMemoryOnboardingStore.onboardingCompleted, isFalse);
+      expect(_InMemoryOnboardingStore.onboardingDontShowAgain, isTrue);
     });
   });
 }

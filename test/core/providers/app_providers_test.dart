@@ -297,7 +297,6 @@ class _FakeSettingsRepository implements SettingsRepository {
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
-    LlmProvider? llmProvider,
     ThemeMode? themeMode,
     double? fontSize,
     bool? studyRemindersEnabled,
@@ -310,6 +309,11 @@ class _FakeSettingsRepository implements SettingsRepository {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     if (shouldThrow) throw Exception('update error');
     _settings = _settings.copyWith(
@@ -328,6 +332,11 @@ class _FakeSettingsRepository implements SettingsRepository {
       lessonNotificationsEnabled: lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: breakDurationSeconds,
+      dailyReminderHour: dailyReminderHour,
+      dailyReminderMinute: dailyReminderMinute,
+      firstFocusVisit: firstFocusVisit,
+      dailyReminderEnabled: dailyReminderEnabled,
     );
   }
 

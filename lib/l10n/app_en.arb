@@ -4709,10 +4709,7 @@
   "@configureNow": {
     "description": "Button to configure API key"
   },
-  "dismiss": "Dismiss",
-  "@dismiss": {
-    "description": "Dismiss button label"
-  },
+
   "dataStorageNotice": "Local Data Storage",
   "@dataStorageNotice": {
     "description": "Data storage notice title"
@@ -4988,13 +4985,7 @@
   "@generateQuestionsFromContentHint": {
     "description": "Hint text for the question generation checkbox"
   },
-  "questionsCount": "{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}",
-  "@questionsCount": {
-    "description": "Shows how many questions are available for practice",
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
+
   "uploadMaterialsToCreateQuestions": "Upload materials to create questions",
   "@uploadMaterialsToCreateQuestions": {
     "description": "Subtitle shown when no questions exist yet"
@@ -5066,5 +5057,145 @@
   "requiredField": "Required field",
   "@requiredField": {
     "description": "Semantic label for required field indicator"
+  },
+  "gallery": "Gallery",
+  "@gallery": {
+    "description": "Gallery option in image picker"
+  },
+  "requiredFieldIndicator": "*",
+  "@requiredFieldIndicator": {
+    "description": "Required field indicator symbol"
+  },
+  "expressionLabel": "Expression: ",
+  "@expressionLabel": {
+    "description": "Label prefix for math expression display"
+  },
+  "defaultLessonGoal": "Understand the topic",
+  "@defaultLessonGoal": {
+    "description": "Default lesson goal text"
+  },
+  "sectionIntroduction": "Introduction",
+  "@sectionIntroduction": {
+    "description": "Default section title for introduction"
+  },
+  "sectionMainContent": "Main Content",
+  "@sectionMainContent": {
+    "description": "Default section title for main content"
+  },
+  "sectionPractice": "Practice",
+  "@sectionPractice": {
+    "description": "Default section title for practice"
+  },
+  "checkpointStarted": "Lesson started",
+  "@checkpointStarted": {
+    "description": "Default checkpoint for lesson started"
+  },
+  "checkpointTopicCovered": "Topic covered",
+  "@checkpointTopicCovered": {
+    "description": "Default checkpoint for topic covered"
+  },
+  "checkpointPracticeCompleted": "Practice completed",
+  "@checkpointPracticeCompleted": {
+    "description": "Default checkpoint for practice completed"
+  },
+  "sessionType": "Type",
+  "@sessionType": {
+    "description": "Column header for session type in PDF export"
+  },
+  "addCourseSubject": "Add Course/Subject",
+  "@addCourseSubject": {
+    "description": "Button label to add a course or subject"
+  },
+  "hoursPerDayAbbrev": "{hours}/Days",
+  "@hoursPerDayAbbrev": {
+    "description": "Hours per day abbreviation with separator",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "lessonTimeStatus": "{topicId} · {time}{completedSuffix}",
+  "@lessonTimeStatus": {
+    "description": "Lesson time status with topic and completion marker",
+    "placeholders": {
+      "topicId": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      },
+      "completedSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "practiceModeWithSubject": "{mode} - {subject}",
+  "@practiceModeWithSubject": {
+    "description": "AppBar title combining practice mode and subject name",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "mentorWelcomeFull": "{greeting}\n\n{body}",
+  "@mentorWelcomeFull": {
+    "description": "Full mentor welcome message with greeting and body",
+    "placeholders": {
+      "greeting": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "unknownError": "Unknown error",
+  "@unknownError": {
+    "description": "Fallback when error message is null"
+  },
+  "failedToLoadPlan": "Failed to load plan: {error}",
+  "@failedToLoadPlan": {
+    "description": "Error message when plan fails to load",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupExportFailedWithError": "Failed to export backup: {error}",
+  "@backupExportFailedWithError": {
+    "description": "Error message when backup export fails with details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidBackupFileWithError": "Invalid backup file: {error}",
+  "@invalidBackupFileWithError": {
+    "description": "Error message when backup file format is invalid with details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionsCountPlural": "{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}",
+  "@questionsCountPlural": {
+    "description": "Plural count of available questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mentorBulletPoint": "• ",
+  "@mentorBulletPoint": {
+    "description": "Bullet point prefix for mentor recommendation list items"
   }
 }

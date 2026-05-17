@@ -14,9 +14,10 @@ import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/questions/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/utils/id_generator.dart';
+import 'package:studyking/core/utils/id_generator.dart';
 
 typedef QuestionValidator = bool Function(Map<String, dynamic> questionData);
+typedef ProcessingProgressCallback = void Function(ProcessingStatus status, String stageDescription);
 
 class ContentPipeline {
   final LlmService _llmService;
@@ -35,13 +36,14 @@ class ContentPipeline {
     required QuestionRepository questionRepository,
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
+    required String modelId,
     String localeName = 'en',
   })  : _llmService = llmService,
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
         _documentExtractor =
-            documentExtractor ?? DocumentExtractor(llmService: llmService),
+            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId),
         _webScraper = webScraper ?? WebScraper(),
         _localeName = localeName;
 
@@ -95,6 +97,7 @@ class ContentPipeline {
     bool generateQuestions = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
+    ProcessingProgressCallback? onProgress,
   }) async {
     final sourceId = IdGenerator.generate('src');
     Source source;
@@ -122,6 +125,7 @@ class ContentPipeline {
     try {
       Source updated = source;
 
+      onProgress?.call(ProcessingStatus.extracting, 'Extracting text from content...');
       updated = _updateStatus(updated, ProcessingStatus.extracting);
       final extractionResult = await _documentExtractor.extractText(
         rawContent: content,
@@ -142,6 +146,7 @@ class ContentPipeline {
           : content;
 
       if (possibleTopics.isNotEmpty) {
+        onProgress?.call(ProcessingStatus.classifying, 'Classifying content topic...');
         updated = _updateStatus(updated, ProcessingStatus.classifying);
         final matchedTopicId = await _classifyTopic(
           textToClassify,
@@ -155,6 +160,7 @@ class ContentPipeline {
         _logger.d('Stage 2 complete: topic classified');
       }
 
+      onProgress?.call(ProcessingStatus.classifying, 'Generating summary...');
       updated = _updateStatus(updated, ProcessingStatus.classifying);
       final summary = await _generateSummary(textToClassify, modelId);
       if (summary.isNotEmpty) {
@@ -164,6 +170,7 @@ class ContentPipeline {
       _logger.d('Stage 3 complete: summary generated');
 
       if (generateQuestions) {
+        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating questions from content...');
         updated = _updateStatus(updated, ProcessingStatus.generatingQuestions);
         final questionIds = await _generateQuestions(
           textToClassify,
@@ -185,6 +192,7 @@ class ContentPipeline {
           'Stage 4 complete: ${questionIds.length} questions generated',
         );
 
+        onProgress?.call(ProcessingStatus.validating, 'Validating generated questions...');
         updated = _updateStatus(updated, ProcessingStatus.validating);
         final validationResults = _validateGeneratedQuestions(
           updated,
@@ -196,6 +204,7 @@ class ContentPipeline {
         updated = _updateStatus(updated, ProcessingStatus.completed);
       }
 
+      onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
       updated = _updateStatus(updated, ProcessingStatus.completed);
       await _sourceRepository.save(updated.id, updated);
       _logger.d('Pipeline complete for source: ${updated.id}');

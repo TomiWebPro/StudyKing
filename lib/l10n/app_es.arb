@@ -3143,7 +3143,7 @@
   "@roadmapGoal": {
     "description": "Label for roadmap goal input"
   },
-  "roadmapGoalHint": "ej., Quiero aprender Física IB en 180 días",
+  "roadmapGoalHint": "p. ej., Quiero aprender Física IB en 180 días",
   "@roadmapGoalHint": {
     "description": "Hint text for roadmap goal"
   },
@@ -4342,7 +4342,7 @@
       }
     }
   },
-  "overtimeLabel": "+{minutes} min",
+  "overtimeLabel": "+{minutes}m",
   "@overtimeLabel": {
     "description": "Label showing the duration of additional time in minutes",
     "placeholders": {
@@ -4709,10 +4709,7 @@
   "@configureNow": {
     "description": "Button to configure API key"
   },
-  "dismiss": "Descartar",
-  "@dismiss": {
-    "description": "Dismiss button label"
-  },
+
   "dataStorageNotice": "Almacenamiento Local de Datos",
   "@dataStorageNotice": {
     "description": "Data storage notice title"
@@ -4988,13 +4985,7 @@
   "@generateQuestionsFromContentHint": {
     "description": "Hint text for the question generation checkbox"
   },
-  "questionsCount": "{count,plural, =0{No hay preguntas disponibles} =1{1 pregunta disponible} other{{count} preguntas disponibles}}",
-  "@questionsCount": {
-    "description": "Shows how many questions are available for practice",
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
+
   "uploadMaterialsToCreateQuestions": "Sube materiales para crear preguntas",
   "@uploadMaterialsToCreateQuestions": {
     "description": "Subtitle shown when no questions exist yet"
@@ -5066,5 +5057,145 @@
   "requiredField": "Campo obligatorio",
   "@requiredField": {
     "description": "Semantic label for required field indicator"
+  },
+  "gallery": "Galería",
+  "@gallery": {
+    "description": "Gallery option in image picker"
+  },
+  "requiredFieldIndicator": "*",
+  "@requiredFieldIndicator": {
+    "description": "Required field indicator symbol"
+  },
+  "expressionLabel": "Expresión: ",
+  "@expressionLabel": {
+    "description": "Label prefix for math expression display"
+  },
+  "defaultLessonGoal": "Comprender el tema",
+  "@defaultLessonGoal": {
+    "description": "Default lesson goal text"
+  },
+  "sectionIntroduction": "Introducción",
+  "@sectionIntroduction": {
+    "description": "Default section title for introduction"
+  },
+  "sectionMainContent": "Contenido Principal",
+  "@sectionMainContent": {
+    "description": "Default section title for main content"
+  },
+  "sectionPractice": "Práctica",
+  "@sectionPractice": {
+    "description": "Default section title for practice"
+  },
+  "checkpointStarted": "Lección iniciada",
+  "@checkpointStarted": {
+    "description": "Default checkpoint for lesson started"
+  },
+  "checkpointTopicCovered": "Tema cubierto",
+  "@checkpointTopicCovered": {
+    "description": "Default checkpoint for topic covered"
+  },
+  "checkpointPracticeCompleted": "Práctica completada",
+  "@checkpointPracticeCompleted": {
+    "description": "Default checkpoint for practice completed"
+  },
+  "sessionType": "Tipo",
+  "@sessionType": {
+    "description": "Column header for session type in PDF export"
+  },
+  "addCourseSubject": "Agregar Curso/Materia",
+  "@addCourseSubject": {
+    "description": "Button label to add a course or subject"
+  },
+  "hoursPerDayAbbrev": "{hours}/Días",
+  "@hoursPerDayAbbrev": {
+    "description": "Hours per day abbreviation with separator",
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "lessonTimeStatus": "{topicId} · {time}{completedSuffix}",
+  "@lessonTimeStatus": {
+    "description": "Lesson time status with topic and completion marker",
+    "placeholders": {
+      "topicId": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      },
+      "completedSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "practiceModeWithSubject": "{mode} - {subject}",
+  "@practiceModeWithSubject": {
+    "description": "AppBar title combining practice mode and subject name",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "mentorWelcomeFull": "{greeting}\n\n{body}",
+  "@mentorWelcomeFull": {
+    "description": "Full mentor welcome message with greeting and body",
+    "placeholders": {
+      "greeting": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "unknownError": "Error desconocido",
+  "@unknownError": {
+    "description": "Fallback when error message is null"
+  },
+  "failedToLoadPlan": "Error al cargar el plan: {error}",
+  "@failedToLoadPlan": {
+    "description": "Error message when plan fails to load",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupExportFailedWithError": "Error al exportar la copia de seguridad: {error}",
+  "@backupExportFailedWithError": {
+    "description": "Error message when backup export fails with details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidBackupFileWithError": "Archivo de copia no válido: {error}",
+  "@invalidBackupFileWithError": {
+    "description": "Error message when backup file format is invalid with details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionsCountPlural": "{count,plural, =0{No hay preguntas disponibles} =1{1 pregunta disponible} other{{count} preguntas disponibles}}",
+  "@questionsCountPlural": {
+    "description": "Plural count of available questions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mentorBulletPoint": "• ",
+  "@mentorBulletPoint": {
+    "description": "Bullet point prefix for mentor recommendation list items"
   }
 }

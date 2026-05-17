@@ -3,7 +3,7 @@ import 'package:studyking/core/services/conversation_memory.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 
-class _MockConversationRepository extends ConversationRepository {
+class _FakeConversationRepository extends ConversationRepository {
   final List<ConversationMessage> _saved = [];
   List<ConversationMessage>? getSessionMessagesResult;
 
@@ -190,7 +190,7 @@ void main() {
       });
 
       test('persists message via repository', () {
-        final repo = _MockConversationRepository();
+        final repo = _FakeConversationRepository();
         final memory = ConversationMemory(
           sessionId: 'sess1',
           repository: repo,

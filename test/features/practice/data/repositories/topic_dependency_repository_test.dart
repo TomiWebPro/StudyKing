@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
 
-class _MockTopicDependencyBox implements Box<TopicDependency> {
+class _FakeTopicDependencyBox implements Box<TopicDependency> {
   final Map<String, TopicDependency> _storage = {};
 
   @override
@@ -59,10 +59,10 @@ class _MockTopicDependencyBox implements Box<TopicDependency> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _MockTopicDependencyRepository extends TopicDependencyRepository {
+class _FakeTopicDependencyRepository extends TopicDependencyRepository {
   final Box<TopicDependency> _fakeBox;
 
-  _MockTopicDependencyRepository(this._fakeBox);
+  _FakeTopicDependencyRepository(this._fakeBox);
 
   @override
   void attachBox(Box<TopicDependency> box) {}
@@ -93,12 +93,12 @@ class _MockTopicDependencyRepository extends TopicDependencyRepository {
 
 void main() {
   group('TopicDependencyRepository', () {
-    late _MockTopicDependencyBox box;
-    late _MockTopicDependencyRepository repository;
+    late _FakeTopicDependencyBox box;
+    late _FakeTopicDependencyRepository repository;
 
     setUp(() {
-      box = _MockTopicDependencyBox();
-      repository = _MockTopicDependencyRepository(box);
+      box = _FakeTopicDependencyBox();
+      repository = _FakeTopicDependencyRepository(box);
     });
 
     group('getTopicDependency', () {

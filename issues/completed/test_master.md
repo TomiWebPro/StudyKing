@@ -1,263 +1,238 @@
-# Test Coverage & Convention Audit
+# Test Coverage & Quality Audit
 
-**Date:** 2026-05-17
-**Scope:** Full cross-reference of AGENTS.md conventions against source/test tree in `lib/` and `test/`.
-**Method:** Manual diff of every source file in `lib/features/*/` and `lib/core/*/` against its expected test mirror, plus content review of every provider and widget test file.
+**Audited:** 2026-05-17  
+**Scope:** Full cross-reference of `lib/` source files vs `test/` files against AGENTS.md conventions
 
 ---
 
-## BLOCKER: Widget Tests Without NavigatorObserver
+## BLOCKER
 
-**Convention:** AGENTS.md §Test Patterns — *"Use `NavigatorObserver` for verifying navigation behavior."*
+### B1. `onboarding_dialog_widget_test.dart` uses bare `NavigatorObserver()` — navigation verification is dead code
 
-31 widget/screen test files use `tester.pumpWidget` / `tester.pumpAndSettle` but **never** install a `NavigatorObserver`. These tests cannot verify that taps, swipes, or programmatic navigation actually trigger the correct route changes.
+**File:** `test/features/onboarding/presentation/onboarding_dialog_widget_test.dart:271`
 
-### Affected files
+**Problem:** The test instantiates `NavigatorObserver()` (the abstract base class with no-op implementations). No `didPush`/`didPop` calls are recorded, so subsequent assertions like `observer.pushedRoutes` or `observer.poppedRoutes` would always be empty. Navigation behaviour is never actually verified.
 
-| Test file | Screen/widget under test |
+**Rationale:** The dialog performs navigation (routes to `AppRoutes.subjectSelection`, `quickGuide`, `apiConfig`), but the test cannot confirm any route was pushed.
+
+**Acceptance criteria:**
+- Replace bare `NavigatorObserver()` with `TestNavigatorObserver` from `test/helpers/navigator_observer_helper.dart`.
+- Add at least one assertion per navigable action (e.g., `expect(observer.pushedRoutes, hasLength(1))` and verify the pushed route name matches the expected `AppRoutes` constant).
+
+---
+
+## MAJOR
+
+### M1. `app_theme_test.dart` mixes unit and widget tests in the same file
+
+**File:** `test/core/theme/app_theme_test.dart`
+
+**Problem:** 28 `test()` calls (pure logic: `createTextTheme`, theme configuration) and 12+ `testWidgets()` calls (UI rendering: scaffold, app bar, card, button, FAB, navigation bar) are in the same file. AGENTS.md mandates: *"Keep unit tests and widget tests in separate files — never mix them in the same file."*
+
+**Rationale:** Separated files are faster to run (widget tests require `flutter_test`, unit tests don't) and prevent confusion between test categories.
+
+**Acceptance criteria:**
+- Move all `testWidgets` blocks to `test/core/theme/app_theme_widget_test.dart`.
+- Keep all pure `test(...)` blocks in the existing `app_theme_test.dart`.
+- Verify both files pass independently.
+
+### M2. 20+ test files depend on real Hive I/O instead of fakes / `fixedStudentId`
+
+**Affected files (representative sample):**
+
+| File | Hive dependency |
 |---|---|
-| `test/features/dashboard/presentation/dashboard_screen_test.dart` | DashboardScreen |
-| `test/features/lessons/presentation/lesson_list_screen_test.dart` | LessonListScreen |
-| `test/features/lessons/presentation/lesson_detail_screen_test.dart` | LessonDetailScreen |
-| `test/features/lessons/presentation/topic_list_screen_test.dart` | TopicListScreen |
-| `test/features/focus_mode/presentation/focus_timer_screen_test.dart` | FocusTimerScreen |
-| `test/features/focus_mode/presentation/widgets/focus_timer_widget_test.dart` | FocusTimerWidget |
-| `test/features/ingestion/presentation/upload_screen_test.dart` | UploadScreen |
-| `test/features/llm_tasks/presentation/llm_task_manager_screen_test.dart` | LlmTaskManagerScreen |
-| `test/features/mentor/presentation/mentor_screen_test.dart` | MentorScreen |
-| `test/features/teaching/presentation/tutor_screen_test.dart` | TutorScreen |
-| `test/features/settings/presentation/settings_screen_test.dart` | SettingsScreen |
-| `test/features/settings/presentation/profile_screen_test.dart` | ProfileScreen |
-| `test/features/settings/presentation/api_config_screen_test.dart` | ApiConfigScreen |
-| `test/features/sessions/presentation/session_tracker_screen_test.dart` | SessionTrackerScreen |
-| `test/features/sessions/presentation/session_history_screen_test.dart` | SessionHistoryScreen |
-| `test/features/subjects/presentation/subject_list_screen_test.dart` | SubjectListScreen |
-| `test/features/subjects/presentation/subject_selection_screen_test.dart` | SubjectSelectionScreen |
-| `test/features/practice/presentation/screens/exam_session_screen_test.dart` | ExamSessionScreen |
-| `test/features/practice/presentation/screens/practice_results_screen_test.dart` | PracticeResultsScreen |
-| `test/features/practice/presentation/widgets/mistake_review_widget_test.dart` | MistakeReviewWidget |
-| `test/features/practice/presentation/widgets/practice_feedback_widget_test.dart` | PracticeFeedbackWidget |
-| `test/features/quickguide/presentation/widgets/suggested_prompts_widget_test.dart` | SuggestedPromptsWidget |
-| `test/features/quickguide/presentation/widgets/message_list_widget_test.dart` | MessageListWidget |
-| `test/features/planner/presentation/widgets/progress_overlay_widget_test.dart` | ProgressOverlayWidget |
-| `test/features/planner/presentation/widgets/calendar_view_widget_test.dart` | CalendarViewWidget |
-| `test/features/questions/presentation/widgets/question_card_widget_test.dart` | QuestionCardWidget |
-| `test/features/questions/presentation/widgets/canvas_drawing_widget_test.dart` | CanvasDrawingWidget |
-| `test/features/questions/presentation/widgets/math_expression_widget_test.dart` | MathExpressionWidget |
-| `test/features/questions/presentation/widgets/single_answer_widget_test.dart` | SingleAnswerWidget |
-| `test/main_screen_test.dart` | MainScreen |
-| `test/core/errors/handlers_widget_test.dart` | Error handlers |
+| `test/features/onboarding/presentation/onboarding_dialog_test.dart` | `Hive.init()`, reads `HiveBoxNames.settings` |
+| `test/features/onboarding/presentation/onboarding_dialog_widget_test.dart` | `Hive.init()`, temp dir per run |
+| `test/features/dashboard/providers/dashboard_layout_providers_test.dart` | `Hive.init()`, `Hive.openBox('dashboard_layout_prefs')` |
+| `test/features/dashboard/providers/dashboard_data_providers_test.dart` | `Hive.init()`, `Hive.openBox('dashboard_layout_prefs')` |
+| `test/features/sessions/data/repositories/session_repository_test.dart` | `Hive.init()`, `Hive.registerAdapter()`, `Hive.openBox()` |
+| `test/features/sessions/services/study_timer_service_test.dart` | `Hive.init()`, `Hive.openBox('settings')` |
+| `test/features/ingestion/presentation/upload_screen_test.dart` | `Hive.init()`, `Hive.registerAdapter()`, `Hive.openBox()` |
+| `test/features/focus_mode/presentation/focus_timer_screen_test.dart` | `Hive.init()` |
+| `test/features/mentor/services/mentor_service_test.dart` | `Hive.init()` |
+| `test/features/mentor/presentation/mentor_screen_test.dart` | `Hive.init()`, opens 'settings' box |
+| `test/features/teaching/data/repositories/tutor_session_repository_test.dart` | `Hive.init()`, real Hive integration |
+| `test/core/services/engagement_scheduler_test.dart` | `Hive.init()` |
+| `test/features/subjects/data/repositories/topic_repository_test.dart` | `Hive.init()`, real "topics" box |
+| `test/features/subjects/data/repositories/subject_repository_test.dart` | `Hive.init()` |
+| `test/features/practice/presentation/screens/practice_session_screen_test.dart` | `Hive.init()` for session pop tests |
+| `test/features/practice/presentation/screens/exam_session_screen_test.dart` | Extends `StudentIdService` instead of using `fixedStudentId` |
 
-**Rationale:** Without `NavigatorObserver`, a broken route push — e.g., pushing `/wrong-route` instead of `/correct-route` — silently passes CI. Every `pumpWidget` call that renders a screen with navigable elements should wrap the app in a `MaterialApp` with a `navigatorObservers: [observer]` and assert the pushed route name.
+**Problem:** AGENTS.md says: *"Prefer `fixedStudentId` over `StudentIdService` singleton in widget tests to avoid Hive I/O dependencies."* Real Hive I/O introduces:
+- Temp directory management boilerplate (`setUp`/`tearDown`)
+- Risk of cross-test state pollution when run together
+- Slower test execution
+- False negatives when Hive type adapters aren't registered
+
+**Rationale:** A hand-written fake repository backed by in-memory `List`/`Map` is faster, deterministic, and requires no disk I/O. Widget tests that need a student ID should inject a `fixedStudentId` string constant rather than opening a Hive box.
 
 **Acceptance criteria:**
-1. Every file above wraps its test app in `MaterialApp` with `navigatorObservers: [observer]`.
-2. At least one test per file asserts the expected route after a navigation-triggering interaction (e.g., tap on a list item, button press).
-3. Shared helpers (`shared_test_helpers.dart`, etc.) expose a reusable `TestNavigatorObserver`.
+- Widget tests using `StudentIdService` → inject `fixedStudentId` string constant directly.
+- Repository tests using `Hive.init()` + real boxes → replace with in-memory fake implementations (e.g., `_FakeSessionRepository` pattern already in `session_providers_test.dart`).
+- Service tests that only read config (e.g., `mentor_screen_test.dart` opens 'settings' box) → inject config values via provider overrides instead.
+- No test file should call `Hive.init()` or `Hive.openBox()` unless it is specifically testing Hive adapter serialization.
 
----
+### M3. No cross-feature integration tests exist
 
-## BLOCKER: Real Hive I/O in Tests (Flakiness Risk)
+**Problem:** There is only `test/integration/e2e_test.dart`, which tests a handful of features (planner, lessons, practice, teaching) in a single scenario. There are zero tests verifying that feature boundaries compose correctly — e.g., that the dashboard correctly reads planner adherence data, or that the mentor feature's nudges integrate with the session service.
 
-**Convention:** AGENTS.md §Test Patterns — *"Prefer `fixedStudentId` over `StudentIdService` singleton in widget tests to avoid Hive I/O dependencies."*
+**Affected integration paths (untested):**
+- Dashboard consuming planner `plan_adherence` data → no test that `dashboardAdherenceDataProvider` correctly reads from a faked `PlanAdherenceRepository`
+- Mentor nudges engaging with session data → no test that `MentorService.checkWellbeingAndGenerateNudges()` correctly queries a faked `SessionRepository`
+- Practice calling back to teaching (mistake review re-teach) → no cross-provider wiring test
+- Planner creating lessons → teaching session flow → no end-to-end test
 
-Several test files call `Hive.init()` + `Hive.openBox()` directly, creating real temp directories and disk-backed boxes. This introduces flakiness from filesystem race conditions, leftover temp directories, and adapter-registration conflicts.
-
-### Affected files
-
-- `test/features/onboarding/presentation/onboarding_dialog_test.dart` — `Hive.init()` in setUp, `Hive.openBox()` in test body
-- `test/features/mentor/services/mentor_service_test.dart` — `Hive.init()` in setUp (line 343)
-- `test/features/mentor/presentation/mentor_screen_test.dart` — `Hive.init()` (line 219)
-- `test/features/dashboard/providers/dashboard_data_providers_test.dart` — imports `hive_flutter`, Hive box ops (line 5)
-- `test/features/dashboard/providers/dashboard_layout_providers_test.dart` — imports `hive_flutter`, Hive box ops (line 5)
-- `test/features/planner/providers/planner_providers_test.dart` — imports `hive_flutter` (line 4)
-- `test/features/teaching/data/repositories/conversation_repository_test.dart` — `Hive.init()` in setUp
-- `test/features/subjects/data/repositories/topic_repository_test.dart` — `Hive.init()` in setUp
-- `test/features/subjects/providers/subjects_repository_provider_test.dart` — imports `hive/hive.dart` (line 3), mocks `Box<Subject>`
-
-**Rationale:** Hive I/O tests are inherently slower, depend on filesystem state, can leave orphan temp directories, and require tearDown cleanup that may not run if a test fails early. They also require adapter registration that can conflict across test files.
+**Rationale:** Without cross-feature tests, regressions that span boundaries (e.g., a change in planner adherence calculation breaking the dashboard's adherence card) will go undetected.
 
 **Acceptance criteria:**
-1. All widget tests replace `Hive.init()` with hand-written fakes / in-memory boxes.
-2. Repository tests that exercise real Hive serialization are moved to a dedicated `test/features/*/data/repositories/hive_*_test.dart` file and excluded from `--exclude-tags=hive` runs, or refactored to use fake Hive boxes.
-3. Service tests that inject `StudentIdService` switch to `fixedStudentId` parameter.
-4. CI adds a `flutter test --exclude-tags=hive` run for fast feedback.
+- Create `test/integration/` test files (at least 3) covering the untested paths above.
+- Each integration test should use `ProviderContainer` with hand-written fakes for all repositories, wiring real feature providers together and verifying the composed output.
+- At minimum cover:
+  1. Dashboard + Planner (adherence data flows correctly)
+  2. Mentor + Sessions (nudge generation uses session data)
+  3. Practice + Teaching (mistake review produces a re-teach request)
 
----
+### M4. 69 "Mock"‑named classes are actually hand-written fakes — naming inconsistency
 
-## MAJOR: Provider Wiring Tests That Don't Verify Wiring
+**Problem:** AGENTS.md says: *"Use hand-written fake classes (not `mockito`/`mocktail`)."* But the codebase has 69 classes named `Mock*` or `_Mock*` that are simply hand-written test doubles (extending real classes, manually overriding methods). Examples:
 
-**Convention:** AGENTS.md §Provider Test Coverage Bar — *"Verifying dependency wiring via overrides (e.g., a fake repo injected through a provider is used by a downstream service)."*
-
-Several provider files claim to test "X is wired to Y" but only assert `isA<ResultType>()` after overriding Y. This is a **tautology**: if the override didn't propagate, the test would still pass because the default factory also creates the same type.
-
-### 1. `test/features/lessons/providers/lesson_providers_test.dart`
-
-```dart
-// Lines 75-85 — "is wired to lessonRepositoryProvider"
-final fakeRepo = LessonRepository();
-container = ProviderContainer(overrides: [lessonRepositoryProvider.overrideWithValue(fakeRepo)]);
-final service = container.read(lessonServiceProvider);
-expect(service, isA<LessonService>());  // ← passes even if fakeRepo was NOT injected
-```
-
-Same pattern at lines 87-97 (tutorSessionRepository wiring) and 99-109 (sessionRepository wiring). None check that `service.repository` is the overridden instance.
-
-### 2. `test/features/teaching/providers/teaching_providers_test.dart`
-
-```dart
-// Lines 47-59 — "is wired to llmServiceProvider"
-final fakeService = LlmService(...);
-container = ProviderContainer(overrides: [llmServiceProvider.overrideWithValue(fakeService)]);
-final evaluator = container.read(exerciseEvaluatorProvider);
-expect(evaluator, isA<ExerciseEvaluator>());  // ← passes even if fake was NOT used
-```
-
-Same pattern at lines 110-121 (tutorService wired to llmService), lines 124-139 (tutorService wired to exerciseEvaluator).
-
-### 3. `test/features/ingestion/providers/ingestion_providers_test.dart`
-
-Lines 211-248 — three "wired to" / "uses llmService from overridden provider" tests that end with `expect(pipeline, isA<ContentPipeline>())` instead of checking `pipeline.llmService` is `same(fakeService)`.
-
-### Contrast with correct pattern
-
-`test/features/focus_mode/providers/focus_mode_providers_test.dart:18-28`:
-```dart
-final service = container.read(studyTimerServiceProvider);
-expect(service.repository, same(overrideRepo));  // ✓ verifies concrete wiring
-```
-
-`test/features/sessions/providers/session_providers_test.dart:237-257`:
-```dart
-final result = await container.read(allSessionsProvider.future);
-expect(result.data![0].id, 'wired-1');  // ✓ verifies override data flows through
-```
-
-**Acceptance criteria:**
-1. Every "is wired to" assertion in the three files above is replaced with a concrete check that the overridden dependency was injected (e.g., `expect(service.someField, same(fakeRepo))` or `expect(result, contains(overrideData))`).
-2. No wiring test uses `isA<ResultType>()` as its sole assertion after an override.
-
----
-
-## MAJOR: Missing Error-State Tests in Providers
-
-**Convention:** AGENTS.md §Provider Test Coverage Bar — *"Testing that error states are handled gracefully."*
-
-| Provider test file | Missing error coverage |
+| File | Class |
 |---|---|
-| `test/features/lessons/providers/lesson_providers_test.dart` | Zero error-state tests. What happens when `LessonRepository.save()` throws? |
-| `test/features/teaching/providers/teaching_providers_test.dart` | No error state (only `teachingModelIdProvider` has fallback logic). What happens when `llmServiceProvider` throws during `exerciseEvaluatorProvider` construction? |
-| `test/features/focus_mode/providers/focus_mode_providers_test.dart` | No error-state tests. What happens when `SessionRepository.getByDate()` throws? |
-| `test/features/ingestion/providers/ingestion_providers_test.dart` | No error-state tests. What happens when `documentExtractorProvider`'s LLM service fails? |
+| `test/features/planner/services/planner_service_test.dart` | `_MockMasteryGraphRepository` |
+| `test/features/ingestion/services/content_pipeline_test.dart` | `_MockLlmService` |
+| `test/features/lessons/data/repositories/lesson_repository_test.dart` | `_MockLessonRepository` |
+| `test/core/services/mastery_graph_service_test.dart` | `MockMasteryGraphRepository` |
 
-For contrast, these provider files do have error coverage:
-- `dashboard_data_providers_test.dart` — tests `throwsA(isA<Exception>())` when service init fails (line 618)
-- `subjects_repository_provider_test.dart` — tests `hasError` on AsyncValue after build failure (line 210)
-- `planner_providers_test.dart` — multiple error-path assertions throughout (lines 837, etc.)
+**Rationale:** Using `Mock` suggests a generated mocking framework (mockito/mocktail). New contributors may be confused about whether these are auto-generated or hand-written. The convention in `test/helpers/fakes.dart` uses `Fake*` — all test doubles should follow this.
 
 **Acceptance criteria:**
-1. Each of the four files above adds at least one test where a dependency throws and the provider handles it gracefully (returns an error async value, falls back to empty/default, or propagates in a controlled way).
-2. Tests verify both the error state AND that subsequent reads still work (provider recovers).
+- Rename all `Mock*` / `_Mock*` hand-written test doubles to `Fake*` / `_Fake*` or `Stub*` / `_Stub*`.
+- Ensure none import from `package:mockito/` or `package:mocktail/`.
+
+### M5. Two LLM service test files are at the wrong directory level
+
+**Files:**
+- `test/core/services/llm_embeddings_service_test.dart` → should be `test/core/services/llm/llm_embeddings_service_test.dart`
+- `test/core/services/llm_model_service_test.dart` → should be `test/core/services/llm/llm_model_service_test.dart`
+
+**Problem:** The source file `lib/core/services/llm/llm_embeddings_service.dart` lives in `llm/` subdirectory, so the test should mirror that path per AGENTS.md convention.
+
+**Acceptance criteria:**
+- Move both test files to `test/core/services/llm/` subdirectory.
+- Update any relative imports if needed.
 
 ---
 
-## MAJOR: Orphan Test Files (No Corresponding Source)
+## MINOR
 
-The following test files have no matching source file under their expected path:
+### m1. 6+ files define inline `NavigatorObserver` instead of using the shared helper
 
-| Orphan test file | Possible source | Status |
-|---|---|---|
-| `test/core/services/ai_model_service_test.dart` | No `lib/core/services/ai_model_service.dart` | Orphan — tests removed/renamed code? |
-| `test/core/services/llm_service_test.dart` | `LlmService` is in `lib/core/services/llm/llm_chat_service.dart`, not at root services path | Mismatched path — likely should be merged into `llm/llm_chat_service_test.dart` or removed |
-| `test/core/providers/settings_controller_test.dart` | No `lib/core/providers/settings_controller.dart` | Orphan — `SettingsController` lives in `app_providers.dart` |
-| `test/core/constants/app_encryption_config_test.dart` | No `lib/core/constants/app_encryption_config.dart` | Orphan |
-| `test/core/constants/app_production_config_test.dart` | No `lib/core/constants/app_production_config.dart` | Orphan |
+**Affected files:**
 
-**Acceptance criteria:**
-1. Each orphan is either: (a) relocated to match an existing source file, (b) merged into the correct existing test, or (c) deleted if the tested code was removed.
-2. CI adds a check: for every `*_test.dart` in `test/`, the corresponding source path must exist (or be a documented exception like barrel tests).
-
----
-
-## MAJOR: Source Files With No Test Coverage
-
-The following source files have no corresponding test file per the AGENTS.md mapping:
-
-| Source file | Missing test |
+| File | Observer class |
 |---|---|
-| `lib/features/mentor/data/models/chat_message_data.dart` | `test/features/mentor/data/models/chat_message_data_test.dart` exists ✓ |
-| `lib/core/data/hive_type_ids.dart` | `test/core/data/hive_type_ids_test.dart` exists ✓ |
+| `test/features/practice/presentation/screens/practice_screen_test.dart` | `_TestNavigatorObserver` (inline) |
+| `test/features/subjects/presentation/widgets/subject_lessons_tab_test.dart` | `_TestNavigatorObserver` (inline) |
+| `test/features/subjects/presentation/subject_detail_screen_test.dart` | `_TestNavigatorObserver` (inline) |
+| `test/features/quickguide/presentation/widgets/mode_navigation_widget_test.dart` | `_TestNavigatorObserver` (inline) |
+| `test/features/planner/presentation/planner_screen_test.dart` | `_TestNavigatorObserver` (inline) |
+| `test/features/planner/presentation/widgets/lesson_booking_sheet_test.dart` | `_NavigatorObserverMock` (inline) |
 
-Wait — re-verified: all source files in `lib/features/*/` have corresponding test files. The crate is fully mapped. This is good.
+**Problem:** `test/helpers/navigator_observer_helper.dart` already provides a shared `TestNavigatorObserver` with `pushedRoutes`, `poppedRoutes`, and `reset()`. The inline versions duplicate this (varying by whether they include a `onPush` callback) and fragment the observer logic.
 
-However, **coverage quality** varies wildly. The practice feature (37 source files, 53 test files) has extensive coverage, while teaching and lessons providers have shallow tests as noted above.
+**Rationale:** DRY principle — one shared implementation reduces maintenance burden and ensures consistent behavior across all navigation tests.
 
-**Rationale:** While every file has a test, several tests consist of a single `expect(x, isA<X>())` construction check with zero behavioral assertions, which provides near-zero regression protection.
+**Acceptance criteria:**
+- Replace all inline `_TestNavigatorObserver`/`_NavigatorObserverMock` definitions with `TestNavigatorObserver` from `test/helpers/navigator_observer_helper.dart`.
+- Remove the obsolete inline class definitions.
+
+### m2. `coverage_gaps_test.dart` is 1834 lines — should be split
+
+**File:** `test/features/practice/services/coverage_gaps_test.dart`
+
+**Problem:** This single file tests 12+ services (`DifficultyAdapter`, `ExamSessionService`, `MasteryRecorder`, `MistakeReviewService`, `PracticeDataService`, `PracticeSessionService`, `ReadinessScorer`, `SpacedRepetitionEngine`, `SpacedRepetitionService`, `AttemptRepository`, `QuestionMasteryStateRepository`, `SessionRepository`) with 10+ fake classes and dozens of test cases. It mixes repository tests and service tests.
+
+**Rationale:** Giant test files are hard to navigate, slow to run, and cause merge conflicts. Each service should have its own test file, matching the source file structure. Most of these services already have dedicated test files in `test/features/practice/services/` — this file appears to add "coverage gap" tests. The new tests should be merged into the existing dedicated files or split into appropriately scoped files.
+
+**Acceptance criteria:**
+- Distribute the test cases from `coverage_gaps_test.dart` into the pre-existing dedicated test files (e.g., `difficulty_adapter_test.dart`, `exam_session_service_test.dart`, etc.).
+- If a test truly covers multiple services, move it to `test/features/practice/services/integration/` or scope it to the appropriate single-service file.
+- Delete `coverage_gaps_test.dart` after distribution.
+
+### m3. Duplicate fake classes defined inline across files
+
+**Problem:** Some fake classes are re-defined in multiple test files instead of being shared via `test/helpers/fakes.dart`:
+
+| Fake class | Defined in |
+|---|---|
+| `FakeSessionRepository` | `test/features/lessons/providers/lesson_providers_test.dart`, `test/features/planner/providers/planner_providers_test.dart`, `test/features/dashboard/providers/dashboard_data_providers_test.dart`, `test/features/sessions/providers/session_providers_test.dart`, and more |
+| `_FakeAttemptRepository` | `test/features/dashboard/providers/dashboard_providers_test.dart`, `test/features/dashboard/providers/dashboard_data_providers_test.dart` |
+| `FakeMasteryGraphService` | `test/features/mentor/services/mentor_service_test.dart`, `test/features/dashboard/presentation/dashboard_screen_test.dart`, `test/helpers/fakes.dart` |
+
+**Rationale:** Duplicated fakes drift apart as teams add behavior to one copy but not another, leading to inconsistent test results.
+
+**Acceptance criteria:**
+- Audit all `Fake*` / `_Fake*` / `Mock*` / `_Mock*` classes across test files.
+- Consolidate common fakes into `test/helpers/fakes.dart`.
+- Keep only domain-specific fakes inline (e.g., a fake with a very specific error-throwing mode used in only one test file).
+
+### m4. Barrel/export tests lack behavioral assertions
+
+**Affected files (barrel-only tests with only `isNotNull`/`isA<>` checks):**
+
+- `test/features/features_barrel_test.dart`
+- `test/features/planner/planner_test.dart`
+- `test/features/planner/data/planner_data_test.dart`
+- `test/features/mentor/mentor_test.dart`
+- `test/features/practice/practice_test.dart`
+- `test/features/practice/data/practice_data_test.dart`
+- `test/features/settings/settings_test.dart`
+- `test/features/subjects/subjects_test.dart`
+- `test/features/subjects/data/subjects_data_test.dart`
+- `test/features/onboarding/onboarding_test.dart`
+- `test/features/ingestion/ingestion_test.dart`
+- `test/features/lessons/lessons_test.dart`
+- `test/features/teaching/teaching_test.dart`
+- `test/features/quickguide/quickguide_test.dart`
+- `test/core/core_test.dart`
+- `test/core/data/data_test.dart`
+- `test/core/widgets/widgets_test.dart`
+- `test/core/utils/utils_test.dart`
+
+**Problem:** While barrel tests serve a legitimate purpose (validate export integrity), the AGENTS.md *Provider Test Coverage Bar* says: *"Every provider test file must include at least one behavioral assertion beyond construction checks."* These barrel files aren't provider tests, so they technically don't violate the rule. However, they provide minimal value and could be enhanced.
+
+**Acceptance criteria:**
+- Consider merging each barrel test into a single `test/features/<name>/exports_test.dart` to reduce overhead.
+- No change strictly required — but document that barrel files are exempt from the behavioral-assertion rule, and ensure no provider-specific barrel file lacks behavioral coverage.
+
+### m5. `e2e_test.dart` has low coverage density
+
+**File:** `test/integration/e2e_test.dart` (337 lines)
+
+**Problem:** The single integration test file covers only a narrow scenario (planner → lessons → practice → teaching). It doesn't test dashboard, focus mode, sessions, settings, or mentor flows. Many fake classes in the test are defined inline rather than from `test/helpers/fakes.dart`.
+
+**Acceptance criteria:**
+- Expand e2e coverage to include at least dashboard + planner adherence and mentor + session interactions.
+- Prefer `Fake*` classes from `test/helpers/fakes.dart` when available (e.g., `FakePlanRepository`, `FakeMasteryGraphRepository`).
+
+### m6. `planner_providers_test.dart` overrides each dependency individually instead of using the service-level override
+
+**File:** `test/features/planner/providers/planner_providers_test.dart`
+
+**Problem:** This file overrides 7+ individual repositories (`_MockPlanRepository`, `_MockMasteryRepository`, `_MockTopicRepository`, etc.) directly in the provider container. AGENTS.md says to use `plannerServiceProvider.overrideWithValue` with a single `FakePlannerService` (already defined in `test/helpers/fakes.dart`) that internally wraps fake repos. This would reduce boilerplate and better match the documented convention.
+
+**Acceptance criteria:**
+- Refactor `planner_providers_test.dart` to use `FakePlannerService` from `test/helpers/fakes.dart` instead of overriding 7 individual repositories.
+- Only override specific sub-dependencies when testing provider-level error propagation.
 
 ---
 
-## MINOR: Hive Object Mock in Subject Repository Provider Test
+## Summary
 
-`test/features/subjects/providers/subjects_repository_provider_test.dart` (line 8) implements `MockSubjectBox implements Box<Subject>`. This class overrides 8 methods but delegates to `noSuchMethod` for dozens of others. This pattern:
-- Silently passes if any unimplemented `Box` method is called at runtime
-- Is brittle (Hive API changes break the mock without warning)
-- Defeats compile-time safety
-
-Per AGENTS.md §Test Patterns — *"Use hand-written fake classes (not `mockito`/`mocktail`) for dependency stubbing."* While this isn't mockito, it's an incomplete fake that inherits the same risk.
-
-**Acceptance criteria:** Replace `MockSubjectBox` with a complete `FakeSubjectBox` that explicitly implements all required `Box` methods, or refactor the test to use a `FakeSubjectRepository` instead of mocking `Box<Subject>`.
-
----
-
-## MINOR: Provider Tests With Only `isNotNull` / `isA` Checks
-
-The following provider tests contain ONLY construction checks (`isNotNull`, `isA`) without any behavioral assertion:
-
-| File | Lines | Issue |
+| Severity | Count | Issues |
 |---|---|---|
-| `test/features/lessons/providers/lesson_providers_test.dart` | 11-15 | `lessonRepositoryProvider` test: only `expect(repo, isA<LessonRepository>())` |
-| `test/features/lessons/providers/lesson_providers_test.dart` | 47-53 | `tutorSessionRepositoryProvider` test: only `isA<TutorSessionRepository>()` |
-| `test/features/focus_mode/providers/focus_mode_providers_test.dart` | 10-16 | `sessionRepositoryProvider` test: only `isA<SessionRepository>()` |
-| `test/features/focus_mode/providers/focus_mode_providers_test.dart` | 31-37 | `studyTimerServiceProvider` test: only `isA<StudyTimerService>()` |
-
-These pass even if the provider's `build()` method returns a `null` that happens to be non-null — they provide zero behavioral coverage.
-
-**Acceptance criteria:** Each bare `isA<T>()` assertion is paired with a behavioral check: at minimum, verify the instance is a singleton across reads (e.g., `expect(repo1, same(repo2))`) or test a concrete method call.
-
----
-
-## MINOR: Service Error-Path Coverage Gaps
-
-Services with no error-path tests (repository throws, network fails, LLM times out):
-
-| Service source | Test file | Missing error coverage |
-|---|---|---|
-| `lib/features/ingestion/services/document_extractor.dart` | `test/features/ingestion/services/document_extractor_test.dart` | No test for LLM call failure |
-| `lib/features/ingestion/services/web_scraper.dart` | `test/features/ingestion/services/web_scraper_test.dart` | No test for network failure |
-| `lib/features/ingestion/services/content_pipeline.dart` | `test/features/ingestion/services/content_pipeline_test.dart` | No test for extractor/scraper failure |
-| `lib/features/lessons/services/lesson_service.dart` | `test/features/lessons/services/lesson_service_test.dart` | Check if error states exist |
-
-**Acceptance criteria:** Each service listed has at least one test where a dependency throws and the service handles it (returns error result, returns fallback data, or propagates with context).
-
----
-
-## Summary Counts
-
-| Severity | Count | Category |
-|---|---|---|
-| **BLOCKER** | 31 | Widget tests missing `NavigatorObserver` |
-| **BLOCKER** | 9 | Tests using real Hive I/O instead of fakes |
-| **MAJOR** | 3 | Provider test files with `isA`-only wiring verification |
-| **MAJOR** | 4 | Provider test files with no error-state tests |
-| **MAJOR** | 5 | Orphan test files (no matching source) |
-| **MINOR** | 4 | Provider tests with only construction checks |
-| **MINOR** | 1 | Incomplete Hive box mock |
-| **MINOR** | 3+ | Service files with error-path coverage gaps |
-
----
-
-## Quick Wins (Can Fix in <30 min Each)
-
-1. Add `NavigatorObserver` to the top 3 screen tests (dashboard_screen, lesson_list_screen, settings_screen) — shared helper already exists in `test/helpers/navigator_observer_helper.dart`.
-2. Remove the 5 orphan test files after verifying their content is covered elsewhere.
-3. Convert the 4 bare `isA` provider assertions to singleton checks (`same(instance)`).
+| BLOCKER | 1 | B1 — dead navigation verification in onboarding widget test |
+| MAJOR | 5 | M1 unit/widget mixing, M2 Hive I/O, M3 missing integration tests, M4 Mock naming, M5 LLM test location |
+| MINOR | 6 | m1 duplicate observers, m2 giant file, m3 duplicate fakes, m4 barrel tests, m5 e2e density, m6 planner overrides |
+| **Total** | **12** | |

@@ -325,6 +325,7 @@ class ConversationManager {
       confidenceRating: (confidenceRating * 5).round(),
       totalMessages: msgCount,
       topicsCovered: [topicTitle],
+      // LLM-facing: invariant English format OK per AGENTS.md
       tutorNotes: 'Adaptive pace: ${formatDecimal(adaptivePace, 'en', minFractionDigits: 1, maxFractionDigits: 1)}x',
       lessonPlanJson: lessonPlan?.toJsonString() ?? '{}',
     );

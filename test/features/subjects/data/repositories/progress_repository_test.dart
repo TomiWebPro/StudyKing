@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-class _MockProgressRepository extends ProgressRepository {
+class _FakeProgressRepository extends ProgressRepository {
   final Map<String, TopicProgress> _storage = {};
 
   @override
@@ -14,6 +14,16 @@ class _MockProgressRepository extends ProgressRepository {
   @override
   Future<TopicProgress?> get(String topicId) async {
     return _storage[topicId];
+  }
+
+  @override
+  Future<List<TopicProgress>> getAll() async {
+    return _storage.values.toList();
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    _storage.remove(key);
   }
 
   @override
@@ -39,10 +49,10 @@ class _MockProgressRepository extends ProgressRepository {
 
 void main() {
   group('ProgressRepository', () {
-    late _MockProgressRepository repository;
+    late _FakeProgressRepository repository;
 
     setUp(() {
-      repository = _MockProgressRepository();
+      repository = _FakeProgressRepository();
     });
 
     group('get', () {
@@ -148,6 +158,27 @@ void main() {
         expect((await repository.get('t2'))?.questionsAnswered, 1);
         expect((await repository.get('t3'))?.questionsAnswered, 1);
       });
+
+      test('getAll returns all progress records', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+        await repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000);
+
+        final all = await repository.getAll();
+        expect(all, hasLength(2));
+      });
+
+      test('getAll returns empty list when empty', () async {
+        final all = await repository.getAll();
+        expect(all, isEmpty);
+      });
+
+      test('delete removes progress record', () async {
+        await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+        expect(await repository.get('t1'), isNotNull);
+
+        await repository.delete('t1');
+        expect(await repository.get('t1'), isNull);
+      });
     });
   });
 
@@ -187,6 +218,80 @@ void main() {
       final progress = await repository.get('t1');
       expect(progress?.questionsAnswered, 2);
       expect(progress?.averageTimeMs, 3000);
+    });
+
+    test('getAll returns all progresses', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+      await repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000);
+      await repository.recordAttempt(topicId: 't3', isCorrect: true, timeSpentMs: 3000);
+
+      final all = await repository.getAll();
+      expect(all, hasLength(3));
+    });
+
+    test('getAll returns empty list when no progresses', () async {
+      final all = await repository.getAll();
+      expect(all, isEmpty);
+    });
+
+    test('delete removes a progress', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+      expect(await repository.get('t1'), isNotNull);
+
+      await repository.delete('t1');
+      expect(await repository.get('t1'), isNull);
+    });
+
+    test('delete non-existent does not throw', () async {
+      await repository.delete('non-existent');
+    });
+
+    test('save stores progress directly', () async {
+      final progress = TopicProgress(
+        topicId: 't1',
+        questionsAnswered: 5,
+        correctAnswers: 3,
+        averageTimeMs: 2500.0,
+        lastUpdated: DateTime(2024, 6, 15),
+      );
+      await repository.save('t1', progress);
+
+      final retrieved = await repository.get('t1');
+      expect(retrieved, isNotNull);
+      expect(retrieved!.questionsAnswered, 5);
+      expect(retrieved.correctAnswers, 3);
+      expect(retrieved.averageTimeMs, 2500.0);
+    });
+
+    test('recordAttempt with large time values', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 999999);
+      final progress = await repository.get('t1');
+      expect(progress?.averageTimeMs, 999999);
+    });
+
+    test('multiple recordAttempts maintain correct average', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 3000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 4000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
+
+      final progress = await repository.get('t1');
+      expect(progress?.questionsAnswered, 5);
+      expect(progress?.correctAnswers, 5);
+      expect(progress?.averageTimeMs, 3000);
+      expect(progress?.accuracy, 1.0);
+    });
+
+    test('recordAttempt with mixed correct and incorrect', () async {
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 2000);
+      await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 3000);
+
+      final progress = await repository.get('t1');
+      expect(progress?.questionsAnswered, 3);
+      expect(progress?.correctAnswers, 2);
+      expect(progress?.accuracy, 2 / 3);
     });
   });
 }

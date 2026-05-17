@@ -6,7 +6,7 @@ import 'package:studyking/features/practice/data/repositories/attempt_repository
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
-class MockAttemptRepository extends AttemptRepository {
+class FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
 
   void setAttempts(List<StudentAttempt> attempts) {
@@ -81,11 +81,11 @@ class FakeSessionRepository extends SessionRepository {
 void main() {
   group('StudyProgressTracker', () {
     late StudyProgressTracker tracker;
-    late MockAttemptRepository mockRepo;
+    late FakeAttemptRepository mockRepo;
     late FakeSessionRepository mockSessionRepo;
 
     setUp(() {
-      mockRepo = MockAttemptRepository();
+      mockRepo = FakeAttemptRepository();
       mockSessionRepo = FakeSessionRepository();
       tracker = StudyProgressTracker(
         attemptRepo: mockRepo,

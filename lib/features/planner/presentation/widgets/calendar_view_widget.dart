@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
@@ -148,11 +149,11 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
   Widget _buildDayCell(
       BuildContext context, ThemeData theme, AppLocalizations l10n, DateTime date, int day) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = now.dateOnly;
     final isToday = date == today;
 
     final dailyPlan = widget.plan.dailyPlans.where((p) {
-      final d = DateTime(p.date.year, p.date.month, p.date.day);
+      final d = p.date.dateOnly;
       return d == date;
     }).firstOrNull;
 

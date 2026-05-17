@@ -8,6 +8,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/constants/app_api_config.dart';
+import 'package:studyking/core/constants/timeouts.dart';
 
 class ApiConfigScreen extends ConsumerStatefulWidget {
   const ApiConfigScreen({super.key});
@@ -119,11 +120,11 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
     try {
       final stopwatch = Stopwatch()..start();
-      final url = baseUrl.isNotEmpty ? '$baseUrl/models' : 'https://openrouter.ai/api/v1/models';
+      final url = baseUrl.isNotEmpty ? '$baseUrl/models' : '${ApiConfig.openRouterBaseUrlString}/models';
       final response = await http.get(
         Uri.parse(url),
         headers: {'Authorization': 'Bearer $apiKey'},
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(Timeouts.apiCall);
       stopwatch.stop();
 
       if (!mounted) return;

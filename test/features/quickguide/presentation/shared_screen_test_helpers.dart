@@ -16,6 +16,7 @@ class FakeLlmService extends LlmService {
   Duration chunkDelay = Duration.zero;
   String? capturedSystemPrompt;
   String? capturedModelId;
+  ConversationMemory? capturedMemory;
 
   FakeLlmService({String apiKey = 'fake-key-for-testing'})
       : super(
@@ -37,6 +38,7 @@ class FakeLlmService extends LlmService {
     if (shouldThrow) throw Exception('Simulated LLM error');
     capturedSystemPrompt = systemPrompt;
     capturedModelId = modelId;
+    capturedMemory = memory;
     for (final chunk in chunks) {
       await Future<void>.delayed(chunkDelay);
       yield chunk;
@@ -70,6 +72,11 @@ class FakeSettingsRepository extends SettingsRepository {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     final current = _box;
     _box = SettingsBox(
@@ -100,6 +107,16 @@ class FakeSettingsRepository extends SettingsRepository {
       planAdjustmentNotificationsEnabled:
           planAdjustmentNotificationsEnabled ??
               current.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds:
+          breakDurationSeconds ?? current.breakDurationSeconds,
+      dailyReminderHour:
+          dailyReminderHour ?? current.dailyReminderHour,
+      dailyReminderMinute:
+          dailyReminderMinute ?? current.dailyReminderMinute,
+      firstFocusVisit:
+          firstFocusVisit ?? current.firstFocusVisit,
+      dailyReminderEnabled:
+          dailyReminderEnabled ?? current.dailyReminderEnabled,
     );
   }
 }
@@ -108,15 +125,6 @@ class FakeSettingsController extends SettingsController {
   FakeSettingsController(SettingsBox box)
       : super(FakeSettingsRepository(box)) {
     state = box;
-  }
-}
-
-class TestNavigatorObserver extends NavigatorObserver {
-  final List<Route<dynamic>> pushedRoutes = [];
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRoutes.add(route);
   }
 }
 

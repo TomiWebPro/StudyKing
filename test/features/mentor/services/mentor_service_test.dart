@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
@@ -338,16 +336,6 @@ class _FakeSessionRepo extends SessionRepository {
 }
 
 void main() {
-  setUp(() async {
-    final dir = Directory.systemTemp.createTempSync('mentor_test_');
-    Hive.init(dir.path);
-    addTearDown(() {
-      try {
-        dir.deleteSync(recursive: true);
-      } catch (_) {}
-    });
-  });
-
   group('MentorService', () {
     group('initial state', () {
       test('memory is a ConversationMemory', () {

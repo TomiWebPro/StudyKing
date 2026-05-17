@@ -13,7 +13,7 @@ import 'package:studyking/features/subjects/data/models/topic_dependency_model.d
 import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
-class MockMasteryBox implements Box<MasteryState> {
+class FakeMasteryBox implements Box<MasteryState> {
   final Map<String, MasteryState> _storage = {};
   final bool _isOpen = true;
 
@@ -66,7 +66,7 @@ class MockMasteryBox implements Box<MasteryState> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockQuestionMasteryBox implements Box<QuestionMasteryState> {
+class FakeQuestionMasteryBox implements Box<QuestionMasteryState> {
   final Map<String, QuestionMasteryState> _storage = {};
   final bool _isOpen = true;
 
@@ -119,7 +119,7 @@ class MockQuestionMasteryBox implements Box<QuestionMasteryState> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockDependencyBox implements Box<TopicDependency> {
+class FakeDependencyBox implements Box<TopicDependency> {
   final Map<String, TopicDependency> _storage = {};
   final bool _isOpen = true;
 
@@ -172,7 +172,7 @@ class MockDependencyBox implements Box<TopicDependency> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockEvalBox implements Box<QuestionEvaluation> {
+class FakeEvalBox implements Box<QuestionEvaluation> {
   final Map<String, QuestionEvaluation> _storage = {};
   final bool _isOpen = true;
 
@@ -227,17 +227,17 @@ class MockEvalBox implements Box<QuestionEvaluation> {
 
 void main() {
   group('MasteryGraphRepository', () {
-    late MockMasteryBox masteryBox;
-    late MockQuestionMasteryBox questionMasteryBox;
-    late MockDependencyBox dependencyBox;
-    late MockEvalBox evalBox;
+    late FakeMasteryBox masteryBox;
+    late FakeQuestionMasteryBox questionMasteryBox;
+    late FakeDependencyBox dependencyBox;
+    late FakeEvalBox evalBox;
     late MasteryGraphRepository repository;
 
     setUp(() {
-      masteryBox = MockMasteryBox();
-      questionMasteryBox = MockQuestionMasteryBox();
-      dependencyBox = MockDependencyBox();
-      evalBox = MockEvalBox();
+      masteryBox = FakeMasteryBox();
+      questionMasteryBox = FakeQuestionMasteryBox();
+      dependencyBox = FakeDependencyBox();
+      evalBox = FakeEvalBox();
       repository = MasteryGraphRepository.test(
         masteryBox: masteryBox,
         questionMasteryBox: questionMasteryBox,

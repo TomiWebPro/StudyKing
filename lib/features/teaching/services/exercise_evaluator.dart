@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/constants/llm_defaults.dart' show evaluationPromptTemplate;
 import '../data/models/evaluation_result.dart';
 
 class ExerciseEvaluator {
@@ -29,17 +30,12 @@ class ExerciseEvaluator {
     required String subjectId,
     required String topicTitle,
   }) {
-    // Invariant prompt format with JSON template
-    return 'Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".\n'
-        '\nQuestion: $question\n'
-        '\nStudent Answer: $studentAnswer\n'
-        '\nReturn a JSON object with:\n'
-        '{\n'
-        '  "score": <0.0 to 1.0>,\n'
-        '  "explanation": "<detailed feedback explaining what was correct/incorrect>",\n'
-        '  "partialCredit": <optional 0.0-1.0 for partially correct parts>,\n'
-        '  "conceptBreakdown": {<optional map of concept name to mastery score 0.0-1.0>}\n'
-        '}';
+    return evaluationPromptTemplate(
+      subjectId: subjectId,
+      topicTitle: topicTitle,
+      question: question,
+      studentAnswer: studentAnswer,
+    );
   }
 
   Future<EvaluationResult> evaluate({

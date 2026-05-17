@@ -50,7 +50,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('1h 0m'), findsOneWidget);
+      expect(find.text('1h 0m 0s'), findsOneWidget);
     });
 
     testWidgets('renders today duration in minutes when < 1 hour', (tester) async {
@@ -60,7 +60,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('25m'), findsOneWidget);
+      expect(find.text('25m 0s'), findsOneWidget);
     });
 
     testWidgets('renders weekly duration', (tester) async {
@@ -70,7 +70,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('2h 0m'), findsOneWidget);
+      expect(find.text('2h 0m 0s'), findsOneWidget);
     });
 
     testWidgets('renders session counts', (tester) async {
@@ -92,7 +92,7 @@ void main() {
         const SessionSummaryCard(),
       ));
 
-      expect(find.text('0m'), findsAtLeast(1));
+      expect(find.text('0s'), findsAtLeast(1));
     });
 
     testWidgets('renders default values when stats map is empty', (tester) async {
@@ -100,7 +100,7 @@ void main() {
         const SessionSummaryCard(todayStats: {}),
       ));
 
-      expect(find.text('0m'), findsAtLeast(1));
+      expect(find.text('0s'), findsAtLeast(1));
       expect(find.text('0/0'), findsOneWidget);
     });
 
@@ -121,7 +121,7 @@ void main() {
       ));
 
       expect(find.text('Recent Sessions'), findsOneWidget);
-      expect(find.text('25m / 25m'), findsOneWidget);
+      expect(find.text('25m 0s / 25m 0s'), findsOneWidget);
     });
 
     testWidgets('shows incomplete session in recent list', (tester) async {
@@ -140,7 +140,7 @@ void main() {
         SessionSummaryCard(recentSessions: sessions),
       ));
 
-      expect(find.text('10m / 25m'), findsOneWidget);
+      expect(find.text('10m 0s / 25m 0s'), findsOneWidget);
     });
 
     testWidgets('limits recent sessions to 3', (tester) async {
@@ -188,8 +188,8 @@ void main() {
         ),
       );
 
-      expect(find.text('1h 0m'), findsOneWidget);
-      expect(find.text('2h 0m'), findsOneWidget);
+      expect(find.text('1h 0m 0s'), findsOneWidget);
+      expect(find.text('2h 0m 0s'), findsOneWidget);
       expect(find.text('2/3'), findsOneWidget);
     });
 
@@ -209,7 +209,7 @@ void main() {
         SessionSummaryCard(recentSessions: sessions),
       ));
 
-      expect(find.text('1h 30m / 90m'), findsOneWidget);
+      expect(find.text('1h 30m 0s / 1h 30m 0s'), findsOneWidget);
     });
 
     testWidgets('shows session start time correctly', (tester) async {
@@ -267,14 +267,99 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsOneWidget);
     });
 
-    testWidgets('renders today stat with minutes only format', (tester) async {
+    testWidgets('renders today stat with seconds format', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(
           todayStats: {'totalMs': 45000},
         ),
       ));
 
-      expect(find.text('0m'), findsAtLeast(1));
+      expect(find.text('45s'), findsOneWidget);
+    });
+
+    testWidgets('falls back to totalSeconds when totalMs absent', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const SessionSummaryCard(
+          todayStats: {'totalSeconds': 3600},
+        ),
+      ));
+
+      expect(find.text('1h 0m 0s'), findsOneWidget);
+    });
+
+    testWidgets('totalMs takes precedence over totalSeconds', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const SessionSummaryCard(
+          todayStats: {
+            'totalMs': 1800000,
+            'totalSeconds': 3600,
+          },
+        ),
+      ));
+
+      expect(find.text('30m 0s'), findsOneWidget);
+    });
+
+    testWidgets('session with null plannedDurationMinutes', (tester) async {
+      final now = DateTime(2026, 5, 14, 10, 30);
+      final sessions = [
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          startTime: now,
+          actualDurationMs: 1500000,
+          completed: true,
+          type: SessionType.focus,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.text('25m 0s / 0s'), findsOneWidget);
+    });
+
+    testWidgets('narrow layout adjusts MetricCard widths', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(350, 600)),
+          child: _buildTestApp(
+            const SessionSummaryCard(
+              todayStats: {
+                'totalMs': 3600000,
+                'completedSessions': 2,
+                'totalSessions': 3,
+              },
+              weeklyMs: 7200000,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('1h 0m 0s'), findsOneWidget);
+      expect(find.text('2h 0m 0s'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+    });
+
+    testWidgets('session with null planned and short duration', (tester) async {
+      final now = DateTime(2026, 5, 14, 10, 30);
+      final sessions = [
+        Session(
+          id: 's1',
+          studentId: 'student-1',
+          startTime: now,
+          actualDurationMs: 30000,
+          completed: false,
+          type: SessionType.focus,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(recentSessions: sessions),
+      ));
+
+      expect(find.text('30s / 0s'), findsOneWidget);
     });
   });
 }

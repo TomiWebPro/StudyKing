@@ -7,6 +7,7 @@ import 'package:studyking/features/quickguide/presentation/quick_guide_screen.da
 import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 import 'shared_screen_test_helpers.dart';
 
 void main() {
@@ -1401,6 +1402,355 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(llm.capturedModelId, equals('gemini-2.0-flash'));
+    });
+  });
+
+  group('QuickGuideScreen - localization guard', () {
+    testWidgets(
+        'didChangeDependencies guard prevents message duplication on rebuild',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.textContaining(
+            'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.textContaining(
+            'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('didChangeDependencies does not duplicate suggested prompts',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
+    });
+  });
+
+  group('QuickGuideScreen - memory management', () {
+    testWidgets('ConversationMemory is passed to chatStream',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Memory test response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Remember this');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(llm.capturedMemory, isNotNull);
+    });
+
+    testWidgets('memory is cleared on conversation reset', (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Hello');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final llm2 = FakeLlmService();
+      llm2.chunks.add('Second message response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm2, showModeNavigation: false),
+        llmService: llm2,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(
+          find.byType(TextField), 'Message after clear');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(llm2.capturedMemory, isNotNull);
+    });
+  });
+
+  group('QuickGuideScreen - scroll behavior', () {
+    testWidgets('scrolling works with reduceMotion enabled',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+      llm.chunkDelay = Duration.zero;
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+        settingsBox: SettingsBox(reduceMotion: true),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Test');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Test'), findsOneWidget);
+    });
+
+    testWidgets('scrolling works with reduceMotion disabled',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+      llm.chunkDelay = Duration.zero;
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+        settingsBox: SettingsBox(reduceMotion: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Scroll test');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Scroll test'), findsOneWidget);
+    });
+  });
+
+  group('QuickGuideScreen - send flow edge cases', () {
+    testWidgets('_getLlmService returns widget service when provided',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Widget service response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Test');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(llm.streamConsumed, isTrue);
+    });
+
+    testWidgets('_sendMessage sets hasInteracted and hides suggestions',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: true),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(ActionChip), findsAtLeastNWidgets(1));
+      expect(find.text('Choose a study mode'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Message');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ActionChip), findsNothing);
+      expect(find.text('Choose a study mode'), findsNothing);
+    });
+
+    testWidgets('placeholder message appears while streaming starts',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Stream response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Stream test');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Stream test'), findsOneWidget);
+      expect(find.text('Stream response'), findsOneWidget);
+    });
+  });
+
+  group('QuickGuideScreen - fallback response edge cases', () {
+    testWidgets(
+        'fallback handles case-insensitive keyword matching for Explain',
+        (tester) async {
+      final llm = FakeLlmService(apiKey: '');
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'EXPLAIN everything');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.textContaining('Sure! I can help explain concepts'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'fallback handles case-insensitive keyword matching for Math',
+        (tester) async {
+      final llm = FakeLlmService(apiKey: '');
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'MATH problem');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.textContaining('happy to help with math'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('fallback handles uppercase keyword CALCULATE',
+        (tester) async {
+      final llm = FakeLlmService(apiKey: '');
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'CALCULATE 5+3');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.textContaining('happy to help with math'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('fallback handles uppercase QUIZ keyword',
+        (tester) async {
+      final llm = FakeLlmService(apiKey: '');
+      await tester.pumpWidget(buildTestApp(
+        screen:
+            QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'QUIZ me');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.textContaining('I can help with questions'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('QuickGuideScreen - mode widget toggle', () {
+    testWidgets('mode navigation hidden when showModeNavigation is false',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: false),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Choose a study mode'), findsNothing);
     });
   });
 }

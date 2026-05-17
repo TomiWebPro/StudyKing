@@ -39,6 +39,11 @@ class FakeSettingsRepository implements SettingsRepository {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     if (_shouldThrowOnSave) {
       throw Exception('Simulated save failure');
@@ -62,6 +67,11 @@ class FakeSettingsRepository implements SettingsRepository {
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: breakDurationSeconds ?? _settings.breakDurationSeconds,
+      dailyReminderHour: dailyReminderHour ?? _settings.dailyReminderHour,
+      dailyReminderMinute: dailyReminderMinute ?? _settings.dailyReminderMinute,
+      firstFocusVisit: firstFocusVisit ?? _settings.firstFocusVisit,
+      dailyReminderEnabled: dailyReminderEnabled ?? _settings.dailyReminderEnabled,
     );
   }
 
@@ -110,6 +120,11 @@ class _TestSettingsNotifier extends SettingsController {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     await fakeApiRepo.updateSettings(
       apiKey: apiKey,

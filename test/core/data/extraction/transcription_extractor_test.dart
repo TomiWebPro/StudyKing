@@ -6,7 +6,7 @@ void main() {
     late TranscriptionExtractor extractor;
 
     setUp(() {
-      extractor = TranscriptionExtractor();
+      extractor = TranscriptionExtractor(modelId: 'test-model');
     });
 
     tearDown(() {

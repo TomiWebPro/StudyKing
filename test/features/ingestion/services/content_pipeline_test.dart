@@ -10,8 +10,8 @@ import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 
-class _MockLlmService extends LlmService {
-  _MockLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
+class _FakeLlmService extends LlmService {
+  _FakeLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
 
   bool classifyShouldFail = false;
   bool questionGenShouldThrow = false;
@@ -52,7 +52,7 @@ class _MockLlmService extends LlmService {
   }
 }
 
-class _MockSourceRepository extends SourceRepository {
+class _FakeSourceRepository extends SourceRepository {
   final Map<String, Source> _storage = {};
   bool shouldThrow = false;
   int saveCallCount = 0;
@@ -108,7 +108,7 @@ class _MockSourceRepository extends SourceRepository {
   Future<List<Source>> getCompleted() async => [];
 }
 
-class _MockTopicRepository extends TopicRepository {
+class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
   bool _shouldThrowOnGetAll = false;
 
@@ -131,7 +131,7 @@ class _MockTopicRepository extends TopicRepository {
   }
 }
 
-class _MockQuestionRepository extends QuestionRepository {
+class _FakeQuestionRepository extends QuestionRepository {
   bool createShouldFail = false;
 
   @override
@@ -147,17 +147,17 @@ class _MockQuestionRepository extends QuestionRepository {
 }
 
 void main() {
-  late _MockSourceRepository mockSourceRepo;
-  late _MockLlmService mockLlmService;
-  late _MockTopicRepository mockTopicRepo;
-  late _MockQuestionRepository mockQuestionRepo;
+  late _FakeSourceRepository mockSourceRepo;
+  late _FakeLlmService mockLlmService;
+  late _FakeTopicRepository mockTopicRepo;
+  late _FakeQuestionRepository mockQuestionRepo;
   late ContentPipeline pipeline;
 
   setUp(() {
-    mockSourceRepo = _MockSourceRepository();
-    mockLlmService = _MockLlmService();
-    mockTopicRepo = _MockTopicRepository();
-    mockQuestionRepo = _MockQuestionRepository();
+    mockSourceRepo = _FakeSourceRepository();
+    mockLlmService = _FakeLlmService();
+    mockTopicRepo = _FakeTopicRepository();
+    mockQuestionRepo = _FakeQuestionRepository();
     mockLlmService.classifyShouldFail = false;
     mockLlmService.classifyResult = 'Math';
     mockLlmService.classifyCallCount = 0;
@@ -168,6 +168,7 @@ void main() {
       sourceRepository: mockSourceRepo,
       topicRepository: mockTopicRepo,
       questionRepository: mockQuestionRepo,
+      modelId: 'test-model',
     );
   });
 

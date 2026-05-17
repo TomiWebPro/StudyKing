@@ -13,6 +13,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/data_backup_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -31,7 +32,8 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
-    show apiKeyProvider, selectedModelProvider, settingsProvider;
+    show apiKeyProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show llmUsageMeterProvider;
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -121,6 +123,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               if (settings.studyRemindersEnabled) ...[
                 SwitchListTile(
+                  secondary: const Icon(Icons.alarm),
+                  title: const Text('Daily Reminder'),
+                  subtitle: const Text('Get a daily reminder to study at your preferred time'),
+                  value: settings.dailyReminderEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updateDailyReminderEnabled(value),
+                ),
+                if (settings.dailyReminderEnabled)
+                  _tile(
+                    'Reminder Time',
+                    '${settings.dailyReminderHour.toString().padLeft(2, '0')}:${settings.dailyReminderMinute.toString().padLeft(2, '0')}',
+                    Icons.access_time,
+                    () => _showDailyReminderTimePicker(settings),
+                  ),
+                SwitchListTile(
                   secondary: const Icon(Icons.repeat),
                   title: Text(l10n.revisionReminders),
                   value: settings.revisionRemindersEnabled,
@@ -149,6 +166,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.read(settingsProvider.notifier).updatePlanAdjustmentNotifications(value),
                 ),
               ],
+              ListTile(
+                leading: const Icon(Icons.notifications),
+                title: const Text('Check Nudges Now'),
+                subtitle: const Text('Run nudge checks immediately'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () async {
+                  final scheduler = ref.read(engagementSchedulerProvider);
+                  try {
+                    await scheduler.runDailyChecksNow();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nudge check complete')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nudge check failed')),
+                      );
+                    }
+                  }
+                },
+              ),
             ]),
             _section(l10n.studyPreferences, [
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
@@ -161,6 +201,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _getDailyCapLabel(l10n),
                   Icons.access_time_filled,
                   () => _showDailyCapDialog()),
+              _tile('Break Duration',
+                  '${settings.breakDurationSeconds ~/ 60} min',
+                  Icons.free_breakfast,
+                  () => _showBreakDurationDialog(settings.breakDurationSeconds)),
             ]),
             _section(l10n.studyAnalytics, [
               _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
@@ -171,6 +215,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(formatDuration(
                     Duration(milliseconds: settings.totalStudyTimeMs),
                     showDays: true)),
+              ),
+            ]),
+            _section(l10n.tokenUsageSummary, [
+              _tile(l10n.totalTokens,
+                  l10n.tokensLabel(formatDecimal(ref.watch(llmUsageMeterProvider).getTotalTokens().toDouble(), l10n.localeName, minFractionDigits: 0)),
+                  Icons.token, () => _showTokenUsageDetails()),
+              ListTile(
+                leading: const Icon(Icons.attach_money),
+                title: Text(l10n.totalCost),
+                subtitle: Text(r'$' '${ref.watch(llmUsageMeterProvider).getTotalCost().toStringAsFixed(4)}'),
               ),
             ]),
             _section(l10n.backupAndRestore, [
@@ -428,6 +482,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (_) {}
   }
 
+  Future<void> _showDailyReminderTimePicker(SettingsBox settings) async {
+    final initial = TimeOfDay(hour: settings.dailyReminderHour, minute: settings.dailyReminderMinute);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: 'Daily Reminder Time',
+    );
+    if (picked != null) {
+      await ref.read(settingsProvider.notifier).updateDailyReminderTime(picked.hour, picked.minute);
+      final notifService = NotificationService();
+      await notifService.init();
+      await notifService.showDailyReminder(
+        id: 9999,
+        title: 'Daily Study Reminder',
+        body: 'Time to study! You have study tasks planned for today.',
+        remindAt: picked,
+      );
+    }
+  }
+
+  void _showBreakDurationDialog(int currentSeconds) {
+    final l10n = AppLocalizations.of(context)!;
+    final options = [60, 120, 180, 300, 420, 600, 900];
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        children: options
+            .map((s) => ListTile(
+                  title: Text(l10n.minutesValue(s ~/ 60)),
+                  trailing: s == currentSeconds
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).updateBreakDuration(s);
+                    Navigator.pop(context);
+                  },
+                ))
+            .toList(),
+      ),
+    );
+  }
+
   void _showSessionDurationDialog(int currentMinutes) {
     final l10n = AppLocalizations.of(context)!;
     final options = [15, 30, 45, 60, 90];
@@ -483,14 +579,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('${l10n.backupExportFailed}: ${result.error}')),
+                content:                     Text(l10n.backupExportFailedWithError(result.error!))),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.backupExportFailed}: $e')),
+          SnackBar(content: Text(l10n.backupExportFailedWithError(e.toString()))),
         );
       }
     }
@@ -515,7 +611,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content:
-                    Text('${l10n.invalidBackupFile}: ${result.error}')),
+                    Text(l10n.invalidBackupFileWithError(result.error!))),
           );
         }
         return;
@@ -674,6 +770,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return LessonBlock.fromJson(json);
       default:
         return json;
+    }
+  }
+
+  void _showTokenUsageDetails() {
+    final l10n = AppLocalizations.of(context)!;
+    final meter = ref.read(llmUsageMeterProvider);
+    final totalTokens = meter.getTotalTokens();
+    final totalCost = meter.getTotalCost();
+    final avgCost = totalTokens > 0 ? (totalCost / totalTokens * 1000) : 0.0;
+    final perFeature = meter.getTotalTokensPerFeature();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.tokenUsageSummary),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.usageSummary(
+                '\$${totalCost.toStringAsFixed(4)}',
+                formatDecimal(totalTokens.toDouble(), l10n.localeName, minFractionDigits: 0),
+                formatDecimal(avgCost, l10n.localeName, minFractionDigits: 4),
+              )),
+              const SizedBox(height: 16),
+              if (perFeature.isNotEmpty) ...[
+                const Divider(),
+                ...perFeature.entries.map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_featureLabel(e.key)),
+                      Text(
+                        l10n.tokensLabel(
+                          formatDecimal(e.value.toDouble(), l10n.localeName, minFractionDigits: 0),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _featureLabel(String feature) {
+    switch (feature) {
+      case 'ocr_extraction':
+      case 'transcription':
+      case 'content_classification':
+      case 'content_summarization':
+      case 'question_generation':
+        return 'Ingestion';
+      case 'general':
+        return 'General';
+      default:
+        return feature;
     }
   }
 

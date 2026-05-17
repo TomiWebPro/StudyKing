@@ -10,7 +10,7 @@ import 'package:studyking/features/subjects/data/repositories/topic_repository.d
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 
-class _MockTopicRepository extends TopicRepository {
+class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
   bool throwOnGetBySubject = false;
   bool throwOnInit = false;
@@ -32,7 +32,7 @@ class _MockTopicRepository extends TopicRepository {
   Future<Topic?> get(String id) async => _topics[id];
 }
 
-class _MockMasteryRepository extends MasteryGraphRepository {
+class _FakeMasteryRepository extends MasteryGraphRepository {
   final List<TopicDependency> _dependencies = [];
   final Map<String, MasteryState> _masteryStates = {};
 
@@ -67,7 +67,7 @@ class _MockMasteryRepository extends MasteryGraphRepository {
   }
 }
 
-class _MockQuestionRepository extends QuestionRepository {
+class _FakeQuestionRepository extends QuestionRepository {
   final List<Question> _questions = [];
   bool throwOnInit = false;
 
@@ -86,15 +86,15 @@ class _MockQuestionRepository extends QuestionRepository {
 
 void main() {
   group('SyllabusResolver', () {
-    late _MockTopicRepository topicRepo;
-    late _MockMasteryRepository masteryRepo;
-    late _MockQuestionRepository questionRepo;
+    late _FakeTopicRepository topicRepo;
+    late _FakeMasteryRepository masteryRepo;
+    late _FakeQuestionRepository questionRepo;
     late SyllabusResolver resolver;
 
     setUp(() {
-      topicRepo = _MockTopicRepository();
-      masteryRepo = _MockMasteryRepository();
-      questionRepo = _MockQuestionRepository();
+      topicRepo = _FakeTopicRepository();
+      masteryRepo = _FakeMasteryRepository();
+      questionRepo = _FakeQuestionRepository();
       resolver = SyllabusResolver(
         topicRepository: topicRepo,
         masteryRepository: masteryRepo,
@@ -331,7 +331,7 @@ void main() {
 
       test('rethrows SyllabusException', () async {
         final throwingResolver = SyllabusResolver(
-          topicRepository: _MockTopicRepository()..throwOnGetBySubject = true,
+          topicRepository: _FakeTopicRepository()..throwOnGetBySubject = true,
           masteryRepository: masteryRepo,
           questionRepository: questionRepo,
         );
@@ -357,6 +357,25 @@ void main() {
     });
 
     group('buildLearningLevels edge cases', () {
+      test('builds simple flat structure with no dependencies', () async {
+        topicRepo.addTopic(Topic(
+          id: 'topic-a', subjectId: 'sub', title: 'A', description: '',
+          syllabusText: '',
+        ));
+        topicRepo.addTopic(Topic(
+          id: 'topic-b', subjectId: 'sub', title: 'B', description: '',
+          syllabusText: '',
+        ));
+
+        final result = await resolver.resolveSyllabus(
+          subjectId: 'sub',
+          studentId: 'student-1',
+        );
+        final levels = resolver.buildLearningLevels(result.data!);
+        expect(levels, hasLength(1));
+        expect(levels.first, containsAll(['topic-a', 'topic-b']));
+      });
+
       test('returns empty list when no level can be formed', () async {
         topicRepo.addTopic(Topic(
           id: 'topic-a', subjectId: 'sub', title: 'A', description: '',

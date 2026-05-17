@@ -23,7 +23,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(null);
     } catch (e) {
       _logger.e('Error creating lesson', e);
-      return Result.failure('Failed to create lesson: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -32,7 +32,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(filterBy((l) => l.subjectId, subjectId));
     } catch (e) {
       _logger.e('Error getting lessons by subject', e);
-      return Result.failure('Failed to get lessons: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -41,7 +41,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(filterBy((l) => l.topicId, topicId));
     } catch (e) {
       _logger.e('Error getting lessons by topic', e);
-      return Result.failure('Failed to get lessons: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -52,7 +52,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(bySubject.where((l) => l.topicId == topicId).toList());
     } catch (e) {
       _logger.e('Error getting lessons by subject and topic', e);
-      return Result.failure('Failed to get lessons: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -60,14 +60,14 @@ class LessonRepository extends Repository<Lesson> {
     try {
       final lesson = await get(block.lessonId);
       if (lesson == null) {
-        return Result.failure('Lesson not found: ${block.lessonId}');
+        return Result.failure('Lesson_not_found: ${block.lessonId}');
       }
       final updated = lesson.copyWith(blocks: [...lesson.blocks, block]);
       await save(lesson.id, updated);
       return Result.success(null);
     } catch (e) {
       _logger.e('Error adding block to lesson', e);
-      return Result.failure('Failed to add block: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -80,7 +80,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(lesson.blocks);
     } catch (e) {
       _logger.e('Error getting blocks for lesson', e);
-      return Result.failure('Failed to get blocks: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -94,7 +94,7 @@ class LessonRepository extends Repository<Lesson> {
       return Result.success(blocks);
     } catch (e) {
       _logger.e('Error getting blocks by subject', e);
-      return Result.failure('Failed to get blocks: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 }

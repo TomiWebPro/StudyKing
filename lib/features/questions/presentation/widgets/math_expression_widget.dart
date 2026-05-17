@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MathExpressionWidget extends StatelessWidget {
   final String expression;
@@ -381,8 +382,8 @@ class MathExpressionWidget extends StatelessWidget {
         style: DefaultTextStyle.of(context).style,
         children: [
           if (showPrefix)
-            const TextSpan(
-              text: 'Expression: ',
+            TextSpan(
+              text: AppLocalizations.of(context)!.expressionLabel,
               style: TextStyle(fontStyle: FontStyle.italic),
             ),
           ...spans,

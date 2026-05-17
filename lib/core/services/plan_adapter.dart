@@ -1,6 +1,7 @@
 import '../errors/result.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import '../utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'personal_learning_plan_service.dart';
@@ -84,7 +85,7 @@ class PlanAdapter {
 
       return Result.success(result);
     } catch (e) {
-      return Result.failure('Failed to check adherence: $e');
+      return Result.failure(e.toString());
     }
   }
 
@@ -116,7 +117,7 @@ class PlanAdapter {
 
       return await svc.generatePlan(studentId);
     } catch (e) {
-      return Result.failure('Failed to regenerate plan: $e');
+      return Result.failure(e.toString());
     }
   }
 
@@ -145,7 +146,7 @@ class PlanAdapter {
         'weeklyTrend': weeklyTrend,
       });
     } catch (e) {
-      return Result.failure('Failed to get adherence report: $e');
+      return Result.failure(e.toString());
     }
   }
 
@@ -160,12 +161,12 @@ class PlanAdapter {
 
       await _adherenceRepository.init();
       final today = DateTime.now();
-      final todayStart = DateTime(today.year, today.month, today.day);
+      final todayStart = today.dateOnly;
 
       int plannedMinutes = 0;
       int plannedQuestions = 0;
       for (final day in plan.dailyPlans) {
-        final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+        final dDay = day.date.dateOnly;
         if (dDay == todayStart) {
           plannedMinutes = day.targetMinutes;
           plannedQuestions = day.targetQuestions;
@@ -177,7 +178,7 @@ class PlanAdapter {
       int actualMinutes = 0;
       int actualQuestions = 0;
       for (final r in todayRecords) {
-        final rDay = DateTime(r.date.year, r.date.month, r.date.day);
+        final rDay = r.date.dateOnly;
         if (rDay == todayStart) {
           actualMinutes += r.actualMinutes;
           actualQuestions += r.actualQuestions;

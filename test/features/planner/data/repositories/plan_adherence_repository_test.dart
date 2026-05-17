@@ -5,7 +5,7 @@ import 'package:studyking/features/planner/data/adapters/plan_adherence_model_ad
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
-class _MockPlanAdherenceRepository extends PlanAdherenceRepository {
+class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final Map<String, PlanAdherenceModel> _storage = {};
 
   @override
@@ -134,10 +134,10 @@ PlanAdherenceModel createTestAdherence({
 
 void main() {
   group('PlanAdherenceRepository', () {
-    late _MockPlanAdherenceRepository repository;
+    late _FakePlanAdherenceRepository repository;
 
     setUp(() {
-      repository = _MockPlanAdherenceRepository();
+      repository = _FakePlanAdherenceRepository();
     });
 
     group('save', () {
@@ -371,6 +371,65 @@ void main() {
       await repository.create(createTestAdherence(id: 'd1'));
       await repository.delete('d1');
       expect(await repository.get('d1'), isNull);
+    });
+
+    test('getByDateRange filters correctly', () async {
+      await repository.create(createTestAdherence(
+        id: 'd1', studentId: 's1', date: DateTime(2025, 6, 1)));
+      await repository.create(createTestAdherence(
+        id: 'd2', studentId: 's1', date: DateTime(2025, 6, 15)));
+      await repository.create(createTestAdherence(
+        id: 'd3', studentId: 's1', date: DateTime(2025, 7, 1)));
+      final result = await repository.getByDateRange(
+        's1', DateTime(2025, 6, 5), DateTime(2025, 6, 25));
+      expect(result.length, 1);
+      expect(result.first.id, 'd2');
+    });
+
+    test('getWeekly returns last 7 days', () async {
+      await repository.create(createTestAdherence(
+        id: 'w1', studentId: 's1', date: DateTime.now().subtract(const Duration(days: 2))));
+      await repository.create(createTestAdherence(
+        id: 'w2', studentId: 's1', date: DateTime.now().subtract(const Duration(days: 14))));
+      final result = await repository.getWeekly('s1');
+      expect(result.length, 1);
+      expect(result.first.id, 'w1');
+    });
+
+    test('getAverageAdherence computes average', () async {
+      await repository.create(createTestAdherence(id: 'avg1', studentId: 's1', adherenceScore: 0.8));
+      await repository.create(createTestAdherence(id: 'avg2', studentId: 's1', adherenceScore: 0.6));
+      final avg = await repository.getAverageAdherence('s1');
+      expect(avg, closeTo(0.7, 0.001));
+    });
+
+    test('getConsecutiveLowAdherenceDays counts correctly', () async {
+      final now = DateTime.now();
+      await repository.create(createTestAdherence(
+        id: 'c1', studentId: 's1', date: now, adherenceScore: 0.3));
+      await repository.create(createTestAdherence(
+        id: 'c2', studentId: 's1', date: now.subtract(const Duration(days: 1)), adherenceScore: 0.4));
+      await repository.create(createTestAdherence(
+        id: 'c3', studentId: 's1', date: now.subtract(const Duration(days: 2)), adherenceScore: 0.9));
+      final consecutive = await repository.getConsecutiveLowAdherenceDays('s1');
+      expect(consecutive, 2);
+    });
+
+    test('getToday returns today record', () async {
+      await repository.create(createTestAdherence(id: 'td1', studentId: 's1', date: DateTime.now()));
+      final today = await repository.getToday('s1');
+      expect(today, isNotNull);
+      expect(today!.id, 'td1');
+    });
+
+    test('deleteByStudent removes all records for student', () async {
+      await repository.create(createTestAdherence(id: 'ds1', studentId: 's1'));
+      await repository.create(createTestAdherence(id: 'ds2', studentId: 's1'));
+      await repository.create(createTestAdherence(id: 'ds3', studentId: 's2'));
+      await repository.deleteByStudent('s1');
+      expect(await repository.get('ds1'), isNull);
+      expect(await repository.get('ds2'), isNull);
+      expect(await repository.get('ds3'), isNotNull);
     });
   });
 }

@@ -25,12 +25,12 @@ class DocumentExtractor {
     OcrExtractor? ocrExtractor,
     TranscriptionExtractor? transcriptionExtractor,
     LlmService? llmService,
-    String? modelId,
+    required String modelId,
     String localeName = 'en',
   })  : _pdfExtractor = pdfExtractor ?? PdfExtractor(),
-        _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId ?? '', localeName: localeName),
+        _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
         _transcriptionExtractor = transcriptionExtractor ??
-            TranscriptionExtractor(llmService: llmService, modelId: modelId ?? '', localeName: localeName);
+            TranscriptionExtractor(llmService: llmService, modelId: modelId, localeName: localeName);
 
   Future<ExtractionResult> extractText({
     required String rawContent,

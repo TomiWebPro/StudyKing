@@ -1,6 +1,7 @@
 import '../conversation_phase.dart';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/constants/llm_defaults.dart' show evaluationPromptTemplate;
 
 class PromptEntry {
   final String systemPrompt;
@@ -44,11 +45,13 @@ class ConversationPromptSet {
     required ConversationPhase phase,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
+    // LLM-facing: invariant English format OK per AGENTS.md
     final paceContext = switch (adaptivePace) {
       > 1.2 => 'The student is doing well. Accelerate pace.',
       < 0.8 => 'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.',
       _ => 'Maintain a steady teaching pace.',
     };
+    // LLM-facing: invariant English format OK per AGENTS.md
     final timeContext = switch (phase) {
       ConversationPhase.greeting => 'Start the lesson warmly.',
       ConversationPhase.teaching => 'Teach the concept step by step. Engage the student with questions.',
@@ -90,17 +93,12 @@ class ConversationPromptSet {
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     // User prompt kept as Dart constant (invariant format with JSON templates)
-    final userPrompt =
-        'Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".\n'
-        '\nQuestion: $question\n'
-        '\nStudent Answer: $studentAnswer\n'
-        '\nReturn a JSON object with:\n'
-        '{\n'
-        '  "score": <0.0 to 1.0>,\n'
-        '  "explanation": "<detailed feedback>",\n'
-        '  "partialCredit": <optional 0.0-1.0>,\n'
-        '  "conceptBreakdown": {<optional map of concept name to mastery score 0.0-1.0>}\n'
-        '}';
+    final userPrompt = evaluationPromptTemplate(
+      subjectId: subjectId,
+      topicTitle: topicTitle,
+      question: question,
+      studentAnswer: studentAnswer,
+    );
     return PromptEntry(
       systemPrompt: '${l10n.evaluationSystemPrompt}$_languageInstruction',
       userPrompt: userPrompt,

@@ -8,7 +8,7 @@ import 'package:studyking/features/questions/data/models/question_evaluation_mod
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
-class _MockQuestionEvaluationBox implements Box<QuestionEvaluation> {
+class _FakeQuestionEvaluationBox implements Box<QuestionEvaluation> {
   final Map<String, QuestionEvaluation> _storage = {};
 
   @override
@@ -60,10 +60,10 @@ class _MockQuestionEvaluationBox implements Box<QuestionEvaluation> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _MockQuestionEvaluationRepository extends QuestionEvaluationRepository {
+class _FakeQuestionEvaluationRepository extends QuestionEvaluationRepository {
   final Box<QuestionEvaluation> _fakeBox;
 
-  _MockQuestionEvaluationRepository(this._fakeBox);
+  _FakeQuestionEvaluationRepository(this._fakeBox);
 
   @override
   void attachBox(Box<QuestionEvaluation> box) {}
@@ -108,12 +108,12 @@ class _MockQuestionEvaluationRepository extends QuestionEvaluationRepository {
 
 void main() {
   group('QuestionEvaluationRepository', () {
-    late _MockQuestionEvaluationBox box;
-    late _MockQuestionEvaluationRepository repository;
+    late _FakeQuestionEvaluationBox box;
+    late _FakeQuestionEvaluationRepository repository;
 
     setUp(() {
-      box = _MockQuestionEvaluationBox();
-      repository = _MockQuestionEvaluationRepository(box);
+      box = _FakeQuestionEvaluationBox();
+      repository = _FakeQuestionEvaluationRepository(box);
     });
 
     group('getEvaluation', () {

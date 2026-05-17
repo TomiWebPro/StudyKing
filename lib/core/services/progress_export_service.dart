@@ -216,9 +216,9 @@ class ProgressExportService {
                   ms.topicId,
                   '${ms.totalAttempts}',
                   '${ms.correctAttempts}',
-                  '${formatDecimal(ms.accuracy * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}%',
+                  formatPercent(ms.accuracy * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1),
                   level,
-                  '${formatDecimal(ms.reviewUrgency * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}%',
+                  formatPercent(ms.reviewUrgency * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(

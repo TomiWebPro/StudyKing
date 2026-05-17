@@ -26,7 +26,7 @@ class DataBackupService {
       return Result.success(file.path);
     } catch (e) {
       _logger.e('Failed to export backup', e);
-      return Result.failure('Failed to export backup: $e');
+      return Result.failure(e.toString());
     }
   }
 
@@ -46,7 +46,7 @@ class DataBackupService {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        return Result.failure('Backup file not found: $filePath');
+        return Result.failure('Backup_not_found: $filePath');
       }
       final json = await file.readAsString();
       final data = jsonDecode(json) as Map<String, dynamic>;
@@ -54,7 +54,7 @@ class DataBackupService {
       if (!data.containsKey('version') ||
           !data.containsKey('exportedAt') ||
           !data.containsKey('boxes')) {
-        return Result.failure('Invalid backup file format');
+        return Result.failure('Invalid_backup_format');
       }
 
       final boxes = data['boxes'] as Map<String, dynamic>;
@@ -72,7 +72,7 @@ class DataBackupService {
       return Result.success(result);
     } catch (e) {
       _logger.e('Failed to restore backup', e);
-      return Result.failure('Failed to restore backup: $e');
+      return Result.failure(e.toString());
     }
   }
 }

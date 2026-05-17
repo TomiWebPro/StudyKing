@@ -522,5 +522,80 @@ void main() {
         expect(restored.points, original.points);
       });
     });
+
+    group('toJson', () {
+      test('serializes description and partialCredit', () {
+        final step = EvaluationStep(
+          stepNumber: '1', requiredAnswer: 'Ans', points: 2.0,
+          description: 'First step', partialCredit: 0.5,
+        );
+        final json = step.toJson();
+        expect(json['description'], 'First step');
+        expect(json['partialCredit'], 0.5);
+      });
+
+      test('serializes null description and partialCredit', () {
+        final step = EvaluationStep(
+          stepNumber: '1', requiredAnswer: 'Ans', points: 2.0,
+        );
+        final json = step.toJson();
+        expect(json['description'], isNull);
+        expect(json['partialCredit'], isNull);
+      });
+    });
+
+    group('fromJson', () {
+      test('handles int points', () {
+        final json = {
+          'stepNumber': '1', 'requiredAnswer': 'Ans', 'points': 3,
+        };
+        final step = EvaluationStep.fromJson(json);
+        expect(step.points, 3.0);
+      });
+
+      test('handles int partialCredit', () {
+        final json = {
+          'stepNumber': '1', 'requiredAnswer': 'Ans', 'points': 1.0,
+          'partialCredit': 1,
+        };
+        final step = EvaluationStep.fromJson(json);
+        expect(step.partialCredit, 1.0);
+      });
+    });
+  });
+
+  group('QuestionEvaluation isMatch additional edge cases', () {
+    test('fuzzyMatch with too few words returns false', () {
+      final eval = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'one two three four five',
+        evaluationType: EvaluationType.fuzzyMatch,
+      );
+      expect(eval.isMatch('one two'), isFalse);
+    });
+
+    test('fuzzyMatch with empty correctAnswer does not crash', () {
+      final eval = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: '',
+        evaluationType: EvaluationType.fuzzyMatch,
+      );
+      expect(eval.isMatch('test'), isFalse);
+    });
+
+    test('stepBased with null steps falls through to default', () {
+      final eval = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+        evaluationType: EvaluationType.stepBased,
+        steps: null,
+      );
+      expect(eval.isMatch('London'), isFalse);
+    });
+
+    test('partialMatch with non-matching answer', () {
+      final eval = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'Paris',
+        evaluationType: EvaluationType.partialMatch,
+      );
+      expect(eval.isMatch('London'), isFalse);
+    });
   });
 }

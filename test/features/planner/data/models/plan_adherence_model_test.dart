@@ -69,6 +69,70 @@ void main() {
       });
     });
 
+    group('toJson', () {
+      test('serializes all fields', () {
+        final model = PlanAdherenceModel(
+          id: id, studentId: studentId, date: date,
+          plannedQuestions: 20, actualQuestions: 15,
+          plannedMinutes: 60, actualMinutes: 45,
+          adherenceScore: 0.75, planId: planId,
+          metadata: {'source': 'manual'},
+        );
+        final json = model.toJson();
+        expect(json['id'], id);
+        expect(json['studentId'], studentId);
+        expect(json['date'], date.toIso8601String());
+        expect(json['plannedQuestions'], 20);
+        expect(json['actualQuestions'], 15);
+        expect(json['plannedMinutes'], 60);
+        expect(json['actualMinutes'], 45);
+        expect(json['adherenceScore'], 0.75);
+        expect(json['planId'], planId);
+        expect(json['metadata'], {'source': 'manual'});
+      });
+    });
+
+    group('fromJson', () {
+      test('deserializes all fields', () {
+        final json = {
+          'id': id,
+          'studentId': studentId,
+          'date': date.toIso8601String(),
+          'plannedQuestions': 20,
+          'actualQuestions': 15,
+          'plannedMinutes': 60,
+          'actualMinutes': 45,
+          'adherenceScore': 0.75,
+          'planId': planId,
+          'metadata': {'source': 'manual'},
+        };
+        final model = PlanAdherenceModel.fromJson(json);
+        expect(model.id, id);
+        expect(model.studentId, studentId);
+        expect(model.date, date);
+        expect(model.plannedQuestions, 20);
+        expect(model.actualQuestions, 15);
+        expect(model.plannedMinutes, 60);
+        expect(model.actualMinutes, 45);
+        expect(model.adherenceScore, 0.75);
+        expect(model.planId, planId);
+        expect(model.metadata, {'source': 'manual'});
+      });
+
+      test('handles missing optional fields', () {
+        final json = {
+          'id': id,
+          'studentId': studentId,
+          'date': date.toIso8601String(),
+        };
+        final model = PlanAdherenceModel.fromJson(json);
+        expect(model.plannedQuestions, 0);
+        expect(model.adherenceScore, 0.0);
+        expect(model.planId, isNull);
+        expect(model.metadata, isNull);
+      });
+    });
+
     group('equality', () {
       test('identical instances are equal', () {
         final a = PlanAdherenceModel(

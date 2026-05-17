@@ -50,9 +50,9 @@ class _ConversationInputState extends State<ConversationInput> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.only(
-                left: ResponsiveUtils.screenPadding(context).left,
-                right: ResponsiveUtils.screenPadding(context).right,
+              padding: EdgeInsetsDirectional.only(
+                start: ResponsiveUtils.screenPadding(context).left,
+                end: ResponsiveUtils.screenPadding(context).right,
                 top: 8,
               ),
               decoration: BoxDecoration(
@@ -148,9 +148,9 @@ class _ConversationInputState extends State<ConversationInput> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(
-                left: ResponsiveUtils.screenPadding(context).left,
-                right: ResponsiveUtils.screenPadding(context).right,
+              padding: EdgeInsetsDirectional.only(
+                start: ResponsiveUtils.screenPadding(context).left,
+                end: ResponsiveUtils.screenPadding(context).right,
                 bottom: MediaQuery.of(context).padding.bottom + 4,
               ),
               child: Row(

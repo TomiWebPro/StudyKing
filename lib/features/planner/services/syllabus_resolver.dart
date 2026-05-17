@@ -49,7 +49,7 @@ class SyllabusResolver {
       final topics = await _topicRepository.getBySubject(subjectId);
       if (topics.isEmpty) {
         return Result.failure(
-          l10n?.noTopicsFoundForSubject(subjectId) ?? 'No topics found for subject $subjectId',
+          l10n?.noTopicsFoundForSubject(subjectId),
         );
       }
 

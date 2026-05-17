@@ -5,13 +5,17 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -320,6 +324,142 @@ class FakeSessionRepository extends SessionRepository {
             s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
             s.startTime.isBefore(end))
         .toList());
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    final allResult = await getAll();
+    if (allResult.isFailure) return Result.failure(allResult.error);
+    return Result.success(
+      allResult.data!.where((s) => s.studentId == studentId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async {
+    final todayResult = await getByDate(DateTime.now());
+    if (todayResult.isFailure) return Result.failure(todayResult.error);
+    return Result.success(
+      todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs),
+    );
+  }
+}
+
+class FakeAttemptRepository extends AttemptRepository {
+  final List<StudentAttempt> _attempts = [];
+  bool throwOnGet = false;
+
+  @override
+  Future<void> init() async {}
+
+  void addAttempt(StudentAttempt attempt) {
+    _attempts.add(attempt);
+  }
+
+  @override
+  Future<List<StudentAttempt>> getByStudent(String studentId) async {
+    if (throwOnGet) throw Exception('AttemptRepository error');
+    return _attempts.where((a) => a.studentId == studentId).toList();
+  }
+
+  @override
+  Future<List<StudentAttempt>> getByStudentAndSubject(
+    String studentId,
+    String subjectId,
+  ) async {
+    return _attempts
+        .where((a) => a.studentId == studentId && a.subjectId == subjectId)
+        .toList();
+  }
+
+  @override
+  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
+    return _attempts.where((a) => a.questionId == questionId).toList();
+  }
+
+  @override
+  Future<List<StudentAttempt>> getBySubject(String subjectId) async {
+    return _attempts.where((a) => a.subjectId == subjectId).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async {
+    final attempts = await getBySubject(subjectId);
+    final correct = attempts.where((a) => a.isCorrect).length;
+    return {
+      'total': attempts.length,
+      'correct': correct,
+      'incorrect': attempts.length - correct,
+      'accuracy': attempts.isNotEmpty ? correct / attempts.length : 0.0,
+    };
+  }
+
+  @override
+  Future<void> create(StudentAttempt attempt) async {
+    _attempts.add(attempt);
+  }
+}
+
+class FakeEngagementNudgeRepository extends EngagementNudgeRepository {
+  final List<EngagementNudgeModel> nudges = [];
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> create(EngagementNudgeModel nudge) async {
+    nudges.add(nudge);
+  }
+
+  @override
+  Future<List<EngagementNudgeModel>> getByStudent(String studentId) async {
+    return nudges.where((n) => n.studentId == studentId).toList();
+  }
+
+  @override
+  Future<List<EngagementNudgeModel>> getRecentByStudent(
+    String studentId, {
+    int limit = 10,
+  }) async {
+    return nudges.where((n) => n.studentId == studentId).take(limit).toList();
+  }
+
+  @override
+  Future<int> getTodayCount(String studentId) async {
+    return nudges.where((n) => n.studentId == studentId).length;
+  }
+
+  @override
+  Future<List<EngagementNudgeModel>> getUnactedByStudent(
+      String studentId) async {
+    return nudges
+        .where((n) => n.studentId == studentId && !n.wasActedUpon)
+        .toList();
+  }
+
+  @override
+  Future<List<EngagementNudgeModel>> getByType(
+      String studentId, String nudgeType) async {
+    return nudges
+        .where((n) => n.studentId == studentId && n.nudgeType == nudgeType)
+        .toList();
+  }
+
+  @override
+  Future<void> markActedUpon(String id) async {
+    final idx = nudges.indexWhere((n) => n.id == id);
+    if (idx >= 0) {
+      nudges[idx] = nudges[idx].copyWith(
+        wasActedUpon: true,
+        actedUponAt: DateTime.now(),
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteOld(int daysOld) async {
+    final cutoff = DateTime.now().subtract(Duration(days: daysOld));
+    nudges.removeWhere((n) => n.sentAt.isBefore(cutoff));
   }
 }
 

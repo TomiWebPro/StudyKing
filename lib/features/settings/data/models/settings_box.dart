@@ -60,6 +60,21 @@ class SettingsBox {
   @HiveField(17)
   late bool planAdjustmentNotificationsEnabled;
 
+  @HiveField(18)
+  late int breakDurationSeconds;
+
+  @HiveField(19)
+  late int dailyReminderHour;
+
+  @HiveField(20)
+  late int dailyReminderMinute;
+
+  @HiveField(21)
+  late bool firstFocusVisit;
+
+  @HiveField(22)
+  late bool dailyReminderEnabled;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -79,6 +94,11 @@ class SettingsBox {
     this.lessonNotificationsEnabled = true,
     this.overworkAlertsEnabled = true,
     this.planAdjustmentNotificationsEnabled = true,
+    this.breakDurationSeconds = 300,
+    this.dailyReminderHour = 9,
+    this.dailyReminderMinute = 0,
+    this.firstFocusVisit = true,
+    this.dailyReminderEnabled = false,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -110,6 +130,11 @@ class SettingsBox {
       'lessonNotificationsEnabled': lessonNotificationsEnabled,
       'overworkAlertsEnabled': overworkAlertsEnabled,
       'planAdjustmentNotificationsEnabled': planAdjustmentNotificationsEnabled,
+      'breakDurationSeconds': breakDurationSeconds,
+      'dailyReminderHour': dailyReminderHour,
+      'dailyReminderMinute': dailyReminderMinute,
+      'firstFocusVisit': firstFocusVisit,
+      'dailyReminderEnabled': dailyReminderEnabled,
     };
   }
 
@@ -155,6 +180,15 @@ class SettingsBox {
           json['planAdjustmentNotificationsEnabled'] is bool
               ? json['planAdjustmentNotificationsEnabled'] as bool
               : true,
+      breakDurationSeconds: (json['breakDurationSeconds'] as num?)?.toInt() ?? 300,
+      dailyReminderHour: (json['dailyReminderHour'] as num?)?.toInt() ?? 9,
+      dailyReminderMinute: (json['dailyReminderMinute'] as num?)?.toInt() ?? 0,
+      firstFocusVisit: json['firstFocusVisit'] is bool
+          ? json['firstFocusVisit'] as bool
+          : true,
+      dailyReminderEnabled: json['dailyReminderEnabled'] is bool
+          ? json['dailyReminderEnabled'] as bool
+          : false,
     );
   }
 
@@ -177,6 +211,11 @@ class SettingsBox {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) {
     return SettingsBox(
       apiKey: apiKey ?? this.apiKey,
@@ -197,6 +236,11 @@ class SettingsBox {
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? this.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? this.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? this.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: breakDurationSeconds ?? this.breakDurationSeconds,
+      dailyReminderHour: dailyReminderHour ?? this.dailyReminderHour,
+      dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
+      firstFocusVisit: firstFocusVisit ?? this.firstFocusVisit,
+      dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
     );
   }
 

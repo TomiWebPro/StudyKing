@@ -839,14 +839,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String questionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count questions available',
-      one: '1 question available',
-      zero: 'No questions available',
-    );
-    return '$_temp0';
+    return 'Questions: $count';
   }
 
   @override
@@ -3692,4 +3685,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get requiredField => 'Required field';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get requiredFieldIndicator => '*';
+
+  @override
+  String get expressionLabel => 'Expression: ';
+
+  @override
+  String get defaultLessonGoal => 'Understand the topic';
+
+  @override
+  String get sectionIntroduction => 'Introduction';
+
+  @override
+  String get sectionMainContent => 'Main Content';
+
+  @override
+  String get sectionPractice => 'Practice';
+
+  @override
+  String get checkpointStarted => 'Lesson started';
+
+  @override
+  String get checkpointTopicCovered => 'Topic covered';
+
+  @override
+  String get checkpointPracticeCompleted => 'Practice completed';
+
+  @override
+  String get sessionType => 'Type';
+
+  @override
+  String get addCourseSubject => 'Add Course/Subject';
+
+  @override
+  String hoursPerDayAbbrev(String hours) {
+    return '$hours/Days';
+  }
+
+  @override
+  String lessonTimeStatus(String topicId, String time, String completedSuffix) {
+    return '$topicId · $time$completedSuffix';
+  }
+
+  @override
+  String practiceModeWithSubject(String mode, String subject) {
+    return '$mode - $subject';
+  }
+
+  @override
+  String mentorWelcomeFull(String greeting, String body) {
+    return '$greeting\n\n$body';
+  }
+
+  @override
+  String get unknownError => 'Unknown error';
+
+  @override
+  String failedToLoadPlan(String error) {
+    return 'Failed to load plan: $error';
+  }
+
+  @override
+  String backupExportFailedWithError(String error) {
+    return 'Failed to export backup: $error';
+  }
+
+  @override
+  String invalidBackupFileWithError(String error) {
+    return 'Invalid backup file: $error';
+  }
+
+  @override
+  String questionsCountPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions available',
+      one: '1 question available',
+      zero: 'No questions available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mentorBulletPoint => '• ';
 }

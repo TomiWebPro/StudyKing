@@ -24,6 +24,7 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakePlanRepository extends PlanRepository {
   final Map<String, PersonalLearningPlan> _storage = {};
@@ -250,16 +251,6 @@ class _FakePlanAdapter extends PlanAdapter {
   @override
   Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
     return Result.success(null);
-  }
-}
-
-class _TestNavigatorObserver extends NavigatorObserver {
-  Route<dynamic>? lastPushedRoute;
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    lastPushedRoute = route;
-    super.didPush(route, previousRoute);
   }
 }
 
@@ -750,7 +741,7 @@ void main() {
 
       testWidgets('openTutorMode triggers navigation when topic ID is non-empty', (tester) async {
         final planRepo = _FakePlanRepository();
-        final observer = _TestNavigatorObserver();
+        final observer = TestNavigatorObserver();
         final existingPlan = PersonalLearningPlan(
           studentId: 'test-student',
           generatedAt: DateTime.now(),

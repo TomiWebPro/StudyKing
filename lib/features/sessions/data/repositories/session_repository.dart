@@ -4,6 +4,7 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 
 class SessionRepository {
   final Logger _logger = const Logger('SessionRepository');
@@ -48,7 +49,7 @@ class SessionRepository {
 
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     try {
-      final start = DateTime(date.year, date.month, date.day);
+      final start = date.dateOnly;
       final end = start.add(Timeouts.day);
       final all = _box.values.toList();
       final filtered = all.where((s) =>

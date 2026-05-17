@@ -10,7 +10,7 @@ import 'package:studyking/features/subjects/providers/subjects_repository_provid
 import 'package:studyking/features/subjects/presentation/subject_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _MockSubjectBox {
+class _FakeSubjectBox {
   final Map<String, Subject> _storage = {};
   void addSubject(Subject s) => _storage[s.id] = s;
   Subject? get(String id) => _storage[id];
@@ -19,7 +19,7 @@ class _MockSubjectBox {
 }
 
 class _FakeSubjectRepository extends SubjectRepository {
-  final _MockSubjectBox _box;
+  final _FakeSubjectBox _box;
   _FakeSubjectRepository(this._box);
 
   @override
@@ -98,7 +98,7 @@ Subject _subject({required String id, required String name, String? code, String
 void main() {
   group('SubjectListScreen', () {
     testWidgets('shows empty state when no subjects', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -110,7 +110,7 @@ void main() {
     });
 
     testWidgets('add icons appear in appbar and empty state', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -120,7 +120,7 @@ void main() {
     });
 
     testWidgets('displays list of subjects', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics', code: 'MATH101'));
       box.addSubject(_subject(id: '2', name: 'Physics', code: 'PHY101'));
       final repo = _FakeSubjectRepository(box);
@@ -135,7 +135,7 @@ void main() {
     });
 
     testWidgets('displays subject cards with icons', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Biology'));
       final repo = _FakeSubjectRepository(box);
 
@@ -147,7 +147,7 @@ void main() {
     });
 
     testWidgets('books icon visible in empty state', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -157,7 +157,7 @@ void main() {
     });
 
     testWidgets('add subject button in empty state', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -167,7 +167,7 @@ void main() {
     });
 
     testWidgets('shows timer icon in subject cards', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Chemistry'));
       final repo = _FakeSubjectRepository(box);
 
@@ -206,7 +206,7 @@ void main() {
     });
 
     testWidgets('shows subject name in card semantics', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -236,7 +236,7 @@ void main() {
     });
 
     testWidgets('app bar add button shows selection screen', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -249,7 +249,7 @@ void main() {
     });
 
     testWidgets('shows practice sessions label on subject card', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Biology'));
       final repo = _FakeSubjectRepository(box);
 
@@ -260,7 +260,7 @@ void main() {
     });
 
     testWidgets('displays subject code on card when provided', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math', code: 'MATH101'));
       final repo = _FakeSubjectRepository(box);
 
@@ -271,7 +271,7 @@ void main() {
     });
 
     testWidgets('does not display code when subject code is null', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -282,7 +282,7 @@ void main() {
     });
 
     testWidgets('card tap navigates to detail screen', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Chemistry', color: '#9C27B0'));
       final repo = _FakeSubjectRepository(box);
 
@@ -296,7 +296,7 @@ void main() {
     });
 
     testWidgets('empty state add subject button navigates to selection', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
@@ -311,7 +311,7 @@ void main() {
     });
 
     testWidgets('app bar add button navigates to selection when subjects exist', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics', color: '#2196F3'));
       box.addSubject(_subject(id: '2', name: 'Physics', color: '#4CAF50'));
       final repo = _FakeSubjectRepository(box);

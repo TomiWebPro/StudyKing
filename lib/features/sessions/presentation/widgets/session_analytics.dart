@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionAnalyticsWidget extends StatelessWidget {
@@ -110,7 +111,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
               Expanded(
                 child: MetricCard(
                   label: l10n.totalSessionsLabel,
-                  value: sessions.length.toString(),
+                  value: formatDecimal(sessions.length.toDouble(), l10n.localeName, minFractionDigits: 0),
                   icon: Icons.history,
                   accent: scheme.secondary,
                 ),

@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/data/models/session_model.dart';
 import '../../../core/utils/number_format_utils.dart';
+import 'package:intl/intl.dart';
+
 import '../../../l10n/generated/app_localizations.dart';
 
 class SessionExportService {
@@ -91,15 +93,15 @@ class SessionExportService {
           if (sessions.isNotEmpty)
             pw.TableHelper.fromTextArray(
               headers: ['#', l10n.subjects, l10n.date, l10n.duration,
-                  l10n.correct, l10n.accuracy, 'Type'],
+                  l10n.correct, l10n.accuracy, l10n.sessionType],
               data: sessions.asMap().entries.map((entry) {
                 final i = entry.key + 1;
                 final s = entry.value;
                 final date =
-                    '${s.startTime.day}/${s.startTime.month}/${s.startTime.year}';
+                    DateFormat.yMd(l10n.localeName).format(s.startTime);
                 final dur = _formatDuration(s.actualDurationMs, l10n);
                 final accuracy = s.questionsAnswered > 0
-                    ? '${formatDecimal((s.correctAnswers / s.questionsAnswered) * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}%'
+                    ? formatPercent((s.correctAnswers / s.questionsAnswered) * 100, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)
                     : '-';
                 return [
                   '$i',
@@ -212,19 +214,19 @@ class SessionExportService {
   static Future<void> shareCSV(
     List<Session> sessions,
     String filename, {
-    AppLocalizations? l10n,
+    required AppLocalizations l10n,
   }) async {
     final file = await writeCSVFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: l10n?.shareSessionsText ?? 'Study Sessions');
+    await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
   }
 
   static Future<void> shareJSON(
     List<Session> sessions,
     String filename, {
-    AppLocalizations? l10n,
+    required AppLocalizations l10n,
   }) async {
     final file = await writeJSONFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: l10n?.shareSessionsText ?? 'Study Sessions');
+    await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
   }
 
   static Future<void> sharePDF(

@@ -24,11 +24,12 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isStudent = message.role == MessageRole.student;
     final isTutor = message.role == MessageRole.tutor;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: ResponsiveUtils.horizontalSpacing(context),
-        right: ResponsiveUtils.horizontalSpacing(context),
+      padding: EdgeInsetsDirectional.only(
+        start: ResponsiveUtils.horizontalSpacing(context),
+        end: ResponsiveUtils.horizontalSpacing(context),
         bottom: 8,
       ),
       child: Row(
@@ -48,8 +49,8 @@ class ChatBubble extends StatelessWidget {
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isStudent ? 16 : 4),
-                  bottomRight: Radius.circular(isStudent ? 4 : 16),
+                  bottomLeft: Radius.circular(isStudent ? (isRtl ? 4 : 16) : (isRtl ? 16 : 4)),
+                  bottomRight: Radius.circular(isStudent ? (isRtl ? 16 : 4) : (isRtl ? 4 : 16)),
                 ),
               ),
               child: Column(

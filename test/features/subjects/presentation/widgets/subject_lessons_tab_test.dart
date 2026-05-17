@@ -9,6 +9,7 @@ import 'package:studyking/features/lessons/data/repositories/lesson_repository.d
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLessonRepository extends LessonRepository {
   final List<Lesson> _lessons;
@@ -23,20 +24,7 @@ class _FakeLessonRepository extends LessonRepository {
   }
 }
 
-class _TestNavigatorObserver extends NavigatorObserver {
-  Route<dynamic>? pushedRoute;
-  Route<dynamic>? poppedRoute;
 
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRoute = route;
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    poppedRoute = route;
-  }
-}
 
 Lesson _lesson({
   required String id,
@@ -223,7 +211,7 @@ void main() {
         _lesson(id: 'l1', subjectId: testSubjectId, title: 'Algebra'),
       ]);
 
-      final observer = _TestNavigatorObserver();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -252,8 +240,8 @@ void main() {
       await tester.tap(find.text('Algebra'));
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoute, isNotNull);
-      expect(observer.pushedRoute!.settings.name, '/lesson-detail');
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, '/lesson-detail');
     });
 
     testWidgets('does not show lessons from other subjects', (tester) async {
@@ -278,7 +266,7 @@ void main() {
       ]);
 
       LessonDetailArgs? capturedArgs;
-      final observer = _TestNavigatorObserver();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -308,6 +296,7 @@ void main() {
       await tester.tap(find.text('Algebra'));
       await tester.pumpAndSettle();
 
+      expect(observer.pushedRoutes, hasLength(1));
       expect(capturedArgs, isNotNull);
       expect(capturedArgs!.lessonId, 'l1');
       expect(capturedArgs!.topicId, 'topic-1');

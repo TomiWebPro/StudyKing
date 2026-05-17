@@ -14,7 +14,7 @@ import 'package:studyking/features/practice/data/repositories/topic_dependency_r
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 
-class _MockMasteryGraphService implements MasteryGraphService {
+class _FakeMasteryGraphService implements MasteryGraphService {
   List<MasteryState> states = [];
 
   @override
@@ -76,7 +76,7 @@ class _MockMasteryGraphService implements MasteryGraphService {
   Future<void> init() async {}
 }
 
-class _MockAttemptRepository implements AttemptRepository {
+class _FakeAttemptRepository implements AttemptRepository {
   @override
   Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
 
@@ -124,7 +124,7 @@ class _MockAttemptRepository implements AttemptRepository {
   Box<StudentAttempt>? _box;
 }
 
-class _MockStudyProgressTracker implements StudyProgressTracker {
+class _FakeStudyProgressTracker implements StudyProgressTracker {
   Map<String, dynamic> overallStats = {};
   List<Map<String, dynamic>> badges = [];
   List<Map<String, dynamic>> trend = [];
@@ -157,7 +157,7 @@ class _MockStudyProgressTracker implements StudyProgressTracker {
   Future<String> exportSessionHistoryCSV(String studentId) async => '';
 }
 
-class _MockL10n {
+class _FakeL10n {
   String get csvOverallStats => 'Overall Statistics';
   String get csvColTotalAttempts => 'Total Attempts';
   String get csvColCorrect => 'Correct';
@@ -215,17 +215,17 @@ class _MockL10n {
 
 void main() {
   group('ProgressExportService', () {
-    late _MockStudyProgressTracker mockTracker;
-    late _MockMasteryGraphService mockMastery;
-    late _MockAttemptRepository mockAttemptRepo;
+    late _FakeStudyProgressTracker mockTracker;
+    late _FakeMasteryGraphService mockMastery;
+    late _FakeAttemptRepository mockAttemptRepo;
     late ProgressExportService service;
-    late _MockL10n l10n;
+    late _FakeL10n l10n;
 
     setUp(() {
-      mockTracker = _MockStudyProgressTracker();
-      mockMastery = _MockMasteryGraphService();
-      mockAttemptRepo = _MockAttemptRepository();
-      l10n = _MockL10n();
+      mockTracker = _FakeStudyProgressTracker();
+      mockMastery = _FakeMasteryGraphService();
+      mockAttemptRepo = _FakeAttemptRepository();
+      l10n = _FakeL10n();
       service = ProgressExportService(
         tracker: mockTracker,
         masteryService: mockMastery,

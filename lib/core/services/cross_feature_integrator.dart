@@ -1,4 +1,5 @@
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -85,19 +86,25 @@ class CrossFeatureIntegrator {
     await _sessionRepo.save(updated);
   }
 
+  Future<Result<List<Session>>> _getSessions(String? studentId) async {
+    final sid = studentId ?? _studentIdService.getStudentId();
+    final result = await _sessionRepo.getByStudent(sid);
+    if (result.isFailure || result.data == null) {
+      _logger.w('cross_feature_integrator: failed to load sessions', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(result.data!);
+  }
+
   Future<List<UnifiedTimelineEntry>> getUnifiedTimeline({
     String? studentId,
     int limit = 50,
     int offset = 0,
   }) async {
-    final sid = studentId ?? _studentIdService.getStudentId();
-    final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) {
-      _logger.e('cross_feature_integrator: getUnifiedTimeline failed', result.error);
-      return [];
-    }
+    final sessionsResult = await _getSessions(studentId);
+    if (sessionsResult.isFailure) return [];
 
-    final entries = result.data!.map((s) => UnifiedTimelineEntry(
+    final entries = sessionsResult.data!.map((s) => UnifiedTimelineEntry(
       id: s.id,
       timestamp: s.startTime,
       type: s.type,
@@ -120,14 +127,10 @@ class CrossFeatureIntegrator {
     String? studentId,
     DateTime? since,
   }) async {
-    final sid = studentId ?? _studentIdService.getStudentId();
-    final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) {
-      _logger.e('cross_feature_integrator: getTotalStudyDurationMs failed', result.error);
-      return 0;
-    }
+    final sessionsResult = await _getSessions(studentId);
+    if (sessionsResult.isFailure) return 0;
 
-    var sessions = result.data!;
+    var sessions = sessionsResult.data!;
     if (since != null) {
       sessions = sessions.where((s) => s.startTime.isAfter(since)).toList();
     }
@@ -136,27 +139,20 @@ class CrossFeatureIntegrator {
   }
 
   Future<int> getCompletedSessionCount({String? studentId}) async {
-    final sid = studentId ?? _studentIdService.getStudentId();
-    final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) {
-      _logger.e('cross_feature_integrator: getCompletedSessionCount failed', result.error);
-      return 0;
-    }
-    return result.data!.where((s) => s.completed).length;
+    final sessionsResult = await _getSessions(studentId);
+    if (sessionsResult.isFailure) return 0;
+
+    return sessionsResult.data!.where((s) => s.completed).length;
   }
 
   Future<Map<SessionType, int>> getDurationByType({
     String? studentId,
     DateTime? since,
   }) async {
-    final sid = studentId ?? _studentIdService.getStudentId();
-    final result = await _sessionRepo.getByStudent(sid);
-    if (result.isFailure || result.data == null) {
-      _logger.e('cross_feature_integrator: getDurationByType failed', result.error);
-      return {};
-    }
+    final sessionsResult = await _getSessions(studentId);
+    if (sessionsResult.isFailure) return {};
 
-    var sessions = result.data!;
+    var sessions = sessionsResult.data!;
     if (since != null) {
       sessions = sessions.where((s) => s.startTime.isAfter(since)).toList();
     }

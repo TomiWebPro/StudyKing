@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 import 'package:studyking/features/planner/data/repositories/student_availability_repository.dart';
 
-class MockStudentAvailabilityBox implements Box<StudentAvailabilityModel> {
+class FakeStudentAvailabilityBox implements Box<StudentAvailabilityModel> {
   final Map<String, StudentAvailabilityModel> _storage = {};
   bool _isOpen = true;
 
@@ -89,10 +89,10 @@ StudentAvailabilityModel createAvailability({
 void main() {
   group('StudentAvailabilityRepository', () {
     late TestableStudentAvailabilityRepository repository;
-    late MockStudentAvailabilityBox mockBox;
+    late FakeStudentAvailabilityBox mockBox;
 
     setUp(() {
-      mockBox = MockStudentAvailabilityBox();
+      mockBox = FakeStudentAvailabilityBox();
       repository = TestableStudentAvailabilityRepository();
       repository.attachMockBox(mockBox);
     });

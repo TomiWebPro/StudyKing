@@ -1,4 +1,5 @@
 import '../errors/result.dart';
+import '../utils/study_utils.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
@@ -9,36 +10,14 @@ class MasteryIntegrationService {
 
   static const List<double> _intervalMultipliers = [1.0, 1.5, 2.0, 3.0, 5.0, 8.0];
 
+  @Deprecated('Use MasteryGraphService directly')
+
   MasteryGraphService get masteryService => _masteryService;
 
   MasteryIntegrationService({
     MasteryGraphService? masteryService,
     MasteryGraphRepository? repository,
   })  : _masteryService = masteryService ?? MasteryGraphService();
-
-  Future<void> initialize() async {
-    return _masteryService.init();
-  }
-
-  Future<Result<void>> recordAttemptWithMasteryUpdate({
-    required String studentId,
-    required String topicId,
-    required String questionId,
-    required bool isCorrect,
-    required int confidence,
-    required int timeSpentMs,
-    String? subtopicId,
-  }) async {
-    return _masteryService.recordAttempt(
-      studentId: studentId,
-      topicId: topicId,
-      questionId: questionId,
-      isCorrect: isCorrect,
-      confidence: confidence,
-      timeSpentMs: timeSpentMs,
-      subtopicId: subtopicId,
-    );
-  }
 
   Future<Result<Map<String, dynamic>>> getAdaptiveRecommendation({
     required String studentId,
@@ -65,31 +44,11 @@ class MasteryIntegrationService {
   }
 
   String _getSuggestedFocus(MasteryState mastery) {
-    if (mastery.accuracy < 0.6) return 'Review fundamentals';
-    if (mastery.reviewUrgency > 0.7) return 'Review at-risk topics';
-    if (mastery.currentStreak < 3) return 'Build consistency';
-    if (mastery.readinessScore > 0.8) return 'Challenge advanced problems';
+    if (mastery.accuracy < masteryLowAccuracy) return 'Review fundamentals';
+    if (mastery.reviewUrgency > masteryReviewUrgencyThreshold) return 'Review at-risk topics';
+    if (mastery.currentStreak < masteryStreakConsistency) return 'Build consistency';
+    if (mastery.readinessScore > masteryChallengeReadiness) return 'Challenge advanced problems';
     return 'Practice and reinforce';
-  }
-
-  @Deprecated('Use SpacedRepetitionEngine.scheduleReview() directly instead')
-  Future<Result<double>> calculateSpacedRepetitionInterval({
-    required String studentId,
-    required String questionId,
-  }) async {
-    final masteryResult = await _masteryService.getQuestionMastery(studentId, questionId);
-    if (masteryResult.isFailure) {
-      return Result.failure(masteryResult.error);
-    }
-
-    final mastery = masteryResult.data!;
-    final interval = _calculateReviewInterval(
-      correctCount: mastery.correctCount,
-      incorrectCount: mastery.incorrectCount,
-      averageConfidence: mastery.averageConfidence,
-    );
-
-    return Result.success(interval);
   }
 
   Future<Result<List<String>>> getPrioritizedQuestionIds({
@@ -103,7 +62,7 @@ class MasteryIntegrationService {
       for (final qId in availableQuestionIds) {
         final result = await _masteryService.getQuestionMastery(studentId, qId);
         if (result.isSuccess && result.data != null) {
-          final priority = 1 - result.data!.reviewUrgency + result.data!.masteryLevel * 0.5;
+          final priority = 1 - result.data!.reviewUrgency + result.data!.masteryLevel * adherenceDefaultScore;
           questionMasteryList.add((qId, result.data!, priority));
         }
       }
@@ -120,27 +79,56 @@ class MasteryIntegrationService {
     required double currentAccuracy,
     required int currentStreak,
   }) {
-    if (currentAccuracy < 0.6) {
+    if (currentAccuracy < masteryLowAccuracy) {
       return 0;
-    } else if (currentAccuracy > 0.9 && currentStreak >= 5) {
+    } else if (currentAccuracy > masteryHighAccuracy && currentStreak >= masteryStreakHigh) {
       return 2;
     }
     return 1;
   }
 
-  double _calculateReviewInterval({
-    required int correctCount,
-    required int incorrectCount,
-    required double averageConfidence,
+  Future<Result<double>> calculateSpacedRepetitionInterval({
+    required String studentId,
+    required String questionId,
+  }) async {
+    final result = await _masteryService.getQuestionMastery(studentId, questionId);
+    if (result.isFailure) {
+      return Result.failure(result.error);
+    }
+    final qm = result.data!;
+    final avgConfidence = qm.confidenceHistory.isNotEmpty
+        ? qm.confidenceHistory.reduce((a, b) => a + b) / qm.confidenceHistory.length
+        : 0.0;
+    return Result.success(_calculateReviewInterval(
+      correctCount: qm.correctCount,
+      incorrectCount: qm.incorrectCount,
+      averageConfidence: avgConfidence,
+    ));
+  }
+
+  Future<Result<void>> initialize() async {
+    await _masteryService.init();
+    return Result.success(null);
+  }
+
+  Future<Result<void>> recordAttemptWithMasteryUpdate({
+    required String studentId,
+    required String topicId,
+    required String questionId,
+    required bool isCorrect,
+    required int confidence,
+    required int timeSpentMs,
+    String? subtopicId,
   }) {
-    final totalAttempts = correctCount + incorrectCount;
-    if (totalAttempts == 0) return 1.0;
-
-    final accuracy = correctCount / totalAttempts;
-    final strength = (accuracy * 2 + averageConfidence / 5) / 3;
-
-    final intervalIndex = (strength.clamp(0.0, 1.0) * (_intervalMultipliers.length - 1)).ceil().clamp(0, _intervalMultipliers.length - 1);
-    return _intervalMultipliers[intervalIndex];
+    return _masteryService.recordAttempt(
+      studentId: studentId,
+      topicId: topicId,
+      questionId: questionId,
+      isCorrect: isCorrect,
+      confidence: confidence,
+      timeSpentMs: timeSpentMs,
+      subtopicId: subtopicId,
+    );
   }
 
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) {
@@ -169,5 +157,20 @@ class MasteryIntegrationService {
       options: options,
       explanation: explanation,
     );
+  }
+
+  double _calculateReviewInterval({
+    required int correctCount,
+    required int incorrectCount,
+    required double averageConfidence,
+  }) {
+    final totalAttempts = correctCount + incorrectCount;
+    if (totalAttempts == 0) return 1.0;
+
+    final accuracy = correctCount / totalAttempts;
+    final strength = (accuracy * 2 + averageConfidence / 5) / 3;
+
+    final intervalIndex = (strength.clamp(0.0, 1.0) * (_intervalMultipliers.length - 1)).ceil().clamp(0, _intervalMultipliers.length - 1);
+    return _intervalMultipliers[intervalIndex];
   }
 }

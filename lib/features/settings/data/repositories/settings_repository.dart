@@ -135,6 +135,16 @@ class SettingsRepository {
           box.get('overworkAlertsEnabled', defaultValue: true),
       planAdjustmentNotificationsEnabled:
           box.get('planAdjustmentNotificationsEnabled', defaultValue: true),
+      breakDurationSeconds:
+          box.get('breakDurationSeconds', defaultValue: 300),
+      dailyReminderHour:
+          box.get('dailyReminderHour', defaultValue: 9),
+      dailyReminderMinute:
+          box.get('dailyReminderMinute', defaultValue: 0),
+      firstFocusVisit:
+          box.get('firstFocusVisit', defaultValue: true),
+      dailyReminderEnabled:
+          box.get('dailyReminderEnabled', defaultValue: false),
     );
   }
 
@@ -155,6 +165,11 @@ class SettingsRepository {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     final box = _requireSettingsBox();
     final current = await getSettings();
@@ -188,6 +203,16 @@ class SettingsRepository {
           overworkAlertsEnabled ?? current.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled:
           planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds:
+          breakDurationSeconds ?? current.breakDurationSeconds,
+      dailyReminderHour:
+          dailyReminderHour ?? current.dailyReminderHour,
+      dailyReminderMinute:
+          dailyReminderMinute ?? current.dailyReminderMinute,
+      firstFocusVisit:
+          firstFocusVisit ?? current.firstFocusVisit,
+      dailyReminderEnabled:
+          dailyReminderEnabled ?? current.dailyReminderEnabled,
     );
 
     await box.put('apiKey', updated.apiKey);
@@ -208,6 +233,11 @@ class SettingsRepository {
     await box.put('lessonNotificationsEnabled', updated.lessonNotificationsEnabled);
     await box.put('overworkAlertsEnabled', updated.overworkAlertsEnabled);
     await box.put('planAdjustmentNotificationsEnabled', updated.planAdjustmentNotificationsEnabled);
+    await box.put('breakDurationSeconds', updated.breakDurationSeconds);
+    await box.put('dailyReminderHour', updated.dailyReminderHour);
+    await box.put('dailyReminderMinute', updated.dailyReminderMinute);
+    await box.put('firstFocusVisit', updated.firstFocusVisit);
+    await box.put('dailyReminderEnabled', updated.dailyReminderEnabled);
   }
 
   /// Update statistics counters
@@ -229,6 +259,11 @@ class SettingsRepository {
       highContrastEnabled: current.highContrastEnabled,
       largeTouchTargets: current.largeTouchTargets,
       reduceMotion: current.reduceMotion,
+      breakDurationSeconds: current.breakDurationSeconds,
+      dailyReminderHour: current.dailyReminderHour,
+      dailyReminderMinute: current.dailyReminderMinute,
+      firstFocusVisit: current.firstFocusVisit,
+      dailyReminderEnabled: current.dailyReminderEnabled,
     );
     final box = _requireSettingsBox();
     await box.put('totalSessionCount', sessionCount ?? current.totalSessionCount);

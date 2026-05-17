@@ -35,13 +35,18 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       lessonNotificationsEnabled: fields[15] as bool,
       overworkAlertsEnabled: fields[16] as bool,
       planAdjustmentNotificationsEnabled: fields[17] as bool,
+      breakDurationSeconds: fields[18] as int? ?? 300,
+      dailyReminderHour: fields[19] as int? ?? 9,
+      dailyReminderMinute: fields[20] as int? ?? 0,
+      firstFocusVisit: fields[21] as bool? ?? true,
+      dailyReminderEnabled: fields[22] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -77,7 +82,17 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(16)
       ..write(obj.overworkAlertsEnabled)
       ..writeByte(17)
-      ..write(obj.planAdjustmentNotificationsEnabled);
+      ..write(obj.planAdjustmentNotificationsEnabled)
+      ..writeByte(18)
+      ..write(obj.breakDurationSeconds)
+      ..writeByte(19)
+      ..write(obj.dailyReminderHour)
+      ..writeByte(20)
+      ..write(obj.dailyReminderMinute)
+      ..writeByte(21)
+      ..write(obj.firstFocusVisit)
+      ..writeByte(22)
+      ..write(obj.dailyReminderEnabled);
   }
 
   @override

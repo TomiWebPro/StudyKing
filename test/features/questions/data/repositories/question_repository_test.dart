@@ -270,7 +270,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.create(createTestQuestion());
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to create question'));
+        expect(result.error, 'Exception: Box put error');
       });
     });
 
@@ -349,7 +349,7 @@ void main() {
         repo.attachBox(_UnopenableBox());
         final result = await repo.getByTopic('t1');
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question box is not open');
+        expect(result.error, 'Question_box_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -357,7 +357,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.getByTopic('t1');
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions by topic'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -392,7 +392,7 @@ void main() {
         repo.attachBox(_UnopenableBox());
         final result = await repo.getBySubject('s1');
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question bank is not open');
+        expect(result.error, 'Question_bank_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -400,7 +400,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.getBySubject('s1');
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions by subject'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -447,7 +447,7 @@ void main() {
         repo.attachBox(_UnopenableBox());
         final result = await repo.getBySubjectAndTopic('s1', 't1');
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question bank is not open');
+        expect(result.error, 'Question_bank_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -455,7 +455,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.getBySubjectAndTopic('s1', 't1');
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -491,7 +491,7 @@ void main() {
         repo.attachBox(_UnopenableBox());
         final result = await repo.getByType(QuestionType.singleChoice);
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question bank is not open');
+        expect(result.error, 'Question_bank_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -499,7 +499,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.getByType(QuestionType.singleChoice);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions by type'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -549,7 +549,7 @@ void main() {
         final result =
             await repo.getBySubjectAndType('s1', QuestionType.singleChoice);
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question bank is not open');
+        expect(result.error, 'Question_bank_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -558,7 +558,7 @@ void main() {
         final result =
             await repo.getBySubjectAndType('s1', QuestionType.singleChoice);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -607,7 +607,7 @@ void main() {
         repo.attachBox(_UnopenableBox());
         final result = await repo.getQuestionsWithMarkschemes('s1');
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Question bank is not open');
+        expect(result.error, 'Question_bank_not_open');
       });
 
       test('returns failure when box.values throws', () async {
@@ -615,7 +615,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.getQuestionsWithMarkschemes('s1');
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get questions with markscheme'));
+        expect(result.error, 'Exception: Box values error');
       });
     });
 
@@ -658,7 +658,7 @@ void main() {
         final result =
             await repo.updateMarkscheme('q1', createTestMarkscheme());
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to update markscheme'));
+        expect(result.error, 'Exception: Box get error');
       });
     });
 

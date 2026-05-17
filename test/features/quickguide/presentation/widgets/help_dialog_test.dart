@@ -99,5 +99,20 @@ void main() {
       expect(find.text('Quick Guide Help'), findsOneWidget);
       expect(find.byType(AlertDialog), findsOneWidget);
     });
+
+    testWidgets('AlertDialog has scrollable enabled', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: QuickGuideHelpDialog(),
+        ),
+      ));
+      await tester.pump();
+
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect(dialog.scrollable, isTrue);
+    });
   });
 }

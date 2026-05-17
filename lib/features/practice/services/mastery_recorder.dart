@@ -44,7 +44,7 @@ class MasteryRecorder {
     try {
       final question = await _questionRepo.get(questionId);
       if (question == null) {
-        return Result.failure('Question not found: $questionId');
+        return Result.failure('Question_not_found: $questionId');
       }
 
       final grade = _srEngine.mapConfidenceToGrade(
@@ -108,7 +108,7 @@ class MasteryRecorder {
       return Result.success(null);
     } catch (e) {
       _logger.e('MasteryRecorder.recordAttempt failed', e);
-      return Result.failure('Failed to record attempt: $e');
+      return Result.failure(e.toString());
     }
   }
 

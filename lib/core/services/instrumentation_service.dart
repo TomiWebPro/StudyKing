@@ -1,5 +1,6 @@
-import 'package:studyking/utils/id_generator.dart';
+import 'package:studyking/core/utils/id_generator.dart';
 import '../errors/result.dart';
+import '../utils/study_utils.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
@@ -129,16 +130,12 @@ class InstrumentationService {
     required int plannedMinutes,
     required int actualMinutes,
   }) {
-    if (plannedQuestions == 0 && plannedMinutes == 0) return 1.0;
-
-    final questionScore = plannedQuestions > 0
-        ? (actualQuestions / plannedQuestions).clamp(0.0, 1.0)
-        : 0.5;
-    final timeScore = plannedMinutes > 0
-        ? (actualMinutes / plannedMinutes).clamp(0.0, 1.5)
-        : 0.5;
-
-    return (questionScore * 0.6 + timeScore * 0.4).clamp(0.0, 1.0);
+    return calculateAdherenceScore(
+      plannedQuestions: plannedQuestions,
+      actualQuestions: actualQuestions,
+      plannedMinutes: plannedMinutes,
+      actualMinutes: actualMinutes,
+    );
   }
 
   Future<Result<void>> trackMasteryImprovement(String studentId, String topicId) async {

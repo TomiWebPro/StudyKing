@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
-class _MockRoadmapRepository extends RoadmapRepository {
+class _FakeRoadmapRepository extends RoadmapRepository {
   final Map<String, RoadmapModel> _storage = {};
 
   @override
@@ -59,10 +59,10 @@ RoadmapModel createTestRoadmap({
 
 void main() {
   group('RoadmapRepository', () {
-    late _MockRoadmapRepository repository;
+    late _FakeRoadmapRepository repository;
 
     setUp(() {
-      repository = _MockRoadmapRepository();
+      repository = _FakeRoadmapRepository();
     });
 
     group('init', () {

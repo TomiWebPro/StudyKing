@@ -24,7 +24,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('25:00'), findsOneWidget);
+      expect(find.text('25 00'), findsOneWidget);
       expect(find.text('remaining'), findsOneWidget);
     });
 
@@ -36,7 +36,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('20:00'), findsOneWidget);
+      expect(find.text('20 00'), findsOneWidget);
     });
 
     testWidgets('shows PAUSED state', (tester) async {
@@ -226,7 +226,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('02:00:00'), findsOneWidget);
+      expect(find.text('02 00 00'), findsOneWidget);
     });
 
     testWidgets('handles zero planned duration', (tester) async {
@@ -237,7 +237,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('00:00'), findsOneWidget);
+      expect(find.text('00 00'), findsOneWidget);
     });
 
     testWidgets('shows circular progress indicator', (tester) async {
@@ -445,6 +445,122 @@ void main() {
       ));
 
       expect(find.text('remaining'), findsOneWidget);
+    });
+
+    testWidgets('reduceMotion disables pulse ring overlay when active', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 0,
+          isActive: true,
+          reduceMotion: true,
+        ),
+      ));
+
+      // IgnorePointer wraps the ring overlay Container (only Material's remain)
+      expect(find.byType(IgnorePointer), findsNWidgets(3));
+    });
+
+    testWidgets('renders ring overlay when pulsing without reduceMotion', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 0,
+          isActive: true,
+          reduceMotion: false,
+        ),
+      ));
+
+      // 3 from Material + 1 from ring overlay
+      expect(find.byType(IgnorePointer), findsNWidgets(4));
+    });
+
+    testWidgets('hides ring overlay when paused', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 60,
+          isActive: true,
+          isPaused: true,
+        ),
+      ));
+
+      expect(find.byType(IgnorePointer), findsNWidgets(3));
+    });
+
+    testWidgets('desktop layout renders buttons correctly', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(900, 800)),
+          child: _buildTestApp(
+            const FocusTimerWidget(
+              plannedDurationMinutes: 25,
+              elapsedSeconds: 0,
+              isActive: true,
+              isPaused: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Pause'), findsOneWidget);
+      expect(find.text('End'), findsOneWidget);
+    });
+
+    testWidgets('mobile layout renders buttons correctly', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(500, 800)),
+          child: _buildTestApp(
+            const FocusTimerWidget(
+              plannedDurationMinutes: 25,
+              elapsedSeconds: 0,
+              isActive: true,
+              isPaused: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Pause'), findsOneWidget);
+      expect(find.text('End'), findsOneWidget);
+    });
+
+    testWidgets('MediaQuery disableAnimations hides ring overlay', (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(800, 600),
+            disableAnimations: true,
+          ),
+          child: _buildTestApp(
+            const FocusTimerWidget(
+              plannedDurationMinutes: 25,
+              elapsedSeconds: 0,
+              isActive: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(IgnorePointer), findsNWidgets(3));
+    });
+
+    testWidgets('active timer with full progress shows DONE', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerWidget(
+          plannedDurationMinutes: 25,
+          elapsedSeconds: 1500,
+          isActive: true,
+          isPaused: false,
+        ),
+      ));
+
+      expect(find.text('DONE!'), findsOneWidget);
+      final progress = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(progress.value, closeTo(1.0, 0.01));
     });
   });
 }

@@ -8,7 +8,7 @@ import 'package:studyking/features/practice/data/repositories/question_mastery_s
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 
-class _MockQuestionMasteryStateBox implements Box<QuestionMasteryState> {
+class _FakeQuestionMasteryStateBox implements Box<QuestionMasteryState> {
   final Map<String, QuestionMasteryState> _storage = {};
 
   @override
@@ -60,10 +60,10 @@ class _MockQuestionMasteryStateBox implements Box<QuestionMasteryState> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _MockQuestionMasteryStateRepository extends QuestionMasteryStateRepository {
+class _FakeQuestionMasteryStateRepository extends QuestionMasteryStateRepository {
   final Box<QuestionMasteryState> _fakeBox;
 
-  _MockQuestionMasteryStateRepository(this._fakeBox);
+  _FakeQuestionMasteryStateRepository(this._fakeBox);
 
   @override
   void attachBox(Box<QuestionMasteryState> box) {}
@@ -141,12 +141,12 @@ QuestionMasteryState _createQS({
 
 void main() {
   group('QuestionMasteryStateRepository', () {
-    late _MockQuestionMasteryStateBox box;
-    late _MockQuestionMasteryStateRepository repository;
+    late _FakeQuestionMasteryStateBox box;
+    late _FakeQuestionMasteryStateRepository repository;
 
     setUp(() {
-      box = _MockQuestionMasteryStateBox();
-      repository = _MockQuestionMasteryStateRepository(box);
+      box = _FakeQuestionMasteryStateBox();
+      repository = _FakeQuestionMasteryStateRepository(box);
     });
 
     group('getQuestionMasteryState', () {

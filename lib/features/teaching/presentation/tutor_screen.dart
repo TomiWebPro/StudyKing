@@ -177,7 +177,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             onPressed: () => Navigator.pop(ctx, ImageSource.gallery),
             child: ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
+              title: Text(l10n.gallery),
               contentPadding: EdgeInsets.zero,
             ),
           ),
@@ -188,7 +188,12 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     if (source == null || !mounted) return;
 
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
+    final pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 80,
+    );
 
     if (pickedFile == null || !mounted) return;
 

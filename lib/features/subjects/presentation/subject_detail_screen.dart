@@ -74,8 +74,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                       color.withValues(alpha: 0.8),
                       color.withValues(alpha: 0.4),
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
                   ),
                 ),
                 child: SafeArea(

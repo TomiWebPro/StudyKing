@@ -446,7 +446,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   Widget _buildConfigScreen(AppLocalizations l10n) {
     if (_totalAvailableQuestions == 0) {
       return Scaffold(
-        appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
+        appBar: AppBar(title: Text(l10n.practiceModeWithSubject(l10n.practiceMode, widget.subjectName))),
         body: Center(
           child: Padding(
             padding: ResponsiveUtils.screenPadding(context),

@@ -16,6 +16,7 @@ import 'package:studyking/features/practice/presentation/screens/practice_sessio
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 import '../shared_test_helpers.dart';
 
 const _kCorrectFeedback = 'Correct!';
@@ -694,7 +695,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.pump(const Duration(milliseconds: 600));
-        expect(observer.popCount, greaterThan(0));
+        expect(observer.poppedRoutes.length, greaterThan(0));
       });
     });
 

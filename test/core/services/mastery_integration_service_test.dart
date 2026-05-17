@@ -8,8 +8,8 @@ import 'package:studyking/features/practice/data/models/question_mastery_state_m
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 
-class MockMasteryGraphRepository extends MasteryGraphRepository {
-  MockMasteryGraphRepository();
+class FakeMasteryGraphRepository extends MasteryGraphRepository {
+  FakeMasteryGraphRepository();
   bool failGetMasteryState = false;
 
   @override
@@ -103,10 +103,10 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 void main() {
   group('MasteryIntegrationService', () {
     late MasteryIntegrationService service;
-    late MockMasteryGraphRepository mockRepo;
+    late FakeMasteryGraphRepository mockRepo;
 
     setUp(() {
-      mockRepo = MockMasteryGraphRepository();
+      mockRepo = FakeMasteryGraphRepository();
       final masteryService = MasteryGraphService(repository: mockRepo);
       service = MasteryIntegrationService(
         masteryService: masteryService,

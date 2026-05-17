@@ -108,7 +108,7 @@ class TopicReadinessService {
       return Result.success(results);
     } catch (e) {
       _logger.e('Failed to get ready topics', e);
-      return Result.failure('Failed to determine topic readiness: $e');
+      return Result.failure(e.toString());
     }
   }
 

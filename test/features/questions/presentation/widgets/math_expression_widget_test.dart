@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/questions/presentation/widgets/math_expression_widget.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget buildWidget({
   required String expression,
@@ -8,6 +9,9 @@ Widget buildWidget({
   bool showPrefix = false,
 }) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     home: Scaffold(
       body: MathExpressionWidget(
         expression: expression,

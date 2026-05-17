@@ -16,6 +16,7 @@ import 'package:studyking/features/subjects/providers/subjects_repository_provid
 import 'package:studyking/features/practice/presentation/screens/practice_screen.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 const _kNoPracticeSessionsYet = 'No Practice Sessions Yet';
 const _kAddSubjectsAndQuestions = 'Add subjects and questions to start practicing';
@@ -31,7 +32,7 @@ const _kNoReviewsScheduled = 'No reviews scheduled.';
 const _kNoTopicsAvailable = 'No topics available';
 const _kNoWeakAreasFound = 'No weak areas found. Keep up the great work!';
 
-class _MockSubjectBox {
+class _FakeSubjectBox {
   final Map<String, Subject> _storage = {};
   void addSubject(Subject s) => _storage[s.id] = s;
   Iterable<Subject> get values => _storage.values.toList();
@@ -39,7 +40,7 @@ class _MockSubjectBox {
 }
 
 class _FakeSubjectRepository extends SubjectRepository {
-  final _MockSubjectBox _box;
+  final _FakeSubjectBox _box;
   _FakeSubjectRepository(this._box);
 
   @override
@@ -155,7 +156,7 @@ Widget _buildTestApp({
 void main() {
   group('PracticeScreen', () {
     testWidgets('shows loading indicator initially', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -164,7 +165,7 @@ void main() {
     });
 
     testWidgets('shows empty state when no subjects', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -176,7 +177,7 @@ void main() {
     });
 
     testWidgets('shows practice modes grid when subjects exist', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -191,7 +192,7 @@ void main() {
     });
 
     testWidgets('shows subject section with cards', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -202,7 +203,7 @@ void main() {
     });
 
     testWidgets('shows practice button in FAB', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -214,7 +215,7 @@ void main() {
     });
 
     testWidgets('FAB shows no subjects when empty', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -224,7 +225,7 @@ void main() {
     });
 
     testWidgets('shows spaced repetition due count badge', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Chemistry'));
       final repo = _FakeSubjectRepository(box);
 
@@ -235,7 +236,7 @@ void main() {
     });
 
     testWidgets('shows book icon in empty state', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -245,7 +246,7 @@ void main() {
     });
 
     testWidgets('spaced repetition card shows disabled state when no due counts', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -257,7 +258,7 @@ void main() {
     });
 
     testWidgets('weak areas card shows coming soon when no subjects', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -267,7 +268,7 @@ void main() {
     });
 
     testWidgets('weak areas card is disabled when no subjects', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
 
@@ -278,7 +279,7 @@ void main() {
     });
 
     testWidgets('disabled mode-card tap does nothing', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
 
@@ -298,7 +299,7 @@ void main() {
 
   group('PracticeScreen - spaced repetition subject selector', () {
     testWidgets('shows no reviews scheduled when no subjects have due counts', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
@@ -310,7 +311,7 @@ void main() {
     });
 
     testWidgets('shows subjects with due counts in SR selector', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
@@ -330,7 +331,7 @@ void main() {
 
   group('PracticeScreen - topic selector', () {
     testWidgets('shows no topics when question repo has no topics', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
       final qRepo = _FakeQuestionRepository([]);
@@ -345,7 +346,7 @@ void main() {
     });
 
     testWidgets('shows topic bottom sheet when topics available', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
       final now = DateTime.now();
@@ -378,7 +379,7 @@ void main() {
 
   group('PracticeScreen - weak areas', () {
     testWidgets('weak areas shows no weak areas snackbar when no weak topics', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
       final masteryService = _FakeMasteryGraphService();
@@ -399,7 +400,7 @@ void main() {
     });
 
     testWidgets('weak areas with multiple subjects shows sheet', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
@@ -424,7 +425,7 @@ void main() {
 
   group('PracticeScreen - UI states', () {
     testWidgets('shows your subjects header when multiple subjects exist', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       box.addSubject(_subject(id: '2', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
@@ -436,7 +437,7 @@ void main() {
     });
 
     testWidgets('does not show your subjects header when single subject', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
 
@@ -447,7 +448,7 @@ void main() {
     });
 
     testWidgets('loading transitions to content then shows loading done', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Science'));
       final repo = _FakeSubjectRepository(box);
 
@@ -462,7 +463,7 @@ void main() {
     });
 
     testWidgets('refresh indicator wraps content when subjects exist', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Geology'));
       final repo = _FakeSubjectRepository(box);
 
@@ -473,7 +474,7 @@ void main() {
     });
 
     testWidgets('FAB is enabled and shows practice when subjects exist', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Biology'));
       final repo = _FakeSubjectRepository(box);
 
@@ -486,7 +487,7 @@ void main() {
     });
 
     testWidgets('FAB is disabled and shows no subjects when empty', (tester) async {
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
@@ -500,11 +501,11 @@ void main() {
     testWidgets('navigates to practice session from FAB tap', (tester) async {
       int pushCount = 0;
 
-      final observer = _TestNavigatorObserver(
+      final observer = TestNavigatorObserver(
         onPush: (_) { pushCount++; },
       );
 
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
 
@@ -529,7 +530,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final box = _MockSubjectBox();
+      final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Math'));
       final repo = _FakeSubjectRepository(box);
 
@@ -544,14 +545,3 @@ void main() {
   });
 }
 
-class _TestNavigatorObserver extends NavigatorObserver {
-  final void Function(Route<dynamic> route) onPush;
-
-  _TestNavigatorObserver({required this.onPush});
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    onPush(route);
-    super.didPush(route, previousRoute);
-  }
-}

@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planAdapterProvider;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 
@@ -32,7 +32,7 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
   ConsumerState<FocusTimerScreen> createState() => _FocusTimerScreenState();
 }
 
-class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
+class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with WidgetsBindingObserver {
   late final StudyTimerService _service;
 
   bool _initialized = false;
@@ -41,19 +41,40 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
   Session? _completedSession;
   bool _inBreak = false;
   int _breakRemaining = 0;
-  final int _breakDuration = 300;
+  int _breakDuration = 300;
   Timer? _breakTimer;
   String _selectedSubjectId = '';
+  bool _showFirstVisitHelp = false;
 
   Map<String, dynamic>? _todayStats;
   int _weeklyMs = 0;
   List<Session> _recentSessions = [];
+  int _lastTickMs = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _service = ref.read(studyTimerServiceProvider);
     _initService();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _service.hasActiveSession) {
+      _reconcileBackgroundTime();
+    }
+  }
+
+  void _reconcileBackgroundTime() {
+    if (!_service.hasActiveSession || _lastTickMs <= 0) return;
+    final expectedMs = DateTime.now().millisecondsSinceEpoch - _lastTickMs;
+    if (expectedMs > 2000) {
+      _service.reconcileElapsedMs(expectedMs);
+      if (_service.elapsedMs >= (_service.currentSession?.plannedDurationMinutes ?? 25) * 60000) {
+        _service.completeSession();
+      }
+    }
   }
 
   Future<void> _initService() async {
@@ -61,6 +82,17 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
       _service.addOnSessionComplete(_onSessionComplete);
       _service.addOnTick(_onTick);
       await _loadStats();
+
+      final settings = ref.read(settingsProvider);
+      _breakDuration = settings.breakDurationSeconds;
+
+      if (settings.firstFocusVisit) {
+        _showFirstVisitHelp = true;
+        try {
+          ref.read(settingsProvider.notifier).updateFirstFocusVisit();
+        } catch (_) {}
+      }
+
       if (mounted) {
         setState(() => _initialized = true);
       }
@@ -82,20 +114,38 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
     });
     _loadStats();
     _recordAdherence(session);
+    _checkBadges(session);
+  }
+
+  Future<void> _checkBadges(Session session) async {
+    try {
+      final studentId = StudentIdService().getStudentId();
+      final badgeService = BadgeService();
+      await badgeService.checkAndUnlockBadges(studentId);
+    } catch (e) {
+      // silent - badge check is non-critical
+    }
   }
 
   Future<void> _recordAdherence(Session session) async {
-    final planAdapter = PlanAdapter();
-    final elapsedSeconds = session.actualDurationMs ~/ 1000;
-    final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
-    await planAdapter.recordFromFocusSession(
-      studentId: StudentIdService().getStudentId(),
-      actualMinutes: actualMinutes,
-    );
+    try {
+      final planAdapter = ref.read(planAdapterProvider);
+      final elapsedSeconds = session.actualDurationMs ~/ 1000;
+      final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
+      await planAdapter.recordFromFocusSession(
+        studentId: StudentIdService().getStudentId(),
+        actualMinutes: actualMinutes,
+      );
+    } catch (e) {
+      // Logged internally by PlanAdapter, non-critical for UX
+    }
   }
 
   void _onTick(int elapsedMs) {
-    if (mounted) setState(() {});
+    if (mounted) {
+      _lastTickMs = DateTime.now().millisecondsSinceEpoch;
+      setState(() {});
+    }
   }
 
   void _startBreakTimer() {
@@ -134,28 +184,32 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
 
   Future<void> _startFocus() async {
     try {
-      final capReached = await _service.isDailyCapReached(_selectedMinutes);
-      if (capReached) {
-        if (mounted) {
-          final l10n = AppLocalizations.of(context)!;
-          final cs = Theme.of(context).colorScheme;
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => AlertDialog(
-              icon: Icon(Icons.celebration, size: 48, color: cs.primary),
-              title: Text(l10n.dailyLimitReached),
-              content: Text(l10n.dailyLimitReachedBody),
-              actions: [
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.ok),
-                ),
-              ],
-            ),
-          );
+      final capMinutes = await _service.getDailyCapMinutes();
+      if (capMinutes > 0) {
+        final remaining = await _service.getRemainingDailyCapMinutes();
+        if (remaining > 0 && _selectedMinutes > remaining) {
+          if (mounted) {
+            final l10n = AppLocalizations.of(context)!;
+            final continueAnyway = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Daily Cap Warning'),
+                content: Text('Starting this session will exceed your daily cap. $_selectedMinutes min selected, $remaining min remaining. Continue?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: Text(l10n.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Continue Anyway'),
+                  ),
+                ],
+              ),
+            );
+            if (continueAnyway != true) return;
+          }
         }
-        return;
       }
 
       await _service.startSession(
@@ -181,6 +235,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _breakTimer?.cancel();
     _service.removeOnSessionComplete(_onSessionComplete);
     _service.removeOnTick(_onTick);
@@ -369,6 +424,32 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> {
                 ),
               ],
             ),
+            if (_showFirstVisitHelp) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: const Text(
+                        'Set a timer and study distraction-free. Completed sessions count toward your daily plan.',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             _buildSubjectPicker(),
             const SizedBox(height: 16),

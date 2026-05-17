@@ -24,33 +24,32 @@ class QuestionRepository extends Repository<Question> {
       return Result.success(null);
     } catch (e) {
       _logger.e('Error creating question', e);
-      return Result.failure('Failed to create question: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
   Future<Result<List<Question>>> getByTopic(String topicId) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question box is not open');
+        return Result.failure('Question_box_not_open');
       }
       return Result.success(filterBy((q) => q.topicId, topicId));
     } catch (e) {
       _logger.e('Error getting questions by topic', e);
       return Result.failure(
-          'Failed to get questions by topic: ${e.toString()}');
+            e.toString());
     }
   }
 
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question bank is not open');
+        return Result.failure('Question_bank_not_open');
       }
       return Result.success(filterBy((q) => q.subjectId, subjectId));
     } catch (e) {
       _logger.e('Error getting questions by subject', e);
-      return Result.failure(
-          'Failed to get questions by subject: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -60,27 +59,26 @@ class QuestionRepository extends Repository<Question> {
   ) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question bank is not open');
+        return Result.failure('Question_bank_not_open');
       }
       final bySubject = filterBy((q) => q.subjectId, subjectId);
       return Result.success(
           bySubject.where((q) => q.topicId == topicId).toList());
     } catch (e) {
       _logger.e('Error getting questions by subject and topic', e);
-      return Result.failure('Failed to get questions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
   Future<Result<List<Question>>> getByType(QuestionType type) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question bank is not open');
+        return Result.failure('Question_bank_not_open');
       }
       return Result.success(filterBy((q) => q.type, type));
     } catch (e) {
       _logger.e('Error getting questions by type', e);
-      return Result.failure(
-          'Failed to get questions by type: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -90,13 +88,13 @@ class QuestionRepository extends Repository<Question> {
   ) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question bank is not open');
+        return Result.failure('Question_bank_not_open');
       }
       final bySubject = filterBy((q) => q.subjectId, subjectId);
       return Result.success(bySubject.where((q) => q.type == type).toList());
     } catch (e) {
       _logger.e('Error getting questions by subject and type', e);
-      return Result.failure('Failed to get questions: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -104,14 +102,14 @@ class QuestionRepository extends Repository<Question> {
       String subjectId) async {
     try {
       if (!box.isOpen) {
-        return Result.failure('Question bank is not open');
+        return Result.failure('Question_bank_not_open');
       }
       final questions = box.values.toList();
       final filtered = questions.where((q) => q.markscheme != null).toList();
 
       if (filtered.isEmpty) {
         return Result.failure(
-            'No questions with markscheme found for subject: $subjectId');
+            'No_markscheme_for_subject: $subjectId');
       }
 
       return Result.success(
@@ -124,8 +122,7 @@ class QuestionRepository extends Repository<Question> {
       );
     } catch (e) {
       _logger.e('Error getting questions with markscheme', e);
-      return Result.failure(
-          'Failed to get questions with markscheme: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 
@@ -134,15 +131,14 @@ class QuestionRepository extends Repository<Question> {
     try {
       final question = box.get(questionId);
       if (question == null) {
-        return Result.failure('Question not found: $questionId');
+        return Result.failure('Question_not_found: $questionId');
       }
       final updated = question.copyWith(markscheme: markscheme);
       await box.put(questionId, updated);
       return Result.success(null);
     } catch (e) {
       _logger.e('Error updating markscheme', e);
-      return Result.failure(
-          'Failed to update markscheme: ${e.toString()}');
+      return Result.failure(e.toString());
     }
   }
 }

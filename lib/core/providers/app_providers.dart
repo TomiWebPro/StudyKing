@@ -15,6 +15,13 @@ import 'package:studyking/features/teaching/data/repositories/conversation_repos
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../data/database_service.dart';
+import '../services/engagement_scheduler.dart';
+import '../services/plan_adapter.dart';
+import '../services/study_progress_tracker.dart';
+import '../services/mastery_graph_service.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 
 final databaseProvider = Provider<DatabaseService>((ref) {
   return DatabaseService(
@@ -68,6 +75,11 @@ class SettingsController extends StateNotifier<SettingsBox> {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     try {
       await _repository.updateSettings(
@@ -96,6 +108,16 @@ class SettingsController extends StateNotifier<SettingsBox> {
             overworkAlertsEnabled ?? state.overworkAlertsEnabled,
         planAdjustmentNotificationsEnabled:
             planAdjustmentNotificationsEnabled ?? state.planAdjustmentNotificationsEnabled,
+        breakDurationSeconds:
+            breakDurationSeconds ?? state.breakDurationSeconds,
+        dailyReminderHour:
+            dailyReminderHour ?? state.dailyReminderHour,
+        dailyReminderMinute:
+            dailyReminderMinute ?? state.dailyReminderMinute,
+        firstFocusVisit:
+            firstFocusVisit ?? state.firstFocusVisit,
+        dailyReminderEnabled:
+            dailyReminderEnabled ?? state.dailyReminderEnabled,
       );
       if (llmProvider != null) {
         await _repository.saveProvider(llmProvider);
@@ -198,6 +220,22 @@ class SettingsController extends StateNotifier<SettingsBox> {
   Future<void> updatePlanAdjustmentNotifications(bool enabled) async {
     await updateSettings(planAdjustmentNotificationsEnabled: enabled);
   }
+
+  Future<void> updateBreakDuration(int seconds) async {
+    await updateSettings(breakDurationSeconds: seconds);
+  }
+
+  Future<void> updateDailyReminderTime(int hour, int minute) async {
+    await updateSettings(dailyReminderHour: hour, dailyReminderMinute: minute);
+  }
+
+  Future<void> updateDailyReminderEnabled(bool enabled) async {
+    await updateSettings(dailyReminderEnabled: enabled);
+  }
+
+  Future<void> updateFirstFocusVisit() async {
+    await updateSettings(firstFocusVisit: false);
+  }
 }
 
 final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>((ref) {
@@ -230,6 +268,30 @@ final localeProvider = StateProvider<Locale>((ref) {
     const Logger('localeProvider').e('Failed to get device locale', e);
   }
   return const Locale('en');
+});
+
+final planAdapterProvider = Provider<PlanAdapter>((ref) {
+  return PlanAdapter();
+});
+
+final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
+  final scheduler = EngagementScheduler(
+    tracker: StudyProgressTracker(
+      attemptRepo: AttemptRepository(),
+      masteryService: MasteryGraphService(),
+      sessionRepo: SessionRepository(),
+    ),
+    masteryService: MasteryGraphService(),
+    nudgeRepository: EngagementNudgeRepository(),
+    adherenceRepository: PlanAdherenceRepository(),
+    planAdapter: PlanAdapter(),
+    sessionRepository: SessionRepository(),
+    plannerService: PlannerService(),
+  );
+  ref.onDispose(() {
+    scheduler.dispose();
+  });
+  return scheduler;
 });
 
 

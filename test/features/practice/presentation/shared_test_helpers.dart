@@ -56,15 +56,6 @@ class UpdateNextReviewCall {
   UpdateNextReviewCall(this.questionId, this.masteryLevel);
 }
 
-class TestNavigatorObserver extends NavigatorObserver {
-  int popCount = 0;
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    popCount++;
-    super.didPop(route, previousRoute);
-  }
-}
-
 Question question({
   required String id,
   required String text,

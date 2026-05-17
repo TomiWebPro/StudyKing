@@ -4,7 +4,7 @@ import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 
-class _MockBadgeRepository implements BadgeRepository {
+class _FakeBadgeRepository implements BadgeRepository {
   final List<BadgeModel> _badges = [];
   Map<String, BadgeModel> _badgeMap = {};
   bool _hasBadgeResult = false;
@@ -57,15 +57,15 @@ class _MockBadgeRepository implements BadgeRepository {
   Box<BadgeModel>? _box;
 }
 
-class _MockStudyProgressTracker {
+class _FakeStudyProgressTracker {
   final Map<String, dynamic> overallStats;
 
-  _MockStudyProgressTracker(this.overallStats);
+  _FakeStudyProgressTracker(this.overallStats);
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async => overallStats;
 }
 
-class _MockNotificationService {
+class _FakeNotificationService {
   bool badgeUnlockedCalled = false;
 
   Future<void> showBadgeUnlocked({
@@ -79,18 +79,18 @@ class _MockNotificationService {
 
 void main() {
   group('BadgeService', () {
-    late _MockBadgeRepository mockRepo;
-    late _MockStudyProgressTracker mockTracker;
-    late _MockNotificationService mockNotif;
+    late _FakeBadgeRepository mockRepo;
+    late _FakeStudyProgressTracker mockTracker;
+    late _FakeNotificationService mockNotif;
     late BadgeService service;
 
     setUp(() {
-      mockRepo = _MockBadgeRepository();
-      mockTracker = _MockStudyProgressTracker({
+      mockRepo = _FakeBadgeRepository();
+      mockTracker = _FakeStudyProgressTracker({
         'totalAttempts': 0, 'correctAttempts': 0, 'accuracy': 0,
         'totalStudyTimeHours': 0, 'weeklyActivity': 0, 'dailyActivity': 0, 'topicsStudied': 0,
       });
-      mockNotif = _MockNotificationService();
+      mockNotif = _FakeNotificationService();
       service = BadgeService(
         repository: mockRepo,
         tracker: mockTracker as dynamic,
@@ -117,7 +117,7 @@ void main() {
 
     group('checkAndUnlockBadges', () {
       test('unlocks first_attempt badge when totalAttempts >= 1', () async {
-        mockTracker = _MockStudyProgressTracker({
+        mockTracker = _FakeStudyProgressTracker({
           'totalAttempts': 1, 'correctAttempts': 1, 'accuracy': 100,
           'totalStudyTimeHours': 0, 'weeklyActivity': 0, 'dailyActivity': 0, 'topicsStudied': 1,
         });
@@ -136,7 +136,7 @@ void main() {
         mockRepo._badgeMap = {
           'first_attempt': BadgeModel(id: 'fa_s1', studentId: 's1', name: 'FS', description: 'd'),
         };
-        mockTracker = _MockStudyProgressTracker({
+        mockTracker = _FakeStudyProgressTracker({
           'totalAttempts': 100, 'correctAttempts': 50, 'accuracy': 50,
           'totalStudyTimeHours': 5, 'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
         });

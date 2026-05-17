@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
-class _MockPendingActionRepository extends PendingActionRepository {
+class _FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _storage = {};
 
   @override
@@ -91,10 +91,10 @@ PendingActionModel createTestAction({
 
 void main() {
   group('PendingActionRepository', () {
-    late _MockPendingActionRepository repository;
+    late _FakePendingActionRepository repository;
 
     setUp(() {
-      repository = _MockPendingActionRepository();
+      repository = _FakePendingActionRepository();
     });
 
     group('save', () {
@@ -264,6 +264,33 @@ void main() {
       await repository.markCompleted('m1');
       final stored = await repository.get('m1');
       expect(stored?.status, 'completed');
+    });
+
+    test('markRejected works after init', () async {
+      await repository.create(createTestAction(id: 'rj1', studentId: 's1'));
+      await repository.markRejected('rj1');
+      final stored = await repository.get('rj1');
+      expect(stored?.status, 'rejected');
+    });
+
+    test('clearAll removes all actions for a student', () async {
+      await repository.create(createTestAction(id: 'ca1', studentId: 's1'));
+      await repository.create(createTestAction(id: 'ca2', studentId: 's1'));
+      await repository.create(createTestAction(id: 'ca3', studentId: 's2'));
+      await repository.clearAll('s1');
+      expect(await repository.get('ca1'), isNull);
+      expect(await repository.get('ca2'), isNull);
+      expect(await repository.get('ca3'), isNotNull);
+    });
+
+    test('hasPending returns true when pending actions exist', () async {
+      await repository.create(createTestAction(id: 'hp1', studentId: 's1'));
+      expect(await repository.hasPending('s1'), isTrue);
+    });
+
+    test('hasPending returns false when only completed actions exist', () async {
+      await repository.create(createTestAction(id: 'hp2', studentId: 's1', status: 'completed'));
+      expect(await repository.hasPending('s1'), isFalse);
     });
   });
 }

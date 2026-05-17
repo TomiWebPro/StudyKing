@@ -69,6 +69,7 @@ class LessonPlan {
     }
   }
 
+  // TODO: i18n - callers should override with localized values from ARB keys
   static LessonPlan defaultPlan(int durationMinutes) {
     return LessonPlan(
       goals: ['Understand the topic'],

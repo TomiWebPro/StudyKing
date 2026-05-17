@@ -2,11 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
+
+class _FakeSubjectRepository extends SubjectRepository {
+  final Map<String, Subject> _subjects = {};
+  bool _shouldThrowOnDelete = false;
+
+  void addSubject(Subject subject) => _subjects[subject.id] = subject;
+  void setThrowOnDelete(bool value) => _shouldThrowOnDelete = value;
+
+  @override
+  Future<Subject?> get(String key) async => _subjects[key];
+
+  @override
+  Future<void> delete(String key) async {
+    if (_shouldThrowOnDelete) throw Exception('Delete failed');
+    _subjects.remove(key);
+  }
+}
+
+class _FakeSubjectsNotifier extends SubjectsRepositoryNotifier {
+  final SubjectRepository _repo;
+  _FakeSubjectsNotifier(this._repo);
+
+  @override
+  Future<SubjectRepository> build() async => _repo;
+}
 
 class _FakeSessionRepository extends SessionRepository {
   final List<Session>? _sessions;
@@ -42,14 +71,7 @@ Session _session({
   );
 }
 
-class _TestNavigatorObserver extends NavigatorObserver {
-  Route<dynamic>? pushedRoute;
 
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRoute = route;
-  }
-}
 
 Route<dynamic>? _testRoute(RouteSettings settings) {
   if (settings.name == AppRoutes.practiceSession) {
@@ -67,6 +89,12 @@ Route<dynamic>? _testRoute(RouteSettings settings) {
   if (settings.name == AppRoutes.dashboard) {
     return MaterialPageRoute(
       builder: (_) => const Scaffold(body: Text('Dashboard Mock')),
+      settings: settings,
+    );
+  }
+  if (settings.name == AppRoutes.subjectSelection) {
+    return MaterialPageRoute(
+      builder: (_) => const Scaffold(body: Text('Edit Subject Mock')),
       settings: settings,
     );
   }
@@ -112,7 +140,7 @@ Widget _buildTestAppMinimal() {
   );
 }
 
-Widget _buildTestAppWithObserver(_TestNavigatorObserver observer) {
+Widget _buildTestAppWithObserver(TestNavigatorObserver observer) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -142,6 +170,30 @@ Widget _buildTestAppWithSessionRepo(SessionRepository sessionRepo) {
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
         sessionRepository: sessionRepo,
+        args: const SubjectDetailArgs(
+          subjectId: 'test-id',
+          subjectName: 'Mathematics',
+          subjectCode: 'MATH101',
+          subjectColor: '#2196F3',
+          subjectDescription: 'Mathematics course',
+          subjectTeacher: 'Dr. Smith',
+          topicIds: ['topic-1', 'topic-2'],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildTestAppWithSubjectRepo(SubjectRepository subjectRepo) {
+  return ProviderScope(
+    overrides: [
+      subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsNotifier(subjectRepo)),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      onGenerateRoute: _testRoute,
+      home: SubjectDetailScreen(
         args: const SubjectDetailArgs(
           subjectId: 'test-id',
           subjectName: 'Mathematics',
@@ -223,7 +275,7 @@ void main() {
     });
 
     testWidgets('start practice navigates to practice session', (tester) async {
-      final observer = _TestNavigatorObserver();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(_buildTestAppWithObserver(observer));
       await tester.pump();
 
@@ -234,12 +286,12 @@ void main() {
       await tester.tap(find.text('Start Practice'));
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoute, isNotNull);
-      expect(observer.pushedRoute!.settings.name, AppRoutes.practiceSession);
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.practiceSession);
     });
 
     testWidgets('practice mode navigates to spaced repetition', (tester) async {
-      final observer = _TestNavigatorObserver();
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(_buildTestAppWithObserver(observer));
       await tester.pump();
 
@@ -250,8 +302,8 @@ void main() {
       await tester.tap(find.text('Practice Mode').last);
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoute, isNotNull);
-      expect(observer.pushedRoute!.settings.name, AppRoutes.practiceSession);
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.practiceSession);
     });
 
     testWidgets('stats tab shows metric cards', (tester) async {
@@ -394,9 +446,37 @@ void main() {
     });
 
     testWidgets('delete dialog delete button pops back', (tester) async {
-      final observer = _TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestAppWithObserver(observer));
+      final subjectRepo = _FakeSubjectRepository();
+      subjectRepo.addSubject(Subject(
+        id: 'test-id',
+        name: 'Mathematics',
+        color: '#2196F3',
+      ));
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestAppWithSubjectRepo(subjectRepo));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsNotifier(subjectRepo)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            navigatorObservers: [observer],
+            onGenerateRoute: _testRoute,
+            home: SubjectDetailScreen(
+              args: const SubjectDetailArgs(
+                subjectId: 'test-id',
+                subjectName: 'Mathematics',
+                subjectColor: '#2196F3',
+                topicIds: [],
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       final iconButtons = find.byType(IconButton);
       IconButton? moreVert;
@@ -419,6 +499,8 @@ void main() {
       await tester.tap(find.text('Delete'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
+
+      expect(await subjectRepo.get('test-id'), isNull);
     });
 
     testWidgets('upload content in bottom sheet navigates to upload', (tester) async {
@@ -548,10 +630,107 @@ void main() {
       expect(find.text('No sessions yet'), findsOneWidget);
     });
 
-    testWidgets('bottom sheet upload navigates gracefully when only practiceSession is registered', (tester) async {
-      await tester.tap(find.byIcon(Icons.upload_file));
-      await tester.pumpAndSettle();
-      expect(find.text('Practice Mock'), findsOneWidget);
+    testWidgets('edit subject navigates to subject selection screen', (tester) async {
+      final subjectRepo = _FakeSubjectRepository();
+      subjectRepo.addSubject(Subject(
+        id: 'test-id',
+        name: 'Mathematics',
+        color: '#2196F3',
+      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsNotifier(subjectRepo)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            onGenerateRoute: _testRoute,
+            home: SubjectDetailScreen(
+              args: const SubjectDetailArgs(
+                subjectId: 'test-id',
+                subjectName: 'Mathematics',
+                subjectColor: '#2196F3',
+                topicIds: ['topic-1'],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Edit Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Edit Subject Mock'), findsOneWidget);
+    });
+
+    testWidgets('delete shows error snackbar on failure', (tester) async {
+      final subjectRepo = _FakeSubjectRepository();
+      subjectRepo.setThrowOnDelete(true);
+      subjectRepo.addSubject(Subject(id: 'test-id', name: 'Mathematics', color: '#2196F3'));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsNotifier(subjectRepo)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            onGenerateRoute: _testRoute,
+            home: SubjectDetailScreen(
+              args: const SubjectDetailArgs(
+                subjectId: 'test-id',
+                subjectName: 'Mathematics',
+                subjectColor: '#2196F3',
+                topicIds: [],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.textContaining('Error: Exception: Delete failed'), findsOneWidget);
     });
   });
 }

@@ -6,19 +6,25 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/services/notification_service.dart';
 
 class StudyTimerService {
   final Logger _logger = const Logger('StudyTimerService');
   final SessionRepository _repository;
+  final NotificationService? _notificationService;
   Timer? _timer;
   Session? _currentSession;
   int _elapsedMs = 0;
   bool _isPaused = false;
   final List<void Function(Session)> _onSessionComplete = [];
   final List<void Function(int elapsedMs)> _onTick = [];
+  DateTime? _lastTickTime;
 
-  StudyTimerService({required SessionRepository repository})
-      : _repository = repository;
+  StudyTimerService({
+    required SessionRepository repository,
+    NotificationService? notificationService,
+  })  : _repository = repository,
+        _notificationService = notificationService;
 
   SessionRepository get repository => _repository;
   Session? get currentSession => _currentSession;
@@ -43,6 +49,16 @@ class StudyTimerService {
     _onTick.remove(callback);
   }
 
+  void reconcileElapsedMs(int expectedMs) {
+    if (!hasActiveSession || _isPaused) return;
+    _elapsedMs += expectedMs;
+    final plannedSeconds = (_currentSession!.plannedDurationMinutes ?? 25) * 60;
+    if (_elapsedMs ~/ 1000 >= plannedSeconds) {
+      _timer?.cancel();
+      completeSession();
+    }
+  }
+
   Future<int> getDailyCapMinutes() async {
     try {
       final box = Hive.box(HiveBoxNames.settings);
@@ -58,6 +74,15 @@ class StudyTimerService {
     final todayStatsResult = await _repository.getTodayStats();
     final todayMinutes = (todayStatsResult.data?['totalMs'] as int? ?? 0) ~/ 60000;
     return (todayMinutes + additionalMinutes) > capMinutes;
+  }
+
+  Future<bool> isDailyCapExceededMidSession() async {
+    final capMinutes = await getDailyCapMinutes();
+    if (capMinutes <= 0) return false;
+    final todayStatsResult = await _repository.getTodayStats();
+    final totalMs = (todayStatsResult.data?['totalMs'] as int? ?? 0);
+    final withoutCurrent = _elapsedMs > 0 ? totalMs - _elapsedMs : totalMs;
+    return (withoutCurrent ~/ 60000) >= capMinutes;
   }
 
   Future<int> getRemainingDailyCapMinutes() async {
@@ -101,15 +126,22 @@ class StudyTimerService {
 
   void _startTimer() {
     _timer?.cancel();
+    _lastTickTime = DateTime.now();
     _timer = Timer.periodic(Timeouts.second, (_) {
+      final now = DateTime.now();
+      final diff = _lastTickTime != null ? now.difference(_lastTickTime!).inMilliseconds : 1000;
+      _lastTickTime = now;
+
       if (!_isPaused) {
-        _elapsedMs += 1000;
+        _elapsedMs += diff.clamp(500, 5000);
+
         for (final cb in _onTick) {
           cb(_elapsedMs);
         }
 
         if (_currentSession!.plannedDurationMinutes != null &&
             _elapsedMs ~/ 1000 >= _currentSession!.plannedDurationMinutes! * 60) {
+          _timer?.cancel();
           completeSession();
         }
       }
@@ -119,18 +151,20 @@ class StudyTimerService {
   void pauseSession() {
     if (_currentSession == null) return;
     _isPaused = true;
+    _lastTickTime = null;
     _logger.d('Session paused');
   }
 
   void resumeSession() {
     if (_currentSession == null) return;
     _isPaused = false;
+    _lastTickTime = DateTime.now();
     _logger.d('Session resumed');
   }
 
   Future<Result<Session>> completeSession() async {
     if (_currentSession == null) {
-      return Result.failure('No active session');
+      return Result.failure('No_active_session');
     }
 
     _timer?.cancel();
@@ -140,6 +174,16 @@ class StudyTimerService {
       actualDurationMs: _elapsedMs,
       completed: true,
     );
+
+    if (_elapsedMs > 0) {
+      try {
+        await _notificationService?.showNotification(
+          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          title: 'Focus Session Complete',
+          body: 'Great focus! You completed ${_elapsedMs ~/ 60000} minutes.',
+        );
+      } catch (_) {}
+    }
 
     await _repository.save(_currentSession!);
     final completed = _currentSession!;
@@ -157,7 +201,7 @@ class StudyTimerService {
 
   Future<Result<Session>> cancelSession() async {
     if (_currentSession == null) {
-      return Result.failure('No active session');
+      return Result.failure('No_active_session');
     }
 
     _timer?.cancel();

@@ -1,29 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_grid.dart';
+import 'package:studyking/features/practice/presentation/widgets/practice_mode_sheet.dart';
+import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
+import 'package:studyking/features/practice/presentation/widgets/spaced_repetition_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/subject_practice_card.dart';
 import 'package:studyking/features/practice/presentation/widgets/subject_selection_sheet.dart';
-import 'package:studyking/features/practice/presentation/widgets/practice_mode_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/topic_selection_sheet.dart';
-import 'package:studyking/features/practice/presentation/widgets/spaced_repetition_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
-import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
-import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       final allQuestions = await _questionRepo.getAll();
       final studentId = _studentIdService.getStudentId();
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      final today = now.dateOnly;
 
       final attemptRepo = ref.read(attemptRepositoryProvider);
       try {

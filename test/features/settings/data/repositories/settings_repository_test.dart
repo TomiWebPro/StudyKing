@@ -6,7 +6,7 @@ import 'package:studyking/features/settings/data/models/user_profile_model.dart'
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'settings_repository_test_helper.dart';
 
-abstract class MockSettingsRepository {
+abstract class FakeSettingsRepository {
   Future<void> init();
   Future<SettingsBox> getSettings();
   Future<void> updateSettings({
@@ -41,7 +41,7 @@ abstract class MockSettingsRepository {
   Future<LlmProvider> getProvider();
 }
 
-class InMemorySettingsRepository implements MockSettingsRepository {
+class InMemorySettingsRepository implements FakeSettingsRepository {
   final Map<String, dynamic> _settings = {};
   final Map<String, dynamic> _profile = {};
   bool _initialized = false;

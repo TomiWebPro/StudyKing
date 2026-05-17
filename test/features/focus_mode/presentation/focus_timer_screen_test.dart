@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
@@ -280,10 +277,6 @@ Widget _buildTestApp(Widget widget) {
 }
 
 void main() {
-  setUpAll(() {
-    Hive.init(Directory.systemTemp.createTempSync('focus_screen_test_').path);
-  });
-
   group('FocusTimerScreen', () {
     testWidgets('shows loading indicator initially', (tester) async {
       await tester.pumpWidget(_buildTestApp(

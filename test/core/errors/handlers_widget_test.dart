@@ -19,7 +19,7 @@ void main() {
 
     testWidgets('handleSyncError displays exception.message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'Syllabus parsing failed', type: ExceptionType.unknown),
         'test',
@@ -41,7 +41,7 @@ void main() {
 
     testWidgets('handleSyncError with retry shows retry button', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'test', type: ExceptionType.unknown),
         'test',
@@ -67,7 +67,7 @@ void main() {
 
     testWidgets('handleSyncError displays exception.message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'No topics to plan', type: ExceptionType.unknown),
         'test',
@@ -106,7 +106,7 @@ void main() {
         (tester) async {
       final context = await captureContext(tester);
       bool tapped = false;
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'test', type: ExceptionType.unknown),
         'test',
@@ -136,7 +136,7 @@ void main() {
 
     testWidgets('handleSyncError displays exception.message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'Schedule conflict detected', type: ExceptionType.unknown),
         'test',
@@ -189,7 +189,7 @@ void main() {
 
     testWidgets('handleSyncError displays exception.message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'Missed too many sessions', type: ExceptionType.unknown),
         'test',
@@ -211,7 +211,7 @@ void main() {
 
     testWidgets('handleSyncError SnackBar has correct duration', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'test', type: ExceptionType.unknown),
         'test',
@@ -301,7 +301,7 @@ void main() {
   group('AppErrorHandler.handleSyncError', () {
     testWidgets('shows NetworkException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -317,7 +317,7 @@ void main() {
 
     testWidgets('shows ApiAuthException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
@@ -331,7 +331,7 @@ void main() {
 
     testWidgets('shows ApiKeyMissingException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'missing key', type: ExceptionType.apiKeyMissing),
         'test',
@@ -345,7 +345,7 @@ void main() {
 
     testWidgets('shows InvalidApiKeyException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'test',
@@ -359,7 +359,7 @@ void main() {
 
     testWidgets('shows ApiRateLimitException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'rate limited', type: ExceptionType.apiRateLimit),
         'test',
@@ -373,7 +373,7 @@ void main() {
 
     testWidgets('shows ApiNotFoundException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'not found', type: ExceptionType.apiNotFound),
         'test',
@@ -387,7 +387,7 @@ void main() {
 
     testWidgets('shows ApiInternalServerError message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'server error', type: ExceptionType.apiInternalServer),
         'test',
@@ -401,7 +401,7 @@ void main() {
 
     testWidgets('shows DatabaseException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'db error', type: ExceptionType.database),
         'test',
@@ -415,7 +415,7 @@ void main() {
 
     testWidgets('shows ValidationException with its own message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'Custom validation error', type: ExceptionType.validation),
         'test',
@@ -426,7 +426,7 @@ void main() {
 
     testWidgets('shows PdfParseException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'pdf error', type: ExceptionType.pdfParse),
         'test',
@@ -440,7 +440,7 @@ void main() {
 
     testWidgets('shows ContentGenerationException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'gen error', type: ExceptionType.contentGeneration),
         'test',
@@ -454,7 +454,7 @@ void main() {
 
     testWidgets('shows LlmException message', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'llm error', type: ExceptionType.llm),
         'test',
@@ -468,7 +468,7 @@ void main() {
 
     testWidgets('shows default message for unknown exception types', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'not found', type: ExceptionType.database),
         'test',
@@ -483,7 +483,7 @@ void main() {
     testWidgets('shows retry button when retry is true and callback provided',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -498,7 +498,7 @@ void main() {
         (tester) async {
       final context = await captureContext(tester);
       bool retryCalled = false;
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -516,7 +516,7 @@ void main() {
     testWidgets('does not show retry button when retry is false',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -528,7 +528,7 @@ void main() {
     testWidgets('shows error icon when retry is true in handleSyncError',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -907,7 +907,7 @@ void main() {
     testWidgets('handleSyncError with retry:false and callback:non-null shows no retry button',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
@@ -925,7 +925,7 @@ void main() {
     testWidgets('handleSyncError shows retry-specific text from getRetryText for NetworkException',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'network error', type: ExceptionType.network),
         'test',
@@ -939,7 +939,7 @@ void main() {
     testWidgets('handleSyncError shows retry-specific text for ApiRateLimitException',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'rate limit', type: ExceptionType.apiRateLimit),
         'test',
@@ -956,7 +956,7 @@ void main() {
         (tester) async {
       final context = await captureContext(tester);
 
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'llm error', type: ExceptionType.llm),
         'op1',
@@ -965,7 +965,7 @@ void main() {
       ScaffoldMessenger.of(context).clearSnackBars();
       await tester.pumpAndSettle();
 
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'db not found', type: ExceptionType.database),
         'op2',
@@ -1052,7 +1052,7 @@ void main() {
         'retry:true, retryCallback:null -> duration 3s, Text content (no retry button)',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'invalid key', type: ExceptionType.invalidApiKey),
         'test',
@@ -1076,7 +1076,7 @@ void main() {
         'retry:false, retryCallback:non-null -> duration 3s, Text content (no retry button)',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'auth error', type: ExceptionType.apiAuth),
         'test',
@@ -1132,7 +1132,7 @@ void main() {
     testWidgets('very long error message in Text content', (tester) async {
       final context = await captureContext(tester);
       final longMessage = 'C' * 400;
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: longMessage, type: ExceptionType.unknown),
         'test',
@@ -1207,13 +1207,13 @@ void main() {
     testWidgets('multiple handleSyncError calls show the latest error',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'first', type: ExceptionType.apiKeyMissing),
         'op1',
       );
       await tester.pump();
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'second', type: ExceptionType.contentGeneration),
         'op2',
@@ -1271,7 +1271,7 @@ void main() {
     testWidgets('DatabaseNotFoundException shows default message via handleSyncError',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'db not found', type: ExceptionType.database),
         'test',
@@ -1287,7 +1287,7 @@ void main() {
         'DatabaseNotFoundException with retry shows retry button and default message',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'db not found', type: ExceptionType.database),
         'test',
@@ -1382,7 +1382,7 @@ void main() {
   group('AppErrorHandler.handleSyncError - SnackBar Behavior', () {
     testWidgets('has floating behavior on SnackBar via handleSyncError', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1394,7 +1394,7 @@ void main() {
 
     testWidgets('has correct duration (3 seconds) on SnackBar via handleSyncError without retry', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1406,7 +1406,7 @@ void main() {
 
     testWidgets('has extended duration (4 seconds) when retry is true via handleSyncError', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1420,7 +1420,7 @@ void main() {
 
     testWidgets('has red background color on SnackBar via handleSyncError', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1433,7 +1433,7 @@ void main() {
     testWidgets('does not show retry button when retryCallback is null even if retry is true',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1694,7 +1694,7 @@ void main() {
     testWidgets('shows default message for FileSystemException via handleSyncError',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'file error', type: ExceptionType.database),
         'test',
@@ -1709,7 +1709,7 @@ void main() {
     testWidgets('handleSyncError with retry shows retry button for FileSystemException',
         (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'file error', type: ExceptionType.database),
         'test',
@@ -1754,7 +1754,7 @@ void main() {
   group('handleSyncError - SnackBar content structure', () {
     testWidgets('non-retry SnackBar shows Text content', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1768,7 +1768,7 @@ void main() {
         (tester) async {
       final context = await captureContext(tester);
       bool tapped = false;
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',
@@ -1788,7 +1788,7 @@ void main() {
 
     testWidgets('retry SnackBar shows error icon', (tester) async {
       final context = await captureContext(tester);
-      AppErrorHandler.handleSyncError(
+      await AppErrorHandler.handleError(
         context,
         AppException(message: 'error', type: ExceptionType.network),
         'test',

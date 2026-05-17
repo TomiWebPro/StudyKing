@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 
-class _MockAttemptRepository extends AttemptRepository {
+class _FakeAttemptRepository extends AttemptRepository {
   final Map<String, StudentAttempt> _storage = {};
 
   @override
@@ -70,11 +70,11 @@ class _MockAttemptRepository extends AttemptRepository {
 
 void main() {
   group('AttemptRepository', () {
-    late _MockAttemptRepository repository;
+    late _FakeAttemptRepository repository;
     late DateTime now;
 
     setUp(() {
-      repository = _MockAttemptRepository();
+      repository = _FakeAttemptRepository();
       now = DateTime(2026, 5, 12);
     });
 

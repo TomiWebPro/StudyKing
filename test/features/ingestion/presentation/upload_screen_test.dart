@@ -105,6 +105,7 @@ class _FakeContentPipeline extends ContentPipeline {
           sourceRepository: _FakeSourceRepo(),
           topicRepository: _FakeTopicRepo(),
           questionRepository: _FakeQuestionRepo(),
+          modelId: 'test-model',
         );
 
   bool processUploadCalled = false;
@@ -161,6 +162,7 @@ class _FakeContentPipeline extends ContentPipeline {
     bool generateQuestions = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
+    ProcessingProgressCallback? onProgress,
   }) async {
     if (processUploadShouldThrow) {
       throw Exception('Network error');
@@ -223,6 +225,7 @@ class _FailingPipeline extends _FakeContentPipeline {
     bool generateQuestions = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
+    ProcessingProgressCallback? onProgress,
   }) async {
     return Result.failure('Upload failed: server error');
   }
@@ -270,6 +273,7 @@ class _DelayedPipeline extends _FakeContentPipeline {
     bool generateQuestions = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
+    ProcessingProgressCallback? onProgress,
   }) async {
     processUploadCalled = true;
     await completer.future;

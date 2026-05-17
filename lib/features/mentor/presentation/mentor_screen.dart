@@ -111,7 +111,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       sessionId: 'mentor',
       role: MessageRole.mentor,
       type: MessageType.text,
-      content: '${l10n.mentorGreeting}\n\n${l10n.mentorWelcomeBody}',
+      content: l10n.mentorWelcomeFull(l10n.mentorGreeting, l10n.mentorWelcomeBody),
       timestamp: DateTime.now(),
     );
 
@@ -533,7 +533,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('• ',
+                              Text(l10n.mentorBulletPoint,
                                   style: theme.textTheme.bodyMedium),
                               Expanded(
                                 child: Text(

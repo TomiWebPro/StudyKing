@@ -6,7 +6,7 @@ void main() {
     late OcrExtractor extractor;
 
     setUp(() {
-      extractor = OcrExtractor();
+      extractor = OcrExtractor(modelId: 'test-model');
     });
 
     group('extractText', () {

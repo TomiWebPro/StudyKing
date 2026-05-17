@@ -16,8 +16,8 @@ import 'package:studyking/features/practice/data/models/mastery_improvement_metr
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 
-class MockMasteryGraphRepository extends MasteryGraphRepository {
-  MockMasteryGraphRepository();
+class FakeMasteryGraphRepository extends MasteryGraphRepository {
+  FakeMasteryGraphRepository();
   @override
   Future<void> init() async {}
 
@@ -94,11 +94,11 @@ void main() {
 
   group('InstrumentationService', () {
     late InstrumentationService service;
-    late MockMasteryGraphRepository mockRepo;
+    late FakeMasteryGraphRepository mockRepo;
     late PlanAdherenceRepository adherenceRepo;
 
     setUp(() async {
-      mockRepo = MockMasteryGraphRepository();
+      mockRepo = FakeMasteryGraphRepository();
       adherenceRepo = PlanAdherenceRepository();
       await adherenceRepo.init();
       service = InstrumentationService(repository: mockRepo, adherenceRepository: adherenceRepo);
@@ -383,7 +383,7 @@ void main() {
 
   group('InstrumentationService - dashboard with actual adherence data', () {
     test('dashboard reflects recorded adherence', () async {
-      final mockRepo = MockMasteryGraphRepository();
+      final mockRepo = FakeMasteryGraphRepository();
       final adherenceRepo = PlanAdherenceRepository();
       await adherenceRepo.init();
       final svc = InstrumentationService(repository: mockRepo, adherenceRepository: adherenceRepo);
@@ -404,7 +404,7 @@ void main() {
 
   group('InstrumentationService - trackMasteryImprovement failure', () {
     test('returns failure when repository fails', () async {
-      final failingRepo = MockMasteryGraphRepository();
+      final failingRepo = FakeMasteryGraphRepository();
       final svc = InstrumentationService(repository: failingRepo);
 
       final result = await svc.trackMasteryImprovement('student1', 'topic1');

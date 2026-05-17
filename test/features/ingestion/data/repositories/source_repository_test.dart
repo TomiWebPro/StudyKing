@@ -7,7 +7,7 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
-class _MockSourceRepository extends SourceRepository {
+class _FakeSourceRepository extends SourceRepository {
   final Map<String, Source> _storage = {};
 
   @override
@@ -130,10 +130,10 @@ Source createTestSource({
 
 void main() {
   group('SourceRepository', () {
-    late _MockSourceRepository repository;
+    late _FakeSourceRepository repository;
 
     setUp(() {
-      repository = _MockSourceRepository();
+      repository = _FakeSourceRepository();
     });
 
     group('create', () {

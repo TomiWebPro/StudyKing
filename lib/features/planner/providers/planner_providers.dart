@@ -8,6 +8,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import '../../../core/services/plan_adapter.dart';
 import '../services/planner_service.dart';
 import '../services/action_executor.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 
 final plannerServiceProvider = Provider<PlannerService>((ref) {
   return PlannerService();
@@ -15,7 +16,7 @@ final plannerServiceProvider = Provider<PlannerService>((ref) {
 
 final actionExecutorProvider = Provider<ActionExecutor>((ref) {
   final plannerService = ref.watch(plannerServiceProvider);
-  return ActionExecutor(plannerService: plannerService);
+  return ActionExecutor(actionPlanner: plannerService);
 });
 
 class PlanProgressData {
@@ -60,12 +61,12 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
   if (plan == null) return const PlanProgressData();
 
   final now = DateTime.now();
-  final todayStart = DateTime(now.year, now.month, now.day);
+  final todayStart = now.dateOnly;
 
   int plannedMinutesToday = 0;
   int plannedQuestionsToday = 0;
   for (final day in plan.dailyPlans) {
-    final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+    final dDay = day.date.dateOnly;
     if (dDay == todayStart) {
       plannedMinutesToday = day.targetMinutes;
       plannedQuestionsToday = day.targetQuestions;
@@ -90,14 +91,14 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
     var pMin = 0;
     var aMin = 0;
     for (final dp in plan.dailyPlans) {
-      final dDay = DateTime(dp.date.year, dp.date.month, dp.date.day);
+      final dDay = dp.date.dateOnly;
       if (dDay == day) {
         pMin = dp.targetMinutes;
         break;
       }
     }
     for (final r in adherenceRecords) {
-      final rDay = DateTime(r.date.year, r.date.month, r.date.day);
+      final rDay = r.date.dateOnly;
       if (rDay == day) {
         aMin += r.actualMinutes;
       }
@@ -112,8 +113,8 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
   final completedDays = plan.dailyPlans.where((d) {
     if (d.isRestDay) return true;
     for (final r in adherenceRecords) {
-      final rDay = DateTime(r.date.year, r.date.month, r.date.day);
-      final dDay = DateTime(d.date.year, d.date.month, d.date.day);
+      final rDay = r.date.dateOnly;
+      final dDay = d.date.dateOnly;
       if (rDay == dDay && r.adherenceScore >= 0.5) return true;
     }
     return false;
@@ -227,7 +228,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       }
     } catch (e) {
       logger.e('Failed to load existing plan', e);
-      state = state.copyWith(error: 'Failed to load plan: $e');
+      state = state.copyWith(error: 'Failed_to_load_plan: $e');
     }
   }
 

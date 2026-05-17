@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
-class _MockEngagementNudgeRepository extends EngagementNudgeRepository {
+class _FakeEngagementNudgeRepository extends EngagementNudgeRepository {
   final Map<String, EngagementNudgeModel> _storage = {};
 
   @override
@@ -106,10 +106,10 @@ EngagementNudgeModel createTestNudge({
 
 void main() {
   group('EngagementNudgeRepository', () {
-    late _MockEngagementNudgeRepository repository;
+    late _FakeEngagementNudgeRepository repository;
 
     setUp(() {
-      repository = _MockEngagementNudgeRepository();
+      repository = _FakeEngagementNudgeRepository();
     });
 
     group('save', () {
@@ -297,6 +297,46 @@ void main() {
       await repository.markActedUpon('m1');
       final result = await repository.getByStudent('s1');
       expect(result.first.wasActedUpon, isTrue);
+    });
+
+    test('getUnactedByStudent returns only unacted nudges', () async {
+      await repository.create(createTestNudge(id: 'u1', studentId: 's1', wasActedUpon: true));
+      await repository.create(createTestNudge(id: 'u2', studentId: 's1'));
+      final result = await repository.getUnactedByStudent('s1');
+      expect(result.length, 1);
+      expect(result.first.id, 'u2');
+    });
+
+    test('getTodayCount returns correct count', () async {
+      await repository.create(createTestNudge(id: 'tc1', studentId: 's1', sentAt: DateTime.now()));
+      await repository.create(createTestNudge(id: 'tc2', studentId: 's1', sentAt: DateTime.now().subtract(const Duration(days: 5))));
+      expect(await repository.getTodayCount('s1'), 1);
+    });
+
+    test('getByType filters by nudge type', () async {
+      await repository.create(createTestNudge(id: 'bt1', studentId: 's1', nudgeType: 'revision'));
+      await repository.create(createTestNudge(id: 'bt2', studentId: 's1', nudgeType: 'overwork'));
+      await repository.create(createTestNudge(id: 'bt3', studentId: 's1', nudgeType: 'revision'));
+      final result = await repository.getByType('s1', 'revision');
+      expect(result.length, 2);
+    });
+
+    test('deleteOld removes older nudges', () async {
+      await repository.create(createTestNudge(id: 'do1', studentId: 's1', sentAt: DateTime.now().subtract(const Duration(days: 10))));
+      await repository.create(createTestNudge(id: 'do2', studentId: 's1', sentAt: DateTime.now().subtract(const Duration(days: 2))));
+      await repository.deleteOld(7);
+      final remaining = await repository.getByStudent('s1');
+      expect(remaining.length, 1);
+      expect(remaining.first.id, 'do2');
+    });
+
+    test('getByStudent sorts by sentAt descending', () async {
+      final early = DateTime.now().subtract(const Duration(days: 5));
+      final late = DateTime.now();
+      await repository.create(createTestNudge(id: 's1a', studentId: 's1', sentAt: early));
+      await repository.create(createTestNudge(id: 's1b', studentId: 's1', sentAt: late));
+      final result = await repository.getByStudent('s1');
+      expect(result.first.id, 's1b');
     });
   });
 }

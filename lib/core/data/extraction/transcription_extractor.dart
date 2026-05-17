@@ -33,7 +33,7 @@ class TranscriptionExtractor {
 
   TranscriptionExtractor({
     LlmService? llmService,
-    String modelId = '',
+    required String modelId,
     http.Client? httpClient,
     String localeName = 'en',
   })  : _llmService = llmService,

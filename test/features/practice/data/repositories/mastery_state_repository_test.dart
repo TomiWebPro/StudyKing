@@ -7,7 +7,7 @@ import 'package:studyking/features/practice/data/repositories/mastery_state_repo
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 
-class _MockMasteryStateRepository extends MasteryStateRepository {
+class _FakeMasteryStateRepository extends MasteryStateRepository {
   final Map<String, MasteryState> _storage = {};
 
   @override
@@ -127,10 +127,10 @@ MasteryState _createState({
 
 void main() {
   group('MasteryStateRepository', () {
-    late _MockMasteryStateRepository repository;
+    late _FakeMasteryStateRepository repository;
 
     setUp(() {
-      repository = _MockMasteryStateRepository();
+      repository = _FakeMasteryStateRepository();
     });
 
     group('getMasteryState', () {

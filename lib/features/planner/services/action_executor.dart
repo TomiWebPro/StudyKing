@@ -1,12 +1,13 @@
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'action_planner.dart';
 import 'planner_service.dart';
 
 class ActionExecutor {
-  final PlannerService _plannerService;
+  final ActionPlanner _actionPlanner;
 
   ActionExecutor({
-    PlannerService? plannerService,
-  })  : _plannerService = plannerService ?? PlannerService();
+    ActionPlanner? actionPlanner,
+  })  : _actionPlanner = actionPlanner ?? PlannerService();
 
   Future<bool> execute(PendingActionModel action) async {
     switch (action.actionType) {
@@ -36,7 +37,7 @@ class ActionExecutor {
 
     final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
 
-    return _plannerService.scheduleLesson(
+    return _actionPlanner.scheduleLesson(
       topicId: topicId,
       topicTitle: topicTitle,
       subjectId: subjectId,
@@ -53,7 +54,7 @@ class ActionExecutor {
     final scheduledTimeStr = action.payload['scheduledTime'] as String?;
 
     if (sessionId != null) {
-      await _plannerService.cancelLesson(sessionId);
+      await _actionPlanner.cancelLesson(sessionId);
     }
 
     if (topicId == null || subjectId == null || scheduledTimeStr == null) {
@@ -65,7 +66,7 @@ class ActionExecutor {
 
     final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
 
-    return _plannerService.scheduleLesson(
+    return _actionPlanner.scheduleLesson(
       topicId: topicId,
       topicTitle: topicTitle,
       subjectId: subjectId,
@@ -78,11 +79,9 @@ class ActionExecutor {
     final adjustmentFactor = (action.payload['adjustmentFactor'] as num?)?.toDouble();
     if (adjustmentFactor == null) return false;
 
-    final studentId = action.studentId;
-    final result = await _plannerService.planAdapter.suggestRegeneration(
-      studentId: studentId,
+    return _actionPlanner.suggestPlanRegeneration(
+      studentId: action.studentId,
       adjustmentFactor: adjustmentFactor,
     );
-    return result.isSuccess;
   }
 }

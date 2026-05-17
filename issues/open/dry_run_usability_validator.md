@@ -1,230 +1,216 @@
-# Dry-Run Usability Validator: Focus Mode & Notification System
+# Dry-Run Usability Validation: Content Library Management
 
-## Scenario
+**Scenario:** "I'm a student who has been using StudyKing for over a week. I've uploaded multiple PDFs, URLs, screenshots, and notes across different subjects. Now I want to review, organize, and manage my content library."
 
-**"I'm a student who wants to build a daily study habit using Focus Mode. I expect the app to remind me to study at my scheduled times, track my focus sessions, and respect my notification preferences."**
+**Scenario file:** `dry-run-test/scenario_managing_content_library.md`
 
-Scenario file: `dry-run-test/scenario_focus_mode_daily_habit.md`
+**Validated against:** codebase as of 2026-05-17
 
 ---
 
-## Finding Summary
+## BLOCKER (app crashes or user cannot proceed)
+
+### B1. No source browsing UI exists anywhere
+
+Uploaded materials are functionally invisible after the upload completes. There is no screen, dialog, sheet, list, or any user interface element anywhere in the app that displays uploaded sources for browsing or interaction.
+
+**Affected files:**
+- `lib/features/ingestion/presentation/upload_screen.dart` — Upload-only, no post-upload management
+- `lib/features/ingestion/data/repositories/source_repository.dart` — `getAll()` exists but no UI consumer
+- `lib/features/dashboard/presentation/dashboard_screen.dart` — No sources section
+- `lib/features/subjects/presentation/subject_detail_screen.dart` — 4 tabs (Lessons, Practice, History, Stats), none show sources
+- `lib/features/settings/presentation/settings_screen.dart` — 12 sections, none for content management
+- `lib/main.dart` — 6 bottom-nav tabs, none for content library
+
+**Rationale:** The `Source` data model stores `title`, `type`, `subjectId`, `topicId`, `processingStatus`, `extractedText`, `summary`, `extractionMeta`, `generatedQuestionIds`, and `chunks`. Every one of these fields is persisted in Hive but has zero UI representation. The only place sources appear is the `SourcePracticeSheet` in the Practice tab, which is a filtering mechanism for practice questions — not a content browser.
+
+**Acceptance criteria:**
+- A "My Content" or "Sources" entry point must exist and be reachable from either the bottom navigation, the dashboard, or subject detail screens.
+- The content library must display each source with at minimum: title, type icon, subject name, processing status, and upload date.
+- The content library must support sorting and filtering (by subject, by type, by status).
+
+---
+
+### B2. Processing failures are invisible; no retry path
+
+If the content pipeline fails (e.g., OCR fails on a screenshot, PDF extraction errors, LLM classification timeout), the source is saved with `ProcessingStatus.failed` but no user-facing notification, error banner, or retry mechanism exists.
+
+**Affected files:**
+- `lib/features/ingestion/services/content_pipeline.dart` — Pipeline sets `processingStatus: ProcessingStatus.failed` on error but error is only surfaced as a SnackBar during the upload flow; after the screen transitions, the status is invisible
+- `lib/features/ingestion/data/models/source_model.dart` — Field `processingStatus` exists but is never displayed
+- `lib/features/ingestion/data/repositories/source_repository.dart` — `getFailed()` query exists but no consumer
+
+**Rationale:** Without a content library UI, `ProcessingStatus` is a dead field. Failed sources accumulate silently, wasting storage and causing users to believe their materials were processed successfully.
+
+**Acceptance criteria:**
+- Processing status must be visible in the content library list/detail view.
+- Failed sources must have a visible error indicator and a "Retry" / "Reprocess" button.
+- A count of failed uploads should be surfaced on the dashboard or settings.
+
+---
+
+### B3. Uploaded sources cannot be deleted
+
+`SourceRepository.delete()` exists (inherited from `Repository.delete()` at `lib/core/data/repository.dart:30`) but no UI calls it. A user who uploads the wrong file, a duplicate, or outdated content has no way to remove it.
+
+**Affected files:**
+- `lib/features/ingestion/data/repositories/source_repository.dart` — `delete()` method never called from UI
+- `lib/features/ingestion/presentation/upload_screen.dart` — No delete or management features
+- All screens — No delete gesture, button, or menu for sources
+
+**Rationale:** This is a data integrity issue. Users cannot curate their content library, and stale/incorrect sources accumulate indefinitely. Compare with Session History, which implements swipe-to-delete with undo.
+
+**Acceptance criteria:**
+- Sources must be deletable from the content library via a swipe gesture, contextual menu, or explicit delete button.
+- Deletion must show a confirmation dialog.
+- Deletion should have an "Undo" SnackBar (consistent with Session History behavior).
+- Deleting a source must optionally prompt: "Also delete questions generated from this source?"
+
+---
+
+### B4. No reprocess/retry mechanism for uploaded sources
+
+If a user uploads a source without checking "Generate questions from this content" and later wants questions generated, or if processing failed, there is no way to re-run the pipeline on an existing source. The user must re-upload the entire file.
+
+**Affected files:**
+- `lib/features/ingestion/services/content_pipeline.dart` — `processFullPipeline()` operates on raw content, not on existing Source objects (no `reprocessSource(Source)` method)
+- `lib/features/ingestion/presentation/upload_screen.dart` — Only handles new uploads
+- No screen — No way to select an existing source and re-process it
+
+**Acceptance criteria:**
+- A "Reprocess" button must exist in the source detail or context menu.
+- Reprocessing must re-run the full pipeline (extract, classify, summarize, generate questions) on the existing source's stored `extractedText`.
+- Reprocessing progress should be shown (reuse the existing progress callback pattern).
+- The user must be warned: "Reprocessing will replace existing generated questions. Continue?"
+
+---
+
+## MAJOR (feature is broken or misleading)
+
+### M1. Source-to-subject association is invisible
+
+Sources are correctly tagged with `subjectId` in the data model. `SourceRepository.getBySubject(subjectId)` can retrieve them. But the SubjectDetailScreen has 4 tabs and none displays sources.
+
+**Affected files:**
+- `lib/features/subjects/presentation/subject_detail_screen.dart:144-155` — TabBar with Lessons, Practice, History, Stats tabs; no Sources tab
+- `lib/features/subjects/presentation/subject_detail_screen.dart:196-261` — "More options" bottom sheet offers "Upload Content" but never "View Sources" or "Manage Content"
+
+**Acceptance criteria:**
+- Add a "Sources" tab (or integrate into existing tabs) on the SubjectDetailScreen listing all sources for that subject.
+- Each source item must show: title, type, processing status, upload date.
+- Tapping a source should navigate to a source detail view.
+
+---
+
+### M2. No question bank browsing or curation
+
+Generated questions are linked to sources via `generatedQuestionIds` on the `Source` model and can be queried via `QuestionRepository`. But there is no UI to browse the question bank, review auto-generated questions, edit them, or delete them.
+
+**Affected files:**
+- `lib/features/questions/` — Entire feature has zero screens (only widgets: `QuestionCardWidget`, `SingleAnswerWidget`, `CanvasDrawingWidget`, `MathExpressionWidget`)
+- `lib/features/questions/presentation/widgets/question_card_widget.dart` — Renders individual questions in practice sessions but has no management mode (edit/delete)
+- `lib/features/practice/` — Questions are consumed by practice/exam sessions but never displayed in a browse view
+
+**Rationale:** The pipeline can generate dozens of questions from an uploaded textbook. The user has zero ability to review quality, remove bad questions, edit question text, or even see how many questions exist. This undermines the "AI-generated content should not be blindly trusted" value from the product vision.
+
+**Acceptance criteria:**
+- A browseable question bank screen must exist, filterable by subject, topic, source, and type.
+- Each question card in browse mode must show: question text, type, difficulty, topic, source, and generated-by indicator.
+- The question bank must support bulk operations: select multiple questions → delete.
+- Individual questions must support editing (question text, options, correct answer, explanation).
+- Question count per source should be displayed on the source detail view.
+
+---
+
+### M3. Extracted text and AI summaries are stored but never shown
+
+The content pipeline produces `extractedText` and `summary` for every source. These are stored on the `Source` model but never rendered in any screen. The user who uploads a web article or pastes notes cannot reread the extracted version through the app.
+
+**Affected files:**
+- `lib/features/ingestion/data/models/source_model.dart` — Fields `extractedText` and `summary` present
+- `lib/features/ingestion/services/content_pipeline.dart:128-170` — Extraction and summarization stages produce these fields
+- No screen — No source detail or viewer screen
+
+**Acceptance criteria:**
+- A source detail view must exist and display: source title, type, upload date, processing status, subject, topic classification, extracted text (scrollable), and AI-generated summary.
+- The extracted text viewer should support basic text search within the source.
+
+---
+
+### M4. Topic classification is stored but never shown or correctable
+
+Content pipeline stage 2 (`_classifyTopic` at `content_pipeline.dart:148-161`) calls the LLM to classify uploaded content into a topic and stores the resulting `topicId`. But this classification is invisible and uncorrectable.
+
+**Affected files:**
+- `lib/features/ingestion/services/content_pipeline.dart:148-161` — Classification result stored as `topicId` on source
+- `lib/features/ingestion/data/models/source_model.dart` — `topicId` field present
+- No screen — Classification never displayed
+
+**Acceptance criteria:**
+- The source detail view must show the assigned topic name.
+- The user must be able to change the topic assignment from a dropdown of available topics for the subject.
+- If classification fails, the UI must show "Not yet classified" and offer a "Classify Now" button.
+
+---
+
+### M5. Source Practice sheet lists sources but is not a content manager
+
+The only place sources are listed is `SourcePracticeSheet` (`lib/features/practice/presentation/widgets/source_practice_sheet.dart`) which shows source titles and question counts for filtering practice by source. Tapping a source starts a practice session; there is no way to view source details, edit, or delete from here.
+
+**Affected file:**
+- `lib/features/practice/presentation/widgets/source_practice_sheet.dart` — Only entry point displaying source titles; no management actions
+
+**Acceptance criteria:**
+- Either the Source Practice sheet should gain management actions (long-press menu with View Details, Delete), or a proper content library screen should exist that subsumes this functionality.
+- The sheet should display processing status and an error icon for failed sources.
+
+---
+
+## MINOR (UX friction)
+
+### m1. No content-related entry point in Settings
+
+Settings has 12 sections (User Management, Quick Access, Appearance, Accessibility, AI Configuration, Notifications, Study Preferences, Focus Mode, Study Analytics, Token Usage, Backup and Restore, About). None mentions content, sources, or uploads. Users looking for their uploaded files naturally check Settings and find nothing.
+
+**Affected file:**
+- `lib/features/settings/presentation/settings_screen.dart:65-244` — All sections enumerated; no Content Management section
+
+**Acceptance criteria:**
+- Add a "Content Management" or "My Uploads" section in Settings, or at minimum a "View Uploaded Materials" tile linking to the new content library screen.
+
+---
+
+### m2. Empty states don't suggest uploading content
+
+The SubjectDetailScreen's tabs (Lessons, Practice, History, Stats) show empty states when there's no data. Without a Sources tab, a user who has uploaded materials for the subject gets no confirmation that those materials exist.
+
+**Affected file:**
+- `lib/features/subjects/presentation/subject_detail_screen.dart` — Empty states on all 4 tabs; no indicator of uploaded sources
+
+**Acceptance criteria:**
+- Add a sources count indicator to the subject card in the subject list (e.g., "3 sources").
+- Even without a dedicated Sources tab, show a "View X uploaded materials" dismissible card on the subject detail when sources exist.
+
+---
+
+### m3. Upload success message gives no next-step guidance
+
+After upload completes, the snackbar says "Content uploaded successfully." It does not offer: "View in content library," "Review generated questions," or "Check processing status."
+
+**Affected file:**
+- `lib/features/ingestion/presentation/upload_screen.dart` — Success/failure handling around lines 288-299
+
+**Acceptance criteria:**
+- Upload success snackbar should include an action button: "View Library" that navigates to the content library or subject detail.
+- If questions were generated, also show: "View Questions" action button.
+
+---
+
+## Summary
 
 | Severity | Count |
 |---|---|
-| BLOCKER | 3 |
-| MAJOR | 4 |
-| MINOR | 4 |
-| PARTIAL | 1 |
-| PASS | 5 |
-
----
-
-## BLOCKER Findings
-
-### B1. Notification preferences are cosmetic only — settings never read by scheduler
-
-**Files affected:**
-- `lib/core/services/engagement_scheduler.dart:89-191` — `_sendNudgeNotifications()` fires all nudge types unconditionally
-- `lib/features/settings/presentation/settings_screen.dart:112-151` — UI toggles exist
-- `lib/features/settings/data/models/settings_box.dart:33-61` — fields `studyRemindersEnabled`, `revisionRemindersEnabled`, `lessonNotificationsEnabled`, `overworkAlertsEnabled`, `planAdjustmentNotificationsEnabled`
-- `lib/core/providers/app_providers.dart:145-200` — `update*()` methods save to Hive but never publish to scheduler
-
-**Problem:** Settings has 5 notification toggle switches (master, revision, lessons, overwork, plan adjustment) that persist to Hive. However, `EngagementScheduler._sendNudgeNotifications()` never reads any of these fields. Users who disable all notifications will continue receiving push notifications and persisted nudges. The two systems are completely disconnected.
-
-**Acceptance criteria:**
-- `EngagementScheduler` must accept or read `SettingsBox` at runtime
-- Before firing each nudge type, the scheduler must check the corresponding setting flag
-- Disabling the master toggle (`studyRemindersEnabled`) must suppress all notification types
-- Toggling a setting should take effect on the next daily check (no restart required)
-
----
-
-### B2. Lesson reminder notifications are defined but never scheduled
-
-**Files affected:**
-- `lib/core/services/notification_service.dart:176-192` — `showLessonReminder()` fully implemented
-- `lib/core/services/engagement_scheduler.dart` — no mention of lesson reminders
-- `lib/features/planner/providers/` — no scheduler or background check for upcoming lessons
-
-**Problem:** `showLessonReminder()` is implemented and testable, but no code path in the entire app ever invokes it. There is no background scheduler that scans upcoming scheduled lessons and fires a push notification before the lesson time. Users will never receive a reminder notification for an upcoming tutor session.
-
-**Acceptance criteria:**
-- A background check (possibly integrated into `EngagementScheduler._runDailyChecks()` or a separate periodic check) must scan upcoming scheduled lessons
-- For lessons starting within the next 15-30 minutes, call `showLessonReminder()`
-- Consider scheduling platform-level alarms via `flutter_local_notifications` for precise timing
-- Toggle `lessonNotificationsEnabled` in `SettingsBox` must gate this behavior
-
----
-
-### B3. EngagementScheduler lifecycle — orphaned instance, no provider, no disposal
-
-**Files affected:**
-- `lib/main.dart:86-102` — `EngagementScheduler` created as local variable in `_initializeApp()`, goes out of scope
-- `lib/core/services/engagement_scheduler.dart:291-293` — `dispose()` exists but is unreachable
-
-**Problem:** The `EngagementScheduler` is instantiated as a plain local variable inside `_initializeApp()`. After `init()` returns, the reference is lost. While the internal `Timer` keeps the object alive via closures, the scheduler is:
-1. Inaccessible from any other part of the app (no Riverpod provider, no global)
-2. Cannot be disposed (no reference to call `dispose()`)
-3. Cannot be triggered on-demand (e.g., "Check nudges now" button)
-4. Cannot access `settingsProvider` to read notification preferences
-
-**Acceptance criteria:**
-- Provide `EngagementScheduler` via a Riverpod provider (e.g., `engagementSchedulerProvider`)
-- Store the provider reference so it can be disposed or triggered from the UI
-- Add a "Check nudges now" action somewhere (Settings or Mentor screen)
-- Ensure `dispose()` is called when the app is terminated or the scheduler is no longer needed
-
----
-
-## MAJOR Findings
-
-### M1. Daily study reminder (`showDailyReminder()`) is dead code
-
-**Files affected:**
-- `lib/core/services/notification_service.dart:79-124` — `showDailyReminder()` fully implemented with `plugin.periodicallyShow()` and `RepeatInterval.daily`
-- `lib/features/settings/presentation/settings_screen.dart` — no daily reminder time picker or toggle
-
-**Problem:** `showDailyReminder()` creates a recurring daily notification at a specified time using the platform's inexact alarm API. This method exists and is tested (`test/core/services/notification_service_test.dart:43`), but nothing in the app ever calls it. There is no settings UI to configure a daily reminder time, and the `EngagementScheduler` doesn't invoke it. Users cannot set up a daily study nudge despite the infrastructure existing.
-
-**Acceptance criteria:**
-- Add a "Daily Reminder" setting in Settings → Notification Preferences with a time picker
-- On save, call `showDailyReminder()` with the selected time
-- The `studyRemindersEnabled` master toggle should gate this reminder
-- Cancel the periodic notification when reminders are disabled
-
----
-
-### M2. Focus Mode timer does not work in background — time under-counted, no completion notification
-
-**Files affected:**
-- `lib/features/sessions/services/study_timer_service.dart:102-117` — `_startTimer()` uses `Timer.periodic(Duration(seconds: 1))` with fixed +1000ms per tick
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart` — no background-aware session management
-
-**Problem:** The Focus Mode timer uses an in-memory `Timer.periodic` that only fires when the Dart event loop is active. When the app goes to the background:
-1. Flutter may throttle or suspend the timer (especially on iOS)
-2. Missed ticks mean `_elapsedMs` is under-counted — the session records less time than actually spent
-3. When the timer would have completed in the background, no notification fires
-4. No `WidgetsBindingObserver` (lifecycle observer) or app lifecycle callback to handle background transitions
-
-**Acceptance criteria:**
-- Register a `WidgetsBindingObserver` in `FocusTimerScreen` or `StudyTimerService` to detect app lifecycle changes
-- On app resume, calculate actual wall-clock elapsed time vs tracked elapsed time and reconcile
-- On timer completion in background, fire a local push notification via `NotificationService`
-- Consider using `Timer.periodic` with diff-based calculation (store `_lastTick`, compute diff from `DateTime.now()`) to handle throttled ticks
-
----
-
-### M3. No onboarding or explanation for first-time Focus Mode users
-
-**Files affected:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:348-420` — setup view shows cards/chips but no explanatory text
-
-**Problem:** When a user opens Focus Mode for the first time, they see "New Focus Session" with a subject dropdown and timer configuration controls but zero explanation of:
-- What Focus Mode is used for
-- How sessions are recorded and contribute to study stats
-- What the break timer does
-- How to interpret the session completion
-
-Compare this to the product vision: "The system should proactively engage students." The Setup view assumes prior knowledge.
-
-**Acceptance criteria:**
-- Show an onboarding tooltip or brief card on first visit explaining Focus Mode
-- Use a provider-level `firstFocusVisit` flag in settings to gate the onboarding
-- Add subtitle text near "New Focus Session": "Set a timer and study distraction-free. Completed sessions count toward your daily plan."
-
----
-
-### M4. Break timer is hardcoded to 5 minutes, no user control
-
-**Files affected:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:43` — `final int _breakDuration = 300;` (hardcoded 5 minutes)
-- `lib/features/settings/presentation/settings_screen.dart` — no break duration setting
-
-**Problem:** The break timer between focus sessions is hardcoded to 300 seconds. The user has no way to configure a shorter or longer break. The product vision mentions "prevent student from overworking" but also "respect the requested class hour" — a user should be able to decide their own break length.
-
-**Acceptance criteria:**
-- Add a "Break Duration" setting (e.g., 1-15 minutes) in Settings → Focus Mode
-- Store the preference in `SettingsBox`
-- Pass the configured duration to `FocusTimerScreen` instead of the hardcoded 300
-
----
-
-## MINOR Findings
-
-### m1. Daily cap is only enforced at session start, not continuously
-
-**Files affected:**
-- `lib/features/sessions/services/study_timer_service.dart:55-61` — `isDailyCapReached()` checks only at session start
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:136` — only called in `_startFocus()`
-
-**Problem:** The daily study cap prevents starting a new session when the cap would be exceeded, but once a session is running, the timer completes regardless of cap. If the daily cap is 120 min and the user has done 115 min today, a 25-min session starts and runs for the full 25 minutes, ending at 140 min (20 over the cap).
-
-**Acceptance criteria:**
-- Option A: Auto-stop the session when the daily cap is reached mid-session (with user notification)
-- Option B: Show a warning when starting: "Starting this session will exceed your daily cap by X minutes. Continue?"
-- The chosen approach should be non-disruptive (never forcefully end a user's active focus without their consent)
-
----
-
-### m2. Badges evaluated lazily (only on Dashboard visit), not proactively after sessions
-
-**Files affected:**
-- `lib/core/services/badge_service.dart:26-64` — `checkAndUnlockBadges()` exists but is only called from Dashboard
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart` — no badge check after session completion
-
-**Problem:** Badge evaluation only triggers when the user visits the Dashboard. If a user completes 10 focus sessions but never visits the Dashboard, badges are never evaluated and unlocked. The product vision says "The system should proactively engage students" — unlocking a badge should feel reactive to the achievement, not to navigation.
-
-**Acceptance criteria:**
-- Call `BadgeService.checkAndUnlockBadges()` after focus session completion (in `_onSessionComplete` or in `StudyTimerService.completeSession()`)
-- Same for practice session completion and tutor lesson completion
-- Consider debouncing (don't re-evaluate if just evaluated within the last minute)
-
----
-
-### m3. PlanAdapter instantiated as raw constructor call instead of injected dependency
-
-**Files affected:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:87` — `final planAdapter = PlanAdapter();`
-
-**Problem:** `PlanAdapter()` is created as a new instance inside `_recordAdherence()` rather than obtained from a provider or injected into the screen. This makes the screen harder to test (cannot mock/substitute the PlanAdapter) and breaks dependency injection patterns used elsewhere in the app (e.g., `studyTimerServiceProvider` injects `SessionRepository`).
-
-**Acceptance criteria:**
-- Provide `PlanAdapter` via a Riverpod provider (e.g., `planAdapterProvider`)
-- Read the provider in `FocusTimerScreen` instead of calling `PlanAdapter()` directly
-- Update tests to use provider overrides with a fake PlanAdapter
-
----
-
-### m4. First-time user has no explanation of what Focus Mode is
-
-*(Same scope as M3 — listed as MINOR here because it's a UX friction rather than a broken feature)*
-
----
-
-## PARTIAL Findings
-
-### P1. Focus Mode adherence recording works but has no plan error resilience
-
-**Files affected:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:86-94` — `_recordAdherence()` no try/catch
-- `lib/core/services/personal_learning_plan_service.dart:430-455` — `recordDailyAdherence()` has try/catch + null check
-
-**Analysis:** The `_recordAdherence` method at line 86-94 calls `planAdapter.recordFromFocusSession()` without its own try/catch. The downstream `PersonalLearningPlanService.recordDailyAdherence()` handles errors internally (try/catch at line 436, null check at line 438). However, `_recordAdherence` is fire-and-forget (called without `await`), so any theoretical uncaught error in the chain would crash the app. In practice, the downstream methods are safe, but the pattern is fragile — any future change that introduces a throw between the fire-and-forget call site and the downstream catch would result in a hard crash. Additionally, `PlanAdapter` is created as a raw `PlanAdapter()` instance (see m3).
-
-**Acceptance criteria:**
-- Add try/catch to `_recordAdherence()` for defensive safety
-- Add a `planAdapterProvider` and inject it into `FocusTimerScreen` (links to m3)
-- Log warnings if adherence recording fails (currently silent)
-
----
-
-## PASS Findings (for reference)
-
-| Check | Why it Passes |
-|---|---|
-| Timer starts, counts down, controls work | `FocusTimerWidget` at `focus_timer_widget.dart` implements play/pause/stop/mark-complete correctly |
-| Stats are accurate after session | `SessionSummaryCard` at `session_summary_card.dart` reads from `SessionRepository` which is Hive-backed and updates immediately |
-| Break flow transitions correctly | `_startBreakTimer()` at `focus_timer_screen.dart:100` counts down and auto-returns to setup view |
-| Back button respects active session | `PopScope` + `_onWillPop` at `focus_timer_screen.dart:190-216` shows confirmation dialog with Stay/End options |
-| Stats persist across app restarts | `SessionRepository` is Hive-backed, data survives process death |
+| BLOCKER | 4 |
+| MAJOR | 5 |
+| MINOR | 3 |
+| **Total** | **12** |

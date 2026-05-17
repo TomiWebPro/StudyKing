@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
@@ -102,46 +102,12 @@ class MentorService {
 
   Future<String> _buildContextPrompt() async {
     final stats = await _progressTracker.getOverallStats(_studentId);
-
-    Result<List<MasteryState>> weakResult;
-    try {
-      weakResult = await _masteryService.getWeakTopics(_studentId);
-    } catch (_) {
-      weakResult = Result.success([]);
-    }
-
-    PersonalLearningPlan? plan;
-    try {
-      plan = await _plannerService.loadExistingPlan();
-    } catch (_) {}
-
-    List<RoadmapModel> roadmaps;
-    try {
-      roadmaps = await _plannerService.loadRoadmaps();
-    } catch (_) {
-      roadmaps = [];
-    }
-
-    List<PendingActionModel> pendingActions;
-    try {
-      pendingActions = await _plannerService.loadPendingActions();
-    } catch (_) {
-      pendingActions = [];
-    }
-
-    List<Session> upcomingLessons;
-    try {
-      upcomingLessons = await _plannerService.getScheduledLessons();
-    } catch (_) {
-      upcomingLessons = [];
-    }
-
-    AdherenceDeviation? adherenceDeviation;
-    try {
-      adherenceDeviation = await _plannerService.checkAdherence();
-    } catch (_) {}
-
-    final weakTopics = weakResult.isSuccess ? weakResult.data! : <MasteryState>[];
+    final weakTopics = await _loadWeakTopics();
+    final plan = await _loadPlan();
+    final roadmaps = await _loadRoadmaps();
+    final pendingActions = await _loadPendingActions();
+    final upcomingLessons = await _loadUpcomingLessons();
+    final adherenceDeviation = await _loadAdherence();
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = await _getDailyCapMinutes();
     final consecutiveDays = await _getConsecutiveStudyDays();
@@ -242,7 +208,9 @@ class MentorService {
 
   String _extractTopic(String message) {
     final lower = message.toLowerCase();
-    final keywords = ['about ', 'for ', 'on ', 'study ', 'learn ', 'review ', 'practice '];
+    final keywords = _localeName == 'es'
+        ? ['sobre ', 'para ', 'de ', 'estudiar ', 'aprender ', 'repasar ', 'practicar ', 'acerca de ', 'acerca ']
+        : ['about ', 'for ', 'on ', 'study ', 'learn ', 'review ', 'practice '];
     for (final kw in keywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
@@ -251,7 +219,9 @@ class MentorService {
         return end != -1 ? after.substring(0, end).trim() : after;
       }
     }
-    final topicKeywords = ['topic ', 'subject ', 'lesson '];
+    final topicKeywords = _localeName == 'es'
+        ? ['tema ', 'materia ', 'lección ', 'asignatura ']
+        : ['topic ', 'subject ', 'lesson '];
     for (final kw in topicKeywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
@@ -263,11 +233,66 @@ class MentorService {
     return 'general';
   }
 
+  Future<List<MasteryState>> _loadWeakTopics() async {
+    try {
+      final result = await _masteryService.getWeakTopics(_studentId);
+      return result.isSuccess ? result.data! : [];
+    } catch (e) {
+      _logger.w('Failed to load weak topics', e);
+      return [];
+    }
+  }
+
+  Future<PersonalLearningPlan?> _loadPlan() async {
+    try {
+      return await _plannerService.loadExistingPlan();
+    } catch (e) {
+      _logger.w('Failed to load existing plan', e);
+      return null;
+    }
+  }
+
+  Future<List<RoadmapModel>> _loadRoadmaps() async {
+    try {
+      return await _plannerService.loadRoadmaps();
+    } catch (e) {
+      _logger.w('Failed to load roadmaps', e);
+      return [];
+    }
+  }
+
+  Future<List<PendingActionModel>> _loadPendingActions() async {
+    try {
+      return await _plannerService.loadPendingActions();
+    } catch (e) {
+      _logger.w('Failed to load pending actions', e);
+      return [];
+    }
+  }
+
+  Future<List<Session>> _loadUpcomingLessons() async {
+    try {
+      return await _plannerService.getScheduledLessons();
+    } catch (e) {
+      _logger.w('Failed to load upcoming lessons', e);
+      return [];
+    }
+  }
+
+  Future<AdherenceDeviation?> _loadAdherence() async {
+    try {
+      return await _plannerService.checkAdherence();
+    } catch (e) {
+      _logger.w('Failed to load adherence', e);
+      return null;
+    }
+  }
+
   int _getPlanDay(PersonalLearningPlan plan) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = now.dateOnly;
     for (final day in plan.dailyPlans) {
-      final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+      final dDay = day.date.dateOnly;
       if (dDay == today) return day.dayNumber;
     }
     return 0;
@@ -282,7 +307,8 @@ class MentorService {
     try {
       final box = await Hive.openBox('settings');
       return box.get('dailyCapMinutes', defaultValue: 0) as int;
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to get daily cap minutes', e);
       return 0;
     }
   }
@@ -294,11 +320,11 @@ class MentorService {
       final all = allResult.data!;
       if (all.isEmpty) return 0;
       final studyDays = all.where((s) => s.completed).map((s) =>
-        DateTime(s.startTime.year, s.startTime.month, s.startTime.day)
+        s.startTime.dateOnly
       ).toSet().toList()..sort((a, b) => b.compareTo(a));
       int consecutive = 0;
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      final today = now.dateOnly;
       for (var i = 0; i < studyDays.length; i++) {
         final expected = today.subtract(Duration(days: i));
         if (studyDays[i] == expected) {
@@ -308,7 +334,8 @@ class MentorService {
         }
       }
       return consecutive;
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to get consecutive study days', e);
       return 0;
     }
   }
@@ -396,10 +423,16 @@ class MentorService {
     final hasScheduleIntent = lower.contains('schedule') ||
         lower.contains('reschedule') ||
         lower.contains('programar') ||
-        lower.contains('reprogramar');
+        lower.contains('reprogramar') ||
+        lower.contains('agendar') ||
+        lower.contains('reagendar') ||
+        lower.contains('citar');
     final hasPlanIntent = lower.contains('plan') ||
         lower.contains('roadmap') ||
-        lower.contains('planificar');
+        lower.contains('planificar') ||
+        (_localeName == 'es' && (lower.contains('plan') ||
+            lower.contains('hoja de ruta') ||
+            lower.contains('planificar')));
 
     if (!hasScheduleIntent && !hasPlanIntent) return;
 

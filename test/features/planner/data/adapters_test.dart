@@ -12,6 +12,7 @@ void main() {
       expect(Hive.isAdapterRegistered(22), isTrue);
       expect(Hive.isAdapterRegistered(23), isTrue);
       expect(Hive.isAdapterRegistered(30), isTrue);
+      expect(Hive.isAdapterRegistered(33), isTrue);
     });
 
     test('is idempotent when called multiple times', () {
@@ -23,6 +24,7 @@ void main() {
       expect(Hive.isAdapterRegistered(22), isTrue);
       expect(Hive.isAdapterRegistered(23), isTrue);
       expect(Hive.isAdapterRegistered(30), isTrue);
+      expect(Hive.isAdapterRegistered(33), isTrue);
     });
   });
 }

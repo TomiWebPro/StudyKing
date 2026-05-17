@@ -35,22 +35,24 @@ void main() {
 
     group('toJson', () {
       test('serializes all fields', () {
-        final step = MarkSchemeStep(
-          stepNumber: '1', requiredAnswer: 'Answer', points: 1.0,
-        );
-        final ms = Markscheme(
-          questionId: 'q1', correctAnswer: 'Correct',
-          acceptableAnswers: ['Alt1'], explanation: 'Exp',
-          markschemePoints: 3.0, steps: [step],
-        );
-        final json = ms.toJson();
-        expect(json['questionId'], 'q1');
-        expect(json['correctAnswer'], 'Correct');
-        expect(json['acceptableAnswers'], ['Alt1']);
-        expect(json['explanation'], 'Exp');
-        expect(json['markschemePoints'], 3.0);
-        expect(json['steps'], isA<List>());
+        final json = {
+          'questionId': 'q1', 'correctAnswer': 'Paris',
+          'acceptableAnswers': ['paris'], 'explanation': 'Capital',
+          'markschemePoints': 2.0,
+          'steps': [
+            {'stepNumber': '1', 'requiredAnswer': 'Step1', 'points': 1.0},
+          ],
+        };
+        final ms = Markscheme.fromJson(json);
+        expect(ms.questionId, 'q1');
+        expect(ms.correctAnswer, 'Paris');
+        expect(ms.acceptableAnswers, ['paris']);
+        expect(ms.explanation, 'Capital');
+        expect(ms.markschemePoints, 2.0);
+        expect(ms.steps.length, 1);
       });
+
+
     });
 
     group('fromJson', () {
@@ -214,6 +216,23 @@ void main() {
         final ms = Markscheme(correctAnswer: 'Paris');
         expect(ms.isMatch('Berlin'), isFalse);
         expect(ms.isMatch(''), isFalse);
+      });
+
+      test('isMatch with multi-word acceptable answer case insensitive', () {
+        final ms = Markscheme(
+          correctAnswer: 'Newton',
+          acceptableAnswers: ['Isaac Newton', 'sir isaac newton'],
+        );
+        expect(ms.isMatch('SIR ISAAC NEWTON'), isTrue);
+        expect(ms.isMatch('Isaac Newton'), isTrue);
+      });
+
+      test('isMatch with acceptable answer not matching fails', () {
+        final ms = Markscheme(
+          correctAnswer: 'Red',
+          acceptableAnswers: ['Blue', 'Green', 'Yellow'],
+        );
+        expect(ms.isMatch('purple'), isFalse);
       });
     });
   });

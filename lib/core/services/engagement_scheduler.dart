@@ -11,6 +11,8 @@ import 'package:studyking/features/planner/data/repositories/plan_adherence_repo
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 
 class EngagementSchedulerConfig {
   final int checkHour;
@@ -43,8 +45,11 @@ class EngagementScheduler {
   final SessionRepository? _sessionRepository;
   final EngagementSchedulerConfig _config;
   final AppLocalizations? _l10n;
+  SettingsBox? _settingsBox;
+  final PlannerService? _plannerService;
 
   Timer? _dailyTimer;
+  Timer? _lessonCheckTimer;
   bool _isInitialized = false;
   int _notificationIdCounter = 1000;
 
@@ -58,6 +63,8 @@ class EngagementScheduler {
     SessionRepository? sessionRepository,
     EngagementSchedulerConfig? config,
     AppLocalizations? l10n,
+    SettingsBox? settingsBox,
+    PlannerService? plannerService,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
@@ -66,7 +73,13 @@ class EngagementScheduler {
         _planAdapter = planAdapter,
         _sessionRepository = sessionRepository,
         _config = config ?? const EngagementSchedulerConfig(),
-        _l10n = l10n;
+        _l10n = l10n,
+        _settingsBox = settingsBox,
+        _plannerService = plannerService;
+
+  void updateSettings(SettingsBox settingsBox) {
+    _settingsBox = settingsBox;
+  }
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -75,6 +88,15 @@ class EngagementScheduler {
     await _nudgeRepository.init();
     await _adherenceRepository.init();
     _scheduleDailyCheck();
+    _startLessonCheckTimer();
+  }
+
+  void _startLessonCheckTimer() {
+    _lessonCheckTimer?.cancel();
+    _lessonCheckTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      await _checkUpcomingLessons();
+    });
+    _checkUpcomingLessons();
   }
 
   void _scheduleDailyCheck() {
@@ -86,87 +108,145 @@ class EngagementScheduler {
     await _sendNudgeNotifications(_config.studentId);
   }
 
-  Future<void> _sendNudgeNotifications(String studentId) async {
-    try {
-      final overworkNudges = await getOverworkNudge(studentId);
-      for (final nudge in overworkNudges) {
-        final model = EngagementNudgeModel(
-          id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-          studentId: studentId,
-          nudgeType: NudgeType.overwork.name,
-          message: nudge.message,
-          severity: nudge.severity.name,
-        );
-        await _nudgeRepository.create(model);
-        await _notificationService.showOverworkWarning(
-          id: _notificationIdCounter++,
-          hoursStudied: double.tryParse(
-                  nudge.message.replaceAll(RegExp(r'[^0-9.]'), '')) ??
-              0,
-        );
-      }
-    } catch (e) {
-      _logger.w('Failed to send overwork nudge: $e');
-    }
+  Future<void> runDailyChecksNow() async {
+    await _sendNudgeNotifications(_config.studentId);
+    await _checkUpcomingLessons();
+  }
 
+  bool _isNotificationEnabled(String nudgeType) {
+    final s = _settingsBox;
+    if (s == null) return true;
+    if (!s.studyRemindersEnabled) return false;
+    return switch (nudgeType) {
+      'overwork' => s.overworkAlertsEnabled,
+      'revision' => s.revisionRemindersEnabled,
+      'planAdjustment' => s.planAdjustmentNotificationsEnabled,
+      'lessonReminder' => s.lessonNotificationsEnabled,
+      _ => true,
+    };
+  }
+
+  Future<void> _checkUpcomingLessons() async {
+    final s = _settingsBox;
+    if (s != null && (!s.studyRemindersEnabled || !s.lessonNotificationsEnabled)) return;
+    if (_plannerService == null) return;
     try {
-      final revisionNudges = await getRevisionNudges(studentId);
-      for (final nudge in revisionNudges) {
-        final model = EngagementNudgeModel(
-          id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-          studentId: studentId,
-          nudgeType: NudgeType.revision.name,
-          message: nudge.message,
-          severity: nudge.severity.name,
-          topicId: nudge.topicId,
-        );
-        await _nudgeRepository.create(model);
-        if (nudge.topicId != null) {
-          final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
-          final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
-          await _notificationService.showRevisionNudge(
+      final lessons = await _plannerService.getScheduledLessons();
+      final now = DateTime.now();
+      for (final lesson in lessons) {
+        if (lesson.completed || lesson.endTime != null) continue;
+        final diff = lesson.startTime.difference(now);
+        if (diff.inMinutes > 0 && diff.inMinutes <= 30) {
+          final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Lesson';
+          await _notificationService.showLessonReminder(
             id: _notificationIdCounter++,
-            topicName: nudge.topicId!,
-            daysSinceLastPractice: days,
+            lessonTitle: title,
+            startTime: lesson.startTime,
           );
         }
       }
     } catch (e) {
-      _logger.w('Failed to send revision nudge: $e');
+      _logger.w('Failed to check upcoming lessons: $e');
+    }
+  }
+
+  Future<void> _sendNudgeNotifications(String studentId) async {
+    if (!_isNotificationEnabled('overwork')) {
+      _logger.d('Overwork nudges disabled by user preferences');
+    } else {
+      try {
+        final overworkNudges = await getOverworkNudge(studentId);
+        for (final nudge in overworkNudges) {
+          final model = EngagementNudgeModel(
+            id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+            studentId: studentId,
+            nudgeType: NudgeType.overwork.name,
+            message: nudge.message,
+            severity: nudge.severity.name,
+          );
+          await _nudgeRepository.create(model);
+          await _notificationService.showOverworkWarning(
+            id: _notificationIdCounter++,
+            hoursStudied: double.tryParse(
+                    nudge.message.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+                0,
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send overwork nudge: $e');
+      }
     }
 
-    try {
-      final planNudges = await getPlanAdjustmentNudge(studentId);
-      for (final nudge in planNudges) {
-        final model = EngagementNudgeModel(
-          id: 'plan_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-          studentId: studentId,
-          nudgeType: NudgeType.planAdjustment.name,
-          message: nudge.message,
-          severity: nudge.severity.name,
-        );
-        await _nudgeRepository.create(model);
-        final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
-        final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
-        await _notificationService.showPlanAdjustmentSuggestion(
-          id: _notificationIdCounter++,
-          consecutiveLowDays: days,
-        );
+    if (!_isNotificationEnabled('revision')) {
+      _logger.d('Revision nudges disabled by user preferences');
+    } else {
+      try {
+        final revisionNudges = await getRevisionNudges(studentId);
+        for (final nudge in revisionNudges) {
+          final model = EngagementNudgeModel(
+            id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+            studentId: studentId,
+            nudgeType: NudgeType.revision.name,
+            message: nudge.message,
+            severity: nudge.severity.name,
+            topicId: nudge.topicId,
+          );
+          await _nudgeRepository.create(model);
+          if (nudge.topicId != null) {
+            final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
+            final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
+            await _notificationService.showRevisionNudge(
+              id: _notificationIdCounter++,
+              topicName: nudge.topicId!,
+              daysSinceLastPractice: days,
+            );
+          }
+        }
+      } catch (e) {
+        _logger.w('Failed to send revision nudge: $e');
       }
-    } catch (e) {
-      _logger.w('Failed to send plan adjustment nudge: $e');
     }
 
-    try {
-      final weakResult = await _masteryService.getWeakTopics(studentId);
-      if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
-        await _notificationService.showLowMasteryWarning(
-          id: _notificationIdCounter++,
-          weakTopics: weakResult.data!.map((s) => s.topicId).toList(),
-        );
+    if (!_isNotificationEnabled('planAdjustment')) {
+      _logger.d('Plan adjustment nudges disabled by user preferences');
+    } else {
+      try {
+        final planNudges = await getPlanAdjustmentNudge(studentId);
+        for (final nudge in planNudges) {
+          final model = EngagementNudgeModel(
+            id: 'plan_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+            studentId: studentId,
+            nudgeType: NudgeType.planAdjustment.name,
+            message: nudge.message,
+            severity: nudge.severity.name,
+          );
+          await _nudgeRepository.create(model);
+          final daysMatch = RegExp(r'(\d+)').firstMatch(nudge.message);
+          final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 3;
+          await _notificationService.showPlanAdjustmentSuggestion(
+            id: _notificationIdCounter++,
+            consecutiveLowDays: days,
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to send plan adjustment nudge: $e');
       }
-    } catch (e) {
-      _logger.w('Failed to check weak topics for nudge: $e');
+    }
+
+    if (!_isNotificationEnabled('weakTopics')) {
+      _logger.d('Weak topics nudges disabled by user preferences');
+    } else {
+      try {
+        final weakResult = await _masteryService.getWeakTopics(studentId);
+        if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
+          await _notificationService.showLowMasteryWarning(
+            id: _notificationIdCounter++,
+            weakTopics: weakResult.data!.map((s) => s.topicId).toList(),
+          );
+        }
+      } catch (e) {
+        _logger.w('Failed to check weak topics for nudge: $e');
+      }
     }
 
     if (_planAdapter != null) {
@@ -290,6 +370,7 @@ class EngagementScheduler {
 
   void dispose() {
     _dailyTimer?.cancel();
+    _lessonCheckTimer?.cancel();
   }
 }
 

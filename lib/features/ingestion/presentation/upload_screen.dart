@@ -47,6 +47,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _generateQuestions = true;
   String? _selectedFilePath;
   String? _selectedFileName;
+  ProcessingStatus? _processingStage;
+  String _processingStageDescription = '';
 
   @override
   void initState() {
@@ -159,7 +161,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.urlFetchFailed(result.error ?? 'unknown')),
+            content: Text(l10n.urlFetchFailed(result.error ?? l10n.unknownError)),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -192,6 +194,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
     setState(() {
       _isUploading = true;
+      _processingStage = null;
+      _processingStageDescription = '';
       _error = null;
       _success = null;
     });
@@ -231,6 +235,14 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             sourceUrl: _useUrlInput ? content : '',
             possibleTopics: [],
             generateQuestions: _generateQuestions,
+            onProgress: (status, description) {
+              if (mounted) {
+                setState(() {
+                  _processingStage = status;
+                  _processingStageDescription = description;
+                });
+              }
+            },
           );
           if (result.isFailure) {
             setState(() {
@@ -276,6 +288,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       setState(() {
         _success = l10n.contentUploadedSuccessfully;
         _isUploading = false;
+        _processingStage = null;
+        _processingStageDescription = '';
         _titleController.clear();
         _contentController.clear();
         _urlController.clear();
@@ -287,6 +301,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       setState(() {
         _error = AppLocalizations.of(context)!.uploadFailed(e.toString());
         _isUploading = false;
+        _processingStage = null;
+        _processingStageDescription = '';
       });
     }
   }
@@ -462,7 +478,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                             ),
                             const SizedBox(height: 8),
                             Align(
-                              alignment: Alignment.centerRight,
+                              alignment: AlignmentDirectional.centerEnd,
                               child: TextButton.icon(
                                 icon: const Icon(Icons.download, size: 18),
                                 label: Text(l10n.fetchAndScrape),
@@ -576,6 +592,39 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                   ),
                 ),
               ),
+              if (_isUploading && _processingStage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          LinearProgressIndicator(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _processingStageDescription,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

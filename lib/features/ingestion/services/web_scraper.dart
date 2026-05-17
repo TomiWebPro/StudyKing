@@ -14,7 +14,7 @@ class WebScraper {
     try {
       final uri = Uri.parse(url);
       if (!uri.hasScheme) {
-        return Result.failure('Invalid URL: no scheme provided');
+        return Result.failure('Invalid_URL_scheme');
       }
 
       final response = await _httpClient.get(
@@ -26,19 +26,19 @@ class WebScraper {
 
       if (response.statusCode != 200) {
         return Result.failure(
-          'Failed to fetch URL: HTTP ${response.statusCode}',
+          'Fetch_failed_status: ${response.statusCode}',
         );
       }
 
       final body = response.body;
       final extracted = DocumentExtractor.stripHtmlToText(body);
       if (extracted.isEmpty) {
-        return Result.failure('No readable content found at URL');
+        return Result.failure('No_readable_content');
       }
       return Result.success(extracted);
     } catch (e) {
       _logger.e('Web scrape error', e);
-      return Result.failure('Failed to fetch URL: $e');
+      return Result.failure(e.toString());
     }
   }
 

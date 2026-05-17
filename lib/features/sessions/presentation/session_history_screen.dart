@@ -9,6 +9,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
+import 'package:intl/intl.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
@@ -101,6 +102,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           await SessionExportService.shareCSV(
             sessions,
             'session_history_${DateTime.now().millisecondsSinceEpoch}',
+            l10n: l10n,
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -122,6 +124,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           await SessionExportService.shareJSON(
             sessions,
             'session_history_${DateTime.now().millisecondsSinceEpoch}',
+            l10n: l10n,
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -364,7 +367,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                               icon: Icon(Icons.calendar_today, color: theme.colorScheme.primary),
                               label: Text(
                                 _selectedDate != null
-                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                    ? DateFormat.yMd(l10n.localeName).format(_selectedDate!)
                                     : l10n.filterByDate,
                               ),
                               style: OutlinedButton.styleFrom(

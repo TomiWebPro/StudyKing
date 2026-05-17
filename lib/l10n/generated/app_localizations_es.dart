@@ -849,14 +849,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String questionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count preguntas disponibles',
-      one: '1 pregunta disponible',
-      zero: 'No hay preguntas disponibles',
-    );
-    return '$_temp0';
+    return 'Preguntas: $count';
   }
 
   @override
@@ -2362,7 +2355,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get roadmapGoal => 'Meta de Aprendizaje';
 
   @override
-  String get roadmapGoalHint => 'ej., Quiero aprender Física IB en 180 días';
+  String get roadmapGoalHint => 'p. ej., Quiero aprender Física IB en 180 días';
 
   @override
   String get generateRoadmap => 'Generar Roadmap';
@@ -3189,7 +3182,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String overtimeLabel(int minutes) {
-    return '+$minutes min';
+    return '+${minutes}m';
   }
 
   @override
@@ -3732,4 +3725,93 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get requiredField => 'Campo obligatorio';
+
+  @override
+  String get gallery => 'Galería';
+
+  @override
+  String get requiredFieldIndicator => '*';
+
+  @override
+  String get expressionLabel => 'Expresión: ';
+
+  @override
+  String get defaultLessonGoal => 'Comprender el tema';
+
+  @override
+  String get sectionIntroduction => 'Introducción';
+
+  @override
+  String get sectionMainContent => 'Contenido Principal';
+
+  @override
+  String get sectionPractice => 'Práctica';
+
+  @override
+  String get checkpointStarted => 'Lección iniciada';
+
+  @override
+  String get checkpointTopicCovered => 'Tema cubierto';
+
+  @override
+  String get checkpointPracticeCompleted => 'Práctica completada';
+
+  @override
+  String get sessionType => 'Tipo';
+
+  @override
+  String get addCourseSubject => 'Agregar Curso/Materia';
+
+  @override
+  String hoursPerDayAbbrev(String hours) {
+    return '$hours/Días';
+  }
+
+  @override
+  String lessonTimeStatus(String topicId, String time, String completedSuffix) {
+    return '$topicId · $time$completedSuffix';
+  }
+
+  @override
+  String practiceModeWithSubject(String mode, String subject) {
+    return '$mode - $subject';
+  }
+
+  @override
+  String mentorWelcomeFull(String greeting, String body) {
+    return '$greeting\n\n$body';
+  }
+
+  @override
+  String get unknownError => 'Error desconocido';
+
+  @override
+  String failedToLoadPlan(String error) {
+    return 'Error al cargar el plan: $error';
+  }
+
+  @override
+  String backupExportFailedWithError(String error) {
+    return 'Error al exportar la copia de seguridad: $error';
+  }
+
+  @override
+  String invalidBackupFileWithError(String error) {
+    return 'Archivo de copia no válido: $error';
+  }
+
+  @override
+  String questionsCountPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count preguntas disponibles',
+      one: '1 pregunta disponible',
+      zero: 'No hay preguntas disponibles',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mentorBulletPoint => '• ';
 }

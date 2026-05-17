@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
@@ -52,20 +49,6 @@ Future<void> pumpShowDialog(WidgetTester tester, Widget child) async {
 }
 
 void main() {
-  late String hivePath;
-
-  setUp(() async {
-    hivePath = (await Directory.systemTemp.createTemp('onboarding_widget_test_')).path;
-    Hive.init(hivePath);
-  });
-
-  tearDown(() async {
-    await Hive.close();
-    if (hivePath.isNotEmpty) {
-      await Directory(hivePath).delete(recursive: true);
-    }
-  });
-
   group('OnboardingDialog', () {
     testWidgets('renders welcome title', (tester) async {
       await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
@@ -164,36 +147,32 @@ void main() {
       expect(checkbox.value, isFalse);
     });
 
-    testWidgets('Get Started persists completed flag', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
-        await tester.pump();
-        await tester.tap(find.text('Get Started'));
-        await tester.pump();
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_completed'), isTrue);
-      });
+    testWidgets('Get Started closes the dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      await tester.tap(find.text('Get Started'));
+      await tester.pump();
+      expect(find.byType(OnboardingDialog), findsNothing);
     });
 
-    testWidgets('Get Started persists completed flag even when checkbox is checked', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
-        await tester.pump();
-        await tester.tap(find.text("Don't show again"));
-        await tester.pump();
-        await tester.tap(find.text('Get Started'));
-        await tester.pump();
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_completed'), isTrue);
-      });
+    testWidgets('Get Started closes dialog even when checkbox is checked', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      await tester.tap(find.text("Don't show again"));
+      await tester.pump();
+      await tester.tap(find.text('Get Started'));
+      await tester.pump();
+      expect(find.byType(OnboardingDialog), findsNothing);
     });
 
     testWidgets('Add Subject navigates to subject selection', (tester) async {
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         home: const OnboardingDialog(),
+        navigatorObservers: [observer],
         routes: {
           AppRoutes.subjectSelection: (_) => const Scaffold(
                 body: Center(child: Text('Subject Selection')),
@@ -206,36 +185,95 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Add Subject'));
       await tester.pumpAndSettle();
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.subjectSelection);
       expect(find.text('Subject Selection'), findsOneWidget);
     });
 
-    testWidgets('Add Subject persists completed flag when checkbox unchecked', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const OnboardingDialog(),
-          routes: {
-            AppRoutes.subjectSelection: (_) => const Scaffold(
-                  body: Center(child: Text('Subject Selection')),
-                ),
-            AppRoutes.quickGuide: (_) => const Scaffold(
-                  body: Center(child: Text('Quick Guide')),
-                ),
-          },
-        ));
-        await tester.pump();
-        await tester.tap(find.text('Add Subject'));
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_completed'), isTrue);
-        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
-      });
+    testWidgets('Add Subject navigates to subject selection when checkbox unchecked', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: const OnboardingDialog(),
+        navigatorObservers: [observer],
+        routes: {
+          AppRoutes.subjectSelection: (_) => const Scaffold(
+                body: Center(child: Text('Subject Selection')),
+              ),
+          AppRoutes.quickGuide: (_) => const Scaffold(
+                body: Center(child: Text('Quick Guide')),
+              ),
+        },
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Add Subject'));
+      await tester.pumpAndSettle();
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.subjectSelection);
+      expect(find.text('Subject Selection'), findsOneWidget);
     });
 
     testWidgets('Quick Guide navigates to quick guide screen', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: const OnboardingDialog(),
+        navigatorObservers: [observer],
+        routes: {
+          AppRoutes.subjectSelection: (_) => const Scaffold(
+                body: Center(child: Text('Subject Selection')),
+              ),
+          AppRoutes.quickGuide: (_) => const Scaffold(
+                body: Center(child: Text('Quick Guide')),
+              ),
+        },
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Quick Guide'));
+      await tester.pumpAndSettle();
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.quickGuide);
+    });
+
+    testWidgets('Quick Guide navigates to quick guide screen when checkbox unchecked', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: const OnboardingDialog(),
+        navigatorObservers: [observer],
+        routes: {
+          AppRoutes.subjectSelection: (_) => const Scaffold(
+                body: Center(child: Text('Subject Selection')),
+              ),
+          AppRoutes.quickGuide: (_) => const Scaffold(
+                body: Center(child: Text('Quick Guide')),
+              ),
+        },
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Quick Guide'));
+      await tester.pumpAndSettle();
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.quickGuide);
+    });
+
+    testWidgets('Add Subject navigates when dont-show-again checked', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      await tester.tap(find.text("Don't show again"));
+      await tester.pump();
+      await tester.tap(find.text('Add Subject'));
+      await tester.pumpAndSettle();
+      expect(find.text('Subject Selection'), findsOneWidget);
+    });
+
+    testWidgets('Quick Guide navigates when dont-show-again checked', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -251,89 +289,11 @@ void main() {
         },
       ));
       await tester.pump();
+      await tester.tap(find.text("Don't show again"));
+      await tester.pump();
       await tester.tap(find.text('Quick Guide'));
       await tester.pumpAndSettle();
       expect(find.text('Quick Guide'), findsOneWidget);
-    });
-
-    testWidgets('Quick Guide persists completed flag when checkbox unchecked', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const OnboardingDialog(),
-          routes: {
-            AppRoutes.subjectSelection: (_) => const Scaffold(
-                  body: Center(child: Text('Subject Selection')),
-                ),
-            AppRoutes.quickGuide: (_) => const Scaffold(
-                  body: Center(child: Text('Quick Guide')),
-                ),
-          },
-        ));
-        await tester.pump();
-        await tester.tap(find.text('Quick Guide'));
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_completed'), isTrue);
-        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
-      });
-    });
-
-    testWidgets('Add Subject with dont-show-again checked persists dontShowAgain flag', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const OnboardingDialog(),
-          routes: {
-            AppRoutes.subjectSelection: (_) => const Scaffold(
-                  body: Center(child: Text('Subject Selection')),
-                ),
-            AppRoutes.quickGuide: (_) => const Scaffold(
-                  body: Center(child: Text('Quick Guide')),
-                ),
-          },
-        ));
-        await tester.pump();
-        await tester.tap(find.text("Don't show again"));
-        await tester.pump();
-        await tester.tap(find.text('Add Subject'));
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_dont_show_again'), isTrue);
-      });
-    });
-
-    testWidgets('Quick Guide with dont-show-again checked persists dontShowAgain flag', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const OnboardingDialog(),
-          routes: {
-            AppRoutes.subjectSelection: (_) => const Scaffold(
-                  body: Center(child: Text('Subject Selection')),
-                ),
-            AppRoutes.quickGuide: (_) => const Scaffold(
-                  body: Center(child: Text('Quick Guide')),
-                ),
-          },
-        ));
-        await tester.pump();
-        await tester.tap(find.text("Don't show again"));
-        await tester.pump();
-        await tester.tap(find.text('Quick Guide'));
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_dont_show_again'), isTrue);
-      });
     });
 
     testWidgets('feature icons use theme primary color', (tester) async {
@@ -402,18 +362,14 @@ void main() {
       expect(noticeText.style?.color, isNotNull);
     });
 
-    testWidgets('Get Started never persists dontShowAgain flag', (tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
-        await tester.pump();
-        await tester.tap(find.text("Don't show again"));
-        await tester.pump();
-        await tester.tap(find.text('Get Started'));
-        await tester.pump();
-        final box = await Hive.openBox(HiveBoxNames.settings);
-        expect(box.get('onboarding_completed'), isTrue);
-        expect(box.get('onboarding_dont_show_again'), isNot(isTrue));
-      });
+    testWidgets('Get Started closes dialog even with dont-show-again checked', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      await tester.tap(find.text("Don't show again"));
+      await tester.pump();
+      await tester.tap(find.text('Get Started'));
+      await tester.pump();
+      expect(find.byType(OnboardingDialog), findsNothing);
     });
 
     testWidgets('dialog renders rocket icon with theme primary color not null', (tester) async {
@@ -472,6 +428,7 @@ void main() {
     });
 
     testWidgets('Configure Now navigates to api config', (tester) async {
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -479,6 +436,7 @@ void main() {
           home: Scaffold(
             body: ApiKeyBanner(onDismiss: () {}),
           ),
+        navigatorObservers: [observer],
         routes: {
           AppRoutes.apiConfig: (_) => const Scaffold(
                 body: Center(child: Text('API Config')),
@@ -488,6 +446,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Configure Now'));
       await tester.pumpAndSettle();
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.apiConfig);
       expect(find.text('API Config'), findsOneWidget);
     });
 

@@ -2,6 +2,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -43,9 +44,9 @@ class StudyProgressTracker {
     final weekAgo = now.subtract(Timeouts.week);
     final weeklyAttempts = attempts.where((a) => a.timestamp.isAfter(weekAgo)).length;
 
-    final today = DateTime(now.year, now.month, now.day);
+    final today = now.dateOnly;
     final dailyAttempts = attempts.where((a) {
-      final date = DateTime(a.timestamp.year, a.timestamp.month, a.timestamp.day);
+      final date = a.timestamp.dateOnly;
       return date == today;
     }).length;
 

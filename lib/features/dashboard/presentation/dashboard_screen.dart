@@ -15,6 +15,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/summary_row.da
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -135,6 +136,19 @@ class DashboardScreen extends ConsumerWidget {
                 onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardMasterySnapshotProvider(studentId)); },
                 title: _cardTitle(context, Icons.analytics, l10n.masteryOverview),
                 body: MasteryProgressCard(snapshot: snapshotData),
+              ),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'workload',
+                asyncValue: allMasteryAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                title: _cardTitle(context, Icons.trending_up, 'Remaining Workload'),
+                body: allMasteryData.isNotEmpty
+                    ? WorkloadCard(
+                        allMastery: allMasteryData,
+                        resolveTopicName: (id) => topicNamesData[id] ?? id,
+                      )
+                    : const SizedBox.shrink(),
               ),
               const SizedBox(height: 16),
               CollapsibleCard(

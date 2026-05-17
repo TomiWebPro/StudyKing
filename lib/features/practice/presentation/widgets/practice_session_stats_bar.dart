@@ -40,7 +40,7 @@ class PracticeSessionStatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scoreValue = currentIndex > 0 ? formatPercent(correctAnswers / (currentIndex + 1) * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0) : '0%';
+    final scoreValue = currentIndex > 0 ? formatPercent(correctAnswers / (currentIndex + 1) * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0) : formatPercent(0, l10n.localeName, minFractionDigits: 0);
     return Container(
       padding: ResponsiveUtils.cardPadding(context),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,

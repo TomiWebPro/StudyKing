@@ -7,8 +7,8 @@ import 'package:studyking/features/questions/data/models/question_evaluation_mod
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
-class MockMasteryGraphRepository extends MasteryGraphRepository {
-  MockMasteryGraphRepository();
+class FakeMasteryGraphRepository extends MasteryGraphRepository {
+  FakeMasteryGraphRepository();
   final Map<String, MasteryState> _masteryStates = {};
   final Map<String, QuestionMasteryState> _questionMasteryStates = {};
   final Map<String, QuestionEvaluation> _evaluations = {};
@@ -162,10 +162,10 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
 void main() {
   group('MasteryGraphService', () {
     late MasteryGraphService service;
-    late MockMasteryGraphRepository mockRepo;
+    late FakeMasteryGraphRepository mockRepo;
 
     setUp(() {
-      mockRepo = MockMasteryGraphRepository();
+      mockRepo = FakeMasteryGraphRepository();
       service = MasteryGraphService(repository: mockRepo);
     });
 

@@ -334,7 +334,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               ),
             if (task.status == LlmTaskStatus.running || task.status == LlmTaskStatus.queued)
               Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: TextButton.icon(
                   onPressed: () => taskManager.cancelTask(task.id),
                   icon: const Icon(Icons.cancel, size: 18),

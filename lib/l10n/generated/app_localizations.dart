@@ -1544,10 +1544,10 @@ abstract class AppLocalizations {
   /// **'Lesson'**
   String get lesson;
 
-  /// Shows how many questions are available for practice
+  /// Label showing number of questions
   ///
   /// In en, this message translates to:
-  /// **'{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}'**
+  /// **'Questions: {count}'**
   String questionsCount(int count);
 
   /// Subtitle for practice tab showing subject name
@@ -2858,7 +2858,7 @@ abstract class AppLocalizations {
   /// **'Adjust Plan'**
   String get adjustPlan;
 
-  /// Dismiss button label
+  /// Button to dismiss a nudge
   ///
   /// In en, this message translates to:
   /// **'Dismiss'**
@@ -6293,6 +6293,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Required field'**
   String get requiredField;
+
+  /// Gallery option in image picker
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// Required field indicator symbol
+  ///
+  /// In en, this message translates to:
+  /// **'*'**
+  String get requiredFieldIndicator;
+
+  /// Label prefix for math expression display
+  ///
+  /// In en, this message translates to:
+  /// **'Expression: '**
+  String get expressionLabel;
+
+  /// Default lesson goal text
+  ///
+  /// In en, this message translates to:
+  /// **'Understand the topic'**
+  String get defaultLessonGoal;
+
+  /// Default section title for introduction
+  ///
+  /// In en, this message translates to:
+  /// **'Introduction'**
+  String get sectionIntroduction;
+
+  /// Default section title for main content
+  ///
+  /// In en, this message translates to:
+  /// **'Main Content'**
+  String get sectionMainContent;
+
+  /// Default section title for practice
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get sectionPractice;
+
+  /// Default checkpoint for lesson started
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson started'**
+  String get checkpointStarted;
+
+  /// Default checkpoint for topic covered
+  ///
+  /// In en, this message translates to:
+  /// **'Topic covered'**
+  String get checkpointTopicCovered;
+
+  /// Default checkpoint for practice completed
+  ///
+  /// In en, this message translates to:
+  /// **'Practice completed'**
+  String get checkpointPracticeCompleted;
+
+  /// Column header for session type in PDF export
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get sessionType;
+
+  /// Button label to add a course or subject
+  ///
+  /// In en, this message translates to:
+  /// **'Add Course/Subject'**
+  String get addCourseSubject;
+
+  /// Hours per day abbreviation with separator
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}/Days'**
+  String hoursPerDayAbbrev(String hours);
+
+  /// Lesson time status with topic and completion marker
+  ///
+  /// In en, this message translates to:
+  /// **'{topicId} · {time}{completedSuffix}'**
+  String lessonTimeStatus(String topicId, String time, String completedSuffix);
+
+  /// AppBar title combining practice mode and subject name
+  ///
+  /// In en, this message translates to:
+  /// **'{mode} - {subject}'**
+  String practiceModeWithSubject(String mode, String subject);
+
+  /// Full mentor welcome message with greeting and body
+  ///
+  /// In en, this message translates to:
+  /// **'{greeting}\n\n{body}'**
+  String mentorWelcomeFull(String greeting, String body);
+
+  /// Fallback when error message is null
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get unknownError;
+
+  /// Error message when plan fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load plan: {error}'**
+  String failedToLoadPlan(String error);
+
+  /// Error message when backup export fails with details
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export backup: {error}'**
+  String backupExportFailedWithError(String error);
+
+  /// Error message when backup file format is invalid with details
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid backup file: {error}'**
+  String invalidBackupFileWithError(String error);
+
+  /// Plural count of available questions
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}'**
+  String questionsCountPlural(int count);
+
+  /// Bullet point prefix for mentor recommendation list items
+  ///
+  /// In en, this message translates to:
+  /// **'• '**
+  String get mentorBulletPoint;
 }
 
 class _AppLocalizationsDelegate

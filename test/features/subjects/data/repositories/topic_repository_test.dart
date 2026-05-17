@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-class _MockTopicRepository extends TopicRepository {
+class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _storage = {};
 
   @override
@@ -80,10 +80,10 @@ Topic createTestTopic({
 
 void main() {
   group('TopicRepository', () {
-    late _MockTopicRepository repository;
+    late _FakeTopicRepository repository;
 
     setUp(() {
-      repository = _MockTopicRepository();
+      repository = _FakeTopicRepository();
     });
 
     group('create', () {

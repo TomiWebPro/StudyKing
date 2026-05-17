@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
   await tester.pumpWidget(MaterialApp(
@@ -80,7 +81,7 @@ void main() {
 
     testWidgets('schedule button calls onSchedule and pops', (tester) async {
       bool scheduled = false;
-      final observer = _NavigatorObserverMock();
+      final observer = TestNavigatorObserver();
 
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -310,15 +311,6 @@ void main() {
 }
 
 Future<void> _fakeSchedule(DateTime time, int duration) async {}
-
-class _NavigatorObserverMock extends NavigatorObserver {
-  int popCount = 0;
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    popCount++;
-    super.didPop(route, previousRoute);
-  }
-}
 
 class _FakeConflictPlannerService extends PlannerService {
   final bool conflictResult;

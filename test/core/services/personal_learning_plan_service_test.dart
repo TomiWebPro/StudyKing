@@ -9,7 +9,7 @@ import 'package:studyking/features/questions/data/models/question_evaluation_mod
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 
-class MockMasteryGraphRepository extends MasteryGraphRepository {
+class FakeMasteryGraphRepository extends MasteryGraphRepository {
   @override
   Future<void> init() async {}
 
@@ -96,7 +96,7 @@ class MockMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
-class MockTopicRepository extends TopicRepository {
+class FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
 
   void addTopic(Topic topic) {
@@ -174,12 +174,12 @@ void main() {
 
   group('PersonalLearningPlanService', () {
     late PersonalLearningPlanService service;
-    late MockMasteryGraphRepository mockRepo;
-    late MockTopicRepository mockTopicRepo;
+    late FakeMasteryGraphRepository mockRepo;
+    late FakeTopicRepository mockTopicRepo;
 
     setUp(() {
-      mockRepo = MockMasteryGraphRepository();
-      mockTopicRepo = MockTopicRepository();
+      mockRepo = FakeMasteryGraphRepository();
+      mockTopicRepo = FakeTopicRepository();
       service = PersonalLearningPlanService(
         masteryService: null,
         repository: mockRepo,

@@ -9,7 +9,7 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 
-class _MockLessonRepository extends LessonRepository {
+class _FakeLessonRepository extends LessonRepository {
   final Map<String, Lesson> _storage = {};
   final Map<String, LessonBlock> _blockStorage = {};
 
@@ -129,10 +129,10 @@ Lesson createTestLesson({
 
 void main() {
   group('LessonRepository', () {
-    late _MockLessonRepository repository;
+    late _FakeLessonRepository repository;
 
     setUp(() {
-      repository = _MockLessonRepository();
+      repository = _FakeLessonRepository();
     });
 
     group('create', () {

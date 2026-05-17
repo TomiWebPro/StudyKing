@@ -35,6 +35,11 @@ class FakeSettingsRepository implements SettingsRepository {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
   }) async {
     _settings = SettingsBox(
       apiKey: apiKey ?? _settings.apiKey,
@@ -55,6 +60,11 @@ class FakeSettingsRepository implements SettingsRepository {
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: breakDurationSeconds ?? _settings.breakDurationSeconds,
+      dailyReminderHour: dailyReminderHour ?? _settings.dailyReminderHour,
+      dailyReminderMinute: dailyReminderMinute ?? _settings.dailyReminderMinute,
+      firstFocusVisit: firstFocusVisit ?? _settings.firstFocusVisit,
+      dailyReminderEnabled: dailyReminderEnabled ?? _settings.dailyReminderEnabled,
     );
   }
 
@@ -726,7 +736,7 @@ void main() {
 
     group('Model Parsing', () {
       testWidgets('AI model selection parses provider correctly', (tester) async {
-        HttpOverrides.global = _MockHttpOverride(
+        HttpOverrides.global = _FakeHttpOverride(
           responseStatusCode: 200,
           responseBody: '{"data": [{"id": "anthropic/claude-3", "name": "Claude 3", "providers": [{"id": "openrouter"}]}]}',
         );
@@ -745,7 +755,7 @@ void main() {
       });
 
       testWidgets('empty model list handled gracefully', (tester) async {
-        HttpOverrides.global = _MockHttpOverride(
+        HttpOverrides.global = _FakeHttpOverride(
           responseStatusCode: 200,
           responseBody: '{"data": []}',
         );
@@ -888,7 +898,7 @@ void main() {
     });
 
     testWidgets('shows generic error on malformed response', (tester) async {
-      HttpOverrides.global = _MockHttpOverride(
+      HttpOverrides.global = _FakeHttpOverride(
         responseStatusCode: 200,
         responseBody: 'not valid json {{{',
       );
@@ -922,7 +932,7 @@ void main() {
 
   group('Model Search Filtering', () {
     testWidgets('search filter narrows model list', (tester) async {
-      HttpOverrides.global = _MockHttpOverride(
+      HttpOverrides.global = _FakeHttpOverride(
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
@@ -957,7 +967,7 @@ void main() {
     });
 
     testWidgets('search is case-insensitive', (tester) async {
-      HttpOverrides.global = _MockHttpOverride(
+      HttpOverrides.global = _FakeHttpOverride(
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
@@ -986,7 +996,7 @@ void main() {
     });
 
     testWidgets('selecting model calls onModelSelected and closes sheet', (tester) async {
-      HttpOverrides.global = _MockHttpOverride(
+      HttpOverrides.global = _FakeHttpOverride(
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
@@ -1069,11 +1079,11 @@ void main() {
   });
 }
 
-class _MockHttpOverride extends HttpOverrides {
+class _FakeHttpOverride extends HttpOverrides {
   final int responseStatusCode;
   final String responseBody;
 
-  _MockHttpOverride({
+  _FakeHttpOverride({
     required this.responseStatusCode,
     required this.responseBody,
   });

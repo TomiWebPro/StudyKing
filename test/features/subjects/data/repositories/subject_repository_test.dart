@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 
-class _MockSubjectRepository extends SubjectRepository {
+class _FakeSubjectRepository extends SubjectRepository {
   final Map<String, Subject> _storage = {};
 
   @override
@@ -115,10 +115,10 @@ Subject createTestSubject({
 
 void main() {
   group('SubjectRepository', () {
-    late _MockSubjectRepository repository;
+    late _FakeSubjectRepository repository;
 
     setUp(() {
-      repository = _MockSubjectRepository();
+      repository = _FakeSubjectRepository();
     });
 
     group('getAll', () {

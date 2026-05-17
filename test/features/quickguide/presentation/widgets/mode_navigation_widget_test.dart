@@ -3,15 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/mode_navigation_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class _TestNavigatorObserver extends NavigatorObserver {
-  final List<Route<dynamic>> pushedRoutes = [];
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRoutes.add(route);
-  }
-}
-
 Widget _buildTestApp({
   NavigatorObserver? observer,
 }) {
@@ -72,9 +63,8 @@ void main() {
       expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
     });
 
-    testWidgets('AI Tutor card tap pushes /tutor route', (tester) async {
-      final observer = _TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestApp(observer: observer));
+    testWidgets('AI Tutor card tap shows dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -82,9 +72,32 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(observer.pushedRoutes.length, 2);
-      final routeName = observer.pushedRoutes.last.settings.name;
-      expect(routeName, '/tutor');
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('AI Tutor'), findsAtLeast(1));
+      expect(
+        find.textContaining(
+            'Please create a subject and study plan first'),
+        findsOneWidget,
+      );
+      expect(find.text('OK'), findsOneWidget);
+    });
+
+    testWidgets('AI Tutor dialog dismisses on OK tap', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('AI Tutor'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AlertDialog), findsNothing);
     });
 
     testWidgets('Mentor card tap navigates to /mentor route', (tester) async {
@@ -249,11 +262,39 @@ void main() {
       expect(find.text('Mentor'), findsOneWidget);
       expect(find.text('Choose a study mode'), findsOneWidget);
 
+      await tester.tap(find.text('Mentor'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Mentor Screen'), findsOneWidget);
+    });
+
+    testWidgets('AI Tutor dialog appears on xs breakpoint',
+        (tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+      });
+      tester.view.physicalSize = const Size(590, 900);
+
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
       await tester.tap(find.text('AI Tutor'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Tutor Screen'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.textContaining(
+            'Please create a subject and study plan first'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
     });
   });
 }

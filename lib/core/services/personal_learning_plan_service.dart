@@ -1,6 +1,8 @@
 import '../errors/result.dart';
 import '../utils/localization_helpers.dart';
 import '../utils/logger.dart';
+import '../utils/study_utils.dart';
+import '../utils/time_utils.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
@@ -28,13 +30,13 @@ class PlanGenerationConfig {
   final int restDayFrequency;
 
   PlanGenerationConfig({
-    this.planDurationDays = 7,
-    this.targetQuestionsPerDay = 15,
-    this.targetMinutesPerDay = 30.0,
-    this.masteryThreshold = 0.8,
-    this.maxQuestionsPerTopic = 10,
+    this.planDurationDays = defaultPlanDurationDays,
+    this.targetQuestionsPerDay = defaultQuestionsPerDay,
+    this.targetMinutesPerDay = defaultMinutesPerDay,
+    this.masteryThreshold = defaultMasteryThreshold,
+    this.maxQuestionsPerTopic = defaultMaxQuestionsPerTopic,
     this.includeRestDays = false,
-    this.restDayFrequency = 7,
+    this.restDayFrequency = defaultPlanDurationDays,
   });
 }
 
@@ -97,7 +99,7 @@ class PersonalLearningPlanService {
     try {
       await _repository.init();
     } catch (e) {
-      return Result.failure('Failed to initialize repository: $e');
+      return Result.failure(e.toString());
     }
     if (syllabusGoals != null) {
       try {
@@ -174,6 +176,7 @@ class PersonalLearningPlanService {
         final resolved = await resolver.resolveSyllabus(
           subjectId: subjectId,
           studentId: studentId,
+          l10n: _l10n,
         );
         if (resolved.isSuccess && resolved.data!.isNotEmpty) {
           learningLevels = resolver.buildLearningLevels(resolved.data!);
@@ -535,12 +538,12 @@ class PersonalLearningPlanService {
     PersonalLearningPlan plan,
   ) async {
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayStart = now.dateOnly;
     final redistributeDays = 3;
     final extraPerDay = (missedMinutes / redistributeDays).ceil();
 
     final updatedPlans = plan.dailyPlans.map((day) {
-      final dDay = DateTime(day.date.year, day.date.month, day.date.day);
+      final dDay = day.date.dateOnly;
       if (dDay.isAfter(todayStart) &&
           dDay.difference(todayStart).inDays <= redistributeDays &&
           !day.isRestDay) {
@@ -576,16 +579,12 @@ class PersonalLearningPlanService {
     required int plannedMinutes,
     required int actualMinutes,
   }) {
-    if (plannedQuestions == 0 && plannedMinutes == 0) return 1.0;
-
-    final questionScore = plannedQuestions > 0
-        ? (actualQuestions / plannedQuestions).clamp(0.0, 1.0)
-        : 0.5;
-    final timeScore = plannedMinutes > 0
-        ? (actualMinutes / plannedMinutes).clamp(0.0, 1.5)
-        : 0.5;
-
-    return (questionScore * 0.6 + timeScore * 0.4).clamp(0.0, 1.0);
+    return calculateAdherenceScore(
+      plannedQuestions: plannedQuestions,
+      actualQuestions: actualQuestions,
+      plannedMinutes: plannedMinutes,
+      actualMinutes: actualMinutes,
+    );
   }
 
   Future<List<DailyPlan>> _generateDailyPlans({

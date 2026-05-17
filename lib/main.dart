@@ -32,6 +32,7 @@ import 'core/services/mastery_graph_service.dart';
 import 'core/services/plan_adapter.dart';
 import 'features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'features/planner/data/repositories/plan_adherence_repository.dart';
+import 'features/planner/services/planner_service.dart';
 import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
 import 'features/settings/presentation/settings_screen.dart';
@@ -43,6 +44,10 @@ import 'features/focus_mode/presentation/focus_timer_screen.dart';
 import 'features/onboarding/presentation/onboarding_dialog.dart';
 
 final Logger _mainLogger = const Logger('App');
+
+EngagementScheduler? _engagementScheduler;
+
+EngagementScheduler? getEngagementScheduler() => _engagementScheduler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,7 +89,7 @@ void main() async {
     await StudentIdService().init();
 
     try {
-      final engagementScheduler = EngagementScheduler(
+      final schedulerRef = EngagementScheduler(
         tracker: StudyProgressTracker(
           attemptRepo: AttemptRepository(),
           masteryService: MasteryGraphService(),
@@ -95,15 +100,18 @@ void main() async {
         adherenceRepository: PlanAdherenceRepository(),
         planAdapter: PlanAdapter(),
         sessionRepository: SessionRepository(),
+        plannerService: PlannerService(),
       );
-      await engagementScheduler.init();
+      await schedulerRef.init();
+      _engagementScheduler = schedulerRef;
     } catch (e) {
       _mainLogger.w('Failed to init EngagementScheduler: $e');
     }
     
     // Load initial settings to sync with providers
     try {
-      await settingsRepository.getSettings();
+      final settings = await settingsRepository.getSettings();
+      _engagementScheduler?.updateSettings(settings);
     } catch (e) {
       _mainLogger.e('Error loading initial settings', e);
     }
@@ -131,6 +139,9 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _engagementScheduler?.updateSettings(settings);
+    });
     final isLoading = ref.watch(settingsLoadingProvider);
     final locale = ref.watch(localeProvider);
 

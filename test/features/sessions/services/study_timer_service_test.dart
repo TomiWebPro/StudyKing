@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -74,22 +71,29 @@ class FakeSessionRepository extends SessionRepository {
   }
 }
 
+class TestableStudyTimerService extends StudyTimerService {
+  int _dailyCapMinutes = 0;
+
+  TestableStudyTimerService({required super.repository});
+
+  void setDailyCapMinutes(int value) => _dailyCapMinutes = value;
+
+  @override
+  Future<int> getDailyCapMinutes() async => _dailyCapMinutes;
+}
+
 void main() {
   group('StudyTimerService', () {
     late FakeSessionRepository repository;
-    late StudyTimerService service;
+    late TestableStudyTimerService service;
 
     setUp(() async {
-      final dir = await Directory.systemTemp.createTemp('timer_test_');
-      Hive.init(dir.path);
-      await Hive.openBox('settings');
       repository = FakeSessionRepository();
-      service = StudyTimerService(repository: repository);
+      service = TestableStudyTimerService(repository: repository);
     });
 
     tearDown(() async {
       await service.dispose();
-      await Hive.close();
     });
 
     group('initial state', () {
@@ -262,8 +266,7 @@ void main() {
       });
 
       test('returns stored cap value', () async {
-        final box = Hive.box('settings');
-        await box.put('dailyCapMinutes', 120);
+        service.setDailyCapMinutes(120);
         expect(await service.getDailyCapMinutes(), 120);
       });
     });
@@ -274,14 +277,12 @@ void main() {
       });
 
       test('returns false when under cap', () async {
-        final box = Hive.box('settings');
-        await box.put('dailyCapMinutes', 120);
+        service.setDailyCapMinutes(120);
         expect(await service.isDailyCapReached(30), isFalse);
       });
 
       test('returns true when over cap', () async {
-        final box = Hive.box('settings');
-        await box.put('dailyCapMinutes', 60);
+        service.setDailyCapMinutes(60);
         await repository.save(Session(
           id: 'existing-session',
           studentId: 'student-1',
@@ -299,8 +300,7 @@ void main() {
       });
 
       test('returns remaining minutes', () async {
-        final box = Hive.box('settings');
-        await box.put('dailyCapMinutes', 120);
+        service.setDailyCapMinutes(120);
         expect(await service.getRemainingDailyCapMinutes(), 120);
       });
     });

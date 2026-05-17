@@ -9,7 +9,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
-class _MockSpacedRepetitionRepository extends SpacedRepetitionRepository {
+class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
   final Map<String, Question> _questionStorage = {};
   final Map<String, StudentAttempt> _attemptStorage = {};
 
@@ -111,7 +111,7 @@ Question createSRQuestion({
   );
 }
 
-class MockQuestionBox implements Box<Question> {
+class FakeQuestionBox implements Box<Question> {
   final Map<String, Question> _storage = {};
 
   @override
@@ -167,7 +167,7 @@ void main() {
   group('SpacedRepetitionQueries', () {
     group('getQuestionsDueAfter', () {
       test('returns questions due after specific date', () {
-        final box = MockQuestionBox();
+        final box = FakeQuestionBox();
         box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
         box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
         final due = SpacedRepetitionQueries.getQuestionsDueAfter(box, DateTime(2023, 1, 1));
@@ -190,7 +190,7 @@ void main() {
 
     group('mapQuestionsToStatus', () {
       test('returns status map for questions', () {
-        final box = MockQuestionBox();
+        final box = FakeQuestionBox();
         box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
         box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
         final status = SpacedRepetitionQueries.mapQuestionsToStatus(box);
@@ -201,10 +201,10 @@ void main() {
   });
 
   group('SpacedRepetitionRepository', () {
-    late _MockSpacedRepetitionRepository repository;
+    late _FakeSpacedRepetitionRepository repository;
 
     setUp(() {
-      repository = _MockSpacedRepetitionRepository();
+      repository = _FakeSpacedRepetitionRepository();
     });
 
     group('getQuestionsDueForReview', () {

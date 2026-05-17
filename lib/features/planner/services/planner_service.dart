@@ -16,11 +16,13 @@ import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/time_utils.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'syllabus_resolver.dart';
 import 'action_executor.dart';
+import 'action_planner.dart';
 
-class PlannerService {
+class PlannerService implements ActionPlanner {
   final PlanRepository planRepo;
   final MasteryGraphService masteryService;
   final MasteryGraphRepository? repository;
@@ -32,12 +34,11 @@ class PlannerService {
   final PlanAdapter planAdapter;
   final SyllabusResolver syllabusResolver;
   final PlanAdherenceRepository adherenceRepo;
-  ActionExecutor? _actionExecutor;
+  final ActionExecutor? _actionExecutor;
   final String? fixedStudentId;
 
   ActionExecutor get actionExecutor {
-    _actionExecutor ??= ActionExecutor(plannerService: this);
-    return _actionExecutor!;
+    return _actionExecutor ?? ActionExecutor(actionPlanner: this);
   }
 
   PlannerService({
@@ -244,6 +245,19 @@ class PlannerService {
     return updated;
   }
 
+  @override
+  Future<bool> suggestPlanRegeneration({
+    required String studentId,
+    required double adjustmentFactor,
+  }) async {
+    final result = await planAdapter.suggestRegeneration(
+      studentId: studentId,
+      adjustmentFactor: adjustmentFactor,
+    );
+    return result.isSuccess;
+  }
+
+  @override
   Future<bool> scheduleLesson({
     required String topicId,
     required String topicTitle,
@@ -272,6 +286,7 @@ class PlannerService {
     }
   }
 
+  @override
   Future<bool> cancelLesson(String sessionId) async {
     try {
       await sessionRepo.init();
@@ -391,12 +406,12 @@ class PlannerService {
     await adherenceRepo.init();
     final records = await adherenceRepo.getByStudent(studentId);
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayStart = now.dateOnly;
 
     int actualMinutesToday = 0;
     int actualQuestionsToday = 0;
     for (final r in records) {
-      final rDay = DateTime(r.date.year, r.date.month, r.date.day);
+      final rDay = r.date.dateOnly;
       if (rDay == todayStart) {
         actualMinutesToday += r.actualMinutes;
         actualQuestionsToday += r.actualQuestions;

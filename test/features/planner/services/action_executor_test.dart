@@ -71,7 +71,7 @@ void main() {
 
     setUp(() {
       plannerService = FakePlannerService();
-      executor = ActionExecutor(plannerService: plannerService);
+      executor = ActionExecutor(actionPlanner: plannerService);
     });
 
     group('execute', () {

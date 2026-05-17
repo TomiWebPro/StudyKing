@@ -21,8 +21,8 @@ class GradientContainer extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
           colors: [
             accent.withValues(alpha: isDark ? 0.3 : 0.2),
             accent.withValues(alpha: isDark ? 0.1 : 0.05),
