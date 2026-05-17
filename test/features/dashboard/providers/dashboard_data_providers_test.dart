@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
@@ -10,8 +11,12 @@ import 'package:studyking/features/dashboard/providers/dashboard_providers.dart'
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -22,7 +27,7 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider;
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   final List<MasteryState>? _allMastery;
@@ -127,7 +132,7 @@ class _FakeTopicRepo extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Topic>> getAll() async => _topics;
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
 }
 
 class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
@@ -177,6 +182,8 @@ ProviderContainer _createContainer({
   TopicRepository? topicRepo,
   PlanAdherenceRepository? adherenceRepo,
   SessionRepository? sessionRepo,
+  SpacedRepetitionService? srService,
+  SubjectRepository? subjectRepo,
 }) {
   return ProviderContainer(
     overrides: [
@@ -197,8 +204,55 @@ ProviderContainer _createContainer({
       ),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),
+      if (srService != null)
+        spacedRepetitionServiceProvider.overrideWithValue(srService),
+      if (subjectRepo != null)
+        subjectRepositoryProvider.overrideWithValue(subjectRepo),
     ],
   );
+}
+
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  final Map<String, int> _dueCounts;
+
+  _FakeSpacedRepetitionService(this._dueCounts)
+      : super(
+          questionRepo: QuestionRepository(),
+          attemptRepo: _FakeAttemptRepo(),
+          srEngine: _FakeSpacedRepetitionEngine(),
+        );
+
+  @override
+  Future<Result<int>> getSubjectDueCount(String subjectId) async {
+    return Result.success(_dueCounts[subjectId] ?? 0);
+  }
+}
+
+class _FakeSubjectRepo extends SubjectRepository {
+  final List<Subject> _subjects;
+
+  _FakeSubjectRepo({List<Subject> subjects = const []}) : _subjects = subjects;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+}
+
+class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
+  @override
+  SM2Result scheduleReview({
+    required String questionId,
+    required int grade,
+    QuestionSRData? currentData,
+    DateTime? now,
+  }) {
+    return SM2Result(
+      nextReview: DateTime.now(),
+      updatedData: currentData ?? const QuestionSRData(),
+    );
+  }
 }
 
 void main() {
@@ -813,6 +867,79 @@ void main() {
       expect(result[0].name, '');
       expect(result[0].description, '');
       expect(result[0].category, 'general');
+    });
+  });
+
+  group('dashboardDueReviewsProvider', () {
+    test('returns DueReviewsData with correct totals', () async {
+      final subjects = [
+        Subject(id: 'subj-1', name: 'Mathematics', code: 'MATH'),
+        Subject(id: 'subj-2', name: 'Physics', code: 'PHY'),
+      ];
+      final srService = _FakeSpacedRepetitionService({
+        'subj-1': 5,
+        'subj-2': 3,
+      });
+      final subjectRepo = _FakeSubjectRepo(subjects: subjects);
+      final container = _createContainer(
+        srService: srService,
+        subjectRepo: subjectRepo,
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDueReviewsProvider('s1').future);
+
+      expect(result, isA<DueReviewsData>());
+      expect(result!.totalDue, 8);
+      expect(result.subjectBreakdown.length, 2);
+      expect(result.subjectBreakdown[0].subjectName, 'Mathematics');
+      expect(result.subjectBreakdown[0].dueCount, 5);
+      expect(result.subjectBreakdown[1].subjectName, 'Physics');
+      expect(result.subjectBreakdown[1].dueCount, 3);
+    });
+
+    test('returns 0 total when no subjects exist', () async {
+      final container = _createContainer(
+        srService: _FakeSpacedRepetitionService({}),
+        subjectRepo: _FakeSubjectRepo(subjects: []),
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDueReviewsProvider('s1').future);
+
+      expect(result, isA<DueReviewsData>());
+      expect(result!.totalDue, 0);
+      expect(result.subjectBreakdown, isEmpty);
+    });
+
+    test('handles service errors gracefully returning null', () async {
+      final container = _createContainer(
+        srService: _FakeSpacedRepetitionService({}),
+        subjectRepo: _FakeSubjectRepo(subjects: []),
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDueReviewsProvider('s1').future);
+      expect(result, isA<DueReviewsData>());
+    });
+
+    test('includes subjects with zero due count', () async {
+      final subjects = [
+        Subject(id: 'subj-1', name: 'English', code: 'ENG'),
+      ];
+      final srService = _FakeSpacedRepetitionService({'subj-1': 0});
+      final subjectRepo = _FakeSubjectRepo(subjects: subjects);
+      final container = _createContainer(
+        srService: srService,
+        subjectRepo: subjectRepo,
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDueReviewsProvider('s1').future);
+
+      expect(result!.totalDue, 0);
+      expect(result.subjectBreakdown.length, 1);
+      expect(result.subjectBreakdown[0].dueCount, 0);
     });
   });
 }

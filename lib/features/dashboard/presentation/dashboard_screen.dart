@@ -15,6 +15,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/summary_row.da
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/due_reviews_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
@@ -39,6 +40,8 @@ class DashboardScreen extends ConsumerWidget {
     final adherenceAsync = ref.watch(dashboardAdherenceDataProvider(studentId));
     final topicNamesAsync = ref.watch(dashboardTopicNamesProvider(studentId));
     final badgesAsync = ref.watch(dashboardBadgesProvider(studentId));
+    final workloadAsync = ref.watch(dashboardWorkloadProvider(studentId));
+    final dueReviewsAsync = ref.watch(dashboardDueReviewsProvider(studentId));
 
     final allMasteryData = allMasteryAsync.valueOrNull ?? [];
     final snapshotData = snapshotAsync.valueOrNull;
@@ -48,6 +51,8 @@ class DashboardScreen extends ConsumerWidget {
     final adherenceData = adherenceAsync.valueOrNull ?? const AdherenceData();
     final topicNamesData = topicNamesAsync.valueOrNull ?? {};
     final badgesData = badgesAsync.valueOrNull ?? [];
+    final workloadData = workloadAsync.valueOrNull;
+    final dueReviewsData = dueReviewsAsync.valueOrNull;
 
     final allEmpty = allMasteryData.isEmpty &&
         (snapshotData == null || snapshotData.isEmpty) &&
@@ -56,7 +61,9 @@ class DashboardScreen extends ConsumerWidget {
         (focusStatsData == null || focusStatsData.isEmpty) &&
         adherenceData.isEmpty &&
         topicNamesData.isEmpty &&
-        badgesData.isEmpty;
+        badgesData.isEmpty &&
+        (workloadData == null || workloadData.totalQuestions == 0) &&
+        (dueReviewsData == null || dueReviewsData.totalDue == 0);
 
     final isFirstLoad = overallStatsAsync.isLoading &&
         snapshotAsync.isLoading &&
@@ -66,6 +73,8 @@ class DashboardScreen extends ConsumerWidget {
         topicNamesAsync.isLoading &&
         badgesAsync.isLoading &&
         allEmpty;
+
+    final asyncSnapshot = ref.watch(dashboardSourceCountProvider(studentId));
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -80,6 +89,8 @@ class DashboardScreen extends ConsumerWidget {
             const DashboardHeader(),
             const SizedBox(height: 24),
             _buildPlannerCard(context),
+            const SizedBox(height: 16),
+            _buildSourcesCard(context, asyncSnapshot),
             const SizedBox(height: 16),
             if (isFirstLoad)
               _buildSkeletonLoading(context)
@@ -101,13 +112,21 @@ class DashboardScreen extends ConsumerWidget {
                 title: _cardTitle(context, Icons.timer, l10n.focusTime),
                 body: InkWell(
                   onTap: () => Navigator.pushNamed(context, AppRoutes.focusMode),
-                  child: SessionSummaryCard(todayStats: focusStatsData != null ? {
-                    'totalSeconds': focusStatsData.totalSeconds,
-                    'completedSessions': focusStatsData.completedSessions,
-                    'totalSessions': focusStatsData.totalSessions,
-                    'plannedMinutes': focusStatsData.plannedMinutes,
-                    'hours': formatHours(focusStatsData.totalSeconds.toDouble(), l10n.localeName),
-                  } : null),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SessionSummaryCard(todayStats: focusStatsData != null ? {
+                          'totalSeconds': focusStatsData.totalSeconds,
+                          'completedSessions': focusStatsData.completedSessions,
+                          'totalSessions': focusStatsData.totalSessions,
+                          'plannedMinutes': focusStatsData.plannedMinutes,
+                          'hours': formatHours(focusStatsData.totalSeconds.toDouble(), l10n.localeName),
+                        } : null),
+                      ),
+                      Icon(Icons.chevron_right,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -140,15 +159,35 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               CollapsibleCard(
                 cardId: 'workload',
-                asyncValue: allMasteryAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                asyncValue: workloadAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardWorkloadProvider(studentId)); },
                 title: _cardTitle(context, Icons.trending_up, 'Remaining Workload'),
-                body: allMasteryData.isNotEmpty
+                body: workloadData != null
                     ? WorkloadCard(
-                        allMastery: allMasteryData,
+                        workload: workloadData,
                         resolveTopicName: (id) => topicNamesData[id] ?? id,
                       )
                     : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+              CollapsibleCard(
+                cardId: 'due_reviews',
+                asyncValue: dueReviewsAsync,
+                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardDueReviewsProvider(studentId)); },
+                title: _cardTitle(context, Icons.autorenew, l10n.dueForReview),
+                body: dueReviewsData != null && dueReviewsData.totalDue > 0
+                    ? DueReviewsCard(data: dueReviewsData)
+                    : Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(
+                          child: Text(
+                            l10n.allCaughtUp,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
               CollapsibleCard(
@@ -193,6 +232,42 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildSourcesCard(BuildContext context, AsyncValue<int> sourceCountAsync) {
+    final count = sourceCountAsync.valueOrNull ?? 0;
+    if (count == 0 && !sourceCountAsync.isLoading) return const SizedBox.shrink();
+    return Card(
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.source, color: Theme.of(context).colorScheme.primary, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Content Library', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      sourceCountAsync.isLoading
+                          ? 'Loading...'
+                          : '$count source(s)',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }

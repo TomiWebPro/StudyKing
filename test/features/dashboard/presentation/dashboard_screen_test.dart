@@ -23,7 +23,13 @@ import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart'
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -202,15 +208,15 @@ class FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async {
+  Future<Result<Topic?>> get(String id) async {
     if (failGet) throw Exception('Failed to get topic');
-    if (returnNull) return null;
-    return topic;
+    if (returnNull) return Result.success(null);
+    return Result.success(topic);
   }
 
   @override
-  Future<List<Topic>> getAll() async {
-    return allTopics ?? (topic != null ? [topic!] : []);
+  Future<Result<List<Topic>>> getAll() async {
+    return Result.success(allTopics ?? (topic != null ? [topic!] : []));
   }
 }
 
@@ -219,6 +225,53 @@ class FakeSessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     return Result.success([]);
   }
+}
+
+class _FakeDashboardSpacedRepetitionService extends SpacedRepetitionService {
+  _FakeDashboardSpacedRepetitionService()
+      : super(
+          questionRepo: _FakeDashboardQuestionRepo(),
+          attemptRepo: _FakeDashboardAttemptRepo(),
+          srEngine: _FakeDashboardSpacedRepetitionEngine(),
+        );
+
+  @override
+  Future<Result<int>> getSubjectDueCount(String subjectId) async {
+    return Result.success(0);
+  }
+}
+
+class _FakeDashboardQuestionRepo extends QuestionRepository {
+  @override
+  Future<void> init() async {}
+}
+
+class _FakeDashboardAttemptRepo extends AttemptRepository {
+  @override
+  Future<void> init() async {}
+}
+
+class _FakeDashboardSpacedRepetitionEngine extends SpacedRepetitionEngine {
+  @override
+  SM2Result scheduleReview({
+    required String questionId,
+    required int grade,
+    QuestionSRData? currentData,
+    DateTime? now,
+  }) {
+    return SM2Result(
+      nextReview: DateTime.now(),
+      updatedData: currentData ?? const QuestionSRData(),
+    );
+  }
+}
+
+class _FakeDashboardSubjectRepo extends SubjectRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success([]);
 }
 
 class FakePlanAdherenceRepository extends PlanAdherenceRepository {
@@ -278,6 +331,12 @@ Widget _buildTestApp(
       dashboardAdherenceRepositoryProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(average: 0.5, weekly: 0.5),
       ),
+      spacedRepetitionServiceProvider.overrideWithValue(
+        _FakeDashboardSpacedRepetitionService(),
+      ),
+      subjectRepositoryProvider.overrideWithValue(
+        _FakeDashboardSubjectRepo(),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -313,6 +372,12 @@ Widget _buildTestAppWithRoutes(
         dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
       dashboardAdherenceRepositoryProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(average: 0.5, weekly: 0.5),
+      ),
+      spacedRepetitionServiceProvider.overrideWithValue(
+        _FakeDashboardSpacedRepetitionService(),
+      ),
+      subjectRepositoryProvider.overrideWithValue(
+        _FakeDashboardSubjectRepo(),
       ),
     ],
     child: MaterialApp(

@@ -105,16 +105,16 @@ class _FakeAttemptRepository implements AttemptRepository {
   void attachBox(Box<StudentAttempt> box) {}
 
   @override
-  Future<void> save(String key, StudentAttempt item) async {}
+  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
 
   @override
-  Future<StudentAttempt?> get(String key) async => null;
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
 
   @override
-  Future<List<StudentAttempt>> getAll() async => [];
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
 
   @override
-  Future<void> delete(String key) async {}
+  Future<Result<void>> delete(String key) async => Result.success(null);
 
   @override
   List<StudentAttempt> filterBy<K>(K Function(StudentAttempt) getter, K value) => [];

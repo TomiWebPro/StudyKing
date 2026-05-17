@@ -27,6 +27,7 @@ import 'package:studyking/features/practice/data/models/question_mastery_state_m
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
@@ -69,6 +70,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _section(l10n.quickAccess, [
               _tile(l10n.quickGuide, l10n.aiPoweredStudyAssistant, Icons.auto_awesome,
                   () => Navigator.pushNamed(context, AppRoutes.quickGuide)),
+            ]),
+            _section('Content Management', [
+              _tile('My Uploads', 'View your uploaded materials', Icons.source,
+                  () => Navigator.pushNamed(context, AppRoutes.contentLibrary)),
+              _tile('Question Bank', 'Browse and manage questions', Icons.quiz,
+                  () => Navigator.pushNamed(context, AppRoutes.questionBank)),
+              _FailedUploadsTile(),
             ]),
             _section(l10n.appearance, [
               _tile(l10n.theme, _getThemeLabel(settings.themeModeEnum), Icons.dark_mode,
@@ -224,7 +232,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.attach_money),
                 title: Text(l10n.totalCost),
-                subtitle: Text(r'$' '${ref.watch(llmUsageMeterProvider).getTotalCost().toStringAsFixed(4)}'),
+                subtitle: Text(formatCurrency(ref.watch(llmUsageMeterProvider).getTotalCost(), l10n.localeName)),
               ),
             ]),
             _section(l10n.backupAndRestore, [
@@ -791,7 +799,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(l10n.usageSummary(
-                '\$${totalCost.toStringAsFixed(4)}',
+                formatCurrency(totalCost, l10n.localeName),
                 formatDecimal(totalTokens.toDouble(), l10n.localeName, minFractionDigits: 0),
                 formatDecimal(avgCost, l10n.localeName, minFractionDigits: 4),
               )),
@@ -991,6 +999,48 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FailedUploadsTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_FailedUploadsTile> createState() => _FailedUploadsTileState();
+}
+
+class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
+  int _failedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFailedCount();
+  }
+
+  Future<void> _loadFailedCount() async {
+    try {
+      final repo = SourceRepository();
+      await repo.init();
+      final failed = await repo.getFailed();
+      if (mounted) setState(() => _failedCount = failed.length);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: _failedCount > 0
+          ? Badge(
+              label: Text('$_failedCount'),
+              child: const Icon(Icons.error_outline),
+            )
+          : const Icon(Icons.error_outline),
+      title: const Text('Failed Uploads'),
+      subtitle: Text(_failedCount > 0
+          ? '$_failedCount source(s) failed to process'
+          : 'No failed uploads'),
+      trailing: const Icon(Icons.arrow_forward_ios),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
     );
   }
 }

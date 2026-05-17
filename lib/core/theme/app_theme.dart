@@ -30,6 +30,10 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
+      disabledColor: colorScheme.onSurface.withValues(alpha: 0.38),
+      focusColor: colorScheme.primary.withValues(alpha: 0.12),
+      hoverColor: colorScheme.primary.withValues(alpha: 0.06),
+      splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -48,6 +52,8 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
+          disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
+          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -57,6 +63,8 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           elevation: 0,
+          disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
+          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -66,11 +74,16 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           elevation: 0,
+          disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
+          disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
         ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        shape: bottomSheetShape,
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 2,
@@ -92,6 +105,56 @@ class AppTheme {
         ),
         backgroundColor: colorScheme.primaryContainer,
         foregroundColor: colorScheme.onPrimaryContainer,
+      ),
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 1,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: colorScheme.primary,
+        selectionColor: colorScheme.primary.withValues(alpha: 0.3),
+        selectionHandleColor: colorScheme.primary,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.12)),
+        ),
+        labelStyle: TextStyle(color: colorScheme.onSurface),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        errorStyle: TextStyle(color: colorScheme.error),
+        filled: true,
+        fillColor: colorScheme.surfaceContainerLowest,
       ),
     );
   }
@@ -187,7 +250,7 @@ class AppTheme {
     final cs = Theme.of(context).colorScheme;
     return switch (status) {
       LlmTaskStatus.running => cs.primary,
-      LlmTaskStatus.done => cs.primary,
+      LlmTaskStatus.done => Colors.green,
       LlmTaskStatus.failed => cs.error,
       LlmTaskStatus.cancelled => cs.tertiary,
       LlmTaskStatus.queued => cs.onSurfaceVariant,

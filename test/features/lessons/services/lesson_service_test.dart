@@ -8,6 +8,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/lessons/services/lesson_service.dart';
@@ -22,20 +23,24 @@ class _FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async => _topics[id];
+  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 
   @override
-  Future<List<Topic>> getAll() async => _topics.values.toList();
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics.values.toList());
 }
 
 class _FakeTutorSessionRepository extends TutorSessionRepository {
   final Map<String, TutorSession> _sessions = {};
+  bool _throwOnGetStudentSessions = false;
+
+  void setThrowOnGetStudentSessions() => _throwOnGetStudentSessions = true;
 
   @override
   Future<void> init() async {}
 
   @override
   Future<List<TutorSession>> getStudentSessions(String studentId) async {
+    if (_throwOnGetStudentSessions) throw Exception('Repo failure');
     return _sessions.values
         .where((s) => s.studentId == studentId)
         .toList()
@@ -107,6 +112,12 @@ void main() {
       final lessons = await service.getLessonsForStudent('stu1');
       expect(lessons, hasLength(1));
       expect(lessons.first.id, 's1');
+    });
+
+    test('returns empty list when repository throws', () async {
+      sessionRepo.setThrowOnGetStudentSessions();
+      final lessons = await service.getLessonsForStudent('stu1');
+      expect(lessons, isEmpty);
     });
   });
 

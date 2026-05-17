@@ -54,6 +54,9 @@ class Source extends HiveObject {
   @HiveField(16, defaultValue: '')
   final String extractionMeta;
 
+  @HiveField(17)
+  final DateTime? createdAt;
+
   Source({
     required this.id,
     required this.title,
@@ -72,6 +75,7 @@ class Source extends HiveObject {
     this.extractionMethod = '',
     this.chunks = '',
     this.extractionMeta = '',
+    this.createdAt,
   });
 
   ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
@@ -97,6 +101,7 @@ class Source extends HiveObject {
     'extractionMethod': extractionMethod,
     'chunks': chunks,
     'extractionMeta': extractionMeta,
+    'createdAt': createdAt?.toIso8601String(),
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -123,6 +128,7 @@ class Source extends HiveObject {
     extractionMethod: json['extractionMethod'] as String? ?? '',
     chunks: json['chunks'] as String? ?? '',
     extractionMeta: json['extractionMeta'] as String? ?? '',
+    createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
   );
 
   Source copyWith({
@@ -143,6 +149,7 @@ class Source extends HiveObject {
     String? extractionMethod,
     String? chunks,
     String? extractionMeta,
+    DateTime? createdAt,
   }) {
     return Source(
       id: id ?? this.id,
@@ -162,6 +169,7 @@ class Source extends HiveObject {
       extractionMethod: extractionMethod ?? this.extractionMethod,
       chunks: chunks ?? this.chunks,
       extractionMeta: extractionMeta ?? this.extractionMeta,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

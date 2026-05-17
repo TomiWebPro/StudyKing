@@ -14,3 +14,4 @@ export 'presentation/widgets/export_section.dart';
 export 'presentation/widgets/collapsible_card.dart';
 export 'presentation/widgets/empty_dashboard_checklist.dart';
 export 'data/models/dashboard_models.dart';
+export 'presentation/widgets/due_reviews_card.dart';

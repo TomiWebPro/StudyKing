@@ -54,13 +54,13 @@ class _FakeQuestionRepo extends QuestionRepository {
   }
 
   @override
-  Future<Question?> get(String id) async {
-    return _questions[id];
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
   }
 
   @override
-  Future<List<Question>> getAll() async {
-    return _questions.values.toList();
+  Future<Result<List<Question>>> getAll() async {
+    return Result.success(_questions.values.toList());
   }
 
   @override

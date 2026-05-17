@@ -7,6 +7,7 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
+import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 

@@ -8,6 +8,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -472,8 +473,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       itemBuilder: (context, index) {
         final session = _filteredSessions[index];
         final position = _allSessions.indexOf(session);
-        final icon = _sessionIcon(session.type);
-        final color = _sessionColor(session.type, theme);
+        final icon = sessionIcon(session.type);
+        final color = sessionColor(session.type, theme);
 
         return Semantics(
           hint: l10n.swipeToDelete,
@@ -620,31 +621,5 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       _selectedSubject = selected;
     });
     _filterSessions();
-  }
-
-  IconData _sessionIcon(SessionType type) {
-    switch (type) {
-      case SessionType.focus:
-        return Icons.timer;
-      case SessionType.practice:
-        return Icons.play_arrow;
-      case SessionType.tutoring:
-        return Icons.school;
-      case SessionType.manual:
-        return Icons.edit_note;
-    }
-  }
-
-  Color _sessionColor(SessionType type, ThemeData theme) {
-    switch (type) {
-      case SessionType.focus:
-        return theme.colorScheme.tertiary;
-      case SessionType.practice:
-        return theme.colorScheme.primary;
-      case SessionType.tutoring:
-        return theme.colorScheme.secondary;
-      case SessionType.manual:
-        return theme.colorScheme.onSurfaceVariant;
-    }
   }
 }

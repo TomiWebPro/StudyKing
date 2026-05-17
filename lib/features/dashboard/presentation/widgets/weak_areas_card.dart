@@ -40,11 +40,11 @@ class WeakAreasCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
+                Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   l10n.weakAreasAccuracy,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
                 ),
               ],
             ),
@@ -63,7 +63,7 @@ class WeakAreasCard extends StatelessWidget {
                     formatPercent(state.accuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.error,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -84,7 +84,7 @@ class WeakAreasCard extends StatelessWidget {
                     onPressed: () => _practiceAllWeakAreas(context),
                     icon: const Icon(Icons.play_arrow),
                     label: Text(l10n.practiceAllWeakAreas),
-                    style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                    style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.primary),
                   ),
                 ),
               ),
@@ -94,6 +94,7 @@ class WeakAreasCard extends StatelessWidget {
   }
 
   void _practiceWeakArea(BuildContext context, String topicId) {
+    if (topicId.isEmpty) return;
     Navigator.pushNamed(
       context,
       AppRoutes.practiceSession,

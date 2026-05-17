@@ -53,7 +53,8 @@ class MistakeReviewService {
         if (processedQuestions.contains(attempt.questionId)) continue;
         processedQuestions.add(attempt.questionId);
 
-        final question = await _questionRepo.get(attempt.questionId);
+        final questionResult = await _questionRepo.get(attempt.questionId);
+        final question = questionResult.data;
         if (question == null) continue;
 
         mistakes.add(MistakeEntry(
@@ -97,7 +98,8 @@ class MistakeReviewService {
         );
 
         if (!lastAttempt.isCorrect && recentCorrectIndex == -1) {
-          final question = await _questionRepo.get(entry.key);
+          final questionResult = await _questionRepo.get(entry.key);
+          final question = questionResult.data;
           if (question == null) continue;
 
           pendingMistakes.add(MistakeEntry(

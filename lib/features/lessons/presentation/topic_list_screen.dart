@@ -27,7 +27,8 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
   Future<void> _loadTopics() async {
     try {
       final repo = ref.read(topicRepositoryProvider);
-      final topics = await repo.getAll();
+      final topicsResult = await repo.getAll();
+      final topics = topicsResult.data ?? [];
       if (!mounted) return;
       setState(() {
         _topics = topics;

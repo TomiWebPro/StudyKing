@@ -12,7 +12,6 @@ import '../../../core/utils/number_format_utils.dart';
 import '../data/models/evaluation_result.dart';
 import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
-export 'conversation_phase.dart';
 import 'exercise_evaluator.dart';
 import 'prompts/prompts.dart';
 

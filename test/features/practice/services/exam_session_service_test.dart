@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+  @override
+  Future<void> init() async {}
+}
 
 class _FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
@@ -58,7 +65,7 @@ void main() {
       sessionRepo = _FakeSessionRepository();
       service = ExamSessionService(
         sessionRepo: sessionRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
     });
 

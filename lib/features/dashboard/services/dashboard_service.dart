@@ -102,7 +102,8 @@ class DashboardService {
   Future<Map<String, String>> getTopicNamesMap(String studentId) async {
     final allMasteryResult = await _masteryService.getAllTopicMastery(studentId);
     final allMastery = allMasteryResult.isSuccess ? allMasteryResult.data! : <MasteryState>[];
-    final allTopics = await _topicRepo.getAll();
+    final allTopicsResult = await _topicRepo.getAll();
+    final allTopics = allTopicsResult.data ?? [];
     final topicMap = <String, String>{};
     for (final topic in allTopics) {
       topicMap[topic.id] = topic.title;

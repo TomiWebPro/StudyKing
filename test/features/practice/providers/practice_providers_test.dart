@@ -20,8 +20,15 @@ import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+  @override
+  Future<void> init() async {}
+}
 
 void main() {
   group('PracticeProviders', () {
@@ -88,7 +95,7 @@ void main() {
         ),
         questionRepo: QuestionRepository(),
         subjectRepo: SubjectRepository(),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final container = ProviderContainer(
         overrides: [
@@ -484,6 +491,33 @@ void main() {
       final result = container.read(crossFeatureIntegratorProvider);
       expect(result, same(fakeIntegrator));
     });
+
+    test('spacedRepetitionEngineProvider is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final a = container.read(spacedRepetitionEngineProvider);
+      final b = container.read(spacedRepetitionEngineProvider);
+      expect(a, same(b));
+    });
+
+    test('readinessScorerProvider is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final a = container.read(readinessScorerProvider);
+      final b = container.read(readinessScorerProvider);
+      expect(a, same(b));
+    });
+
+    test('difficultyAdapterProvider is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final a = container.read(difficultyAdapterProvider);
+      final b = container.read(difficultyAdapterProvider);
+      expect(a, same(b));
+    });
   });
 }
 
@@ -530,7 +564,7 @@ class FakeExamSessionService extends ExamSessionService {
   FakeExamSessionService()
       : super(
           sessionRepo: SessionRepository(),
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
         );
 }
 
@@ -546,6 +580,6 @@ class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
   FakeCrossFeatureIntegrator()
       : super(
           sessionRepo: SessionRepository(),
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
         );
 }

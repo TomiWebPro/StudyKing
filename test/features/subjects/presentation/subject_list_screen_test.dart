@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -23,10 +24,10 @@ class _FakeSubjectRepository extends SubjectRepository {
   _FakeSubjectRepository(this._box);
 
   @override
-  Future<List<Subject>> getAll() async => _box.values.toList();
+  Future<Result<List<Subject>>> getAll() async => Result.success(_box.values.toList());
 
   @override
-  Future<Subject?> get(String id) async => _box.get(id);
+  Future<Result<Subject?>> get(String id) async => Result.success(_box.get(id));
 
   @override
   Future<void> create(Subject subject) async => _box.put(subject.id, subject);
@@ -41,7 +42,7 @@ class _ErrorSubjectRepository extends SubjectRepository {
   _ErrorSubjectRepository();
 
   @override
-  Future<List<Subject>> getAll() async {
+  Future<Result<List<Subject>>> getAll() async {
     throw Exception('Failed to load subjects');
   }
 }

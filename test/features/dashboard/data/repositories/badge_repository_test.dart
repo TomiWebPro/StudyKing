@@ -140,28 +140,28 @@ void main() {
         final badge = createTestBadge();
         await repository.create(badge);
         final stored = await repository.get(badge.id);
-        expect(stored, isNotNull);
-        expect(stored?.name, 'First Step');
+        expect(stored.data, isNotNull);
+        expect(stored.data?.name, 'First Step');
       });
 
       test('overwrites existing badge with same id', () async {
         await repository.create(createTestBadge(id: 'badge-1', name: 'Original'));
         await repository.create(createTestBadge(id: 'badge-1', name: 'Updated'));
-        expect((await repository.get('badge-1'))?.name, 'Updated');
+        expect((await repository.get('badge-1')).data?.name, 'Updated');
       });
     });
 
     group('get', () {
       test('returns null for non-existent badge', () async {
-        expect(await repository.get('none'), isNull);
+        expect((await repository.get('none')).data, isNull);
       });
 
       test('returns stored badge', () async {
         await repository.create(createTestBadge());
         final result = await repository.get('badge-1');
-        expect(result?.id, 'badge-1');
-        expect(result?.studentId, 'student-1');
-        expect(result?.category, 'milestone');
+        expect(result.data?.id, 'badge-1');
+        expect(result.data?.studentId, 'student-1');
+        expect(result.data?.category, 'milestone');
       });
     });
 
@@ -266,11 +266,11 @@ void main() {
       test('returns all badges', () async {
         await repository.create(createTestBadge(id: 'b1'));
         await repository.create(createTestBadge(id: 'b2'));
-        expect((await repository.getAll()).length, 2);
+        expect((await repository.getAll()).data!.length, 2);
       });
 
       test('returns empty when no badges', () async {
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
     });
 
@@ -278,7 +278,7 @@ void main() {
       test('removes a badge', () async {
         await repository.create(createTestBadge());
         await repository.delete('badge-1');
-        expect(await repository.get('badge-1'), isNull);
+        expect((await repository.get('badge-1')).data, isNull);
       });
 
       test('does nothing for non-existent id', () async {
@@ -313,8 +313,8 @@ void main() {
       final badge = createTestBadge(id: 'init-1', name: 'Init Test');
       await repository.create(badge);
       final stored = await repository.get('init-1');
-      expect(stored, isNotNull);
-      expect(stored!.name, 'Init Test');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.name, 'Init Test');
     });
 
     test('getByStudent works after init', () async {
@@ -347,13 +347,13 @@ void main() {
     test('delete works after init', () async {
       await repository.create(createTestBadge(id: 'd1'));
       await repository.delete('d1');
-      expect(await repository.get('d1'), isNull);
+      expect((await repository.get('d1')).data, isNull);
     });
 
     test('getAll works after init', () async {
       await repository.create(createTestBadge(id: 'g1'));
       await repository.create(createTestBadge(id: 'g2'));
-      expect(await repository.getAll(), hasLength(2));
+      expect((await repository.getAll()).data, hasLength(2));
     });
   });
 }

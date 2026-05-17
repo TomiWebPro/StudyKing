@@ -13,7 +13,8 @@ class ProgressRepository extends Repository<TopicProgress> {
     required bool isCorrect,
     required int timeSpentMs,
   }) async {
-    var progress = await get(topicId);
+    final progressResult = await get(topicId);
+    var progress = progressResult.data;
     if (progress == null) {
       progress = TopicProgress(
         topicId: topicId,

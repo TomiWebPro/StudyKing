@@ -24,8 +24,8 @@ class GradientContainer extends StatelessWidget {
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
           colors: [
-            accent.withValues(alpha: isDark ? 0.3 : 0.2),
-            accent.withValues(alpha: isDark ? 0.1 : 0.05),
+            accent.withValues(alpha: isDark ? 0.3 : 0.15),
+            accent.withValues(alpha: isDark ? 0.1 : 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),

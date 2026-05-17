@@ -24,13 +24,13 @@ class _FakeLessonRepository extends LessonRepository {
   }
 
   @override
-  Future<Lesson?> get(String id) async {
-    return _storage[id];
+  Future<Result<Lesson?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<Lesson>> getAll() async {
-    return _storage.values.toList();
+  Future<Result<List<Lesson>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
@@ -67,8 +67,9 @@ class _FakeLessonRepository extends LessonRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 }
 
@@ -140,13 +141,13 @@ void main() {
         final lesson = createTestLesson();
         await repository.create(lesson);
         final stored = await repository.get('lesson-1');
-        expect(stored?.title, 'Test Lesson');
+        expect(stored.data?.title, 'Test Lesson');
       });
     });
 
     group('get', () {
       test('returns null for non-existent', () async {
-        expect(await repository.get('none'), isNull);
+        expect((await repository.get('none')).data, isNull);
       });
     });
 
@@ -154,7 +155,7 @@ void main() {
       test('returns all lessons', () async {
         await repository.create(createTestLesson(id: 'l1'));
         await repository.create(createTestLesson(id: 'l2'));
-        expect((await repository.getAll()).length, 2);
+        expect((await repository.getAll()).data!.length, 2);
       });
     });
 
@@ -214,7 +215,7 @@ void main() {
       test('removes lesson', () async {
         await repository.create(createTestLesson(id: 'l1'));
         await repository.delete('l1');
-        expect(await repository.get('l1'), isNull);
+        expect((await repository.get('l1')).data, isNull);
       });
     });
   });
@@ -254,10 +255,10 @@ void main() {
         final lesson = createTestLesson();
         await repo.create(lesson);
         final stored = await repo.get('lesson-1');
-        expect(stored, isNotNull);
-        expect(stored!.title, 'Test Lesson');
-        expect(stored.subjectId, 'sub-1');
-        expect(stored.topicId, 'topic-1');
+        expect(stored.data, isNotNull);
+        expect(stored.data!.title, 'Test Lesson');
+        expect(stored.data!.subjectId, 'sub-1');
+        expect(stored.data!.topicId, 'topic-1');
       });
 
       test('stores a lesson with all fields', () async {
@@ -276,24 +277,24 @@ void main() {
         );
         await repo.create(lesson);
         final stored = await repo.get('full-lesson');
-        expect(stored, isNotNull);
-        expect(stored!.difficulty, 3);
-        expect(stored.generatedBy, GeneratedBy.ai);
-        expect(stored.markscheme, 'Answer key');
-        expect(stored.blocks.length, 1);
-        expect(stored.blocks.first.content, 'Block 1');
+        expect(stored.data, isNotNull);
+        expect(stored.data!.difficulty, 3);
+        expect(stored.data!.generatedBy, GeneratedBy.ai);
+        expect(stored.data!.markscheme, 'Answer key');
+        expect(stored.data!.blocks.length, 1);
+        expect(stored.data!.blocks.first.content, 'Block 1');
       });
     });
 
     group('get', () {
       test('returns null for non-existent lesson', () async {
-        expect(await repo.get('nonexistent'), isNull);
+        expect((await repo.get('nonexistent')).data, isNull);
       });
     });
 
     group('getAll', () {
       test('returns empty list when no lessons exist', () async {
-        expect(await repo.getAll(), isEmpty);
+        expect((await repo.getAll()).data, isEmpty);
       });
 
       test('returns all stored lessons', () async {
@@ -301,7 +302,7 @@ void main() {
         await repo.create(createTestLesson(id: 'l2'));
         await repo.create(createTestLesson(id: 'l3'));
         final all = await repo.getAll();
-        expect(all.length, 3);
+        expect(all.data!.length, 3);
       });
     });
 
@@ -460,15 +461,15 @@ void main() {
     group('delete', () {
       test('removes a stored lesson', () async {
         await repo.create(createTestLesson(id: 'to-delete'));
-        expect(await repo.get('to-delete'), isNotNull);
+        expect((await repo.get('to-delete')).data, isNotNull);
         await repo.delete('to-delete');
-        expect(await repo.get('to-delete'), isNull);
+        expect((await repo.get('to-delete')).data, isNull);
       });
 
       test('does not throw when deleting non-existent lesson', () async {
         await repo.create(createTestLesson(id: 'existing'));
         await repo.delete('nonexistent');
-        expect(await repo.get('existing'), isNotNull);
+        expect((await repo.get('existing')).data, isNotNull);
       });
     });
 
@@ -477,7 +478,7 @@ void main() {
         await repo.create(createTestLesson(id: 'updatable', title: 'Original'));
         await repo.save('updatable', createTestLesson(id: 'updatable', title: 'Updated'));
         final stored = await repo.get('updatable');
-        expect(stored?.title, 'Updated');
+        expect(stored.data?.title, 'Updated');
       });
     });
   });
@@ -584,20 +585,21 @@ class _ThrowingLessonRepository extends LessonRepository {
   bool throwOnFilterBy = false;
 
   @override
-  Future<void> save(String key, Lesson item) async {
+  Future<Result<void>> save(String key, Lesson item) async {
     if (throwOnSave) throw Exception('Save error');
+    return Result.success(null);
   }
 
   @override
-  Future<Lesson?> get(String id) async {
+  Future<Result<Lesson?>> get(String id) async {
     if (throwOnGet) throw Exception('Get error');
-    return null;
+    return Result.success(null);
   }
 
   @override
-  Future<List<Lesson>> getAll() async {
+  Future<Result<List<Lesson>>> getAll() async {
     if (throwOnGetAll) throw Exception('GetAll error');
-    return [];
+    return Result.success([]);
   }
 
   @override

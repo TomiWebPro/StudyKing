@@ -44,7 +44,7 @@ class _FakeSubjectRepository extends SubjectRepository {
   _FakeSubjectRepository(this._box);
 
   @override
-  Future<List<Subject>> getAll() async => _box.values.toList();
+  Future<Result<List<Subject>>> getAll() async => Result.success(_box.values.toList());
 }
 
 class _FakeQuestionRepository extends QuestionRepository {
@@ -52,8 +52,8 @@ class _FakeQuestionRepository extends QuestionRepository {
   _FakeQuestionRepository(this._questions);
 
   @override
-  Future<List<Question>> getAll() async {
-    return _questions;
+  Future<Result<List<Question>>> getAll() async {
+    return Result.success(_questions);
   }
 
   @override

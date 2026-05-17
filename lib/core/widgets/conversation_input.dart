@@ -111,7 +111,10 @@ class _ConversationInputState extends State<ConversationInput> {
                             vertical: 12,
                           ),
                         ),
-                        onSubmitted: (_) => widget.onSend(),
+                        onSubmitted: (_) {
+                          if (!widget.isEnabled || widget.isLoading) return;
+                          widget.onSend();
+                        },
                       ),
                     ),
                   ),
@@ -121,7 +124,9 @@ class _ConversationInputState extends State<ConversationInput> {
                   else
                     Semantics(
                       button: true,
-                      label: widget.sendTooltip,
+                      label: widget.isLoading
+                          ? AppLocalizations.of(context)!.sending
+                          : widget.sendTooltip,
                       child: IconButton.filled(
                         icon: widget.isLoading
                             ? const SizedBox(

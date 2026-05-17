@@ -66,7 +66,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextButton), findsNWidgets(3));
+      expect(find.byType(TextButton), findsNWidgets(5));
       expect(find.byIcon(Icons.download), findsOneWidget);
       expect(find.byIcon(Icons.history), findsOneWidget);
       expect(find.byIcon(Icons.analytics), findsOneWidget);

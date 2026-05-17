@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -100,7 +101,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Future<void> _loadQuestionCount() async {
     try {
-      final allQuestions = await _questionRepo.getAll();
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       final studentId = _studentIdService.getStudentId();
       final now = DateTime.now();
       final today = now.dateOnly;
@@ -130,7 +132,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Future<void> _startTopicPractice(String topic) async {
     try {
-      final allQuestions = await _questionRepo.getAll();
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       final topicQuestions =
           allQuestions.where((q) => q.topic == topic).toList();
       if (topicQuestions.isEmpty) {
@@ -182,7 +185,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       }
       final weakTopicIds =
           weakTopicsResult.data!.map((s) => s.topicId).toSet();
-      final allQuestions = await _questionRepo.getAll().catchError((_) => <Question>[]);
+      final allQuestionsResult = await _questionRepo.getAll().catchError((_) => Result.success(<Question>[]));
+      final allQuestions = allQuestionsResult.data ?? [];
       if (allQuestions.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
@@ -268,7 +272,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   void _showSourcePracticeSheet() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final allQuestions = await _questionRepo.getAll();
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       final sourceMap = <String, Set<String>>{};
       for (final q in allQuestions) {
         for (final sourceId in q.sourceIds) {
@@ -285,6 +290,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
           id: source.id,
           title: source.title,
           questionCount: questionCount,
+          status: source.statusEnum,
         );
       }).toList();
 
@@ -343,7 +349,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     try {
       final repo = SourceRepository();
       await repo.init();
-      return await repo.getAll();
+      final result = await repo.getAll();
+      return result.data ?? [];
     } catch (e) {
       return [];
     }

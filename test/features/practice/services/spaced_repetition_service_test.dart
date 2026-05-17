@@ -113,18 +113,20 @@ class _FakeQuestionRepository extends QuestionRepository {
   Box<Question> get box => fakeBox;
 
   @override
-  Future<Question?> get(String id) async {
-    return fakeBox.get(id);
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(fakeBox.get(id));
   }
 
   @override
-  Future<void> save(String key, Question item) async {
+  Future<Result<void>> save(String key, Question item) async {
     await fakeBox.put(key, item);
+    return Result.success(null);
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     await fakeBox.delete(key);
+    return Result.success(null);
   }
 
   @override
@@ -141,8 +143,8 @@ class _FakeAttemptRepository extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<StudentAttempt?> get(String id) async {
-    return _storage[id];
+  Future<Result<StudentAttempt?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 }
 

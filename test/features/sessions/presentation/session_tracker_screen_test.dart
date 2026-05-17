@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -45,7 +42,6 @@ Widget _buildTestApp(_FakeSessionRepository repository) {
 
 void main() {
   setUpAll(() async {
-    Hive.init(Directory.systemTemp.createTempSync('tracker_test_').path);
     StudentIdService().setStudentId('test-student');
   });
 

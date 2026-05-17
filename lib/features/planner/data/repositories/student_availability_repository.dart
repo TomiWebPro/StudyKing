@@ -12,6 +12,7 @@ class StudentAvailabilityRepository extends Repository<StudentAvailabilityModel>
   }
 
   Future<StudentAvailabilityModel?> getByStudent(String studentId) async {
-    return super.get(studentId);
+    final result = await super.get(studentId);
+    return result.data;
   }
 }

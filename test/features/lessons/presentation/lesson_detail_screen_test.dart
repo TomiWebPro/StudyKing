@@ -18,13 +18,13 @@ class _FakeLessonRepository extends LessonRepository {
   _FakeLessonRepository({List<Lesson>? lessons}) : _lessons = lessons ?? [];
 
   @override
-  Future<Lesson?> get(String id) async {
+  Future<Result<Lesson?>> get(String id) async {
     if (shouldThrow) throw Exception('Simulated DB error');
-    return _lessons.where((l) => l.id == id).firstOrNull;
+    return Result.success(_lessons.where((l) => l.id == id).firstOrNull);
   }
 
   @override
-  Future<List<Lesson>> getAll() async => _lessons;
+  Future<Result<List<Lesson>>> getAll() async => Result.success(_lessons);
 
   @override
   Future<void> init() async {}

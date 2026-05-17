@@ -117,6 +117,15 @@ void main() {
         final result = container.read(ingestionSourceRepositoryProvider);
         expect(result, same(fakeRepo));
       });
+
+      test('returns the same instance across reads', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final a = container.read(ingestionSourceRepositoryProvider);
+        final b = container.read(ingestionSourceRepositoryProvider);
+        expect(a, same(b));
+      });
     });
 
     group('ingestionTopicRepositoryProvider', () {
@@ -140,6 +149,15 @@ void main() {
         final result = container.read(ingestionTopicRepositoryProvider);
         expect(result, same(fakeRepo));
       });
+
+      test('returns the same instance across reads', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final a = container.read(ingestionTopicRepositoryProvider);
+        final b = container.read(ingestionTopicRepositoryProvider);
+        expect(a, same(b));
+      });
     });
 
     group('ingestionQuestionRepositoryProvider', () {
@@ -162,6 +180,15 @@ void main() {
 
         final result = container.read(ingestionQuestionRepositoryProvider);
         expect(result, same(fakeRepo));
+      });
+
+      test('returns the same instance across reads', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final a = container.read(ingestionQuestionRepositoryProvider);
+        final b = container.read(ingestionQuestionRepositoryProvider);
+        expect(a, same(b));
       });
     });
 

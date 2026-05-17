@@ -558,6 +558,90 @@ void main() {
     });
   });
 
+  group('SubjectDueCount', () {
+    test('creates with required fields', () {
+      final item = SubjectDueCount(
+        subjectId: 'subj-1',
+        subjectName: 'Mathematics',
+        dueCount: 5,
+      );
+      expect(item.subjectId, 'subj-1');
+      expect(item.subjectName, 'Mathematics');
+      expect(item.dueCount, 5);
+    });
+
+    test('supports zero due count', () {
+      final item = SubjectDueCount(
+        subjectId: 'subj-2',
+        subjectName: 'Physics',
+        dueCount: 0,
+      );
+      expect(item.dueCount, 0);
+    });
+
+    test('supports large due counts', () {
+      final item = SubjectDueCount(
+        subjectId: 'subj-3',
+        subjectName: 'Chemistry',
+        dueCount: 999,
+      );
+      expect(item.dueCount, 999);
+    });
+
+    test('accepts empty subjectName', () {
+      final item = SubjectDueCount(
+        subjectId: 'subj-4',
+        subjectName: '',
+        dueCount: 1,
+      );
+      expect(item.subjectName, '');
+    });
+  });
+
+  group('DueReviewsData', () {
+    test('creates with required fields', () {
+      final data = DueReviewsData(
+        totalDue: 12,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Math', dueCount: 7),
+          SubjectDueCount(subjectId: 's2', subjectName: 'Physics', dueCount: 5),
+        ],
+      );
+      expect(data.totalDue, 12);
+      expect(data.subjectBreakdown.length, 2);
+    });
+
+    test('supports empty subject breakdown', () {
+      final data = DueReviewsData(
+        totalDue: 0,
+        subjectBreakdown: [],
+      );
+      expect(data.totalDue, 0);
+      expect(data.subjectBreakdown, isEmpty);
+    });
+
+    test('supports zero total due with breakdown', () {
+      final data = DueReviewsData(
+        totalDue: 0,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Math', dueCount: 0),
+        ],
+      );
+      expect(data.totalDue, 0);
+      expect(data.subjectBreakdown.length, 1);
+    });
+
+    test('supports large total due values', () {
+      final data = DueReviewsData(
+        totalDue: 9999,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Biology', dueCount: 9999),
+        ],
+      );
+      expect(data.totalDue, 9999);
+    });
+  });
+
   group('DashboardArgs', () {
     test('stores studentId', () {
       final args = DashboardArgs(studentId: 'student_123');

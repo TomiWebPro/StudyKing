@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
@@ -15,21 +16,6 @@ class SubjectSelectionSheet extends StatelessWidget {
     required this.onSubjectSelected,
     this.subtitleBuilder,
   });
-
-  Color _getSubjectColor(BuildContext context, String name) {
-    final cs = Theme.of(context).colorScheme;
-    final colors = [
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-    ];
-    return colors[name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,10 +40,10 @@ class SubjectSelectionSheet extends StatelessWidget {
                 label: '${l10n.selectSubject} ${subject.name}',
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _getSubjectColor(context, subject.name).withValues(alpha: 0.1),
+                    backgroundColor: ColorUtils.getSubjectColor(context, subject.name).withValues(alpha: 0.1),
                     child: Icon(
                       Icons.school,
-                      color: _getSubjectColor(context, subject.name),
+                      color: ColorUtils.getSubjectColor(context, subject.name),
                     ),
                   ),
                   title: Text(subject.name),

@@ -169,7 +169,8 @@ class CrossFeatureIntegrator {
     required String topicId,
     required SourceRepository sourceRepository,
   }) async {
-    final source = await sourceRepository.get(sourceId);
+    final sourceResult = await sourceRepository.get(sourceId);
+    final source = sourceResult.data;
     if (source == null) {
       _logger.w('Source not found for linking: $sourceId');
       return;
@@ -184,8 +185,8 @@ class CrossFeatureIntegrator {
     required List<String> topicIds,
     required SourceRepository sourceRepository,
   }) async {
-    final source = await sourceRepository.get(sourceId);
-    if (source == null) {
+    final sourceResult = await sourceRepository.get(sourceId);
+    if (sourceResult.data == null) {
       _logger.w('Source not found for planner notification: $sourceId');
       return;
     }

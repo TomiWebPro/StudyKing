@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/progress_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_progress_model.dart';
 import 'dart:io';
@@ -12,18 +13,19 @@ class _FakeProgressRepository extends ProgressRepository {
   Future<void> init() async {}
 
   @override
-  Future<TopicProgress?> get(String topicId) async {
-    return _storage[topicId];
+  Future<Result<TopicProgress?>> get(String topicId) async {
+    return Result.success(_storage[topicId]);
   }
 
   @override
-  Future<List<TopicProgress>> getAll() async {
-    return _storage.values.toList();
+  Future<Result<List<TopicProgress>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     _storage.remove(key);
+    return Result.success(null);
   }
 
   @override
@@ -65,69 +67,69 @@ void main() {
       test('creates new progress for new topic', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
         final progress = await repository.get('t1');
-        expect(progress, isNotNull);
-        expect(progress?.topicId, 't1');
-        expect(progress?.questionsAnswered, 1);
-        expect(progress?.correctAnswers, 1);
+        expect(progress.data, isNotNull);
+        expect(progress.data?.topicId, 't1');
+        expect(progress.data?.questionsAnswered, 1);
+        expect(progress.data?.correctAnswers, 1);
       });
 
       test('records incorrect attempt', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 5000);
         final progress = await repository.get('t1');
-        expect(progress?.questionsAnswered, 1);
-        expect(progress?.correctAnswers, 0);
-        expect(progress?.accuracy, 0.0);
+        expect(progress.data?.questionsAnswered, 1);
+        expect(progress.data?.correctAnswers, 0);
+        expect(progress.data?.accuracy, 0.0);
       });
 
       test('updates existing progress', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
         await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 3000);
         final progress = await repository.get('t1');
-        expect(progress?.questionsAnswered, 2);
-        expect(progress?.correctAnswers, 1);
-        expect(progress?.accuracy, 0.5);
+        expect(progress.data?.questionsAnswered, 2);
+        expect(progress.data?.correctAnswers, 1);
+        expect(progress.data?.accuracy, 0.5);
       });
 
       test('updates average time', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 4000);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, 3000);
+        expect(progress.data?.averageTimeMs, 3000);
       });
 
       test('handles multiple topics independently', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
         await repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000);
-        expect((await repository.get('t1'))?.questionsAnswered, 1);
-        expect((await repository.get('t2'))?.questionsAnswered, 1);
+        expect((await repository.get('t1')).data?.questionsAnswered, 1);
+        expect((await repository.get('t2')).data?.questionsAnswered, 1);
       });
 
       test('recordAttempt with timeSpentMs: 0 does not cause division issues', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 0);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, 0);
-        expect(progress?.questionsAnswered, 1);
-        expect(progress?.correctAnswers, 1);
+        expect(progress.data?.averageTimeMs, 0);
+        expect(progress.data?.questionsAnswered, 1);
+        expect(progress.data?.correctAnswers, 1);
       });
 
       test('recordAttempt with negative timeSpentMs is stored as-is', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: -1);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, -1);
-        expect(progress?.questionsAnswered, 1);
+        expect(progress.data?.averageTimeMs, -1);
+        expect(progress.data?.questionsAnswered, 1);
       });
 
       test('averageTimeMs calculation on first attempt uses correct formula', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, 5000);
+        expect(progress.data?.averageTimeMs, 5000);
       });
 
       test('averageTimeMs calculation on second attempt', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 4000);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, 3000);
+        expect(progress.data?.averageTimeMs, 3000);
       });
 
       test('averageTimeMs calculation on third attempt', () async {
@@ -135,7 +137,7 @@ void main() {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 3000);
         final progress = await repository.get('t1');
-        expect(progress?.averageTimeMs, 2000);
+        expect(progress.data?.averageTimeMs, 2000);
       });
 
       test('concurrent recordAttempt calls do not corrupt state', () async {
@@ -144,8 +146,8 @@ void main() {
           repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 2000),
         ]);
         final progress = await repository.get('t1');
-        expect(progress?.questionsAnswered, 2);
-        expect(progress?.correctAnswers, 1);
+        expect(progress.data?.questionsAnswered, 2);
+        expect(progress.data?.correctAnswers, 1);
       });
 
       test('concurrent recordAttempt calls on different topics are isolated', () async {
@@ -154,9 +156,9 @@ void main() {
           repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000),
           repository.recordAttempt(topicId: 't3', isCorrect: true, timeSpentMs: 3000),
         ]);
-        expect((await repository.get('t1'))?.questionsAnswered, 1);
-        expect((await repository.get('t2'))?.questionsAnswered, 1);
-        expect((await repository.get('t3'))?.questionsAnswered, 1);
+        expect((await repository.get('t1')).data?.questionsAnswered, 1);
+        expect((await repository.get('t2')).data?.questionsAnswered, 1);
+        expect((await repository.get('t3')).data?.questionsAnswered, 1);
       });
 
       test('getAll returns all progress records', () async {
@@ -164,20 +166,20 @@ void main() {
         await repository.recordAttempt(topicId: 't2', isCorrect: false, timeSpentMs: 2000);
 
         final all = await repository.getAll();
-        expect(all, hasLength(2));
+        expect(all.data, hasLength(2));
       });
 
       test('getAll returns empty list when empty', () async {
         final all = await repository.getAll();
-        expect(all, isEmpty);
+        expect(all.data, isEmpty);
       });
 
       test('delete removes progress record', () async {
         await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
-        expect(await repository.get('t1'), isNotNull);
+        expect((await repository.get('t1')).data, isNotNull);
 
         await repository.delete('t1');
-        expect(await repository.get('t1'), isNull);
+        expect((await repository.get('t1')).data, isNull);
       });
     });
   });
@@ -206,18 +208,18 @@ void main() {
     test('init opens box and supports CRUD', () async {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
       final progress = await repository.get('t1');
-      expect(progress, isNotNull);
-      expect(progress?.topicId, 't1');
-      expect(progress?.questionsAnswered, 1);
-      expect(progress?.correctAnswers, 1);
+      expect(progress.data, isNotNull);
+      expect(progress.data?.topicId, 't1');
+      expect(progress.data?.questionsAnswered, 1);
+      expect(progress.data?.correctAnswers, 1);
     });
 
     test('recordAttempt updates existing progress', () async {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 2000);
       await repository.recordAttempt(topicId: 't1', isCorrect: false, timeSpentMs: 4000);
       final progress = await repository.get('t1');
-      expect(progress?.questionsAnswered, 2);
-      expect(progress?.averageTimeMs, 3000);
+      expect(progress.data?.questionsAnswered, 2);
+      expect(progress.data?.averageTimeMs, 3000);
     });
 
     test('getAll returns all progresses', () async {
@@ -226,20 +228,20 @@ void main() {
       await repository.recordAttempt(topicId: 't3', isCorrect: true, timeSpentMs: 3000);
 
       final all = await repository.getAll();
-      expect(all, hasLength(3));
+      expect(all.data, hasLength(3));
     });
 
     test('getAll returns empty list when no progresses', () async {
       final all = await repository.getAll();
-      expect(all, isEmpty);
+      expect(all.data, isEmpty);
     });
 
     test('delete removes a progress', () async {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 1000);
-      expect(await repository.get('t1'), isNotNull);
+      expect((await repository.get('t1')).data, isNotNull);
 
       await repository.delete('t1');
-      expect(await repository.get('t1'), isNull);
+      expect((await repository.get('t1')).data, isNull);
     });
 
     test('delete non-existent does not throw', () async {
@@ -257,16 +259,16 @@ void main() {
       await repository.save('t1', progress);
 
       final retrieved = await repository.get('t1');
-      expect(retrieved, isNotNull);
-      expect(retrieved!.questionsAnswered, 5);
-      expect(retrieved.correctAnswers, 3);
-      expect(retrieved.averageTimeMs, 2500.0);
+      expect(retrieved.data, isNotNull);
+      expect(retrieved.data!.questionsAnswered, 5);
+      expect(retrieved.data!.correctAnswers, 3);
+      expect(retrieved.data!.averageTimeMs, 2500.0);
     });
 
     test('recordAttempt with large time values', () async {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 999999);
       final progress = await repository.get('t1');
-      expect(progress?.averageTimeMs, 999999);
+      expect(progress.data?.averageTimeMs, 999999);
     });
 
     test('multiple recordAttempts maintain correct average', () async {
@@ -277,10 +279,10 @@ void main() {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 5000);
 
       final progress = await repository.get('t1');
-      expect(progress?.questionsAnswered, 5);
-      expect(progress?.correctAnswers, 5);
-      expect(progress?.averageTimeMs, 3000);
-      expect(progress?.accuracy, 1.0);
+      expect(progress.data?.questionsAnswered, 5);
+      expect(progress.data?.correctAnswers, 5);
+      expect(progress.data?.averageTimeMs, 3000);
+      expect(progress.data?.accuracy, 1.0);
     });
 
     test('recordAttempt with mixed correct and incorrect', () async {
@@ -289,9 +291,9 @@ void main() {
       await repository.recordAttempt(topicId: 't1', isCorrect: true, timeSpentMs: 3000);
 
       final progress = await repository.get('t1');
-      expect(progress?.questionsAnswered, 3);
-      expect(progress?.correctAnswers, 2);
-      expect(progress?.accuracy, 2 / 3);
+      expect(progress.data?.questionsAnswered, 3);
+      expect(progress.data?.correctAnswers, 2);
+      expect(progress.data?.accuracy, 2 / 3);
     });
   });
 }

@@ -20,12 +20,14 @@ class TopicRepository extends Repository<Topic> {
   }
 
   Future<List<Topic>> getRootTopics() async {
-    final all = await getAll();
+    final getAllResult = await getAll();
+    final all = getAllResult.data ?? [];
     return all.where((t) => t.parentId == null).toList();
   }
 
   Future<void> addParent(Topic topic, String parentId) async {
-    final parent = await get(parentId);
+    final getResult = await get(parentId);
+    final parent = getResult.data;
     if (parent != null) {
       final updated =
           topic.copyWith(parentId: parentId, subjectId: parent.subjectId);

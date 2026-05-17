@@ -72,7 +72,9 @@ class CollapsibleCard extends ConsumerWidget {
           Semantics(
             button: true,
             expanded: !isCollapsed,
-            hint: AppLocalizations.of(context)!.tapToRefreshSection,
+            hint: isCollapsed
+                ? AppLocalizations.of(context)!.tapToExpand
+                : AppLocalizations.of(context)!.tapToCollapse,
             child: InkWell(
               onTap: () =>
                   ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),

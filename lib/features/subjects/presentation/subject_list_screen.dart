@@ -43,7 +43,7 @@ class SubjectListScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, SubjectRepository repository) {
     final l10n = AppLocalizations.of(context)!;
     return FutureBuilder<List<Subject>>(
-      future: repository.getAll(),
+      future: repository.getAll().then((r) => r.data ?? []),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

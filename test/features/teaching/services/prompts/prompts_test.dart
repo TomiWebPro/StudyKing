@@ -538,15 +538,15 @@ void main() {
     });
   });
 
-  group('PromptTemplates (backward compat)', () {
-    test('is a typedef for ConversationPromptSet', () {
-      PromptTemplates templates = const ConversationPromptSet();
+  group('ConversationPromptSet', () {
+    test('can be constructed with default params', () {
+      const templates = ConversationPromptSet();
       expect(templates, isA<ConversationPromptSet>());
     });
 
-    test('can be used where ConversationPromptSet is expected', () {
+    test('can be used as a valid instance', () {
       void takesConversationPromptSet(ConversationPromptSet set) {}
-      PromptTemplates templates = const ConversationPromptSet();
+      const templates = ConversationPromptSet();
       expect(() => takesConversationPromptSet(templates), returnsNormally);
     });
   });

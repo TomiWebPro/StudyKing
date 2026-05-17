@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class WorkloadCard extends StatelessWidget {
-  final List<MasteryState> allMastery;
+  final SubjectWorkload? workload;
   final String Function(String) resolveTopicName;
 
   const WorkloadCard({
     super.key,
-    required this.allMastery,
+    required this.workload,
     required this.resolveTopicName,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final belowThreshold = allMastery.where((s) => s.masteryLevel.index < MasteryLevel.developing.index).toList();
-    final totalLessons = _estimateLessonsRemaining(belowThreshold);
 
-    if (allMastery.isEmpty) {
+    if (workload == null || workload!.totalQuestions == 0) {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Center(
@@ -34,7 +32,11 @@ class WorkloadCard extends StatelessWidget {
       );
     }
 
-    final totalLessonsStr = formatDecimal(totalLessons.toDouble(), l10n.localeName, minFractionDigits: 0);
+    final totalLessons = workload!.estimatedLessonsRemaining;
+    final totalLessonsStr = formatDecimal(totalLessons, l10n.localeName, minFractionDigits: 0);
+    final topicsNeedingAttention = workload!.topicWorkloads
+        .where((t) => t.estimatedLessonsRemaining > 0)
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -77,14 +79,14 @@ class WorkloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${belowThreshold.length} topics need attention',
+            '${topicsNeedingAttention.length} topics need attention',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-          if (belowThreshold.isNotEmpty) ...[
+          if (topicsNeedingAttention.isNotEmpty) ...[
             const SizedBox(height: 12),
-            ...belowThreshold.take(5).map((state) => Padding(
+            ...topicsNeedingAttention.take(5).map((topic) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 children: [
@@ -92,12 +94,12 @@ class WorkloadCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      resolveTopicName(state.topicId),
+                      resolveTopicName(topic.topicId),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                   Text(
-                    _masteryLabel(state.masteryLevel, l10n),
+                    _masteryLabel(topic.masteryLevel, l10n),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -111,36 +113,11 @@ class WorkloadCard extends StatelessWidget {
     );
   }
 
-  int _estimateLessonsRemaining(List<MasteryState> belowThreshold) {
-    int total = 0;
-    for (final state in belowThreshold) {
-      final level = state.masteryLevel;
-      switch (level) {
-        case MasteryLevel.novice:
-          total += 3;
-        case MasteryLevel.browsing:
-          total += 2;
-        case MasteryLevel.developing:
-        case MasteryLevel.proficient:
-        case MasteryLevel.expert:
-          break;
-      }
-    }
-    return total;
-  }
-
-  String _masteryLabel(MasteryLevel level, AppLocalizations l10n) {
-    switch (level) {
-      case MasteryLevel.novice:
-        return l10n.masteryLevelNovice;
-      case MasteryLevel.browsing:
-        return l10n.masteryLevelBrowsing;
-      case MasteryLevel.developing:
-        return l10n.masteryLevelDeveloping;
-      case MasteryLevel.proficient:
-        return l10n.masteryLevelProficient;
-      case MasteryLevel.expert:
-        return l10n.masteryLevelExpert;
-    }
+  String _masteryLabel(double masteryLevel, AppLocalizations l10n) {
+    if (masteryLevel >= 0.9) return l10n.masteryLevelExpert;
+    if (masteryLevel >= 0.7) return l10n.masteryLevelProficient;
+    if (masteryLevel >= 0.5) return l10n.masteryLevelDeveloping;
+    if (masteryLevel >= 0.3) return l10n.masteryLevelBrowsing;
+    return l10n.masteryLevelNovice;
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/utils/id_generator.dart';
+import 'package:studyking/core/utils/id_generator.dart';
 
 void main() {
   group('IdGenerator', () {

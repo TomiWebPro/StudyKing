@@ -119,7 +119,8 @@ class SyllabusResolver {
   }) async {
     try {
       await _questionRepository.init();
-      final allQuestions = await _questionRepository.getAll();
+      final allQuestionsResult = await _questionRepository.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       final questions = allQuestions
           .where((q) => q.topicId == topicId)
           .toList();
@@ -137,7 +138,8 @@ class SyllabusResolver {
   }) async {
     try {
       await _questionRepository.init();
-      final allQuestions = await _questionRepository.getAll();
+      final allQuestionsResult = await _questionRepository.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       final result = <String, List<Question>>{};
       for (final topicId in topicIds) {
         result[topicId] = allQuestions

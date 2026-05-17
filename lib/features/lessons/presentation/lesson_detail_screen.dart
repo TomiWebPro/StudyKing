@@ -50,10 +50,10 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   Future<void> _loadLesson() async {
     try {
       final repo = ref.read(lessonRepositoryProvider);
-      final lesson = await repo.get(widget.args.lessonId);
+      final lessonResult = await repo.get(widget.args.lessonId);
       if (mounted) {
         setState(() {
-          _lesson = lesson;
+          _lesson = lessonResult.data;
           _loadError = false;
         });
       }

@@ -14,6 +14,7 @@ import 'package:studyking/features/planner/data/repositories/plan_repository.dar
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
@@ -120,13 +121,14 @@ class FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async {
+  Future<Result<Topic?>> get(String id) async {
     if (shouldThrow) throw Exception('Topic error');
-    return _topics[id];
+    return Result.success(_topics[id]);
   }
 
   @override
-  Future<List<Topic>> getAll() async => _topics.values.toList();
+  Future<Result<List<Topic>>> getAll() async =>
+      Result.success(_topics.values.toList());
 }
 
 class FakeRoadmapRepository extends RoadmapRepository {
@@ -216,8 +218,8 @@ class FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<PendingActionModel?> get(String id) async {
-    return _storage[id];
+  Future<Result<PendingActionModel?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
@@ -476,7 +478,8 @@ class FakeQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Question>> getAll() async => List.from(_questions);
+  Future<Result<List<Question>>> getAll() async =>
+      Result.success(List.from(_questions));
 
   @override
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
@@ -527,29 +530,29 @@ class FakePlannerService {
   bool hasSchedulingConflictCalled = false;
   bool scheduleLessonCalled = false;
 
-  Future<dynamic> loadExistingPlan(String studentId) async {
+  Future<PersonalLearningPlan?> loadExistingPlan(String studentId) async {
     loadExistingPlanCalled = true;
     return null;
   }
 
-  Future<List<dynamic>> loadRoadmaps(String studentId) async {
+  Future<List<RoadmapModel>> loadRoadmaps(String studentId) async {
     loadRoadmapsCalled = true;
     return [];
   }
 
-  Future<List<dynamic>> loadPendingActions(String studentId) async {
+  Future<List<PendingActionModel>> loadPendingActions(String studentId) async {
     loadPendingActionsCalled = true;
     return [];
   }
 
-  Future<List<dynamic>> getScheduledLessons(String studentId) async {
+  Future<List<Session>> getScheduledLessons(String studentId) async {
     getScheduledLessonsCalled = true;
     return [];
   }
 
-  Future<double> checkAdherence(String studentId) async {
+  Future<AdherenceDeviation?> checkAdherence(String studentId) async {
     checkAdherenceCalled = true;
-    return 1.0;
+    return null;
   }
 
   Future<bool> hasSchedulingConflict(String studentId, DateTime start, DateTime end) async {
@@ -557,9 +560,9 @@ class FakePlannerService {
     return false;
   }
 
-  Future<dynamic> scheduleLesson(String studentId, Map<String, dynamic> lesson) async {
+  Future<bool> scheduleLesson(String studentId, Map<String, dynamic> lesson) async {
     scheduleLessonCalled = true;
-    return null;
+    return false;
   }
 }
 
@@ -567,14 +570,14 @@ class FakeMasteryGraphService {
   bool getWeakTopicsCalled = false;
   bool getAtRiskQuestionsCalled = false;
 
-  Future<List<dynamic>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
     getWeakTopicsCalled = true;
-    return [];
+    return Result.success([]);
   }
 
-  Future<List<dynamic>> getAtRiskQuestions(String studentId) async {
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(String studentId) async {
     getAtRiskQuestionsCalled = true;
-    return [];
+    return Result.success([]);
   }
 }
 
@@ -588,7 +591,7 @@ class FakeProgressTracker {
     return {'accuracy': 0.0, 'totalAttempts': 0};
   }
 
-  Future<List<dynamic>> getRecommendations(String studentId) async {
+  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
     getRecommendationsCalled = true;
     return [];
   }

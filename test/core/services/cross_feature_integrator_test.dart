@@ -5,6 +5,13 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+  @override
+  Future<void> init() async {}
+}
+
 class _FakeSessionRepository extends SessionRepository {
   final List<Session> _sessions = [];
 
@@ -43,7 +50,7 @@ void main() {
       sessionRepo = _FakeSessionRepository();
       integrator = CrossFeatureIntegrator(
         sessionRepo: sessionRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
     });
 

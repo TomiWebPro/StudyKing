@@ -16,7 +16,8 @@ class RoadmapRepository extends Repository<RoadmapModel> {
   }
 
   Future<RoadmapModel?> loadRoadmap(String id) async {
-    return super.get(id);
+    final result = await super.get(id);
+    return result.data;
   }
 
   Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
@@ -26,7 +27,8 @@ class RoadmapRepository extends Repository<RoadmapModel> {
   }
 
   Future<List<RoadmapModel>> getAllRoadmaps() async {
-    return super.getAll();
+    final result = await super.getAll();
+    return result.data ?? [];
   }
 
   Future<void> deleteRoadmap(String id) async {

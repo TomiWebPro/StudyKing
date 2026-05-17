@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 
@@ -18,13 +19,13 @@ class _FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<StudentAttempt?> get(String id) async {
-    return _storage[id];
+  Future<Result<StudentAttempt?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<StudentAttempt>> getAll() async {
-    return _storage.values.toList();
+  Future<Result<List<StudentAttempt>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
@@ -63,8 +64,9 @@ class _FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 }
 
@@ -83,13 +85,13 @@ void main() {
         final attempt = StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now);
         await repository.create(attempt);
         final stored = await repository.get('a1');
-        expect(stored?.id, 'a1');
+        expect(stored.data?.id, 'a1');
       });
     });
 
     group('get', () {
       test('returns null for non-existent', () async {
-        expect(await repository.get('none'), isNull);
+        expect((await repository.get('none')).data, isNull);
       });
     });
 
@@ -97,11 +99,11 @@ void main() {
       test('returns all attempts', () async {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', timestamp: now));
-        expect((await repository.getAll()).length, 2);
+        expect((await repository.getAll()).data!.length, 2);
       });
 
       test('returns empty when no attempts', () async {
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
     });
 
@@ -178,7 +180,7 @@ void main() {
       test('removes attempt', () async {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.delete('a1');
-        expect(await repository.get('a1'), isNull);
+        expect((await repository.get('a1')).data, isNull);
       });
     });
   });
@@ -208,8 +210,8 @@ void main() {
       final attempt = StudentAttempt(id: 'hive-1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: DateTime.now());
       await repository.create(attempt);
       final stored = await repository.get('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.studentId, 's1');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.studentId, 's1');
     });
 
     test('getByStudent works after init', () async {

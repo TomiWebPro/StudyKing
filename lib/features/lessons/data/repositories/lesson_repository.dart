@@ -58,7 +58,8 @@ class LessonRepository extends Repository<Lesson> {
 
   Future<Result<void>> addBlock(LessonBlock block) async {
     try {
-      final lesson = await get(block.lessonId);
+      final lessonResult = await get(block.lessonId);
+      final lesson = lessonResult.data;
       if (lesson == null) {
         return Result.failure('Lesson_not_found: ${block.lessonId}');
       }
@@ -73,7 +74,8 @@ class LessonRepository extends Repository<Lesson> {
 
   Future<Result<List<LessonBlock>>> getBlocksForLesson(String lessonId) async {
     try {
-      final lesson = await get(lessonId);
+      final lessonResult = await get(lessonId);
+      final lesson = lessonResult.data;
       if (lesson == null) {
         return Result.success([]);
       }
@@ -86,7 +88,8 @@ class LessonRepository extends Repository<Lesson> {
 
   Future<Result<List<LessonBlock>>> getBlocksBySubject(String subjectId) async {
     try {
-      final lessons = await getAll();
+      final lessonsResult = await getAll();
+      final lessons = lessonsResult.data ?? [];
       final blocks = lessons
           .expand((l) => l.blocks)
           .where((b) => b.subjectId == subjectId)

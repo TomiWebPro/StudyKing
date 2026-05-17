@@ -153,7 +153,9 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
           if (profile != null && profile.language.isNotEmpty && mounted) {
             ref.read(localeProvider.notifier).state = Locale(profile.language);
           }
-        } catch (_) {}
+        } catch (e) {
+          _mainLogger.e('Error loading profile', e);
+        }
       });
     }
     
@@ -303,7 +305,9 @@ class _MainScreenState extends State<MainScreen> {
           setState(() => _showApiKeyBanner = true);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      _mainLogger.e('_handleFirstLaunch failed', e);
+    }
   }
 
   List<Widget> _buildTabNavigators() {

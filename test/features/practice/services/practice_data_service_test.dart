@@ -22,7 +22,17 @@ class _FakeQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Question>> getAll() async => _questions;
+  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
+}
+
+class _FakeStudentIdService extends StudentIdService {
+  String _studentId = 'test-student';
+  @override
+  void setStudentId(String id) => _studentId = id;
+  @override
+  String getStudentId() => _studentId;
+  @override
+  Future<void> init() async {}
 }
 
 class _FakeSpacedRepetitionService extends SpacedRepetitionService {
@@ -44,7 +54,7 @@ class _FakeSubjectRepository extends SubjectRepository {
   _FakeSubjectRepository(this._subjects);
 
   @override
-  Future<List<Subject>> getAll() async => _subjects;
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
 }
 
 Question _question({
@@ -80,7 +90,7 @@ void main() {
         srService: srService,
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: _FakeSubjectRepository(subjects),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final dueCounts = await service.loadDueCounts(subjects);
       expect(dueCounts['subj-1'], 5);
@@ -95,7 +105,7 @@ void main() {
         srService: srService,
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final dueCounts = await service.loadDueCounts(subjects);
       expect(dueCounts['missing'], 0);
@@ -114,7 +124,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, hasLength(2));
@@ -128,7 +138,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, isEmpty);
@@ -145,7 +155,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final algebraQs = await service.loadTopicQuestions('Algebra');
       expect(algebraQs, hasLength(2));
@@ -158,7 +168,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: failingRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadTopicQuestions('Algebra');
       expect(result, isEmpty);
@@ -175,7 +185,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: subjectRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.fetchSubjects();
       expect(result, hasLength(2));
@@ -190,14 +200,14 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: subjectRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.fetchSubjects();
       expect(result, isEmpty);
     });
 
     test('loadWeakAreaQuestions returns questions for weak topics', () async {
-      StudentIdService().setStudentId('test-student');
+      // Student ID is handled by _FakeStudentIdService
       final now = DateTime.now();
       final masteryService = _FakeMasteryGraphService(Result.success([
         MasteryState(
@@ -218,7 +228,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, hasLength(1));
@@ -226,35 +236,35 @@ void main() {
     });
 
     test('loadWeakAreaQuestions returns empty when no weak topics', () async {
-      StudentIdService().setStudentId('test-student');
+      // Student ID is handled by _FakeStudentIdService
       final masteryService = _FakeMasteryGraphService(Result.success([]));
 
       final service = PracticeDataService(
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, isEmpty);
     });
 
     test('loadWeakAreaQuestions returns empty when getWeakTopics fails', () async {
-      StudentIdService().setStudentId('test-student');
+      // Student ID is handled by _FakeStudentIdService
       final masteryService = _FakeMasteryGraphServiceFailure();
 
       final service = PracticeDataService(
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: _FakeQuestionRepository([]),
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, isEmpty);
     });
 
     test('loadWeakAreaQuestions returns empty when getAll fails', () async {
-      StudentIdService().setStudentId('test-student');
+      // Student ID is handled by _FakeStudentIdService
       final now = DateTime.now();
       final masteryService = _FakeMasteryGraphService(Result.success([
         MasteryState(
@@ -271,7 +281,7 @@ void main() {
         srService: _FakeSpacedRepetitionService({}),
         questionRepo: failingRepo,
         subjectRepo: _FakeSubjectRepository([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, isEmpty);
@@ -284,7 +294,7 @@ class _FakeFailingQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Question>> getAll() async => throw Exception('Failed to load');
+  Future<Result<List<Question>>> getAll() async => throw Exception('Failed to load');
 }
 
 class _FakeMasteryGraphService extends MasteryGraphService {

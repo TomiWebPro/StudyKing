@@ -68,20 +68,21 @@ class _FakeSourceRepository extends SourceRepository {
   }
 
   @override
-  Future<void> save(String key, Source item) async {
+  Future<Result<void>> save(String key, Source item) async {
     saveCallCount++;
     if (saveCallCount >= failSaveAfter) throw Exception('Save error');
     _storage[key] = item;
+    return Result.success(null);
   }
 
   @override
-  Future<Source?> get(String id) async => _storage[id];
+  Future<Result<Source?>> get(String id) async => Result.success(_storage[id]);
 
   @override
-  Future<List<Source>> getAll() async => _storage.values.toList();
+  Future<Result<List<Source>>> getAll() async => Result.success(_storage.values.toList());
 
   @override
-  Future<void> delete(String id) async {}
+  Future<Result<void>> delete(String id) async => Result.success(null);
 
   @override
   Future<List<Source>> getByStudent(String studentId) async => [];
@@ -122,12 +123,12 @@ class _FakeTopicRepository extends TopicRepository {
   void throwOnGetAll() => _shouldThrowOnGetAll = true;
 
   @override
-  Future<Topic?> get(String id) async => _topics[id];
+  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 
   @override
-  Future<List<Topic>> getAll() async {
+  Future<Result<List<Topic>>> getAll() async {
     if (_shouldThrowOnGetAll) throw Exception('DB error');
-    return _topics.values.toList();
+    return Result.success(_topics.values.toList());
   }
 }
 
@@ -441,6 +442,33 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(result.data!.processingStatus, 'completed');
       expect(result.data!.id, startsWith('src_'));
+    });
+
+    test('reprocessSource runs pipeline on existing source', () async {
+      final source = Source(id: 'src-existing', title: 'Existing', type: SourceType.pdf, content: 'Some content');
+      await mockSourceRepo.create(source);
+
+      final result = await pipeline.reprocessSource(
+        source,
+        modelId: 'model-1',
+        generateQuestions: false,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.title, 'Existing');
+      expect(result.data!.extractedText, isNotEmpty);
+    });
+
+    test('reprocessSource reports failure for empty content', () async {
+      final source = Source(id: 'src-empty', title: 'Empty', type: SourceType.pdf, content: '');
+
+      final result = await pipeline.reprocessSource(
+        source,
+        modelId: 'model-1',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('no content'));
     });
   });
 }

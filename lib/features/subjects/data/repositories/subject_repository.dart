@@ -12,14 +12,16 @@ class SubjectRepository extends Repository<Subject> {
   }
 
   Future<List<Subject>> getWithTopics(List<String> topicIds) async {
-    final subjects = await getAll();
+    final getAllResult = await getAll();
+    final subjects = getAllResult.data ?? [];
     return subjects.where((s) {
       return s.topicIds.any((id) => topicIds.contains(id));
     }).toList();
   }
 
   Future<void> addTopicToSubject(String subjectId, String topicId) async {
-    final subject = await get(subjectId);
+    final getResult = await get(subjectId);
+    final subject = getResult.data;
     if (subject != null) {
       if (subject.topicIds.contains(topicId)) {
         return;
@@ -33,7 +35,8 @@ class SubjectRepository extends Repository<Subject> {
 
   Future<void> removeTopicFromSubject(
       String subjectId, String topicId) async {
-    final subject = await get(subjectId);
+    final getResult = await get(subjectId);
+    final subject = getResult.data;
     if (subject != null) {
       final updated = subject.copyWith(
         topicIds: subject.topicIds.where((id) => id != topicId).toList(),
@@ -43,7 +46,8 @@ class SubjectRepository extends Repository<Subject> {
   }
 
   Future<Subject?> getByCode(String code) async {
-    final subjects = await getAll();
+    final getAllResult = await getAll();
+    final subjects = getAllResult.data ?? [];
     return subjects.where((s) => s.code == code).firstOrNull;
   }
 }

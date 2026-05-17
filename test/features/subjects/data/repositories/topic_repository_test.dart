@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'dart:io';
@@ -12,8 +13,8 @@ class _FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async {
-    return _storage[id];
+  Future<Result<Topic?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
@@ -22,8 +23,8 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<List<Topic>> getAll() async {
-    return _storage.values.toList();
+  Future<Result<List<Topic>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
@@ -42,13 +43,15 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 
   @override
   Future<void> addParent(Topic topic, String parentId) async {
-    final parent = await get(parentId);
+    final getResult = await get(parentId);
+    final parent = getResult.data;
     if (parent != null) {
       final updated = topic.copyWith(parentId: parentId, subjectId: parent.subjectId);
       await create(updated);
@@ -90,66 +93,66 @@ void main() {
       test('stores a topic', () async {
         final topic = createTestTopic();
         await repository.create(topic);
-        expect(await repository.get('topic-1'), isNotNull);
+        expect((await repository.get('topic-1')).data, isNotNull);
       });
 
       test('updates existing topic with same id', () async {
         await repository.create(createTestTopic(id: 't1', title: 'Original', subjectId: 's1'));
         await repository.create(createTestTopic(id: 't1', title: 'Updated', subjectId: 's1'));
         final result = await repository.get('t1');
-        expect(result!.title, 'Updated');
+        expect(result.data!.title, 'Updated');
       });
 
       test('preserves other topics when creating new one', () async {
         await repository.create(createTestTopic(id: 't1', title: 'A'));
         await repository.create(createTestTopic(id: 't2', title: 'B'));
         final all = await repository.getAll();
-        expect(all.length, 2);
+        expect(all.data!.length, 2);
       });
 
       test('stores multiple topics with unique ids', () async {
         await repository.create(createTestTopic(id: 't1', title: 'Algebra'));
         await repository.create(createTestTopic(id: 't2', title: 'Geometry'));
         await repository.create(createTestTopic(id: 't3', title: 'Calculus'));
-        expect(await repository.getAll(), hasLength(3));
+        expect((await repository.getAll()).data, hasLength(3));
       });
     });
 
     group('get', () {
       test('returns null for non-existent topic', () async {
-        expect(await repository.get('non-existent'), isNull);
+        expect((await repository.get('non-existent')).data, isNull);
       });
 
       test('returns stored topic', () async {
         final topic = createTestTopic();
         await repository.create(topic);
         final result = await repository.get('topic-1');
-        expect(result?.id, 'topic-1');
-        expect(result?.title, 'Algebra');
+        expect(result.data?.id, 'topic-1');
+        expect(result.data?.title, 'Algebra');
       });
 
       test('returns null for empty storage', () async {
-        expect(await repository.get('anything'), isNull);
+        expect((await repository.get('anything')).data, isNull);
       });
 
       test('get returns correct topic when multiple exist', () async {
         await repository.create(createTestTopic(id: 't1', title: 'A'));
         await repository.create(createTestTopic(id: 't2', title: 'B'));
         await repository.create(createTestTopic(id: 't3', title: 'C'));
-        expect((await repository.get('t2'))!.title, 'B');
+        expect((await repository.get('t2')).data!.title, 'B');
       });
     });
 
     group('getAll', () {
       test('returns empty list when no topics', () async {
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
 
       test('returns all topics', () async {
         await repository.create(createTestTopic(id: 't1', title: 'Algebra'));
         await repository.create(createTestTopic(id: 't2', title: 'Geometry'));
         final all = await repository.getAll();
-        expect(all.length, 2);
+        expect(all.data!.length, 2);
       });
 
       test('returns new list instance each time', () async {
@@ -162,9 +165,9 @@ void main() {
       test('modifying returned list does not affect repository', () async {
         await repository.create(createTestTopic(id: 't1', title: 'A'));
         final list = await repository.getAll();
-        list.clear();
+        list.data!.clear();
         final result = await repository.getAll();
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
     });
 
@@ -291,14 +294,14 @@ void main() {
         await repository.create(parent);
         await repository.addParent(child, 'parent-1');
         final stored = await repository.get('child-1');
-        expect(stored?.parentId, 'parent-1');
-        expect(stored?.subjectId, 's1');
+        expect(stored.data?.parentId, 'parent-1');
+        expect(stored.data?.subjectId, 's1');
       });
 
       test('does nothing when parent does not exist', () async {
         final child = createTestTopic(id: 'child-1', title: 'Child');
         await repository.addParent(child, 'non-existent');
-        expect(await repository.get('child-1'), isNull);
+        expect((await repository.get('child-1')).data, isNull);
       });
 
       test('updates existing topic with new parent', () async {
@@ -307,7 +310,7 @@ void main() {
         await repository.create(createTestTopic(id: 'child-1', title: 'Child', subjectId: 's1'));
         await repository.addParent(createTestTopic(id: 'child-1', title: 'Child'), 'parent-1');
         final stored = await repository.get('child-1');
-        expect(stored?.parentId, 'parent-1');
+        expect(stored.data?.parentId, 'parent-1');
       });
 
       test('inherits subjectId from parent', () async {
@@ -316,7 +319,7 @@ void main() {
         await repository.create(parent);
         await repository.addParent(child, 'parent-1');
         final stored = await repository.get('child-1');
-        expect(stored?.subjectId, 'physics');
+        expect(stored.data?.subjectId, 'physics');
       });
 
       test('preserves existing fields when adding parent', () async {
@@ -331,10 +334,10 @@ void main() {
         await repository.create(parent);
         await repository.addParent(child, 'parent-1');
         final stored = await repository.get('child-1');
-        expect(stored?.title, 'Child Topic');
-        expect(stored?.description, 'Description text');
-        expect(stored?.sortOrder, 5);
-        expect(stored?.syllabusText, 'Syllabus content');
+        expect(stored.data?.title, 'Child Topic');
+        expect(stored.data?.description, 'Description text');
+        expect(stored.data?.sortOrder, 5);
+        expect(stored.data?.syllabusText, 'Syllabus content');
       });
     });
 
@@ -342,13 +345,13 @@ void main() {
       test('removes topic', () async {
         await repository.create(createTestTopic(id: 't1'));
         await repository.delete('t1');
-        expect(await repository.get('t1'), isNull);
+        expect((await repository.get('t1')).data, isNull);
       });
 
       test('handles non-existent id gracefully', () async {
         await repository.create(createTestTopic(id: 't1'));
         await repository.delete('non-existent');
-        expect(await repository.get('t1'), isNotNull);
+        expect((await repository.get('t1')).data, isNotNull);
       });
 
       test('delete from empty storage does not throw', () async {
@@ -359,7 +362,7 @@ void main() {
         await repository.create(createTestTopic(id: 't1'));
         await repository.delete('t1');
         await repository.delete('t1');
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
 
       test('deletes only specified topic', () async {
@@ -367,8 +370,8 @@ void main() {
         await repository.create(createTestTopic(id: 't2'));
         await repository.delete('t1');
         final remaining = await repository.getAll();
-        expect(remaining.length, 1);
-        expect(remaining.first.id, 't2');
+        expect(remaining.data!.length, 1);
+        expect(remaining.data!.first.id, 't2');
       });
 
       test('delete all topics leaves empty storage', () async {
@@ -378,7 +381,7 @@ void main() {
         await repository.delete('t1');
         await repository.delete('t2');
         await repository.delete('t3');
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
     });
 
@@ -396,29 +399,29 @@ void main() {
         );
         await repository.create(topic);
         final retrieved = await repository.get('full-topic');
-        expect(retrieved, isNotNull);
-        expect(retrieved!.id, 'full-topic');
-        expect(retrieved.subjectId, 'subject-1');
-        expect(retrieved.title, 'Advanced Algebra');
-        expect(retrieved.description, 'A comprehensive description');
-        expect(retrieved.parentId, 'parent-1');
-        expect(retrieved.sortOrder, 3);
-        expect(retrieved.syllabusText, 'Full syllabus content');
-        expect(retrieved.childTopicIds, ['child-1', 'child-2']);
+        expect(retrieved.data, isNotNull);
+        expect(retrieved.data!.id, 'full-topic');
+        expect(retrieved.data!.subjectId, 'subject-1');
+        expect(retrieved.data!.title, 'Advanced Algebra');
+        expect(retrieved.data!.description, 'A comprehensive description');
+        expect(retrieved.data!.parentId, 'parent-1');
+        expect(retrieved.data!.sortOrder, 3);
+        expect(retrieved.data!.syllabusText, 'Full syllabus content');
+        expect(retrieved.data!.childTopicIds, ['child-1', 'child-2']);
       });
 
       test('save preserves null parentId', () async {
         final topic = createTestTopic(id: 'null-parent', parentId: null);
         await repository.create(topic);
         final retrieved = await repository.get('null-parent');
-        expect(retrieved!.parentId, isNull);
+        expect(retrieved.data!.parentId, isNull);
       });
 
       test('save preserves empty childTopicIds', () async {
         final topic = createTestTopic(id: 'no-children', childTopicIds: []);
         await repository.create(topic);
         final retrieved = await repository.get('no-children');
-        expect(retrieved!.childTopicIds, isEmpty);
+        expect(retrieved.data!.childTopicIds, isEmpty);
       });
     });
 
@@ -426,38 +429,38 @@ void main() {
       test('save -> get -> save (update) -> get preserves fields', () async {
         await repository.create(createTestTopic(id: 't1', title: 'Original', sortOrder: 1));
         final g1 = await repository.get('t1');
-        expect(g1!.title, 'Original');
+        expect(g1.data!.title, 'Original');
 
         await repository.create(createTestTopic(id: 't1', title: 'Updated', sortOrder: 2));
         final g2 = await repository.get('t1');
-        expect(g2!.title, 'Updated');
-        expect(g2.sortOrder, 2);
+        expect(g2.data!.title, 'Updated');
+        expect(g2.data!.sortOrder, 2);
       });
 
       test('save -> delete -> save restores with new data', () async {
         await repository.create(createTestTopic(id: 'cyclic', title: 'Version 1', subjectId: 's1'));
         await repository.delete('cyclic');
-        expect(await repository.get('cyclic'), isNull);
+        expect((await repository.get('cyclic')).data, isNull);
 
         await repository.create(createTestTopic(id: 'cyclic', title: 'Version 2', subjectId: 's2'));
         final restored = await repository.get('cyclic');
-        expect(restored, isNotNull);
-        expect(restored!.title, 'Version 2');
-        expect(restored.subjectId, 's2');
+        expect(restored.data, isNotNull);
+        expect(restored.data!.title, 'Version 2');
+        expect(restored.data!.subjectId, 's2');
       });
 
       test('getAll returns consistent results after multiple operations', () async {
         for (int i = 0; i < 5; i++) {
           await repository.create(createTestTopic(id: 't$i', title: 'Topic $i', subjectId: 's1'));
         }
-        expect(await repository.getAll(), hasLength(5));
+        expect((await repository.getAll()).data, hasLength(5));
 
         await repository.delete('t0');
         await repository.delete('t4');
-        expect(await repository.getAll(), hasLength(3));
+        expect((await repository.getAll()).data, hasLength(3));
 
         await repository.create(createTestTopic(id: 't0', title: 'Topic 0 again', subjectId: 's1'));
-        expect(await repository.getAll(), hasLength(4));
+        expect((await repository.getAll()).data, hasLength(4));
       });
 
       test('multiple operations in sequence work correctly', () async {
@@ -469,7 +472,7 @@ void main() {
 
         await repository.delete('b');
         expect(await repository.getBySubject('s2'), isEmpty);
-        expect(await repository.getAll(), hasLength(1));
+        expect((await repository.getAll()).data, hasLength(1));
       });
 
       test('addParent then getByParent returns correct topics', () async {
@@ -493,30 +496,30 @@ void main() {
         final longTitle = 'A' * 1000;
         await repository.create(createTestTopic(id: 'long', title: longTitle, syllabusText: 'S'));
         final result = await repository.get('long');
-        expect(result!.title.length, 1000);
+        expect(result.data!.title.length, 1000);
       });
 
       test('handles very long syllabus text', () async {
         final longSyllabus = 'S' * 5000;
         await repository.create(createTestTopic(id: 'long-syllabus', title: 'T', syllabusText: longSyllabus));
         final result = await repository.get('long-syllabus');
-        expect(result!.syllabusText.length, 5000);
+        expect(result.data!.syllabusText.length, 5000);
       });
 
       test('handles many child topic IDs', () async {
         final manyChildren = List.generate(100, (i) => 'child-$i');
         await repository.create(createTestTopic(id: 'many-children', title: 'T', childTopicIds: manyChildren));
         final result = await repository.get('many-children');
-        expect(result!.childTopicIds.length, 100);
+        expect(result.data!.childTopicIds.length, 100);
       });
 
       test('handles topic with no optional fields', () async {
         final topic = Topic(id: 'minimal', subjectId: 's1', title: 'Minimal', description: '', syllabusText: '');
         await repository.create(topic);
         final result = await repository.get('minimal');
-        expect(result, isNotNull);
-        expect(result!.parentId, isNull);
-        expect(result.childTopicIds, isEmpty);
+        expect(result.data, isNotNull);
+        expect(result.data!.parentId, isNull);
+        expect(result.data!.childTopicIds, isEmpty);
       });
     });
 
@@ -526,19 +529,19 @@ void main() {
           await repository.create(createTestTopic(id: 't$i', title: 'Topic $i', subjectId: 's1'));
         }
         final all = await repository.getAll();
-        expect(all.length, 100);
+        expect(all.data!.length, 100);
       });
 
       test('sequential creates and deletes', () async {
         for (int i = 0; i < 50; i++) {
           await repository.create(createTestTopic(id: 't$i', title: 'Topic $i', subjectId: 's1'));
         }
-        expect(await repository.getAll(), hasLength(50));
+        expect((await repository.getAll()).data, hasLength(50));
 
         for (int i = 0; i < 50; i++) {
           await repository.delete('t$i');
         }
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
 
       test('getBySubject with many topics', () async {
@@ -579,19 +582,19 @@ void main() {
       final topic = createTestTopic(id: 'hive-1', title: 'Hive Test');
       await repository.create(topic);
       final stored = await repository.get('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.title, 'Hive Test');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.title, 'Hive Test');
     });
 
     test('init is idempotent when called multiple times', () async {
       await repository.init();
       await repository.init();
       await repository.create(createTestTopic(id: 't1', title: 'After re-init'));
-      expect(await repository.get('t1'), isNotNull);
+      expect((await repository.get('t1')).data, isNotNull);
     });
 
     test('getAll returns empty after init', () async {
-      expect(await repository.getAll(), isEmpty);
+      expect((await repository.getAll()).data, isEmpty);
     });
 
     test('create and get round-trip preserves all fields', () async {
@@ -607,14 +610,14 @@ void main() {
       );
       await repository.create(topic);
       final stored = await repository.get('full');
-      expect(stored!.id, 'full');
-      expect(stored.subjectId, 's1');
-      expect(stored.title, 'Full Topic');
-      expect(stored.description, 'Full description');
-      expect(stored.parentId, 'p1');
-      expect(stored.sortOrder, 7);
-      expect(stored.syllabusText, 'Full syllabus');
-      expect(stored.childTopicIds, ['c1', 'c2']);
+      expect(stored.data!.id, 'full');
+      expect(stored.data!.subjectId, 's1');
+      expect(stored.data!.title, 'Full Topic');
+      expect(stored.data!.description, 'Full description');
+      expect(stored.data!.parentId, 'p1');
+      expect(stored.data!.sortOrder, 7);
+      expect(stored.data!.syllabusText, 'Full syllabus');
+      expect(stored.data!.childTopicIds, ['c1', 'c2']);
     });
 
     test('getBySubject works after init', () async {
@@ -670,14 +673,14 @@ void main() {
       final child = createTestTopic(id: 'child', title: 'Child', subjectId: 'old-subject');
       await repository.addParent(child, 'parent');
       final stored = await repository.get('child');
-      expect(stored!.parentId, 'parent');
-      expect(stored.subjectId, 's1');
+      expect(stored.data!.parentId, 'parent');
+      expect(stored.data!.subjectId, 's1');
     });
 
     test('addParent does nothing when parent does not exist', () async {
       final child = createTestTopic(id: 'child', title: 'Child');
       await repository.addParent(child, 'non-existent');
-      expect(await repository.get('child'), isNull);
+      expect((await repository.get('child')).data, isNull);
     });
 
     test('addParent with null parentId child works', () async {
@@ -686,13 +689,13 @@ void main() {
       final child = createTestTopic(id: 'child', title: 'Child');
       await repository.addParent(child, 'parent');
       final stored = await repository.get('child');
-      expect(stored!.parentId, 'parent');
+      expect(stored.data!.parentId, 'parent');
     });
 
     test('delete works after init', () async {
       await repository.create(createTestTopic(id: 'd1'));
       await repository.delete('d1');
-      expect(await repository.get('d1'), isNull);
+      expect((await repository.get('d1')).data, isNull);
     });
 
     test('delete non-existent does not throw', () async {
@@ -703,14 +706,14 @@ void main() {
       await repository.create(createTestTopic(id: 't1', title: 'A', subjectId: 's1'));
       await repository.create(createTestTopic(id: 't2', title: 'B', subjectId: 's1'));
       final all = await repository.getAll();
-      expect(all.length, 2);
+      expect(all.data!.length, 2);
     });
 
     test('create updates existing topic', () async {
       await repository.create(createTestTopic(id: 't1', title: 'Original', subjectId: 's1'));
       await repository.create(createTestTopic(id: 't1', title: 'Updated', subjectId: 's1'));
       final stored = await repository.get('t1');
-      expect(stored!.title, 'Updated');
+      expect(stored.data!.title, 'Updated');
     });
 
     test('supports multiple topics and queries', () async {
@@ -722,7 +725,7 @@ void main() {
         await repository.create(createTestTopic(id: 'c$i', title: 'Child $i', subjectId: 's1', parentId: parentId));
       }
 
-      expect(await repository.getAll(), hasLength(15));
+      expect((await repository.getAll()).data, hasLength(15));
       expect(await repository.getRootTopics(), hasLength(5));
       expect(await repository.getByParent('r0'), hasLength(2));
       expect(await repository.getBySubject('s1'), hasLength(15));

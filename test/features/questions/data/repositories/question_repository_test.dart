@@ -227,9 +227,9 @@ void main() {
         final question = createTestQuestion();
         final result = await repository.create(question);
         expect(result.isSuccess, isTrue);
-        final stored = await repository.get('q-1');
-        expect(stored, isNotNull);
-        expect(stored!.id, 'q-1');
+        final storedResult = await repository.get('q-1');
+        expect(storedResult.data, isNotNull);
+        expect(storedResult.data!.id, 'q-1');
       });
 
       test('stores question with all fields', () async {
@@ -245,8 +245,9 @@ void main() {
         );
         final result = await repository.create(question);
         expect(result.isSuccess, isTrue);
-        final stored = await repository.get('full');
-        expect(stored!.text, 'Full question?');
+        final storedResult = await repository.get('full');
+        final stored = storedResult.data!;
+        expect(stored.text, 'Full question?');
         expect(stored.type, QuestionType.multiChoice);
         expect(stored.difficulty, 3);
         expect(stored.subjectId, 'sub-99');
@@ -261,8 +262,8 @@ void main() {
         await repository.create(
           createTestQuestion(id: 'dup', text: 'Second'),
         );
-        final stored = await repository.get('dup');
-        expect(stored!.text, 'Second');
+        final storedResult = await repository.get('dup');
+        expect(storedResult.data!.text, 'Second');
       });
 
       test('returns failure when box.put throws', () async {
@@ -281,16 +282,16 @@ void main() {
       test('returns question by id', () async {
         await repository.create(createTestQuestion());
         final stored = await repository.get('q-1');
-        expect(stored, isNotNull);
-        expect(stored!.text, 'Test question?');
+        expect(stored.data, isNotNull);
+        expect(stored.data!.text, 'Test question?');
       });
 
       test('returns null for missing question', () async {
-        expect(await repository.get('not-found'), isNull);
+        expect((await repository.get('not-found')).data, isNull);
       });
 
       test('returns null when box is empty', () async {
-        expect(await repository.get('any'), isNull);
+        expect((await repository.get('any')).data, isNull);
       });
     });
 
@@ -302,11 +303,11 @@ void main() {
         await repository.create(createTestQuestion(id: 'q1'));
         await repository.create(createTestQuestion(id: 'q2'));
         final questions = await repository.getAll();
-        expect(questions.length, 2);
+        expect(questions.data!.length, 2);
       });
 
       test('returns empty when no questions', () async {
-        expect(await repository.getAll(), isEmpty);
+        expect((await repository.getAll()).data, isEmpty);
       });
 
       test('preserves insertion order', () async {
@@ -314,7 +315,7 @@ void main() {
         await repository.create(createTestQuestion(id: 'b'));
         await repository.create(createTestQuestion(id: 'c'));
         final all = await repository.getAll();
-        expect(all.map((q) => q.id).toList(), ['a', 'b', 'c']);
+        expect(all.data!.map((q) => q.id).toList(), ['a', 'b', 'c']);
       });
     });
 
@@ -629,9 +630,9 @@ void main() {
         final result = await repository.updateMarkscheme('q1', markscheme);
         expect(result.isSuccess, isTrue);
         final stored = await repository.get('q1');
-        expect(stored!.markscheme?.correctAnswer, 'Paris');
+        expect(stored.data!.markscheme?.correctAnswer, 'Paris');
       });
-
+ 
       test('replaces existing markscheme', () async {
         await repository.create(
           createTestQuestion(
@@ -643,7 +644,7 @@ void main() {
             await repository.updateMarkscheme('q1', createTestMarkscheme(answer: 'Rome'));
         expect(result.isSuccess, isTrue);
         final stored = await repository.get('q1');
-        expect(stored!.markscheme?.correctAnswer, 'Rome');
+        expect(stored.data!.markscheme?.correctAnswer, 'Rome');
       });
 
       test('returns failure for non-existent question', () async {
@@ -669,7 +670,7 @@ void main() {
       test('removes question', () async {
         await repository.create(createTestQuestion(id: 'q1'));
         await repository.delete('q1');
-        expect(await repository.get('q1'), isNull);
+        expect((await repository.get('q1')).data, isNull);
       });
 
       test('does not throw for non-existent question', () async {
@@ -681,8 +682,8 @@ void main() {
         await repository.create(createTestQuestion(id: 'remove'));
         await repository.delete('remove');
         final all = await repository.getAll();
-        expect(all.length, 1);
-        expect(all.first.id, 'keep');
+        expect(all.data!.length, 1);
+        expect(all.data!.first.id, 'keep');
       });
     });
   });
@@ -756,8 +757,8 @@ void main() {
       final result = await repo.create(createTestQuestion(id: 'init-q'));
       expect(result.isSuccess, isTrue);
       final stored = await repo.get('init-q');
-      expect(stored, isNotNull);
-      expect(stored!.id, 'init-q');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.id, 'init-q');
     });
 
     test('can getAll after init', () async {
@@ -766,7 +767,7 @@ void main() {
       await repo.create(createTestQuestion(id: 'a'));
       await repo.create(createTestQuestion(id: 'b'));
       final all = await repo.getAll();
-      expect(all.length, 2);
+      expect(all.data!.length, 2);
     });
   });
 }

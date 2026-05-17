@@ -17,11 +17,13 @@ class TutorSessionRepository extends Repository<TutorSession> {
   }
 
   Future<TutorSession?> getSession(String id) async {
-    return get(id);
+    final result = await get(id);
+    return result.data;
   }
 
   Future<List<TutorSession>> getAllSessions() async {
-    final all = await getAll();
+    final getAllResult = await getAll();
+    final all = getAllResult.data ?? [];
     all.sort((a, b) => b.startTime.compareTo(a.startTime));
     return all;
   }

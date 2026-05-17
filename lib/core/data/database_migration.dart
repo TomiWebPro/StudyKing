@@ -32,7 +32,8 @@ class DatabaseMigration {
       for (final boxName in boxes) {
         try {
           await Hive.openBox(boxName);
-        } catch (_) {
+        } catch (e) {
+          Logger('DatabaseMigration').w('Failed to open box "$boxName"', e);
           missingBoxes.add(boxName);
         }
       }

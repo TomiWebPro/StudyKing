@@ -22,9 +22,25 @@ class ColorUtils {
     try {
       final hex = hexColor.replaceAll('#', '');
       return Color(int.parse(hex, radix: 16) + 0xFF000000);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('ColorUtils.stringToColor: invalid hex color "$hexColor": $e');
       return defaultColor;
     }
+  }
+
+  static Color getSubjectColor(BuildContext context, String name) {
+    final cs = Theme.of(context).colorScheme;
+    final colors = [
+      cs.primary,
+      cs.secondary,
+      cs.tertiary,
+      cs.primary,
+      cs.secondary,
+      cs.tertiary,
+      cs.primary,
+      cs.secondary,
+    ];
+    return colors[name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
   }
 
   static String getColorLabel(String hexColor, {AppLocalizations? l10n}) {

@@ -7,6 +7,13 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+  @override
+  Future<void> init() async {}
+}
+
 class _FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
   bool saveCalled = false;
@@ -68,7 +75,7 @@ void main() {
       service = PracticeSessionService(
         sessionRepo: sessionRepo,
         srRepo: srRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
         subjectId: 'subj-1',
       );
     });
@@ -203,7 +210,7 @@ void main() {
         final customService = PracticeSessionService(
           sessionRepo: sessionRepo,
           srRepo: srRepo,
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
           clock: clock,
           subjectId: 'subj-1',
         );
@@ -221,7 +228,7 @@ void main() {
         final customService = PracticeSessionService(
           sessionRepo: repo,
           srRepo: srRepo,
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
           clock: clock,
           subjectId: 'subj-1',
         );

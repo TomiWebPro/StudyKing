@@ -9,6 +9,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -28,6 +29,15 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/utils/clock.dart';
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+  @override
+  void setStudentId(String id) {}
+  @override
+  Future<void> init() async {}
+}
 
 // ============================================================================
 // FAKES
@@ -140,17 +150,17 @@ class _ThrowingQuestionRepository extends QuestionRepository {
   Box<Question> get box => fakeBox;
 
   @override
-  Future<Question?> get(String id) async {
+  Future<Result<Question?>> get(String id) async {
     throw Exception('Repo get error');
   }
 
   @override
-  Future<void> save(String key, Question item) async {
+  Future<Result<void>> save(String key, Question item) async {
     throw Exception('Repo save error');
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     throw Exception('Repo delete error');
   }
 
@@ -172,9 +182,9 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<StudentAttempt?> get(String id) async {
+  Future<Result<StudentAttempt?>> get(String id) async {
     if (_throwOnGet) throw Exception('Attempt get error');
-    return _storage[id];
+    return Result.success(_storage[id]);
   }
 }
 
@@ -748,9 +758,9 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       final updated = await fakeQuestionRepo.get('q1');
-      expect(updated!.srDataJson, isNotNull);
-      expect(updated.srDataJson, contains('"r"'));
-      expect(updated.srDataJson, contains('"ef"'));
+      expect(updated.data!.srDataJson, isNotNull);
+      expect(updated.data!.srDataJson, contains('"r"'));
+      expect(updated.data!.srDataJson, contains('"ef"'));
     });
 
     test('recordAttempt uses provided timestamp', () async {
@@ -794,7 +804,7 @@ void main() {
       sessionRepo = _FakeSessionRepo();
       service = ExamSessionService(
         sessionRepo: sessionRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
     });
 
@@ -976,7 +986,7 @@ void main() {
       test('dispose cancels timer and disposes notifiers', () {
         final localService = ExamSessionService(
           sessionRepo: sessionRepo,
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
         );
         final config = const ExamConfig(
           durationMinutes: 30,
@@ -993,7 +1003,7 @@ void main() {
       test('ExamSessionService.dispose is safe to call once', () {
         final localService = ExamSessionService(
           sessionRepo: sessionRepo,
-          studentIdService: StudentIdService(),
+          studentIdService: _FakeStudentIdService(),
         );
         localService.dispose();
         // should not throw
@@ -1348,7 +1358,7 @@ void main() {
         srService: _FakeSrService2({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, isEmpty);
@@ -1381,7 +1391,7 @@ void main() {
         srService: _FakeSrService2({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, hasLength(1));
@@ -1394,7 +1404,7 @@ void main() {
         srService: srService,
         questionRepo: _FakeQuestionRepo4([]),
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final dueCounts = await service.loadDueCounts([]);
       expect(dueCounts, isEmpty);
@@ -1402,13 +1412,13 @@ void main() {
 
     test('loadWeakAreaQuestions returns empty when getWeakTopics returns empty list',
         () async {
-      StudentIdService().setStudentId('test-student');
+      _FakeStudentIdService().setStudentId('test-student');
       final masteryService = _FakeMasteryGraphSvc2();
       final service = PracticeDataService(
         srService: _FakeSrService2({}),
         questionRepo: _FakeQuestionRepo4([]),
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, isEmpty);
@@ -1428,7 +1438,7 @@ void main() {
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
         srRepo: srRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1446,7 +1456,7 @@ void main() {
       final service1 = PracticeSessionService(
         sessionRepo: sessionRepo,
         srRepo: srRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1456,7 +1466,7 @@ void main() {
       final service2 = PracticeSessionService(
         sessionRepo: sessionRepo,
         srRepo: srRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1473,7 +1483,7 @@ void main() {
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
         srRepo: srRepo,
-        studentIdService: StudentIdService(),
+        studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1525,18 +1535,20 @@ class _FakeQuestionRepo extends QuestionRepository {
   Box<Question> get box => fakeBox;
 
   @override
-  Future<Question?> get(String id) async {
-    return fakeBox.get(id);
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(fakeBox.get(id));
   }
 
   @override
-  Future<void> save(String key, Question item) async {
+  Future<Result<void>> save(String key, Question item) async {
     await fakeBox.put(key, item);
+    return Result.success(null);
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     await fakeBox.delete(key);
+    return Result.success(null);
   }
 
   @override
@@ -1559,13 +1571,13 @@ class _FakeThrowingBoxRepo extends QuestionRepository {
   Box<Question> get box => _box;
 
   @override
-  Future<Question?> get(String id) async => null;
+  Future<Result<Question?>> get(String id) async => Result.success(null);
 
   @override
-  Future<void> save(String key, Question item) async {}
+  Future<Result<void>> save(String key, Question item) async => Result.success(null);
 
   @override
-  Future<void> delete(String key) async {}
+  Future<Result<void>> delete(String key) async => Result.success(null);
 
   @override
   Future<Result<void>> create(Question question) async {
@@ -1681,13 +1693,14 @@ class _FakeQuestionRepo2 extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Question?> get(String id) async {
-    return _questions[id];
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
   }
 
   @override
-  Future<void> save(String key, Question item) async {
+  Future<Result<void>> save(String key, Question item) async {
     _questions[key] = item;
+    return Result.success(null);
   }
 }
 
@@ -1763,8 +1776,8 @@ class _FakeQuestionRepo3 extends QuestionRepository {
   }
 
   @override
-  Future<Question?> get(String id) async {
-    return _questions[id];
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
   }
 }
 
@@ -1778,7 +1791,7 @@ class _FakeQuestionRepo4 extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Question>> getAll() async => _questions;
+  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
 }
 
 class _FakeSrService2 extends SpacedRepetitionService {
@@ -1801,7 +1814,7 @@ class _FakeSubjectRepo2 extends SubjectRepository {
   _FakeSubjectRepo2(this._subjects);
 
   @override
-  Future<List<Subject>> getAll() async => _subjects;
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
 }
 
 class _FakeMasteryGraphSvc2 extends MasteryGraphService {

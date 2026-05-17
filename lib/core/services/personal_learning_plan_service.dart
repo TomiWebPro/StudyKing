@@ -395,7 +395,8 @@ class PersonalLearningPlanService {
         final stretchIds = <String>[];
 
         for (final topic in plan.priorityTopics) {
-          final topicQuestions = allQuestions
+          final allQuestionsList = allQuestions.data ?? [];
+        final topicQuestions = allQuestionsList
               .where((q) => q.topicId == topic.topicId)
               .toList();
 
@@ -451,7 +452,7 @@ class PersonalLearningPlanService {
       final plannedQuestions = todayPlan?.targetQuestions ?? 0;
       final plannedMinutes = todayPlan?.targetMinutes ?? 0;
 
-      final adherenceScore = _calculateAdherenceScore(
+      final adherenceScore = calculateAdherenceScore(
         plannedQuestions: plannedQuestions,
         actualQuestions: actualQuestions,
         plannedMinutes: plannedMinutes,
@@ -573,19 +574,6 @@ class PersonalLearningPlanService {
     return null;
   }
 
-  double _calculateAdherenceScore({
-    required int plannedQuestions,
-    required int actualQuestions,
-    required int plannedMinutes,
-    required int actualMinutes,
-  }) {
-    return calculateAdherenceScore(
-      plannedQuestions: plannedQuestions,
-      actualQuestions: actualQuestions,
-      plannedMinutes: plannedMinutes,
-      actualMinutes: actualMinutes,
-    );
-  }
 
   Future<List<DailyPlan>> _generateDailyPlans({
     required String studentId,
@@ -732,8 +720,8 @@ class PersonalLearningPlanService {
 
   Future<String> _getTopicTitle(String topicId) async {
     try {
-      final topic = await _topicRepository.get(topicId);
-      return topic?.title ?? topicId;
+      final topicResult = await _topicRepository.get(topicId);
+      return topicResult.data?.title ?? topicId;
     } catch (e) {
       const Logger('PersonalLearningPlanService').e('Failed to get topic title', e);
       return topicId;
@@ -764,8 +752,8 @@ class PersonalLearningPlanService {
 
   Future<String> _getSubjectId(String topicId) async {
     try {
-      final topic = await _topicRepository.get(topicId);
-      return topic?.subjectId ?? '';
+      final topicResult = await _topicRepository.get(topicId);
+      return topicResult.data?.subjectId ?? '';
     } catch (e) {
       const Logger('PersonalLearningPlanService').e('Failed to get subject ID', e);
       return '';

@@ -6425,6 +6425,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'• '**
   String get mentorBulletPoint;
+
+  /// Title shown when a route is not found
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get pageNotFound;
+
+  /// Description shown on the not-found page
+  ///
+  /// In en, this message translates to:
+  /// **'The page you are looking for does not exist or the link may be invalid.'**
+  String get pageNotFoundDescription;
+
+  /// Button label to navigate to the dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Dashboard'**
+  String get goToDashboard;
+
+  /// Label shown when a message is being sent
+  ///
+  /// In en, this message translates to:
+  /// **'Sending'**
+  String get sending;
 }
 
 class _AppLocalizationsDelegate

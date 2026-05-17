@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
@@ -8,6 +9,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -32,11 +34,22 @@ class SubjectDetailScreen extends ConsumerStatefulWidget {
 
 class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _sourceCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
+    _loadSourceCount();
+  }
+
+  Future<void> _loadSourceCount() async {
+    try {
+      final repo = SourceRepository();
+      await repo.init();
+      final sources = await repo.getBySubject(widget.args.subjectId);
+      if (mounted) setState(() => _sourceCount = sources.length);
+    } catch (_) {}
   }
 
   @override
@@ -93,7 +106,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   radius: 24,
                                   backgroundColor: theme.colorScheme.surface,
                                   child: Text(
-                                    widget.args.subjectName[0].toUpperCase(),
+                                    widget.args.subjectName.isNotEmpty ? widget.args.subjectName[0].toUpperCase() : '?',
                                     style: TextStyle(
                                       color: color,
                                       fontSize: 24,
@@ -143,12 +156,13 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             ),
             bottom: TabBar(
               controller: _tabController,
-              labelColor: theme.primaryColor,
+              labelColor: theme.colorScheme.primary,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               indicatorColor: color,
               tabs: [
                 Tab(icon: const Icon(Icons.book), text: l10n.lessonsTab),
                 Tab(icon: const Icon(Icons.play_arrow), text: l10n.practiceTab),
+                Tab(icon: const Icon(Icons.source), text: 'Sources'),
                 Tab(icon: const Icon(Icons.history), text: l10n.historyTab),
                 Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
               ],
@@ -165,6 +179,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     onStartPractice: () => _startPractice(isSpacedRepetition: false),
                     onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
                   ),
+                  _SubjectSourcesTab(subjectId: widget.args.subjectId, subjectName: widget.args.subjectName),
                   SubjectHistoryTab(
                     subjectId: widget.args.subjectId,
                     onSessionTap: (session) => _showSessionDetails(session),
@@ -226,6 +241,18 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                 },
               ),
             ),
+            if (_sourceCount > 0)
+              Semantics(
+                label: 'View Sources',
+                child: ListTile(
+                  leading: const Icon(Icons.source),
+                  title: Text('$_sourceCount Source(s)'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _tabController.animateTo(2);
+                  },
+                ),
+              ),
             Semantics(
               label: l10n.dashboard,
               child: ListTile(
@@ -264,7 +291,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     if (!mounted) return;
     try {
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      final subject = await repo.get(widget.args.subjectId);
+      final subjectResult = await repo.get(widget.args.subjectId);
+      final subject = subjectResult.data;
       if (subject == null || !mounted) return;
       Navigator.pushNamed(
         context,
@@ -361,4 +389,161 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       ),
     );
   }
+}
+
+class _SubjectSourcesTab extends ConsumerStatefulWidget {
+  final String subjectId;
+  final String subjectName;
+
+  const _SubjectSourcesTab({required this.subjectId, required this.subjectName});
+
+  @override
+  ConsumerState<_SubjectSourcesTab> createState() => _SubjectSourcesTabState();
+}
+
+class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
+  final _sourceRepo = SourceRepository();
+  List<_SourceItem> _items = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _isLoading = true);
+    try {
+      await _sourceRepo.init();
+      final sources = await _sourceRepo.getBySubject(widget.subjectId);
+      if (mounted) {
+        setState(() {
+          _items = sources.map((s) => _SourceItem(
+            id: s.id,
+            title: s.title,
+            type: s.type,
+            status: s.statusEnum,
+            questionCount: s.generatedQuestionIds.length,
+          )).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    if (_items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.folder_open, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            Text('No sources for this subject', style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.cloud_upload),
+              label: Text(l10n.uploadMaterials),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.upload, arguments: widget.subjectId),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Text(
+            '${_items.length} Source(s)',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            itemCount: _items.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final item = _items[index];
+              final statusColor = item.status == ProcessingStatus.completed
+                  ? Colors.green
+                  : item.status == ProcessingStatus.failed
+                      ? Colors.red
+                      : Colors.orange;
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Icon(_typeIcon(item.type), color: theme.colorScheme.primary, size: 20),
+                ),
+                title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        item.status.name,
+                        style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (item.questionCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(l10n.questionsCount(item.questionCount), style: theme.textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: item.id),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _typeIcon(SourceType type) {
+    switch (type) {
+      case SourceType.pdf: return Icons.picture_as_pdf;
+      case SourceType.syllabus: return Icons.menu_book;
+      case SourceType.textbook: return Icons.book;
+      case SourceType.video: return Icons.video_library;
+      case SourceType.lectureNotes: return Icons.note;
+      case SourceType.externalResource: return Icons.article;
+      case SourceType.image: return Icons.image;
+      case SourceType.webPage: return Icons.language;
+      case SourceType.audio: return Icons.headphones;
+      case SourceType.document: return Icons.description;
+    }
+  }
+}
+
+class _SourceItem {
+  final String id;
+  final String title;
+  final SourceType type;
+  final ProcessingStatus status;
+  final int questionCount;
+
+  const _SourceItem({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.status,
+    required this.questionCount,
+  });
 }

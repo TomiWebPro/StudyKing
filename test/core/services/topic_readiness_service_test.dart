@@ -19,11 +19,11 @@ class _FakeReadinessTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<Topic?> get(String id) async =>
-      _topics.cast<Topic?>().firstWhere((t) => t?.id == id, orElse: () => null);
+  Future<Result<Topic?>> get(String id) async =>
+      Result.success(_topics.cast<Topic?>().firstWhere((t) => t?.id == id, orElse: () => null));
 
   @override
-  Future<List<Topic>> getAll() async => _topics;
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
 
   @override
   Future<List<Topic>> getBySubject(String subjectId) async {

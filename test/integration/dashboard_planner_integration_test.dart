@@ -77,10 +77,10 @@ class _FakeTopicRepo extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<Topic>> getAll() async => [];
+  Future<Result<List<Topic>>> getAll() async => Result.success([]);
 
   @override
-  Future<Topic?> get(String id) async => null;
+  Future<Result<Topic?>> get(String id) async => Result.success(null);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

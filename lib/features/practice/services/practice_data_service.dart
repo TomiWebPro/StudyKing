@@ -25,7 +25,8 @@ class PracticeDataService {
         _studentIdService = studentIdService;
 
   Future<List<Subject>> fetchSubjects() async {
-    return _subjectRepo.getAll();
+    final result = await _subjectRepo.getAll();
+    return result.data ?? [];
   }
 
   Future<Map<String, int>> loadDueCounts(List<Subject> subjects) async {
@@ -43,7 +44,8 @@ class PracticeDataService {
 
   Future<List<String>> loadTopics(QuestionRepository questionRepo) async {
     try {
-      final questions = await questionRepo.getAll();
+      final questionsResult = await questionRepo.getAll();
+      final questions = questionsResult.data ?? [];
       if (questions.isEmpty) return [];
       return questions
           .where((q) => q.topic != null && q.topic!.isNotEmpty)
@@ -58,7 +60,8 @@ class PracticeDataService {
 
   Future<List<Question>> loadTopicQuestions(String topic) async {
     try {
-      final questions = await _questionRepo.getAll();
+      final questionsResult = await _questionRepo.getAll();
+      final questions = questionsResult.data ?? [];
       return questions.where((q) => q.topic == topic).toList();
     } catch (e) {
       _logger.w('Failed to load topic questions: $e');
@@ -78,7 +81,8 @@ class PracticeDataService {
     final weakTopicIds =
         weakTopicsResult.data!.map((s) => s.topicId).toSet();
     try {
-      final allQuestions = await _questionRepo.getAll();
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
       return allQuestions
           .where((q) => weakTopicIds.contains(q.topicId))
           .toList();

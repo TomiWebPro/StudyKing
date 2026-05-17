@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/core/errors/result.dart';
 
 class _FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _storage = {};
@@ -17,8 +18,8 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<PendingActionModel?> get(String id) async {
-    return _storage[id];
+  Future<Result<PendingActionModel?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
@@ -46,8 +47,9 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 
   @override
@@ -102,27 +104,27 @@ void main() {
         final action = createTestAction();
         await repository.create(action);
         final stored = await repository.get('action-1');
-        expect(stored, isNotNull);
-        expect(stored?.actionType, 'schedule');
+        expect(stored.data, isNotNull);
+        expect(stored.data?.actionType, 'schedule');
       });
 
       test('overwrites existing action with same id', () async {
         await repository.create(createTestAction(actionType: 'schedule'));
         await repository.create(createTestAction(actionType: 'reschedule'));
-        expect((await repository.get('action-1'))?.actionType, 'reschedule');
+        expect((await repository.get('action-1')).data?.actionType, 'reschedule');
       });
     });
 
     group('get', () {
       test('returns null for non-existent action', () async {
-        expect(await repository.get('none'), isNull);
+        expect((await repository.get('none')).data, isNull);
       });
 
       test('returns stored action', () async {
         await repository.create(createTestAction());
         final result = await repository.get('action-1');
-        expect(result?.id, 'action-1');
-        expect(result?.status, 'pending');
+        expect(result.data?.id, 'action-1');
+        expect(result.data?.status, 'pending');
       });
     });
 
@@ -157,7 +159,7 @@ void main() {
         await repository.create(createTestAction(id: 'a1', studentId: 's1'));
         await repository.markCompleted('a1');
         final result = await repository.get('a1');
-        expect(result?.status, 'completed');
+        expect(result.data?.status, 'completed');
       });
 
       test('does nothing for non-existent action', () async {
@@ -170,7 +172,7 @@ void main() {
         await repository.create(createTestAction(id: 'a1', studentId: 's1'));
         await repository.markRejected('a1');
         final result = await repository.get('a1');
-        expect(result?.status, 'rejected');
+        expect(result.data?.status, 'rejected');
       });
 
       test('does nothing for non-existent action', () async {
@@ -182,7 +184,7 @@ void main() {
       test('removes an action', () async {
         await repository.create(createTestAction(id: 'a1'));
         await repository.delete('a1');
-        expect(await repository.get('a1'), isNull);
+        expect((await repository.get('a1')).data, isNull);
       });
 
       test('does nothing for non-existent id', () async {
@@ -196,9 +198,9 @@ void main() {
         await repository.create(createTestAction(id: 'a2', studentId: 's1'));
         await repository.create(createTestAction(id: 'a3', studentId: 's2'));
         await repository.clearAll('s1');
-        expect(await repository.get('a1'), isNull);
-        expect(await repository.get('a2'), isNull);
-        expect(await repository.get('a3'), isNotNull);
+        expect((await repository.get('a1')).data, isNull);
+        expect((await repository.get('a2')).data, isNull);
+        expect((await repository.get('a3')).data, isNotNull);
       });
 
       test('does nothing when student has no actions', () async {
@@ -249,8 +251,8 @@ void main() {
       final action = createTestAction(id: 'hive-1');
       await repository.create(action);
       final stored = await repository.get('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.actionType, 'schedule');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.actionType, 'schedule');
     });
 
     test('getPending works after init', () async {
@@ -263,14 +265,14 @@ void main() {
       await repository.create(createTestAction(id: 'm1', studentId: 's1'));
       await repository.markCompleted('m1');
       final stored = await repository.get('m1');
-      expect(stored?.status, 'completed');
+      expect(stored.data?.status, 'completed');
     });
 
     test('markRejected works after init', () async {
       await repository.create(createTestAction(id: 'rj1', studentId: 's1'));
       await repository.markRejected('rj1');
       final stored = await repository.get('rj1');
-      expect(stored?.status, 'rejected');
+      expect(stored.data?.status, 'rejected');
     });
 
     test('clearAll removes all actions for a student', () async {
@@ -278,9 +280,9 @@ void main() {
       await repository.create(createTestAction(id: 'ca2', studentId: 's1'));
       await repository.create(createTestAction(id: 'ca3', studentId: 's2'));
       await repository.clearAll('s1');
-      expect(await repository.get('ca1'), isNull);
-      expect(await repository.get('ca2'), isNull);
-      expect(await repository.get('ca3'), isNotNull);
+      expect((await repository.get('ca1')).data, isNull);
+      expect((await repository.get('ca2')).data, isNull);
+      expect((await repository.get('ca3')).data, isNotNull);
     });
 
     test('hasPending returns true when pending actions exist', () async {

@@ -16,7 +16,8 @@ class ConversationRepository extends Repository<ConversationMessage> {
   }
 
   Future<ConversationMessage?> getMessage(String id) async {
-    return get(id);
+    final result = await get(id);
+    return result.data;
   }
 
   Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {

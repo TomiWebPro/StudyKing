@@ -109,7 +109,8 @@ class SpacedRepetitionService {
   Future<Result<void>> updateNextReviewDate(
       String questionId, double masteryLevel) async {
     try {
-      final question = await _questionRepo.get(questionId);
+      final questionResult = await _questionRepo.get(questionId);
+      final question = questionResult.data;
       if (question == null) {
         return Result.failure('not_found');
       }
@@ -176,7 +177,8 @@ class SpacedRepetitionService {
   Future<Result<List<DateTime>>> getQuestionDueTimes(
       String questionId) async {
     try {
-      final attempt = await _attemptRepo.get(questionId);
+      final attemptResult = await _attemptRepo.get(questionId);
+      final attempt = attemptResult.data;
       if (attempt == null) {
         return Result.failure('not_found');
       }

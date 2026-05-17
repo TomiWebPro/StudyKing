@@ -42,7 +42,8 @@ class MasteryRecorder {
     final now = timestamp ?? DateTime.now();
 
     try {
-      final question = await _questionRepo.get(questionId);
+      final questionResult = await _questionRepo.get(questionId);
+      final question = questionResult.data;
       if (question == null) {
         return Result.failure('Question_not_found: $questionId');
       }

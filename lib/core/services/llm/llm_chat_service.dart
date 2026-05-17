@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../errors/result.dart';
 import '../conversation_memory.dart';
@@ -28,7 +27,7 @@ class LlmConfiguration {
 
 class LlmService {
   static String get defaultSystemPrompt =>
-      lookupAppLocalizations(const Locale('en')).aiDefaultSystemPrompt;
+      AppLocalizationsEn().aiDefaultSystemPrompt;
 
   final LlmConfiguration config;
   final http.Client _httpClient;

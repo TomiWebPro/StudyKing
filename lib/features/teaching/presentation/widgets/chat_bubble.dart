@@ -123,7 +123,7 @@ class ChatBubble extends StatelessWidget {
 
     if (message.isStreaming) {
       return Semantics(
-        liveRegion: true,
+        liveRegion: message.content.length < 50,
         child: textWidget,
       );
     }

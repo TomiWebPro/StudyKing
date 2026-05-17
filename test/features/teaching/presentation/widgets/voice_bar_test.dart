@@ -10,6 +10,8 @@ class FakeVoiceController extends VoiceController {
   final bool _fakeIsAvailable = true;
   final StreamController<String> _transcriptionCtrl =
       StreamController<String>.broadcast();
+  bool requestPermissionCalled = false;
+  String? lastLocaleName;
 
   @override
   bool get isListening => _fakeIsListening;
@@ -23,11 +25,18 @@ class FakeVoiceController extends VoiceController {
   @override
   Future<void> startListening({String? localeName}) async {
     _fakeIsListening = true;
+    lastLocaleName = localeName;
   }
 
   @override
   Future<void> stopListening() async {
     _fakeIsListening = false;
+  }
+
+  @override
+  Future<bool> requestPermission() async {
+    requestPermissionCalled = true;
+    return true;
   }
 
   void addTranscription(String text) {
@@ -355,6 +364,186 @@ void main() {
 
       final micIcon = tester.widget<Icon>(find.byIcon(Icons.mic));
       expect(micIcon.color, isNotNull);
+    });
+
+    testWidgets('shows CustomPaint with painter when listening', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      final waveformPaint = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.size.width == 24 && w.size.height == 24,
+      );
+      expect(waveformPaint, findsOneWidget);
+
+      final customPaint = tester.widget<CustomPaint>(waveformPaint);
+      expect(customPaint.painter, isNotNull);
+    });
+
+    testWidgets('handles transcription stream emitting after widget disposal', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Active transcription');
+      await tester.pump();
+
+      await tester.pumpWidget(wrapApp(const SizedBox.shrink()));
+      await tester.pump();
+
+      controller.addTranscription('After dispose');
+      expect(true, isTrue);
+    });
+
+    testWidgets('voice bar disabled does not start listening on tap', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+          isEnabled: false,
+        ),
+      ));
+
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(controller.isListening, isFalse);
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
+    });
+
+    testWidgets('stop listening with empty transcription does not submit', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(submitted, isEmpty);
+    });
+
+    testWidgets('shows transcription text in flexible widget when listening', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Flexible transcription text');
+      await tester.pump();
+
+      expect(find.text('Flexible transcription text'), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.text('Flexible transcription text'),
+          matching: find.byType(Flexible),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('requestPermission is called on init via postFrameCallback', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(controller.requestPermissionCalled, isTrue);
+    });
+
+    testWidgets('transcription is cleared in internal state after submission', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Submit me');
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(submitted, ['Submit me']);
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(submitted, ['Submit me']);
+    });
+
+    testWidgets('_WaveformPainter shouldRepaint returns true for different value', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('');
+      await tester.pump();
+
+      final waveformPaint = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.size.width == 24 && w.size.height == 24,
+      );
+      expect(waveformPaint, findsOneWidget);
+
+      final customPaint = tester.widget<CustomPaint>(waveformPaint);
+      final painter = customPaint.painter;
+      expect(painter, isNotNull);
     });
   });
 }

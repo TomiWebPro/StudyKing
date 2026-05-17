@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -11,24 +12,41 @@ import 'package:studyking/features/dashboard/providers/dashboard_providers.dart'
 
 class _FakeTopicRepository extends TopicRepository {
   @override
-  Future<void> save(String key, Topic item) async {}
+  Future<Result<void>> save(String key, Topic item) async => Result.success(null);
   @override
-  Future<Topic?> get(String key) async => null;
+  Future<Result<Topic?>> get(String key) async => Result.success(null);
   @override
-  Future<List<Topic>> getAll() async => [];
+  Future<Result<List<Topic>>> getAll() async => Result.success([]);
   @override
-  Future<void> delete(String key) async {}
+  Future<Result<void>> delete(String key) async => Result.success(null);
 }
 
 class _FakeAttemptRepository extends AttemptRepository {
   @override
-  Future<void> save(String key, StudentAttempt item) async {}
+  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
   @override
-  Future<StudentAttempt?> get(String key) async => null;
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
   @override
-  Future<List<StudentAttempt>> getAll() async => [];
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
   @override
-  Future<void> delete(String key) async {}
+  Future<Result<void>> delete(String key) async => Result.success(null);
+}
+
+class _SeededAttemptRepo extends AttemptRepository {
+  final List<StudentAttempt> _attempts;
+  _SeededAttemptRepo(this._attempts);
+  @override
+  Future<void> init() async {}
+  @override
+  Future<List<StudentAttempt>> getByStudent(String studentId) async => _attempts;
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success(_attempts);
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
 }
 
 void main() {
@@ -129,6 +147,43 @@ void main() {
         container.read(dashboardAdherenceRepositoryProvider),
         same(fakeRepo),
       );
+    });
+
+    test('dashboardStudyProgressTrackerProvider uses overridden attemptRepo for stats', () async {
+      final now = DateTime.now();
+      final seededAttempts = [
+        StudentAttempt(
+          id: 'a1', studentId: 'stu1', questionId: 'q1', subjectId: 'sub1',
+          isCorrect: true, timeSpentMs: 5000,
+          confidence: 3, userAnswer: 'A', timestamp: now,
+        ),
+        StudentAttempt(
+          id: 'a2', studentId: 'stu1', questionId: 'q2', subjectId: 'sub1',
+          isCorrect: false, timeSpentMs: 10000,
+          confidence: 2, userAnswer: 'B', timestamp: now,
+        ),
+        StudentAttempt(
+          id: 'a3', studentId: 'stu1', questionId: 'q3', subjectId: 'sub1',
+          isCorrect: true, timeSpentMs: 3000,
+          confidence: 4, userAnswer: 'C', timestamp: now,
+        ),
+      ];
+      final seededRepo = _SeededAttemptRepo(seededAttempts);
+      final container = ProviderContainer(
+        overrides: [
+          dashboardAttemptRepositoryProvider.overrideWithValue(seededRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final tracker = container.read(dashboardStudyProgressTrackerProvider);
+      expect(tracker, isA<StudyProgressTracker>());
+
+      final stats = await tracker.getOverallStats('stu1');
+      expect(stats['totalAttempts'], 3);
+      expect(stats['correctAttempts'], 2);
+      expect(stats['accuracy'], 2.0 / 3.0);
+      expect(stats['avgTimePerQuestion'], (5000 + 10000 + 3000) / 3);
     });
   });
 }

@@ -11,7 +11,7 @@ import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
-import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/id_generator.dart';
@@ -71,6 +71,7 @@ class ContentPipeline {
         studentId: studentId,
         language: language,
         processingStatus: ProcessingStatus.pending.name,
+        createdAt: DateTime.now(),
       );
 
       await _sourceRepository.create(source);
@@ -114,6 +115,7 @@ class ContentPipeline {
         studentId: studentId,
         language: language,
         processingStatus: ProcessingStatus.pending.name,
+        createdAt: DateTime.now(),
       );
       await _sourceRepository.create(source);
       _logger.d('Source created: ${source.id}');
@@ -225,6 +227,36 @@ class ContentPipeline {
     }
   }
 
+  Future<Result<Source>> reprocessSource(
+    Source source, {
+    required String modelId,
+    List<String> possibleTopics = const [],
+    bool generateQuestions = false,
+    QuestionValidator? validator,
+    List<String> allowedQuestionTypes = _defaultAllowedTypes,
+    ProcessingProgressCallback? onProgress,
+  }) async {
+    final textToProcess = source.extractedText.isNotEmpty ? source.extractedText : source.content;
+    if (textToProcess.isEmpty) {
+      return Result.failure('Source has no content to reprocess');
+    }
+    return processFullPipeline(
+      title: source.title,
+      content: textToProcess,
+      type: source.type,
+      studentId: source.studentId.isNotEmpty ? source.studentId : '',
+      modelId: modelId,
+      subjectId: source.subjectId,
+      sourceUrl: source.sourceUrl,
+      language: source.language,
+      possibleTopics: possibleTopics,
+      generateQuestions: generateQuestions,
+      validator: validator,
+      allowedQuestionTypes: allowedQuestionTypes,
+      onProgress: onProgress,
+    );
+  }
+
   List<String> _validateGeneratedQuestions(
     Source source,
     List<String> questionIds,
@@ -271,7 +303,8 @@ class ContentPipeline {
       if (validTopic.isEmpty) return '';
 
       try {
-        final topics = await _topicRepository.getAll();
+        final topicsResult = await _topicRepository.getAll();
+        final topics = topicsResult.data ?? [];
         final topicTitle = validTopic.first;
         final topicMatch = topics.where(
           (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),

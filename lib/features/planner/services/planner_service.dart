@@ -340,7 +340,8 @@ class PlannerService implements ActionPlanner {
   Future<bool> acceptPendingAction(String actionId) async {
     try {
       await pendingActionRepo.init();
-      final action = await pendingActionRepo.get(actionId);
+      final actionResult = await pendingActionRepo.get(actionId);
+      final action = actionResult.data;
       if (action == null) return false;
       final executed = await actionExecutor.execute(action);
       if (executed) {

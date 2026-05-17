@@ -3814,4 +3814,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorBulletPoint => '• ';
+
+  @override
+  String get pageNotFound => 'Página no encontrada';
+
+  @override
+  String get pageNotFoundDescription => 'La página que buscas no existe o el enlace no es válido.';
+
+  @override
+  String get goToDashboard => 'Ir al Panel';
+
+  @override
+  String get sending => 'Enviando';
 }

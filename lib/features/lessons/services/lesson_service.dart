@@ -26,7 +26,8 @@ class LessonService {
     final topicIds = lessons.map((l) => l.topicId).whereType<String>().toSet();
     final topics = <Topic>[];
     for (final id in topicIds) {
-      final topic = await _database.topicRepository.get(id);
+      final topicResult = await _database.topicRepository.get(id);
+      final topic = topicResult.data;
       if (topic != null) {
         topics.add(topic);
       }

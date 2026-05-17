@@ -130,7 +130,7 @@ class SubjectStatsTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: avgScore / 100,
+                      value: avgScore.isNaN || !avgScore.isFinite ? 0.0 : avgScore / 100,
                       backgroundColor: Theme.of(
                         context,
                       ).colorScheme.surfaceContainerHighest,

@@ -156,6 +156,28 @@ class BadgeDisplay {
   });
 }
 
+class SubjectDueCount {
+  final String subjectId;
+  final String subjectName;
+  final int dueCount;
+
+  const SubjectDueCount({
+    required this.subjectId,
+    required this.subjectName,
+    required this.dueCount,
+  });
+}
+
+class DueReviewsData {
+  final int totalDue;
+  final List<SubjectDueCount> subjectBreakdown;
+
+  const DueReviewsData({
+    required this.totalDue,
+    required this.subjectBreakdown,
+  });
+}
+
 class DashboardArgs {
   final String studentId;
 

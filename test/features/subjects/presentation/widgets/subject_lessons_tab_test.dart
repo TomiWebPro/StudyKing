@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -18,9 +19,9 @@ class _FakeLessonRepository extends LessonRepository {
   _FakeLessonRepository(this._lessons, {this.shouldThrow = false});
 
   @override
-  Future<List<Lesson>> getAll() async {
+  Future<Result<List<Lesson>>> getAll() async {
     if (shouldThrow) throw Exception('test error');
-    return _lessons;
+    return Result.success(_lessons);
   }
 }
 

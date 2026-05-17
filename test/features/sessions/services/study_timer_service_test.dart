@@ -71,6 +71,37 @@ class FakeSessionRepository extends SessionRepository {
   }
 }
 
+class _FailingSessionRepository extends SessionRepository {
+  @override
+  Future<Result<void>> save(Session session) async {
+    return Result.failure('Save failed');
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getTodaySessionCount() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getTodayCompletedSessionCount() async => Result.success(0);
+}
+
 class TestableStudyTimerService extends StudyTimerService {
   int _dailyCapMinutes = 0;
 
@@ -178,6 +209,16 @@ void main() {
           () => service.completeSession(),
           throwsA(isA<StateError>()),
         );
+      });
+
+      test('returns failure when repository save fails', () async {
+        final failingRepo = _FailingSessionRepository();
+        final timerService = TestableStudyTimerService(repository: failingRepo);
+        addTearDown(() => timerService.dispose());
+        await timerService.startSession(plannedDurationMinutes: 25);
+
+        final result = await timerService.completeSession();
+        expect(result.isFailure, isTrue);
       });
 
       test('completes the active session', () async {

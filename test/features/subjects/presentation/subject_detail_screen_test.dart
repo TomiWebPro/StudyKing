@@ -20,12 +20,13 @@ class _FakeSubjectRepository extends SubjectRepository {
   void setThrowOnDelete(bool value) => _shouldThrowOnDelete = value;
 
   @override
-  Future<Subject?> get(String key) async => _subjects[key];
+  Future<Result<Subject?>> get(String key) async => Result.success(_subjects[key]);
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     if (_shouldThrowOnDelete) throw Exception('Delete failed');
     _subjects.remove(key);
+    return Result.success(null);
   }
 }
 
@@ -500,7 +501,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(await subjectRepo.get('test-id'), isNull);
+      expect((await subjectRepo.get('test-id')).data, isNull);
     });
 
     testWidgets('upload content in bottom sheet navigates to upload', (tester) async {

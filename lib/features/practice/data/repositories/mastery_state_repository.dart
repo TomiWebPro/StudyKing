@@ -22,7 +22,8 @@ class MasteryStateRepository extends Repository<MasteryState> {
   ) async {
     try {
       final key = '${studentId}_$topicId';
-      final state = await get(key);
+      final stateResult = await get(key);
+      final state = stateResult.data;
       if (state != null) {
         return Result.success(state);
       }

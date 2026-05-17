@@ -211,7 +211,7 @@ class AppErrorHandler {
 
     return AppException(
       message: l10n.errorUnexpected,
-      type: ExceptionType.network,
+      type: ExceptionType.unknown,
       originalError: error,
     );
   }

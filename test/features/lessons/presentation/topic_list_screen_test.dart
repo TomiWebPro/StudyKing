@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/lessons/presentation/topic_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -15,17 +16,17 @@ class _FakeTopicRepository extends TopicRepository {
   _FakeTopicRepository({List<Topic>? topics}) : _topics = topics ?? [];
 
   @override
-  Future<List<Topic>> getAll() async {
+  Future<Result<List<Topic>>> getAll() async {
     getAllCallCount++;
     if (shouldThrow) throw Exception('Simulated DB error');
-    return _topics;
+    return Result.success(_topics);
   }
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async => null;
+  Future<Result<Topic?>> get(String id) async => Result.success(null);
 }
 
 Widget _buildTestApp({

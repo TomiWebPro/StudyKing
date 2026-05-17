@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -19,23 +20,25 @@ class FakeSubjectRepository extends SubjectRepository {
   }
 
   @override
-  Future<Subject?> get(String key) async {
-    return _storage[key];
+  Future<Result<Subject?>> get(String key) async {
+    return Result.success(_storage[key]);
   }
 
   @override
-  Future<List<Subject>> getAll() async {
-    return _storage.values.toList();
+  Future<Result<List<Subject>>> getAll() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> save(String key, Subject item) async {
+  Future<Result<void>> save(String key, Subject item) async {
     _storage[key] = item;
+    return Result.success(null);
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     _storage.remove(key);
+    return Result.success(null);
   }
 
   @override
@@ -135,8 +138,8 @@ void main() {
 
         expect(result, isA<SubjectRepository>());
         final allSubjects = await result.getAll();
-        expect(allSubjects.length, 1);
-        expect(allSubjects.first.name, 'Physics');
+        expect(allSubjects.data!.length, 1);
+        expect(allSubjects.data!.first.name, 'Physics');
       });
 
       test('build returns repository withinitialized data', () async {
@@ -147,8 +150,8 @@ void main() {
         final result = await notifier.build();
 
         final allSubjects = await result.getAll();
-        expect(allSubjects.length, 1);
-        expect(allSubjects.first.name, 'Chemistry');
+        expect(allSubjects.data!.length, 1);
+        expect(allSubjects.data!.first.name, 'Chemistry');
       });
     });
 
@@ -230,7 +233,7 @@ void main() {
         
         final subjects = await repo.getAll();
 
-        expect(subjects.length, 2);
+        expect(subjects.data!.length, 2);
       });
 
       test('can get subject by id', () async {
@@ -241,8 +244,8 @@ void main() {
         
         final subject = await repo.get('subj-1');
 
-        expect(subject, isNotNull);
-        expect(subject!.name, 'Physics');
+        expect(subject.data, isNotNull);
+        expect(subject.data!.name, 'Physics');
       });
 
       test('can save subject', () async {
@@ -253,8 +256,8 @@ void main() {
         await repo.create(newSubject);
 
         final retrieved = await repo.get('new-subj');
-        expect(retrieved, isNotNull);
-        expect(retrieved!.name, 'Biology');
+        expect(retrieved.data, isNotNull);
+        expect(retrieved.data!.name, 'Biology');
       });
 
       test('can delete subject', () async {
@@ -266,7 +269,7 @@ void main() {
         await repo.delete('subj-1');
 
         final result = await repo.get('subj-1');
-        expect(result, isNull);
+        expect(result.data, isNull);
       });
 
       test('can filter subjects by topics', () async {
@@ -303,7 +306,7 @@ void main() {
         await repo.addTopicToSubject('subj-1', 'topic-2');
 
         final subject = await repo.get('subj-1');
-        expect(subject!.topicIds, containsAll(['topic-1', 'topic-2']));
+        expect(subject.data!.topicIds, containsAll(['topic-1', 'topic-2']));
       });
 
       test('can remove topic from subject', () async {
@@ -315,7 +318,7 @@ void main() {
         await repo.removeTopicFromSubject('subj-1', 'topic-1');
 
         final subject = await repo.get('subj-1');
-        expect(subject!.topicIds, ['topic-2']);
+        expect(subject.data!.topicIds, ['topic-2']);
       });
     });
 
@@ -351,7 +354,7 @@ void main() {
         
         final subjects = await repo.getAll();
 
-        expect(subjects, isEmpty);
+        expect(subjects.data, isEmpty);
         container.dispose();
       });
     });
@@ -372,7 +375,7 @@ void main() {
         
         final result = await repo.get('non-existent');
 
-        expect(result, isNull);
+        expect(result.data, isNull);
         container.dispose();
       });
 
@@ -392,7 +395,7 @@ void main() {
         await repo.delete('non-existent');
         
         final remaining = await repo.getAll();
-        expect(remaining.length, 1);
+        expect(remaining.data!.length, 1);
         container.dispose();
       });
 
@@ -460,7 +463,7 @@ void main() {
         
         final subjects = await repo.getAll();
 
-        expect(subjects.length, 2);
+        expect(subjects.data!.length, 2);
       });
     });
   });

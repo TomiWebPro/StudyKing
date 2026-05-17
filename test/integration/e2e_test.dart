@@ -87,7 +87,7 @@ class _IntegrationFakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async => null;
+  Future<Result<Topic?>> get(String id) async => Result.success(null);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -319,10 +319,10 @@ class _FakeLessonRepository extends LessonRepository {
   _FakeLessonRepository({List<Lesson>? lessons}) : _lessons = lessons ?? [];
 
   @override
-  Future<List<Lesson>> getAll() async => _lessons;
+  Future<Result<List<Lesson>>> getAll() async => Result.success(_lessons);
 
   @override
-  Future<Lesson?> get(String id) async => _lessons.where((l) => l.id == id).firstOrNull;
+  Future<Result<Lesson?>> get(String id) async => Result.success(_lessons.where((l) => l.id == id).firstOrNull);
 
   @override
   Future<void> init() async {}

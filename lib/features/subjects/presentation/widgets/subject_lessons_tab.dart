@@ -25,7 +25,8 @@ class SubjectLessonsTab extends ConsumerWidget {
 
     Future<List<Lesson>> loadLessons() async {
       try {
-        final lessons = await lessonRepo.getAll();
+        final lessonsResult = await lessonRepo.getAll();
+        final lessons = lessonsResult.data ?? [];
         return lessons.where((l) => l.subjectId == subjectId).toList();
       } catch (e) {
         return [];

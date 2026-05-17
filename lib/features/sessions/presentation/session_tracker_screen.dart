@@ -17,6 +17,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -378,32 +379,6 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     );
   }
 
-  IconData _sessionIcon(SessionType type) {
-    switch (type) {
-      case SessionType.focus:
-        return Icons.timer;
-      case SessionType.practice:
-        return Icons.play_arrow;
-      case SessionType.tutoring:
-        return Icons.school;
-      case SessionType.manual:
-        return Icons.edit_note;
-    }
-  }
-
-  Color _sessionColor(SessionType type, ThemeData theme) {
-    switch (type) {
-      case SessionType.focus:
-        return theme.colorScheme.tertiary;
-      case SessionType.practice:
-        return theme.colorScheme.primary;
-      case SessionType.tutoring:
-        return theme.colorScheme.secondary;
-      case SessionType.manual:
-        return theme.colorScheme.onSurfaceVariant;
-    }
-  }
-
   Widget _buildRecentSessionsList(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     if (_allSessions.isEmpty) {
@@ -432,8 +407,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         final session = recentSessions[index];
         final position = _sortedSessions.indexOf(session);
 
-        final icon = _sessionIcon(session.type);
-        final color = _sessionColor(session.type, theme);
+        final icon = sessionIcon(session.type);
+        final color = sessionColor(session.type, theme);
 
         return Semantics(
           label: l10n.sessionNumber(_sortedSessions.length - position),

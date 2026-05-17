@@ -451,7 +451,8 @@ class MentorService {
       String? subjectId;
       if (topicTitle.isNotEmpty && topicTitle != 'general') {
         await _database.topicRepository.init();
-        final allTopics = await _database.topicRepository.getAll();
+        final allTopicsResult = await _database.topicRepository.getAll();
+        final allTopics = allTopicsResult.data ?? [];
         final match = allTopics.where(
           (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),
         ).firstOrNull;
@@ -582,7 +583,8 @@ class MentorService {
     }
 
     final l10n = lookupAppLocalizations(Locale(_localeName));
-    final subjects = await _database.subjectRepository.getAll();
+    final subjectsResult = await _database.subjectRepository.getAll();
+    final subjects = subjectsResult.data ?? [];
     if (subjects.isEmpty) {
       return MentorAction(
         message: l10n.mentorNoSubjects,

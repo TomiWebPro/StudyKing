@@ -27,7 +27,7 @@ import 'package:studyking/main.dart' show MainScreen;
 
 class _FakeSubjectRepository extends SubjectRepository {
   @override
-  Future<List<Subject>> getAll() async => [];
+  Future<Result<List<Subject>>> getAll() async => Result.success([]);
 }
 
 class _FakeSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {

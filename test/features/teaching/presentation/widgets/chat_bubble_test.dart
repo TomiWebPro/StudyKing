@@ -558,5 +558,284 @@ void main() {
       // score is null → cast to double throws → falls to catch → plain text
       expect(find.text(jsonEncode(evalData)), findsOneWidget);
     });
+
+    testWidgets('renders correctly in RTL layout for student message', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: ChatBubble(
+                message: ConversationMessage(
+                  id: '27',
+                  sessionId: 's1',
+                  role: MessageRole.student,
+                  type: MessageType.text,
+                  content: 'RTL student message',
+                  timestamp: now,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('RTL student message'), findsOneWidget);
+      expect(find.text('You'), findsOneWidget);
+      expect(find.byIcon(Icons.person), findsOneWidget);
+    });
+
+    testWidgets('renders correctly in RTL layout for tutor message', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: ChatBubble(
+                message: ConversationMessage(
+                  id: '28',
+                  sessionId: 's1',
+                  role: MessageRole.tutor,
+                  type: MessageType.text,
+                  content: 'RTL tutor message',
+                  timestamp: now,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('RTL tutor message'), findsOneWidget);
+      expect(find.text('Tutor'), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy), findsOneWidget);
+    });
+
+    testWidgets('isEvaluationMessage with JSON array shows plain text', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '29',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: '["item1", "item2"]',
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text('["item1", "item2"]'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsNothing);
+    });
+
+    testWidgets('feedback with non-numeric score shows plain text fallback', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 'not_a_number',
+        'explanation': 'Bad score',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '30',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text(jsonEncode(evalData)), findsOneWidget);
+    });
+
+    testWidgets('streaming with long content renders correctly', (tester) async {
+      final longContent = 'A' * 50;
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '31',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: longContent,
+            timestamp: now,
+            isStreaming: true,
+          ),
+        ),
+      ));
+
+      expect(find.text(longContent), findsOneWidget);
+    });
+
+    testWidgets('non-streaming text has Semantics wrapping', (tester) async {
+      const messageContent = 'Accessible text';
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '32',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: messageContent,
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.text(messageContent), findsOneWidget);
+      expect(find.byType(Semantics), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('typing indicator disposes animation controller safely', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '33',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: '',
+            timestamp: now,
+            isStreaming: true,
+          ),
+        ),
+      ));
+
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.pumpWidget(wrapApp(const SizedBox.shrink()));
+      await tester.pump();
+
+      expect(find.byType(ChatBubble), findsNothing);
+    });
+
+    testWidgets('typing indicator with reduceMotion true disposes without controller', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '34',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: '',
+            timestamp: now,
+            isStreaming: true,
+          ),
+          reduceMotion: true,
+        ),
+      ));
+
+      await tester.pumpWidget(wrapApp(const SizedBox.shrink()));
+      await tester.pump();
+
+      expect(find.byType(ChatBubble), findsNothing);
+    });
+
+    testWidgets('streaming feedback message with empty content shows typing indicator', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '35',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.feedback,
+            content: '',
+            timestamp: now,
+            isStreaming: true,
+          ),
+        ),
+      ));
+
+      expect(find.byType(AnimatedBuilder), findsAtLeastNWidgets(1));
+      expect(find.text('Tutor'), findsOneWidget);
+    });
+
+    testWidgets('evaluation semantics label for score >= 0.7', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 0.85,
+        'explanation': 'Great job!',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '36',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.text('85%'), findsOneWidget);
+      expect(find.text('Great job!'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('evaluation semantics label for score between 0.3 and 0.7', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 0.45,
+        'explanation': 'Almost there.',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '37',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.byIcon(Icons.info), findsOneWidget);
+      expect(find.text('45%'), findsOneWidget);
+      expect(find.text('Almost there.'), findsOneWidget);
+    });
+
+    testWidgets('evaluation semantics label for score <= 0.3', (tester) async {
+      final evalData = {
+        'type': 'evaluation',
+        'score': 0.15,
+        'explanation': 'Keep practicing.',
+      };
+
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '38',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.feedback,
+            content: jsonEncode(evalData),
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+      expect(find.text('15%'), findsOneWidget);
+      expect(find.text('Keep practicing.'), findsOneWidget);
+    });
   });
 }

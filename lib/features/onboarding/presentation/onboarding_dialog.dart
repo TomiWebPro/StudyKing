@@ -105,32 +105,35 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_dontShowAgain) {
-                    OnboardingService.markDontShowAgain();
+                    await OnboardingService.markDontShowAgain();
                   } else {
-                    OnboardingService.markCompleted();
+                    await OnboardingService.markCompleted();
                   }
+                  if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.subjectSelection);
                 },
                 child: Text(l10n.addSubject),
               ),
               const SizedBox(width: 8),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_dontShowAgain) {
-                    OnboardingService.markDontShowAgain();
+                    await OnboardingService.markDontShowAgain();
                   } else {
-                    OnboardingService.markCompleted();
+                    await OnboardingService.markCompleted();
                   }
+                  if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.quickGuide);
                 },
                 child: Text(l10n.quickGuide),
               ),
               const SizedBox(width: 8),
               FilledButton(
-                onPressed: () {
-                  OnboardingService.markCompleted();
+                onPressed: () async {
+                  await OnboardingService.markCompleted();
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                 },
                 child: Text(l10n.getStarted),

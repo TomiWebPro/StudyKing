@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -178,7 +179,7 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
       case QuestionType.graphDrawing:
         return CanvasDrawingWidget(
           instruction: question.text,
-          onDrawingComplete: (data) => onAnswerSelected(AppLocalizations.of(context)!.drawingSubmitted),
+          onDrawingComplete: (data) => onAnswerSelected(base64Encode(data)),
           initialDrawing: null,
           largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
         );
@@ -191,40 +192,8 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         return _buildEssayWidget(context);
 
       case QuestionType.fileUpload:
-        return _buildFileUploadWidget(context);
-
       case QuestionType.audioRecording:
-        return _buildAudioRecordingWidget(context);
+        return const SizedBox.shrink();
     }
-  }
-
-  Widget _buildFileUploadWidget(BuildContext context) {
-    final hasFile = currentAnswer != null && currentAnswer!.isNotEmpty;
-    return Semantics(
-      button: true,
-      label: 'Upload file',
-      child: OutlinedButton.icon(
-        onPressed: isSubmitted
-            ? null
-            : () => onAnswerSelected('file_uploaded'),
-        icon: Icon(hasFile ? Icons.check_circle : Icons.upload_file),
-        label: Text(hasFile ? 'File attached' : 'Upload file'),
-      ),
-    );
-  }
-
-  Widget _buildAudioRecordingWidget(BuildContext context) {
-    final hasRecording = currentAnswer != null && currentAnswer!.isNotEmpty;
-    return Semantics(
-      button: true,
-      label: 'Record audio',
-      child: OutlinedButton.icon(
-        onPressed: isSubmitted
-            ? null
-            : () => onAnswerSelected('audio_recorded'),
-        icon: Icon(hasRecording ? Icons.mic : Icons.mic_none),
-        label: Text(hasRecording ? 'Recording complete' : 'Start recording'),
-      ),
-    );
   }
 }

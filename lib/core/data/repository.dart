@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../errors/result.dart';
 
 /// All repositories MUST wrap their public method return types in [Result].
 /// See [Result] in `core/errors/result.dart`.
@@ -15,20 +16,40 @@ class Repository<T> {
     _box = box;
   }
 
-  Future<void> save(String key, T item) async {
-    await _box.put(key, item);
+  Future<Result<void>> save(String key, T item) async {
+    try {
+      await _box.put(key, item);
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure('Failed to save: $e');
+    }
   }
 
-  Future<T?> get(String key) async {
-    return _box.get(key);
+  Future<Result<T?>> get(String key) async {
+    try {
+      final item = _box.get(key);
+      return Result.success(item);
+    } catch (e) {
+      return Result.failure('Failed to get: $e');
+    }
   }
 
-  Future<List<T>> getAll() async {
-    return _box.values.toList();
+  Future<Result<List<T>>> getAll() async {
+    try {
+      final items = _box.values.toList();
+      return Result.success(items);
+    } catch (e) {
+      return Result.failure('Failed to get all: $e');
+    }
   }
 
-  Future<void> delete(String key) async {
-    await _box.delete(key);
+  Future<Result<void>> delete(String key) async {
+    try {
+      await _box.delete(key);
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure('Failed to delete: $e');
+    }
   }
 
   @protected

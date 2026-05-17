@@ -112,12 +112,12 @@ class FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<Topic?> get(String id) async {
-    return _topics[id];
+  Future<Result<Topic?>> get(String id) async {
+    return Result.success(_topics[id]);
   }
 
   @override
-  Future<List<Topic>> getAll() async => _topics.values.toList();
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics.values.toList());
 
   @override
   Future<List<Topic>> getBySubject(String subjectId) async => _topics.values.where((t) => t.subjectId == subjectId).toList();
@@ -129,8 +129,9 @@ class FakeTopicRepository extends TopicRepository {
   Future<List<Topic>> getRootTopics() async => _topics.values.where((t) => t.parentId == null).toList();
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _topics.remove(id);
+    return Result.success(null);
   }
 
   @override

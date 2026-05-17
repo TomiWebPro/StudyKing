@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -20,10 +21,10 @@ class _FakeSubjectRepository extends SubjectRepository {
   _FakeSubjectRepository(this._box);
 
   @override
-  Future<List<Subject>> getAll() async => _box._storage.values.toList();
+  Future<Result<List<Subject>>> getAll() async => Result.success(_box._storage.values.toList());
 
   @override
-  Future<Subject?> get(String id) async => _box.get(id);
+  Future<Result<Subject?>> get(String id) async => Result.success(_box.get(id));
 
   @override
   Future<void> create(Subject subject) async {
@@ -44,10 +45,10 @@ class _SlowSubjectRepository extends SubjectRepository {
   _SlowSubjectRepository();
 
   @override
-  Future<List<Subject>> getAll() async => [];
+  Future<Result<List<Subject>>> getAll() async => Result.success([]);
 
   @override
-  Future<Subject?> get(String id) async => null;
+  Future<Result<Subject?>> get(String id) async => Result.success(null);
 
   @override
   Future<void> create(Subject subject) async {
@@ -151,7 +152,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
+      expect(subjects.data, hasLength(1));
     });
 
     testWidgets('shows validation error when name is empty on save', (tester) async {
@@ -231,12 +232,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
-      expect(subjects.first.name, 'Physics');
-      expect(subjects.first.code, 'PHY101');
-      expect(subjects.first.teacher, 'Dr. Smith');
-      expect(subjects.first.syllabus, 'Mechanics');
-      expect(subjects.first.description, 'Introductory physics');
+      expect(subjects.data, hasLength(1));
+      expect(subjects.data!.first.name, 'Physics');
+      expect(subjects.data!.first.code, 'PHY101');
+      expect(subjects.data!.first.teacher, 'Dr. Smith');
+      expect(subjects.data!.first.syllabus, 'Mechanics');
+      expect(subjects.data!.first.description, 'Introductory physics');
     });
 
     testWidgets('code field has character capitalization', (tester) async {
@@ -287,12 +288,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
-      expect(subjects.first.name, 'Physics');
-      expect(subjects.first.code, isNull);
-      expect(subjects.first.teacher, isNull);
-      expect(subjects.first.syllabus, isNull);
-      expect(subjects.first.description, isNull);
+      expect(subjects.data, hasLength(1));
+      expect(subjects.data!.first.name, 'Physics');
+      expect(subjects.data!.first.code, isNull);
+      expect(subjects.data!.first.teacher, isNull);
+      expect(subjects.data!.first.syllabus, isNull);
+      expect(subjects.data!.first.description, isNull);
     });
 
     testWidgets('code is auto-uppercased when saved', (tester) async {
@@ -315,8 +316,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
-      expect(subjects.first.code, 'CHEM101');
+      expect(subjects.data, hasLength(1));
+      expect(subjects.data!.first.code, 'CHEM101');
     });
 
     testWidgets('app bar shows title', (tester) async {
@@ -360,9 +361,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
-      expect(subjects.first.name, 'Physics');
-      expect(subjects.first.color, '#4CAF50');
+      expect(subjects.data, hasLength(1));
+      expect(subjects.data!.first.name, 'Physics');
+      expect(subjects.data!.first.color, '#4CAF50');
     });
 
     testWidgets('saves subject with default color when no color selected', (tester) async {
@@ -383,9 +384,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final subjects = await repo.getAll();
-      expect(subjects, hasLength(1));
-      expect(subjects.first.name, 'Chemistry');
-      expect(subjects.first.color, '#2196F3');
+      expect(subjects.data, hasLength(1));
+      expect(subjects.data!.first.name, 'Chemistry');
+      expect(subjects.data!.first.color, '#2196F3');
     });
 
     testWidgets('shows upload prompt dialog after saving new subject', (tester) async {
@@ -526,8 +527,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final updated = await repo.get('edit-id-3');
-      expect(updated, isNotNull);
-      expect(updated!.name, 'New Name');
+      expect(updated.data, isNotNull);
+      expect(updated.data!.name, 'New Name');
     });
   });
 }

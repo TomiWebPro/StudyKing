@@ -16,7 +16,8 @@ class PlanRepository extends Repository<PersonalLearningPlan> {
   }
 
   Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return super.get(studentId);
+    final result = await super.get(studentId);
+    return result.data;
   }
 
   Future<void> deletePlan(String studentId) async {
@@ -28,6 +29,7 @@ class PlanRepository extends Repository<PersonalLearningPlan> {
   }
 
   Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return super.getAll();
+    final result = await super.getAll();
+    return result.data ?? [];
   }
 }

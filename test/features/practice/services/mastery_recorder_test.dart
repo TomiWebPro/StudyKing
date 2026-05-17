@@ -125,13 +125,14 @@ class _FakeQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Question?> get(String id) async {
-    return _questions[id];
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
   }
 
   @override
-  Future<void> save(String key, Question item) async {
+  Future<Result<void>> save(String key, Question item) async {
     _questions[key] = item;
+    return Result.success(null);
   }
 }
 
@@ -210,7 +211,7 @@ void main() {
       expect(savedAttempt.first.confidence, 4);
 
       final updatedQuestion = await fakeQuestionRepo.get('q1');
-      expect(updatedQuestion?.nextReview, isNotNull);
+      expect(updatedQuestion.data?.nextReview, isNotNull);
     });
 
     test('recordAttempt saves incorrect attempt correctly', () async {

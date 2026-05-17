@@ -55,7 +55,7 @@ class _FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async => _topics[id];
+  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 
   @override
   Future<List<Topic>> getBySubject(String subjectId) async {
@@ -151,7 +151,7 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<PendingActionModel?> get(String id) async => _actions[id];
+  Future<Result<PendingActionModel?>> get(String id) async => Result.success(_actions[id]);
 
   @override
   Future<void> markCompleted(String id) async {

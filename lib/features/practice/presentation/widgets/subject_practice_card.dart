@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class SubjectPracticeCard extends StatelessWidget {
@@ -13,24 +14,9 @@ class SubjectPracticeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _getSubjectColor(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final colors = [
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-    ];
-    return colors[subject.name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _getSubjectColor(context);
+    final color = ColorUtils.getSubjectColor(context, subject.name);
     final bp = ResponsiveUtils.breakpointOf(context);
     final iconContainerSize = bp.isXs ? 48.0 : 56.0;
     return Semantics(

@@ -105,7 +105,7 @@ class InstrumentationService {
     DateTime? date,
   }) {
     final recordDate = date ?? DateTime.now();
-    final score = _calculateAdherenceScore(
+    final score = calculateAdherenceScore(
       plannedQuestions: plannedQuestions,
       actualQuestions: actualQuestions,
       plannedMinutes: plannedMinutes,
@@ -124,19 +124,6 @@ class InstrumentationService {
     _adherenceRepository?.create(model);
   }
 
-  double _calculateAdherenceScore({
-    required int plannedQuestions,
-    required int actualQuestions,
-    required int plannedMinutes,
-    required int actualMinutes,
-  }) {
-    return calculateAdherenceScore(
-      plannedQuestions: plannedQuestions,
-      actualQuestions: actualQuestions,
-      plannedMinutes: plannedMinutes,
-      actualMinutes: actualMinutes,
-    );
-  }
 
   Future<Result<void>> trackMasteryImprovement(String studentId, String topicId) async {
     final result = await _repository.getMasteryState(studentId, topicId);

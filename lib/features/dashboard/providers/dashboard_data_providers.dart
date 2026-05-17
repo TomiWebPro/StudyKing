@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider;
+    show masteryGraphServiceProvider, questionRepositoryProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
 
 final dashboardInitProvider = FutureProvider<void>((ref) async {
   await Future.wait([
@@ -93,7 +95,8 @@ final dashboardTopicNamesProvider =
   await ref.watch(dashboardInitProvider.future);
   final topicRepo = ref.read(dashboardTopicRepositoryProvider);
   final allMastery = await ref.watch(dashboardAllMasteryProvider(studentId).future);
-  final allTopics = await topicRepo.getAll();
+  final allTopicsResult = await topicRepo.getAll();
+  final allTopics = allTopicsResult.data ?? [];
   final topicMap = <String, String>{};
   for (final topic in allTopics) {
     topicMap[topic.id] = topic.title;
@@ -120,6 +123,83 @@ final dashboardBadgesProvider =
   } catch (e) {
     const Logger('dashboardBadgesProvider').e('Failed to get badges', e);
     return [];
+  }
+});
+
+final dashboardWorkloadProvider =
+    FutureProvider.family<SubjectWorkload?, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final allMastery =
+        await ref.watch(dashboardAllMasteryProvider(studentId).future);
+    final topicNames =
+        await ref.watch(dashboardTopicNamesProvider(studentId).future);
+    final questionRepo = ref.read(questionRepositoryProvider);
+
+    final allQuestionsResult = await questionRepo.getAll();
+    final allQuestions = allQuestionsResult.data ?? [];
+    final questionsPerTopic = <String, int>{};
+    for (final q in allQuestions) {
+      questionsPerTopic[q.topicId] =
+          (questionsPerTopic[q.topicId] ?? 0) + 1;
+    }
+
+    final topicMasteryLevels = <String, double>{};
+    for (final state in allMastery) {
+      topicMasteryLevels[state.topicId] = state.accuracy;
+    }
+
+    final estimator = RemainingWorkloadEstimator();
+    return estimator.estimateSubjectWorkload(
+      subjectId: 'all',
+      subjectTitle: 'All Subjects',
+      topicTitles: topicNames,
+      questionsPerTopic: questionsPerTopic,
+      topicMasteryLevels: topicMasteryLevels,
+    );
+  } catch (e) {
+    const Logger('dashboardWorkloadProvider').e('Failed to estimate workload', e);
+    return null;
+  }
+});
+
+final dashboardDueReviewsProvider =
+    FutureProvider.family<DueReviewsData?, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final subjectRepo = ref.read(subjectRepositoryProvider);
+    final srService = ref.read(spacedRepetitionServiceProvider);
+    final subjectsResult = await subjectRepo.getAll();
+    final subjects = subjectsResult.data ?? [];
+
+    int totalDue = 0;
+    final breakdown = <SubjectDueCount>[];
+    for (final subject in subjects) {
+      final result = await srService.getSubjectDueCount(subject.id);
+      final count = result.isSuccess ? (result.data ?? 0) : 0;
+      totalDue += count;
+      breakdown.add(SubjectDueCount(
+        subjectId: subject.id,
+        subjectName: subject.name,
+        dueCount: count,
+      ));
+    }
+
+    return DueReviewsData(totalDue: totalDue, subjectBreakdown: breakdown);
+  } catch (e) {
+    const Logger('dashboardDueReviewsProvider').e('Failed to load due reviews', e);
+    return null;
+  }
+});
+
+final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, studentId) async {
+  try {
+    final repo = SourceRepository();
+    await repo.init();
+    final sources = await repo.getByStudent(studentId);
+    return sources.length;
+  } catch (e) {
+    return 0;
   }
 });
 

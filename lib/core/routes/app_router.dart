@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/widgets/not_found_screen.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
+import 'package:studyking/features/ingestion/presentation/content_library_screen.dart';
+import 'package:studyking/features/ingestion/presentation/source_detail_screen.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/practice/presentation/screens/exam_session_screen.dart';
+import 'package:studyking/features/questions/presentation/question_bank_screen.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
@@ -44,6 +48,9 @@ class AppRoutes {
   static const String llmTasks = '/llm-tasks';
   static const String focusMode = '/focus-mode';
   static const String examSession = '/exam-session';
+  static const String contentLibrary = '/content-library';
+  static const String sourceDetail = '/source-detail';
+  static const String questionBank = '/question-bank';
 }
 
 class SubjectDetailArgs {
@@ -193,7 +200,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.practiceSession:
       final args = routeSettings.arguments;
       if (args is PracticeSessionArgs) {
@@ -202,7 +209,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.lessonList:
       final args = routeSettings.arguments;
       if (args is LessonListArgs) {
@@ -211,7 +218,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.lessonDetail:
       final args = routeSettings.arguments;
       if (args is LessonDetailArgs) {
@@ -220,7 +227,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.tutor:
       final args = routeSettings.arguments;
       if (args is TutorArgs) {
@@ -235,7 +242,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.llmTasks:
       return _materialPageRoute(
         const LlmTaskManagerScreen(),
@@ -252,14 +259,34 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
           routeSettings,
         );
       }
-      return null;
+      return _errorRoute(routeSettings);
     case AppRoutes.focusMode:
       return _materialPageRoute(
         const FocusTimerScreen(),
         routeSettings,
       );
+    case AppRoutes.contentLibrary:
+      final subjectId = routeSettings.arguments as String?;
+      return _materialPageRoute(
+        ContentLibraryScreen(preselectedSubjectId: subjectId),
+        routeSettings,
+      );
+    case AppRoutes.sourceDetail:
+      final sourceId = routeSettings.arguments as String?;
+      if (sourceId != null) {
+        return _materialPageRoute(
+          SourceDetailScreen(sourceId: sourceId),
+          routeSettings,
+        );
+      }
+      return _errorRoute(routeSettings);
+    case AppRoutes.questionBank:
+      return _materialPageRoute(
+        const QuestionBankScreen(),
+        routeSettings,
+      );
     default:
-      return _materialPageRoute(const SettingsScreen(), routeSettings);
+      return _materialPageRoute(const NotFoundScreen(), routeSettings);
   }
 }
 
@@ -267,6 +294,20 @@ PageRouteBuilder<dynamic> _materialPageRoute(Widget page, RouteSettings settings
   return PageRouteBuilder(
     settings: settings,
     pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: animation,
+        child: child,
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 200),
+  );
+}
+
+PageRouteBuilder<dynamic> _errorRoute(RouteSettings routeSettings) {
+  return PageRouteBuilder(
+    settings: routeSettings,
+    pageBuilder: (context, animation, secondaryAnimation) => const NotFoundScreen(),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
         opacity: animation,

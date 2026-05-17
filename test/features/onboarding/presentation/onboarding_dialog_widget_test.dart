@@ -264,20 +264,38 @@ void main() {
     });
 
     testWidgets('Add Subject navigates when dont-show-again checked', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        navigatorObservers: [observer],
+        home: Scaffold(body: const OnboardingDialog()),
+        routes: {
+          AppRoutes.subjectSelection: (_) => const Scaffold(
+                body: Center(child: Text('Subject Selection')),
+              ),
+          AppRoutes.quickGuide: (_) => const Scaffold(
+                body: Center(child: Text('Quick Guide')),
+              ),
+        },
+      ));
       await tester.pump();
       await tester.tap(find.text("Don't show again"));
       await tester.pump();
       await tester.tap(find.text('Add Subject'));
       await tester.pumpAndSettle();
-      expect(find.text('Subject Selection'), findsOneWidget);
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.subjectSelection);
     });
 
     testWidgets('Quick Guide navigates when dont-show-again checked', (tester) async {
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
+        navigatorObservers: [observer],
         home: const OnboardingDialog(),
         routes: {
           AppRoutes.subjectSelection: (_) => const Scaffold(
@@ -293,7 +311,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Quick Guide'));
       await tester.pumpAndSettle();
-      expect(find.text('Quick Guide'), findsOneWidget);
+      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes.first.settings.name, AppRoutes.quickGuide);
     });
 
     testWidgets('feature icons use theme primary color', (tester) async {

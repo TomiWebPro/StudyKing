@@ -107,7 +107,7 @@ class _FakeTopicRepository extends TopicRepository {
   Future<void> init() async {}
 
   @override
-  Future<Topic?> get(String id) async => null;
+  Future<Result<Topic?>> get(String id) async => Result.success(null);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -199,8 +199,8 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<PendingActionModel?> get(String id) async {
-    return _storage[id];
+  Future<Result<PendingActionModel?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
@@ -1446,7 +1446,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final action = await pendingRepo.get('action-2');
-        expect(action?.status, 'completed');
+        expect(action.data?.status, 'completed');
       });
 
       testWidgets('dismiss pending action marks it as rejected',
@@ -1471,7 +1471,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final action = await pendingRepo.get('action-3');
-        expect(action?.status, 'rejected');
+        expect(action.data?.status, 'rejected');
       });
 
       testWidgets('pending actions section not shown when empty',

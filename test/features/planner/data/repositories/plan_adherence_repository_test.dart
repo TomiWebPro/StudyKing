@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/core/errors/result.dart';
 
 class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final Map<String, PlanAdherenceModel> _storage = {};
@@ -19,8 +20,8 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   }
 
   @override
-  Future<PlanAdherenceModel?> get(String id) async {
-    return _storage[id];
+  Future<Result<PlanAdherenceModel?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
@@ -90,8 +91,9 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 
   @override
@@ -145,27 +147,27 @@ void main() {
         final model = createTestAdherence();
         await repository.create(model);
         final stored = await repository.get('adherence-1');
-        expect(stored, isNotNull);
-        expect(stored?.adherenceScore, 0.8);
+        expect(stored.data, isNotNull);
+        expect(stored.data?.adherenceScore, 0.8);
       });
 
       test('overwrites existing record with same id', () async {
         await repository.create(createTestAdherence(adherenceScore: 0.5));
         await repository.create(createTestAdherence(adherenceScore: 0.9));
-        expect((await repository.get('adherence-1'))?.adherenceScore, 0.9);
+        expect((await repository.get('adherence-1')).data?.adherenceScore, 0.9);
       });
     });
 
     group('get', () {
       test('returns null for non-existent record', () async {
-        expect(await repository.get('none'), isNull);
+        expect((await repository.get('none')).data, isNull);
       });
 
       test('returns stored record', () async {
         await repository.create(createTestAdherence());
         final result = await repository.get('adherence-1');
-        expect(result?.id, 'adherence-1');
-        expect(result?.studentId, 'student-1');
+        expect(result.data?.id, 'adherence-1');
+        expect(result.data?.studentId, 'student-1');
       });
     });
 
@@ -306,7 +308,7 @@ void main() {
       test('removes a record', () async {
         await repository.create(createTestAdherence(id: 'a1'));
         await repository.delete('a1');
-        expect(await repository.get('a1'), isNull);
+        expect((await repository.get('a1')).data, isNull);
       });
 
       test('does nothing for non-existent id', () async {
@@ -320,9 +322,9 @@ void main() {
         await repository.create(createTestAdherence(id: 'a2', studentId: 's1'));
         await repository.create(createTestAdherence(id: 'a3', studentId: 's2'));
         await repository.deleteByStudent('s1');
-        expect(await repository.get('a1'), isNull);
-        expect(await repository.get('a2'), isNull);
-        expect(await repository.get('a3'), isNotNull);
+        expect((await repository.get('a1')).data, isNull);
+        expect((await repository.get('a2')).data, isNull);
+        expect((await repository.get('a3')).data, isNotNull);
       });
 
       test('does nothing when student has no records', () async {
@@ -356,8 +358,8 @@ void main() {
       final model = createTestAdherence(id: 'hive-1');
       await repository.create(model);
       final stored = await repository.get('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.adherenceScore, 0.8);
+      expect(stored.data, isNotNull);
+      expect(stored.data!.adherenceScore, 0.8);
     });
 
     test('getByStudent works after init', () async {
@@ -370,7 +372,7 @@ void main() {
     test('delete works after init', () async {
       await repository.create(createTestAdherence(id: 'd1'));
       await repository.delete('d1');
-      expect(await repository.get('d1'), isNull);
+      expect((await repository.get('d1')).data, isNull);
     });
 
     test('getByDateRange filters correctly', () async {
@@ -427,9 +429,9 @@ void main() {
       await repository.create(createTestAdherence(id: 'ds2', studentId: 's1'));
       await repository.create(createTestAdherence(id: 'ds3', studentId: 's2'));
       await repository.deleteByStudent('s1');
-      expect(await repository.get('ds1'), isNull);
-      expect(await repository.get('ds2'), isNull);
-      expect(await repository.get('ds3'), isNotNull);
+      expect((await repository.get('ds1')).data, isNull);
+      expect((await repository.get('ds2')).data, isNull);
+      expect((await repository.get('ds3')).data, isNotNull);
     });
   });
 }

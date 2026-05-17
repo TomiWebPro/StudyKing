@@ -72,6 +72,8 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
 }
 
 class FakeLlmService extends LlmService {
+  bool _shouldThrowOnChat = false;
+
   FakeLlmService()
       : super(
           config: const LlmConfiguration(
@@ -79,6 +81,8 @@ class FakeLlmService extends LlmService {
             apiKey: '',
           ),
         );
+
+  void setThrowOnChat() => _shouldThrowOnChat = true;
 
   @override
   Future<Result<String>> chat({
@@ -89,6 +93,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    if (_shouldThrowOnChat) throw Exception('LLM failure');
     return Result.success('{"goals":["Learn"],"sections":[{"title":"Intro","duration":10,"type":"explanation"}],"checkpoints":["ck"],"estimatedDifficulty":2}');
   }
 
@@ -293,6 +298,19 @@ void main() {
         expect(sessions.length, greaterThanOrEqualTo(2));
         final updated = sessions.last;
         expect(updated.lessonPlanJson, contains('goals'));
+      });
+
+      test('throws when LLM chat fails', () async {
+        llmService.setThrowOnChat();
+        expect(
+          () async => await tutorService.startLesson(
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            topicTitle: 'Algebra',
+          ),
+          throwsA(isA<Exception>()),
+        );
       });
     });
 

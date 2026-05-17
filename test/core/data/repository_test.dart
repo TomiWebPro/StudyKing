@@ -63,7 +63,8 @@ void main() {
     test('save stores and get retrieves an item', () async {
       final item = _TestItem('1', 'apple');
       await repo.save('key1', item);
-      final retrieved = await repo.get('key1');
+      final getResult = await repo.get('key1');
+      final retrieved = getResult.data;
       expect(retrieved, isNotNull);
       expect(retrieved!.id, equals('1'));
       expect(retrieved.name, equals('apple'));
@@ -71,7 +72,7 @@ void main() {
 
     test('get returns null for missing key', () async {
       final result = await repo.get('nonexistent');
-      expect(result, isNull);
+      expect(result.data, isNull);
     });
 
     test('getAll returns all saved items', () async {
@@ -79,21 +80,23 @@ void main() {
       await repo.save('key2', _TestItem('2', 'banana'));
       await repo.save('key3', _TestItem('3', 'cherry'));
 
-      final all = await repo.getAll();
+      final getAllResult = await repo.getAll();
+      final all = getAllResult.data ?? [];
       expect(all, hasLength(3));
     });
 
     test('getAll returns empty list when nothing saved', () async {
-      final all = await repo.getAll();
+      final getAllResult = await repo.getAll();
+      final all = getAllResult.data ?? [];
       expect(all, isEmpty);
     });
 
     test('delete removes an item', () async {
       await repo.save('key1', _TestItem('1', 'apple'));
-      expect(await repo.get('key1'), isNotNull);
+      expect((await repo.get('key1')).data, isNotNull);
 
       await repo.delete('key1');
-      expect(await repo.get('key1'), isNull);
+      expect((await repo.get('key1')).data, isNull);
     });
 
     test('delete is idempotent', () async {
@@ -104,7 +107,8 @@ void main() {
       await repo.save('key1', _TestItem('1', 'apple'));
       await repo.save('key1', _TestItem('1', 'updated'));
 
-      final retrieved = await repo.get('key1');
+      final getResult = await repo.get('key1');
+      final retrieved = getResult.data;
       expect(retrieved!.name, equals('updated'));
     });
 
@@ -155,14 +159,15 @@ void main() {
     test('openBox creates a box and allows operations', () async {
       await repo.save('k1', _TestItem('1', 'abc'));
       final result = await repo.get('k1');
-      expect(result, isNotNull);
-      expect(result!.name, 'abc');
+      expect(result.data, isNotNull);
+      expect(result.data!.name, 'abc');
     });
 
     test('openBox box contains saved items', () async {
       await repo.save('k1', _TestItem('1', 'x'));
       await repo.save('k2', _TestItem('2', 'y'));
-      final all = await repo.getAll();
+      final getAllResult = await repo.getAll();
+      final all = getAllResult.data ?? [];
       expect(all, hasLength(2));
     });
 

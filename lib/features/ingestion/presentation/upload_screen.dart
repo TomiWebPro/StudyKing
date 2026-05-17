@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
@@ -61,10 +62,10 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     try {
       final repo = SubjectRepository();
       await repo.init();
-      final subjects = await repo.getAll();
+      final subjectsResult = await repo.getAll();
       if (mounted) {
         setState(() {
-          _subjects = subjects;
+          _subjects = subjectsResult.data ?? [];
         });
       }
     } catch (_) {}
@@ -297,6 +298,19 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         _selectedFileName = null;
         _useFilePicker = false;
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_success!),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'View Library',
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
+            ),
+          ),
+        );
+        setState(() => _success = null);
+      }
     } catch (e) {
       setState(() {
         _error = AppLocalizations.of(context)!.uploadFailed(e.toString());

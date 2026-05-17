@@ -28,13 +28,13 @@ class FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<StudentAttempt?> get(String id) async {
-    return _attempts.where((a) => a.id == id).firstOrNull;
+  Future<Result<StudentAttempt?>> get(String id) async {
+    return Result.success(_attempts.where((a) => a.id == id).firstOrNull);
   }
 
   @override
-  Future<List<StudentAttempt>> getAll() async {
-    return _attempts;
+  Future<Result<List<StudentAttempt>>> getAll() async {
+    return Result.success(_attempts);
   }
 
   @override
@@ -58,8 +58,9 @@ class FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     _attempts.removeWhere((a) => a.id == id);
+    return Result.success(null);
   }
 }
 

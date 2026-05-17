@@ -351,5 +351,193 @@ void main() {
       // Core (10-30): elapsed=10, sectionStart=10, sectionEnd=30 → isCurrent=true (10 >= 10 && 10 < 30)
       expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
     });
+
+    testWidgets('elapsed at 0 shows first section as current', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 10, type: LessonSectionType.explanation),
+          LessonSection(title: 'Main', durationMinutes: 20, type: LessonSectionType.exercise),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 0,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+    });
+
+    testWidgets('elapsed exactly matching total duration with sections', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'One', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Two', durationMinutes: 8, type: LessonSectionType.exercise),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      // total section duration = 13, elapsed = 13
+      // cumulative after One: 5, after Two: 13
+      // elapsed >= total sections → all sections completed
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 13,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      // All sections are completed, so both show check_circle
+      expect(find.byIcon(Icons.check_circle), findsNWidgets(2));
+    });
+
+    testWidgets('correctCount zero renders stat chip without accent color', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 3,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      expect(find.text('0 correct'), findsOneWidget);
+      expect(find.text('3 questions'), findsOneWidget);
+    });
+
+    testWidgets('overtime with sections shows all as completed', (tester) async {
+      final plan = LessonPlan(
+        goals: ['Learn'],
+        sections: [
+          LessonSection(title: 'Intro', durationMinutes: 5, type: LessonSectionType.explanation),
+          LessonSection(title: 'Body', durationMinutes: 10, type: LessonSectionType.exercise),
+        ],
+        checkpoints: [],
+        estimatedDifficulty: 2,
+      );
+
+      await tester.pumpWidget(wrapApp(
+        LessonProgressBar(
+          elapsedMinutes: 60,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+          lessonPlan: plan,
+        ),
+      ));
+
+      expect(find.byIcon(Icons.check_circle), findsNWidgets(2));
+    });
+
+    testWidgets('progress bar uses error color when overtime', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 50,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      final valueColor = progressBar.valueColor as AlwaysStoppedAnimation<Color>;
+      final theme = ThemeData();
+      expect(valueColor.value, theme.colorScheme.error);
+    });
+
+    testWidgets('progress bar uses warning color when remaining <= 5', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 40,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      final valueColor = progressBar.valueColor as AlwaysStoppedAnimation<Color>;
+      final theme = ThemeData();
+      expect(valueColor.value, theme.colorScheme.tertiary);
+    });
+
+    testWidgets('progress bar uses primary color when normal', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 0,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      final progressBar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      final valueColor = progressBar.valueColor as AlwaysStoppedAnimation<Color>;
+      final theme = ThemeData();
+      expect(valueColor.value, theme.colorScheme.primary);
+    });
+
+    testWidgets('statChip uses primary color for correct count > 0', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 5,
+          correctCount: 3,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      final iconFinder = find.byIcon(Icons.check_circle_outline);
+      expect(iconFinder, findsOneWidget);
+      final icon = tester.widget<Icon>(iconFinder);
+      final theme = ThemeData();
+      expect(icon.color, theme.colorScheme.primary);
+    });
+
+    testWidgets('statChip uses default theme color for correct count of 0', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        const LessonProgressBar(
+          elapsedMinutes: 10,
+          plannedDurationMinutes: 45,
+          exerciseCount: 5,
+          correctCount: 0,
+          topicTitle: 'Math',
+        ),
+      ));
+
+      final iconFinder = find.byIcon(Icons.check_circle_outline);
+      expect(iconFinder, findsOneWidget);
+      final icon = tester.widget<Icon>(iconFinder);
+      final theme = ThemeData();
+      expect(icon.color, theme.colorScheme.onSurfaceVariant);
+    });
   });
 }

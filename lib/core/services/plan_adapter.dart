@@ -1,4 +1,5 @@
 import '../errors/result.dart';
+import '../utils/logger.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import '../utils/time_utils.dart';
@@ -208,7 +209,8 @@ class PlanAdapter {
             ?? 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
       }
       return null;
-    } catch (_) {
+    } catch (e) {
+      Logger('PlanAdapter').e('getDailyAdherenceFeedback failed', e);
       return null;
     }
   }
@@ -259,7 +261,8 @@ class PlanAdapter {
       final avgAdherence = await _adherenceRepository.getAverageAdherence(studentId);
       if (avgAdherence <= 0.0) return 0.7;
       return (avgAdherence + 0.3).clamp(0.5, 1.0);
-    } catch (_) {
+    } catch (e) {
+      Logger('PlanAdapter').e('_calculateAdjustmentFactor failed', e);
       return 0.7;
     }
   }

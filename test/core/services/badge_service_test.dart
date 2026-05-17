@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/services/badge_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 
@@ -38,16 +39,16 @@ class _FakeBadgeRepository implements BadgeRepository {
   void attachBox(Box<BadgeModel> box) {}
 
   @override
-  Future<void> save(String key, BadgeModel item) async {}
+  Future<Result<void>> save(String key, BadgeModel item) async => Result.success(null);
 
   @override
-  Future<BadgeModel?> get(String key) async => null;
+  Future<Result<BadgeModel?>> get(String key) async => Result.success(null);
 
   @override
-  Future<List<BadgeModel>> getAll() async => [];
+  Future<Result<List<BadgeModel>>> getAll() async => Result.success([]);
 
   @override
-  Future<void> delete(String key) async {}
+  Future<Result<void>> delete(String key) async => Result.success(null);
 
   @override
   List<BadgeModel> filterBy<K>(K Function(BadgeModel) getter, K value) => [];

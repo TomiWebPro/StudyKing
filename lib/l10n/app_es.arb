@@ -5197,5 +5197,29 @@
   "mentorBulletPoint": "• ",
   "@mentorBulletPoint": {
     "description": "Bullet point prefix for mentor recommendation list items"
+  },
+  "pageNotFound": "Página no encontrada",
+  "@pageNotFound": {
+    "description": "Title shown when a route is not found"
+  },
+  "pageNotFoundDescription": "La página que buscas no existe o el enlace no es válido.",
+  "@pageNotFoundDescription": {
+    "description": "Description shown on the not-found page"
+  },
+  "goToDashboard": "Ir al Panel",
+  "@goToDashboard": {
+    "description": "Button label to navigate to the dashboard"
+  },
+  "tapToCollapse": "Toca para colapsar",
+  "@tapToCollapse": {
+    "description": "Semantic hint for collapsing a card section"
+  },
+  "tapToExpand": "Toca para expandir",
+  "@tapToExpand": {
+    "description": "Semantic hint for expanding a card section"
+  },
+  "sending": "Enviando",
+  "@sending": {
+    "description": "Label shown when a message is being sent"
   }
 }

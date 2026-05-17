@@ -514,7 +514,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     return subjectsAsync.when(
       data: (repo) {
         return FutureBuilder<List<Subject>>(
-          future: repo.getAll(),
+          future: repo.getAll().then((r) => r.data ?? []),
           builder: (context, snapshot) {
             final subjects = snapshot.data ?? [];
             if (subjects.isEmpty) return const SizedBox.shrink();

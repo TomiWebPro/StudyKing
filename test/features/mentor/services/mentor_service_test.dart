@@ -71,7 +71,7 @@ class FakeSubjectRepository extends SubjectRepository {
   void addSubject(Subject subject) => _subjects.add(subject);
 
   @override
-  Future<List<Subject>> getAll() async => _subjects;
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
 }
 
 class FakeLlmService extends LlmService {

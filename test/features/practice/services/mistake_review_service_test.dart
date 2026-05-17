@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
@@ -48,8 +49,8 @@ class _FakeQuestionRepository extends QuestionRepository {
   }
 
   @override
-  Future<Question?> get(String id) async {
-    return _questions[id];
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
   }
 }
 

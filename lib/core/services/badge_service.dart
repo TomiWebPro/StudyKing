@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
@@ -56,7 +57,9 @@ class BadgeService {
             badgeName: definition.name,
             badgeDescription: definition.description,
           );
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[BadgeService] Failed to show badge notification: $e');
+        }
       }
     }
 

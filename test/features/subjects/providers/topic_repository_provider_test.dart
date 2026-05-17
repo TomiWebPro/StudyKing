@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
@@ -12,27 +13,29 @@ class _FakeTopicRepository extends TopicRepository {
   void setShouldThrow(bool value) => _shouldThrow = value;
 
   @override
-  Future<void> save(String key, Topic item) async {
+  Future<Result<void>> save(String key, Topic item) async {
     if (_shouldThrow) throw Exception('fail');
     _topics[key] = item;
+    return Result.success(null);
   }
 
   @override
-  Future<Topic?> get(String key) async {
+  Future<Result<Topic?>> get(String key) async {
     if (_shouldThrow) throw Exception('fail');
-    return _topics[key];
+    return Result.success(_topics[key]);
   }
 
   @override
-  Future<List<Topic>> getAll() async {
+  Future<Result<List<Topic>>> getAll() async {
     if (_shouldThrow) throw Exception('fail');
-    return _topics.values.toList();
+    return Result.success(_topics.values.toList());
   }
 
   @override
-  Future<void> delete(String key) async {
+  Future<Result<void>> delete(String key) async {
     if (_shouldThrow) throw Exception('fail');
     _topics.remove(key);
+    return Result.success(null);
   }
 
   @override
@@ -102,8 +105,8 @@ void main() {
       final repo = container.read(topicRepositoryProvider);
       expect(repo, same(fakeRepo));
       final result = await repo.get('t1');
-      expect(result, isNotNull);
-      expect(result!.title, 'Topic t1');
+      expect(result.data, isNotNull);
+      expect(result.data!.title, 'Topic t1');
     });
 
     test('propagates errors from repository', () {
@@ -190,7 +193,7 @@ void main() {
             home: _TopicReaderWidget(
               onRead: (repo) async {
                 final topic = await repo.get('t1');
-                topicTitle = topic?.title;
+                topicTitle = topic.data?.title;
               },
             ),
           ),

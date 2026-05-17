@@ -29,7 +29,7 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<Topic?> get(String id) async => _topics[id];
+  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 }
 
 class _FakeMasteryRepository extends MasteryGraphRepository {
@@ -79,8 +79,8 @@ class _FakeQuestionRepository extends QuestionRepository {
   }
 
   @override
-  Future<List<Question>> getAll() async {
-    return _questions;
+  Future<Result<List<Question>>> getAll() async {
+    return Result.success(_questions);
   }
 }
 

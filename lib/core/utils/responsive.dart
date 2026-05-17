@@ -133,7 +133,7 @@ class ResponsiveUtils {
       child: SizedBox(
         width: minTouchTarget,
         height: minTouchTarget,
-        child: child,
+        child: Center(child: child),
       ),
     );
   }

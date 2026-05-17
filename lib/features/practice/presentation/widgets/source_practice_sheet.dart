@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -82,21 +84,73 @@ class SourcePracticeSheet extends StatelessWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final source = sources[index];
+                    final statusColor = source.status == ProcessingStatus.completed
+                        ? Colors.green
+                        : source.status == ProcessingStatus.failed
+                            ? Colors.red
+                            : Colors.orange;
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                         child: Icon(
-                          Icons.source,
-                          color: Theme.of(context).colorScheme.primary,
+                          source.status == ProcessingStatus.failed
+                              ? Icons.error_outline
+                              : Icons.source,
+                          color: source.status == ProcessingStatus.failed
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       title: Text(source.title),
-                      subtitle: Text(
-                        source.questionCount > 0
-                            ? l10n.questionsCount(source.questionCount)
-                            : l10n.sourceWithNoQuestions,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  source.status.name,
+                                  style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              if (source.questionCount > 0) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.questionsCount(source.questionCount),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
                       ),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing:                           PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (value) {
+                          if (value == 'view_details') {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: source.id);
+                          } else if (value == 'select') {
+                            Navigator.pop(context);
+                            onSourceSelected(source.id, source.title);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'select',
+                            child: Text('Practice'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'view_details',
+                            child: Text('View Details'),
+                          ),
+                        ],
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         onSourceSelected(source.id, source.title);
@@ -116,10 +170,12 @@ class SourceItemData {
   final String id;
   final String title;
   final int questionCount;
+  final ProcessingStatus status;
 
   const SourceItemData({
     required this.id,
     required this.title,
     required this.questionCount,
+    this.status = ProcessingStatus.completed,
   });
 }
