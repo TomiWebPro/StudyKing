@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import '../errors/result.dart';
-import '../utils/logger.dart';
+import '../../../core/errors/result.dart';
+import '../../../core/utils/logger.dart';
 
 class DataBackupService {
   final Logger _logger = const Logger('DataBackupService');

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
@@ -55,6 +56,31 @@ class FailingSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   Future<SubjectRepository> build() async {
     await Future.delayed(const Duration(milliseconds: 10));
     throw Exception('Failed to initialize repository');
+  }
+}
+
+class BuildCountingNotifier extends SubjectsRepositoryNotifier {
+  final SubjectRepository repo;
+  int buildCount = 0;
+
+  BuildCountingNotifier(this.repo);
+
+  @override
+  Future<SubjectRepository> build() async {
+    buildCount++;
+    return repo;
+  }
+}
+
+class _RecoverableNotifier extends SubjectsRepositoryNotifier {
+  final VoidCallback onBuild;
+
+  _RecoverableNotifier(this.onBuild);
+
+  @override
+  Future<SubjectRepository> build() async {
+    onBuild();
+    return FakeSubjectRepository();
   }
 }
 
@@ -177,6 +203,59 @@ void main() {
       expect(afterDelete.data, isNull);
       c.dispose();
     });
+
+    test('invalidate triggers rebuild on next read', () async {
+      final fakeRepo = FakeSubjectRepository();
+      final notifier = BuildCountingNotifier(fakeRepo);
+      final c = _makeContainer(notifier);
+      expect(notifier.buildCount, equals(0));
+
+      await c.read(subjectsRepositoryProvider.future);
+      expect(notifier.buildCount, equals(1));
+
+      c.invalidate(subjectsRepositoryProvider);
+      expect(notifier.buildCount, equals(1));
+
+      await c.read(subjectsRepositoryProvider.future);
+      expect(notifier.buildCount, equals(2));
+      c.dispose();
+    });
+
+    test('invalidate delivers a new repository instance', () async {
+      final fakeRepo1 = FakeSubjectRepository();
+      final notifier = BuildCountingNotifier(fakeRepo1);
+      final c = _makeContainer(notifier);
+
+      final repo1 = await c.read(subjectsRepositoryProvider.future);
+      expect(repo1, same(fakeRepo1));
+
+      c.invalidate(subjectsRepositoryProvider);
+      final repo2 = await c.read(subjectsRepositoryProvider.future);
+      expect(repo2, same(fakeRepo1));
+      expect(identical(repo1, repo2), isTrue);
+      c.dispose();
+    });
+
+    test('error state can be recovered by invalidate', () async {
+      int attempt = 0;
+      final c = ProviderContainer(overrides: [
+        subjectsRepositoryProvider.overrideWith(() => _RecoverableNotifier(() {
+              attempt++;
+              if (attempt == 1) throw Exception('First attempt fails');
+            })),
+      ]);
+      addTearDown(c.dispose);
+
+      try {
+        await c.read(subjectsRepositoryProvider.future);
+      } catch (_) {}
+      expect(c.read(subjectsRepositoryProvider).hasError, isTrue);
+
+      c.invalidate(subjectsRepositoryProvider);
+      final repo = await c.read(subjectsRepositoryProvider.future);
+      expect(repo, isA<SubjectRepository>());
+      expect(c.read(subjectsRepositoryProvider).hasError, isFalse);
+    });
   });
 
   group('subjectsRepositoryProvider (real Hive init)', () {
@@ -231,5 +310,125 @@ void main() {
       final b = container.read(subjectsRepositoryProvider).valueOrNull;
       expect(identical(a, b), isTrue);
     });
+
+    test('create() persists subject through real provider', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = _createSubject(id: 'create-1', name: 'Chemistry');
+      await repo.create(subject);
+
+      final retrieved = await repo.get('create-1');
+      expect(retrieved.data, isNotNull);
+      expect(retrieved.data!.name, 'Chemistry');
+    });
+
+    test('getWithTopics returns subjects matching topicIds', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final s1 = _createSubject(id: 's1', name: 'Math', topicIds: ['t1', 't2']);
+      final s2 = _createSubject(id: 's2', name: 'Physics', topicIds: ['t3']);
+      await repo.save('s1', s1);
+      await repo.save('s2', s2);
+
+      final matching = await repo.getWithTopics(['t1', 't3']);
+      expect(matching, hasLength(2));
+
+      final noMatch = await repo.getWithTopics(['t99']);
+      expect(noMatch, isEmpty);
+    });
+
+    test('getByCode finds subject by code', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = Subject(
+        id: 'code-test',
+        name: 'History',
+        code: 'HIST101',
+      );
+      await repo.save('code-test', subject);
+
+      final found = await repo.getByCode('HIST101');
+      expect(found, isNotNull);
+      expect(found!.id, 'code-test');
+
+      final notFound = await repo.getByCode('NONEXIST');
+      expect(notFound, isNull);
+    });
+
+    test('addTopicToSubject adds topic id to subject', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = _createSubject(id: 's-add', name: 'Biology');
+      await repo.save('s-add', subject);
+
+      await repo.addTopicToSubject('s-add', 'topic-1');
+      final updated = await repo.get('s-add');
+      expect(updated.data!.topicIds, contains('topic-1'));
+    });
+
+    test('addTopicToSubject does not duplicate existing topic id', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = _createSubject(id: 's-dup', name: 'Biology', topicIds: ['topic-1']);
+      await repo.save('s-dup', subject);
+
+      await repo.addTopicToSubject('s-dup', 'topic-1');
+      final updated = await repo.get('s-dup');
+      expect(updated.data!.topicIds, hasLength(1));
+    });
+
+    test('addTopicToSubject does nothing for unknown subject', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      await repo.addTopicToSubject('nonexistent', 'topic-1');
+      // Should not throw
+    });
+
+    test('removeTopicFromSubject removes topic id from subject', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = _createSubject(id: 's-rm', name: 'Physics', topicIds: ['t1', 't2']);
+      await repo.save('s-rm', subject);
+
+      await repo.removeTopicFromSubject('s-rm', 't1');
+      final updated = await repo.get('s-rm');
+      expect(updated.data!.topicIds, equals(['t2']));
+    });
+
+    test('removeTopicFromSubject does nothing for unknown subject', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      await repo.removeTopicFromSubject('nonexistent', 't1');
+      // Should not throw
+    });
+
+    test('build() is called again after invalidate', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo1 = await container.read(subjectsRepositoryProvider.future);
+      container.invalidate(subjectsRepositoryProvider);
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      expect(repo, isA<SubjectRepository>());
+      expect(identical(repo1, repo), isFalse);
+    });
   });
 }
+
+

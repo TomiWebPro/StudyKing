@@ -3,20 +3,28 @@ import 'package:studyking/features/onboarding/onboarding.dart';
 
 void main() {
   group('Onboarding barrel', () {
-    test('OnboardingService is accessible', () {
-      expect(OnboardingService, isNotNull);
+    setUp(() {
+      OnboardingService.setTestStorage({});
+    });
+
+    tearDown(() {
+      OnboardingService.setTestStorage(null);
+    });
+
+    test('OnboardingService returns true for isOnboardingNeeded initially', () async {
+      expect(await OnboardingService.isOnboardingNeeded(), isTrue);
     });
 
     test('OnboardingDialog is accessible', () {
-      expect(OnboardingDialog, isNotNull);
+      expect(OnboardingDialog, isA<Type>());
     });
 
     test('ApiKeyBanner is accessible', () {
-      expect(ApiKeyBanner, isNotNull);
+      expect(ApiKeyBanner, isA<Type>());
     });
 
     test('LocalDataNotice is accessible', () {
-      expect(LocalDataNotice, isNotNull);
+      expect(LocalDataNotice, isA<Type>());
     });
   });
 }

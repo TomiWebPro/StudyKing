@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart' show localeProvider, settingsRepository;
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
@@ -11,22 +12,24 @@ class _FakeSettingsRepository extends SettingsRepository {
   UserProfile? _currentProfile;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<UserProfile?> getProfileData() async {
-    if (_currentProfile != null) return _currentProfile;
-    return UserProfile(id: 'default_profile', name: '');
+  Future<Result<UserProfile?>> getProfileData() async {
+    if (_currentProfile != null) return Result.success(_currentProfile);
+    return Result.success(UserProfile(id: 'default_profile', name: ''));
   }
 
   @override
-  Future<void> saveProfileData(UserProfile profile) async {
+  Future<Result<void>> saveProfileData(UserProfile profile) async {
     _currentProfile = profile;
+    return Result.success(null);
   }
 
   @override
-  Future<void> clearProfile() async {
+  Future<Result<void>> clearProfile() async {
     _currentProfile = null;
+    return Result.success(null);
   }
 }
 
@@ -422,9 +425,10 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData, isNotNull);
-        expect(profileData!.name, equals('Save Test User'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data, isNotNull);
+        expect(profileResult.data!.name, equals('Save Test User'));
       });
 
       testWidgets('save includes student ID when provided', (tester) async {
@@ -444,8 +448,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.studentId, equals('12345'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.studentId, equals('12345'));
       });
 
       testWidgets('save includes learning goal when provided', (tester) async {
@@ -465,8 +470,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.learningGoal, equals('Pass Final Exam'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.learningGoal, equals('Pass Final Exam'));
       });
 
       testWidgets('save includes preferred study time when provided', (tester) async {
@@ -486,8 +492,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.preferredStudyTime, equals('Evening 7-10 PM'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.preferredStudyTime, equals('Evening 7-10 PM'));
       });
 
       testWidgets('save shows loading indicator during save', (tester) async {
@@ -547,8 +554,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.name, equals('Trimmed User'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.name, equals('Trimmed User'));
       });
 
       testWidgets('student ID accepts numeric values only', (tester) async {
@@ -568,8 +576,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.studentId, equals('9876543210'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.studentId, equals('9876543210'));
       });
 
       testWidgets('empty student ID is stored as null', (tester) async {
@@ -585,8 +594,9 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData!.studentId, isNull);
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data!.studentId, isNull);
       });
 
       testWidgets('name field has 60 character limit', (tester) async {
@@ -621,9 +631,10 @@ void main() {
         await tester.tap(deleteButtons.last);
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData, isNotNull);
-        expect(profileData!.id, equals('default_profile'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data, isNotNull);
+        expect(profileResult.data!.id, equals('default_profile'));
       });
 
       testWidgets('delete confirmation shows warning message', (tester) async {
@@ -652,9 +663,10 @@ void main() {
         await tester.tap(find.text('Cancel').first);
         await tester.pumpAndSettle();
 
-        final profileData = await settingsRepository.getProfileData();
-        expect(profileData, isNotNull);
-        expect(profileData!.name, equals('Cancel Delete Test'));
+        final profileResult = await settingsRepository.getProfileData();
+        expect(profileResult.isSuccess, isTrue);
+        expect(profileResult.data, isNotNull);
+        expect(profileResult.data!.name, equals('Cancel Delete Test'));
       });
 
       testWidgets('delete button has danger styling', (tester) async {

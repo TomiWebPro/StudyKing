@@ -104,6 +104,33 @@ void main() {
     });
   });
 
+  group('AppException - all parameters', () {
+    test('can create exception with all parameters', () {
+      final original = Exception('cause');
+      final exception = AppException(
+        message: 'full error',
+        type: ExceptionType.apiAuth,
+        code: 'AUTH_001',
+        originalError: original,
+      );
+      expect(exception.message, equals('full error'));
+      expect(exception.type, ExceptionType.apiAuth);
+      expect(exception.code, equals('AUTH_001'));
+      expect(exception.originalError, same(original));
+      expect(exception.toString(), equals('AppException: full error (AUTH_001)'));
+    });
+
+    test('toString does not include code when code is null explicitly', () {
+      const exception = AppException(message: 'test', code: null);
+      expect(exception.toString(), equals('AppException: test'));
+    });
+
+    test('toString with message containing special characters', () {
+      const exception = AppException(message: "can't connect, retry?");
+      expect(exception.toString(), equals("AppException: can't connect, retry?"));
+    });
+  });
+
   group('Exception Equality and Identity', () {
     test('two exceptions with same message are not identical', () {
       const e1 = AppException(message: 'test');

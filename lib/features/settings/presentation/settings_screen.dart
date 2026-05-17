@@ -13,7 +13,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/services/data_backup_service.dart';
+import 'package:studyking/features/settings/services/data_backup_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';

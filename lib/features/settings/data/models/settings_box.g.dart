@@ -35,11 +35,11 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       lessonNotificationsEnabled: fields[15] as bool,
       overworkAlertsEnabled: fields[16] as bool,
       planAdjustmentNotificationsEnabled: fields[17] as bool,
-      breakDurationSeconds: fields[18] as int? ?? 300,
-      dailyReminderHour: fields[19] as int? ?? 9,
-      dailyReminderMinute: fields[20] as int? ?? 0,
-      firstFocusVisit: fields[21] as bool? ?? true,
-      dailyReminderEnabled: fields[22] as bool? ?? false,
+      breakDurationSeconds: fields[18] as int,
+      dailyReminderHour: fields[19] as int,
+      dailyReminderMinute: fields[20] as int,
+      firstFocusVisit: fields[21] as bool,
+      dailyReminderEnabled: fields[22] as bool,
     );
   }
 

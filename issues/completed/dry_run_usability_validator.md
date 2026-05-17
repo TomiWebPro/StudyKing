@@ -1,216 +1,196 @@
-# Dry-Run Usability Validation: Content Library Management
+# Dry-Run Usability Validation: Mentor as AI Study Companion
 
-**Scenario:** "I'm a student who has been using StudyKing for over a week. I've uploaded multiple PDFs, URLs, screenshots, and notes across different subjects. Now I want to review, organize, and manage my content library."
-
-**Scenario file:** `dry-run-test/scenario_managing_content_library.md`
-
-**Validated against:** codebase as of 2026-05-17
+> Scenario file: `dry-run-test/scenario_mentor_study_companion.md`
+> Validated against codebase commit: current HEAD
 
 ---
 
-## BLOCKER (app crashes or user cannot proceed)
+## Scenario Summary
 
-### B1. No source browsing UI exists anywhere
+A returning student opens the **Mentor tab** for the first time, expecting an AI study companion that knows their context, can review progress, schedule lessons conversationally, and proactively help manage their study habits. The scenario traces: first-time welcome, context-aware Q&A, progress report, conversational scheduling, cross-session persistence, wellbeing checking, next-action suggestions, API error handling, plan intent detection, tab-state preservation, and long-conversation memory management.
 
-Uploaded materials are functionally invisible after the upload completes. There is no screen, dialog, sheet, list, or any user interface element anywhere in the app that displays uploaded sources for browsing or interaction.
+---
+
+## BLOCKER Findings (app crashes or user cannot proceed)
+
+### B-1: Conversational scheduling runs with zero user confirmation
+
+The `_handleScheduleIntent()` method (`lib/features/mentor/services/mentor_service.dart:446-512`) detects scheduling keywords in user chat and immediately schedules a lesson at the next free hour. The user is never asked to confirm the time, date, duration, or subject. The only "feedback" is a system message added to `ConversationMemory`, which is **invisible in the chat UI** (the UI filters to `MessageRole.mentor` and `MessageRole.student` only — see `mentor_screen.dart:82`).
+
+Additionally, the LLM streaming response completes *before* `_checkAndHandlePlanningIntent()` fires, so the LLM's visible reply cannot reference the scheduling outcome. The user sees a generic "I'll help you schedule" but never knows whether the lesson was actually booked.
 
 **Affected files:**
-- `lib/features/ingestion/presentation/upload_screen.dart` — Upload-only, no post-upload management
-- `lib/features/ingestion/data/repositories/source_repository.dart` — `getAll()` exists but no UI consumer
-- `lib/features/dashboard/presentation/dashboard_screen.dart` — No sources section
-- `lib/features/subjects/presentation/subject_detail_screen.dart` — 4 tabs (Lessons, Practice, History, Stats), none show sources
-- `lib/features/settings/presentation/settings_screen.dart` — 12 sections, none for content management
-- `lib/main.dart` — 6 bottom-nav tabs, none for content library
-
-**Rationale:** The `Source` data model stores `title`, `type`, `subjectId`, `topicId`, `processingStatus`, `extractedText`, `summary`, `extractionMeta`, `generatedQuestionIds`, and `chunks`. Every one of these fields is persisted in Hive but has zero UI representation. The only place sources appear is the `SourcePracticeSheet` in the Practice tab, which is a filtering mechanism for practice questions — not a content browser.
+- `lib/features/mentor/services/mentor_service.dart:420-512` (`_checkAndHandlePlanningIntent`, `_handleScheduleIntent`)
+- `lib/features/mentor/presentation/mentor_screen.dart:80-94` (message loading filters out `system` role messages)
 
 **Acceptance criteria:**
-- A "My Content" or "Sources" entry point must exist and be reachable from either the bottom navigation, the dashboard, or subject detail screens.
-- The content library must display each source with at minimum: title, type icon, subject name, processing status, and upload date.
-- The content library must support sorting and filtering (by subject, by type, by status).
+- Scheduling through chat MUST show a confirmation dialog (time, date, duration, topic) before calling `scheduleLesson()`
+- The confirmation MUST allow the user to cancel or modify the proposed schedule
+- After confirmation, the scheduling result MUST appear as a visible mentor message in the chat
 
----
+### B-2: Progress report "Practice weak topic" navigates with empty subjectId
 
-### B2. Processing failures are invisible; no retry path
-
-If the content pipeline fails (e.g., OCR fails on a screenshot, PDF extraction errors, LLM classification timeout), the source is saved with `ProcessingStatus.failed` but no user-facing notification, error banner, or retry mechanism exists.
+Each weak topic `ListTile` in the progress report dialog (`mentor_screen.dart:484-491`) calls:
+```dart
+Navigator.pushNamed(context, AppRoutes.practiceSession, arguments:
+  PracticeSessionArgs(subjectId: '', topicId: topic.topicId));
+```
+The `subjectId` is hardcoded to empty string `''`. The `MasteryState.topicId` does not carry subject information, so the dialog passes `subjectId: ''` unconditionally. The practice session screen requires a valid subjectId to load questions — with an empty one, it will either show zero questions or crash.
 
 **Affected files:**
-- `lib/features/ingestion/services/content_pipeline.dart` — Pipeline sets `processingStatus: ProcessingStatus.failed` on error but error is only surfaced as a SnackBar during the upload flow; after the screen transitions, the status is invisible
-- `lib/features/ingestion/data/models/source_model.dart` — Field `processingStatus` exists but is never displayed
-- `lib/features/ingestion/data/repositories/source_repository.dart` — `getFailed()` query exists but no consumer
-
-**Rationale:** Without a content library UI, `ProcessingStatus` is a dead field. Failed sources accumulate silently, wasting storage and causing users to believe their materials were processed successfully.
+- `lib/features/mentor/presentation/mentor_screen.dart:484-491` (passes empty `subjectId`)
+- `lib/features/mentor/data/models/progress_report.dart:1-27` (`ProgressReport` lacks subject info on weak topics)
 
 **Acceptance criteria:**
-- Processing status must be visible in the content library list/detail view.
-- Failed sources must have a visible error indicator and a "Retry" / "Reprocess" button.
-- A count of failed uploads should be surfaced on the dashboard or settings.
+- `ProgressReport.weakTopics` must include `subjectId` for each weak topic
+- The navigation action in `_showProgressReport()` must pass the correct `subjectId`
+- OR: the practice session screen must handle empty `subjectId` gracefully with an error message
 
----
+### B-3: Conversational scheduling result is invisible in chat UI
 
-### B3. Uploaded sources cannot be deleted
+When `_handleScheduleIntent()` completes, it calls `_memory.addSystemMessage()` to record the outcome (success, conflict, or failure). However, `_initializeMentor()` at `mentor_screen.dart:80-84` filters loaded messages to only `MessageRole.mentor` and `MessageRole.student`. System messages are excluded. The scheduling outcome is stored in Hive but never rendered.
 
-`SourceRepository.delete()` exists (inherited from `Repository.delete()` at `lib/core/data/repository.dart:30`) but no UI calls it. A user who uploads the wrong file, a duplicate, or outdated content has no way to remove it.
+This also applies to `_handlePlanIntent()` (line 540) which adds system messages that never appear.
 
 **Affected files:**
-- `lib/features/ingestion/data/repositories/source_repository.dart` — `delete()` method never called from UI
-- `lib/features/ingestion/presentation/upload_screen.dart` — No delete or management features
-- All screens — No delete gesture, button, or menu for sources
-
-**Rationale:** This is a data integrity issue. Users cannot curate their content library, and stale/incorrect sources accumulate indefinitely. Compare with Session History, which implements swipe-to-delete with undo.
+- `lib/features/mentor/presentation/mentor_screen.dart:80-84` (filter excludes `system` role)
+- `lib/features/mentor/services/mentor_service.dart:497-508` (scheduling result as system message)
+- `lib/features/mentor/services/mentor_service.dart:540-542` (plan result as system message)
 
 **Acceptance criteria:**
-- Sources must be deletable from the content library via a swipe gesture, contextual menu, or explicit delete button.
-- Deletion must show a confirmation dialog.
-- Deletion should have an "Undo" SnackBar (consistent with Session History behavior).
-- Deleting a source must optionally prompt: "Also delete questions generated from this source?"
+- Scheduling/planning outcomes must appear as visible mentor chat messages (role `mentor`), not system messages
+- The chat must re-render to show the outcome immediately after scheduling completes
 
 ---
 
-### B4. No reprocess/retry mechanism for uploaded sources
+## MAJOR Findings (feature is broken or misleading)
 
-If a user uploads a source without checking "Generate questions from this content" and later wants questions generated, or if processing failed, there is no way to re-run the pipeline on an existing source. The user must re-upload the entire file.
+### M-1: `checkWellbeingAndGenerateNudges()` never called from MentorScreen
+
+The `MentorService.checkWellbeingAndGenerateNudges()` method (`mentor_service.dart:343-418`) contains comprehensive logic for detecting overwork, late-night study, revision needs, streaks, and inactivity. However, this method is **never called** during `_initializeMentor()`, `chat()`, or any other MentorScreen lifecycle method. The only wellbeing signal reaching the user depends on whether the LLM chooses to respond to the `"WARNING: daily cap exceeded"` text in the context prompt — which is unreliable.
+
+The context prompt does include wellbeing-relevant data (lines 174-198), but the explicit nudge-generation logic (creating EngagementNudgeModel records) is dead code in the context of the Mentor tab.
 
 **Affected files:**
-- `lib/features/ingestion/services/content_pipeline.dart` — `processFullPipeline()` operates on raw content, not on existing Source objects (no `reprocessSource(Source)` method)
-- `lib/features/ingestion/presentation/upload_screen.dart` — Only handles new uploads
-- No screen — No way to select an existing source and re-process it
+- `lib/features/mentor/services/mentor_service.dart:343-418` (method defined but unreachable from MentorScreen)
 
 **Acceptance criteria:**
-- A "Reprocess" button must exist in the source detail or context menu.
-- Reprocessing must re-run the full pipeline (extract, classify, summarize, generate questions) on the existing source's stored `extractedText`.
-- Reprocessing progress should be shown (reuse the existing progress callback pattern).
-- The user must be warned: "Reprocessing will replace existing generated questions. Continue?"
+- `checkWellbeingAndGenerateNudges()` must be called at appropriate points: after initialization, after each chat turn, or on a periodic timer within the MentorScreen
+- Overwork/nudges must be surfaced as visible chat messages, not just context-prompt warnings
 
----
+### M-2: `suggestNextAction()` and `suggestReschedule()` are dead code
 
-## MAJOR (feature is broken or misleading)
+Both methods are fully implemented in `MentorService`:
+- `suggestNextAction()` (`mentor_service.dart:576-599`) — returns a `MentorAction` with next-step recommendation
+- `suggestReschedule(String sessionId)` (`mentor_service.dart:601-647`) — finds next free slot, creates a PendingActionModel
 
-### M1. Source-to-subject association is invisible
-
-Sources are correctly tagged with `subjectId` in the data model. `SourceRepository.getBySubject(subjectId)` can retrieve them. But the SubjectDetailScreen has 4 tabs and none displays sources.
+Neither method is called from `MentorScreen` or any other widget. The `MentorAction` model (`lib/features/mentor/data/models/mentor_action.dart:1-9`) is defined but never displayed. The `PendingActionRepository` is never populated by the mentor flow.
 
 **Affected files:**
-- `lib/features/subjects/presentation/subject_detail_screen.dart:144-155` — TabBar with Lessons, Practice, History, Stats tabs; no Sources tab
-- `lib/features/subjects/presentation/subject_detail_screen.dart:196-261` — "More options" bottom sheet offers "Upload Content" but never "View Sources" or "Manage Content"
+- `lib/features/mentor/services/mentor_service.dart:576-647` (both methods unreachable)
+- `lib/features/mentor/data/models/mentor_action.dart:1-9` (model defined but unused)
 
 **Acceptance criteria:**
-- Add a "Sources" tab (or integrate into existing tabs) on the SubjectDetailScreen listing all sources for that subject.
-- Each source item must show: title, type, processing status, upload date.
-- Tapping a source should navigate to a source detail view.
+- The MentorScreen must display a "Suggested next action" area (chip, card, or inline) that calls `suggestNextAction()` and renders the `MentorAction`
+- OR: the `chat()` method must call `suggestNextAction()` and inject the recommendation into the conversation
 
----
+### M-3: Missing API key causes silent empty response instead of clear error
 
-### M2. No question bank browsing or curation
+When no API key is configured, `LlmService.chatStream()` returns an empty stream (yields nothing, completes normally — no exception). The MentorScreen's `_sendMessage()` method completes its `await for` loop with an empty buffer, sets the message content to `''`, and marks it as complete. The user sees a loading spinner, then an empty bubble. The error catch block at line 186 never fires because the stream completed without throwing.
 
-Generated questions are linked to sources via `generatedQuestionIds` on the `Source` model and can be queried via `QuestionRepository`. But there is no UI to browse the question bank, review auto-generated questions, edit them, or delete them.
+The `ApiKeyBanner` on the main screen (main.dart:371-374) provides some warning, but within the Mentor tab itself, the experience is a silent failure.
 
 **Affected files:**
-- `lib/features/questions/` — Entire feature has zero screens (only widgets: `QuestionCardWidget`, `SingleAnswerWidget`, `CanvasDrawingWidget`, `MathExpressionWidget`)
-- `lib/features/questions/presentation/widgets/question_card_widget.dart` — Renders individual questions in practice sessions but has no management mode (edit/delete)
-- `lib/features/practice/` — Questions are consumed by practice/exam sessions but never displayed in a browse view
-
-**Rationale:** The pipeline can generate dozens of questions from an uploaded textbook. The user has zero ability to review quality, remove bad questions, edit question text, or even see how many questions exist. This undermines the "AI-generated content should not be blindly trusted" value from the product vision.
+- `lib/core/services/llm/llm_chat_service.dart:79-81` (empty key returns empty stream without error)
+- `lib/features/mentor/presentation/mentor_screen.dart:159-199` (catch block never reached for empty stream)
 
 **Acceptance criteria:**
-- A browseable question bank screen must exist, filterable by subject, topic, source, and type.
-- Each question card in browse mode must show: question text, type, difficulty, topic, source, and generated-by indicator.
-- The question bank must support bulk operations: select multiple questions → delete.
-- Individual questions must support editing (question text, options, correct answer, explanation).
-- Question count per source should be displayed on the source detail view.
+- When API key is empty, the mentor chat must show a clear inline error message: "AI service not configured. Go to Settings to add an API key."
+- A "Go to Settings" button or inline link must be provided in the error message
 
----
+### M-4: Plan intent handling produces invisible output
 
-### M3. Extracted text and AI summaries are stored but never shown
-
-The content pipeline produces `extractedText` and `summary` for every source. These are stored on the `Source` model but never rendered in any screen. The user who uploads a web article or pastes notes cannot reread the extracted version through the app.
+`_handlePlanIntent()` (`mentor_service.dart:535-546`) extracts the number of days using regex and adds a system message with the `mentorPlanDaysPrompt` localized string. This system message is invisible in the chat UI (same issue as B-3). The only visible output is whatever the LLM decided to say in its initial response — which runs before the intent handler.
 
 **Affected files:**
-- `lib/features/ingestion/data/models/source_model.dart` — Fields `extractedText` and `summary` present
-- `lib/features/ingestion/services/content_pipeline.dart:128-170` — Extraction and summarization stages produce these fields
-- No screen — No source detail or viewer screen
+- `lib/features/mentor/services/mentor_service.dart:535-546` (plan intent result hidden as system message)
 
 **Acceptance criteria:**
-- A source detail view must exist and display: source title, type, upload date, processing status, subject, topic classification, extracted text (scrollable), and AI-generated summary.
-- The extracted text viewer should support basic text search within the source.
+- Plan intent results must appear as visible mentor chat messages
+- The LLM response should be integrated with the plan intent result (or the intent handler should run before the LLM's response is finalized)
 
----
+### M-5: Conversational scheduling hardcodes 30-minute duration
 
-### M4. Topic classification is stored but never shown or correctable
-
-Content pipeline stage 2 (`_classifyTopic` at `content_pipeline.dart:148-161`) calls the LLM to classify uploaded content into a topic and stores the resulting `topicId`. But this classification is invisible and uncorrectable.
+`_handleScheduleIntent()` (`mentor_service.dart:489-495`) calls `_plannerService.scheduleLesson()` with `durationMinutes: 30` hardcoded. The user has no way to specify a different duration through conversation. The `LessonBookingSheet` in the Planner UI supports configurable duration (15-90 min), but the conversational path bypasses this entirely.
 
 **Affected files:**
-- `lib/features/ingestion/services/content_pipeline.dart:148-161` — Classification result stored as `topicId` on source
-- `lib/features/ingestion/data/models/source_model.dart` — `topicId` field present
-- No screen — Classification never displayed
+- `lib/features/mentor/services/mentor_service.dart:494` (hardcoded `durationMinutes: 30`)
 
 **Acceptance criteria:**
-- The source detail view must show the assigned topic name.
-- The user must be able to change the topic assignment from a dropdown of available topics for the subject.
-- If classification fails, the UI must show "Not yet classified" and offer a "Classify Now" button.
+- The mentor must either ask the user for the desired duration during scheduling, or use a configurable default from settings
+- At minimum, the duration used must be displayed in the confirmation dialog (see B-1)
 
 ---
 
-### M5. Source Practice sheet lists sources but is not a content manager
+## MINOR Findings (UX friction)
 
-The only place sources are listed is `SourcePracticeSheet` (`lib/features/practice/presentation/widgets/source_practice_sheet.dart`) which shows source titles and question counts for filtering practice by source. Tapping a source starts a practice session; there is no way to view source details, edit, or delete from here.
+### m-1: New/empty user receives generic advice instead of setup guidance
 
-**Affected file:**
-- `lib/features/practice/presentation/widgets/source_practice_sheet.dart` — Only entry point displaying source titles; no management actions
+If a user opens the Mentor tab with no subjects, no practice data, and no plan, the `_buildContextPrompt()` returns a context string with all zeros/empty. The LLM receives no meaningful context and responds generically. There is no special-casing in the MentorScreen or `chat()` like: "You haven't set up any subjects yet. Go to the Subjects tab to get started!"
+
+The `suggestNextAction()` method does handle this case (returns a `mentorNoSubjects` message), but it's never called (M-2).
+
+**Affected files:**
+- `lib/features/mentor/services/mentor_service.dart:103-202` (no empty-state special handling)
+- `lib/features/mentor/presentation/mentor_screen.dart:58-105` (no empty-state check besides history-loaded check)
 
 **Acceptance criteria:**
-- Either the Source Practice sheet should gain management actions (long-press menu with View Details, Delete), or a proper content library screen should exist that subsumes this functionality.
-- The sheet should display processing status and an error icon for failed sources.
+- Before sending the context to the LLM, check if the student has meaningful data
+- If data is empty/zero, display a local guidance message instead of invoking the LLM
+
+### m-2: Conversation memory Hive records grow unboundedly
+
+`ConversationMemory` truncates in-memory messages at `maxTurns * 2` (100 messages for mentor), but Hive records are never cleaned up. `conversation_memory.dart:29-31` removes old messages from the in-memory list only. Over months of use, the Hive-backed `ConversationRepository` accumulates thousands of records for the `'mentor_$studentId'` session key with no cleanup mechanism.
+
+**Affected files:**
+- `lib/core/services/conversation_memory.dart:29-31` (only in-memory trim, no Hive cleanup)
+- `lib/features/teaching/data/repositories/conversation_repository.dart` (no age-based or count-based eviction)
+
+**Acceptance criteria:**
+- Hive records older than `maxTurns * 2` should be deleted when new messages are persisted
+- OR: a periodic cleanup mechanism should trim old messages
+
+### m-3: No memory truncation notification
+
+When the in-memory conversation is truncated (oldest messages removed to stay under `maxTurns`), the user receives no indication. The UI still renders all messages loaded from Hive, but the LLM no longer sees the oldest ones. This can make the mentor appear to "forget" earlier parts of the conversation without explanation.
+
+**Affected files:**
+- `lib/core/services/conversation_memory.dart:29-31` (no user-facing truncation notification)
+
+**Acceptance criteria:**
+- When memory truncation occurs, a system message should be added (and rendered?) explaining that older context has been trimmed
 
 ---
 
-## MINOR (UX friction)
+## Cross-Scenario: Note on Content Library Findings
 
-### m1. No content-related entry point in Settings
+The existing scenario `scenario_managing_content_library.md` (dry-run-test) reports several BLOCKER failures about content library browsing, deletion, status display, and question bank access. However, the current codebase now has:
 
-Settings has 12 sections (User Management, Quick Access, Appearance, Accessibility, AI Configuration, Notifications, Study Preferences, Focus Mode, Study Analytics, Token Usage, Backup and Restore, About). None mentions content, sources, or uploads. Users looking for their uploaded files naturally check Settings and find nothing.
+- `lib/features/ingestion/presentation/content_library_screen.dart` (581 lines) — full source browsing with filtering, sorting, swipe-to-delete, and navigation to source detail
+- `lib/features/ingestion/presentation/source_detail_screen.dart` (565 lines) — per-source detail showing status, topic classification, summary, extracted text, generated questions, reprocess, and delete
+- `lib/features/questions/presentation/question_bank_screen.dart` (539 lines) — question browsing, search, filter by subject/type/source, edit question text, delete single/bulk, multi-select
+- Settings screen (`settings_screen.dart:74-80`) has "Content Management" section with "My Uploads", "Question Bank", and "Failed Uploads" entries
 
-**Affected file:**
-- `lib/features/settings/presentation/settings_screen.dart:65-244` — All sections enumerated; no Content Management section
-
-**Acceptance criteria:**
-- Add a "Content Management" or "My Uploads" section in Settings, or at minimum a "View Uploaded Materials" tile linking to the new content library screen.
-
----
-
-### m2. Empty states don't suggest uploading content
-
-The SubjectDetailScreen's tabs (Lessons, Practice, History, Stats) show empty states when there's no data. Without a Sources tab, a user who has uploaded materials for the subject gets no confirmation that those materials exist.
-
-**Affected file:**
-- `lib/features/subjects/presentation/subject_detail_screen.dart` — Empty states on all 4 tabs; no indicator of uploaded sources
-
-**Acceptance criteria:**
-- Add a sources count indicator to the subject card in the subject list (e.g., "3 sources").
-- Even without a dedicated Sources tab, show a "View X uploaded materials" dismissible card on the subject detail when sources exist.
-
----
-
-### m3. Upload success message gives no next-step guidance
-
-After upload completes, the snackbar says "Content uploaded successfully." It does not offer: "View in content library," "Review generated questions," or "Check processing status."
-
-**Affected file:**
-- `lib/features/ingestion/presentation/upload_screen.dart` — Success/failure handling around lines 288-299
-
-**Acceptance criteria:**
-- Upload success snackbar should include an action button: "View Library" that navigates to the content library or subject detail.
-- If questions were generated, also show: "View Questions" action button.
+These screens were apparently added after the existing scenario was written. The existing scenario's findings for content library BLOCKER failures (no browsing, no deletion, no status, etc.) are now **partially or fully resolved**. A re-validation of that scenario against the current codebase would likely convert several BLOCKERs to PASS.
 
 ---
 
 ## Summary
 
-| Severity | Count |
-|---|---|
-| BLOCKER | 4 |
-| MAJOR | 5 |
-| MINOR | 3 |
-| **Total** | **12** |
+| Severity | Count | Key Areas |
+|----------|-------|-----------|
+| BLOCKER  | 3 | No-confirmation scheduling, empty subjectId in progress report, invisible scheduling results |
+| MAJOR    | 5 | Wellbeing nudges dead code, suggestNextAction/suggestReschedule dead code, silent API key failure, invisible plan intent output, hardcoded 30-min scheduling |
+| MINOR    | 3 | Empty user gets no guidance, unbounded Hive growth, no truncation notification |
+
+The Mentor tab has a solid foundation (rich context prompt, persistent conversation, tab-state preservation) but critical UX gaps in conversational scheduling (no confirmation, no feedback), unreachable service methods, and silent failures make the experience unreliable for users who rely on the Mentor as their primary study companion.

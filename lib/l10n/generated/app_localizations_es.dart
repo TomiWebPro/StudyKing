@@ -3899,7 +3899,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get viewMyUploads => 'Ver sus materiales cargados';
 
   @override
-  String get questionBank => 'Banco de Preguntas';
+  String get questionBank => 'Banco de preguntas';
 
   @override
   String get browseAndManageQuestions => 'Explorar y gestionar preguntas';
@@ -3954,4 +3954,125 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get unableToResolveSubject =>
       'No se pudo encontrar la materia para este tema.';
+
+  @override
+  String get questionDeleted => 'Pregunta eliminada';
+
+  @override
+  String get deleteQuestion => 'Eliminar pregunta';
+
+  @override
+  String get deleteQuestionConfirm =>
+      '¿Estás seguro de que quieres eliminar esta pregunta?';
+
+  @override
+  String get deleteQuestions => 'Eliminar preguntas';
+
+  @override
+  String deleteQuestionsConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count preguntas',
+      one: '1 pregunta',
+    );
+    return '¿Estás seguro de que quieres eliminar $_temp0?';
+  }
+
+  @override
+  String questionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count preguntas eliminadas',
+      one: '1 pregunta eliminada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get editQuestion => 'Editar pregunta';
+
+  @override
+  String get questionText => 'Texto de la pregunta';
+
+  @override
+  String get cancelSelection => 'Cancelar selección';
+
+  @override
+  String get deleteSelected => 'Eliminar seleccionadas';
+
+  @override
+  String get selectMultiple => 'Seleccionar múltiples';
+
+  @override
+  String get searchQuestions => 'Buscar preguntas';
+
+  @override
+  String get allSubjects => 'Todas las materias';
+
+  @override
+  String get allTypes => 'Todos los tipos';
+
+  @override
+  String get allSources => 'Todas las fuentes';
+
+  @override
+  String get acceleratePace =>
+      'El estudiante lo está haciendo bien. Acelere el ritmo.';
+
+  @override
+  String get slowDownPace =>
+      'El estudiante parece tener dificultades. Reduzca la velocidad, simplifique las explicaciones y proporcione más ejemplos.';
+
+  @override
+  String get maintainPace => 'Mantenga un ritmo de enseñanza constante.';
+
+  @override
+  String get greetingContext => 'Comience la lección calurosamente.';
+
+  @override
+  String get teachingContext =>
+      'Enseñe el concepto paso a paso. Involucre al estudiante con preguntas.';
+
+  @override
+  String get exerciseContext =>
+      'Dé al estudiante una pregunta de práctica para evaluar su comprensión.';
+
+  @override
+  String get feedbackContext =>
+      'Proporcione retroalimentación constructiva sobre su respuesta.';
+
+  @override
+  String get adaptiveReviewContext =>
+      'El estudiante necesita ayuda adicional. Vuelva a explicar el concepto de forma más sencilla. Use ejemplos diferentes.';
+
+  @override
+  String get closingContext => 'Concluya la lección. Resuma los puntos clave.';
+
+  @override
+  String evaluateStudentAnswerIntro(
+    String subjectId,
+    String topicTitle,
+    String question,
+    String studentAnswer,
+  ) {
+    return 'Evalúe esta respuesta del estudiante para la materia \"$subjectId\" sobre el tema \"$topicTitle\".\n\nPregunta: $question\n\nRespuesta del estudiante: $studentAnswer\n\nDevuelva un objeto JSON con:';
+  }
+
+  @override
+  String minutesSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutos',
+      one: '1 minuto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String breakRemainingLabel(String formattedTime) {
+    return 'Quedan $formattedTime de descanso';
+  }
 }

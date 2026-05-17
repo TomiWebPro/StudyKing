@@ -34,11 +34,12 @@ class PlannerService implements ActionPlanner {
   final PlanAdapter planAdapter;
   final SyllabusResolver syllabusResolver;
   final PlanAdherenceRepository adherenceRepo;
-  final ActionExecutor? _actionExecutor;
+  ActionExecutor? _actionExecutor;
   final String? fixedStudentId;
 
   ActionExecutor get actionExecutor {
-    return _actionExecutor ?? ActionExecutor(actionPlanner: this);
+    _actionExecutor ??= ActionExecutor(actionPlanner: this);
+    return _actionExecutor!;
   }
 
   PlannerService({

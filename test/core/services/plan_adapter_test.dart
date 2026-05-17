@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
@@ -118,6 +122,8 @@ void main() {
     late PlanAdapter adapter;
 
     setUp(() {
+      Hive.init(Directory.systemTemp.createTempSync('plan_adapter_test_').path);
+      registerPlannerAdapters();
       adherenceRepo = _FakePlanAdherenceRepository();
       planRepo = _FakePlanRepository();
       adapter = PlanAdapter(
@@ -285,6 +291,35 @@ void main() {
       });
     });
 
+    group('suggestRegeneration', () {
+      test('returns failure when no mastery data exists for plan generation', () async {
+        final result = await adapter.suggestRegeneration(studentId: 'student-1');
+        expect(result.isFailure, true);
+      });
+
+      test('returns failure even when existing plan exists due to empty mastery data', () async {
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 50, totalMinutes: 300, newTopics: 5,
+            reviewTopics: 3, estimatedCoverage: 0.5, focusAreas: [],
+          ),
+          recommendations: [],
+          planDurationDays: 7,
+          targetMinutesPerDay: 60.0,
+          targetQuestionsPerDay: 15,
+        );
+
+        final result = await adapter.suggestRegeneration(
+          studentId: 'student-1',
+          adjustmentFactor: 0.8,
+        );
+        expect(result.isFailure, true);
+      });
+    });
+
     group('getAdherenceReport', () {
       test('returns empty report when no data exists', () async {
         final result = await adapter.getAdherenceReport('student-1');
@@ -315,6 +350,197 @@ void main() {
         expect(result.data!['totalDays'], 2);
         expect(result.data!['lowAdherenceDays'], 1);
         expect((result.data!['averageAdherence'] as double), closeTo(0.55, 0.01));
+      });
+    });
+
+    group('getDailyAdherenceFeedback', () {
+      test('returns null when no plan exists', () async {
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNull);
+      });
+
+      test('returns null when plan has no daily plans for today', () async {
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNull);
+      });
+
+      test('returns null when planned minutes and questions are both zero', () async {
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime.now(),
+          dailyPlans: [
+            DailyPlan(
+              date: DateTime.now(),
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 0,
+              targetMinutes: 0,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNull);
+      });
+
+      test('returns low adherence feedback when ratio < 0.3', () async {
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        // actual = 10 min -> raio = 10/60 = 0.167 < 0.3
+        await adherenceRepo.create(PlanAdherenceModel(
+          id: 'fb_low', studentId: 'student-1', date: now.dateOnly,
+          plannedMinutes: 60, actualMinutes: 10,
+          plannedQuestions: 10, actualQuestions: 2,
+          adherenceScore: 0.17,
+        ));
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNotNull);
+        expect(result, contains('10 min today vs 60 min planned'));
+        expect(result, contains('redistributing'));
+      });
+
+      test('returns partial adherence feedback when ratio < 0.7', () async {
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        // actual = 30 min -> ratio = 30/60 = 0.5 < 0.7
+        await adherenceRepo.create(PlanAdherenceModel(
+          id: 'fb_part', studentId: 'student-1', date: now.dateOnly,
+          plannedMinutes: 60, actualMinutes: 30,
+          plannedQuestions: 10, actualQuestions: 5,
+          adherenceScore: 0.5,
+        ));
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNotNull);
+        expect(result, contains('30 min today vs 60 min planned'));
+        expect(result, contains('catch up'));
+      });
+
+      test('returns exceeded feedback when ratio > 1.2', () async {
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        // actual = 90 min -> ratio = 90/60 = 1.5 > 1.2
+        await adherenceRepo.create(PlanAdherenceModel(
+          id: 'fb_exc', studentId: 'student-1', date: now.dateOnly,
+          plannedMinutes: 60, actualMinutes: 90,
+          plannedQuestions: 10, actualQuestions: 15,
+          adherenceScore: 1.5,
+        ));
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNotNull);
+        expect(result, contains('Great work'));
+        expect(result, contains('90 min vs 60 min'));
+      });
+
+      test('returns null when ratio is within normal range', () async {
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        // actual = 45 min -> ratio = 45/60 = 0.75 which is between 0.7 and 1.2
+        await adherenceRepo.create(PlanAdherenceModel(
+          id: 'fb_norm', studentId: 'student-1', date: now.dateOnly,
+          plannedMinutes: 60, actualMinutes: 45,
+          plannedQuestions: 10, actualQuestions: 8,
+          adherenceScore: 0.75,
+        ));
+
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result, isNull);
       });
     });
   });

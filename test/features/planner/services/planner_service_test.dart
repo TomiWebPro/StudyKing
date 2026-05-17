@@ -27,21 +27,36 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 class _FakeMasteryGraphRepository extends MasteryGraphRepository {
+  final Map<String, MasteryState> _masteryStates = {};
+  final List<TopicDependency> _dependencies = [];
+
+  void addMasteryState(MasteryState state) {
+    _masteryStates['${state.studentId}_${state.topicId}'] = state;
+  }
+
+  void addDependency(TopicDependency dep) => _dependencies.add(dep);
+
   @override
   Future<void> init() async {}
 
   @override
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
-    return Result.success([]);
+    return Result.success(
+      _masteryStates.values.where((s) => s.studentId == studentId).toList(),
+    );
   }
 
   @override
   Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success([]);
+    return Result.success(_dependencies);
   }
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    final key = '${studentId}_$topicId';
+    if (_masteryStates.containsKey(key)) {
+      return Result.success(_masteryStates[key]!);
+    }
     return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
   }
 }
@@ -380,6 +395,9 @@ void main() {
         description: 'Motion',
         syllabusText: 'IB Physics topic',
       ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-1'),
+      );
 
       final plan = await service.generatePlanFromSyllabus(
         syllabusGoals: [
@@ -400,6 +418,19 @@ void main() {
     });
 
     test('generated plan has metadata with syllabus goals', () async {
+      if (!topicRepo._topics.containsKey('topic-1')) {
+        topicRepo.addTopic(Topic(
+          id: 'topic-1',
+          subjectId: 'sub_physics',
+          title: 'Kinematics',
+          description: 'Motion',
+          syllabusText: 'IB Physics topic',
+        ));
+      }
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-1'),
+      );
+
       final plan = await service.generatePlanFromSyllabus(
         syllabusGoals: [
           const SyllabusGoal(

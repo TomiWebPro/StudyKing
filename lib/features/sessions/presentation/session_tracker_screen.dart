@@ -23,8 +23,9 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionTrackerScreen extends ConsumerStatefulWidget {
   final SessionRepository? sessionRepository;
+  final String? fixedStudentId;
 
-  const SessionTrackerScreen({super.key, this.sessionRepository});
+  const SessionTrackerScreen({super.key, this.sessionRepository, this.fixedStudentId});
 
   @override
   ConsumerState<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
@@ -147,7 +148,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
 
     final questionsAnswered = stats?.questionsAnswered ?? 0;
     final correctAnswers = stats?.correctAnswers ?? 0;
-    final studentId = StudentIdService().getStudentId();
+    final studentId = widget.fixedStudentId ?? StudentIdService().getStudentId();
 
     final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 

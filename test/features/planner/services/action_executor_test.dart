@@ -16,6 +16,7 @@ class FakePlannerService extends PlannerService {
   double? lastAdjustmentFactor;
   bool scheduleResult = true;
   bool cancelResult = true;
+  bool regenerateResult = true;
 
   FakePlannerService() : super();
 
@@ -41,6 +42,16 @@ class FakePlannerService extends PlannerService {
     cancelCalled = true;
     lastSessionId = sessionId;
     return cancelResult;
+  }
+
+  @override
+  Future<bool> suggestPlanRegeneration({
+    required String studentId,
+    required double adjustmentFactor,
+  }) async {
+    regenerateCalled = true;
+    lastAdjustmentFactor = adjustmentFactor;
+    return regenerateResult;
   }
 }
 
@@ -254,7 +265,9 @@ void main() {
             payload: {'adjustmentFactor': 0.8},
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result, isTrue);
+          expect(plannerService.regenerateCalled, isTrue);
+          expect(plannerService.lastAdjustmentFactor, 0.8);
         });
 
         test('returns false when adjustmentFactor is missing', () async {

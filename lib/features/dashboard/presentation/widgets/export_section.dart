@@ -91,7 +91,7 @@ class ExportSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     try {
       final service = ProgressExportService();
-      final csv = await service.exportComprehensiveCSV(studentId);
+      final csv = await service.exportComprehensiveCSV(studentId, l10n: l10n);
       final dir = await getTemporaryDirectory();
       final file = File(
           '${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv');

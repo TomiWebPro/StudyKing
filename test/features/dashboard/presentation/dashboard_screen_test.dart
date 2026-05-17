@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
@@ -354,6 +355,7 @@ Widget _buildTestAppWithRoutes(
   InstrumentationService? instrumentation,
   TopicRepository? topicRepo,
   PlanAdherenceRepository? adherenceRepo,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
     overrides: [
@@ -384,6 +386,7 @@ Widget _buildTestAppWithRoutes(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: Scaffold(body: screen),
       routes: {
         '/practice-session': (_) => const Scaffold(
@@ -1597,6 +1600,28 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Focus Mode'), findsOneWidget);
+      });
+
+      testWidgets('planner card navigation pushes correct route via NavigatorObserver', (tester) async {
+        final observer = TestNavigatorObserver();
+        await tester.pumpWidget(_buildTestAppWithRoutes(
+          DashboardScreen(studentId: 'student-1'),
+          masteryService: FakeMasteryGraphService(),
+          tracker: FakeStudyProgressTracker(),
+          instrumentation: FakeInstrumentationService(),
+          topicRepo: FakeTopicRepository(),
+          navigatorObserver: observer,
+        ));
+        await tester.pumpAndSettle();
+
+        await scrollToFind(tester, find.text('Study Planner'));
+        await tester.tap(find.text('Study Planner'));
+        await tester.pumpAndSettle();
+
+        expect(
+          observer.pushedRoutes.any((r) => r.settings.name == '/planner'),
+          isTrue,
+        );
       });
     });
 

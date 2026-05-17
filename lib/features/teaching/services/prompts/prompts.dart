@@ -46,20 +46,18 @@ class ConversationPromptSet {
     required ConversationPhase phase,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
-    // LLM-facing: invariant English format OK per AGENTS.md
     final paceContext = switch (adaptivePace) {
-      > 1.2 => 'The student is doing well. Accelerate pace.',
-      < 0.8 => 'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.',
-      _ => 'Maintain a steady teaching pace.',
+      > 1.2 => l10n.acceleratePace,
+      < 0.8 => l10n.slowDownPace,
+      _ => l10n.maintainPace,
     };
-    // LLM-facing: invariant English format OK per AGENTS.md
     final timeContext = switch (phase) {
-      ConversationPhase.greeting => 'Start the lesson warmly.',
-      ConversationPhase.teaching => 'Teach the concept step by step. Engage the student with questions.',
-      ConversationPhase.exercise => 'Give the student a practice question to assess understanding.',
-      ConversationPhase.feedback => 'Provide constructive feedback on their answer.',
-      ConversationPhase.adaptiveReview => 'The student needs extra help. Re-explain the concept more simply. Use different examples.',
-      ConversationPhase.closing => 'Wrap up the lesson. Summarize key points.',
+      ConversationPhase.greeting => l10n.greetingContext,
+      ConversationPhase.teaching => l10n.teachingContext,
+      ConversationPhase.exercise => l10n.exerciseContext,
+      ConversationPhase.feedback => l10n.feedbackContext,
+      ConversationPhase.adaptiveReview => l10n.adaptiveReviewContext,
+      ConversationPhase.closing => l10n.closingContext,
     };
     final systemPrompt = '${l10n.tutorSystemPrompt(subjectId, topicTitle)}$_languageInstruction';
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
@@ -93,8 +91,8 @@ class ConversationPromptSet {
     required String topicTitle,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
-    // User prompt kept as Dart constant (invariant format with JSON templates)
     final userPrompt = evaluationPromptTemplate(
+      l10n: l10n,
       subjectId: subjectId,
       topicTitle: topicTitle,
       question: question,

@@ -1,4 +1,5 @@
 import '../services/llm/llm_chat_service.dart' show LlmProvider;
+import '../../l10n/generated/app_localizations.dart';
 
 String defaultModelForProvider(LlmProvider provider) {
   switch (provider) {
@@ -12,6 +13,7 @@ String defaultModelForProvider(LlmProvider provider) {
 }
 
 String evaluationPromptTemplate({
+  required AppLocalizations l10n,
   required String subjectId,
   required String topicTitle,
   required String question,
@@ -20,10 +22,10 @@ String evaluationPromptTemplate({
   String partialCreditKey = 'partialCredit',
   String conceptBreakdownKey = 'conceptBreakdown',
 }) {
-  return 'Evaluate this student answer for the subject "$subjectId" on topic "$topicTitle".\n'
-      '\nQuestion: $question\n'
-      '\nStudent Answer: $studentAnswer\n'
-      '\nReturn a JSON object with:\n'
+  final intro = l10n.evaluateStudentAnswerIntro(
+    subjectId, topicTitle, question, studentAnswer,
+  );
+  return '$intro\n'
       '{\n'
       '  "score": <0.0 to 1.0>,\n'
       '  "$explanationKey": "<detailed feedback explaining what was correct/incorrect>",\n'

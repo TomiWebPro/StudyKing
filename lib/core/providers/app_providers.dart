@@ -50,12 +50,12 @@ class SettingsController extends StateNotifier<SettingsBox> {
 
   Future<void> _loadSettings() async {
     if (_hasLoadedOnce) return;
-    try {
-      _hasLoadedOnce = true;
-      final settings = await _repository.getSettings();
-      state = settings;
-    } catch (e) {
-      _logger.e('Error loading settings', e);
+    _hasLoadedOnce = true;
+    final result = await _repository.getSettings();
+    if (result.isSuccess) {
+      state = result.data!;
+    } else {
+      _logger.e('Error loading settings: ${result.error}');
     }
   }
 
@@ -82,86 +82,100 @@ class SettingsController extends StateNotifier<SettingsBox> {
     bool? firstFocusVisit,
     bool? dailyReminderEnabled,
   }) async {
-    try {
-      await _repository.updateSettings(
-        apiKey: apiKey ?? state.apiKey,
-        apiBaseUrl: apiBaseUrl ?? state.apiBaseUrl,
-        selectedModel: selectedModel ?? state.selectedModel,
-        themeMode: themeMode ?? state.themeModeEnum,
-        fontSize: fontSize ?? state.fontSize,
-        studyRemindersEnabled:
-            studyRemindersEnabled ?? state.studyRemindersEnabled,
-        requestTimeoutSeconds:
-            requestTimeoutSeconds ?? state.requestTimeoutSeconds,
-        sessionDurationMinutes:
-            sessionDurationMinutes ?? state.sessionDurationMinutes,
-        highContrastEnabled:
-            highContrastEnabled ?? state.highContrastEnabled,
-        largeTouchTargets:
-            largeTouchTargets ?? state.largeTouchTargets,
-        reduceMotion:
-            reduceMotion ?? state.reduceMotion,
-        revisionRemindersEnabled:
-            revisionRemindersEnabled ?? state.revisionRemindersEnabled,
-        lessonNotificationsEnabled:
-            lessonNotificationsEnabled ?? state.lessonNotificationsEnabled,
-        overworkAlertsEnabled:
-            overworkAlertsEnabled ?? state.overworkAlertsEnabled,
-        planAdjustmentNotificationsEnabled:
-            planAdjustmentNotificationsEnabled ?? state.planAdjustmentNotificationsEnabled,
-        breakDurationSeconds:
-            breakDurationSeconds ?? state.breakDurationSeconds,
-        dailyReminderHour:
-            dailyReminderHour ?? state.dailyReminderHour,
-        dailyReminderMinute:
-            dailyReminderMinute ?? state.dailyReminderMinute,
-        firstFocusVisit:
-            firstFocusVisit ?? state.firstFocusVisit,
-        dailyReminderEnabled:
-            dailyReminderEnabled ?? state.dailyReminderEnabled,
-      );
-      if (llmProvider != null) {
-        await _repository.saveProvider(llmProvider);
-      }
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating settings', e);
+    final updateResult = await _repository.updateSettings(
+      apiKey: apiKey ?? state.apiKey,
+      apiBaseUrl: apiBaseUrl ?? state.apiBaseUrl,
+      selectedModel: selectedModel ?? state.selectedModel,
+      themeMode: themeMode ?? state.themeModeEnum,
+      fontSize: fontSize ?? state.fontSize,
+      studyRemindersEnabled:
+          studyRemindersEnabled ?? state.studyRemindersEnabled,
+      requestTimeoutSeconds:
+          requestTimeoutSeconds ?? state.requestTimeoutSeconds,
+      sessionDurationMinutes:
+          sessionDurationMinutes ?? state.sessionDurationMinutes,
+      highContrastEnabled:
+          highContrastEnabled ?? state.highContrastEnabled,
+      largeTouchTargets:
+          largeTouchTargets ?? state.largeTouchTargets,
+      reduceMotion:
+          reduceMotion ?? state.reduceMotion,
+      revisionRemindersEnabled:
+          revisionRemindersEnabled ?? state.revisionRemindersEnabled,
+      lessonNotificationsEnabled:
+          lessonNotificationsEnabled ?? state.lessonNotificationsEnabled,
+      overworkAlertsEnabled:
+          overworkAlertsEnabled ?? state.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled:
+          planAdjustmentNotificationsEnabled ?? state.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds:
+          breakDurationSeconds ?? state.breakDurationSeconds,
+      dailyReminderHour:
+          dailyReminderHour ?? state.dailyReminderHour,
+      dailyReminderMinute:
+          dailyReminderMinute ?? state.dailyReminderMinute,
+      firstFocusVisit:
+          firstFocusVisit ?? state.firstFocusVisit,
+      dailyReminderEnabled:
+          dailyReminderEnabled ?? state.dailyReminderEnabled,
+    );
+    if (updateResult.isFailure) {
+      _logger.e('Error updating settings: ${updateResult.error}');
+      return;
+    }
+    if (llmProvider != null) {
+      await _repository.saveProvider(llmProvider);
+    }
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
+    } else {
+      _logger.e('Error loading settings after update: ${settingsResult.error}');
     }
   }
 
   Future<void> saveApiKey(String key) async {
-    try {
-      await _repository.saveApiKey(service: 'default', key: key);
-      await _loadSettings();
-    } catch (e) {
-      _logger.e('Error saving API key', e);
+    final result = await _repository.saveApiKey(service: 'default', key: key);
+    if (result.isFailure) {
+      _logger.e('Error saving API key: ${result.error}');
+      return;
     }
+    await _loadSettings();
   }
 
   Future<void> updateTheme(ThemeMode mode) async {
-    try {
-      await _repository.updateSettings(themeMode: mode);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating theme', e);
+    final updateResult = await _repository.updateSettings(themeMode: mode);
+    if (updateResult.isFailure) {
+      _logger.e('Error updating theme: ${updateResult.error}');
+      return;
+    }
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
     }
   }
 
   Future<void> updateFontSize(double size) async {
-    try {
-      await _repository.updateSettings(fontSize: size);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating font size', e);
+    final updateResult = await _repository.updateSettings(fontSize: size);
+    if (updateResult.isFailure) {
+      _logger.e('Error updating font size: ${updateResult.error}');
+      return;
+    }
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
     }
   }
 
   Future<void> updateModel(String model) async {
-    try {
-      await _repository.updateSettings(selectedModel: model);
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating model', e);
+    final updateResult = await _repository.updateSettings(selectedModel: model);
+    if (updateResult.isFailure) {
+      _logger.e('Error updating model: ${updateResult.error}');
+      return;
+    }
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
     }
   }
 
@@ -182,15 +196,18 @@ class SettingsController extends StateNotifier<SettingsBox> {
     int? studyTimeMs,
     int? questions,
   }) async {
-    try {
-      await _repository.updateStats(
-        sessionCount: sessionCount,
-        studyTimeMs: studyTimeMs,
-        questions: questions,
-      );
-      state = await _repository.getSettings();
-    } catch (e) {
-      _logger.e('Error updating stats', e);
+    final statsResult = await _repository.updateStats(
+      sessionCount: sessionCount,
+      studyTimeMs: studyTimeMs,
+      questions: questions,
+    );
+    if (statsResult.isFailure) {
+      _logger.e('Error updating stats: ${statsResult.error}');
+      return;
+    }
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
     }
   }
 

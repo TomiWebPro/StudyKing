@@ -3906,4 +3906,124 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unableToResolveSubject => 'Could not find subject for this topic.';
+
+  @override
+  String get questionDeleted => 'Question deleted';
+
+  @override
+  String get deleteQuestion => 'Delete Question';
+
+  @override
+  String get deleteQuestionConfirm =>
+      'Are you sure you want to delete this question?';
+
+  @override
+  String get deleteQuestions => 'Delete Questions';
+
+  @override
+  String deleteQuestionsConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'questions',
+      one: 'question',
+    );
+    return 'Are you sure you want to delete $count $_temp0?';
+  }
+
+  @override
+  String questionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'questions',
+      one: 'question',
+    );
+    return '$count $_temp0 deleted';
+  }
+
+  @override
+  String get editQuestion => 'Edit Question';
+
+  @override
+  String get questionText => 'Question text';
+
+  @override
+  String get cancelSelection => 'Cancel selection';
+
+  @override
+  String get deleteSelected => 'Delete selected';
+
+  @override
+  String get selectMultiple => 'Select multiple';
+
+  @override
+  String get searchQuestions => 'Search questions';
+
+  @override
+  String get allSubjects => 'All subjects';
+
+  @override
+  String get allTypes => 'All types';
+
+  @override
+  String get allSources => 'All sources';
+
+  @override
+  String get acceleratePace => 'The student is doing well. Accelerate pace.';
+
+  @override
+  String get slowDownPace =>
+      'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.';
+
+  @override
+  String get maintainPace => 'Maintain a steady teaching pace.';
+
+  @override
+  String get greetingContext => 'Start the lesson warmly.';
+
+  @override
+  String get teachingContext =>
+      'Teach the concept step by step. Engage the student with questions.';
+
+  @override
+  String get exerciseContext =>
+      'Give the student a practice question to assess understanding.';
+
+  @override
+  String get feedbackContext =>
+      'Provide constructive feedback on their answer.';
+
+  @override
+  String get adaptiveReviewContext =>
+      'The student needs extra help. Re-explain the concept more simply. Use different examples.';
+
+  @override
+  String get closingContext => 'Wrap up the lesson. Summarize key points.';
+
+  @override
+  String evaluateStudentAnswerIntro(
+    String subjectId,
+    String topicTitle,
+    String question,
+    String studentAnswer,
+  ) {
+    return 'Evaluate this student answer for the subject \"$subjectId\" on topic \"$topicTitle\".\n\nQuestion: $question\n\nStudent Answer: $studentAnswer\n\nReturn a JSON object with:';
+  }
+
+  @override
+  String minutesSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String breakRemainingLabel(String formattedTime) {
+    return 'Break remaining $formattedTime';
+  }
 }

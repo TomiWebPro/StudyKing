@@ -58,7 +58,10 @@ class ProgressExportService {
     return json;
   }
 
-  Future<String> exportComprehensiveCSV(String studentId) async {
+  Future<String> exportComprehensiveCSV(
+    String studentId, {
+    AppLocalizations? l10n,
+  }) async {
     final overallStats = await _tracker.getOverallStats(studentId);
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
@@ -80,13 +83,7 @@ class ProgressExportService {
     buffer.writeln(
         'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency (%)');
     for (final ms in masteryStates) {
-      final level = switch (ms.masteryLevel) {
-        MasteryLevel.novice => 'Novice',
-        MasteryLevel.browsing => 'Browsing',
-        MasteryLevel.developing => 'Developing',
-        MasteryLevel.proficient => 'Proficient',
-        MasteryLevel.expert => 'Expert',
-      };
+      final level = _masteryLevelLabel(ms.masteryLevel, l10n);
       buffer.writeln(
           '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
     }
@@ -119,6 +116,16 @@ class ProgressExportService {
     }
 
     return buffer.toString();
+  }
+
+  String _masteryLevelLabel(MasteryLevel level, AppLocalizations? l10n) {
+    return switch (level) {
+      MasteryLevel.novice => l10n?.masteryLevelNovice ?? 'Novice',
+      MasteryLevel.browsing => l10n?.masteryLevelBrowsing ?? 'Browsing',
+      MasteryLevel.developing => l10n?.masteryLevelDeveloping ?? 'Developing',
+      MasteryLevel.proficient => l10n?.masteryLevelProficient ?? 'Proficient',
+      MasteryLevel.expert => l10n?.masteryLevelExpert ?? 'Expert',
+    };
   }
 
   Future<List<int>> exportComprehensivePDF(
@@ -317,7 +324,7 @@ class ProgressExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    final csv = await exportComprehensiveCSV(studentId);
+    final csv = await exportComprehensiveCSV(studentId, l10n: l10n);
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);

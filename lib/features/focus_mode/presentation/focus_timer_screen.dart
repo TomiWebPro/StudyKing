@@ -340,7 +340,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Widget _buildBreakView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
     return Semantics(
       liveRegion: true,
-      label: 'Break remaining ${formatTimer(Duration(seconds: _breakRemaining), l10n: l10n)}',
+      label: l10n.breakRemainingLabel(formatTimer(Duration(seconds: _breakRemaining), l10n: l10n)),
       child: Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -476,7 +476,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 return Semantics(
                   button: true,
                   selected: selected,
-                  label: '$m minutes',
+                  label: l10n.minutesSemantics(m),
                   child: ChoiceChip(
                     label: Text(l10n.durationMinutes(m)),
                     selected: selected,

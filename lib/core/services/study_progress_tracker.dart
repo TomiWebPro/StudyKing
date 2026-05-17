@@ -244,18 +244,16 @@ class StudyProgressTracker {
   }
 
   Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async {
+    final level = await getTopicMasteryLevelEnum(topicId, studentId: studentId);
+    return _masteryLevelLabel(level);
+  }
+
+  Future<MasteryLevel> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async {
     studentId ??= StudentIdService().getStudentId();
     try {
       final result = await _masteryService.getTopicMastery(studentId, topicId);
       if (result.isSuccess && result.data != null) {
-        final state = result.data!;
-        return switch (state.masteryLevel) {
-          MasteryLevel.novice => 'Novice',
-          MasteryLevel.browsing => 'Browsing',
-          MasteryLevel.developing => 'Developing',
-          MasteryLevel.proficient => 'Proficient',
-          MasteryLevel.expert => 'Expert',
-        };
+        return result.data!.masteryLevel;
       }
     } catch (e) {
       _logger.e('Failed to get topic mastery level from service: $e');
@@ -265,16 +263,26 @@ class StudyProgressTracker {
       final stats = await getTopicProgress(studentId, topicId);
       final attempts = stats['attempts'] as int? ?? 0;
       final accuracy = (stats['accuracy'] as int? ?? 0) / 100.0;
-      if (attempts == 0) return 'Novice';
-      if (accuracy >= 0.9 && attempts >= 10) return 'Expert';
-      if (accuracy >= 0.8 && attempts >= 5) return 'Proficient';
-      if (accuracy >= 0.6 && attempts >= 3) return 'Developing';
-      if (attempts >= 1) return 'Browsing';
+      if (attempts == 0) return MasteryLevel.novice;
+      if (accuracy >= 0.9 && attempts >= 10) return MasteryLevel.expert;
+      if (accuracy >= 0.8 && attempts >= 5) return MasteryLevel.proficient;
+      if (accuracy >= 0.6 && attempts >= 3) return MasteryLevel.developing;
+      if (attempts >= 1) return MasteryLevel.browsing;
     } catch (e) {
       _logger.e('Failed to get topic progress for mastery level: $e');
     }
 
-    return 'Novice';
+    return MasteryLevel.novice;
+  }
+
+  String _masteryLevelLabel(MasteryLevel level) {
+    return switch (level) {
+      MasteryLevel.novice => _l10n?.masteryLevelNovice ?? 'Novice',
+      MasteryLevel.browsing => _l10n?.masteryLevelBrowsing ?? 'Browsing',
+      MasteryLevel.developing => _l10n?.masteryLevelDeveloping ?? 'Developing',
+      MasteryLevel.proficient => _l10n?.masteryLevelProficient ?? 'Proficient',
+      MasteryLevel.expert => _l10n?.masteryLevelExpert ?? 'Expert',
+    };
   }
 
   Future<String> exportProgressCSV(String studentId) async {
@@ -317,10 +325,6 @@ class StudyProgressTracker {
       csvLines.add('"${attempt.questionId}","$studentId","${attempt.isCorrect}","${attempt.timeSpentMs ~/ 1000}","${attempt.timestamp.toIso8601String()}"');
     }
 
-    if (attempts.isEmpty) {
-      csvLines.add('"","$studentId","No attempts recorded","",""');
-    }
-
     return csvLines.join('\n');
   }
 
@@ -333,19 +337,9 @@ class StudyProgressTracker {
     csvLines.add('"Topic ID","Total Attempts","Correct","Accuracy","Mastery Level","Last Practiced","Review Urgency"');
 
     for (final ms in masteryStates) {
-      final level = switch (ms.masteryLevel) {
-        MasteryLevel.novice => 'Novice',
-        MasteryLevel.browsing => 'Browsing',
-        MasteryLevel.developing => 'Developing',
-        MasteryLevel.proficient => 'Proficient',
-        MasteryLevel.expert => 'Expert',
-      };
+      final level = _masteryLevelLabel(ms.masteryLevel);
       final topicId = ms.topicId;
       csvLines.add('"$topicId","${ms.totalAttempts}","${ms.correctAttempts}","${(ms.accuracy * 100).toStringAsFixed(1)}%","$level","${ms.lastAttempt.toIso8601String()}","${(ms.reviewUrgency * 100).toStringAsFixed(0)}%"');
-    }
-
-    if (masteryStates.isEmpty) {
-      csvLines.add('"No session data available for $studentId","","","","","",""');
     }
 
     csvLines.add('');

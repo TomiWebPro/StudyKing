@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -53,10 +54,10 @@ class FakeSettingsRepository extends SettingsRepository {
   FakeSettingsRepository(this._box);
 
   @override
-  Future<SettingsBox> getSettings() async => _box;
+  Future<Result<SettingsBox>> getSettings() async => Result.success(_box);
 
   @override
-  Future<void> updateSettings({
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -118,6 +119,7 @@ class FakeSettingsRepository extends SettingsRepository {
       dailyReminderEnabled:
           dailyReminderEnabled ?? current.dailyReminderEnabled,
     );
+    return Result.success(null);
   }
 }
 

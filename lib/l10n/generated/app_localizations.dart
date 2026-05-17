@@ -6546,7 +6546,7 @@ abstract class AppLocalizations {
   /// **'View your uploaded materials'**
   String get viewMyUploads;
 
-  /// Tile title for question bank
+  /// Title for the question bank screen
   ///
   /// In en, this message translates to:
   /// **'Question Bank'**
@@ -6635,6 +6635,173 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not find subject for this topic.'**
   String get unableToResolveSubject;
+
+  /// Snackbar message when a question is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Question deleted'**
+  String get questionDeleted;
+
+  /// Title for delete question confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Question'**
+  String get deleteQuestion;
+
+  /// Body for delete question confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this question?'**
+  String get deleteQuestionConfirm;
+
+  /// Title for delete multiple questions dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Questions'**
+  String get deleteQuestions;
+
+  /// Body for delete multiple questions confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} {count, plural, =1{question} other{questions}}?'**
+  String deleteQuestionsConfirm(int count);
+
+  /// Snackbar when multiple questions are deleted
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{question} other{questions}} deleted'**
+  String questionsDeleted(int count);
+
+  /// Title for edit question dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Question'**
+  String get editQuestion;
+
+  /// Label for question text input field
+  ///
+  /// In en, this message translates to:
+  /// **'Question text'**
+  String get questionText;
+
+  /// Tooltip for cancel selection button
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get cancelSelection;
+
+  /// Tooltip for delete selected button
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected'**
+  String get deleteSelected;
+
+  /// Tooltip for select multiple mode
+  ///
+  /// In en, this message translates to:
+  /// **'Select multiple'**
+  String get selectMultiple;
+
+  /// Hint text for question search field
+  ///
+  /// In en, this message translates to:
+  /// **'Search questions'**
+  String get searchQuestions;
+
+  /// Filter label showing all subjects
+  ///
+  /// In en, this message translates to:
+  /// **'All subjects'**
+  String get allSubjects;
+
+  /// Filter label showing all question types
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get allTypes;
+
+  /// Filter label showing all sources
+  ///
+  /// In en, this message translates to:
+  /// **'All sources'**
+  String get allSources;
+
+  /// LLM pace context when student is doing well
+  ///
+  /// In en, this message translates to:
+  /// **'The student is doing well. Accelerate pace.'**
+  String get acceleratePace;
+
+  /// LLM pace context when student is struggling
+  ///
+  /// In en, this message translates to:
+  /// **'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.'**
+  String get slowDownPace;
+
+  /// LLM pace context for normal pace
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain a steady teaching pace.'**
+  String get maintainPace;
+
+  /// LLM time context for greeting phase
+  ///
+  /// In en, this message translates to:
+  /// **'Start the lesson warmly.'**
+  String get greetingContext;
+
+  /// LLM time context for teaching phase
+  ///
+  /// In en, this message translates to:
+  /// **'Teach the concept step by step. Engage the student with questions.'**
+  String get teachingContext;
+
+  /// LLM time context for exercise phase
+  ///
+  /// In en, this message translates to:
+  /// **'Give the student a practice question to assess understanding.'**
+  String get exerciseContext;
+
+  /// LLM time context for feedback phase
+  ///
+  /// In en, this message translates to:
+  /// **'Provide constructive feedback on their answer.'**
+  String get feedbackContext;
+
+  /// LLM time context for adaptive review phase
+  ///
+  /// In en, this message translates to:
+  /// **'The student needs extra help. Re-explain the concept more simply. Use different examples.'**
+  String get adaptiveReviewContext;
+
+  /// LLM time context for closing phase
+  ///
+  /// In en, this message translates to:
+  /// **'Wrap up the lesson. Summarize key points.'**
+  String get closingContext;
+
+  /// Introduction for the evaluation prompt template
+  ///
+  /// In en, this message translates to:
+  /// **'Evaluate this student answer for the subject \"{subjectId}\" on topic \"{topicTitle}\".\n\nQuestion: {question}\n\nStudent Answer: {studentAnswer}\n\nReturn a JSON object with:'**
+  String evaluateStudentAnswerIntro(
+    String subjectId,
+    String topicTitle,
+    String question,
+    String studentAnswer,
+  );
+
+  /// Semantics label for minutes in focus timer
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{minute} other{minutes}}'**
+  String minutesSemantics(int count);
+
+  /// Semantics label for break remaining time
+  ///
+  /// In en, this message translates to:
+  /// **'Break remaining {formattedTime}'**
+  String breakRemainingLabel(String formattedTime);
 }
 
 class _AppLocalizationsDelegate

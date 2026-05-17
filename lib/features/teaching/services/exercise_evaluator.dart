@@ -30,7 +30,9 @@ class ExerciseEvaluator {
     required String subjectId,
     required String topicTitle,
   }) {
+    final l10n = lookupAppLocalizations(Locale(_localeName));
     return evaluationPromptTemplate(
+      l10n: l10n,
       subjectId: subjectId,
       topicTitle: topicTitle,
       question: question,

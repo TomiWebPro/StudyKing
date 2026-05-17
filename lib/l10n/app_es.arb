@@ -5352,5 +5352,135 @@
   "unableToResolveSubject": "No se pudo encontrar la materia para este tema.",
   "@unableToResolveSubject": {
     "description": "Snackbar message when subject cannot be resolved for a topic"
+  },
+  "questionDeleted": "Pregunta eliminada",
+  "@questionDeleted": {
+    "description": "Snackbar message when a question is deleted"
+  },
+  "deleteQuestion": "Eliminar pregunta",
+  "@deleteQuestion": {
+    "description": "Title for delete question confirmation dialog"
+  },
+  "deleteQuestionConfirm": "¿Estás seguro de que quieres eliminar esta pregunta?",
+  "@deleteQuestionConfirm": {
+    "description": "Body for delete question confirmation dialog"
+  },
+  "deleteQuestions": "Eliminar preguntas",
+  "@deleteQuestions": {
+    "description": "Title for delete multiple questions dialog"
+  },
+  "deleteQuestionsConfirm": "¿Estás seguro de que quieres eliminar {count,plural,=1{1 pregunta} other{{count} preguntas}}?",
+  "@deleteQuestionsConfirm": {
+    "description": "Body for delete multiple questions confirmation",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "questionsDeleted": "{count,plural,=1{1 pregunta eliminada} other{{count} preguntas eliminadas}}",
+  "@questionsDeleted": {
+    "description": "Snackbar when multiple questions are deleted",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "editQuestion": "Editar pregunta",
+  "@editQuestion": {
+    "description": "Title for edit question dialog"
+  },
+  "questionText": "Texto de la pregunta",
+  "@questionText": {
+    "description": "Label for question text input field"
+  },
+  "questionBank": "Banco de preguntas",
+  "@questionBank": {
+    "description": "Title for the question bank screen"
+  },
+  "cancelSelection": "Cancelar selección",
+  "@cancelSelection": {
+    "description": "Tooltip for cancel selection button"
+  },
+  "deleteSelected": "Eliminar seleccionadas",
+  "@deleteSelected": {
+    "description": "Tooltip for delete selected button"
+  },
+  "selectMultiple": "Seleccionar múltiples",
+  "@selectMultiple": {
+    "description": "Tooltip for select multiple mode"
+  },
+  "searchQuestions": "Buscar preguntas",
+  "@searchQuestions": {
+    "description": "Hint text for question search field"
+  },
+  "allSubjects": "Todas las materias",
+  "@allSubjects": {
+    "description": "Filter label showing all subjects"
+  },
+  "allTypes": "Todos los tipos",
+  "@allTypes": {
+    "description": "Filter label showing all question types"
+  },
+  "allSources": "Todas las fuentes",
+  "@allSources": {
+    "description": "Filter label showing all sources"
+  },
+  "acceleratePace": "El estudiante lo está haciendo bien. Acelere el ritmo.",
+  "@acceleratePace": {
+    "description": "LLM pace context when student is doing well"
+  },
+  "slowDownPace": "El estudiante parece tener dificultades. Reduzca la velocidad, simplifique las explicaciones y proporcione más ejemplos.",
+  "@slowDownPace": {
+    "description": "LLM pace context when student is struggling"
+  },
+  "maintainPace": "Mantenga un ritmo de enseñanza constante.",
+  "@maintainPace": {
+    "description": "LLM pace context for normal pace"
+  },
+  "greetingContext": "Comience la lección calurosamente.",
+  "@greetingContext": {
+    "description": "LLM time context for greeting phase"
+  },
+  "teachingContext": "Enseñe el concepto paso a paso. Involucre al estudiante con preguntas.",
+  "@teachingContext": {
+    "description": "LLM time context for teaching phase"
+  },
+  "exerciseContext": "Dé al estudiante una pregunta de práctica para evaluar su comprensión.",
+  "@exerciseContext": {
+    "description": "LLM time context for exercise phase"
+  },
+  "feedbackContext": "Proporcione retroalimentación constructiva sobre su respuesta.",
+  "@feedbackContext": {
+    "description": "LLM time context for feedback phase"
+  },
+  "adaptiveReviewContext": "El estudiante necesita ayuda adicional. Vuelva a explicar el concepto de forma más sencilla. Use ejemplos diferentes.",
+  "@adaptiveReviewContext": {
+    "description": "LLM time context for adaptive review phase"
+  },
+  "closingContext": "Concluya la lección. Resuma los puntos clave.",
+  "@closingContext": {
+    "description": "LLM time context for closing phase"
+  },
+  "evaluateStudentAnswerIntro": "Evalúe esta respuesta del estudiante para la materia \"{subjectId}\" sobre el tema \"{topicTitle}\".\n\nPregunta: {question}\n\nRespuesta del estudiante: {studentAnswer}\n\nDevuelva un objeto JSON con:",
+  "@evaluateStudentAnswerIntro": {
+    "description": "Introduction for the evaluation prompt template",
+    "placeholders": {
+      "subjectId": { "type": "String" },
+      "topicTitle": { "type": "String" },
+      "question": { "type": "String" },
+      "studentAnswer": { "type": "String" }
+    }
+  },
+  "minutesSemantics": "{count,plural,=1{1 minuto} other{{count} minutos}}",
+  "@minutesSemantics": {
+    "description": "Semantics label for minutes in focus timer",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "breakRemainingLabel": "Quedan {formattedTime} de descanso",
+  "@breakRemainingLabel": {
+    "description": "Semantics label for break remaining time",
+    "placeholders": {
+      "formattedTime": { "type": "String" }
+    }
   }
 }

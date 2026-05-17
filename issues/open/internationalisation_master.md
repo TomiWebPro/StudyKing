@@ -1,183 +1,322 @@
-# Internationalisation Master Issue
+# Internationalisation Master — Comprehensive i18n Audit
 
-**Audited:** 2026-05-17  
-**Scope:** All Dart source files and `.arb` locale bundles  
-**Target locale for audit:** `es` (Spanish) — other languages follow same pattern  
-**Reference:** `AGENTS.md` i18n / Number Formatting Conventions
-
----
-
-## Summary
-
-The Spanish locale (`app_es.arb`) is commendably complete — all 500+ keys from `app_en.arb` have a Spanish translation. The codebase already uses `l10n` extensively and has `number_format_utils.dart` with locale-aware helpers. However, several source files contain **hardcoded user-facing English strings** that bypass `AppLocalizations`, use `toStringAsFixed` for numeric displays, or use non-locale-aware date/time formatting. Additionally, the notification service formats timestamps manually, LLM prompts have untranslated English fragments, and layout handling for RTL/expanded strings is minimal.
+**Created**: 2026-05-18
+**Target Locale**: Spanish (`es`) — formal "usted" register, neutral Latin American
+**Scope**: Full codebase — `lib/`, `lib/l10n/`, `lib/features/*/presentation/`
+**Severity Levels**: BLOCKER / MAJOR / MINOR
 
 ---
 
-## BLOCKER
+## BLOCKER — None
 
-| # | File | Line(s) | Issue |
-|---|------|---------|-------|
-| B1 | `lib/features/questions/presentation/question_bank_screen.dart` | 140, 158–159, 183 | Hardcoded English strings: `const Text('Question deleted')`, `const Text('Delete Questions')`, `'Are you sure you want to delete ${_selectedIds.length} question(s)?'` — these are user-facing confirmations and snackbars. A Spanish user sees mixed English/Spanish UI. |
-| B2 | `lib/features/ingestion/presentation/source_detail_screen.dart` | 172 | `SnackBar(content: Text('Reprocess failed: $e'))` — hardcoded English error on a user-visible snackbar. |
-
-**Acceptance (fixed):**
-- B1: All three strings use `AppLocalizations.of(context)!` keys defined in `.arb`.
-- B2: `'Reprocess failed: $e'` is replaced by `l10n.errorWithMessage(e.toString())` (key exists in both en/es).
+No app-crashing or user-progression-blocking internationalisation issues found.
 
 ---
 
 ## MAJOR
 
-### M1. Hardcoded English mastery level labels in CSV and service
+### MAJOR-1: ~40 hardcoded user-facing strings in ingestion feature screens
 
-**Files:**
-- `lib/core/services/study_progress_tracker.dart:268–277` — `getTopicMasteryLevel()` returns English strings `'Novice'`, `'Browsing'`, `'Developing'`, `'Proficient'`, `'Expert'`.
-- `lib/core/services/study_progress_tracker.dart:336–342` — `exportSessionHistoryCSV()` hardcodes the same mastery level labels.
-- `lib/core/services/progress_export_service.dart:83–89` — `exportComprehensiveCSV()` hardcodes `'Novice'` etc.
+**Files**:
+- `lib/features/ingestion/presentation/source_detail_screen.dart`
+- `lib/features/ingestion/presentation/content_library_screen.dart`
 
-**Problem:** The mastery level labels in CSV exports are always English even when the user's UI is Spanish. While AGENTS.md says CSV should use invariant format, the mastery level labels are user-facing content, not number formatting. Spanish users expect `Novato`, `Explorando`, `En Desarrollo`, `Competente`, `Experto`.
+**Context**: Both screens use raw English string literals for every UI label, dialog title, tooltip, section header, placeholder, and status text — none go through `AppLocalizations.of(context)!`.
 
-**Acceptance (fixed):**
-- `getTopicMasteryLevel()` accepts an `AppLocalizations` (or `l10n`) parameter and returns localized labels via `l10n.masteryLevelNovice` etc.
-- CSV export methods pass `l10n` and use the localized labels (the CSV is downloaded/shared and read by the user).
+**Affected strings in `source_detail_screen.dart`**:
+- `'Source not found'` (lines 75, 237)
+- `'Reprocess Source'` (dialog title, line 119)
+- `'Reprocessing will replace existing generated questions. Continue?'` (line 120)
+- `'Continue'` (button, line 123)
+- `'Reprocessing...'` (progress, line 131)
+- `'Source Detail'` (error AppBar, line 232)
+- `'Reprocess'` (tooltip + popup + button, lines 258, 271, 444)
+- `'Delete'` (popup + button; lines 274, 453)
+- `'Status'`, `'Subject'`, `'Type'`, `'ID'`, `'Uploaded'` (`_InfoRow` labels, lines 296–302)
+- `'Processing failed'` (error banner, line 318)
+- `'Topic Classification'`, `'Summary'`, `'Extracted Text (${...} chars)'`, `'Generated Questions (${...})'` (`_SectionHeader` titles, lines 329–409)
+- `'Not yet classified'` (line 338)
+- `'Classify Now'` (button, line 348)
+- `'No summary available'` (placeholder, line 361)
+- `'Search in text'` (hint, line 380)
+- `'No extracted text available'` (placeholder, line 397)
+- `'No questions from this source'` (placeholder, line 414)
+- `'${q.type.name}  •  ${q.difficultyText ?? "Difficulty ${q.difficulty}"}'` (question subtitle, line 429)
+- `'Select Topic'` (sheet title, line 472)
+- `'Delete Source'` (dialog title, line 492)
+- `'Are you sure you want to delete this source?'` (dialog content, line 493)
+- `'Source deleted'` (snackbar, line 512)
 
-### M2. Hardcoded English in LLM prompts
+**Affected strings in `content_library_screen.dart`**:
+- `_statusLabel()` returns hardcoded English: `'Pending'`, `'Extracting'`, `'Processing'`, `'Generating Questions'`, `'Validating'`, `'Completed'`, `'Failed'` (lines 117–134)
+- `'Delete Source'` + `'Are you sure you want to delete this source?'` + `'Also delete questions generated from this source'` (dialog, lines 174–183)
+- `'Source deleted'` (snackbar, line 223)
+- `'Content Library'` (AppBar, line 248)
+- `'Sort order'`, `'Sort by'` (tooltips, lines 252, 257)
+- `'Date'`, `'Title'`, `'Status'`, `'Type'` (sort menu items, lines 260–263)
+- `'All subjects'`, `'All types'`, `'All statuses'` (filter chips + bottom sheets, lines 343–444)
+- `'Reprocess'` (tooltip on failed source, line 567)
 
-**Files:**
-- `lib/features/teaching/services/prompts/prompts.dart:50–63` — `tutorMessage()` contains hardcoded English pace/time-context strings: `'The student is doing well. Accelerate pace.'`, `'The student seems to be struggling...'`, `'Start the lesson warmly.'`, etc. These are LLM-facing per AGENTS.md but they feed into the system prompt that the student sees as AI output.
-- `lib/core/constants/llm_defaults.dart:23–32` — `evaluationPromptTemplate()` is entirely hardcoded English with no locale parameter.
+**Rationale**: These are all user-facing. A Spanish user sees English throughout the entire ingestion workflow. The ARB file already has `allSubjects`, `allTypes`, `allSources`, `date`, `delete` but the code doesn't use them.
 
-**Problem:** When the user's locale is Spanish, the LLM still receives English instructions about "Evaluate this student answer" and English context strings, making the AI less likely to respond consistently in Spanish.
+**Acceptance Criteria**:
+- Every hardcoded string above is replaced with `l10n.<key>(...)`
+- New ARB keys added for: `sourceDetail`, `sourceNotFound`, `reprocessSource`, `reprocessingConfirm`, `continue`, `reprocessing`, `processingFailed`, `topicClassification`, `notYetClassified`, `classifyNow`, `summary`, `noSummaryAvailable`, `extractedText({charCount})`, `searchInText`, `noExtractedText`, `generatedQuestions({count})`, `noQuestionsFromSource`, `deleteSourceTitle`, `deleteSourceConfirm`, `sourceDeleted`, `processingStatusPending`, `processingStatusExtracting`, `processingStatusProcessing`, `processingStatusGeneratingQuestions`, `processingStatusValidating`, `processingStatusCompleted`, `processingStatusFailed`, `contentLibrary`, `sortOrder`, `sortBy`, `sortDate`, `sortTitle`, `sortStatus`, `sortType`, `allStatuses`
+- Spanish translations provided for all new keys
 
-**Acceptance (fixed):**
-- Pace/time-context strings in `prompts.dart` are moved to `.arb` keys with placeholder support.
-- `evaluationPromptTemplate()` accepts an `AppLocalizations` parameter and constructs the template from locale-aware strings.
-- Alternatively, the `_languageInstruction` mechanism is extended to cover these fragments.
+---
 
-### M3. Non-locale-aware time formatting in notification service
+### MAJOR-2: Hardcoded English strings in question bank screen
 
-**File:** `lib/core/services/notification_service.dart:247`
+**File**: `lib/features/questions/presentation/question_bank_screen.dart`
+
+**Affected strings**:
+- `'Edit Question'` (dialog title, line 196)
+- `'Question text'`, `'Explanation'` (input labels, lines 203, 209)
+- `'Question Bank'` (AppBar title, line 251)
+- `'Cancel selection'`, `'Delete selected'`, `'Select multiple'` (tooltips, lines 256–267)
+- `'Difficulty ${q.difficulty}'` (chip, line 352) — ARB already has `difficultyLabel(level)` at line 1507
+- `'${q.sourceIds.length} source(s)'` (chip, line 356)
+- `'AI-generated'`, `'Manual'` (chips, line 358)
+- `'Edit'` (popup menu, line 373)
+- `'Search questions'` (hint, line 413) — ARB already has `searchQuestions` at line 5410
+- `'All subjects'`, `'All types'`, `'All sources'` (filters + sheets, lines 426–523) — ARB already has `allSubjects`, `allTypes`, `allSources`
+
+**Acceptance Criteria**:
+- Replace all with `l10n.*()` calls
+- Use `l10n.difficultyLabel(...)` instead of `'Difficulty ...'`
+- Add ARB keys: `editQuestionTitle`, `questionTextLabel`, `explanationLabel`, `searchQuestionsHint`, `aiGenerated`, `manual`, `sourceCountChip({count})`
+- Spanish translations for all new keys
+
+---
+
+### MAJOR-3: Dashboard screen has hardcoded strings
+
+**File**: `lib/features/dashboard/presentation/dashboard_screen.dart`
+
+**Affected strings**:
+- `'Remaining Workload'` (card title, line 164) — no ARB key exists
+- `'Content Library'` (card title, line 256) — no ARB key exists
+- `'Loading...'` (line 260)
+- `'$count source(s)'` (line 261)
+
+**Acceptance Criteria**:
+- Add ARB keys: `remainingWorkload`, `contentLibrary`, `loading`, `sourceCountCard({count})`
+- Replace with `l10n.*()` calls
+
+---
+
+### MAJOR-4: Mentor screen schedule dialog hardcoded English
+
+**File**: `lib/features/mentor/presentation/mentor_screen.dart`
+
+**Affected strings**:
+- `'Topic: ${proposal.topicTitle}'` (line 306, schedule confirmation dialog)
+- `'${l10n.duration}: ${proposal.durationMinutes} min'` (line 308, uses `min` directly rather than a formatted duration string)
+
+**Acceptance Criteria**:
+- Add ARB key: `mentorScheduleTopic({topicTitle})`
+- Use `l10n.*` for label construction
+- Replace `' min'` hardcode with locale-aware duration formatting via `formatDuration` from `time_utils.dart`
+
+---
+
+### MAJOR-5: Source practice sheet popup-menu items hardcoded
+
+**File**: `lib/features/practice/presentation/widgets/source_practice_sheet.dart`
+
+**Affected strings**:
+- `'Practice'` (line 146)
+- `'View Details'` (line 149)
+
+**Acceptance Criteria**:
+- Add ARB keys: `practiceAction`, `viewDetailsAction`
+- Replace with `l10n.*()` calls
+
+---
+
+### MAJOR-6: Subject detail screen hardcoded strings
+
+**File**: `lib/features/subjects/presentation/subject_detail_screen.dart`
+
+**Affected strings**:
+- `'Sources'` (tab label, line 168) — ARB has no `sourcesTab` key
+- `'View Sources'` (semantics label, line 249)
+- `'$_sourceCount Source(s)'` (list tile, line 252)
+- `'No sources for this subject'` (empty state, line 457)
+- `'${_items.length} Source(s)'` (subtitle, line 475)
+- `item.status.name` (line 505) — uses English enum `.name` directly
+
+**Acceptance Criteria**:
+- Add ARB keys: `sourcesTab`, `viewSources`, `sourceCountTile({count})`, `noSourcesForSubject`, `sourceCountSubtitle({count})`
+- Use `ProcessingStatus` labels from ARB (see MAJOR-1) instead of `.name`
+
+---
+
+### MAJOR-7: Processing status labels lack ARB keys entirely
+
+**Files**: `content_library_screen.dart`, `source_detail_screen.dart`, `subject_detail_screen.dart`, `source_practice_sheet.dart`
+
+**Context**: Four files display processing status (Pending, Extracting, Processing, Generating Questions, Validating, Completed, Failed) using either:
+- `_statusLabel()` with hardcoded English strings
+- `source.status.name` (enum `.name` output is always English)
+
+**Acceptance Criteria**:
+- Add 7 ARB keys: `processingPending`, `processingExtracting`, `processingProcessing`, `processingGenerating`, `processingValidating`, `processingCompleted`, `processingFailed`
+- Create a shared helper (or use a map from the ARB) to convert `ProcessingStatus` values to localized strings
+- Spanish translations provided
+
+---
+
+### MAJOR-8: Hardcoded plural constructions `${count} source(s)` repeated across the codebase
+
+**Files**: `dashboard_screen.dart` (line 261), `subject_detail_screen.dart` (lines 252, 475), `question_bank_screen.dart` (line 356)
+
+**Context**: These use string interpolation with English plural convention `source(s)` instead of a plural-aware ARB key. In Spanish the word order and plural form differ (`fuente` → `fuentes`), and the parenthetical `(s)` convention doesn't exist.
+
+**Acceptance Criteria**:
+- Create plural ARB keys: `sourceCountCard({count, plural, =1{1 source} other{{count} sources}})` and similar
+- Replace all `${count} source(s)` patterns with `l10n.sourceCountCard(count)` calls
+
+---
+
+### MAJOR-9: LLM `_buildContextPrompt()` context labels are invariant English
+
+**File**: `lib/features/mentor/services/mentor_service.dart`
+
+**Context**: The `_buildContextPrompt()` method (lines 157–258) builds context for the LLM with labels like `'Current student context:'`, `'Total attempts: '`, etc. The code comment says "labels are a data-formatting convention, not user-facing text". However, a significant portion of this context is sent to the LLM which then generates the nudge / mentor messages that are displayed to users. If the LLM picks up English patterns from the context, the mentor may respond in English despite the locale being `es`.
+
+**Affected lines**: 175–255 (all `buffer.writeln()` calls with English text)
+
+**Acceptance Criteria**:
+- Audit which context labels bleed into LLM-generated output
+- Where labels affect LLM output style, localise them using `lookupAppLocalizations(Locale(_localeName)).<key>()`
+- Add ARB keys for LLM context labels if needed
+
+---
+
+### MAJOR-10: `formatCompactNumber` fallback is not locale-aware for values < 1000
+
+**File**: `lib/core/utils/number_format_utils.dart` (line 36)
 
 ```dart
-final timeStr = '${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}';
+String formatCompactNumber(int value, String localeName) {
+  // ...
+  return value.toString();  // <-- no thousand separators for values < 1000
+}
 ```
 
-**Problem:** This produces `14:30` regardless of locale. Spanish users expect `14:30` (happens to match 24h format), but French-Canadian, US-English, and other locales have different conventions (`2:30 PM`). This string feeds directly into user-visible notification bodies like `"Your lesson starts at 14:30"`.
+**Rationale**: For values under 1000, `toString()` produces `"999"` or `"500"`. While single-language OK, in some locales values like `9999` would be formatted by `compact` but `999` would not. This is minor because numbers < 1000 rarely need separators.
 
-**Acceptance (fixed):**
-- Use `DateFormat('HH:mm', l10n.localeName)` or `DateFormat.jm(l10n.localeName)` so the time adapts to the locale.
-
-### M4. Hardcoded English in focus timer accessibility labels
-
-**File:** `lib/features/focus_mode/presentation/focus_timer_screen.dart`
-
-| Line | Code | Problem |
-|------|------|---------|
-| 336 | `label: 'Break remaining ${formatTimer(...)}'` | Hardcoded `'Break remaining'` prefix |
-| 472 | `label: '$m minutes'` | Hardcoded English `'minutes'` |
-
-**Acceptance (fixed):**
-- `'Break remaining'` uses a localized string like `l10n.timerRemaining` with the formatted timer appended.
-- `'$m minutes'` uses `l10n.durationMinutes(m)` or `l10n.minutesValue(m)`.
-
-### M5. Hardcoded English in CSV headers
-
-**Files:**
-- `lib/core/services/study_progress_tracker.dart:287, 297–298, 302, 314, 321, 333, 353` — CSV column headers like `"Date","Metric","Value"`, `"Weekly Trend","Week","Attempts","Accuracy"` etc.
-- `lib/features/sessions/services/session_export_service.dart:26–27` — CSV headers `'Session ID,Student ID,...'`
-
-**Context:** AGENTS.md says CSV exports should remain in invariant `en` format. However, headers like `"Badges","Badge Name","Date Unlocked"` are user-facing text a Spanish speaker would read. If the intent is truly invariant, that's acceptable, but if users see these CSVs, they should be localized.
-
-**Recommendation:** Per `AGENTS.md` convention, CSV headers may remain invariant EN. However, consider that these files are shared/shared to the user (via `share_plus`). Add a comment documenting this choice. If user-facing, move to `.arb`.
+**Acceptance Criteria**: Add a locale-aware `NumberFormat` for the fallback path, or confirm via test that `NumberFormat.decimalPattern(localeName)` handles the fallback correctly for all locales.
 
 ---
 
 ## MINOR
 
-### m1. Hardcoded English in `study_progress_tracker.dart` CSV empty states
+### MINOR-1: `time_utils.dart` has English fallback strings
 
-**File:** `lib/core/services/study_progress_tracker.dart:321, 348`
+**File**: `lib/core/utils/time_utils.dart` (lines 62, 68, 72)
 
 ```dart
-csvLines.add('"","$studentId","No attempts recorded","",""');
-csvLines.add('"No session data available for $studentId","","","","","",""');
+final unknown = l10n?.unknown ?? 'Unknown';
+// ...
+return l10n?.today ?? 'Today';
+return l10n?.yesterday ?? 'Yesterday';
 ```
 
-**Acceptance:** These user-facing messages should use `l10n` or at least be removed/fixed — an empty CSV should have empty data, not English prose.
+**Rationale**: These fallbacks are only used when `AppLocalizations` is null (shouldn't happen in normal usage). Low risk but a potential English leak in edge cases.
 
-### m2. Hardcoded mastery level in `study_progress_tracker.dart:268`
-
-The function `getTopicMasteryLevel()` returns `'Novice'`, `'Expert'` etc. These are used internally to derive the level string but could instead return an enum or int, leaving display to the caller with locale support.
-
-**Acceptance:** Change return type to `MasteryLevel` enum and let callers use `l10n.masteryLevelNovice` etc.
-
-### m3. No `Directionality` / RTL awareness in most widgets
-
-**Files:** Only 3 files use `Directionality.of(context)`:
-- `lib/features/teaching/presentation/widgets/chat_bubble.dart`
-- `lib/features/lessons/presentation/widgets/lesson_block_card.dart`
-- `lib/features/lessons/presentation/widgets/lesson_list_item.dart`
-
-**Problem:** If the app ever adds an RTL locale (Arabic, Hebrew), most layouts will break — hardcoded `EdgeInsets.only(left: ...)`, `crossAxisAlignment: CrossAxisAlignment.start`, `MainAxisAlignment.start`, no `Directionality` or `resolve()` calls.
-
-**Acceptance:** This is a proactive finding. No immediate action for `es` locale, but a plan should document these locations for future RTL support.
-
-### m4. Hardcoded English in error handler
-
-**File:** `lib/core/errors/handlers.dart` — verify no hardcoded English in user-facing error SnackBars.
-
-### m5. `toStringAsFixed` usage in display contexts
-
-**Files with `toStringAsFixed`:**
-- `lib/features/mentor/services/mentor_service.dart:132, 172` — LLM-facing, marked OK in comments
-- `lib/core/services/progress_export_service.dart:76, 91` — CSV export, OK per AGENTS.md
-- `lib/features/sessions/services/session_export_service.dart:32, 34` — CSV export, OK per AGENTS.md
-- `lib/core/services/study_progress_tracker.dart:293, 344` — CSV export, OK per AGENTS.md
-- `lib/features/teaching/services/prompts/prompts.dart:84` — LLM-facing, OK per AGENTS.md
-
-**Verdict:** All `toStringAsFixed` uses are correctly scoped to CSV/LLM contexts per AGENTS.md. No action needed.
-
-### m6. Missing plural forms in `.arb` for select keys
-
-The `.arb` files are complete key-wise (all EN keys have ES translations). However, spot-check quality issues:
-
-- `es` `durationSeconds`: uses `"1s"` / `"{count}s"` — same as English. In Spanish, "s" is understood but `"1 seg"` / `"{count} seg"` would be more natural.
-- `milestoneShort`: ES uses `"H{order}"` (H = hito), EN uses `"M{order}"` (M = milestone). This is correct.
-- `questionsAbbreviation`: ES uses `{count}P` (P = preguntas), EN uses `{count}Q` (Q = questions). Correct.
-
-**Acceptance:** Review `durationSeconds`, `durationMinutes` ES translations for naturalness in Spanish context.
+**Acceptance Criteria**: Either ensure `l10n` is never null in these paths, or keep the fallbacks but add a test that verifies context-bearing overloads (`formatDateFromContext`) never hit these branches.
 
 ---
 
-## Concrete Fix Checklist (Prioritised)
+### MINOR-2: RTL layout readiness — minimal Directionality usage
 
-### Immediate (fix first, before next release)
+**Files** (only 4): `chat_bubble.dart`, `lesson_block_card.dart`, `lesson_list_item.dart`, `lesson_booking_sheet.dart`
 
-- [ ] **B1** — `question_bank_screen.dart` hardcoded strings → `l10n.questionDeleted`, `l10n.deleteQuestions`, `l10n.deleteQuestionsConfirm(count)`
-- [ ] **B2** — `source_detail_screen.dart` 'Reprocess failed' → `l10n.errorWithMessage(e.toString())`
-- [ ] **M4** — `focus_timer_screen.dart` hardcoded accessibility labels → `l10n`
-- [ ] **M3** — `notification_service.dart` hardcoded time format → `DateFormat.jm(l10n.localeName)`
+**Context**: Only 4 files use `Directionality.of(context)`. Many layout widgets use hardcoded `start`/`end` correctly via `EdgeInsetsDirectional`, `AlignmentDirectional`, etc., but:
+- `content_library_screen.dart` line 493: `DismissDirection.endToStart` — correct, already uses directional enum
+- No RTL language currently supported (no Arabic/Hebrew in `l10n.yaml`)
+- The `l10n.yaml` lists locales: `en, es` — no RTL locale yet
 
-### Short-term (next iteration)
-
-- [ ] **M1** — Mastery labels: convert `getTopicMasteryLevel()` to use `l10n` or return enum
-- [ ] **M2** — LLM prompts: extract English fragments to `.arb` keys
-- [ ] **m1** — Hardcoded empty-state prose in CSV exports
-- [ ] **m2** — Refactor mastery level to enum-based
-
-### Future (i18n backlog)
-
-- [ ] **m3** — Document RTL-aware layout plan
-- [ ] **m6** — Review ES translation naturalness for abbreviated duration units
+**Acceptance Criteria**: Document RTL readiness status. When adding an RTL language (Arabic, Hebrew), audit all files for `EdgeInsets.only(left/right)` vs `EdgeInsetsDirectional.only(start/end)`, `Alignment.topLeft` vs `AlignmentDirectional.topStart`, and `TextAlign.left` vs `TextAlign.start`.
 
 ---
 
-## How to verify fixes
+### MINOR-3: `source_practice_sheet.dart` uses `const Text()` for menu items
 
-1. Set device locale to `es` (Spanish).
-2. Navigate to Question Bank → delete a question → confirm the snackbar reads `Pregunta eliminada` not `Question deleted`.
-3. Navigate to Source Detail → trigger a reprocess failure → snackbar reads `Error: ...` not `Reprocess failed: ...`.
-4. Start a Focus session → activate TalkBack/VoiceOver → accessibility labels should be in Spanish.
-5. Schedule a lesson → notification body should show locale-aware time (e.g. `14:30` or `2:30 PM` depending on locale).
-6. Export CSV → mastery levels should be `Novato`, `Explorando`, etc.
-7. Start an AI Tutor session → the LLM prompt should instruct the AI to respond in Spanish.
+**File**: `lib/features/practice/presentation/widgets/source_practice_sheet.dart` (lines 144–150)
+
+```dart
+const PopupMenuItem(
+  value: 'select',
+  child: Text('Practice'),
+),
+const PopupMenuItem(
+  value: 'view_details',
+  child: Text('View Details'),
+),
+```
+
+**Rationale**: `const` prevents runtime locale switching — these strings will never update when locale changes.
+
+**Acceptance Criteria**: Remove `const` from these `PopupMenuItem` widgets, pass `l10n.*` text.
+
+---
+
+### MINOR-4: No `locale_config.dart` tested for locale persistence edge cases
+
+**File**: `lib/core/config/locale_config.dart`
+
+**Context**: Locale config persistence handles basic save/load. No test validates fallback when saved locale key no longer exists in supported list, or when device locale is unsupported.
+
+**Acceptance Criteria**: Add test for `resolveLocale()` with unsupported device locale — verify it falls back to `en`.
+
+---
+
+### MINOR-5: ARB `@@locale` comments vs `localeName` consistency
+
+**Context**: `app_es.arb` has `"@@locale": "es"`. The generated code uses `localeName` getter from `AppLocalizations`. Some Dart files reference `l10n.localeName` for `NumberFormat` and `DateFormat`. This works correctly but should be documented for translators.
+
+**Acceptance Criteria**: No code change needed. Add documentation in `docs/i18n.md` that `localeName` must match `@@locale` in the `.arb` file for generated locale-aware formatting to work correctly.
+
+---
+
+## Summary of Required ARB Key Additions
+
+| Group | Keys needed | Priority |
+|---|---|---|
+| Ingestion feature | ~30 keys (sourceDetail, reprocess*, processing*, deleteSource*, section headers, status labels) | HIGH |
+| Question Bank | 6 keys (editQuestionTitle, questionTextLabel, explanationLabel, aiGenerated, manual, sourceCountChip) | HIGH |
+| Dashboard | 4 keys (remainingWorkload, contentLibrary, loading, sourceCountCard) | HIGH |
+| Mentor | 1 key (mentorScheduleTopic) | HIGH |
+| Practice sheet | 2 keys (practiceAction, viewDetailsAction) | HIGH |
+| Subject detail | 4 keys (sourcesTab, viewSources, sourceCountTile, noSourcesForSubject) | HIGH |
+| Status labels | 7 keys (processingPending through processingFailed) | HIGH |
+| Sort/filter | 4 keys (sortOrder*, sortBy*, sortDate, sortTitle, sortStatus, sortType) + allStatuses | MEDIUM |
+
+**Total new ARB keys estimated**: ~55–60
+
+## Existing ARB Keys Not Used in Source Code
+
+The following keys exist in both `app_en.arb` and `app_es.arb` but are hardcoded in presentation files:
+
+| ARB Key | Hardcoded in File | Line(s) |
+|---|---|---|
+| `allSubjects` | `question_bank_screen.dart`, `content_library_screen.dart` | 426, 343 |
+| `allTypes` | `question_bank_screen.dart`, `content_library_screen.dart` | 433, 350 |
+| `allSources` | `question_bank_screen.dart` | 440 |
+| `searchQuestions` | `question_bank_screen.dart` | 413 |
+| `questionBank` | `question_bank_screen.dart` | 251 |
+| `editQuestion` | `question_bank_screen.dart` | 196 (different capitalisation — ARB is `Edit Question`, code uses `Edit Question`) |
+| `questionText` | `question_bank_screen.dart` | 203 (code uses `'Question text'`, ARB has `questionText`: `Question text`) |
+| `cancelSelection` | `question_bank_screen.dart` | 256 |
+| `deleteSelected` | `question_bank_screen.dart` | 261 |
+| `selectMultiple` | `question_bank_screen.dart` | 267 |
+| `difficultyLabel` | `question_bank_screen.dart` | 352 (code uses `'Difficulty ${q.difficulty}'` instead of `l10n.difficultyLabel(...)`) |
+| `date` | `content_library_screen.dart` | 260 (uses `'Date'` instead of `l10n.date`) |
+| `practiceBySource` | `source_practice_sheet.dart` | Already used at line 59 |
+| `practiceBySourceDescription` | `source_practice_sheet.dart` | Already used at line 64 |
+
+**Recommendation**: Audit and replace these usages. Low-hanging fruit — ARB keys exist, just not wired up.

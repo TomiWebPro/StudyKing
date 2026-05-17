@@ -83,7 +83,10 @@ void main() async {
     await mainDb.init();
     
     // Initialize settings repository
-    await settingsRepository.init();
+    final initResult = await settingsRepository.init();
+    if (initResult.isFailure) {
+      _mainLogger.e('Failed to init settings: ${initResult.error}');
+    }
     
     // Initialize student ID service (generates UUID on first launch)
     StudentIdService(); // ensure singleton is initialized
@@ -110,11 +113,11 @@ void main() async {
     }
     
     // Load initial settings to sync with providers
-    try {
-      final settings = await settingsRepository.getSettings();
-      _engagementScheduler?.updateSettings(settings);
-    } catch (e) {
-      _mainLogger.e('Error loading initial settings', e);
+    final settingsResult = await settingsRepository.getSettings();
+    if (settingsResult.isSuccess) {
+      _engagementScheduler?.updateSettings(settingsResult.data!);
+    } else {
+      _mainLogger.e('Error loading initial settings: ${settingsResult.error}');
     }
     
     runApp(StudyKingApp());
@@ -149,13 +152,14 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
     if (!_hasLoadedProfile) {
       _hasLoadedProfile = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          final profile = await settingsRepository.getProfileData();
+        final profileResult = await settingsRepository.getProfileData();
+        if (profileResult.isSuccess) {
+          final profile = profileResult.data;
           if (profile != null && profile.language.isNotEmpty && mounted) {
             ref.read(localeProvider.notifier).state = Locale(profile.language);
           }
-        } catch (e) {
-          _mainLogger.e('Error loading profile', e);
+        } else {
+          _mainLogger.e('Error loading profile: ${profileResult.error}');
         }
       });
     }

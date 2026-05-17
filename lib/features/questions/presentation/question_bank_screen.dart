@@ -116,8 +116,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Question'),
-        content: const Text('Are you sure you want to delete this question?'),
+        title: Text(l10n.deleteQuestion),
+        content: Text(l10n.deleteQuestionConfirm),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
           ElevatedButton(
@@ -137,7 +137,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Question deleted'),
+          content: Text(l10n.questionDeleted),
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
@@ -155,8 +155,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Questions'),
-        content: Text('Are you sure you want to delete ${_selectedIds.length} question(s)?'),
+        title: Text(l10n.deleteQuestions),
+        content: Text(l10n.deleteQuestionsConfirm(_selectedIds.length)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
           ElevatedButton(
@@ -180,7 +180,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         _selectionMode = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${idsToDelete.length} question(s) deleted')),
+        SnackBar(content: Text(l10n.questionsDeleted(idsToDelete.length))),
       );
     }
   }

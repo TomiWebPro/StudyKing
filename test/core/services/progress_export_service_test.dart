@@ -148,6 +148,9 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
   Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async => '';
 
   @override
+  Future<MasteryLevel> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async => MasteryLevel.novice;
+
+  @override
   Future<String> exportProgressCSV(String studentId) async => '';
 
   @override

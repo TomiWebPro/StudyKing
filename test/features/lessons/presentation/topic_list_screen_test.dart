@@ -7,6 +7,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/lessons/presentation/topic_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeTopicRepository extends TopicRepository {
   final List<Topic> _topics;
@@ -33,6 +34,7 @@ Widget _buildTestApp({
   TopicRepository? topicRepo,
   List<Topic>? topics,
   bool shouldThrow = false,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   final repo = topicRepo ?? _FakeTopicRepository(topics: topics);
   if (repo is _FakeTopicRepository) {
@@ -46,6 +48,7 @@ Widget _buildTestApp({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const Scaffold(body: TopicListScreen()),
     ),
   );
@@ -129,6 +132,44 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Lesson List'), findsOneWidget);
+    });
+
+    testWidgets('topic tap pushes correct route via NavigatorObserver', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepository(topics: [
+              Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: '', syllabusText: ''),
+            ])),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            navigatorObservers: [observer],
+            home: const Scaffold(body: TopicListScreen()),
+            onGenerateRoute: (settings) {
+              if (settings.name == '/lesson-list') {
+                return MaterialPageRoute(
+                  builder: (_) => const Scaffold(body: Text('Lesson List')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Algebra'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/lesson-list'),
+        isTrue,
+      );
     });
 
     testWidgets('uses default database repository when none injected', (tester) async {

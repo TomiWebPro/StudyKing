@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
 
@@ -242,7 +243,8 @@ class NotificationService {
     required DateTime startTime,
   }) async {
     final l10n = _l10n;
-    final timeStr = '${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}';
+    final localeName = l10n?.localeName ?? 'en';
+    final timeStr = DateFormat.jm(localeName).format(startTime);
     await showNotification(
       id: id,
       title: l10n?.notifTitleUpcomingLesson ?? 'Upcoming Lesson',

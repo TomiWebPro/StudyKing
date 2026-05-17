@@ -1,304 +1,183 @@
-# Internationalisation Master — Comprehensive i18n Audit
+# Internationalisation Master Issue
 
-**Date:** 2026-05-17
-**Auditor:** Internationalisation Master
-**Target Locale:** Spanish (`es`) — patterns generalise to all locales
-
-## Strengths Observed
-
-- ARB files (en/es) have 100% key parity per `scripts/check_i18n_coverage.sh` (5,201 keys each).
-- All LLM system/user prompts (tutor, mentor, quick guide, evaluation, OCR, etc.) are fully localised in both EN and ES ARB files.
-- `number_format_utils.dart` exists with `formatDecimal`, `formatPercent`, `formatCompactNumber`, `formatHours`, `formatCurrency`.
-- `chat_bubble.dart` uses `Directionality.of(context)` + `MainAxisAlignment.start`/`end` for RTL-aware bubble positioning.
-- CSVs correctly use `en`-invariant `toStringAsFixed` format per AGENTS.md convention.
-- `DateFormat` calls across the codebase generally pass `l10n.localeName` for locale-aware output.
-- `EdgeInsetsDirectional` and `EdgeInsets.only(top/bottom)` are used widely, preventing LTR-hardcoded padding in most places.
+**Audited:** 2026-05-17  
+**Scope:** All Dart source files and `.arb` locale bundles  
+**Target locale for audit:** `es` (Spanish) — other languages follow same pattern  
+**Reference:** `AGENTS.md` i18n / Number Formatting Conventions
 
 ---
 
-## BLOCKER — App crashes or user cannot proceed
+## Summary
 
-### B1. Hardcoded user-facing strings in settings screen
-
-**Files:** `lib/features/settings/presentation/settings_screen.dart`
-**Lines:** 127–128, 135, 171–172, 180, 186
-**Strings:**
-| Line | Hardcoded string |
-|------|-----------------|
-| 127 | `const Text('Daily Reminder')` |
-| 128 | `const Text('Get a daily reminder to study at your preferred time')` |
-| 135 | `_tile('Reminder Time', ...)` |
-| 171 | `const Text('Check Nudges Now')` |
-| 172 | `const Text('Run nudge checks immediately')` |
-| 180 | `const SnackBar(content: Text('Nudge check complete'))` |
-| 186 | `const SnackBar(content: Text('Nudge check failed'))` |
-
-**Impact:** These 7 strings always render in English regardless of Locale. The study-reminder and nudge sections are completely broken for Spanish users.
-
-**Fix:** Replace each with `Text(l10n.dailyReminder)`, `Text(l10n.dailyReminderDescription)`, etc. — all these keys already exist in both ARB files and are simply not referenced.
-
-**Acceptance:** Switching locale to `es` shows all settings tiles in Spanish; no English residual in these tiles.
+The Spanish locale (`app_es.arb`) is commendably complete — all 500+ keys from `app_en.arb` have a Spanish translation. The codebase already uses `l10n` extensively and has `number_format_utils.dart` with locale-aware helpers. However, several source files contain **hardcoded user-facing English strings** that bypass `AppLocalizations`, use `toStringAsFixed` for numeric displays, or use non-locale-aware date/time formatting. Additionally, the notification service formats timestamps manually, LLM prompts have untranslated English fragments, and layout handling for RTL/expanded strings is minimal.
 
 ---
 
-### B2. Hardcoded dialog strings in focus timer screen
+## BLOCKER
+
+| # | File | Line(s) | Issue |
+|---|------|---------|-------|
+| B1 | `lib/features/questions/presentation/question_bank_screen.dart` | 140, 158–159, 183 | Hardcoded English strings: `const Text('Question deleted')`, `const Text('Delete Questions')`, `'Are you sure you want to delete ${_selectedIds.length} question(s)?'` — these are user-facing confirmations and snackbars. A Spanish user sees mixed English/Spanish UI. |
+| B2 | `lib/features/ingestion/presentation/source_detail_screen.dart` | 172 | `SnackBar(content: Text('Reprocess failed: $e'))` — hardcoded English error on a user-visible snackbar. |
+
+**Acceptance (fixed):**
+- B1: All three strings use `AppLocalizations.of(context)!` keys defined in `.arb`.
+- B2: `'Reprocess failed: $e'` is replaced by `l10n.errorWithMessage(e.toString())` (key exists in both en/es).
+
+---
+
+## MAJOR
+
+### M1. Hardcoded English mastery level labels in CSV and service
+
+**Files:**
+- `lib/core/services/study_progress_tracker.dart:268–277` — `getTopicMasteryLevel()` returns English strings `'Novice'`, `'Browsing'`, `'Developing'`, `'Proficient'`, `'Expert'`.
+- `lib/core/services/study_progress_tracker.dart:336–342` — `exportSessionHistoryCSV()` hardcodes the same mastery level labels.
+- `lib/core/services/progress_export_service.dart:83–89` — `exportComprehensiveCSV()` hardcodes `'Novice'` etc.
+
+**Problem:** The mastery level labels in CSV exports are always English even when the user's UI is Spanish. While AGENTS.md says CSV should use invariant format, the mastery level labels are user-facing content, not number formatting. Spanish users expect `Novato`, `Explorando`, `En Desarrollo`, `Competente`, `Experto`.
+
+**Acceptance (fixed):**
+- `getTopicMasteryLevel()` accepts an `AppLocalizations` (or `l10n`) parameter and returns localized labels via `l10n.masteryLevelNovice` etc.
+- CSV export methods pass `l10n` and use the localized labels (the CSV is downloaded/shared and read by the user).
+
+### M2. Hardcoded English in LLM prompts
+
+**Files:**
+- `lib/features/teaching/services/prompts/prompts.dart:50–63` — `tutorMessage()` contains hardcoded English pace/time-context strings: `'The student is doing well. Accelerate pace.'`, `'The student seems to be struggling...'`, `'Start the lesson warmly.'`, etc. These are LLM-facing per AGENTS.md but they feed into the system prompt that the student sees as AI output.
+- `lib/core/constants/llm_defaults.dart:23–32` — `evaluationPromptTemplate()` is entirely hardcoded English with no locale parameter.
+
+**Problem:** When the user's locale is Spanish, the LLM still receives English instructions about "Evaluate this student answer" and English context strings, making the AI less likely to respond consistently in Spanish.
+
+**Acceptance (fixed):**
+- Pace/time-context strings in `prompts.dart` are moved to `.arb` keys with placeholder support.
+- `evaluationPromptTemplate()` accepts an `AppLocalizations` parameter and constructs the template from locale-aware strings.
+- Alternatively, the `_languageInstruction` mechanism is extended to cover these fragments.
+
+### M3. Non-locale-aware time formatting in notification service
+
+**File:** `lib/core/services/notification_service.dart:247`
+
+```dart
+final timeStr = '${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}';
+```
+
+**Problem:** This produces `14:30` regardless of locale. Spanish users expect `14:30` (happens to match 24h format), but French-Canadian, US-English, and other locales have different conventions (`2:30 PM`). This string feeds directly into user-visible notification bodies like `"Your lesson starts at 14:30"`.
+
+**Acceptance (fixed):**
+- Use `DateFormat('HH:mm', l10n.localeName)` or `DateFormat.jm(l10n.localeName)` so the time adapts to the locale.
+
+### M4. Hardcoded English in focus timer accessibility labels
 
 **File:** `lib/features/focus_mode/presentation/focus_timer_screen.dart`
-**Lines:** 196–197, 205
-**Code:**
+
+| Line | Code | Problem |
+|------|------|---------|
+| 336 | `label: 'Break remaining ${formatTimer(...)}'` | Hardcoded `'Break remaining'` prefix |
+| 472 | `label: '$m minutes'` | Hardcoded English `'minutes'` |
+
+**Acceptance (fixed):**
+- `'Break remaining'` uses a localized string like `l10n.timerRemaining` with the formatted timer appended.
+- `'$m minutes'` uses `l10n.durationMinutes(m)` or `l10n.minutesValue(m)`.
+
+### M5. Hardcoded English in CSV headers
+
+**Files:**
+- `lib/core/services/study_progress_tracker.dart:287, 297–298, 302, 314, 321, 333, 353` — CSV column headers like `"Date","Metric","Value"`, `"Weekly Trend","Week","Attempts","Accuracy"` etc.
+- `lib/features/sessions/services/session_export_service.dart:26–27` — CSV headers `'Session ID,Student ID,...'`
+
+**Context:** AGENTS.md says CSV exports should remain in invariant `en` format. However, headers like `"Badges","Badge Name","Date Unlocked"` are user-facing text a Spanish speaker would read. If the intent is truly invariant, that's acceptable, but if users see these CSVs, they should be localized.
+
+**Recommendation:** Per `AGENTS.md` convention, CSV headers may remain invariant EN. However, consider that these files are shared/shared to the user (via `share_plus`). Add a comment documenting this choice. If user-facing, move to `.arb`.
+
+---
+
+## MINOR
+
+### m1. Hardcoded English in `study_progress_tracker.dart` CSV empty states
+
+**File:** `lib/core/services/study_progress_tracker.dart:321, 348`
+
 ```dart
-title: Text('Daily Cap Warning'),
-content: Text('Starting this session will exceed your daily cap. ...'),
-child: const Text('Continue Anyway'),
+csvLines.add('"","$studentId","No attempts recorded","",""');
+csvLines.add('"No session data available for $studentId","","","","","",""');
 ```
 
-**Impact:** Spanish users see the daily-cap warning dialog entirely in English.
+**Acceptance:** These user-facing messages should use `l10n` or at least be removed/fixed — an empty CSV should have empty data, not English prose.
 
-**Fix:** Add ARB keys `dailyCapWarningTitle`, `dailyCapWarningBody`, `continueAnyway` to both ARB files and reference them.
+### m2. Hardcoded mastery level in `study_progress_tracker.dart:268`
 
-**Acceptance:** Daily-cap warning dialog renders in Spanish when locale is `es`.
+The function `getTopicMasteryLevel()` returns `'Novice'`, `'Expert'` etc. These are used internally to derive the level string but could instead return an enum or int, leaving display to the caller with locale support.
 
----
+**Acceptance:** Change return type to `MasteryLevel` enum and let callers use `l10n.masteryLevelNovice` etc.
 
-### B3. Currency display uses hardcoded `$` + `toStringAsFixed(4)`
+### m3. No `Directionality` / RTL awareness in most widgets
 
-**File:** `lib/features/settings/presentation/settings_screen.dart`
-**Lines:** 227, 794
-**Code:**
-```dart
-// Line 227
-subtitle: Text(r'$' '${ref.watch(llmUsageMeterProvider).getTotalCost().toStringAsFixed(4)}'),
-// Line 794 (inside token usage dialog)
-'\$${totalCost.toStringAsFixed(4)}',
-```
+**Files:** Only 3 files use `Directionality.of(context)`:
+- `lib/features/teaching/presentation/widgets/chat_bubble.dart`
+- `lib/features/lessons/presentation/widgets/lesson_block_card.dart`
+- `lib/features/lessons/presentation/widgets/lesson_list_item.dart`
 
-**Impact:**
-1. `toStringAsFixed(4)` always produces a period `.` decimal separator, even in Spanish (`es`) where comma is standard: `$1,234.5678` should be `$1.234,5678` (but actually Spanish doesn't use `$` — it would be a different format entirely).
-2. Hardcoded `$` assumes USD. A Spanish user might expect `€` or locale-specific symbol.
+**Problem:** If the app ever adds an RTL locale (Arabic, Hebrew), most layouts will break — hardcoded `EdgeInsets.only(left: ...)`, `crossAxisAlignment: CrossAxisAlignment.start`, `MainAxisAlignment.start`, no `Directionality` or `resolve()` calls.
 
-**Fix:** Use `formatCurrency(value, l10n.localeName)` from `number_format_utils.dart`. The existing `formatCurrency` already accepts locale and produces locale-correct separators. For LLM-facing invariant strings where period is required, use explicit `NumberFormat('#,##0.0000', 'en')`.
+**Acceptance:** This is a proactive finding. No immediate action for `es` locale, but a plan should document these locations for future RTL support.
 
-**Acceptance:** Token cost displays with locale-correct decimal separators and currency symbol (currently `$` is acceptable for `en`; for `es` at minimum comma decimals should display correctly).
+### m4. Hardcoded English in error handler
 
----
+**File:** `lib/core/errors/handlers.dart` — verify no hardcoded English in user-facing error SnackBars.
 
-## MAJOR — Feature is broken or misleading
+### m5. `toStringAsFixed` usage in display contexts
 
-### M1. Mentor LLM-facing date strings use ISO format for all locales
+**Files with `toStringAsFixed`:**
+- `lib/features/mentor/services/mentor_service.dart:132, 172` — LLM-facing, marked OK in comments
+- `lib/core/services/progress_export_service.dart:76, 91` — CSV export, OK per AGENTS.md
+- `lib/features/sessions/services/session_export_service.dart:32, 34` — CSV export, OK per AGENTS.md
+- `lib/core/services/study_progress_tracker.dart:293, 344` — CSV export, OK per AGENTS.md
+- `lib/features/teaching/services/prompts/prompts.dart:84` — LLM-facing, OK per AGENTS.md
 
-**File:** `lib/features/mentor/services/mentor_service.dart`
-**Lines:** 146, 163, 481, 482, 500, 642
-**Code pattern:**
-```dart
-DateFormat('y-MM-dd HH:mm', _localeName).format(lesson.startTime.toLocal())
-```
+**Verdict:** All `toStringAsFixed` uses are correctly scoped to CSV/LLM contexts per AGENTS.md. No action needed.
 
-**Impact:** Despite passing `_localeName`, the hardcoded pattern `y-MM-dd HH:mm` produces the same ISO-like output for every locale (e.g. `2026-05-17 14:30` for both `en` and `es`). A Spanish user reading their mentor's message should see `17/5/2026 14:30` (or similar locale-appropriate pattern). The `_localeName` parameter is wasted here.
+### m6. Missing plural forms in `.arb` for select keys
 
-**Fix:** Use locale-aware date/time patterns. Options:
-- `DateFormat.yMd(_localeName).add_Hm().format(...)` for short date + 24h time
-- Or `DateFormat.yMMMd(_localeName).add_jm().format(...)` for "May 17, 2026 2:30 PM" (en) / "17 may 2026 14:30" (es)
+The `.arb` files are complete key-wise (all EN keys have ES translations). However, spot-check quality issues:
 
-**Acceptance:** Mentor chatbot messages show dates in the user's locale format.
+- `es` `durationSeconds`: uses `"1s"` / `"{count}s"` — same as English. In Spanish, "s" is understood but `"1 seg"` / `"{count} seg"` would be more natural.
+- `milestoneShort`: ES uses `"H{order}"` (H = hito), EN uses `"M{order}"` (M = milestone). This is correct.
+- `questionsAbbreviation`: ES uses `{count}P` (P = preguntas), EN uses `{count}Q` (Q = questions). Correct.
+
+**Acceptance:** Review `durationSeconds`, `durationMinutes` ES translations for naturalness in Spanish context.
 
 ---
 
-### M2. `formatTimer` in `time_utils.dart` produces locale-unaware output
+## Concrete Fix Checklist (Prioritised)
 
-**File:** `lib/core/utils/time_utils.dart`
-**Lines:** 83–93
-**Code:**
-```dart
-String formatTimer(Duration duration, {AppLocalizations? l10n}) {
-  ...
-  return '${h.toString().padLeft(2, '0')}$sep${m.toString().padLeft(2, '0')}$sep${s.toString().padLeft(2, '0')}';
-}
-```
+### Immediate (fix first, before next release)
 
-**Impact:** The timer always uses a 00:00:00 format with zero-padded digits. While HM-separator is localisable (via `durationSeparator` ARB key), the overall format is rigid. Some locales use `h:mm:ss` without leading zero on hours, or use `h`/`h.` suffix conventions.
+- [ ] **B1** — `question_bank_screen.dart` hardcoded strings → `l10n.questionDeleted`, `l10n.deleteQuestions`, `l10n.deleteQuestionsConfirm(count)`
+- [ ] **B2** — `source_detail_screen.dart` 'Reprocess failed' → `l10n.errorWithMessage(e.toString())`
+- [ ] **M4** — `focus_timer_screen.dart` hardcoded accessibility labels → `l10n`
+- [ ] **M3** — `notification_service.dart` hardcoded time format → `DateFormat.jm(l10n.localeName)`
 
-**Fix:** Create a locale-aware timer format, or at minimum use `NumberFormat('00', localeName)` for the digits. Consider a `formatTimerCompact` variant that drops zero-leading hours.
+### Short-term (next iteration)
 
-**Acceptance:** The focus-mode timer respects locale digit conventions.
+- [ ] **M1** — Mastery labels: convert `getTopicMasteryLevel()` to use `l10n` or return enum
+- [ ] **M2** — LLM prompts: extract English fragments to `.arb` keys
+- [ ] **m1** — Hardcoded empty-state prose in CSV exports
+- [ ] **m2** — Refactor mastery level to enum-based
 
----
+### Future (i18n backlog)
 
-### M3. `Reminder Time` tile in settings uses hardcoded time display
-
-**File:** `lib/features/settings/presentation/settings_screen.dart`
-**Line:** 135–136
-**Code:**
-```dart
-_tile(
-  'Reminder Time',
-  '${settings.dailyReminderHour.toString().padLeft(2, '0')}:${settings.dailyReminderMinute.toString().padLeft(2, '0')}',
-  ...
-)
-```
-
-**Impact:** (A) The tile title `'Reminder Time'` is hardcoded in English. (B) The time format always shows 24h with leading zeros, regardless of locale. A user in `en_US` locale would expect "2:30 PM" not "14:30".
-
-**Fix:** (A) Use `l10n.reminderTime` (or create the key). (B) Use `MaterialLocalizations.of(context).formatTimeOfDay()` or `DateFormat.jm(localeName)` for locale-aware display.
-
-**Acceptance:** Reminder time shows in the user's preferred time format (12h/24h per locale).
+- [ ] **m3** — Document RTL-aware layout plan
+- [ ] **m6** — Review ES translation naturalness for abbreviated duration units
 
 ---
 
-### M4. `questionsAbbreviation` uses `Q` (English convention)
+## How to verify fixes
 
-**File:** `lib/l10n/app_en.arb` line 2460, `lib/l10n/app_es.arb` line 2460
-**Code:**
-```json
-"questionsAbbreviation": "{count}Q",
-```
-Spanish translates this as:
-```json
-"questionsAbbreviation": "{count}P",
-```
-
-**Impact:** Spanish convention (correct in the ARB key), but the abbreviation `P` (from *preguntas*) is not universally understood — `P` vs `Q` mapping is correct. This is actually done right in the ARB. But verify the calling code uses the correct key.
-
-**Acceptance:** No action needed if already wired. Verify in `planner_screen.dart` and `dashboard` widgets that `l10n.questionsAbbreviation(count)` is used rather than hardcoded `{count}Q`.
-
----
-
-### M5. `importPreview` text uses ungrammatical parenthetical Spanish
-
-**File:** `lib/l10n/app_es.arb` line 905
-**Code:**
-```json
-"importPreview": "Esta copia contiene {boxes} sección(es) con {records} registro(s). ..."
-```
-
-**Impact:** The parenthetical `sección(es)` and `registro(s)` pattern is awkward in Spanish. Native Spanish would use proper plural-aware phrasing: "contiene {boxes} secciones y {records} registros" or use ICU plural `{count,plural,=1{1 sección} other{{count} secciones}}`.
-
-**Fix:** Use ICU plural select for `boxes` and `records` (or rephrase).
-
-**Acceptance:** Import preview reads naturally in Spanish.
-
----
-
-### M6. Hardcoded time format in session history date filter display
-
-**File:** `lib/features/sessions/presentation/session_history_screen.dart`
-**Line:** 370
-**Code:**
-```dart
-DateFormat.yMd(l10n.localeName).format(_selectedDate!)
-```
-
-**Impact:** This uses a locale-aware format (good), but verify this is not a raw `toString().split()` pattern accidentally left in. There are also `toString().split(' ')[0]` calls in `progress_export_service.dart` lines 294-295 that produce date strings without any locale awareness for PDF exports (PDF should be user-facing per AGENTS.md).
-
-**Fix:** Replace `toString().split(' ')[0]` in PDF code with `DateFormat.yMd(localeName)`.
-
-**Acceptance:** PDF report dates use locale-aware formatting.
-
----
-
-## MINOR — Code quality / UX friction
-
-### m1. `EdgeInsets.only(left:)` patterns not RTL-safe in widget tests
-
-Several widget files use `EdgeInsets.only(left: ...)` instead of `EdgeInsetsDirectional.only(start: ...)`:
-- Check `lib/features/settings/presentation/settings_screen.dart` line 255
-- `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` line 82
-- `lib/features/quickguide/presentation/quick_guide_screen.dart` line 285
-- `lib/features/quickguide/presentation/widgets/suggested_prompts_widget.dart` line 25
-- `lib/features/subjects/presentation/widgets/subject_history_tab.dart` line 81
-- `lib/features/subjects/presentation/widgets/subject_lessons_tab.dart` line 78
-- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` line 17
-- `lib/features/lessons/presentation/widgets/lesson_list_item.dart` line 29
-
-**Impact:** These will look wrong if the app ever supports Arabic, Hebrew, or other RTL locales.
-
-**Fix:** Replace `EdgeInsets.only(left: X, ...)` with `EdgeInsetsDirectional.only(start: X, ...)` in the above files.
-
-**Acceptance:** All horizontal padding in presentation code uses `start`/`end` variants.
-
----
-
-### m2. `mentorService` uses `writeln('- Plan adherence: ...')` with ASCII dash
-
-**File:** `lib/features/mentor/services/mentor_service.dart`
-**Lines:** 130, 170
-**Code:**
-```dart
-buffer.writeln('- Plan adherence: ${adherenceDeviation...}');
-buffer.writeln('  * ${topic.topicId} (accuracy: ...)');
-```
-
-**Impact:** The mentor uses ASCII `-` and `*` for bullet lists in LLM-facing strings. These are invariant (LLM-facing) per AGENTS.md. However, when these strings are surfaced back to the user via the mentor chat, they may not render as proper list items in all locales.
-
-**Fix:** Use the `l10n.mentorBulletPoint` ARB key (which already exists in both ARB files at lines 5197-5200). Replace `'- '` with `l10n.mentorBulletPoint` and `'  * '` accordingly.
-
-**Acceptance:** Mentor chat bullet lists use locale-appropriate bullet characters.
-
----
-
-### m3. `tests` directory may have hardcoded English strings in widget tests
-
-Check all files under `test/` for hardcoded English strings — widget tests that check for exact string matches will break when the app locale is Spanish.
-
----
-
-### m4. Some ARB descriptions mention English concepts but translations exist
-
-Check the following keys that have identical source/target in es (possible missing translations):
-- `colorBlueGrey` → es: `"Gris Azulado"` (fine)
-- `aboutApplicationName` → es: `"StudyKing"` (fine, proper noun)
-- `durationSeparator` → es: `" "` (intentional)
-
-No false positives found — all 5,201 keys are properly translated.
-
----
-
-### m5. `completionOfValue` takes `double` type but percent often stored as int
-
-**File:** `lib/l10n/app_en.arb` line 3191-3196
-```json
-"completionOfValue": "{value}% Complete",
-"placeholder": { "value": { "type": "double" } }
-```
-
-**Impact:** If callers pass `int`, the Dart compiler auto-promotes, but ICU formatting may strip decimals unexpectedly. Verify callers pass `double` (e.g., `80.0` rather than `80`). Not a Spanish-specific issue, but worth fixing to ensure correct percent rendering.
-
----
-
-### m6. `notifBodyOverwork` uses `{hours}` as String type — but might be numeric
-
-**File:** `lib/l10n/app_en.arb` lines 3895-3901
-```json
-"notifBodyOverwork": "You've studied {hours} hours today.",
-"placeholder": { "hours": { "type": "String" } }
-```
-
-**Impact:** Using `String` type loses pluralisation capability. Like `nudgeOverworkMinutes` which uses `int` correctly, the overwork notification cannot distinguish "1 hour" vs "2 hours" for locales where hour has plural forms.
-
-**Fix:** Change `hours` type to `int` and add ICU plural: `You've studied {hours,plural,=1{1 hour} other{{hours} hours}} today.` for EN; `Ha estudiado {hours,plural,=1{1 hora} other{{hours} horas}} hoy.` for ES.
-
-**Acceptance:** Overwork notifications use correct plural forms.
-
----
-
-## Summary Count
-
-| Severity | Count |
-|----------|-------|
-| BLOCKER  | 3 (B1, B2, B3) |
-| MAJOR    | 6 (M1–M6) |
-| MINOR    | 6 (m1–m6) |
-
-## Priority Action Items
-
-1. **B1 + B2 (hardcoded strings):** Quick wins — add ARB keys, replace literals in settings + focus screens.
-2. **B3 (currency formatting):** Switch to `formatCurrency` from `number_format_utils.dart`.
-3. **M1 (mentor dates):** Replace ISO date patterns with locale-aware `DateFormat.yMd().add_Hm()`.
-4. **M6 (PDF dates):** Replace `toString().split(' ')[0]` with `DateFormat.yMd(localeName)`.
-5. **m1 (RTL padding):** Batch-replace `EdgeInsets.only(left/right:)` with `EdgeInsetsDirectional.only(start/end:)`.
-
-## Reference: Locale Config
-
-- `lib/l10n/l10n.yaml` — defines en + es as supported locales
-- `lib/core/config/locale_config.dart` — `AppLocale` enum, `resolveLocale()` maps variants to base
-- `lib/l10n/generated/app_localizations.dart` — generated output
-- `scripts/check_i18n_coverage.sh` — validates key parity
+1. Set device locale to `es` (Spanish).
+2. Navigate to Question Bank → delete a question → confirm the snackbar reads `Pregunta eliminada` not `Question deleted`.
+3. Navigate to Source Detail → trigger a reprocess failure → snackbar reads `Error: ...` not `Reprocess failed: ...`.
+4. Start a Focus session → activate TalkBack/VoiceOver → accessibility labels should be in Spanish.
+5. Schedule a lesson → notification body should show locale-aware time (e.g. `14:30` or `2:30 PM` depending on locale).
+6. Export CSV → mastery levels should be `Novato`, `Explorando`, etc.
+7. Start an AI Tutor session → the LLM prompt should instruct the AI to respond in Spanish.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
@@ -110,7 +111,7 @@ void main() {
       test('starts with default SettingsBox', () {
         expect(controller.currentState, isA<SettingsBox>());
         expect(controller.currentState.apiKey, isEmpty);
-        expect(controller.currentState.themeModeEnum, isNull);
+        expect(controller.currentState.themeModeEnum, equals(ThemeMode.system));
       });
     });
 
@@ -170,7 +171,7 @@ void main() {
       test('handles errors gracefully', () async {
         fakeRepo.shouldThrow = true;
         await controller.updateTheme(ThemeMode.dark);
-        expect(controller.currentState.themeModeEnum, isNull);
+        expect(controller.currentState.themeModeEnum, equals(ThemeMode.system));
       });
     });
 
@@ -284,16 +285,16 @@ class _FakeSettingsRepository implements SettingsRepository {
   bool shouldThrow = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<SettingsBox> getSettings() async {
-    if (shouldThrow) throw Exception('storage error');
-    return _settings;
+  Future<Result<SettingsBox>> getSettings() async {
+    if (shouldThrow) return Result.failure('storage error');
+    return Result.success(_settings);
   }
 
   @override
-  Future<void> updateSettings({
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -315,7 +316,7 @@ class _FakeSettingsRepository implements SettingsRepository {
     bool? firstFocusVisit,
     bool? dailyReminderEnabled,
   }) async {
-    if (shouldThrow) throw Exception('update error');
+    if (shouldThrow) return Result.failure('update error');
     _settings = _settings.copyWith(
       apiKey: apiKey,
       apiBaseUrl: apiBaseUrl,
@@ -338,42 +339,45 @@ class _FakeSettingsRepository implements SettingsRepository {
       firstFocusVisit: firstFocusVisit,
       dailyReminderEnabled: dailyReminderEnabled,
     );
+    return Result.success(null);
   }
 
   @override
-  Future<void> saveApiKey({required String service, required String key}) async {
-    if (shouldThrow) throw Exception('api key save error');
+  Future<Result<void>> saveApiKey({required String service, required String key}) async {
+    if (shouldThrow) return Result.failure('api key save error');
     _settings = _settings.copyWith(apiKey: key);
+    return Result.success(null);
   }
 
   @override
-  Future<void> saveProvider(LlmProvider provider) async {}
+  Future<Result<void>> saveProvider(LlmProvider provider) async => Result.success(null);
 
   @override
-  Future<LlmProvider> getProvider() async => LlmProvider.openRouter;
+  Future<Result<LlmProvider>> getProvider() async => Result.success(LlmProvider.openRouter);
 
   @override
-  Future<String?> getApiKey({required String service}) async => null;
+  Future<Result<String?>> getApiKey({required String service}) async => Result.success(null);
 
   @override
-  Future<void> saveProfileData(UserProfile profile) async {}
+  Future<Result<void>> saveProfileData(UserProfile profile) async => Result.success(null);
 
   @override
-  Future<UserProfile?> getProfileData() async => null;
+  Future<Result<UserProfile?>> getProfileData() async => Result.success(null);
 
   @override
-  Future<void> clearSettings() async {}
+  Future<Result<void>> clearSettings() async => Result.success(null);
 
   @override
-  Future<void> clearProfile() async {}
+  Future<Result<void>> clearProfile() async => Result.success(null);
 
   @override
-  Future<void> updateStats({
+  Future<Result<void>> updateStats({
     int? sessionCount,
     int? studyTimeMs,
     int? questions,
   }) async {
-    if (shouldThrow) throw Exception('stats update error');
+    if (shouldThrow) return Result.failure('stats update error');
+    return Result.success(null);
   }
 
   SettingsBox get currentSettings => _settings;

@@ -6,7 +6,7 @@ import 'shared_test_helpers.dart';
 
 void main() {
   group('AppErrorHandler - SyllabusException', () {
-    testWidgets('handleError displays exception.message', (tester) async {
+    testWidgets('handleError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -14,10 +14,10 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Syllabus format is invalid'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
-    testWidgets('handleSyncError displays exception.message', (tester) async {
+    testWidgets('handleSyncError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -25,7 +25,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Syllabus parsing failed'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('handleError shows error_outline icon', (tester) async {
@@ -54,7 +54,7 @@ void main() {
   });
 
   group('AppErrorHandler - PlanGenerationException', () {
-    testWidgets('handleError displays exception.message', (tester) async {
+    testWidgets('handleError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -62,10 +62,10 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Plan generation timeout'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
-    testWidgets('handleSyncError displays exception.message', (tester) async {
+    testWidgets('handleSyncError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -73,7 +73,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('No topics to plan'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('handleError shows error_outline icon', (tester) async {
@@ -123,7 +123,7 @@ void main() {
   });
 
   group('AppErrorHandler - SchedulingException', () {
-    testWidgets('handleError displays exception.message', (tester) async {
+    testWidgets('handleError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -131,10 +131,10 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Time slot unavailable'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
-    testWidgets('handleSyncError displays exception.message', (tester) async {
+    testWidgets('handleSyncError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -142,7 +142,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Schedule conflict detected'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('handleError shows error_outline icon', (tester) async {
@@ -176,7 +176,7 @@ void main() {
   });
 
   group('AppErrorHandler - AdherenceException', () {
-    testWidgets('handleError displays exception.message', (tester) async {
+    testWidgets('handleError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -184,10 +184,10 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Study adherence below threshold'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
-    testWidgets('handleSyncError displays exception.message', (tester) async {
+    testWidgets('handleSyncError displays localized message for unknown type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -195,7 +195,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.text('Missed too many sessions'), findsOneWidget);
+      expect(find.text('An unexpected error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('handleError shows error_outline icon', (tester) async {
@@ -256,7 +256,7 @@ void main() {
       expect(find.byIcon(Icons.key_rounded), findsOneWidget);
     });
 
-    testWidgets('shows error_outline icon for FileSystemException via handleError', (tester) async {
+    testWidgets('shows storage icon for FileSystemException via handleError', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -264,7 +264,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byIcon(Icons.storage), findsOneWidget);
     });
   });
 
@@ -466,7 +466,7 @@ void main() {
       );
     });
 
-    testWidgets('shows default message for unknown exception types', (tester) async {
+    testWidgets('shows database error message for database exception type', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -475,7 +475,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });
@@ -525,7 +525,7 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets('shows error icon when retry is true in handleSyncError',
+    testWidgets('shows refresh icon when retry is true in handleSyncError',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -536,7 +536,7 @@ void main() {
         retryCallback: () {},
       );
       await tester.pump();
-      expect(find.byIcon(Icons.error), findsOneWidget);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
   });
 
@@ -726,7 +726,7 @@ void main() {
       expect(find.byIcon(Icons.wifi_tethering_off), findsOneWidget);
     });
 
-    testWidgets('shows error_outline icon for default exception via handleError',
+    testWidgets('shows storage icon for database exception via handleError',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -735,7 +735,7 @@ void main() {
         'test',
       );
       await tester.pump();
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byIcon(Icons.storage), findsOneWidget);
     });
   });
 
@@ -869,7 +869,7 @@ void main() {
   });
 
   group('AppErrorHandler.handleError - message edge cases', () {
-    testWidgets('handleError shows default message for FileSystemException',
+    testWidgets('handleError shows database error message for database exception',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -879,7 +879,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });
@@ -972,7 +972,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });
@@ -1007,7 +1007,7 @@ void main() {
       'AppErrorHandler.handleError - retry/callback parameter combinations (duration & content)',
       () {
     testWidgets(
-        'retry:true, retryCallback:null -> duration 4s, icon Row (no retry button)',
+        'retry:true, retryCallback:null -> duration 4s, Row content with icon (no retry button)',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -1062,7 +1062,7 @@ void main() {
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.duration, equals(const Duration(seconds: 3)));
-      expect(snackBar.content, isA<Text>());
+      expect(snackBar.content, isA<Row>());
       expect(find.text('Retry'), findsNothing);
       expect(
         find.text(
@@ -1073,7 +1073,7 @@ void main() {
     });
 
     testWidgets(
-        'retry:false, retryCallback:non-null -> duration 3s, Text content (no retry button)',
+        'retry:false, retryCallback:non-null -> duration 3s, Row content with icon (no retry button)',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -1086,7 +1086,7 @@ void main() {
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.duration, equals(const Duration(seconds: 3)));
-      expect(snackBar.content, isA<Text>());
+      expect(snackBar.content, isA<Row>());
       expect(find.text('Retry'), findsNothing);
       expect(
         find.text('Authentication failed. Please check your API credentials.'),

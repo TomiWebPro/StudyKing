@@ -148,10 +148,10 @@ void main() {
       expect(result.type, ExceptionType.database);
     });
 
-    test('converts unknown generic error to AppException(network - default)', () {
+    test('converts unknown generic error to AppException(unknown)', () {
       final error = Exception('Some random error');
       final result = AppErrorHandler.convertToAppException(error);
-      expect(result.type, ExceptionType.network);
+      expect(result.type, ExceptionType.unknown);
     });
 
     test('priority: Network keyword takes precedence over invalid keyword', () {
@@ -160,22 +160,67 @@ void main() {
       expect(result.type, ExceptionType.network);
     });
 
-    test('error with "501" maps to default AppException(network)', () {
+    test('error with "501" maps to default AppException(unknown)', () {
       final error = Exception('501 Not Implemented');
       final result = AppErrorHandler.convertToAppException(error);
-      expect(result.type, ExceptionType.network);
+      expect(result.type, ExceptionType.unknown);
     });
 
-    test('error with status 400 maps to default AppException(network)', () {
+    test('error with status 400 maps to default AppException(unknown)', () {
       final error = Exception('HTTP 400 Bad Request');
       final result = AppErrorHandler.convertToAppException(error);
-      expect(result.type, ExceptionType.network);
+      expect(result.type, ExceptionType.unknown);
     });
 
-    test('TypeError is converted to default AppException(network)', () {
+    test('TypeError is converted to default AppException(unknown)', () {
       final error = TypeError();
       final result = AppErrorHandler.convertToAppException(error);
+      expect(result.type, ExceptionType.unknown);
+    });
+  });
+
+  group('AppErrorHandler.convertToAppException - edge cases', () {
+    test('converts plain String to unknown AppException', () {
+      final result = AppErrorHandler.convertToAppException('some plain error');
+      expect(result.type, ExceptionType.unknown);
+      expect(result.originalError, equals('some plain error'));
+    });
+
+    test('preserves originalError in converted exceptions', () {
+      final original = Exception('SocketException: timeout');
+      final result = AppErrorHandler.convertToAppException(original);
       expect(result.type, ExceptionType.network);
+      expect(result.originalError, same(original));
+    });
+
+    test('converts int error to unknown AppException', () {
+      final result = AppErrorHandler.convertToAppException(42);
+      expect(result.type, ExceptionType.unknown);
+      expect(result.originalError, equals(42));
+    });
+
+    test('message matches exception type for network', () {
+      final error = Exception('SocketException');
+      final result = AppErrorHandler.convertToAppException(error);
+      expect(result.message, equals('Unable to connect to the server. Please check your internet connection and try again.'));
+    });
+
+    test('message matches exception type for database', () {
+      final error = StateError('Bad state');
+      final result = AppErrorHandler.convertToAppException(error);
+      expect(result.message, equals('A database error occurred. Please try again.'));
+    });
+
+    test('message matches exception type for validation', () {
+      final error = const FormatException('Invalid input');
+      final result = AppErrorHandler.convertToAppException(error);
+      expect(result.message, equals('Invalid input'));
+    });
+
+    test('message matches exception type for unknown', () {
+      final error = Exception('random error');
+      final result = AppErrorHandler.convertToAppException(error);
+      expect(result.message, equals('An unexpected error occurred. Please try again.'));
     });
   });
 

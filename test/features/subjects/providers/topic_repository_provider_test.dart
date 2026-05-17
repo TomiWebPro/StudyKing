@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -204,32 +203,6 @@ void main() {
       expect(roots, hasLength(2));
     });
 
-    testWidgets('provider is accessible in widget tree', (tester) async {
-      final fakeRepo = _FakeTopicRepository();
-      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
-
-      String? topicTitle;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(fakeRepo),
-          ],
-          child: MaterialApp(
-            home: _TopicReaderWidget(
-              onRead: (repo) async {
-                final topic = await repo.get('t1');
-                topicTitle = topic.data?.title;
-              },
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      expect(topicTitle, 'Topic t1');
-    });
-
     test('create works through provider override', () async {
       final fakeRepo = _FakeTopicRepository();
       final topic = _createTopic(id: 't1', subjectId: 's1');
@@ -304,6 +277,79 @@ void main() {
       expect(repo2, isA<TopicRepository>());
       expect(identical(repo1, repo2), isFalse);
     });
+
+    test('invalidate triggers re-creation on next read', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo1 = container.read(topicRepositoryProvider);
+      container.invalidate(topicRepositoryProvider);
+      final repo2 = container.read(topicRepositoryProvider);
+
+      expect(repo1, isA<TopicRepository>());
+      expect(repo2, isA<TopicRepository>());
+      expect(identical(repo1, repo2), isFalse);
+    });
+
+    test('multiple invalidate cycles work correctly', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo1 = container.read(topicRepositoryProvider);
+      container.invalidate(topicRepositoryProvider);
+      final repo2 = container.read(topicRepositoryProvider);
+      container.invalidate(topicRepositoryProvider);
+      final repo3 = container.read(topicRepositoryProvider);
+
+      expect(identical(repo1, repo2), isFalse);
+      expect(identical(repo2, repo3), isFalse);
+      expect(identical(repo1, repo3), isFalse);
+    });
+
+    test('invalidate without subsequent read does not create new instance', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo1 = container.read(topicRepositoryProvider);
+      container.invalidate(topicRepositoryProvider);
+      // Read not called again; repo1 should still be valid
+      expect(repo1, isA<TopicRepository>());
+    });
+
+    test('delete works through provider override', () async {
+      final fakeRepo = _FakeTopicRepository();
+      final topic = _createTopic(id: 't1', subjectId: 's1');
+      await fakeRepo.save('t1', topic);
+
+      final container = ProviderContainer(
+        overrides: [
+          topicRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.delete('t1');
+      final result = await repo.get('t1');
+      expect(result.data, isNull);
+    });
+
+    test('getAll works through provider override', () async {
+      final fakeRepo = _FakeTopicRepository();
+      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
+      await fakeRepo.save('t2', _createTopic(id: 't2', subjectId: 's1'));
+
+      final container = ProviderContainer(
+        overrides: [
+          topicRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      final all = await repo.getAll();
+      expect(all.data, hasLength(2));
+    });
   });
 
   group('topicRepositoryProvider (real Hive init)', () {
@@ -339,30 +385,96 @@ void main() {
       final repo2 = container.read(topicRepositoryProvider);
       expect(identical(repo1, repo2), isTrue);
     });
-  });
-}
 
-class _TopicReaderWidget extends ConsumerStatefulWidget {
-  final void Function(TopicRepository repo) onRead;
+    test('real provider invalidate creates new instance', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-  const _TopicReaderWidget({required this.onRead});
-
-  @override
-  ConsumerState<_TopicReaderWidget> createState() => _TopicReaderWidgetState();
-}
-
-class _TopicReaderWidgetState extends ConsumerState<_TopicReaderWidget> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final repo = ref.read(topicRepositoryProvider);
-      widget.onRead(repo);
+      final repo1 = container.read(topicRepositoryProvider);
+      container.invalidate(topicRepositoryProvider);
+      final repo2 = container.read(topicRepositoryProvider);
+      expect(identical(repo1, repo2), isFalse);
     });
-  }
 
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+    test('real provider create and get round-trip', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      final topic = _createTopic(id: 'rt-1', subjectId: 'rs-1');
+      await repo.create(topic);
+
+      final result = await repo.get('rt-1');
+      expect(result.data, isNotNull);
+      expect(result.data!.id, 'rt-1');
+    });
+
+    test('real provider getBySubject returns filtered topics', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      await repo.create(_createTopic(id: 'rt-a', subjectId: 'rs-1'));
+      await repo.create(_createTopic(id: 'rt-b', subjectId: 'rs-1'));
+      await repo.create(_createTopic(id: 'rt-c', subjectId: 'rs-2'));
+
+      final forSubject1 = await repo.getBySubject('rs-1');
+      expect(forSubject1, hasLength(2));
+
+      final forSubject2 = await repo.getBySubject('rs-2');
+      expect(forSubject2, hasLength(1));
+
+      final forSubject3 = await repo.getBySubject('rs-3');
+      expect(forSubject3, isEmpty);
+    });
+
+    test('real provider getRootTopics returns only root topics', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      await repo.create(_createTopic(id: 'rt-root1', subjectId: 'rs-1'));
+      await repo.create(_createTopic(id: 'rt-root2', subjectId: 'rs-1'));
+      await repo.create(_createTopic(id: 'rt-child', subjectId: 'rs-1', parentId: 'rt-root1'));
+
+      final roots = await repo.getRootTopics();
+      expect(roots, hasLength(2));
+    });
+
+    test('real provider getByParent returns children', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      await repo.create(_createTopic(id: 'rt-parent', subjectId: 'rs-1'));
+      await repo.create(_createTopic(id: 'rt-child1', subjectId: 'rs-1', parentId: 'rt-parent'));
+      await repo.create(_createTopic(id: 'rt-child2', subjectId: 'rs-1', parentId: 'rt-parent'));
+
+      final children = await repo.getByParent('rt-parent');
+      expect(children, hasLength(2));
+    });
+
+    test('real provider addParent links topic to parent', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      final parent = _createTopic(id: 'rt-par', subjectId: 'rs-1');
+      final child = _createTopic(id: 'rt-ch', subjectId: 'rs-2');
+      await repo.create(parent);
+      await repo.create(child);
+
+      await repo.addParent(child, 'rt-par');
+      final stored = await repo.get('rt-ch');
+      expect(stored.data!.parentId, 'rt-par');
+      expect(stored.data!.subjectId, 'rs-1');
+    });
+  });
 }
 
 class _TestTopicAdapter extends TypeAdapter<Topic> {

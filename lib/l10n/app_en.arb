@@ -5352,5 +5352,135 @@
   "unableToResolveSubject": "Could not find subject for this topic.",
   "@unableToResolveSubject": {
     "description": "Snackbar message when subject cannot be resolved for a topic"
+  },
+  "questionDeleted": "Question deleted",
+  "@questionDeleted": {
+    "description": "Snackbar message when a question is deleted"
+  },
+  "deleteQuestion": "Delete Question",
+  "@deleteQuestion": {
+    "description": "Title for delete question confirmation dialog"
+  },
+  "deleteQuestionConfirm": "Are you sure you want to delete this question?",
+  "@deleteQuestionConfirm": {
+    "description": "Body for delete question confirmation dialog"
+  },
+  "deleteQuestions": "Delete Questions",
+  "@deleteQuestions": {
+    "description": "Title for delete multiple questions dialog"
+  },
+  "deleteQuestionsConfirm": "Are you sure you want to delete {count} {count, plural, =1{question} other{questions}}?",
+  "@deleteQuestionsConfirm": {
+    "description": "Body for delete multiple questions confirmation",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "questionsDeleted": "{count} {count, plural, =1{question} other{questions}} deleted",
+  "@questionsDeleted": {
+    "description": "Snackbar when multiple questions are deleted",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "editQuestion": "Edit Question",
+  "@editQuestion": {
+    "description": "Title for edit question dialog"
+  },
+  "questionText": "Question text",
+  "@questionText": {
+    "description": "Label for question text input field"
+  },
+  "questionBank": "Question Bank",
+  "@questionBank": {
+    "description": "Title for the question bank screen"
+  },
+  "cancelSelection": "Cancel selection",
+  "@cancelSelection": {
+    "description": "Tooltip for cancel selection button"
+  },
+  "deleteSelected": "Delete selected",
+  "@deleteSelected": {
+    "description": "Tooltip for delete selected button"
+  },
+  "selectMultiple": "Select multiple",
+  "@selectMultiple": {
+    "description": "Tooltip for select multiple mode"
+  },
+  "searchQuestions": "Search questions",
+  "@searchQuestions": {
+    "description": "Hint text for question search field"
+  },
+  "allSubjects": "All subjects",
+  "@allSubjects": {
+    "description": "Filter label showing all subjects"
+  },
+  "allTypes": "All types",
+  "@allTypes": {
+    "description": "Filter label showing all question types"
+  },
+  "allSources": "All sources",
+  "@allSources": {
+    "description": "Filter label showing all sources"
+  },
+  "acceleratePace": "The student is doing well. Accelerate pace.",
+  "@acceleratePace": {
+    "description": "LLM pace context when student is doing well"
+  },
+  "slowDownPace": "The student seems to be struggling. Slow down, simplify explanations, and provide more examples.",
+  "@slowDownPace": {
+    "description": "LLM pace context when student is struggling"
+  },
+  "maintainPace": "Maintain a steady teaching pace.",
+  "@maintainPace": {
+    "description": "LLM pace context for normal pace"
+  },
+  "greetingContext": "Start the lesson warmly.",
+  "@greetingContext": {
+    "description": "LLM time context for greeting phase"
+  },
+  "teachingContext": "Teach the concept step by step. Engage the student with questions.",
+  "@teachingContext": {
+    "description": "LLM time context for teaching phase"
+  },
+  "exerciseContext": "Give the student a practice question to assess understanding.",
+  "@exerciseContext": {
+    "description": "LLM time context for exercise phase"
+  },
+  "feedbackContext": "Provide constructive feedback on their answer.",
+  "@feedbackContext": {
+    "description": "LLM time context for feedback phase"
+  },
+  "adaptiveReviewContext": "The student needs extra help. Re-explain the concept more simply. Use different examples.",
+  "@adaptiveReviewContext": {
+    "description": "LLM time context for adaptive review phase"
+  },
+  "closingContext": "Wrap up the lesson. Summarize key points.",
+  "@closingContext": {
+    "description": "LLM time context for closing phase"
+  },
+  "evaluateStudentAnswerIntro": "Evaluate this student answer for the subject \"{subjectId}\" on topic \"{topicTitle}\".\n\nQuestion: {question}\n\nStudent Answer: {studentAnswer}\n\nReturn a JSON object with:",
+  "@evaluateStudentAnswerIntro": {
+    "description": "Introduction for the evaluation prompt template",
+    "placeholders": {
+      "subjectId": { "type": "String" },
+      "topicTitle": { "type": "String" },
+      "question": { "type": "String" },
+      "studentAnswer": { "type": "String" }
+    }
+  },
+  "minutesSemantics": "{count} {count, plural, =1{minute} other{minutes}}",
+  "@minutesSemantics": {
+    "description": "Semantics label for minutes in focus timer",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "breakRemainingLabel": "Break remaining {formattedTime}",
+  "@breakRemainingLabel": {
+    "description": "Semantics label for break remaining time",
+    "placeholders": {
+      "formattedTime": { "type": "String" }
+    }
   }
 }

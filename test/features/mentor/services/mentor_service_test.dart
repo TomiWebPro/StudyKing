@@ -998,5 +998,30 @@ void main() {
         );
       });
     });
+
+    group('checkWellbeingAndGenerateNudges', () {
+      test('handles session repository getByDate failure gracefully', () async {
+        final failingRepo = _FakeSessionRepo();
+        final service = createMentorService(sessionRepository: failingRepo);
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result, isA<List<String>>());
+      });
+
+      test('handles mastery service failure gracefully', () async {
+        final mastery = FakeMasteryGraphService();
+        mastery.setAtRiskResult(Result.failure('Service unavailable'));
+        final service = createMentorService(masteryService: mastery);
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result, isEmpty);
+      });
+
+      test('handles planner service failure in getWeakTopics gracefully', () async {
+        final mastery = FakeMasteryGraphService();
+        mastery.setWeakTopicsResult(Result.failure('Weak topics unavailable'));
+        final service = createMentorService(masteryService: mastery);
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result, isA<List<String>>());
+      });
+    });
   });
 }

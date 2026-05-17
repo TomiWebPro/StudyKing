@@ -1,313 +1,375 @@
-# Code Refactor Master — Comprehensive Code Quality Issue
+# Code Refactor Master — Architecture & Quality Audit
 
-## Executive Summary
-
-This issue catalogs systemic code quality problems across the StudyKing codebase identified during an architectural audit. Findings are grouped by severity and affect approximately 65+ source files across all layers (core, features, presentation, data).
-
----
-
-## BLOCKER
-
-*None identified.* The application compiles, tests pass, and no crash-path was found that a user would trigger in normal operation.
+**Generated:** 2026-05-18
+**Scope:** Full codebase audit (315 lib/ files, 331 test/ files)
+**Analysis areas:** Dead code, circular deps, SRP violations, error handling inconsistency, redundant abstractions, file placement, hardcoded configs, log levels, repeated patterns
 
 ---
 
-## MAJOR
+## BLOCKER — App crashes or user cannot proceed
 
-### M1. Dead Code: Unused Classes & Interfaces (4 items)
+### B1. Silent catch blocks swallow fatal errors (`catch (_) {}`)
 
-**Rationale:** These artifacts compile but serve no purpose in production. They increase maintenance surface area and confuse new developers.
+**Context:** 11+ locations catch exceptions with empty bodies or `catch (_) {}` that silently discard errors. The user receives no feedback and the app appears to do nothing.
 
-| Dead Item | File | Lines | Evidence |
-|---|---|---|---|
-| `SessionQueryContract` (abstract class) | `lib/core/data/contracts/session_query_contract.dart` | All | Zero implementations in `lib/` or `test/`. Grep for `implements SessionQueryContract` returns nothing. |
-| `TaskModel` | `lib/features/planner/data/models/task_model.dart` | All | Zero imports from `lib/`. Only referenced in `test/` and `hive_type_ids.dart` (type ID constant). Never instantiated. |
-| `QuestionPDFGenerator` | `lib/core/services/pdf_generator/question_pdf_generator.dart` | All | Zero imports from `lib/`. Only referenced in test file. Scaffolding never wired into production. |
-| `DashboardService` | `lib/features/dashboard/services/dashboard_service.dart` | All | Zero imports from `lib/`. All dashboard logic is in providers directly. |
-| `safely()` and `safelySync()` | `lib/core/errors/handlers.dart` | 113–139 | Zero callers in `lib/` (only called in tests). Dead production utilities. |
-
-**Acceptance Criteria:**
-- [ ] `SessionQueryContract` is deleted (or gets an implementation if the contract is still needed).
-- [ ] `TaskModel` is deleted (along with its hive type ID in `hive_type_ids.dart`).
-- [ ] `QuestionPDFGenerator` is deleted or wired into a production code path.
-- [ ] `DashboardService` is deleted (providers already handle the logic).
-- [ ] `safely`/`safelySync` are deleted or given production callers.
-
----
-
-### M2. Error Handling Inconsistency: 4 Competing Patterns
-
-**Rationale:** The documented contract (`lib/core/data/repository.dart:5-7`) states all public repository methods must return `Result<T>`. In practice, 4 different patterns coexist, creating unpredictable failure modes.
-
-**Pattern A — Canonical `try`→`Result.success` / `catch`→`Result.failure`:**
-~40+ methods across 8 repositories. Correct per contract.
-
-**Pattern B — `try`→`catch`→`rethrow` (init methods):**
-8 repository `init()` methods + `DatabaseService.init()`. Log then rethrow raw exception. No `Result` wrapping.
-- `lib/features/lessons/data/repositories/lesson_repository.dart:16`
-- `lib/features/practice/data/repositories/mastery_state_repository.dart:15`
-- `lib/features/practice/data/repositories/question_mastery_state_repository.dart:15`
-- `lib/features/practice/data/repositories/question_evaluation_repository.dart:15`
-- `lib/features/practice/data/repositories/topic_dependency_repository.dart:16`
-- `lib/features/practice/data/repositories/spaced_repetition_repository.dart:30`
-- `lib/features/practice/data/repositories/mastery_graph_repository.dart:68`
-- `lib/features/questions/data/repositories/question_repository.dart:17`
-- `lib/core/data/database_service.dart:46`
-
-**Pattern C — No `Result` at all (raw `Future<T>` return types that can fail):**
-- `lib/features/subjects/data/repositories/subject_repository.dart`
-- `lib/features/subjects/data/repositories/topic_repository.dart`
-- `lib/features/practice/data/repositories/attempt_repository.dart`
-- `lib/features/settings/data/repositories/settings_repository.dart`
-- `lib/features/dashboard/data/repositories/badge_repository.dart`
-
-**Pattern D — Empty `catch (_) {}` (silent swallow):**
-- `lib/features/ingestion/services/document_extractor.dart:84` — **most dangerous instance in codebase**
-
-**Acceptance Criteria:**
-- [ ] All repository `init()` methods return `Future<Result<void>>` or exceptions are consistently handled upstream.
-- [ ] `SubjectRepository`, `TopicRepository`, `AttemptRepository`, `BadgeRepository`, `SettingsRepository` use `Result<T>` wrapping consistent with the documented contract.
-- [ ] The empty `catch (_) {}` in `document_extractor.dart:84` is replaced with at minimum logging + `Result.failure`.
-- [ ] `Result.capture()` / `Result.captureSync()` are either used or removed from `result.dart`.
-
----
-
-### M3. Circular Dependencies Between Features (3 verified cycles)
-
-**Rationale:** Compile-time circular dependencies create brittle code where changes in one feature can transitively break unrelated features. Refactoring or extracting a feature into a package becomes impossible without breaking all cycles first.
-
-**Cycle A — SUBJECTS ↔ INGESTION (direct 2-way cycle):**
-- `subjects/presentation/subject_detail_screen.dart` imports `ingestion/data/repositories/source_repository.dart`
-- `ingestion/` (5 files) imports `subjects/data/repositories/subject_repository.dart` or `topic_repository.dart`
-
-**Cycle B — PRACTICE → SESSIONS → PLANNER → PRACTICE (3-hop cycle):**
-- `practice/services/practice_session_service.dart` and `exam_session_service.dart` import `sessions/data/repositories/session_repository.dart`
-- `sessions/presentation/session_tracker_screen.dart` imports `planner/data/repositories/plan_adherence_repository.dart` and `plan_repository.dart`
-- `planner/services/planner_service.dart` and `syllabus_resolver.dart` import `practice/data/repositories/mastery_graph_repository.dart` and `mastery_state_model.dart`
-
-**Cycle C — SUBJECTS → SESSIONS → PLANNER → PRACTICE → SUBJECTS (4-hop):**
-Superset of Cycle B with `subjects/` at both ends.
-
-**Acceptance Criteria:**
-- [ ] No compile-time circular dependency exists between any two features (verified by `dart analyze` or a dependency graph tool).
-- [ ] Cycle A is broken (e.g., extract `SourceRepository` into core/data, or introduce a core abstraction that both features depend on).
-- [ ] Cycle B is broken (e.g., `session_tracker_screen.dart` uses providers/callbacks instead of direct repo imports).
-
----
-
-### M4. `_logger.e()` Misuse (~70+ instances across 8+ files)
-
-**Rationale:** `_logger.e()` (error level) is used for caught, expected, recoverable failures — inflating error monitoring and masking genuine crashes. Expected failures (data not found, network timeout, fallback to default) should be `_logger.w()`.
-
-**Affected files with highest density:**
-- `lib/features/sessions/data/repositories/session_repository.dart` — all 16 catch blocks use `_logger.e()` for operations that return `Result.failure()`
-- `lib/features/mentor/services/mentor_service.dart` — 12+ catch blocks for optional data lookups (returns `[]` or `null` on failure)
-- `lib/features/practice/services/spaced_repetition_service.dart` — 7 catch blocks
-- `lib/features/sessions/presentation/session_tracker_screen.dart` — 3 UI-level catch blocks
-- `lib/features/sessions/presentation/session_history_screen.dart` — 2 UI-level catch blocks
-- `lib/core/data/extraction/transcription_extractor.dart` — 4 catch blocks for network failures
-- `lib/core/data/extraction/ocr_extractor.dart` — 1 catch block
-
-**Acceptance Criteria:**
-- [ ] All `_logger.e()` calls wrapping expected/recoverable failures are demoted to `_logger.w()`.
-- [ ] `_logger.e()` is reserved for unexpected errors that indicate bugs, data corruption, or unrecoverable states.
-
----
-
-### M5. Reverse Dependency: Core Services Importing Feature Repositories
-
-**Rationale:** `lib/core/services/` is architecturally supposed to be the foundation layer. Currently 12 core services import from `lib/features/`, inverting the dependency direction. This is caused by 19 shared domain models living inside feature folders.
-
-**Core services that import feature repositories/models:**
-- `personal_learning_plan_service.dart` — 5 feature repos, 2 feature models, 1 feature service
-- `engagement_scheduler.dart` — 2 feature repos, 2 feature models, 1 feature service
-- `mastery_graph_service.dart` — 5 feature repos, 3 feature models
-- `instrumentation_service.dart` — 2 feature repos, 3 feature models
-- `study_progress_tracker.dart` — 2 feature repos, 1 feature model
-- `progress_export_service.dart` — 2 feature repos, 1 feature model
-- `topic_readiness_service.dart` — 2 feature repos, 2 feature models
-- `plan_adapter.dart` — 2 feature repos, 1 feature model
-- `badge_service.dart` — 2 feature repos, 1 feature model
-- `conversation_memory.dart` — 1 feature repo, 1 feature model
-- `answer_validation_service.dart` — 1 feature model
-- `llm_usage_meter.dart` — 1 feature model
-
-**Key models to promote to `lib/core/data/models/` (19 identified):**
-| Current Location | Key Consumers |
-|---|---|
-| `features/practice/data/models/mastery_state_model.dart` | 7 core services, 4 features |
-| `features/planner/data/models/personal_learning_plan_model.dart` | 2 core services, 4 features |
-| `features/planner/data/models/plan_adherence_model.dart` | 2 core services, 2 features |
-| `features/planner/data/models/engagement_nudge_model.dart` | 1 core service, 2 features |
-| `features/questions/data/models/question_evaluation_model.dart` | 1 core service, 3 features |
-| `features/subjects/data/models/topic_dependency_model.dart` | 2 core services, 4 features |
-| `features/practice/data/models/question_mastery_state_model.dart` | 1 core service, 2 features |
-| `features/practice/data/models/mastery_improvement_metric_model.dart` | 1 core service, 1 feature |
-| `features/ingestion/data/models/source_model.dart` | 4 features |
-| `features/lessons/data/models/lesson_model.dart` | 3 features |
-| `features/teaching/data/models/conversation_message_model.dart` | 4 features |
-| `features/dashboard/data/models/badge_model.dart` | 1 core service, 1 feature |
-| `features/dashboard/data/models/dashboard_models.dart` | 2 features |
-| `features/lessons/data/models/lesson_block_model.dart` | 2 features |
-
-**Acceptance Criteria:**
-- [ ] All models imported by 2+ features or by core services are promoted to `lib/core/data/models/`.
-- [ ] After promotion, no `lib/core/` file imports from `lib/features/`.
-- [ ] After promotion, no feature imports from another feature's `data/models/` (only from core).
-
----
-
-## MINOR
-
-### N1. Feature-Specific Services in `lib/core/services/` (misplaced, 6 items)
-
-| Service | Only Used By |
-|---|---|
-| `badge_service.dart` | `focus_mode/presentation/focus_timer_screen.dart` |
-| `answer_validation_service.dart` | `features/practice/` |
-| `data_backup_service.dart` | `features/settings/presentation/settings_screen.dart` |
-| `remaining_workload_estimator.dart` | `features/dashboard/` |
-| `session_plan_adherence_service.dart` | Zero imports (dead code) |
-| `cross_feature_integrator.dart` | `features/practice/providers/practice_providers.dart` |
-
-**Acceptance Criteria:**
-- [ ] Each service is moved into its consuming feature's `services/` directory.
-- [ ] `session_plan_adherence_service.dart` is either removed or given a production consumer.
-
----
-
-### N2. Overly Long / Complex Functions (SRP violations, top 5)
-
-| Function | File | Lines | `if`s | Problem |
-|---|---|---|---|---|
-| `_parseExpression()` | `lib/features/questions/presentation/widgets/math_expression_widget.dart:75` | 321 | 12-branch chain | Mixes LaTeX tokenization with widget construction. Should split into tokenizer + renderer. |
-| `_fetchTranscript()` | `lib/core/data/extraction/transcription_extractor.dart:199` | 153 | 13 | Highest cyclomatic density. Multiple API fallbacks with nested JSON/text/HTML detection. |
-| `build()` | `lib/features/ingestion/presentation/upload_screen.dart:356` | 295 | — | Giant form with 15+ fields, all inline. Extract per-section builder methods. |
-| `_sendNudgeNotifications()` | `lib/core/services/engagement_scheduler.dart:153` | 119 | 8 | Five near-identical nudge blocks. Extract to a config-driven helper. |
-| `processFullPipeline()` | `lib/features/ingestion/services/content_pipeline.dart:86` | 143 | 6 | 14 parameters, mutable state threaded through stages. Split into pipeline-stage pattern. |
-
-**Acceptance Criteria for each:**
-- [ ] Function is split so no function exceeds 80 lines.
-- [ ] Cyclomatic complexity per function is ≤ 8 (per Dart lint `cyclomatic_complexity`).
-- [ ] Each new function has a single responsibility.
-
----
-
-### N3. Redundant Abstractions (6 items)
-
-| Abstraction | File | Issue |
+| File | Line | Impact |
 |---|---|---|
-| `MasteryGraphRepository` (facade) | `lib/features/practice/data/repositories/mastery_graph_repository.dart` | Self-acknowledged anti-pattern ("New code should depend on the specific repositories directly"). All 8 delegations are pass-throughs. |
-| `MasteryGraphService` (9/17 methods) | `lib/core/services/mastery_graph_service.dart` | 9 methods are pure repository pass-throughs adding no business logic. |
-| `ActionPlanner` (abstract class) | `lib/features/planner/services/action_planner.dart` | Exactly 1 implementation (`PlannerService`). No polymorphism benefit. |
-| `PlanAdherenceContract` | `lib/core/data/contracts/plan_adherence_contract.dart` | Exactly 1 implementation (`SessionPlanAdherenceService`). |
-| `Clock` | `lib/core/utils/clock.dart` | Single impl, single consumer. Replace with `DateTime Function()` parameter. |
-| `createRoadmapFromGoal()` | `lib/features/planner/services/planner_service.dart:211` | Pure pass-through to `createRoadmap()` with identical signature. |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 144 | `_loadSuggestedAction()` — user sees blank area with no retry |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 291 | `_sendMessage()` — message appears sent but is lost |
+| `lib/features/ingestion/presentation/source_detail_screen.dart` | 217 | Reprocess silently fails — user thinks content was reprocessed |
+| `lib/features/lessons/presentation/lesson_list_screen.dart` | 77 | Lesson list silently fails to load |
+| `lib/features/mentor/services/mentor_service.dart` | 367 | Study streak silently returns 0 |
+| `lib/features/practice/services/spaced_repetition_service.dart` | 162 | SR data deserialization silently falls back to defaults |
+| `lib/core/services/answer_validation_service.dart` | 457 | Validation error silently returns empty result |
+| `lib/features/settings/presentation/api_config_screen.dart` | 90 | Config test silently fails |
+| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | 232, 282 | Canvas operations silently fail |
+| `lib/features/dashboard/data/models/badge_model.dart` | 119 | Badge data silently returns null |
 
-**Acceptance Criteria:**
-- [ ] `MasteryGraphRepository` is removed; consumers inject specific repos directly.
-- [ ] `MasteryGraphService` pure pass-throughs are removed; consumers inject repos directly.
-- [ ] `ActionPlanner`, `PlanAdherenceContract`, `Clock` are inlined or removed.
-- [ ] `createRoadmapFromGoal()` is removed; callers use `createRoadmap()` directly.
+**Rationale:** Errors in catch blocks have the highest user impact in presentation layers because they leave the UI in a stale/unresponsive state. An LLM message that appears sent but isn't is a UX blocker.
 
----
-
-### N4. Repeated Code Patterns Extractable to Shared Utilities
-
-| Pattern | Occurrences | Lines Wasted | Suggested Fix |
-|---|---|---|---|
-| `try`→`Result.success` / `catch`→`Result.failure` | ~164 instances across 8+ repos | ~400 | Add `_wrap<T>(Future<T> Function() fn, String op)` helper to `Repository<T>` base class |
-| Nudge notification blocks | 5 near-identical blocks in `engagement_scheduler.dart:153-271` | ~95 | Extract to config-driven `_processNudgeType()` method |
-| Repository `init()` (try/catch/rethrow) | 6 identical blocks | ~36 | Extract to base class: `Future<void> init(String boxName, {Logger? logger})` |
-| Logger field declarations | 94 instances across codebase | ~94 | Add `HasLogger` mixin with `Logger get _logger => const Logger('$runtimeType');` |
-
-**Acceptance Criteria:**
-- [ ] The `try`→`Result` pattern is extracted to a reusable helper and used consistently.
-- [ ] Nudge notifications are refactored to eliminate the 5-block duplication.
-- [ ] Repository `init()` uses the base-class extraction.
-- [ ] Logger declarations follow a consistent mixin or computed-property pattern.
+**Fix:**
+- Remove bare `catch (_) {}` — at minimum log every caught exception
+- In presentation-layer catches, show a SnackBar via `AppErrorHandler.handleError()` or set an error state
+- Define a lint rule banning empty catch blocks
 
 ---
 
-### N5. Hardcoded Configuration Values (no environment override mechanism)
+### B2. Repository contract mandate violated by 7 repositories
 
-**API URLs** — `lib/core/constants/app_api_config.dart:56-61`: All 6 endpoint URLs and `User-Agent` are compile-time constants. `ApiConfig.forEnvironment()` accepts an `AppEnvironment` param but returns the same URLs for all environments.
+**Context:** `lib/core/data/repository.dart:5` states *"All repositories MUST wrap their public method return types in `Result`"*. Seven repositories return raw values instead, discarding the `Result<T>` wrapper that callers depend on for uniform error handling.
 
-**Token pricing** — `lib/core/constants/token_pricing_config.dart:8-11`: LLM pricing changes when providers update their rates. No runtime override.
-
-**Magic numbers across business logic:**
-| File | Values | Context |
+| Repository | Violating methods | Return type (should be) |
 |---|---|---|
-| `lib/features/sessions/services/study_timer_service.dart` | 25, 500, 5000, 60000 | Timer defaults & caps |
-| `lib/features/mentor/services/mentor_service.dart` | 48 (hrs), 5 (cap), 30 (min) | Nudge thresholds |
-| `lib/core/services/engagement_scheduler.dart` | 4, 3, 7 (days) | Nudge timing |
-| `lib/core/services/plan_adapter.dart` | 7 (days), 30 (min), 15 (questions) | Plan defaults |
-| `lib/core/data/extraction/transcription_extractor.dart:255-257` | Hardcoded User-Agent (should reuse `ApiConfig.userAgent`) | Duplicated config |
+| `SubjectRepository` | `create`, `addTopicToSubject`, `removeTopicFromSubject`, `getWithTopics`, `getByCode` | `void` / `Subject?` / `List<Subject>` → `Result<void>` / `Result<Subject?>` |
+| `AttemptRepository` | `create`, `getByStudent`, `getByStudentAndSubject`, `getByQuestion`, `getBySubject`, `getSubjectStats` | All raw |
+| `PlanRepository` | `create`, `savePlan`, `loadPlan`, `deletePlan`, `hasPlan`, `getAllPlans` | All raw |
+| `RoadmapRepository` | all methods | All raw |
+| `ConversationRepository` | all methods | All raw |
+| `TutorSessionRepository` | all methods | All raw |
+| `EngagementNudgeRepository` | all methods | All raw |
 
-**Acceptance Criteria:**
-- [ ] Environment-level overrides are supported for API URLs (env vars or runtime config).
-- [ ] Hardcoded magic numbers >= 3 in business logic are extracted to named constants.
-- [ ] Duplicated User-Agent in `transcription_extractor.dart` is replaced with `ApiConfig.userAgent`.
-- [ ] Token pricing is configurable at runtime.
+**Rationale:** When a repository method throws or fails, callers get a raw exception (crash) instead of a `Result.failure` to handle gracefully. This also forces downstream services into ad-hoc `try/catch` patterns (see M1).
+
+**Fix:**
+- Audit all 7 repos listed above and wrap all public method return types in `Result<T>`
+- `AttemptRepository.create` at `features/practice/data/repositories/attempt_repository.dart:10` calls `await save(...)` but discards the returned `Result` — this is a latent bug
+- Add a `Repository` base class template method or mixin to enforce the contract automatically
 
 ---
 
-### N6. Outdated / Misleading Comments (3 items)
+### B3. `planner` ↔ `sessions` direct bidirectional dependency cycle
 
-| File | Line | Comment | Problem |
+**Context:** `planner` imports `sessions/SessionRepository`; `sessions` imports `planner/PlanRepository` and `planner/PlanAdherenceRepository`. This is a direct 2-node cycle that makes the features inseparable.
+
+| Direction | File | Import |
+|---|---|---|
+| planner → sessions | `lib/features/planner/services/planner_service.dart:10` | `package:studyking/features/sessions/data/repositories/session_repository.dart` |
+| sessions → planner | `lib/features/sessions/presentation/session_tracker_screen.dart:13,18` | `package:studyking/features/planner/data/repositories/...` |
+
+**Rationale:** Bidirectional dependencies prevent independent testing, increase coupling, and make it impossible to extract either feature into its own package. Refactoring one feature risks breaking the other at runtime with no compile-time guard.
+
+**Fix:**
+- Move the shared dependency (session repository access needed by planner) into a contract in `core/data/contracts/session_query_contract.dart` — this file already exists but is **never implemented** (see M4)
+- `SessionTrackerScreen` should receive planner data via a Riverpod provider that bridges features, not import planner repos directly
+- Alternatively, invert the dependency: have `planner` define an interface that `sessions` implements
+
+---
+
+### B4. `dashboard` ↔ `subjects` direct bidirectional dependency cycle
+
+| Direction | File | Import |
+|---|---|---|
+| dashboard → subjects | `lib/features/dashboard/providers/dashboard_providers.dart:4` | `package:studyking/features/subjects/data/repositories/topic_repository.dart` |
+| subjects → dashboard | `lib/features/subjects/presentation/subject_detail_screen.dart:11` | `package:studyking/features/dashboard/data/models/dashboard_models.dart` |
+
+**Fix:** Extract `dashboard_models.dart` into `core/data/models/` since it's referenced by features beyond dashboard. Route the TopicRepository dependency via a core-level contract or provider.
+
+---
+
+### B5. `ingestion` ↔ `questions` and `ingestion` ↔ `subjects` bidirectional cycles
+
+- **ingestion ↔ questions**: `ingestion` imports `question_repository`; `questions` imports `source_model` + `source_repository`
+- **ingestion ↔ subjects**: `ingestion` imports subject repositories (6 imports); `subjects` imports `source_repository`
+
+**Topology note:** The 4 cycles above (B3–B5) merge into a transitive mega-cycle spanning 6 features: `dashboard → subjects → ingestion → questions → practice → sessions → planner → dashboard`. This means no feature in this cycle can be extracted or tested independently.
+
+**Fix:** Break the cycles at their weakest links:
+1. Make `questions` depend on `ingestion` (unidirectional — questions come from ingested sources) by removing `questions → source_model` import
+2. Make `subjects` depend on `ingestion` (unidirectional — subjects own topics, sources belong to subjects) by removing `subjects → source_repository` import
+3. Elevate cross-feature data models to `core/data/models/`
+
+---
+
+## MAJOR — Feature is broken or misleading
+
+### M1. Error handling inconsistency: three coexisting failure patterns
+
+**Context:** The codebase has **three** distinct error-handling strategies with no consistency around when to use which:
+
+| Pattern | Used by | Problem |
+|---|---|---|
+| `Result<T>` from repository | SessionRepository, QuestionRepository, SettingsRepository (correct) | Correct but inconsistently applied |
+| Raw `try/catch` returning defaults | MentorService (6×), StudyProgressTracker (4×), PracticeDataService, MistakeReviewService | Duplicates the `Result` pattern — repos already return `Result`, outer `try/catch` is redundant |
+| `throw` raw `StateError`/`ArgumentError` | SettingsRepository (init), SecurityConfig, AppBuildConfig, HiveTypeIds | Bypasses `AppException` hierarchy and `convertToAppException` dispatch |
+| `Result.capture()` / `Result.captureSync()` | Defined in `core/errors/result.dart:15-35` but **never used** anywhere in the codebase | Dead utility |
+
+**Rationale:** A developer cannot predict whether calling a method will return `Result.failure`, throw `AppException`, throw `StateError`, or silently return `[]`. This leads to uncaught crashes in production when a method changes its implementation.
+
+**Fix:**
+1. Make every public method in every service/repository return `Result<T>`
+2. Ban raw `throw` in data-access/service layers via lint rule
+3. Use `Result.capture()` / `Result.captureSync()` as the single entry point for all try/catch — it's defined but unused
+4. Kill the bare `try/catch => defaultValue` pattern in MentorService, ProgressTracker, etc. — delegate to `Result.capture()`
+
+---
+
+### M2. Wrong log levels across 80+ locations
+
+**Pervasive pattern:** `.e()` (error) used for expected, recoverable failures that return defaults gracefully. Error level should be for unexpected fatal conditions; expected data-absence should be `.w()`.
+
+| File | Count | Current | Should be |
 |---|---|---|---|
-| `lib/features/teaching/data/models/lesson_plan_model.dart` | 72 | `// TODO: i18n - callers should override with localized values from ARB keys` | i18n system is mature; TODO never acted on. `defaultPlan()` returns hardcoded English. |
-| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | 130 | `// silent - badge check is non-critical` | Error silently swallowed with no logging. |
-| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | 144 | `// Logged internally by PlanAdapter, non-critical for UX` | Misleading — PlanAdapter does not log errors caused by record call failures. |
+| `lib/features/sessions/data/repositories/session_repository.dart` | 16× | `.e()` | `.w()` |
+| `lib/core/services/personal_learning_plan_service.dart` | 13× | `.e()` | `.w()` |
+| `lib/features/mentor/services/mentor_service.dart` | 10× | `.e()` | `.w()` |
+| `lib/core/providers/app_providers.dart` | 9× | `.e()` | `.w()` |
+| `lib/features/practice/services/spaced_repetition_service.dart` | 7× | `.e()` | `.w()` |
+| `lib/core/services/engagement_scheduler.dart` | 6× | `.e()` | `.w()` |
+| `lib/core/services/study_progress_tracker.dart` | 4× | `.e()` | `.w()` |
+| `lib/features/practice/services/practice_data_service.dart` | 3× | `.e()` | `.w()` |
+| `lib/features/teaching/services/tutor_service.dart` | 4× | `.w()` | **Correct** (uses warn for recoverable) |
 
-**Acceptance Criteria:**
-- [ ] `lesson_plan_model.dart` TODO is resolved (localize default plan strings) or the comment is removed.
-- [ ] `focus_timer_screen.dart` empty catches are replaced with at minimum `_logger.w()`.
+**Additionally,`.d()` used for significant state changes that should be `.i()`:**
+- `lib/features/sessions/services/study_timer_service.dart` — session lifecycle events (`Session started`, `paused`, `completed`) logged at debug
+
+**Fix:**
+- Audit all `.e()` calls in repository/service/provider layers; demote to `.w()` when the method returns a graceful default
+- Audit all `.d()` calls for session lifecycle, notification events, and feature integrations; promote to `.i()`
+- Add a linting rule or logging guideline to AGENTS.md
 
 ---
 
-### N7. Missing Test Files (per AGENTS.md conventions, 6 files)
+### M3. `SessionQueryContract` and `PlanAdherenceContract` — dead abstract classes
 
-| Source File | Expected Test |
+**Context:** Two files in `core/data/contracts/` are declared but never implemented:
+- `lib/core/data/contracts/session_query_contract.dart:1-17` — `SessionQueryContract` is **never implemented** by any class. `SessionRepository` extends `Repository<Session>` directly
+- `lib/core/data/contracts/plan_adherence_contract.dart:1-6` — single-method abstract, only one (unnamed) implementation in `SessionPlanAdherenceService`
+
+**Fix:** Either implement these contracts on the corresponding repositories (which would also break the planner↔sessions cycle) or remove them as dead code.
+
+---
+
+### M4. 18 `core/` files import from features — upward dependency
+
+**Context:** Files in `lib/core/` should be the lowest architectural layer, depending only on themselves and external packages. 18 core files import from features, creating an upward dependency.
+
+| Core File | Feature imports |
 |---|---|
-| `lib/features/onboarding/services/onboarding_service.dart` | `test/features/onboarding/services/onboarding_service_test.dart` |
-| `lib/features/sessions/data/repositories/session_utils.dart` | `test/features/sessions/data/repositories/session_utils_test.dart` |
-| `lib/core/data/models/markscheme_model.dart` | `test/core/data/models/markscheme_model_test.dart` |
-| `lib/core/data/contracts/plan_adherence_contract.dart` | (if not removed per N3) |
-| `lib/core/data/contracts/session_query_contract.dart` | (if not removed per M1) |
-| `lib/core/services/session_plan_adherence_service.dart` | (if not removed per N1) |
+| `lib/core/routes/app_router.dart` | all 15 features |
+| `lib/core/data/database_service.dart` | 6 features |
+| `lib/core/data/hive_initializer.dart` | 6 features |
+| `lib/core/providers/app_providers.dart` | 8+ features |
+| `lib/core/services/personal_learning_plan_service.dart` | 4 features |
+| `lib/core/services/mastery_graph_service.dart` | 2 features |
+| `lib/core/services/instrumentation_service.dart` | 2 features |
+| `lib/core/services/progress_export_service.dart` | 2 features |
+| `lib/core/services/badge_service.dart` | 2 features |
+| `lib/core/services/cross_feature_integrator.dart` | 2 features |
+| ... and 8 more | |
 
-**Acceptance Criteria:**
-- [ ] Every production Dart file has a corresponding test file following the AGENTS.md convention.
-- [ ] Orphaned source files (identified for deletion in M1/N1/N3) are removed rather than tested.
+**Note on routing:** `app_router.dart` importing every feature is architecturally acceptable — a router must know about all screens. The problematic ones are the **service-layer** imports (e.g., `mastery_graph_service.dart` importing `features/practice/...`).
 
----
-
-### N8. Barrel File / Export Inconsistencies
-
-`lib/features/dashboard/dashboard.dart` does not export `workload_card.dart` even though `lib/features/dashboard/presentation/dashboard_screen.dart` imports it directly (bypassing the barrel).
-
-Similar violations exist in `subjects.dart`, `questions.dart`, and others (see full list in audit).
-
-**Acceptance Criteria:**
-- [ ] All feature barrel files export every public file in the feature.
-- [ ] No production import in `lib/` bypasses a feature's barrel file (verified by lint rule or manual check).
+**Fix:**
+- Move the "orchestration" services (`personal_learning_plan_service`, `mastery_graph_service`, `badge_service`, `cross_feature_integrator`, `instrumentation_service`, `progress_export_service`) into dedicated `lib/features/crosscutting/` or keep in core but have features provide data through contracts defined in core
+- For pure-data services (e.g., `llm_usage_meter.dart` importing `features/settings/`), extract the referenced model into `core/data/models/`
 
 ---
 
-## Appendix: Files Referenced in This Issue
+### M5. 10 overly long functions violating Single Responsibility Principle
 
-| Category | Files |
-|---|---|
-| **Dead code** | `lib/core/data/contracts/session_query_contract.dart`, `lib/features/planner/data/models/task_model.dart`, `lib/core/services/pdf_generator/question_pdf_generator.dart`, `lib/features/dashboard/services/dashboard_service.dart`, `lib/core/errors/handlers.dart` |
-| **Error handling** | `lib/core/data/repository.dart`, `lib/core/errors/result.dart`, `lib/core/errors/handlers.dart`, all repository files in features/*/data/repositories/, `lib/features/ingestion/services/document_extractor.dart`, `lib/features/settings/data/repositories/settings_repository.dart`, `lib/features/subjects/data/repositories/subject_repository.dart`, `lib/features/subjects/data/repositories/topic_repository.dart`, `lib/features/practice/data/repositories/attempt_repository.dart`, `lib/features/dashboard/data/repositories/badge_repository.dart` |
-| **Circular dependencies** | `lib/features/subjects/presentation/subject_detail_screen.dart`, `lib/features/ingestion/` (5 files), `lib/features/sessions/presentation/session_tracker_screen.dart`, `lib/features/planner/services/planner_service.dart`, `lib/features/planner/services/syllabus_resolver.dart`, `lib/features/practice/services/practice_session_service.dart`, `lib/features/practice/services/exam_session_service.dart` |
-| **Log level misuse** | `lib/features/sessions/data/repositories/session_repository.dart`, `lib/features/mentor/services/mentor_service.dart`, `lib/features/practice/services/spaced_repetition_service.dart`, `lib/features/sessions/presentation/session_tracker_screen.dart`, `lib/features/sessions/presentation/session_history_screen.dart`, `lib/core/data/extraction/transcription_extractor.dart`, `lib/core/data/extraction/ocr_extractor.dart` |
-| **Reverse dependencies** | 12 core services listed in M5, 19 shared models listed in M5 |
-| **Feature services in core** | `lib/core/services/badge_service.dart`, `lib/core/services/answer_validation_service.dart`, `lib/core/services/data_backup_service.dart`, `lib/core/services/remaining_workload_estimator.dart`, `lib/core/services/session_plan_adherence_service.dart`, `lib/core/services/cross_feature_integrator.dart` |
-| **Complex functions** | `lib/features/questions/presentation/widgets/math_expression_widget.dart`, `lib/core/data/extraction/transcription_extractor.dart`, `lib/features/ingestion/presentation/upload_screen.dart`, `lib/core/services/engagement_scheduler.dart`, `lib/features/ingestion/services/content_pipeline.dart` |
-| **Redundant abstractions** | `lib/features/practice/data/repositories/mastery_graph_repository.dart`, `lib/core/services/mastery_graph_service.dart`, `lib/features/planner/services/action_planner.dart`, `lib/core/data/contracts/plan_adherence_contract.dart`, `lib/core/utils/clock.dart`, `lib/features/planner/services/planner_service.dart` |
-| **Hardcoded config** | `lib/core/constants/app_api_config.dart`, `lib/core/constants/token_pricing_config.dart`, `lib/features/sessions/services/study_timer_service.dart`, `lib/core/services/plan_adapter.dart`, `lib/core/data/extraction/transcription_extractor.dart` |
-| **Misleading comments** | `lib/features/teaching/data/models/lesson_plan_model.dart`, `lib/features/focus_mode/presentation/focus_timer_screen.dart` |
-| **Missing tests** | `lib/features/onboarding/services/onboarding_service.dart`, `lib/features/sessions/data/repositories/session_utils.dart`, `lib/core/data/models/markscheme_model.dart` |
-| **Barrel inconsistencies** | `lib/features/dashboard/dashboard.dart`, `lib/features/subjects/subjects.dart` |
+| Function | File | Lines | SRP violations |
+|---|---|---|---|
+| `_parseExpression` | `lib/features/questions/presentation/widgets/math_expression_widget.dart:75` | 256 | Tokenization + parsing + widget rendering in one giant if/else chain (30+ branches) |
+| `exportComprehensivePDF` | `lib/core/services/progress_export_service.dart:131` | 189 | Data loading + PDF widget tree construction + 3 table layouts + conditional sections |
+| `_showProgressReport` | `lib/features/mentor/presentation/mentor_screen.dart:567` | 205 | Data fetching + AlertDialog building + theme access + Navigator routing |
+| `processFullPipeline` | `lib/features/ingestion/services/content_pipeline.dart:88` | 142 | 4 processing stages + progress callbacks + status updates + saves + error handling |
+| `_buildPlan` | `lib/core/services/personal_learning_plan_service.dart:95` | 132 | 3 data source loads + recommendation scoring + 3 input modes + daily plan generation + persistence |
+| `_sendNudgeNotifications` | `lib/core/services/engagement_scheduler.dart:153` | 118 | 5 nudge types in a near-identical repeated pattern |
+| `_generateDailyPlans` | `lib/core/services/personal_learning_plan_service.dart:579` | 121 | Triple-nested loop + live readiness fetches per topic + sorting + rest days |
+| `_buildContextPrompt` | `lib/features/mentor/services/mentor_service.dart:157` | 101 | 10+ data fetches + try/catch per section + conditional formatting |
+| `checkWellbeingAndGenerateNudges` | `lib/features/mentor/services/mentor_service.dart:399` | 84 | 5 wellbeing checks + nudge creation + persistence + memory update |
+| `_buildEmptyMasteryPlan` | `lib/core/services/personal_learning_plan_service.dart:229` | 90 | Topic generation + daily plan creation + summary + persistence |
+
+**Fix:** Break each function into focused methods. Specific suggestions in the detailed analysis above. Add a Cyclomatic Complexity lint threshold (< 15 branches per function).
+
+---
+
+### M6. 10× repeated `onRetry` lambda pattern in dashboard
+
+**Context:** `lib/features/dashboard/presentation/dashboard_screen.dart:103-220` repeats this near-identical pattern 10 times:
+
+```dart
+onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardXxxProvider(studentId)); },
+```
+
+Only the provider name changes. 10 individual `onRetry: () => ref.invalidate(...)` callbacks.
+
+**Fix:** Extract into a helper method or use a shared `retryDashboard` function that invalidates the init provider and a given target provider.
+
+---
+
+## MINOR — Code quality / UX friction
+
+### m1. Repeated repository boilerplate (9 files)
+
+**Context:** 9 repositories (`AttemptRepository`, `SubjectRepository`, `TopicRepository`, `PlanRepository`, `RoadmapRepository`, `PendingActionRepository`, `BadgeRepository`, `ConversationRepository`, `TutorSessionRepository`) all have identical `init() { openBox(HiveBoxNames.xxx) }` + `create(x) { save(x.id, x) }` boilerplate.
+
+**Fix:** Add these as default methods on the `Repository<T>` base class or generate them via a mixin. The box name can be passed as a constructor parameter.
+
+---
+
+### m2. `llm_tasks` — feature with single file and no subdirectories
+
+**Context:** `lib/features/llm_tasks/` is a full feature barrel directory containing exactly one file (`presentation/llm_task_manager_screen.dart`) with no `data/`, `services/`, or `providers/` subdirectories. The file's logic is tightly coupled to `lib/core/services/llm_task_manager.dart`.
+
+**Fix:** Either promote to core (it's a singleton service with a single UI entry point) or restructure to follow the standard feature pattern with at minimum a provider.
+
+---
+
+### m3. `onboarding` has no `data/` or `providers/` directories; `quickguide` has no `data/`, `providers/`, or `services/`; `focus_mode` has no `data/`
+
+**Context:** These features are structurally incomplete compared to the established convention. Over time this will cause feature-creep as data or state management gets added ad-hoc.
+
+**Fix:** Add the standard subdirectories with barrel files even if initially empty, or document the exception.
+
+---
+
+### m4. `Clock` / `SystemClock` — single-implementation abstraction
+
+**Context:** `lib/core/utils/clock.dart:1-8` defines a `Clock` abstract + `SystemClock` implementation. Only one implementation exists. While this is somewhat justified for testability (4 services inject it), it adds boilerplate for no polymorphic benefit.
+
+**Accept if:** The team values testability through injection. However, verify that tests actually use a fake clock (search test/ for `FakeClock` or similar) — if not, remove the abstraction.
+
+---
+
+### m5. Hardcoded configuration values that should be environment-driven
+
+| Value | File | Hardcoded as |
+|---|---|---|
+| OpenRouter base URL | `lib/core/constants/app_api_config.dart:56` | `'https://openrouter.ai/api/v1'` |
+| Ollama base URL | `lib/core/constants/app_api_config.dart:57` | `'http://localhost:11434'` |
+| OpenAI base URL | `lib/core/constants/app_api_config.dart:58` | `'https://api.openai.com/v1'` |
+| YouTube transcript URL | `lib/core/constants/app_api_config.dart:59-60` | `'https://youtubetranscript.com/...'` |
+| Google API URL | `lib/core/constants/app_api_config.dart:68-69` | `'https://www.googleapis.com/...'` |
+| User-Agent header | `lib/core/constants/app_api_config.dart:61` | `'Mozilla/5.0 (compatible; StudyKing/1.0)'` |
+| Token pricing | `lib/core/constants/token_pricing_config.dart:8-11` | `cachedInputCostPerToken`, `inputCostPerToken`, `outputCostPerToken`, `divisor` |
+| Cache expiration | `lib/core/constants/app_runtime_config.dart:8` | `Duration(hours: 24)` |
+| Session timeout | `lib/core/constants/security_config.dart:7` | `Duration(minutes: 30)` |
+
+**Fix:** Move runtime-configurable values (URLs, timeouts, pricing) to a config file or environment variables. The TODO at `app_api_config.dart:30` already flags this: `// TODO(security): prefer runtime secret injection`.
+
+---
+
+### m6. No shared loading / empty-state / error widgets despite 15+ duplicate implementations
+
+**Context:** `Center(child: CircularProgressIndicator())` appears 15+ times. 4 separate empty-state implementations (`PracticeEmptyState`, `MentorScreen._buildEmptyState()`, `SessionHistoryScreen._buildEmptyState()`, `QuickGuideScreen._buildEmptyState()`). No shared widget in `core/widgets/`.
+
+**Fix:** Add to `core/widgets/`:
+- `LoadingIndicator` (standard spinner with optional message)
+- `EmptyStateWidget` (icon + title + subtitle + optional action button)
+- `ErrorRetryWidget` (error message + retry button)
+
+Then replace all 15+ instances across features.
+
+---
+
+### m7. `throw` in config/constant files breaks the `AppException` error UI
+
+**Context:** Several constant files throw raw `ArgumentError` or `StateError` instead of `AppException`:
+- `lib/core/constants/security_config.dart:24,40,43,50,68` — `ArgumentError`
+- `lib/core/constants/app_build_config.dart:31,41,44,47` — `ArgumentError`
+- `lib/core/constants/app_api_config.dart:20,37` — `ArgumentError`
+- `lib/core/constants/app_config.dart:86` — `StateError`
+- `lib/core/data/hive_type_ids.dart:82` — `StateError`
+- `lib/features/settings/data/repositories/settings_repository.dart:20,28` — `StateError`
+
+While `convertToAppException` in `handlers.dart:147` does translate `StateError` and `ArgumentError`, the translation is by string matching (`errorStr.contains('401')`, etc.) which is fragile and locale-dependent.
+
+**Fix:** Switch to `AppException` with the correct `ExceptionType` (e.g., `ExceptionType.database` for `StateError`, `ExceptionType.validation` for `ArgumentError`). This gives typed, i18n-aware error messages without fragile string matching.
+
+---
+
+### m8. `Result.capture()` / `Result.captureSync()` defined but never used
+
+**Context:** `lib/core/errors/result.dart:15-35` provides `Result.capture()` and `Result.captureSync()` — static factory methods that wrap a block in try/catch and return `Result.success`/`Result.failure`. These are the **exact** tool needed to eliminate the 25+ repeated try/catch patterns found (MentorService, ProgressTracker, SessionRepository, LessonRepository).
+
+**Fix:** Replace all ad-hoc `try { return x; } catch (e) { log; return default; }` with `Result.capture(() => x, context: 'method')`.
+
+---
+
+### m9. TODO without timeline or ticket reference
+
+**File:** `lib/core/constants/app_api_config.dart:30`
+```dart
+// TODO(security): prefer runtime secret injection (keystore/native layer) over compile-time embedding where possible.
+```
+
+**Fix:** Assign a timeline (target version) or ticket reference, or resolve the TODO by implementing secret injection.
+
+---
+
+### m10. `// ignore: invalid_null_aware_operator` likely stale
+
+**File:** `lib/features/planner/services/syllabus_resolver.dart:93`
+**Rationale:** Suppression comments that outlive their need mask new null-safety issues. Verify it's still needed.
+
+---
+
+## Summary of Acceptance Criteria
+
+For this issue to be considered "fixed":
+
+1. **All `catch (_) {}` blocks** (B1) — replaced with at-minimum `_logger.w(...)` and preferably user-visible feedback
+2. **All repository return types** (B2) — wrapped in `Result<T>` per the contract in `repository.dart`
+3. **All 4 bidirectional dependency cycles** (B3-B5) — resolved (unidirectional or contracted)
+4. **Error handling strategy** (M1) — unified: use `Result.capture()` everywhere, ban raw `throw` in services/repos, remove redundant outer try/catch
+5. **Log level audit** (M2) — `.e()` only for fatal, `.w()` for recoverable, `.i()` for state transitions
+6. **Dead contracts** (M3) — either implemented or removed
+7. **Core→feature dependencies** (M4) — only `app_router.dart` and `app_providers.dart` may import features
+8. **Top 10 longest functions** (M5) — each broken into focused sub-methods under 60 lines
+9. **Dashboard retry lambda** (M6) — extracted to shared helper
+10. **Repository boilerplate** (m1) — default methods on `Repository<T>` base class
+11. **Incomplete feature directories** (m2-m3) — standardized or documented
+12. **Shared widgets** (m6) — `LoadingIndicator`, `EmptyStateWidget`, `ErrorRetryWidget` in `core/widgets/`
+13. **Raw `throw`** in config/constants (m7) — replaced with `AppException`
+14. **`Result.capture()` used** (m8) — replaces all ad-hoc try/catch blocks in data-access layer
+15. **Stale TODO and `// ignore:`** (m9-m10) — resolved or converted to tracked tickets
+
+---
+
+## Reference: Key Files Requiring Changes
+
+| Priority | File | Issue(s) |
+|---|---|---|
+| BLOCKER | `lib/core/data/repository.dart` | B2, m1 (add enforcements, default methods) |
+| BLOCKER | `lib/features/sessions/presentation/session_tracker_screen.dart` | B3 (remove planner import) |
+| BLOCKER | `lib/features/subjects/presentation/subject_detail_screen.dart` | B4 (remove dashboard import) |
+| BLOCKER | `lib/features/questions/presentation/question_bank_screen.dart` | B5 (remove ingestion import) |
+| BLOCKER | 7 repository files under `features/*/data/repositories/` | B2 (wrap return types in Result) |
+| MAJOR | `lib/features/mentor/services/mentor_service.dart` | M1, M5, m8 (error handling, SRP, Result.capture) |
+| MAJOR | `lib/core/services/personal_learning_plan_service.dart` | M4 (imports features), M5 (3 long functions) |
+| MAJOR | `lib/core/services/engagement_scheduler.dart` | M5 (118-line function) |
+| MAJOR | `lib/features/ingestion/services/content_pipeline.dart` | M5 (142-line function) |
+| MAJOR | `lib/features/mentor/presentation/mentor_screen.dart` | B1 (silent catch), M5 (205-line function) |
+| MAJOR | `lib/features/presentation/widgets/math_expression_widget.dart` | M5 (256-line function) |
+| MAJOR | `lib/core/services/progress_export_service.dart` | M4 (imports features), M5 (189-line function) |
+| MAJOR | `lib/features/sessions/data/repositories/session_repository.dart` | M2 (16× wrong log level) |
+| MAJOR | `lib/core/errors/exceptions.dart` + `handlers.dart` | M1, m7 (AppException adoption) |
+| MAJOR | `lib/core/errors/result.dart` | m8 (`Result.capture` is unused) |
+| MINOR | `lib/core/data/contracts/session_query_contract.dart` | M3 (dead abstract) |
+| MINOR | `lib/core/data/contracts/plan_adherence_contract.dart` | M3 (dead abstract) |
+| MINOR | `lib/core/widgets/` (new files) | m6 (shared loading/empty/error widgets) |
+| MINOR | `lib/core/constants/app_api_config.dart` | m5, m9 (hardcoded URLs, stale TODO) |
+| MINOR | `lib/core/constants/token_pricing_config.dart` | m5 (hardcoded pricing) |
+| MINOR | `lib/features/llm_tasks/` | m2 (incomplete feature) |
+| MINOR | `lib/features/onboarding/`, `focus_mode/`, `quickguide/` | m3 (incomplete feature dirs) |

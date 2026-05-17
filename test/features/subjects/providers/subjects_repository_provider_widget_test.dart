@@ -46,6 +46,17 @@ class _SlowNotifier extends SubjectsRepositoryNotifier {
   }
 }
 
+class _FirstFailingThenOkNotifier extends SubjectsRepositoryNotifier {
+  int callCount = 0;
+
+  @override
+  Future<SubjectRepository> build() async {
+    callCount++;
+    if (callCount == 1) throw Exception('First build fails');
+    return _FakeSubjectRepository();
+  }
+}
+
 class _ProviderReaderWidget extends ConsumerWidget {
   final void Function(SubjectRepository)? onData;
 
@@ -61,6 +72,29 @@ class _ProviderReaderWidget extends ConsumerWidget {
       },
       loading: () => const Text('Loading...'),
       error: (e, _) => Text('Error: ${e.toString()}'),
+    );
+  }
+}
+
+class _InvalidatingWidget extends ConsumerStatefulWidget {
+  final Widget child;
+  const _InvalidatingWidget({required this.child});
+
+  @override
+  ConsumerState<_InvalidatingWidget> createState() => _InvalidatingWidgetState();
+}
+
+class _InvalidatingWidgetState extends ConsumerState<_InvalidatingWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed: () => ref.invalidate(subjectsRepositoryProvider),
+          child: const Text('Invalidate'),
+        ),
+        widget.child,
+      ],
     );
   }
 }
@@ -172,6 +206,85 @@ void main() {
 
       expect(find.text('Loading...'), findsNothing);
       expect(find.text('DataLoaded'), findsOneWidget);
+    });
+
+    testWidgets('shows error then recovers after invalidate', (tester) async {
+      final notifier = _FirstFailingThenOkNotifier();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => notifier),
+          ],
+          child: const MaterialApp(
+            home: _ProviderReaderWidget(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Error: Exception: First build fails'), findsOneWidget);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => notifier),
+          ],
+          child: MaterialApp(
+            home: _InvalidatingWidget(
+              child: const _ProviderReaderWidget(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Error: Exception: First build fails'), findsOneWidget);
+
+      await tester.tap(find.text('Invalidate'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DataLoaded'), findsOneWidget);
+    });
+
+    testWidgets('two ProviderScopes with different overrides are independent',
+        (tester) async {
+      final fakeRepo1 = _FakeSubjectRepository();
+      final fakeRepo2 = _FakeSubjectRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Column(
+            children: [
+              SizedBox(
+                width: 800,
+                child: ProviderScope(
+                  overrides: [
+                    subjectsRepositoryProvider.overrideWith(
+                      () => _TestNotifier(fakeRepo1),
+                    ),
+                  ],
+                  child: const _ProviderReaderWidget(),
+                ),
+              ),
+              SizedBox(
+                width: 800,
+                child: ProviderScope(
+                  overrides: [
+                    subjectsRepositoryProvider.overrideWith(
+                      () => _TestNotifier(fakeRepo2),
+                    ),
+                  ],
+                  child: const _ProviderReaderWidget(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('DataLoaded'), findsNWidgets(2));
     });
   });
 }

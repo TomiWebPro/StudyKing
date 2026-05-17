@@ -19,6 +19,7 @@ Session createSession({
   int questionsAnswered = 0,
   int correctAnswers = 0,
   bool completed = false,
+  String? sourceId,
   List<String> sourceIds = const [],
   List<String> lessonIds = const [],
   List<String> tags = const [],
@@ -40,6 +41,7 @@ Session createSession({
     questionsAnswered: questionsAnswered,
     correctAnswers: correctAnswers,
     completed: completed,
+    sourceId: sourceId,
     sourceIds: sourceIds,
     lessonIds: lessonIds,
     tags: tags,
@@ -143,6 +145,7 @@ void main() {
           questionsAnswered: 20,
           correctAnswers: 18,
           completed: true,
+          sourceId: 'source-main',
           sourceIds: ['src-1', 'src-2'],
           lessonIds: ['lesson-1'],
           tags: ['math', 'algebra'],
@@ -165,6 +168,7 @@ void main() {
         expect(stored.questionsAnswered, 20);
         expect(stored.correctAnswers, 18);
         expect(stored.completed, isTrue);
+        expect(stored.sourceId, 'source-main');
         expect(stored.sourceIds, ['src-1', 'src-2']);
         expect(stored.lessonIds, ['lesson-1']);
         expect(stored.tags, ['math', 'algebra']);
@@ -900,6 +904,211 @@ void main() {
         await repository.save(session.id, session);
         final stored = (await repository.get('noplan')).data!;
         expect(stored.plannedDuration, isNull);
+      });
+    });
+
+    group('error handling', () {
+      setUp(() async {
+        final session = createSession(startTime: DateTime.now());
+        await repository.save(session.id, session);
+        await Hive.close();
+      });
+
+      test('getAll returns failure when box is closed', () async {
+        final result = await repository.getAll();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getByDate returns failure when box is closed', () async {
+        final result = await repository.getByDate(DateTime.now());
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getByType returns failure when box is closed', () async {
+        final result = await repository.getByType(SessionType.focus);
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getByStudent returns failure when box is closed', () async {
+        final result = await repository.getByStudent('student-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getBySubject returns failure when box is closed', () async {
+        final result = await repository.getBySubject('subject-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getByStudentAndSubject returns failure when box is closed', () async {
+        final result =
+            await repository.getByStudentAndSubject('stu-1', 'sub-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getRecentSessionsForSubject returns failure when box is closed',
+          () async {
+        final result =
+            await repository.getRecentSessionsForSubject('sub-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTotalStudyTimeForSubject returns failure when box is closed',
+          () async {
+        final result =
+            await repository.getTotalStudyTimeForSubject('sub-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getActive returns failure when box is closed', () async {
+        final result = await repository.getActive();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayDurationMs returns failure when box is closed', () async {
+        final result = await repository.getTodayDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodaySessionCount returns failure when box is closed', () async {
+        final result = await repository.getTodaySessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayCompletedSessionCount returns failure when box is closed',
+          () async {
+        final result = await repository.getTodayCompletedSessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getWeeklyDurationMs returns failure when box is closed', () async {
+        final result = await repository.getWeeklyDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayStats returns failure when box is closed', () async {
+        final result = await repository.getTodayStats();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getSubjectStats returns failure when box is closed', () async {
+        final result = await repository.getSubjectStats('sub-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('clearAll returns failure when box is closed', () async {
+        final result = await repository.clearAll();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('save returns failure when box is closed', () async {
+        final session = createSession(startTime: DateTime.now());
+        final result = await repository.save(session.id, session);
+        expect(result.isFailure, isTrue);
+      });
+
+      test('get returns failure when box is closed', () async {
+        final result = await repository.get('any-key');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('delete returns failure when box is closed', () async {
+        final result = await repository.delete('any-key');
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('attachBox', () {
+      test('uses a pre-opened Hive box', () async {
+        final box = await Hive.openBox<Session>('test_attach_box');
+        final repo = SessionRepository();
+        repo.attachBox(box);
+        expect(repo.box, isNotNull);
+        expect(repo.box.name, 'test_attach_box');
+        await box.close();
+      });
+    });
+
+    group('multiple sessions edge cases', () {
+      test('getByType distinguishes all session types', () async {
+        for (final type in SessionType.values) {
+          final sess = createSession(
+            id: 'type-${type.name}', startTime: DateTime(2025, 1, 15),
+            type: type,
+          );
+          await repository.save(sess.id, sess);
+        }
+        for (final type in SessionType.values) {
+          final results = await repository.getByType(type);
+          expect(results.isSuccess, isTrue);
+          expect(results.data!.length, 1);
+          expect(results.data!.first.id, 'type-${type.name}');
+        }
+      });
+
+      test('getTodayStats handles sessions without plannedDurationMinutes', () async {
+        final noPlan = createSession(
+          id: 'noplan', startTime: DateTime.now(), completed: true,
+          actualDurationMs: 1000, plannedDurationMinutes: null,
+        );
+        await repository.save(noPlan.id, noPlan);
+        final hasPlan = createSession(
+          id: 'hasplan', startTime: DateTime.now(), completed: false,
+          actualDurationMs: 2000, plannedDurationMinutes: 30,
+        );
+        await repository.save(hasPlan.id, hasPlan);
+        final statsResult = await repository.getTodayStats();
+        expect(statsResult.isSuccess, isTrue);
+        final stats = statsResult.data!;
+        expect(stats['totalMs'], 3000);
+        expect(stats['totalSessions'], 2);
+        expect(stats['completedSessions'], 1);
+        expect(stats['plannedMinutes'], 30);
+      });
+
+      test('getSubjectStats computes perfect score', () async {
+        final sess = createSession(
+          id: 'perfect', subjectId: 'sub-perfect', startTime: DateTime(2025, 1, 15),
+          actualDurationMs: 1000, questionsAnswered: 10, correctAnswers: 10,
+        );
+        await repository.save(sess.id, sess);
+        final statsResult = await repository.getSubjectStats('sub-perfect');
+        expect(statsResult.isSuccess, isTrue);
+        expect(statsResult.data!['avgScore'], 100.0);
+      });
+
+      test('getSubjectStats computes zero score', () async {
+        final sess = createSession(
+          id: 'zero', subjectId: 'sub-zero-score', startTime: DateTime(2025, 1, 15),
+          actualDurationMs: 1000, questionsAnswered: 10, correctAnswers: 0,
+        );
+        await repository.save(sess.id, sess);
+        final statsResult = await repository.getSubjectStats('sub-zero-score');
+        expect(statsResult.isSuccess, isTrue);
+        expect(statsResult.data!['avgScore'], 0.0);
+      });
+
+      test('getByStudentAndSubject returns empty for nonexistent student', () async {
+        final sess = createSession(
+          id: 's1', studentId: 'stu-1', subjectId: 'sub-1',
+          startTime: DateTime(2025, 1, 15),
+        );
+        await repository.save(sess.id, sess);
+        final results = await repository.getByStudentAndSubject('stu-99', 'sub-1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data, isEmpty);
+      });
+
+      test('getRecentSessionsForSubject respects default limit of 10', () async {
+        for (var i = 0; i < 15; i++) {
+          final sess = createSession(
+            id: 's$i', subjectId: 'sub-limit',
+            startTime: DateTime(2025, 1, 15 + i),
+          );
+          await repository.save(sess.id, sess);
+        }
+        final results = await repository.getRecentSessionsForSubject('sub-limit');
+        expect(results.isSuccess, isTrue);
+        expect(results.data!.length, 10);
       });
     });
   });

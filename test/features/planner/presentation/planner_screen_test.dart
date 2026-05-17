@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -9,6 +11,8 @@ import 'package:studyking/features/subjects/data/models/topic_dependency_model.d
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -21,6 +25,7 @@ import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -221,6 +226,20 @@ class _FakePendingActionRepository extends PendingActionRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _FakeAdherenceRepo extends PlanAdherenceRepository {
+  final List<PlanAdherenceModel> _records = [];
+
+  void addRecord(PlanAdherenceModel record) => _records.add(record);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
+    return _records.where((r) => r.studentId == studentId).toList();
+  }
+}
+
 class _FakePlanAdapter extends PlanAdapter {
   AdherenceDeviation? customDeviation;
 
@@ -260,6 +279,7 @@ Widget _buildTestApp({
   SessionRepository? sessionRepository,
   PendingActionRepository? pendingActionRepository,
   PlanAdapter? planAdapter,
+  PlanAdherenceRepository? planAdherenceRepository,
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
@@ -275,6 +295,7 @@ Widget _buildTestApp({
     sessionRepo: sessionRepository ?? _FakeSessionRepository(),
     pendingActionRepo: pendingActionRepository ?? _FakePendingActionRepository(),
     planAdapter: planAdapter ?? _FakePlanAdapter(),
+    adherenceRepo: planAdherenceRepository ?? _FakeAdherenceRepo(),
     fixedStudentId: id,
   );
 
@@ -295,6 +316,11 @@ Widget _buildTestApp({
 }
 
 void main() {
+  setUpAll(() {
+    Hive.init(Directory.systemTemp.createTempSync('planner_screen_test_').path);
+    registerPlannerAdapters();
+  });
+
   group('PlannerScreen', () {
     group('Study Plan tab', () {
       testWidgets('renders title and form fields', (tester) async {
@@ -447,8 +473,9 @@ void main() {
           await tester.pump(const Duration(milliseconds: 100));
         }
 
-        expect(find.text('0Q'), findsOneWidget);
-        expect(find.text('0min'), findsOneWidget);
+        // 30 days * 15 questions/day = 450; 120 min/day * 30 days = 3600
+        expect(find.text('450Q'), findsOneWidget);
+        expect(find.text('3600 min'), findsOneWidget);
 
         final plan = await planRepo.getAllPlans();
         expect(plan, hasLength(1));
@@ -606,7 +633,7 @@ void main() {
         expect(find.text('Your Study Schedule'), findsOneWidget);
         expect(find.text('Plan Summary'), findsOneWidget);
         expect(find.text('50Q'), findsOneWidget);
-        expect(find.text('1200min'), findsOneWidget);
+        expect(find.text('1200 min'), findsOneWidget);
       });
 
       testWidgets('shows no plan when loadPlan returns null', (tester) async {
@@ -1064,7 +1091,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Learn IB Physics'), findsOneWidget);
-        expect(find.text('active'), findsOneWidget);
+        expect(find.text('In Progress'), findsOneWidget);
         expect(find.text('1/2 milestones'), findsOneWidget);
       });
 
@@ -1213,7 +1240,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Master Python'), findsOneWidget);
-        expect(find.text('completed'), findsOneWidget);
+        expect(find.text('Completed'), findsOneWidget);
         expect(find.text('1/3 milestones'), findsOneWidget);
         expect(find.textContaining('Target Completion'), findsOneWidget);
       });
@@ -1386,7 +1413,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Archived goal'), findsOneWidget);
-        expect(find.text('archived'), findsOneWidget);
+        expect(find.text('Not Started'), findsOneWidget);
       });
     });
 
@@ -1492,7 +1519,8 @@ void main() {
         expect(find.text('Course/Subject +'), findsNothing);
 
         await tester.tap(find.text('Subjects'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
         expect(find.text('Course/Subject +'), findsOneWidget);
         expect(find.byIcon(Icons.add), findsOneWidget);
@@ -1502,18 +1530,22 @@ void main() {
         await tester.pumpWidget(_buildTestApp(
           fixedStudentId: 'test-student',
         ));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
 
         await tester.tap(find.text('Subjects'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
 
         await tester.tap(find.text('Course/Subject +'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
 
         expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
 
         await tester.tap(find.text('Course/Subject +'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
 
         expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(2));
 

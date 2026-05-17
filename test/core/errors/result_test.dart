@@ -104,4 +104,84 @@ void main() {
       expect(failure.isFailure, equals(!failure.isSuccess));
     });
   });
+
+  group('Result.capture', () {
+    test('returns success when async block succeeds', () async {
+      final result = await Result.capture(() async => 42);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals(42));
+      expect(result.error, isNull);
+    });
+
+    test('returns failure when async block throws Exception', () async {
+      final result = await Result.capture<int>(() async => throw Exception('fail'));
+      expect(result.isFailure, isTrue);
+      expect(result.data, isNull);
+      expect(result.error, contains('fail'));
+    });
+
+    test('returns failure when async block throws non-Exception', () async {
+      final result = await Result.capture<int>(() async => throw 42);
+      expect(result.isFailure, isTrue);
+      expect(result.error, equals('42'));
+    });
+
+    test('capture with context string does not change return value', () async {
+      final result = await Result.capture(() async => 'data', context: 'ctx');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals('data'));
+    });
+
+    test('capture preserves null return from async block', () async {
+      final result = await Result.capture<String?>(() async => null);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNull);
+    });
+
+    test('capture preserves complex object return', () async {
+      final result = await Result.capture(() async => [1, 2, 3]);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals([1, 2, 3]));
+    });
+  });
+
+  group('Result.captureSync', () {
+    test('returns success when sync block succeeds', () {
+      final result = Result.captureSync(() => 42);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals(42));
+      expect(result.error, isNull);
+    });
+
+    test('returns failure when sync block throws Exception', () {
+      final result = Result.captureSync<int>(() => throw Exception('sync fail'));
+      expect(result.isFailure, isTrue);
+      expect(result.data, isNull);
+      expect(result.error, contains('sync fail'));
+    });
+
+    test('returns failure when sync block throws non-Exception', () {
+      final result = Result.captureSync<int>(() => throw 'string error');
+      expect(result.isFailure, isTrue);
+      expect(result.error, equals('string error'));
+    });
+
+    test('captureSync with context string does not change return value', () {
+      final result = Result.captureSync(() => 'data', context: 'ctx');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals('data'));
+    });
+
+    test('captureSync preserves null return', () {
+      final result = Result.captureSync<String?>(() => null);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNull);
+    });
+
+    test('captureSync preserves complex object return', () {
+      final result = Result.captureSync(() => {'key': 'value'});
+      expect(result.isSuccess, isTrue);
+      expect(result.data, equals({'key': 'value'}));
+    });
+  });
 }

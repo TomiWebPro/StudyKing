@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
@@ -16,10 +17,10 @@ class FakeSettingsRepository implements SettingsRepository {
   SettingsBox _settings = SettingsBox();
 
   @override
-  Future<SettingsBox> getSettings() async => _settings;
+  Future<Result<SettingsBox>> getSettings() async => Result.success(_settings);
 
   @override
-  Future<void> updateSettings({
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -66,28 +67,29 @@ class FakeSettingsRepository implements SettingsRepository {
       firstFocusVisit: firstFocusVisit ?? _settings.firstFocusVisit,
       dailyReminderEnabled: dailyReminderEnabled ?? _settings.dailyReminderEnabled,
     );
+    return Result.success(null);
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
   @override
-  Future<void> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async {}
+  Future<Result<void>> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async => Result.success(null);
   @override
-  Future<void> saveApiKey({required String service, required String key}) async {}
+  Future<Result<void>> saveApiKey({required String service, required String key}) async => Result.success(null);
   @override
-  Future<String?> getApiKey({required String service}) async => _settings.apiKey;
+  Future<Result<String?>> getApiKey({required String service}) async => Result.success(_settings.apiKey);
   @override
-  Future<void> saveProfileData(UserProfile profile) async {}
+  Future<Result<void>> saveProfileData(UserProfile profile) async => Result.success(null);
   @override
-  Future<UserProfile?> getProfileData() async => null;
+  Future<Result<UserProfile?>> getProfileData() async => Result.success(null);
   @override
-  Future<void> clearSettings() async {}
+  Future<Result<void>> clearSettings() async => Result.success(null);
   @override
-  Future<void> clearProfile() async {}
+  Future<Result<void>> clearProfile() async => Result.success(null);
   @override
-  Future<void> saveProvider(LlmProvider provider) async {}
+  Future<Result<void>> saveProvider(LlmProvider provider) async => Result.success(null);
   @override
-  Future<LlmProvider> getProvider() async => LlmProvider.openRouter;
+  Future<Result<LlmProvider>> getProvider() async => Result.success(LlmProvider.openRouter);
 }
 
 final fakeRepo = FakeSettingsRepository();

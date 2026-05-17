@@ -43,10 +43,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      // Get the settings repository from main
       final repository = settingsRepository;
-      final profile = await repository.getProfileData();
-      
+      final profileResult = await repository.getProfileData();
+
+      if (profileResult.isFailure) {
+        _logger.e('Error loading profile: ${profileResult.error}');
+        if (mounted) {
+          setState(() {
+            _avatarIconKey = 'Icons.person';
+          });
+        }
+        return;
+      }
+
+      final profile = profileResult.data;
       if (profile != null && mounted) {
         setState(() {
           _profileId = profile.id;
@@ -107,7 +117,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       // Save to repository
-      await settingsRepository.saveProfileData(profile);
+      final saveResult = await settingsRepository.saveProfileData(profile);
+      if (saveResult.isFailure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorSavingProfile(saveResult.error!))),
+          );
+        }
+        return;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -498,10 +516,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           FilledButton(
             onPressed: () async {
-               await settingsRepository.clearProfile();
-               if (!context.mounted) return;
-               Navigator.pop(context);
-               Navigator.maybePop(context);
+              final clearResult = await settingsRepository.clearProfile();
+              if (clearResult.isFailure) return;
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              Navigator.maybePop(context);
             },
             style: FilledButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),

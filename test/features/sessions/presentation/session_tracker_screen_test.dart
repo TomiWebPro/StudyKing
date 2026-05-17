@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
@@ -37,7 +36,7 @@ Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? 
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-      home: SessionTrackerScreen(sessionRepository: repository),
+      home: SessionTrackerScreen(sessionRepository: repository, fixedStudentId: 'test-student'),
       routes: {
         '/session-history': (_) => const Scaffold(body: Center(child: Text('Session History'))),
       },
@@ -46,10 +45,6 @@ Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? 
 }
 
 void main() {
-  setUpAll(() async {
-    StudentIdService().setStudentId('test-student');
-  });
-
   group('SessionTrackerScreen', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -197,7 +192,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('en'),
-          home: SessionTrackerScreen(sessionRepository: repo),
+          home: SessionTrackerScreen(sessionRepository: repo, fixedStudentId: 'test-student'),
           routes: {
             '/session-history': (_) => const Scaffold(body: Center(child: Text('Session History'))),
           },

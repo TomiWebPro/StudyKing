@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
@@ -7,9 +8,9 @@ import 'package:studyking/features/settings/data/repositories/settings_repositor
 import 'settings_repository_test_helper.dart';
 
 abstract class FakeSettingsRepository {
-  Future<void> init();
-  Future<SettingsBox> getSettings();
-  Future<void> updateSettings({
+  Future<Result<void>> init();
+  Future<Result<SettingsBox>> getSettings();
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -26,19 +27,19 @@ abstract class FakeSettingsRepository {
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
   });
-  Future<void> updateStats({
+  Future<Result<void>> updateStats({
     int? sessionCount,
     int? studyTimeMs,
     int? questions,
   });
-  Future<void> saveApiKey({required String service, required String key});
-  Future<String?> getApiKey({required String service});
-  Future<void> saveProfileData(UserProfile profile);
-  Future<UserProfile?> getProfileData();
-  Future<void> clearSettings();
-  Future<void> clearProfile();
-  Future<void> saveProvider(LlmProvider provider);
-  Future<LlmProvider> getProvider();
+  Future<Result<void>> saveApiKey({required String service, required String key});
+  Future<Result<String?>> getApiKey({required String service});
+  Future<Result<void>> saveProfileData(UserProfile profile);
+  Future<Result<UserProfile?>> getProfileData();
+  Future<Result<void>> clearSettings();
+  Future<Result<void>> clearProfile();
+  Future<Result<void>> saveProvider(LlmProvider provider);
+  Future<Result<LlmProvider>> getProvider();
 }
 
 class InMemorySettingsRepository implements FakeSettingsRepository {
@@ -53,14 +54,15 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
   }
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     _initialized = true;
+    return Result.success(null);
   }
 
   @override
-  Future<SettingsBox> getSettings() async {
+  Future<Result<SettingsBox>> getSettings() async {
     _ensureInitialized();
-    return SettingsBox(
+    return Result.success(SettingsBox(
       apiKey: _settings['apiKey'] ?? '',
       apiBaseUrl: _settings['apiBaseUrl'] ?? 'https://openrouter.ai/api/v1',
       selectedModel: _settings['selectedModel'] ?? '',
@@ -79,11 +81,11 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
       lessonNotificationsEnabled: _settings['lessonNotificationsEnabled'] ?? true,
       overworkAlertsEnabled: _settings['overworkAlertsEnabled'] ?? true,
       planAdjustmentNotificationsEnabled: _settings['planAdjustmentNotificationsEnabled'] ?? true,
-    );
+    ));
   }
 
   @override
-  Future<void> updateSettings({
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -101,7 +103,8 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
     bool? planAdjustmentNotificationsEnabled,
   }) async {
     _ensureInitialized();
-    final current = await getSettings();
+    final currentResult = await getSettings();
+    final current = currentResult.data!;
 
     _settings['apiKey'] = apiKey ?? current.apiKey;
     _settings['apiBaseUrl'] = apiBaseUrl ?? current.apiBaseUrl;
@@ -128,23 +131,26 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
         overworkAlertsEnabled ?? current.overworkAlertsEnabled;
     _settings['planAdjustmentNotificationsEnabled'] =
         planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled;
+    return Result.success(null);
   }
 
   @override
-  Future<void> updateStats({
+  Future<Result<void>> updateStats({
     int? sessionCount,
     int? studyTimeMs,
     int? questions,
   }) async {
     _ensureInitialized();
-    final current = await getSettings();
+    final currentResult = await getSettings();
+    final current = currentResult.data!;
     _settings['totalSessionCount'] = sessionCount ?? current.totalSessionCount;
     _settings['totalStudyTimeMs'] = studyTimeMs ?? current.totalStudyTimeMs;
     _settings['totalQuestions'] = questions ?? current.totalQuestions;
+    return Result.success(null);
   }
 
   @override
-  Future<void> saveApiKey({
+  Future<Result<void>> saveApiKey({
     required String service,
     required String key,
   }) async {
@@ -153,75 +159,81 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
     if (service != 'default') {
       _settings['apiKey_$service'] = key;
     }
+    return Result.success(null);
   }
 
   @override
-  Future<String?> getApiKey({required String service}) async {
+  Future<Result<String?>> getApiKey({required String service}) async {
     _ensureInitialized();
     if (service == 'default') {
-      return _settings['apiKey'];
+      return Result.success(_settings['apiKey']);
     } else {
-      return _settings['apiKey_$service'];
+      return Result.success(_settings['apiKey_$service']);
     }
   }
 
   @override
-  Future<void> saveProfileData(UserProfile profile) async {
+  Future<Result<void>> saveProfileData(UserProfile profile) async {
     _ensureInitialized();
     _profile[profile.id] = profile;
     _profile['current_profile'] = profile.id;
+    return Result.success(null);
   }
 
   @override
-  Future<UserProfile?> getProfileData() async {
+  Future<Result<UserProfile?>> getProfileData() async {
     _ensureInitialized();
     final currentId = _profile['current_profile'];
     if (currentId is String) {
       final profile = _profile[currentId];
-      if (profile is UserProfile) return profile;
+      if (profile is UserProfile) return Result.success(profile);
     }
 
     if (_profile.isEmpty) {
-      return UserProfile(id: 'default_profile', name: '');
+      return Result.success(UserProfile(id: 'default_profile', name: ''));
     }
 
     for (final key in _profile.keys) {
       final value = _profile[key];
       if (value is UserProfile) {
         _profile['current_profile'] = value.id;
-        return value;
+        return Result.success(value);
       }
     }
 
-    return null;
+    return Result.success(null);
   }
 
   @override
-  Future<void> clearSettings() async {
+  Future<Result<void>> clearSettings() async {
     _ensureInitialized();
     _settings.clear();
+    return Result.success(null);
   }
 
   @override
-  Future<void> clearProfile() async {
+  Future<Result<void>> clearProfile() async {
     _ensureInitialized();
     _profile.clear();
+    return Result.success(null);
   }
 
   @override
-  Future<void> saveProvider(LlmProvider provider) async {
+  Future<Result<void>> saveProvider(LlmProvider provider) async {
     _ensureInitialized();
     _settings['llmProvider'] = provider.name;
+    return Result.success(null);
   }
 
   @override
-  Future<LlmProvider> getProvider() async {
+  Future<Result<LlmProvider>> getProvider() async {
     _ensureInitialized();
     final stored = _settings['llmProvider'] as String? ?? 'openRouter';
-    return LlmProvider.values.firstWhere(
+    final provider = LlmProvider.values.firstWhere(
       (p) => p.name == stored,
       orElse: () => LlmProvider.openRouter,
     );
+    return Result.success(provider);
   }
 }
 
@@ -255,9 +267,10 @@ void main() {
         final repo = InMemorySettingsRepository();
         await repo.init();
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('default_profile'));
-        expect(result.name, equals(''));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('default_profile'));
+        expect(result.data!.name, equals(''));
       });
 
       test('returns null when only non-profile keys exist', () async {
@@ -265,7 +278,8 @@ void main() {
         await repo.init();
         repo._profile['some_key'] = 'some_value';
         final result = await repo.getProfileData();
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('finds profile by scanning when current_profile is not set', () async {
@@ -274,9 +288,10 @@ void main() {
         final profile = UserProfile(id: 'scanned', name: 'Found by scan');
         repo._profile['scanned'] = profile;
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('scanned'));
-        expect(result.name, equals('Found by scan'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('scanned'));
+        expect(result.data!.name, equals('Found by scan'));
       });
 
       test('handles profile with non-String current_profile key', () async {
@@ -286,8 +301,9 @@ void main() {
         final profile = UserProfile(id: 'fallback', name: 'Fallback');
         repo._profile['fallback'] = profile;
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('fallback'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('fallback'));
       });
 
       test('returns null when box has keys but no UserProfile values', () async {
@@ -297,7 +313,8 @@ void main() {
         repo._profile['key2'] = 42;
         repo._profile['key3'] = true;
         final result = await repo.getProfileData();
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('fallback profile when current_profile key has non-UserProfile value', () async {
@@ -308,8 +325,9 @@ void main() {
         final profile = UserProfile(id: 'scanned', name: 'Found by scan');
         repo._profile['scanned'] = profile;
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('scanned'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('scanned'));
       });
 
       test('fallback profile when current_profile key does not exist', () async {
@@ -319,8 +337,9 @@ void main() {
         final profile = UserProfile(id: 'scanned', name: 'Fallback');
         repo._profile['scanned'] = profile;
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('scanned'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('scanned'));
       });
     });
 
@@ -331,7 +350,8 @@ void main() {
         await repo.updateSettings(apiKey: 'key1', fontSize: 18.0);
         await repo.updateSettings(apiBaseUrl: 'https://url2.com', themeMode: ThemeMode.dark);
         await repo.updateSettings(selectedModel: 'model3', studyRemindersEnabled: false);
-        final settings = await repo.getSettings();
+        final settingsResult = await repo.getSettings();
+        final settings = settingsResult.data!;
         expect(settings.apiKey, equals('key1'));
         expect(settings.apiBaseUrl, equals('https://url2.com'));
         expect(settings.selectedModel, equals('model3'));
@@ -345,7 +365,8 @@ void main() {
         await repo.init();
         await repo.updateStats(sessionCount: 10, studyTimeMs: 5000, questions: 50);
         await repo.updateSettings(fontSize: 20.0);
-        final settings = await repo.getSettings();
+        final settingsResult = await repo.getSettings();
+        final settings = settingsResult.data!;
         expect(settings.totalSessionCount, equals(10));
         expect(settings.totalStudyTimeMs, equals(5000));
         expect(settings.totalQuestions, equals(50));
@@ -360,7 +381,8 @@ void main() {
         await repo.clearProfile();
         await repo.clearProfile();
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
       });
 
       test('clearSettings on already empty box does not throw', () async {
@@ -368,7 +390,8 @@ void main() {
         await repo.init();
         await repo.clearSettings();
         await repo.clearSettings();
-        final settings = await repo.getSettings();
+        final settingsResult = await repo.getSettings();
+        final settings = settingsResult.data!;
         expect(settings.apiKey, equals(''));
         expect(settings.fontSize, equals(16.0));
       });
@@ -381,19 +404,19 @@ void main() {
         await repo.saveApiKey(service: 'default', key: 'sk-settings-key');
         await repo.saveProfileData(UserProfile(id: 'prof1', name: 'Profile User'));
 
-        final settings = await repo.getSettings();
-        expect(settings.apiKey, equals('sk-settings-key'));
+        final settingsResult = await repo.getSettings();
+        expect(settingsResult.data!.apiKey, equals('sk-settings-key'));
 
-        final profile = await repo.getProfileData();
-        expect(profile!.name, equals('Profile User'));
+        final profileResult = await repo.getProfileData();
+        expect(profileResult.data!.name, equals('Profile User'));
 
         await repo.clearSettings();
 
-        final settingsAfterClear = await repo.getSettings();
-        expect(settingsAfterClear.apiKey, equals(''));
+        final settingsAfterClearResult = await repo.getSettings();
+        expect(settingsAfterClearResult.data!.apiKey, equals(''));
 
-        final profileAfterClear = await repo.getProfileData();
-        expect(profileAfterClear!.name, equals('Profile User'));
+        final profileAfterClearResult = await repo.getProfileData();
+        expect(profileAfterClearResult.data!.name, equals('Profile User'));
       });
 
       test('clearing profile does not affect settings data', () async {
@@ -404,13 +427,14 @@ void main() {
 
         await repo.clearProfile();
 
-        final settingsAfterClear = await repo.getSettings();
-        expect(settingsAfterClear.apiKey, equals('sk-profile-test'));
-        expect(settingsAfterClear.fontSize, equals(20.0));
+        final settingsAfterClearResult = await repo.getSettings();
+        expect(settingsAfterClearResult.data!.apiKey, equals('sk-profile-test'));
+        expect(settingsAfterClearResult.data!.fontSize, equals(20.0));
 
         final result = await repo.getProfileData();
-        expect(result, isNotNull);
-        expect(result!.id, equals('default_profile'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, equals('default_profile'));
       });
     });
 
@@ -419,8 +443,8 @@ void main() {
         final repo = InMemorySettingsRepository();
         await repo.init();
         await repo.saveApiKey(service: 'default', key: 'sk-default-only');
-        expect(await repo.getApiKey(service: 'default'), equals('sk-default-only'));
-        expect(await repo.getApiKey(service: 'other'), isNull);
+        expect((await repo.getApiKey(service: 'default')).data, equals('sk-default-only'));
+        expect((await repo.getApiKey(service: 'other')).data, isNull);
       });
 
       test('default key is updated when custom service key is saved', () async {
@@ -428,15 +452,15 @@ void main() {
         await repo.init();
         await repo.saveApiKey(service: 'default', key: 'sk-default');
         await repo.saveApiKey(service: 'custom', key: 'sk-custom');
-        expect(await repo.getApiKey(service: 'default'), equals('sk-custom'));
-        expect(await repo.getApiKey(service: 'custom'), equals('sk-custom'));
+        expect((await repo.getApiKey(service: 'default')).data, equals('sk-custom'));
+        expect((await repo.getApiKey(service: 'custom')).data, equals('sk-custom'));
       });
 
       test('empty string key can be saved', () async {
         final repo = InMemorySettingsRepository();
         await repo.init();
         await repo.saveApiKey(service: 'default', key: '');
-        expect(await repo.getApiKey(service: 'default'), equals(''));
+        expect((await repo.getApiKey(service: 'default')).data, equals(''));
       });
     });
 
@@ -446,7 +470,8 @@ void main() {
         await repo.init();
         await repo.updateStats(sessionCount: 10, studyTimeMs: 5000, questions: 50);
         await repo.updateStats();
-        final settings = await repo.getSettings();
+        final settingsResult = await repo.getSettings();
+        final settings = settingsResult.data!;
         expect(settings.totalSessionCount, equals(10));
         expect(settings.totalStudyTimeMs, equals(5000));
         expect(settings.totalQuestions, equals(50));
@@ -458,16 +483,16 @@ void main() {
         final repo = InMemorySettingsRepository();
         await repo.init();
         repo._settings['llmProvider'] = 'non_existent_provider';
-        final provider = await repo.getProvider();
-        expect(provider, LlmProvider.openRouter);
+        final providerResult = await repo.getProvider();
+        expect(providerResult.data, LlmProvider.openRouter);
       });
 
       test('persists provider across multiple getProvider calls', () async {
         final repo = InMemorySettingsRepository();
         await repo.init();
         await repo.saveProvider(LlmProvider.ollama);
-        expect(await repo.getProvider(), LlmProvider.ollama);
-        expect(await repo.getProvider(), LlmProvider.ollama);
+        expect((await repo.getProvider()).data, LlmProvider.ollama);
+        expect((await repo.getProvider()).data, LlmProvider.ollama);
       });
     });
 
@@ -481,7 +506,8 @@ void main() {
           themeMode: ThemeMode.dark,
         );
         await repo.updateSettings();
-        final settings = await repo.getSettings();
+        final settingsResult = await repo.getSettings();
+        final settings = settingsResult.data!;
         expect(settings.apiKey, equals('sk-existing'));
         expect(settings.fontSize, equals(18.0));
         expect(settings.themeMode, equals(ThemeMode.dark.index));

@@ -30,7 +30,6 @@ import 'package:studyking/features/practice/data/models/question_mastery_state_m
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -41,10 +40,10 @@ class _FakeSettingsRepository extends SettingsRepository {
   final Map<String, dynamic> _store = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<void> updateSettings({
+  Future<Result<void>> updateSettings({
     String? apiKey,
     String? apiBaseUrl,
     String? selectedModel,
@@ -69,15 +68,16 @@ class _FakeSettingsRepository extends SettingsRepository {
     if (reduceMotion != null) _store['reduceMotion'] = reduceMotion;
     if (highContrastEnabled != null) _store['highContrastEnabled'] = highContrastEnabled;
     if (largeTouchTargets != null) _store['largeTouchTargets'] = largeTouchTargets;
+    return Result.success(null);
   }
 
   @override
-  Future<SettingsBox> getSettings() async {
-    return SettingsBox(
+  Future<Result<SettingsBox>> getSettings() async {
+    return Result.success(SettingsBox(
       reduceMotion: _store['reduceMotion'] as bool? ?? false,
       highContrastEnabled: _store['highContrastEnabled'] as bool? ?? false,
       largeTouchTargets: _store['largeTouchTargets'] as bool? ?? false,
-    );
+    ));
   }
 }
 

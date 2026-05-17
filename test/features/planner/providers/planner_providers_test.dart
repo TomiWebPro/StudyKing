@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -17,6 +19,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
+import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -49,11 +53,17 @@ class _FakePlanRepository extends PlanRepository {
 class _FakeMasteryRepository extends MasteryGraphRepository {
   bool _throwOnGetAllMasteryStates = false;
   bool _returnFailureOnGetAllMasteryStates = false;
+  final Map<String, MasteryState> _masteryStates = {};
+  final List<TopicDependency> _dependencies = [];
 
   void setThrowOnGetAllMasteryStates() =>
       _throwOnGetAllMasteryStates = true;
   void setReturnFailure() =>
       _returnFailureOnGetAllMasteryStates = true;
+  void addMasteryState(MasteryState state) {
+    _masteryStates['${state.studentId}_${state.topicId}'] = state;
+  }
+  void addDependency(TopicDependency dep) => _dependencies.add(dep);
 
   @override
   Future<void> init() async {}
@@ -64,29 +74,41 @@ class _FakeMasteryRepository extends MasteryGraphRepository {
     if (_returnFailureOnGetAllMasteryStates) {
       return Result.failure('mastery repo failure');
     }
-    return Result.success([]);
+    return Result.success(
+      _masteryStates.values.where((s) => s.studentId == studentId).toList(),
+    );
   }
 
   @override
   Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success([]);
+    return Result.success(_dependencies);
   }
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    final key = '${studentId}_$topicId';
+    if (_masteryStates.containsKey(key)) {
+      return Result.success(_masteryStates[key]!);
+    }
     return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
   }
 }
 
 class _FakeTopicRepository extends TopicRepository {
+  final Map<String, Topic> _topics = {};
+
+  void addTopic(Topic topic) => _topics[topic.id] = topic;
+
   @override
   Future<void> init() async {}
 
   @override
-  Future<Result<Topic?>> get(String id) async => Result.success(null);
+  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async => [];
+  Future<List<Topic>> getBySubject(String subjectId) async {
+    return _topics.values.where((t) => t.subjectId == subjectId).toList();
+  }
 }
 
 class _FakeRoadmapRepository extends RoadmapRepository {
@@ -330,6 +352,7 @@ PlannerService _createService({
   _FakePendingActionRepo? pendingActionRepo,
   _FakePlanAdapter? planAdapter,
   _FakeAdherenceRepo? adherenceRepo,
+  SyllabusResolver? syllabusResolver,
   String? fixedStudentId,
 }) {
   final pRepo = planRepo ?? _FakePlanRepository();
@@ -339,6 +362,10 @@ PlannerService _createService({
   final sRepo = sessionRepo ?? _FakeSessionRepo();
   final paRepo = pendingActionRepo ?? _FakePendingActionRepo();
   final adapter = planAdapter ?? _FakePlanAdapter();
+  final resolver = syllabusResolver ?? SyllabusResolver(
+    topicRepository: tRepo,
+    masteryRepository: mRepo,
+  );
   return PlannerService(
     planRepo: pRepo,
     masteryService: MasteryGraphService(repository: mRepo),
@@ -349,6 +376,7 @@ PlannerService _createService({
     pendingActionRepo: paRepo,
     planAdapter: adapter,
     adherenceRepo: adherenceRepo,
+    syllabusResolver: resolver,
     fixedStudentId: fixedStudentId ?? 'test-student',
   );
 }
@@ -406,6 +434,9 @@ void main() {
     late PlannerNotifier notifier;
 
     setUp(() {
+      Hive.init(Directory.systemTemp.createTempSync('planner_providers_test_').path);
+      registerPlannerAdapters();
+
       planRepo = _FakePlanRepository();
       masteryRepo = _FakeMasteryRepository();
       l10n = AppLocalizationsEn();
@@ -415,6 +446,11 @@ void main() {
       pendingActionRepo = _FakePendingActionRepo();
       planAdapter = _FakePlanAdapter();
 
+      final syllabusResolver = SyllabusResolver(
+        topicRepository: topicRepo,
+        masteryRepository: masteryRepo,
+      );
+
       service = _createService(
         planRepo: planRepo,
         masteryRepo: masteryRepo,
@@ -423,6 +459,7 @@ void main() {
         sessionRepo: sessionRepo,
         pendingActionRepo: pendingActionRepo,
         planAdapter: planAdapter,
+        syllabusResolver: syllabusResolver,
       );
 
       notifier = PlannerNotifier(service);
@@ -532,6 +569,17 @@ void main() {
 
     group('generatePlanFromSyllabus', () {
       test('generates plan from syllabus goals', () async {
+        topicRepo.addTopic(Topic(
+          id: 'topic-1',
+          subjectId: 'sub_physics',
+          title: 'Kinematics',
+          description: 'Motion',
+          syllabusText: 'IB Physics topic',
+        ));
+        masteryRepo.addMasteryState(
+          MasteryState.initial(studentId: 'test-student', topicId: 'topic-1'),
+        );
+
         await notifier.generatePlanFromSyllabus(
           syllabusGoals: [
             const SyllabusGoal(

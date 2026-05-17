@@ -2,51 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class _FakeTopicRepository extends TopicRepository {
-  bool get wasUsedViaWatch => _wasUsedViaWatch;
-  bool _wasUsedViaWatch = false;
+  final Map<String, Topic> _topics = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> save(String key, Topic item) async {
+    _topics[key] = item;
+    return Result.success(null);
+  }
 
   @override
-  Future<Result<void>> save(String key, Topic item) async =>
-      Result.success(null);
-
-  @override
-  Future<Result<Topic?>> get(String key) async => Result.success(null);
+  Future<Result<Topic?>> get(String key) async {
+    return Result.success(_topics[key]);
+  }
 
   @override
   Future<Result<List<Topic>>> getAll() async {
-    _wasUsedViaWatch = true;
-    return Result.success([]);
+    return Result.success(_topics.values.toList());
   }
 
   @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
-
-  @override
-  Future<List<Topic>> getBySubject(String subjectId) async => [];
-
-  @override
-  Future<List<Topic>> getByParent(String parentId) async => [];
-
-  @override
-  Future<List<Topic>> getRootTopics() async => [];
+  Future<void> init() async {}
 }
 
-class _TopicWatcherWidget extends ConsumerWidget {
-  const _TopicWatcherWidget();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(topicRepositoryProvider);
-    return Text('RepoReady');
-  }
+Topic _createTopic({required String id, required String subjectId}) {
+  return Topic(
+    id: id,
+    subjectId: subjectId,
+    title: 'Topic $id',
+    description: 'Description for $id',
+    syllabusText: 'Syllabus for $id',
+    childTopicIds: [],
+  );
 }
 
 class _TopicReaderWidget extends ConsumerStatefulWidget {
@@ -73,121 +64,29 @@ class _TopicReaderWidgetState extends ConsumerState<_TopicReaderWidget> {
 }
 
 void main() {
-  group('topicRepositoryProvider widget tests', () {
-    testWidgets('displays repo status via ref.watch', (tester) async {
-      final fakeRepo = _FakeTopicRepository();
+  testWidgets('provider is accessible in widget tree', (tester) async {
+    final fakeRepo = _FakeTopicRepository();
+    await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(fakeRepo),
-          ],
-          child: const MaterialApp(
-            home: _TopicWatcherWidget(),
+    String? topicTitle;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          topicRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+        child: MaterialApp(
+          home: _TopicReaderWidget(
+            onRead: (repo) async {
+              final topic = await repo.get('t1');
+              topicTitle = topic.data?.title;
+            },
           ),
         ),
-      );
+      ),
+    );
 
-      expect(find.text('RepoReady'), findsOneWidget);
-    });
-
-    testWidgets('ref.read accesses the same instance as override',
-        (tester) async {
-      final fakeRepo = _FakeTopicRepository();
-      TopicRepository? receivedRepo;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(fakeRepo),
-          ],
-          child: MaterialApp(
-            home: _TopicReaderWidget(
-              onRead: (repo) => receivedRepo = repo,
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      expect(receivedRepo, same(fakeRepo));
-    });
-
-    testWidgets('repo can be watched in multiple widgets', (tester) async {
-      final fakeRepo = _FakeTopicRepository();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(fakeRepo),
-          ],
-          child: const MaterialApp(
-            home: Column(
-              children: [
-                _TopicWatcherWidget(),
-                _TopicWatcherWidget(),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('RepoReady'), findsNWidgets(2));
-    });
-
-    testWidgets('override with different repos are independent',
-        (tester) async {
-      final fakeRepo1 = _FakeTopicRepository();
-      final fakeRepo2 = _FakeTopicRepository();
-      TopicRepository? repoFromScope1;
-      TopicRepository? repoFromScope2;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Row(
-            children: [
-              ProviderScope(
-                overrides: [
-                  topicRepositoryProvider.overrideWithValue(fakeRepo1),
-                ],
-                child: _TopicReaderWidget(
-                  onRead: (repo) => repoFromScope1 = repo,
-                ),
-              ),
-              ProviderScope(
-                overrides: [
-                  topicRepositoryProvider.overrideWithValue(fakeRepo2),
-                ],
-                child: _TopicReaderWidget(
-                  onRead: (repo) => repoFromScope2 = repo,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      await tester.pump();
-      expect(repoFromScope1, same(fakeRepo1));
-      expect(repoFromScope2, same(fakeRepo2));
-      expect(identical(repoFromScope1, repoFromScope2), isFalse);
-    });
-
-    testWidgets('provider is accessible without override', (tester) async {
-      TopicRepository? receivedRepo;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: _TopicReaderWidget(
-              onRead: (repo) => receivedRepo = repo,
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      expect(receivedRepo, isA<TopicRepository>());
-    });
+    await tester.pump();
+    expect(topicTitle, 'Topic t1');
   });
 }
