@@ -746,6 +746,12 @@ abstract class AppLocalizations {
   /// **'Choose Avatar'**
   String get chooseAvatar;
 
+  /// Button label to confirm an action
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
   /// Cancel button label
   ///
   /// In en, this message translates to:
@@ -3991,6 +3997,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to generate progress report. Please try again later.'**
   String get mentorProgressReportError;
+
+  /// Message when API key is missing for mentor chat
+  ///
+  /// In en, this message translates to:
+  /// **'AI service not configured.'**
+  String get mentorApiKeyMissing;
 
   /// Mentor message when no subjects exist
   ///

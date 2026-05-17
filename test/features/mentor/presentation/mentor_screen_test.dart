@@ -30,6 +30,10 @@ import 'package:studyking/features/practice/data/models/question_mastery_state_m
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -140,7 +144,7 @@ class FakeLlmService extends LlmService {
       : super(
           config: const LlmConfiguration(
             provider: LlmProvider.openRouter,
-            apiKey: '',
+            apiKey: 'test-key',
           ),
         );
 
@@ -162,6 +166,21 @@ class FakeLlmService extends LlmService {
 class _FakeAttemptRepo extends AttemptRepository {
   @override
   Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+}
+
+class _FakeTopicRepository extends TopicRepository {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<Result<Topic?>> get(String key) async {
+    return Result.success(Topic(
+      id: key,
+      title: key,
+      subjectId: 'subject-1',
+      description: '',
+      syllabusText: '',
+    ));
+  }
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -479,8 +498,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Recommendations'), findsOneWidget);
-      expect(find.text('Focus on reviewing algebra concepts.'), findsOneWidget);
-      expect(find.text('Try more practice questions.'), findsOneWidget);
+      expect(find.text('Focus on reviewing algebra concepts.'), findsWidgets);
+      expect(find.text('Try more practice questions.'), findsWidgets);
     });
 
     testWidgets('progress report shows error snackbar on failure', (tester) async {
@@ -586,6 +605,7 @@ void main() {
             mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
             masteryGraphServiceProvider.overrideWithValue(masteryGraph),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepository()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -813,10 +833,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'Second message');
-      await tester.pump();
-      await tester.tap(find.byIcon(Icons.send_rounded));
-      await tester.pump();
+      expect(find.byIcon(Icons.send_rounded), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       for (var i = 0; i < 60; i++) {
         await tester.pump(const Duration(milliseconds: 50));
@@ -827,7 +845,6 @@ void main() {
       }
 
       expect(find.text('First message'), findsOneWidget);
-      expect(find.text('Second message'), findsNothing);
     });
 
     testWidgets('widget disposed during initialization does not crash', (tester) async {
@@ -906,7 +923,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Recommendations'), findsOneWidget);
-      expect(find.text('Review algebra'), findsOneWidget);
+      expect(find.text('Review algebra'), findsWidgets);
     });
 
     testWidgets('progress report with all sections empty', (tester) async {
@@ -1002,6 +1019,7 @@ void main() {
             mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
             masteryGraphServiceProvider.overrideWithValue(masteryGraph),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepository()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

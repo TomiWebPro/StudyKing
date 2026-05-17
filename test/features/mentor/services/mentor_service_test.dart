@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
@@ -336,6 +337,10 @@ class _FakeSessionRepo extends SessionRepository {
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting('en');
+  });
+
   group('MentorService', () {
     group('initial state', () {
       test('memory is a ConversationMemory', () {
@@ -700,75 +705,71 @@ void main() {
         fakePlanner = FakePlannerService();
       });
 
-      test('schedule keyword directly schedules a lesson', () async {
+      test('schedule keyword creates pending schedule proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('schedule a math lesson').toList();
-        expect(fakePlanner.scheduleCallCount, greaterThan(0));
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(fakePlanner.scheduleCallCount, equals(0));
       });
 
-      test('plan keyword adds system message about planning', () async {
+      test('plan keyword creates pending plan proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('plan a study roadmap').toList();
-        final history = service.memory.getHistory();
-        expect(history.any((m) =>
-            m.role == MessageRole.system &&
-            m.content.contains('study plan')), isTrue);
+        expect(service.pendingPlanProposal, isNotNull);
       });
 
-      test('roadmap keyword adds system message', () async {
+      test('roadmap keyword creates pending plan proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('create a roadmap for chemistry').toList();
-        final history = service.memory.getHistory();
-        expect(history.any((m) =>
-            m.role == MessageRole.system &&
-            m.content.contains('roadmap')), isTrue);
+        expect(service.pendingPlanProposal, isNotNull);
       });
 
-      test('programar keyword (Portuguese) schedules a lesson', () async {
+      test('programar keyword (Portuguese) creates schedule proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('programar estudos de matematica').toList();
-        expect(fakePlanner.scheduleCallCount, greaterThan(0));
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(fakePlanner.scheduleCallCount, equals(0));
       });
 
-      test('reprogramar keyword (Portuguese) schedules', () async {
+      test('reprogramar keyword (Portuguese) creates schedule proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('reprogramar sessoes').toList();
-        expect(fakePlanner.scheduleCallCount, greaterThan(0));
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(fakePlanner.scheduleCallCount, equals(0));
       });
 
-      test('planificar keyword (Spanish) adds system message', () async {
+      test('planificar keyword (Spanish) creates plan proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('planificar el estudio').toList();
-        final history = service.memory.getHistory();
-        expect(history.any((m) =>
-            m.role == MessageRole.system), isTrue);
+        expect(service.pendingPlanProposal, isNotNull);
       });
 
-      test('non-planning message does not trigger scheduling', () async {
+      test('non-planning message does not trigger any intent', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
         );
         await service.chat('hello how are you').toList();
-        expect(fakePlanner.scheduleCallCount, equals(0));
+        expect(service.pendingScheduleProposal, isNull);
+        expect(service.pendingPlanProposal, isNull);
       });
 
       test('topic is extracted from schedule message', () async {
@@ -777,7 +778,7 @@ void main() {
           plannerService: fakePlanner,
         );
         await service.chat('schedule a lesson about calculus').toList();
-        expect(fakePlanner.lastScheduledTopicTitle, equals('calculus'));
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculus'));
       });
 
       test('topic with punctuation is trimmed', () async {
@@ -786,7 +787,7 @@ void main() {
           plannerService: fakePlanner,
         );
         await service.chat('schedule study linear algebra, please').toList();
-        expect(fakePlanner.lastScheduledTopicTitle, equals('linear algebra'));
+        expect(service.pendingScheduleProposal!.topicTitle, equals('linear algebra'));
       });
 
       test('topic after learn keyword is extracted', () async {
@@ -795,7 +796,7 @@ void main() {
           plannerService: fakePlanner,
         );
         await service.chat('schedule learn dart').toList();
-        expect(fakePlanner.lastScheduledTopicTitle, equals('dart'));
+        expect(service.pendingScheduleProposal!.topicTitle, equals('dart'));
       });
 
       test('topic after topic keyword is extracted', () async {
@@ -804,7 +805,7 @@ void main() {
           plannerService: fakePlanner,
         );
         await service.chat('schedule topic world history').toList();
-        expect(fakePlanner.lastScheduledTopicTitle, equals('world history'));
+        expect(service.pendingScheduleProposal!.topicTitle, equals('world history'));
       });
 
       test('fallback to general when no topic keyword found', () async {
@@ -813,7 +814,7 @@ void main() {
           plannerService: fakePlanner,
         );
         await service.chat('schedule something').toList();
-        expect(fakePlanner.lastScheduledTopicTitle, equals('general'));
+        expect(service.pendingScheduleProposal!.topicTitle, equals('general'));
       });
 
       test('chat completes when LLM response triggers planning intent',
@@ -826,7 +827,7 @@ void main() {
         expect(chunks, isNotEmpty);
       });
 
-      test('planner errors are caught silently during scheduling', () async {
+      test('planner not called during chat', () async {
         final planner = FakePlannerService();
         planner.setScheduleResult(false);
         final service = createMentorService(
@@ -835,6 +836,7 @@ void main() {
         );
         final chunks = await service.chat('schedule a lesson').toList();
         expect(chunks, isNotEmpty);
+        expect(planner.scheduleCallCount, equals(0));
       });
     });
 

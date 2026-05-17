@@ -508,6 +508,10 @@
   "@chooseAvatar": {
     "description": "Title for avatar picker bottom sheet"
   },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Button label to confirm an action"
+  },
   "cancel": "Cancel",
   "@cancel": {
     "description": "Cancel button label"
@@ -3122,6 +3126,10 @@
   "mentorProgressReportError": "Unable to generate progress report. Please try again later.",
   "@mentorProgressReportError": {
     "description": "Error when progress report generation fails"
+  },
+  "mentorApiKeyMissing": "AI service not configured.",
+  "@mentorApiKeyMissing": {
+    "description": "Message when API key is missing for mentor chat"
   },
   "mentorNoSubjects": "You haven't added any subjects yet. Would you like help setting up your first subject?",
   "@mentorNoSubjects": {

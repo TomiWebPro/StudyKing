@@ -412,6 +412,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get chooseAvatar => 'Elegir Avatar';
 
   @override
+  String get confirm => 'Confirmar';
+
+  @override
   String get cancel => 'Cancelar';
 
   @override
@@ -2348,6 +2351,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get mentorProgressReportError =>
       'No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.';
+
+  @override
+  String get mentorApiKeyMissing => 'Servicio de IA no configurado.';
 
   @override
   String get mentorNoSubjects =>

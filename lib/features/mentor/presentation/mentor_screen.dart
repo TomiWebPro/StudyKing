@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
@@ -14,6 +15,7 @@ import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
@@ -37,6 +39,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _initError = false;
   bool _isRetrying = false;
   String _initErrorMessage = '';
+  MentorAction? _suggestedAction;
 
   bool _didInit = false;
 
@@ -81,7 +84,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
       final history = _mentorService.memory.getHistory();
       final loadedMessages = history
-          .where((m) => m.role == MessageRole.mentor || m.role == MessageRole.student)
+          .where((m) => m.role == MessageRole.mentor || m.role == MessageRole.student || m.role == MessageRole.system)
           .map((m) => ChatMessageData(message: m, isComplete: true))
           .toList();
 
@@ -95,6 +98,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         if (loadedMessages.isEmpty) {
           _sendWelcomeMessage();
         }
+        WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCheck());
       }
     } catch (e) {
       if (mounted) {
@@ -125,6 +129,19 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         isComplete: true,
       ));
     });
+  }
+
+  void _refreshCheck() {
+    _loadSuggestedAction();
+  }
+
+  Future<void> _loadSuggestedAction() async {
+    try {
+      final action = await _mentorService.suggestNextAction();
+      if (mounted) {
+        setState(() => _suggestedAction = action);
+      }
+    } catch (_) {}
   }
 
   Future<void> _sendMessage() async {
@@ -158,6 +175,24 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       _isSending = true;
     });
     _scrollToBottom();
+
+    if (!_mentorService.hasApiKey) {
+      final l10n = AppLocalizations.of(context)!;
+      final idx = _messages.length - 1;
+      setState(() {
+        _messages[idx] = ChatMessageData(
+          message: _messages[idx].message.copyWith(
+            content: '${l10n.mentorApiKeyMissing} ${l10n.goToSettings}',
+            isStreaming: false,
+          ),
+          isComplete: true,
+        );
+        _isSending = false;
+      });
+      _scrollToBottom();
+      _inputFocusNode.requestFocus();
+      return;
+    }
 
     final buffer = StringBuffer();
     try {
@@ -203,6 +238,110 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     }
     _scrollToBottom();
     _inputFocusNode.requestFocus();
+    await _handlePostChatIntents();
+  }
+
+  Future<void> _handlePostChatIntents() async {
+    try {
+      final schedule = _mentorService.pendingScheduleProposal;
+      final plan = _mentorService.pendingPlanProposal;
+
+      if (schedule != null) {
+        _mentorService.clearPendingSchedule();
+        if (!mounted) return;
+        await _showScheduleConfirmationDialog(schedule);
+      } else if (plan != null) {
+        _mentorService.clearPendingPlan();
+        final msg = _mentorService.planDaysMessage(plan.days);
+        if (!mounted) return;
+        final msgObj = ConversationMessage(
+          id: 'plan_${DateTime.now().millisecondsSinceEpoch}',
+          sessionId: 'mentor',
+          role: MessageRole.mentor,
+          type: MessageType.text,
+          content: msg,
+          timestamp: DateTime.now(),
+        );
+        setState(() {
+          _messages.add(ChatMessageData(message: msgObj, isComplete: true));
+        });
+        _scrollToBottom();
+      }
+
+      final nudges = await _mentorService.checkWellbeingAndGenerateNudges();
+      if (nudges.isNotEmpty && mounted) {
+        setState(() {
+          for (final nudge in nudges) {
+            _messages.add(ChatMessageData(
+              message: ConversationMessage(
+                id: 'nudge_${DateTime.now().millisecondsSinceEpoch}',
+                sessionId: 'mentor',
+                role: MessageRole.mentor,
+                type: MessageType.text,
+                content: nudge,
+                timestamp: DateTime.now(),
+              ),
+              isComplete: true,
+            ));
+          }
+        });
+        _scrollToBottom();
+      }
+      _loadSuggestedAction();
+    } catch (_) {}
+  }
+
+  Future<void> _showScheduleConfirmationDialog(ScheduleProposal proposal) async {
+    final l10n = AppLocalizations.of(context)!;
+    final dateStr = DateFormat.yMd(l10n.localeName).add_Hm().format(proposal.proposedTime.toLocal());
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.scheduleALesson),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${l10n.time}: $dateStr'),
+            const SizedBox(height: 8),
+            Text('${l10n.duration}: ${proposal.durationMinutes} min'),
+            const SizedBox(height: 8),
+            Text('Topic: ${proposal.topicTitle}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final result = await _mentorService.confirmSchedule(proposal);
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessageData(
+            message: ConversationMessage(
+              id: 'sched_${DateTime.now().millisecondsSinceEpoch}',
+              sessionId: 'mentor',
+              role: MessageRole.mentor,
+              type: MessageType.text,
+              content: result,
+              timestamp: DateTime.now(),
+            ),
+            isComplete: true,
+          ));
+        });
+        _scrollToBottom();
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -259,12 +398,15 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           children: [
             if (_initError)
               _buildInitErrorCard(l10n)
-            else
+            else ...[
+              if (_suggestedAction != null)
+                _buildSuggestedActionCard(l10n),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState(l10n)
                     : _buildMessageList(ref.watch(settingsProvider).reduceMotion),
               ),
+            ],
             FocusTraversalOrder(
               order: const NumericFocusOrder(1),
               child: ConversationInput(
@@ -374,6 +516,38 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestedActionCard(AppLocalizations l10n) {
+    return Padding(
+      padding: ResponsiveUtils.screenPadding(context),
+      child: Card(
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        child: Padding(
+          padding: ResponsiveUtils.cardPadding(context),
+          child: Row(
+            children: [
+              Icon(Icons.lightbulb_outline,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _suggestedAction!.message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: l10n.dismiss,
+                onPressed: () => setState(() => _suggestedAction = null),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

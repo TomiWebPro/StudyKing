@@ -25,6 +25,28 @@ import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+class ScheduleProposal {
+  final String topicTitle;
+  final String? topicId;
+  final String? subjectId;
+  final DateTime proposedTime;
+  final int durationMinutes;
+
+  ScheduleProposal({
+    required this.topicTitle,
+    this.topicId,
+    this.subjectId,
+    required this.proposedTime,
+    this.durationMinutes = 30,
+  });
+}
+
+class PlanProposal {
+  final int days;
+
+  PlanProposal({this.days = 30});
+}
+
 class MentorService {
   final Logger _logger = const Logger('MentorService');
   final DatabaseService _database;
@@ -39,6 +61,9 @@ class MentorService {
   final EngagementNudgeRepository _nudgeRepo;
   final SessionRepository _sessionRepository;
   final String _localeName;
+
+  ScheduleProposal? _pendingSchedule;
+  PlanProposal? _pendingPlan;
 
   MentorService({
     required DatabaseService database,
@@ -71,13 +96,43 @@ class MentorService {
         );
 
   ConversationMemory get memory => _memory;
+  ScheduleProposal? get pendingScheduleProposal => _pendingSchedule;
+  PlanProposal? get pendingPlanProposal => _pendingPlan;
+  bool get hasApiKey => _llmService.config.apiKey.isNotEmpty;
+
+  void clearPendingSchedule() => _pendingSchedule = null;
+  void clearPendingPlan() => _pendingPlan = null;
 
   Future<void> initialize() async {
     await _memory.loadFromRepository();
     await _nudgeRepo.init();
   }
 
+  Future<bool> hasMeaningfulData() async {
+    try {
+      final subjectsResult = await _database.subjectRepository.getAll();
+      final hasSubjects = subjectsResult.data != null && subjectsResult.data!.isNotEmpty;
+      final stats = await _progressTracker.getOverallStats(_studentId);
+      final attempts = stats['totalAttempts'] as int? ?? 0;
+      return attempts > 0 || hasSubjects;
+    } catch (e) {
+      return true;
+    }
+  }
+
   Stream<String> chat(String message) async* {
+    _pendingSchedule = null;
+    _pendingPlan = null;
+
+    final hasData = await hasMeaningfulData();
+    if (!hasData) {
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      final msg = l10n.mentorNoSubjects;
+      _memory.addAssistantMessage(msg);
+      yield msg;
+      return;
+    }
+
     _memory.addUserMessage(message);
 
     final context = await _buildContextPrompt();
@@ -96,8 +151,7 @@ class MentorService {
 
     _memory.addAssistantMessage(buffer.toString());
 
-    final response = buffer.toString();
-    await _checkAndHandlePlanningIntent(response, message);
+    _checkAndHandlePlanningIntent(message);
   }
 
   Future<String> _buildContextPrompt() async {
@@ -307,10 +361,10 @@ class MentorService {
 
   Future<int> _getDailyCapMinutes() async {
     try {
-      final box = await Hive.openBox('settings');
+      if (!Hive.isBoxOpen('settings')) return 0;
+      final box = Hive.box('settings');
       return box.get('dailyCapMinutes', defaultValue: 0) as int;
-    } catch (e) {
-      _logger.e('Failed to get daily cap minutes', e);
+    } catch (_) {
       return 0;
     }
   }
@@ -342,35 +396,39 @@ class MentorService {
     }
   }
 
-  Future<void> checkWellbeingAndGenerateNudges() async {
+  Future<List<String>> checkWellbeingAndGenerateNudges() async {
+    final messages = <String>[];
     try {
       final todayMinutes = await _getTodayStudyMinutes();
       final dailyCap = await _getDailyCapMinutes();
       final recentResult = await _sessionRepository.getByDate(DateTime.now());
 
       if (dailyCap > 0 && todayMinutes > dailyCap) {
+        final msg = lookupAppLocalizations(Locale(_localeName)).nudgeOverworkMinutes(todayMinutes, dailyCap);
         final nudge = EngagementNudgeModel(
           id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
           studentId: _studentId,
           nudgeType: NudgeType.overwork.name,
-          message: lookupAppLocalizations(Locale(_localeName)).nudgeOverworkMinutes(todayMinutes, dailyCap),
+          message: msg,
           severity: NudgeSeverity.medium.name,
         );
         await _nudgeRepo.create(nudge);
-        _memory.addSystemMessage(nudge.message);
+        messages.add(msg);
       }
 
       if (recentResult.isSuccess) {
         final lateNight = recentResult.data!.where((s) => s.startTime.hour >= 22).toList();
         if (lateNight.isNotEmpty) {
+          final msg = lookupAppLocalizations(Locale(_localeName)).nudgeLateNight(lateNight.length);
           final nudge = EngagementNudgeModel(
             id: 'wellbeing_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
             studentId: _studentId,
             nudgeType: NudgeType.overwork.name,
-            message: lookupAppLocalizations(Locale(_localeName)).nudgeLateNight(lateNight.length),
+            message: msg,
             severity: NudgeSeverity.low.name,
           );
           await _nudgeRepo.create(nudge);
+          messages.add(msg);
         }
       }
 
@@ -378,22 +436,23 @@ class MentorService {
       if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
         final atRiskCount = weakResult.data!.length;
         if (atRiskCount >= 3) {
+          final msg = lookupAppLocalizations(Locale(_localeName)).nudgeRevisionNeeded(atRiskCount);
           final nudge = EngagementNudgeModel(
             id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
             studentId: _studentId,
             nudgeType: NudgeType.revision.name,
-            message: lookupAppLocalizations(Locale(_localeName)).nudgeRevisionNeeded(atRiskCount),
+            message: msg,
             severity: NudgeSeverity.low.name,
           );
           await _nudgeRepo.create(nudge);
+          messages.add(msg);
         }
       }
 
       final consecutiveDays = await _getConsecutiveStudyDays();
       if (consecutiveDays >= 7) {
-        _memory.addSystemMessage(
-          lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays)
-        );
+        final msg = lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays);
+        messages.add(msg);
       } else if (consecutiveDays == 0) {
         final allResult = await _sessionRepository.getAll();
         if (allResult.isSuccess) {
@@ -403,24 +462,27 @@ class MentorService {
               return prev;
             });
           if (lastStudy != null && DateTime.now().difference(lastStudy).inHours >= 48) {
-            _memory.addSystemMessage(
-              lookupAppLocalizations(Locale(_localeName)).nudgeInactive48h
-            );
+            final msg = lookupAppLocalizations(Locale(_localeName)).nudgeInactive48h;
+            messages.add(msg);
           }
         }
       }
 
+      for (final msg in messages) {
+        _memory.addAssistantMessage(msg);
+      }
+
       if (dailyCap > 0) {
         final todayNudges = await _nudgeRepo.getTodayCount(_studentId);
-        if (todayNudges >= 5) return;
+        if (todayNudges >= 5) return messages;
       }
     } catch (e) {
       _logger.e('Failed to check wellbeing: $e');
     }
+    return messages;
   }
 
-  Future<void> _checkAndHandlePlanningIntent(
-      String response, String originalMessage) async {
+  void _checkAndHandlePlanningIntent(String originalMessage) {
     final lower = originalMessage.toLowerCase();
     final hasScheduleIntent = lower.contains('schedule') ||
         lower.contains('reschedule') ||
@@ -439,78 +501,98 @@ class MentorService {
     if (!hasScheduleIntent && !hasPlanIntent) return;
 
     if (hasScheduleIntent) {
-      await _handleScheduleIntent(originalMessage);
+      _pendingSchedule = _extractScheduleProposal(originalMessage);
     } else if (hasPlanIntent) {
-      await _handlePlanIntent(originalMessage);
+      _pendingPlan = _extractPlanProposal(originalMessage);
     }
   }
 
-  Future<void> _handleScheduleIntent(String originalMessage) async {
-    try {
-      final topicTitle = _extractTopic(originalMessage);
+  ScheduleProposal _extractScheduleProposal(String originalMessage) {
+    final topicTitle = _extractTopic(originalMessage);
+    final proposedTime = DateTime.now().add(Timeouts.hour);
+    final nextHour = DateTime(
+      proposedTime.year,
+      proposedTime.month,
+      proposedTime.day,
+      proposedTime.hour,
+      0,
+    );
+    return ScheduleProposal(
+      topicTitle: topicTitle,
+      proposedTime: nextHour,
+      durationMinutes: 30,
+    );
+  }
 
+  PlanProposal _extractPlanProposal(String originalMessage) {
+    final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(originalMessage.toLowerCase());
+    final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 30;
+    return PlanProposal(days: days);
+  }
+
+  Future<String> confirmSchedule(ScheduleProposal proposal) async {
+    try {
       String? topicId;
       String? subjectId;
-      if (topicTitle.isNotEmpty && topicTitle != 'general') {
+      if (proposal.topicTitle.isNotEmpty && proposal.topicTitle != 'general') {
         await _database.topicRepository.init();
         final allTopicsResult = await _database.topicRepository.getAll();
         final allTopics = allTopicsResult.data ?? [];
         final match = allTopics.where(
-          (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),
+          (t) => t.title.toLowerCase().contains(proposal.topicTitle.toLowerCase()),
         ).firstOrNull;
         topicId = match?.id;
         subjectId = match?.subjectId;
       }
 
-      final proposedTime = DateTime.now().add(Timeouts.hour);
-      final nextHour = DateTime(
-        proposedTime.year,
-        proposedTime.month,
-        proposedTime.day,
-        proposedTime.hour,
-        0,
-      );
-
       final hasConflict = await _plannerService.hasSchedulingConflict(
-        startTime: nextHour,
-        durationMinutes: 30,
+        startTime: proposal.proposedTime,
+        durationMinutes: proposal.durationMinutes,
       );
 
       if (hasConflict) {
         final existingLessons = await _plannerService.getScheduledLessons();
-        final nextFree = _findNextFreeSlot(existingLessons, 30);
-        _memory.addSystemMessage(
-          lookupAppLocalizations(Locale(_localeName)).mentorScheduleConflict(
-            DateFormat.yMd(_localeName).add_Hm().format(nextHour.toLocal()),
-            DateFormat.yMd(_localeName).add_Hm().format(nextFree.toLocal()),
-          )
+        final nextFree = _findNextFreeSlot(existingLessons, proposal.durationMinutes);
+        final l10n = lookupAppLocalizations(Locale(_localeName));
+        final msg = l10n.mentorScheduleConflict(
+          DateFormat.yMd(_localeName).add_Hm().format(proposal.proposedTime.toLocal()),
+          DateFormat.yMd(_localeName).add_Hm().format(nextFree.toLocal()),
         );
-        return;
+        _memory.addAssistantMessage(msg);
+        return msg;
       }
 
       final success = await _plannerService.scheduleLesson(
         topicId: topicId ?? '',
-        topicTitle: topicTitle,
+        topicTitle: proposal.topicTitle,
         subjectId: subjectId ?? '',
-        scheduledTime: nextHour,
-        durationMinutes: 30,
+        scheduledTime: proposal.proposedTime,
+        durationMinutes: proposal.durationMinutes,
       );
 
+      String msg;
+      final l10n = lookupAppLocalizations(Locale(_localeName));
       if (success) {
-        _memory.addSystemMessage(
-          lookupAppLocalizations(Locale(_localeName)).mentorScheduleSuccess(
-            topicTitle,
-            DateFormat.yMd(_localeName).add_Hm().format(nextHour.toLocal()),
-          )
+        msg = l10n.mentorScheduleSuccess(
+          proposal.topicTitle,
+          DateFormat.yMd(_localeName).add_Hm().format(proposal.proposedTime.toLocal()),
         );
       } else {
-        _memory.addSystemMessage(
-          lookupAppLocalizations(Locale(_localeName)).mentorScheduleFail
-        );
+        msg = l10n.mentorScheduleFail;
       }
+      _memory.addAssistantMessage(msg);
+      return msg;
     } catch (e) {
-      _logger.e('Failed to handle schedule intent: $e');
+      _logger.e('Failed to confirm schedule: $e');
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+      return l10n.mentorScheduleFail;
     }
+  }
+
+  String planDaysMessage(int days) {
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    final msg = l10n.mentorPlanDaysPrompt(days);
+    return msg;
   }
 
   DateTime _findNextFreeSlot(List<Session> existingLessons, int durationMinutes) {
@@ -532,19 +614,6 @@ class MentorService {
       }
     }
     return candidate;
-  }
-
-  Future<void> _handlePlanIntent(String originalMessage) async {
-    try {
-      final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(originalMessage.toLowerCase());
-      final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 30;
-
-      _memory.addSystemMessage(
-        lookupAppLocalizations(Locale(_localeName)).mentorPlanDaysPrompt(days)
-      );
-    } catch (e) {
-      _logger.e('Failed to handle plan intent: $e');
-    }
   }
 
   Future<ProgressReport> getProgressReport() async {

@@ -147,7 +147,7 @@ void main() {
       final stats = await tracker.getOverallStats('stu1');
       expect(stats['totalAttempts'], 1);
       expect(stats['correctAttempts'], 1);
-      expect(stats['accuracy'], 1.0);
+      expect(stats['accuracy'], 100);
     });
   });
 }

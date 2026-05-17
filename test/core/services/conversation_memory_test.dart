@@ -86,8 +86,9 @@ void main() {
       memory.addUserMessage('msg2');
       memory.addAssistantMessage('resp2');
       memory.addUserMessage('msg3');
-      expect(memory.messages.length, equals(4));
+      expect(memory.messages.length, equals(5));
       expect(memory.messages.first.content, equals('resp1'));
+      expect(memory.messages.last.content, contains('trimmed'));
     });
 
     test('does not trim when under maxTurns', () {

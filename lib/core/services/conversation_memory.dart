@@ -6,10 +6,24 @@ class ConversationMemory {
   final int maxTurns;
   final String? sessionId;
   final ConversationRepository? _repository;
+  bool _truncationNotified = false;
 
   ConversationMemory({this.maxTurns = 20, this.sessionId, ConversationRepository? repository})
       : messages = [],
         _repository = repository;
+
+  void _trimRepository() async {
+    final repo = _repository;
+    final sid = sessionId;
+    if (repo == null || sid == null) return;
+    final stored = await repo.getSessionMessages(sid);
+    if (stored.length > maxTurns * 2) {
+      final toRemove = stored.sublist(0, stored.length - maxTurns * 2);
+      for (final msg in toRemove) {
+        await repo.deleteMessage(msg.id);
+      }
+    }
+  }
 
   void addMessage(String role, String content) {
     final messageRole = switch (role) {
@@ -28,8 +42,22 @@ class ConversationMemory {
     messages.add(msg);
     if (messages.length > maxTurns * 2) {
       messages.removeRange(0, messages.length - maxTurns * 2);
+      if (!_truncationNotified) {
+        _truncationNotified = true;
+        final truncMsg = ConversationMessage(
+          id: '${sessionId}_trunc_${DateTime.now().millisecondsSinceEpoch}',
+          sessionId: sessionId ?? '',
+          role: MessageRole.system,
+          type: MessageType.system,
+          content: 'Conversation history trimmed. Older messages are no longer visible to the AI.',
+          timestamp: DateTime.now(),
+        );
+        messages.add(truncMsg);
+        _persistMessage(truncMsg);
+      }
     }
     _persistMessage(msg);
+    _trimRepository();
   }
 
   void _persistMessage(ConversationMessage msg) {
