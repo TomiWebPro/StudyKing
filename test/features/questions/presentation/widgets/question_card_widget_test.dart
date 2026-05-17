@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/presentation/widgets/question_card_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

@@ -278,7 +278,7 @@ class PlannerService implements ActionPlanner {
         completed: false,
         tutorMetadata: TutorMetadata(topicTitle: topicTitle),
       );
-      final result = await sessionRepo.save(session);
+      final result = await sessionRepo.save(session.id, session);
       return result.isSuccess;
     } catch (e) {
       const Logger('PlannerService.scheduleLesson').e('Failed to schedule lesson', e);
@@ -293,7 +293,7 @@ class PlannerService implements ActionPlanner {
       final result = await sessionRepo.get(sessionId);
       if (result.isFailure || result.data == null) return false;
       final cancelled = result.data!.copyWith(completed: true);
-      final saveResult = await sessionRepo.save(cancelled);
+      final saveResult = await sessionRepo.save(cancelled.id, cancelled);
       return saveResult.isSuccess;
     } catch (e) {
       const Logger('PlannerService.cancelLesson').e('Failed to cancel lesson', e);
@@ -314,7 +314,7 @@ class PlannerService implements ActionPlanner {
         startTime: newStartTime,
         plannedDurationMinutes: durationMinutes,
       );
-      final saveResult = await sessionRepo.save(rescheduled);
+      final saveResult = await sessionRepo.save(rescheduled.id, rescheduled);
       return saveResult.isSuccess;
     } catch (e) {
       const Logger('PlannerService.rescheduleLesson').e('Failed to reschedule lesson', e);

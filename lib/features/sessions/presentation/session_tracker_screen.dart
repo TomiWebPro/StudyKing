@@ -152,7 +152,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 
     try {
-      await _sessionRepository.save(Session(
+      final session = Session(
         id: id,
         startTime: startTime,
         endTime: endTime,
@@ -162,7 +162,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         studentId: studentId,
         subjectId: 'all',
         type: SessionType.manual,
-      ));
+      );
+      await _sessionRepository.save(session.id, session);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -235,7 +236,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.studySessionTracker),
-          centerTitle: true,
+        centerTitle: false,
           elevation: 0,
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -386,7 +387,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: ResponsiveUtils.emptyStateIconSize(context) * 0.6, color: theme.disabledColor),
+            Icon(Icons.history, size: ResponsiveUtils.emptyStateIconSize(context), color: theme.disabledColor),
             const SizedBox(height: 8),
             Text(l10n.noSessionsYet, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),

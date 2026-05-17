@@ -6,6 +6,12 @@ part 'settings_box.g.dart';
 
 @HiveType(typeId: 4)
 class SettingsBox {
+  static const double defaultFontSize = 16.0;
+  static const int defaultRequestTimeoutSeconds = 120;
+  static const int defaultSessionDurationMinutes = 30;
+  static const int defaultBreakDurationSeconds = 300;
+  static const int defaultDailyReminderHour = 9;
+
   @HiveField(0)
   late String apiKey;
 
@@ -80,13 +86,13 @@ class SettingsBox {
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
     this.selectedModel = '',
     this.themeMode = 0,
-    this.fontSize = 16.0,
+    this.fontSize = defaultFontSize,
     this.totalSessionCount = 0,
     this.totalStudyTimeMs = 0,
     this.totalQuestions = 0,
     this.studyRemindersEnabled = true,
-    this.requestTimeoutSeconds = 120,
-    this.sessionDurationMinutes = 30,
+    this.requestTimeoutSeconds = defaultRequestTimeoutSeconds,
+    this.sessionDurationMinutes = defaultSessionDurationMinutes,
     this.highContrastEnabled = false,
     this.largeTouchTargets = false,
     this.reduceMotion = false,
@@ -94,8 +100,8 @@ class SettingsBox {
     this.lessonNotificationsEnabled = true,
     this.overworkAlertsEnabled = true,
     this.planAdjustmentNotificationsEnabled = true,
-    this.breakDurationSeconds = 300,
-    this.dailyReminderHour = 9,
+    this.breakDurationSeconds = defaultBreakDurationSeconds,
+    this.dailyReminderHour = defaultDailyReminderHour,
     this.dailyReminderMinute = 0,
     this.firstFocusVisit = true,
     this.dailyReminderEnabled = false,
@@ -147,7 +153,7 @@ class SettingsBox {
       selectedModel:
           json['selectedModel'] is String ? json['selectedModel'] as String : '',
       themeMode: (json['themeMode'] as num?)?.toInt() ?? 0,
-      fontSize: (json['fontSize'] as num?)?.toDouble() ?? 16.0,
+      fontSize: (json['fontSize'] as num?)?.toDouble() ?? defaultFontSize,
       totalSessionCount: (json['totalSessionCount'] as num?)?.toInt() ?? 0,
       totalStudyTimeMs: (json['totalStudyTimeMs'] as num?)?.toInt() ?? 0,
       totalQuestions: (json['totalQuestions'] as num?)?.toInt() ?? 0,
@@ -155,9 +161,9 @@ class SettingsBox {
           ? json['studyRemindersEnabled'] as bool
           : true,
       requestTimeoutSeconds:
-          (json['requestTimeoutSeconds'] as num?)?.toInt() ?? 120,
+          (json['requestTimeoutSeconds'] as num?)?.toInt() ?? defaultRequestTimeoutSeconds,
       sessionDurationMinutes:
-          (json['sessionDurationMinutes'] as num?)?.toInt() ?? 30,
+          (json['sessionDurationMinutes'] as num?)?.toInt() ?? defaultSessionDurationMinutes,
       highContrastEnabled: json['highContrastEnabled'] is bool
           ? json['highContrastEnabled'] as bool
           : false,
@@ -180,8 +186,8 @@ class SettingsBox {
           json['planAdjustmentNotificationsEnabled'] is bool
               ? json['planAdjustmentNotificationsEnabled'] as bool
               : true,
-      breakDurationSeconds: (json['breakDurationSeconds'] as num?)?.toInt() ?? 300,
-      dailyReminderHour: (json['dailyReminderHour'] as num?)?.toInt() ?? 9,
+      breakDurationSeconds: (json['breakDurationSeconds'] as num?)?.toInt() ?? defaultBreakDurationSeconds,
+      dailyReminderHour: (json['dailyReminderHour'] as num?)?.toInt() ?? defaultDailyReminderHour,
       dailyReminderMinute: (json['dailyReminderMinute'] as num?)?.toInt() ?? 0,
       firstFocusVisit: json['firstFocusVisit'] is bool
           ? json['firstFocusVisit'] as bool

@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -165,7 +163,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     _storage[session.id] = session;
     return Result.success(null);
   }
@@ -267,7 +265,6 @@ Widget _buildTestApp({
   RouteFactory? onGenerateRoute,
 }) {
   final id = fixedStudentId ?? 'test-student';
-  Hive.init(Directory.systemTemp.createTempSync('planner_test_').path);
   final repo = masteryGraphRepository ?? _FakeMasteryGraphRepository();
   final svc = PlannerService(
     planRepo: planRepository ?? _FakePlanRepository(),
@@ -1687,15 +1684,18 @@ void main() {
 
         final sessionRepo = _FakeSessionRepository();
         final now = DateTime.now();
-        await sessionRepo.save(Session(
-          id: 'sess-1',
-          studentId: 'test-student',
-          topicId: 'topic-1',
-          subjectId: 'subj-1',
-          startTime: now.add(const Duration(hours: 2)),
-          plannedDurationMinutes: 30,
-          status: SessionStatus.planned,
-        ));
+        final sess0 = Session(
+          
+                    id: 'sess-1',
+                    studentId: 'test-student',
+                    topicId: 'topic-1',
+                    subjectId: 'subj-1',
+                    startTime: now.add(const Duration(hours: 2)),
+                    plannedDurationMinutes: 30,
+                    status: SessionStatus.planned,
+                  
+        );
+        await sessionRepo.save(sess0.id, sess0);
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
@@ -1727,16 +1727,19 @@ void main() {
 
         final sessionRepo = _FakeSessionRepository();
         final now = DateTime.now();
-        await sessionRepo.save(Session(
-          id: 'sess-completed',
-          studentId: 'test-student',
-          topicId: 'topic-done',
-          subjectId: 'subj-1',
-          startTime: now.subtract(const Duration(hours: 4)),
-          endTime: now.subtract(const Duration(hours: 3)),
-          completed: true,
-          status: SessionStatus.completed,
-        ));
+        final sess1 = Session(
+          
+                    id: 'sess-completed',
+                    studentId: 'test-student',
+                    topicId: 'topic-done',
+                    subjectId: 'subj-1',
+                    startTime: now.subtract(const Duration(hours: 4)),
+                    endTime: now.subtract(const Duration(hours: 3)),
+                    completed: true,
+                    status: SessionStatus.completed,
+                  
+        );
+        await sessionRepo.save(sess1.id, sess1);
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
@@ -1768,15 +1771,18 @@ void main() {
 
         final sessionRepo = _FakeSessionRepository();
         final now = DateTime.now();
-        await sessionRepo.save(Session(
-          id: 'sess-2',
-          studentId: 'test-student',
-          topicId: 'topic-2',
-          subjectId: 'subj-2',
-          startTime: now.add(const Duration(hours: 2)),
-          plannedDurationMinutes: 45,
-          status: SessionStatus.planned,
-        ));
+        final sess2 = Session(
+          
+                    id: 'sess-2',
+                    studentId: 'test-student',
+                    topicId: 'topic-2',
+                    subjectId: 'subj-2',
+                    startTime: now.add(const Duration(hours: 2)),
+                    plannedDurationMinutes: 45,
+                    status: SessionStatus.planned,
+                  
+        );
+        await sessionRepo.save(sess2.id, sess2);
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
@@ -1818,15 +1824,18 @@ void main() {
 
         final sessionRepo = _FakeSessionRepository();
         final now = DateTime.now();
-        await sessionRepo.save(Session(
-          id: 'sess-cancel',
-          studentId: 'test-student',
-          topicId: 'topic-cancel',
-          subjectId: 'subj-1',
-          startTime: now.add(const Duration(hours: 2)),
-          plannedDurationMinutes: 30,
-          status: SessionStatus.planned,
-        ));
+        final sess3 = Session(
+          
+                    id: 'sess-cancel',
+                    studentId: 'test-student',
+                    topicId: 'topic-cancel',
+                    subjectId: 'subj-1',
+                    startTime: now.add(const Duration(hours: 2)),
+                    plannedDurationMinutes: 30,
+                    status: SessionStatus.planned,
+                  
+        );
+        await sessionRepo.save(sess3.id, sess3);
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
@@ -1868,15 +1877,18 @@ void main() {
         final sessionRepo = _FakeSessionRepository();
         final now = DateTime.now();
         for (var i = 0; i < 5; i++) {
-          await sessionRepo.save(Session(
-            id: 'sess-$i',
-            studentId: 'test-student',
-            topicId: 'topic-$i',
-            subjectId: 'subj-1',
-            startTime: now.add(Duration(hours: 2 + i)),
-            plannedDurationMinutes: 30,
-            status: SessionStatus.planned,
-          ));
+          final sess4 = Session(
+            
+                        id: 'sess-$i',
+                        studentId: 'test-student',
+                        topicId: 'topic-$i',
+                        subjectId: 'subj-1',
+                        startTime: now.add(Duration(hours: 2 + i)),
+                        plannedDurationMinutes: 30,
+                        status: SessionStatus.planned,
+                      
+          );
+          await sessionRepo.save(sess4.id, sess4);
         }
 
         await tester.pumpWidget(_buildTestApp(

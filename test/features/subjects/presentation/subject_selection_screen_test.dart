@@ -8,6 +8,7 @@ import 'package:studyking/features/subjects/providers/subjects_repository_provid
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSubjectBox {
   final Map<String, Subject> _storage = {};
@@ -56,7 +57,7 @@ class _SlowSubjectRepository extends SubjectRepository {
   }
 }
 
-Widget _buildTestAppForRepo(SubjectRepository repo) {
+Widget _buildTestAppForRepo(SubjectRepository repo, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _TestNotifier(repo)),
@@ -64,6 +65,7 @@ Widget _buildTestAppForRepo(SubjectRepository repo) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       onGenerateRoute: (settings) {
         if (settings.name == AppRoutes.upload) {
           return MaterialPageRoute(
@@ -86,7 +88,7 @@ class _TestNotifier extends SubjectsRepositoryNotifier {
   Future<SubjectRepository> build() async => repo;
 }
 
-Widget _buildTestApp(SubjectRepository repo) {
+Widget _buildTestApp(SubjectRepository repo, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _TestNotifier(repo)),
@@ -94,6 +96,7 @@ Widget _buildTestApp(SubjectRepository repo) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       onGenerateRoute: (settings) {
         if (settings.name == AppRoutes.upload) {
           return MaterialPageRoute(
@@ -529,6 +532,41 @@ void main() {
       final updated = await repo.get('edit-id-3');
       expect(updated.data, isNotNull);
       expect(updated.data!.name, 'New Name');
+    });
+
+    testWidgets('navigator pushes upload route on Upload Study Material tap', (tester) async {
+      final observer = TestNavigatorObserver();
+      final box = _FakeSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'History');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Upload Study Material'));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == AppRoutes.upload),
+        isTrue,
+      );
+    });
+
+    testWidgets('navigator pops via system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      final box = _FakeSubjectBox();
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
     });
   });
 }

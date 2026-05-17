@@ -13,6 +13,7 @@ import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLessonRepository extends LessonRepository {
   final List<Lesson> _lessons;
@@ -59,6 +60,7 @@ Widget _buildTestApp({
   List<Lesson>? lessons,
   List<TutorSession>? sessions,
   bool shouldThrow = false,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   final lessonRepo = _FakeLessonRepository(lessons: lessons);
   lessonRepo.shouldThrow = shouldThrow;
@@ -73,6 +75,7 @@ Widget _buildTestApp({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: Builder(
         builder: (context) => Scaffold(
           body: LessonListScreen(args: args),
@@ -237,6 +240,56 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Lesson Detail'), findsOneWidget);
+    });
+
+    testWidgets('navigator pushes lesson detail on lesson tap', (tester) async {
+      final observer = TestNavigatorObserver();
+      final now = DateTime.now();
+
+      await tester.pumpWidget(_buildTestApp(
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Lesson 1',
+            topicId: 't1', blocks: [],
+            createdAt: now,
+          ),
+        ],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Lesson 1'));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/lesson-detail'),
+        isTrue,
+      );
+    });
+
+    testWidgets('navigator pops lesson detail on system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      final now = DateTime.now();
+
+      await tester.pumpWidget(_buildTestApp(
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Lesson 1',
+            topicId: 't1', blocks: [],
+            createdAt: now,
+          ),
+        ],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Lesson 1'));
+      await tester.pumpAndSettle();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, hasLength(1));
     });
   });
 

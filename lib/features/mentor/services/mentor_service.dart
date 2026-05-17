@@ -111,25 +111,27 @@ class MentorService {
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = await _getDailyCapMinutes();
     final consecutiveDays = await _getConsecutiveStudyDays();
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    final bullet = l10n.mentorBulletPoint;
 
     final buffer = StringBuffer();
     // Note: Context labels are in invariant English regardless of user locale.
     // This context data is fed to the LLM. The labels are a data-formatting
     // convention, not user-facing text.
     buffer.writeln('Current student context:');
-    buffer.writeln('- Total attempts: ${stats['totalAttempts']}');
-    buffer.writeln('- Correct attempts: ${stats['correctAttempts']}');
-    buffer.writeln('- Accuracy: ${stats['accuracy']}%');
-    buffer.writeln('- Topics studied: ${stats['topicsStudied']}');
-    buffer.writeln('- Weekly activity: ${stats['weeklyActivity']} attempts');
-    buffer.writeln('- Total study time: ${stats['totalStudyTimeHours']} hours');
+    buffer.writeln('${bullet}Total attempts: ${stats['totalAttempts']}');
+    buffer.writeln('${bullet}Correct attempts: ${stats['correctAttempts']}');
+    buffer.writeln('${bullet}Accuracy: ${stats['accuracy']}%');
+    buffer.writeln('${bullet}Topics studied: ${stats['topicsStudied']}');
+    buffer.writeln('${bullet}Weekly activity: ${stats['weeklyActivity']} attempts');
+    buffer.writeln('${bullet}Total study time: ${stats['totalStudyTimeHours']} hours');
 
     if (plan != null) {
-      buffer.writeln('- Plan exists: current phase (day ${_getPlanDay(plan)} of ${plan.dailyPlans.length})');
+      buffer.writeln('${bullet}Plan exists: current phase (day ${_getPlanDay(plan)} of ${plan.dailyPlans.length})');
       if (adherenceDeviation != null) {
-        buffer.writeln('- Plan adherence: ${adherenceDeviation.averageAdherence.toStringAsFixed(1)}%'); // LLM-facing: invariant period format OK
+        buffer.writeln('${bullet}Plan adherence: ${adherenceDeviation.averageAdherence.toStringAsFixed(1)}%'); // LLM-facing: invariant period format OK
         if (adherenceDeviation.consecutiveLowDays > 0) {
-          buffer.writeln('- Low adherence for ${adherenceDeviation.consecutiveLowDays} consecutive days');
+          buffer.writeln('${bullet}Low adherence for ${adherenceDeviation.consecutiveLowDays} consecutive days');
         }
       }
     }
@@ -137,63 +139,63 @@ class MentorService {
     if (roadmaps.isNotEmpty) {
       final activeRoadmaps = roadmaps.where((r) => r.status == 'active').toList();
       if (activeRoadmaps.isNotEmpty) {
-        buffer.writeln('- Active roadmaps: ${activeRoadmaps.length}');
+        buffer.writeln('${bullet}Active roadmaps: ${activeRoadmaps.length}');
         for (final roadmap in activeRoadmaps.take(2)) {
           final completedMilestones = roadmap.milestones.where((m) => m.isCompleted).length;
           final nearest = roadmap.milestones.where((m) => !m.isCompleted).firstOrNull;
-          buffer.writeln('  * "${roadmap.goal}": $completedMilestones/${roadmap.milestones.length} milestones completed');
+          buffer.writeln('  $bullet"${roadmap.goal}": $completedMilestones/${roadmap.milestones.length} milestones completed');
           if (nearest != null) {
-            buffer.writeln('    Next milestone: "${nearest.title}" due ${DateFormat.yMd(_localeName).format(nearest.deadline.toLocal())}');
+            buffer.writeln('    Next milestone: "${nearest.title}" due ${DateFormat.yMd(_localeName).add_Hm().format(nearest.deadline.toLocal())}');
           }
         }
       }
     }
 
     if (pendingActions.isNotEmpty) {
-      buffer.writeln('- Pending actions awaiting decision: ${pendingActions.length}');
+      buffer.writeln('${bullet}Pending actions awaiting decision: ${pendingActions.length}');
       for (final action in pendingActions.take(3)) {
-        buffer.writeln('  * ${action.actionType}: ${action.topicTitle}');
+        buffer.writeln('  $bullet${action.actionType}: ${action.topicTitle}');
       }
     }
 
     if (upcomingLessons.isNotEmpty) {
-      buffer.writeln('- Upcoming lessons (next ${upcomingLessons.length > 3 ? 3 : upcomingLessons.length}):');
+      buffer.writeln('${bullet}Upcoming lessons (next ${upcomingLessons.length > 3 ? 3 : upcomingLessons.length}):');
       for (final lesson in upcomingLessons.take(3)) {
         final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Unknown';
-        buffer.writeln('  * "$title" at ${DateFormat('y-MM-dd HH:mm', _localeName).format(lesson.startTime.toLocal())} (${lesson.plannedDurationMinutes ?? 30}min)');
+        buffer.writeln('  $bullet"$title" at ${DateFormat.yMd(_localeName).add_Hm().format(lesson.startTime.toLocal())} (${lesson.plannedDurationMinutes ?? 30}min)');
       }
     }
 
     if (weakTopics.isNotEmpty) {
-      buffer.writeln('- Weak topics needing attention:');
+      buffer.writeln('${bullet}Weak topics needing attention:');
       for (final topic in weakTopics.take(5)) {
-        buffer.writeln('  * ${topic.topicId} (accuracy: ${(topic.accuracy * 100).toStringAsFixed(0)}%)'); // LLM-facing: invariant period format OK
+        buffer.writeln('  $bullet${topic.topicId} (accuracy: ${(topic.accuracy * 100).toStringAsFixed(0)}%)'); // LLM-facing: invariant period format OK
       }
     }
 
     if (todayMinutes > 0) {
-      buffer.writeln('- Today\'s study time: $todayMinutes minutes');
+      buffer.writeln("${bullet}Today's study time: $todayMinutes minutes");
       if (dailyCap > 0 && todayMinutes > dailyCap) {
-        buffer.writeln('- WARNING: Daily study cap ($dailyCap min) exceeded by ${todayMinutes - dailyCap} minutes');
+        buffer.writeln('${bullet}WARNING: Daily study cap ($dailyCap min) exceeded by ${todayMinutes - dailyCap} minutes');
       } else if (dailyCap > 0) {
-        buffer.writeln('- Daily cap: $dailyCap minutes (${dailyCap - todayMinutes} min remaining)');
+        buffer.writeln('${bullet}Daily cap: $dailyCap minutes (${dailyCap - todayMinutes} min remaining)');
       }
     }
 
     if (consecutiveDays >= 7) {
-      buffer.writeln('- Congratulations! $consecutiveDays day study streak!');
+      buffer.writeln('${bullet}Congratulations! $consecutiveDays day study streak!');
     } else if (consecutiveDays >= 3) {
-      buffer.writeln('- $consecutiveDays consecutive study days - good consistency!');
+      buffer.writeln('$bullet$consecutiveDays consecutive study days - good consistency!');
     }
 
     final recentResult = await _sessionRepository.getByDate(DateTime.now());
     if (recentResult.isSuccess) {
       final todaySessions = recentResult.data!;
       if (todaySessions.isNotEmpty) {
-        buffer.writeln('- Sessions today: ${todaySessions.length}');
+        buffer.writeln('${bullet}Sessions today: ${todaySessions.length}');
         final lateNight = todaySessions.where((s) => s.startTime.hour >= 22).toList();
         if (lateNight.isNotEmpty) {
-          buffer.writeln('- WARNING: ${lateNight.length} session(s) started after 10 PM (late-night study detected)');
+          buffer.writeln('${bullet}WARNING: ${lateNight.length} session(s) started after 10 PM (late-night study detected)');
         }
       }
     }
@@ -238,7 +240,7 @@ class MentorService {
       final result = await _masteryService.getWeakTopics(_studentId);
       return result.isSuccess ? result.data! : [];
     } catch (e) {
-      _logger.w('Failed to load weak topics', e);
+      _logger.e('Failed to load weak topics', e);
       return [];
     }
   }
@@ -247,7 +249,7 @@ class MentorService {
     try {
       return await _plannerService.loadExistingPlan();
     } catch (e) {
-      _logger.w('Failed to load existing plan', e);
+      _logger.e('Failed to load existing plan', e);
       return null;
     }
   }
@@ -256,7 +258,7 @@ class MentorService {
     try {
       return await _plannerService.loadRoadmaps();
     } catch (e) {
-      _logger.w('Failed to load roadmaps', e);
+      _logger.e('Failed to load roadmaps', e);
       return [];
     }
   }
@@ -265,7 +267,7 @@ class MentorService {
     try {
       return await _plannerService.loadPendingActions();
     } catch (e) {
-      _logger.w('Failed to load pending actions', e);
+      _logger.e('Failed to load pending actions', e);
       return [];
     }
   }
@@ -274,7 +276,7 @@ class MentorService {
     try {
       return await _plannerService.getScheduledLessons();
     } catch (e) {
-      _logger.w('Failed to load upcoming lessons', e);
+      _logger.e('Failed to load upcoming lessons', e);
       return [];
     }
   }
@@ -283,7 +285,7 @@ class MentorService {
     try {
       return await _plannerService.checkAdherence();
     } catch (e) {
-      _logger.w('Failed to load adherence', e);
+      _logger.e('Failed to load adherence', e);
       return null;
     }
   }
@@ -308,7 +310,7 @@ class MentorService {
       final box = await Hive.openBox('settings');
       return box.get('dailyCapMinutes', defaultValue: 0) as int;
     } catch (e) {
-      _logger.w('Failed to get daily cap minutes', e);
+      _logger.e('Failed to get daily cap minutes', e);
       return 0;
     }
   }
@@ -335,7 +337,7 @@ class MentorService {
       }
       return consecutive;
     } catch (e) {
-      _logger.w('Failed to get consecutive study days', e);
+      _logger.e('Failed to get consecutive study days', e);
       return 0;
     }
   }
@@ -413,7 +415,7 @@ class MentorService {
         if (todayNudges >= 5) return;
       }
     } catch (e) {
-      _logger.w('Failed to check wellbeing: $e');
+      _logger.e('Failed to check wellbeing: $e');
     }
   }
 
@@ -479,8 +481,8 @@ class MentorService {
         final nextFree = _findNextFreeSlot(existingLessons, 30);
         _memory.addSystemMessage(
           lookupAppLocalizations(Locale(_localeName)).mentorScheduleConflict(
-            DateFormat('y-MM-dd HH:mm', _localeName).format(nextHour.toLocal()),
-            DateFormat('y-MM-dd HH:mm', _localeName).format(nextFree.toLocal()),
+            DateFormat.yMd(_localeName).add_Hm().format(nextHour.toLocal()),
+            DateFormat.yMd(_localeName).add_Hm().format(nextFree.toLocal()),
           )
         );
         return;
@@ -498,7 +500,7 @@ class MentorService {
         _memory.addSystemMessage(
           lookupAppLocalizations(Locale(_localeName)).mentorScheduleSuccess(
             topicTitle,
-            DateFormat('y-MM-dd HH:mm', _localeName).format(nextHour.toLocal()),
+            DateFormat.yMd(_localeName).add_Hm().format(nextHour.toLocal()),
           )
         );
       } else {
@@ -507,7 +509,7 @@ class MentorService {
         );
       }
     } catch (e) {
-      _logger.w('Failed to handle schedule intent: $e');
+      _logger.e('Failed to handle schedule intent: $e');
     }
   }
 
@@ -541,7 +543,7 @@ class MentorService {
         lookupAppLocalizations(Locale(_localeName)).mentorPlanDaysPrompt(days)
       );
     } catch (e) {
-      _logger.w('Failed to handle plan intent: $e');
+      _logger.e('Failed to handle plan intent: $e');
     }
   }
 
@@ -556,7 +558,7 @@ class MentorService {
       final completed = await _database.tutorSessionRepository.getCompletedSessions(_studentId);
       completedLessons = completed.length;
     } catch (e) {
-      _logger.w('Failed to fetch completed lessons count: $e');
+      _logger.e('Failed to fetch completed lessons count: $e');
     }
 
     return ProgressReport(
@@ -641,7 +643,7 @@ class MentorService {
     _memory.addSystemMessage(
       lookupAppLocalizations(Locale(_localeName)).mentorReschedulePending(
         session.topicTitle,
-        DateFormat('y-MM-dd HH:mm', _localeName).format(nextFree.toLocal()),
+        DateFormat.yMd(_localeName).add_Hm().format(nextFree.toLocal()),
       )
     );
   }

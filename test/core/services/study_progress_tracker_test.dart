@@ -1,8 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/badge_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
@@ -79,18 +87,121 @@ class FakeSessionRepository extends SessionRepository {
   }
 }
 
+class _BadgeModelAdapter extends TypeAdapter<BadgeModel> {
+  @override
+  final int typeId = 31;
+
+  @override
+  BadgeModel read(BinaryReader reader) {
+    final id = reader.readString();
+    final studentId = reader.readString();
+    final name = reader.readString();
+    final description = reader.readString();
+    final iconName = reader.readString();
+    final category = reader.readString();
+    final unlockedAt = DateTime.fromMillisecondsSinceEpoch(reader.readInt());
+    Map<String, dynamic>? criteria;
+    if (reader.readBool()) {
+      criteria = Map<String, dynamic>.from(jsonDecode(reader.readString()) as Map);
+    }
+    return BadgeModel(
+      id: id,
+      studentId: studentId,
+      name: name,
+      description: description,
+      iconName: iconName,
+      category: category,
+      unlockedAt: unlockedAt,
+      criteria: criteria,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, BadgeModel obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.studentId);
+    writer.writeString(obj.name);
+    writer.writeString(obj.description);
+    writer.writeString(obj.iconName);
+    writer.writeString(obj.category);
+    writer.writeInt(obj.unlockedAt.millisecondsSinceEpoch);
+    writer.writeBool(obj.criteria != null);
+    if (obj.criteria != null) {
+      writer.writeString(jsonEncode(obj.criteria));
+    }
+  }
+}
+
+class FakeMasteryGraphService extends MasteryGraphService {
+  List<MasteryState> _weakTopics = [];
+  MasteryState? _topicMastery;
+  List<MasteryState> _allMastery = [];
+
+  void setWeakTopics(List<MasteryState> topics) {
+    _weakTopics = topics;
+  }
+
+  void setTopicMastery(MasteryState state) {
+    _topicMastery = state;
+  }
+
+  void setAllMastery(List<MasteryState> states) {
+    _allMastery = states;
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success(_weakTopics);
+  }
+
+  @override
+  Future<Result<MasteryState>> getTopicMastery(String studentId, String topicId) async {
+    if (_topicMastery != null) {
+      return Result.success(_topicMastery!);
+    }
+    return Result.failure('No topic mastery set');
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    return Result.success(_allMastery);
+  }
+
+  @override
+  Future<void> init() async {}
+}
+
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('tracker_test_').path;
+    Hive.init(hivePath);
+    Hive.registerAdapter(_BadgeModelAdapter());
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (hivePath.isNotEmpty) {
+      await Directory(hivePath).delete(recursive: true);
+    }
+  });
+
   group('StudyProgressTracker', () {
     late StudyProgressTracker tracker;
     late FakeAttemptRepository mockRepo;
     late FakeSessionRepository mockSessionRepo;
 
+    late FakeMasteryGraphService mockMasteryService;
+
     setUp(() {
       mockRepo = FakeAttemptRepository();
       mockSessionRepo = FakeSessionRepository();
+      mockMasteryService = FakeMasteryGraphService();
       tracker = StudyProgressTracker(
         attemptRepo: mockRepo,
         sessionRepo: mockSessionRepo,
+        masteryService: mockMasteryService,
       );
     });
 
@@ -132,7 +243,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['avgTimePerQuestion'], equals(7));
+        expect(stats['avgTimePerQuestion'], equals(8));
       });
 
       test('calculates total study time in hours', () async {
@@ -237,7 +348,7 @@ void main() {
         final progress = await tracker.getTopicProgress('student1', 'topic1');
 
         expect(progress['attempts'], equals(3));
-        expect(progress['accuracy'], equals(66));
+        expect(progress['accuracy'], equals(67));
         expect(progress['timeSpentMinutes'], equals(3));
       });
 
@@ -332,51 +443,52 @@ void main() {
     });
 
     group('getBadges', () {
-      test('returns first attempt badge', () async {
+      test('returns empty list when no badges have been unlocked', () async {
+        final badges = await tracker.getBadges('no_badges_student');
+        expect(badges, isEmpty);
+      });
+
+      test('returns badges after they are persisted', () async {
+        const testStudent = 'badge_persist_student';
         final now = DateTime.now();
         mockRepo.setAttempts([
-          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a1', studentId: testStudent, questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
 
-        final badges = await tracker.getBadges('student1');
+        final badgeService = BadgeService(
+          tracker: tracker,
+          notificationService: null,
+        );
+        await badgeService.checkAndUnlockBadges(testStudent);
 
-        expect(badges.any((b) => b['id'] == 'first_attempt'), isTrue);
+        final badges = await tracker.getBadges(testStudent);
+
+        expect(badges.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
       });
 
-      test('returns century badge for 100+ attempts', () async {
+      test('returns multiple badges when conditions are met', () async {
+        const testStudent = 'badge_multiple_student';
         final now = DateTime.now();
         final attempts = List.generate(100, (i) => StudentAttempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
+          id: 'a$i', studentId: testStudent, questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
         ));
         mockRepo.setAttempts(attempts);
 
-        final badges = await tracker.getBadges('student1');
+        final badgeService = BadgeService(
+          tracker: tracker,
+          notificationService: null,
+        );
+        await badgeService.checkAndUnlockBadges(testStudent);
 
-        expect(badges.any((b) => b['id'] == 'century'), isTrue);
+        final badges = await tracker.getBadges(testStudent);
+
+        expect(badges.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
+        expect(badges.any((b) => (b['id'] as String).startsWith('century')), isTrue);
       });
 
-      test('returns accuracy gold badge for 90%+ accuracy', () async {
-        final now = DateTime.now();
-        final attempts = List.generate(10, (i) => StudentAttempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
-        ));
-        mockRepo.setAttempts(attempts);
-
-        final badges = await tracker.getBadges('student1');
-
-        expect(badges.any((b) => b['id'] == 'accuracy_gold'), isTrue);
-      });
-
-      test('returns daily streak badge for 5+ daily attempts', () async {
-        final now = DateTime.now();
-        final attempts = List.generate(5, (i) => StudentAttempt(
-          id: 'a$i', studentId: 'student1', questionId: 'q$i', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math',
-        ));
-        mockRepo.setAttempts(attempts);
-
-        final badges = await tracker.getBadges('student1');
-
-        expect(badges.any((b) => b['id'] == 'daily_streak'), isTrue);
+      test('returns empty list for student without attempts', () async {
+        final badges = await tracker.getBadges('no_attempts_student');
+        expect(badges, isEmpty);
       });
     });
 

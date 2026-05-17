@@ -15,7 +15,7 @@ void main() {
   }
 
   group('PendingActionCard', () {
-    testWidgets('renders schedule action type', (tester) async {
+    testWidgets('renders schedule action type with event icon', (tester) async {
       await tester.pumpWidget(buildApp(
         PendingActionCard(
           action: PendingActionModel(
@@ -32,7 +32,7 @@ void main() {
       expect(find.byIcon(Icons.event), findsOneWidget);
     });
 
-    testWidgets('renders reschedule action type', (tester) async {
+    testWidgets('renders reschedule action type with event_busy icon', (tester) async {
       await tester.pumpWidget(buildApp(
         PendingActionCard(
           action: PendingActionModel(
@@ -49,7 +49,7 @@ void main() {
       expect(find.byIcon(Icons.event_busy), findsOneWidget);
     });
 
-    testWidgets('renders planAdjustment action type', (tester) async {
+    testWidgets('renders planAdjustment action type with tune icon', (tester) async {
       await tester.pumpWidget(buildApp(
         PendingActionCard(
           action: PendingActionModel(
@@ -100,12 +100,29 @@ void main() {
       expect(find.text('Algebra Basics'), findsOneWidget);
     });
 
+    testWidgets('hides topic title when empty', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PendingActionCard(
+          action: PendingActionModel(
+            id: 'a6',
+            studentId: 's1',
+            actionType: 'schedule',
+            topicTitle: '',
+          ),
+          onAccept: () {},
+          onDismiss: () {},
+        ),
+      ));
+
+      expect(find.byType(Column), findsWidgets);
+    });
+
     testWidgets('calls onAccept when accept button tapped', (tester) async {
       bool accepted = false;
       await tester.pumpWidget(buildApp(
         PendingActionCard(
           action: PendingActionModel(
-            id: 'a6',
+            id: 'a7',
             studentId: 's1',
             actionType: 'schedule',
           ),
@@ -123,7 +140,7 @@ void main() {
       await tester.pumpWidget(buildApp(
         PendingActionCard(
           action: PendingActionModel(
-            id: 'a7',
+            id: 'a8',
             studentId: 's1',
             actionType: 'schedule',
           ),
@@ -134,6 +151,23 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.cancel_outlined));
       expect(dismissed, isTrue);
+    });
+
+    testWidgets('renders dismiss and accept tooltips', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PendingActionCard(
+          action: PendingActionModel(
+            id: 'a9',
+            studentId: 's1',
+            actionType: 'schedule',
+          ),
+          onAccept: () {},
+          onDismiss: () {},
+        ),
+      ));
+
+      expect(find.byTooltip('Accept'), findsOneWidget);
+      expect(find.byTooltip('Dismiss'), findsOneWidget);
     });
   });
 }

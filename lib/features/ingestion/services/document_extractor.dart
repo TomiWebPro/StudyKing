@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
@@ -19,13 +20,14 @@ class DocumentExtractor {
   final PdfExtractor _pdfExtractor;
   final OcrExtractor _ocrExtractor;
   final TranscriptionExtractor _transcriptionExtractor;
+  final String modelId;
 
   DocumentExtractor({
     PdfExtractor? pdfExtractor,
     OcrExtractor? ocrExtractor,
     TranscriptionExtractor? transcriptionExtractor,
     LlmService? llmService,
-    required String modelId,
+    required this.modelId,
     String localeName = 'en',
   })  : _pdfExtractor = pdfExtractor ?? PdfExtractor(),
         _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
@@ -104,7 +106,9 @@ class DocumentExtractor {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      const Logger('DocumentExtractor').e('Failed to read file as UTF-8: $e');
+    }
 
     final chunks = _chunkContent(rawContent);
     final heading = _detectHeading(rawContent);

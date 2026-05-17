@@ -41,7 +41,7 @@ class ChatBubble extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: ResponsiveUtils.cardPadding(context),
               decoration: BoxDecoration(
                 color: isStudent
                     ? Theme.of(context).colorScheme.primaryContainer
@@ -139,7 +139,7 @@ class ChatBubble extends StatelessWidget {
       final data = jsonDecode(content) as Map<String, dynamic>;
       return data['type'] == 'evaluation';
     } catch (e) {
-      _logger.w('Failed to parse evaluation message', e);
+      _logger.e('Failed to parse evaluation message', e);
       return false;
     }
   }
@@ -207,7 +207,7 @@ class ChatBubble extends StatelessWidget {
         ],
       );
     } catch (e) {
-      _logger.w('Failed to build evaluation content', e);
+      _logger.e('Failed to build evaluation content', e);
       return Text(content);
     }
   }

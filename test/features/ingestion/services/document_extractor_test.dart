@@ -1,6 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
+
+class _FakeOcrExtractor extends OcrExtractor {
+  _FakeOcrExtractor() : super(modelId: 'test');
+
+  @override
+  Future<OcrExtractionResult> extractText({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async {
+    return const OcrExtractionResult(
+      text: '',
+      extractionMethod: 'ocr_failed',
+      errorMessage: 'Simulated OCR failure',
+    );
+  }
+}
 
 void main() {
   group('DocumentExtractor', () {
@@ -159,6 +176,19 @@ void main() {
         );
         expect(result.text, '');
         expect(result.extractionMethod, 'pdf_empty');
+      });
+
+      test('returns error when OCR extraction fails', () async {
+        final extractor = DocumentExtractor(
+          modelId: 'test-model',
+          ocrExtractor: _FakeOcrExtractor(),
+        );
+        final result = await extractor.extractText(
+          rawContent: 'test content',
+          sourceType: SourceType.image,
+        );
+        expect(result.isError, isTrue);
+        expect(result.errorMessage, contains('Simulated OCR failure'));
       });
     });
 

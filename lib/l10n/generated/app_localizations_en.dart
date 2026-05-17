@@ -705,7 +705,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String importPreview(int boxes, int records) {
-    return 'This backup contains $boxes section(s) with $records record(s). Existing data may be overwritten. Continue?';
+    String _temp0 = intl.Intl.pluralLogic(
+      boxes,
+      locale: localeName,
+      other: '$boxes sections',
+      one: '1 section',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      records,
+      locale: localeName,
+      other: '$records records',
+      one: '1 record',
+    );
+    return 'This backup contains $_temp0 with $_temp1. Existing data may be overwritten. Continue?';
   }
 
   @override
@@ -2850,8 +2862,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifTitleTakeBreak => 'Take a Break';
 
   @override
-  String notifBodyOverwork(String hours) {
-    return 'You\'ve studied $hours hours today. Remember to rest!';
+  String notifBodyOverwork(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return 'You\'ve studied $_temp0 today. Remember to rest!';
   }
 
   @override
@@ -3779,11 +3797,107 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pageNotFound => 'Page not found';
 
   @override
-  String get pageNotFoundDescription => 'The page you are looking for does not exist or the link may be invalid.';
+  String get pageNotFoundDescription =>
+      'The page you are looking for does not exist or the link may be invalid.';
 
   @override
   String get goToDashboard => 'Go to Dashboard';
 
   @override
   String get sending => 'Sending';
+
+  @override
+  String get dailyReminderDescription =>
+      'Get a daily reminder to study at your preferred time';
+
+  @override
+  String get reminderTime => 'Reminder Time';
+
+  @override
+  String get dailyReminderTimeHelp => 'Daily Reminder Time';
+
+  @override
+  String get checkNudgesNow => 'Check Nudges Now';
+
+  @override
+  String get runNudgeChecks => 'Run nudge checks immediately';
+
+  @override
+  String get nudgeCheckComplete => 'Nudge check complete';
+
+  @override
+  String get nudgeCheckFailed => 'Nudge check failed';
+
+  @override
+  String get dailyCapWarningTitle => 'Daily Cap Warning';
+
+  @override
+  String dailyCapWarningBody(int selectedMinutes, int remaining) {
+    return 'Starting this session will exceed your daily cap. $selectedMinutes min selected, $remaining min remaining. Continue?';
+  }
+
+  @override
+  String get continueAnyway => 'Continue Anyway';
+
+  @override
+  String get focusFirstVisitHelp =>
+      'Set a timer and study distraction-free. Completed sessions count toward your daily plan.';
+
+  @override
+  String get contentManagement => 'Content Management';
+
+  @override
+  String get myUploads => 'My Uploads';
+
+  @override
+  String get viewMyUploads => 'View your uploaded materials';
+
+  @override
+  String get questionBank => 'Question Bank';
+
+  @override
+  String get browseAndManageQuestions => 'Browse and manage questions';
+
+  @override
+  String get failedUploads => 'Failed Uploads';
+
+  @override
+  String sourceCountFailed(int count) {
+    return '$count source(s) failed to process';
+  }
+
+  @override
+  String get noFailedUploads => 'No failed uploads';
+
+  @override
+  String get breakDuration => 'Break Duration';
+
+  @override
+  String get featureLabelIngestion => 'Ingestion';
+
+  @override
+  String get featureLabelGeneral => 'General';
+
+  @override
+  String get deleteSourceTitle => 'Delete Source';
+
+  @override
+  String get deleteSourceBody => 'Are you sure you want to delete this source?';
+
+  @override
+  String get dailyReminderNotificationTitle => 'Daily Study Reminder';
+
+  @override
+  String get dailyReminderNotificationBody =>
+      'Time to study! You have study tasks planned for today.';
+
+  @override
+  String get addSubjectsForFocusHint =>
+      'Add subjects in Settings to track focus by subject.';
+
+  @override
+  String get retrying => 'Retrying...';
+
+  @override
+  String get unableToResolveSubject => 'Could not find subject for this topic.';
 }

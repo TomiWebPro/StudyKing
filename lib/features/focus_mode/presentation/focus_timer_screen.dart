@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planAdapterProvider;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -14,7 +15,8 @@ import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dar
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/routes/app_router.dart';
 
 class FocusTimerScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
@@ -90,13 +92,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         _showFirstVisitHelp = true;
         try {
           ref.read(settingsProvider.notifier).updateFirstFocusVisit();
-        } catch (_) {}
+        } catch (e) {
+          const Logger('FocusTimerScreen').e('Failed to update first focus visit: $e');
+        }
       }
 
       if (mounted) {
         setState(() => _initialized = true);
       }
-    } catch (_) {
+    } catch (e) {
+      const Logger('FocusTimerScreen').e('Failed to initialize focus timer', e);
       if (mounted) {
         setState(() => _initialized = true);
       }
@@ -119,7 +124,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   Future<void> _checkBadges(Session session) async {
     try {
-      final studentId = StudentIdService().getStudentId();
+      final studentId = ref.read(studentIdValueProvider);
       final badgeService = BadgeService();
       await badgeService.checkAndUnlockBadges(studentId);
     } catch (e) {
@@ -133,7 +138,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       final elapsedSeconds = session.actualDurationMs ~/ 1000;
       final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
       await planAdapter.recordFromFocusSession(
-        studentId: StudentIdService().getStudentId(),
+        studentId: ref.read(studentIdValueProvider),
         actualMinutes: actualMinutes,
       );
     } catch (e) {
@@ -179,7 +184,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
           _recentSessions = recent;
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      const Logger('FocusTimerScreen').e('Failed to load focus stats', e);
+    }
   }
 
   Future<void> _startFocus() async {
@@ -193,8 +200,8 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             final continueAnyway = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text('Daily Cap Warning'),
-                content: Text('Starting this session will exceed your daily cap. $_selectedMinutes min selected, $remaining min remaining. Continue?'),
+                title: Text(l10n.dailyCapWarningTitle),
+                content: Text(l10n.dailyCapWarningBody(_selectedMinutes, remaining)),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
@@ -202,7 +209,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                   ),
                   FilledButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Continue Anyway'),
+                    child: Text(l10n.continueAnyway),
                   ),
                 ],
               ),
@@ -441,9 +448,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                     Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: const Text(
-                        'Set a timer and study distraction-free. Completed sessions count toward your daily plan.',
-                        style: TextStyle(fontSize: 13),
+                      child: Text(
+                        l10n.focusFirstVisitHelp,
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ),
                   ],
@@ -517,7 +524,34 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
           future: repo.getAll().then((r) => r.data ?? []),
           builder: (context, snapshot) {
             final subjects = snapshot.data ?? [];
-            if (subjects.isEmpty) return const SizedBox.shrink();
+            if (subjects.isEmpty) {
+              return Semantics(
+                label: l10n.addSubjectsForFocusHint,
+                child: Card(
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.addSubjectsForFocusHint,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton(
+                          onPressed: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+                          child: Text(l10n.settings),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
             return DropdownButtonFormField<String>(
               initialValue: _selectedSubjectId.isEmpty ? null : _selectedSubjectId,
               decoration: InputDecoration(

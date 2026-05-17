@@ -31,6 +31,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart' s
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSettingsRepository extends SettingsRepository {
   final Map<String, dynamic> _store = {};
@@ -225,6 +226,7 @@ Widget _buildTestApp({
   FakeMasteryGraphService? masteryGraph,
   FakeProgressTracker? progressTracker,
   EngagementNudgeRepository? nudgeRepo,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
     overrides: [
@@ -250,6 +252,7 @@ Widget _buildTestApp({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const MentorScreen(),
     ),
   );
@@ -1090,6 +1093,22 @@ void main() {
       expect(find.byIcon(Icons.trending_up), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
       expect(find.byIcon(Icons.book_outlined), findsOneWidget);
+    });
+
+    testWidgets('navigator observes no pops initially', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('navigator pops via system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
     });
   });
 }

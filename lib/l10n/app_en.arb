@@ -902,7 +902,7 @@
   "@importConfirmTitle": {
     "description": "Title for import confirmation dialog"
   },
-  "importPreview": "This backup contains {boxes} section(s) with {records} record(s). Existing data may be overwritten. Continue?",
+  "importPreview": "This backup contains {boxes,plural,=1{1 section} other{{boxes} sections}} with {records,plural,=1{1 record} other{{records} records}}. Existing data may be overwritten. Continue?",
   "@importPreview": {
     "description": "Preview message before importing a backup with box and record counts",
     "placeholders": {
@@ -3892,12 +3892,12 @@
   "@notifTitleTakeBreak": {
     "description": "Title for overwork warning notification"
   },
-  "notifBodyOverwork": "You've studied {hours} hours today. Remember to rest!",
+  "notifBodyOverwork": "You've studied {hours,plural,=1{1 hour} other{{hours} hours}} today. Remember to rest!",
   "@notifBodyOverwork": {
     "description": "Body for overwork warning",
     "placeholders": {
       "hours": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
@@ -5221,5 +5221,128 @@
   "sending": "Sending",
   "@sending": {
     "description": "Label shown when a message is being sent"
+  },
+  "dailyReminderDescription": "Get a daily reminder to study at your preferred time",
+  "@dailyReminderDescription": {
+    "description": "Subtitle for daily reminder toggle"
+  },
+  "reminderTime": "Reminder Time",
+  "@reminderTime": {
+    "description": "Tile title for daily reminder time setting"
+  },
+  "dailyReminderTimeHelp": "Daily Reminder Time",
+  "@dailyReminderTimeHelp": {
+    "description": "Help text for the daily reminder time picker"
+  },
+  "checkNudgesNow": "Check Nudges Now",
+  "@checkNudgesNow": {
+    "description": "Button title to run nudge checks immediately"
+  },
+  "runNudgeChecks": "Run nudge checks immediately",
+  "@runNudgeChecks": {
+    "description": "Subtitle for nudge check button"
+  },
+  "nudgeCheckComplete": "Nudge check complete",
+  "@nudgeCheckComplete": {
+    "description": "Snackbar message after successful nudge check"
+  },
+  "nudgeCheckFailed": "Nudge check failed",
+  "@nudgeCheckFailed": {
+    "description": "Snackbar message after failed nudge check"
+  },
+  "dailyCapWarningTitle": "Daily Cap Warning",
+  "@dailyCapWarningTitle": {
+    "description": "Title for daily cap warning dialog"
+  },
+  "dailyCapWarningBody": "Starting this session will exceed your daily cap. {selectedMinutes} min selected, {remaining} min remaining. Continue?",
+  "@dailyCapWarningBody": {
+    "description": "Body for daily cap warning dialog",
+    "placeholders": {
+      "selectedMinutes": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "continueAnyway": "Continue Anyway",
+  "@continueAnyway": {
+    "description": "Button to proceed despite warning"
+  },
+  "focusFirstVisitHelp": "Set a timer and study distraction-free. Completed sessions count toward your daily plan.",
+  "@focusFirstVisitHelp": {
+    "description": "Help text shown on first visit to focus timer"
+  },
+  "contentManagement": "Content Management",
+  "@contentManagement": {
+    "description": "Section title for content management settings"
+  },
+  "myUploads": "My Uploads",
+  "@myUploads": {
+    "description": "Tile title for uploaded materials"
+  },
+  "viewMyUploads": "View your uploaded materials",
+  "@viewMyUploads": {
+    "description": "Subtitle for uploads tile"
+  },
+  "questionBank": "Question Bank",
+  "@questionBank": {
+    "description": "Tile title for question bank"
+  },
+  "browseAndManageQuestions": "Browse and manage questions",
+  "@browseAndManageQuestions": {
+    "description": "Subtitle for question bank tile"
+  },
+  "failedUploads": "Failed Uploads",
+  "@failedUploads": {
+    "description": "Tile title for failed uploads"
+  },
+  "sourceCountFailed": "{count} source(s) failed to process",
+  "@sourceCountFailed": {
+    "description": "Failed upload count message",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noFailedUploads": "No failed uploads",
+  "@noFailedUploads": {
+    "description": "Message when no failed uploads exist"
+  },
+  "breakDuration": "Break Duration",
+  "@breakDuration": {
+    "description": "Tile title for break duration setting"
+  },
+  "featureLabelIngestion": "Ingestion",
+  "@featureLabelIngestion": {
+    "description": "Feature label for ingestion in token usage dialog"
+  },
+  "featureLabelGeneral": "General",
+  "@featureLabelGeneral": {
+    "description": "Feature label for general in token usage dialog"
+  },
+  "deleteSourceTitle": "Delete Source",
+  "@deleteSourceTitle": {
+    "description": "Title for delete source confirmation dialog"
+  },
+  "deleteSourceBody": "Are you sure you want to delete this source?",
+  "@deleteSourceBody": {
+    "description": "Body for delete source confirmation dialog"
+  },
+  "dailyReminderNotificationTitle": "Daily Study Reminder",
+  "@dailyReminderNotificationTitle": {
+    "description": "Title for daily reminder study notification"
+  },
+  "dailyReminderNotificationBody": "Time to study! You have study tasks planned for today.",
+  "@dailyReminderNotificationBody": {
+    "description": "Body for daily reminder study notification"
+  },
+  "addSubjectsForFocusHint": "Add subjects in Settings to track focus by subject.",
+  "@addSubjectsForFocusHint": {
+    "description": "Hint shown in focus timer when no subjects exist yet"
+  },
+  "retrying": "Retrying...",
+  "@retrying": {
+    "description": "Button label when retrying an operation"
+  },
+  "unableToResolveSubject": "Could not find subject for this topic.",
+  "@unableToResolveSubject": {
+    "description": "Snackbar message when subject cannot be resolved for a topic"
   }
 }

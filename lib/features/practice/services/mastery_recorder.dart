@@ -127,7 +127,8 @@ class MasteryRecorder {
             ? DateTime.fromMillisecondsSinceEpoch(map['lr'] as int)
             : null,
       );
-    } catch (_) {
+    } catch (e) {
+      _logger.e('Failed to deserialize SR data', e);
       return const QuestionSRData();
     }
   }

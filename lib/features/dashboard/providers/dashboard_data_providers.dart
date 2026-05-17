@@ -199,6 +199,7 @@ final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, st
     final sources = await repo.getByStudent(studentId);
     return sources.length;
   } catch (e) {
+    const Logger('dashboardSourceCountProvider').e('Failed to get source count', e);
     return 0;
   }
 });

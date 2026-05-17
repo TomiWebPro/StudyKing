@@ -16,7 +16,7 @@ class _FakeSessionRepository extends SessionRepository {
   final List<Session> _sessions = [];
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     _sessions.add(session);
     return Result.success(null);
   }
@@ -84,7 +84,7 @@ void main() {
           startTime: DateTime(2026, 1, 1),
           completed: true,
         );
-        await sessionRepo.save(session);
+        await sessionRepo.save(session.id, session);
 
         await integrator.linkPracticeSessionToSource(
           practiceSessionId: 'practice_1',
@@ -108,33 +108,42 @@ void main() {
 
     group('getUnifiedTimeline', () {
       test('returns sessions sorted chronologically', () async {
-        await sessionRepo.save(Session(
-          id: 's1',
-          studentId: 's1',
-          subjectId: 'sub1',
-          type: SessionType.practice,
-          startTime: DateTime(2026, 1, 3),
-          actualDurationMs: 1000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's2',
-          studentId: 's1',
-          subjectId: 'sub1',
-          type: SessionType.tutoring,
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 2000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's3',
-          studentId: 's1',
-          subjectId: 'sub1',
-          type: SessionType.focus,
-          startTime: DateTime(2026, 1, 2),
-          actualDurationMs: 3000,
-          completed: true,
-        ));
+        final sess0 = Session(
+          
+                    id: 's1',
+                    studentId: 's1',
+                    subjectId: 'sub1',
+                    type: SessionType.practice,
+                    startTime: DateTime(2026, 1, 3),
+                    actualDurationMs: 1000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess0.id, sess0);
+        final sess1 = Session(
+          
+                    id: 's2',
+                    studentId: 's1',
+                    subjectId: 'sub1',
+                    type: SessionType.tutoring,
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 2000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess1.id, sess1);
+        final sess2 = Session(
+          
+                    id: 's3',
+                    studentId: 's1',
+                    subjectId: 'sub1',
+                    type: SessionType.focus,
+                    startTime: DateTime(2026, 1, 2),
+                    actualDurationMs: 3000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess2.id, sess2);
 
         final timeline = await integrator.getUnifiedTimeline(studentId: 's1');
 
@@ -146,13 +155,16 @@ void main() {
 
       test('respects limit parameter', () async {
         for (var i = 0; i < 5; i++) {
-          await sessionRepo.save(Session(
-            id: 's$i',
-            studentId: 's1',
-            startTime: DateTime(2026, 1, i + 1),
-            actualDurationMs: 1000,
-            completed: true,
-          ));
+          final sess3 = Session(
+            
+                        id: 's$i',
+                        studentId: 's1',
+                        startTime: DateTime(2026, 1, i + 1),
+                        actualDurationMs: 1000,
+                        completed: true,
+                      
+          );
+          await sessionRepo.save(sess3.id, sess3);
         }
 
         final timeline = await integrator.getUnifiedTimeline(
@@ -165,13 +177,16 @@ void main() {
 
       test('respects offset parameter', () async {
         for (var i = 0; i < 5; i++) {
-          await sessionRepo.save(Session(
-            id: 's$i',
-            studentId: 's1',
-            startTime: DateTime(2026, 1, i + 1),
-            actualDurationMs: 1000,
-            completed: true,
-          ));
+          final sess4 = Session(
+            
+                        id: 's$i',
+                        studentId: 's1',
+                        startTime: DateTime(2026, 1, i + 1),
+                        actualDurationMs: 1000,
+                        completed: true,
+                      
+          );
+          await sessionRepo.save(sess4.id, sess4);
         }
 
         final timeline = await integrator.getUnifiedTimeline(
@@ -191,40 +206,52 @@ void main() {
 
     group('getTotalStudyDurationMs', () {
       test('sums all session durations', () async {
-        await sessionRepo.save(Session(
-          id: 's1',
-          studentId: 's1',
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 100000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's2',
-          studentId: 's1',
-          startTime: DateTime(2026, 1, 2),
-          actualDurationMs: 200000,
-          completed: true,
-        ));
+        final sess5 = Session(
+          
+                    id: 's1',
+                    studentId: 's1',
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 100000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess5.id, sess5);
+        final sess6 = Session(
+          
+                    id: 's2',
+                    studentId: 's1',
+                    startTime: DateTime(2026, 1, 2),
+                    actualDurationMs: 200000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess6.id, sess6);
 
         final total = await integrator.getTotalStudyDurationMs(studentId: 's1');
         expect(total, 300000);
       });
 
       test('filters by date', () async {
-        await sessionRepo.save(Session(
-          id: 's1',
-          studentId: 's1',
-          startTime: DateTime(2025, 1, 1),
-          actualDurationMs: 100000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's2',
-          studentId: 's1',
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 200000,
-          completed: true,
-        ));
+        final sess7 = Session(
+          
+                    id: 's1',
+                    studentId: 's1',
+                    startTime: DateTime(2025, 1, 1),
+                    actualDurationMs: 100000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess7.id, sess7);
+        final sess8 = Session(
+          
+                    id: 's2',
+                    studentId: 's1',
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 200000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess8.id, sess8);
 
         final total = await integrator.getTotalStudyDurationMs(
           studentId: 's1',
@@ -236,30 +263,39 @@ void main() {
 
     group('getDurationByType', () {
       test('groups durations by session type', () async {
-        await sessionRepo.save(Session(
-          id: 's1',
-          studentId: 's1',
-          type: SessionType.practice,
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 100000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's2',
-          studentId: 's1',
-          type: SessionType.practice,
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 200000,
-          completed: true,
-        ));
-        await sessionRepo.save(Session(
-          id: 's3',
-          studentId: 's1',
-          type: SessionType.tutoring,
-          startTime: DateTime(2026, 1, 1),
-          actualDurationMs: 300000,
-          completed: true,
-        ));
+        final sess9 = Session(
+          
+                    id: 's1',
+                    studentId: 's1',
+                    type: SessionType.practice,
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 100000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess9.id, sess9);
+        final sess10 = Session(
+          
+                    id: 's2',
+                    studentId: 's1',
+                    type: SessionType.practice,
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 200000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess10.id, sess10);
+        final sess11 = Session(
+          
+                    id: 's3',
+                    studentId: 's1',
+                    type: SessionType.tutoring,
+                    startTime: DateTime(2026, 1, 1),
+                    actualDurationMs: 300000,
+                    completed: true,
+                  
+        );
+        await sessionRepo.save(sess11.id, sess11);
 
         final byType = await integrator.getDurationByType(studentId: 's1');
 
@@ -269,18 +305,24 @@ void main() {
     });
 
     test('getCompletedSessionCount returns count', () async {
-      await sessionRepo.save(Session(
-        id: 's1',
-        studentId: 's1',
-        startTime: DateTime(2026, 1, 1),
-        completed: true,
-      ));
-      await sessionRepo.save(Session(
-        id: 's2',
-        studentId: 's1',
-        startTime: DateTime(2026, 1, 1),
-        completed: false,
-      ));
+      final sess12 = Session(
+        
+                id: 's1',
+                studentId: 's1',
+                startTime: DateTime(2026, 1, 1),
+                completed: true,
+              
+      );
+      await sessionRepo.save(sess12.id, sess12);
+      final sess13 = Session(
+        
+                id: 's2',
+                studentId: 's1',
+                startTime: DateTime(2026, 1, 1),
+                completed: false,
+              
+      );
+      await sessionRepo.save(sess13.id, sess13);
 
       final count = await integrator.getCompletedSessionCount(studentId: 's1');
       expect(count, 1);

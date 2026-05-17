@@ -13,6 +13,8 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
 void main() {
@@ -45,6 +47,42 @@ void main() {
         returnsNormally,
       );
     });
+
+    test('uses overridden repository with seeded data', () async {
+      final fakeRepo = LessonRepository();
+      final container = ProviderContainer(
+        overrides: [
+          lessonRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(lessonRepositoryProvider);
+      expect(repo, same(fakeRepo));
+    });
+
+    test('behavioral: overridden repository returns seeded data through provider', () async {
+      final now = DateTime.now();
+      final fakeRepo = _SeededFakeLessonRepository(seed: [
+        Lesson(
+          id: 'seeded-lesson', subjectId: 'sub-1', title: 'Seeded Lesson',
+          topicId: 't-1', blocks: [], createdAt: now,
+        ),
+      ]);
+      final container = ProviderContainer(
+        overrides: [
+          lessonRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(lessonRepositoryProvider);
+      final all = await repo.getAll();
+      expect(all.isSuccess, isTrue);
+      expect(all.data, hasLength(1));
+      expect(all.data!.first.id, 'seeded-lesson');
+      expect(all.data!.first.title, 'Seeded Lesson');
+    });
   });
 
   group('tutorSessionRepositoryProvider', () {
@@ -66,6 +104,44 @@ void main() {
       );
       addTearDown(container.dispose);
       expect(container.read(tutorSessionRepositoryProvider), same(fakeRepo));
+    });
+
+    test('uses overridden repository with seeded data', () async {
+      final fakeRepo = TutorSessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          tutorSessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(tutorSessionRepositoryProvider);
+      expect(repo, same(fakeRepo));
+    });
+
+    test('behavioral: overridden repository returns seeded sessions through provider', () async {
+      final fakeRepo = _SeededFakeTutorSessionRepository(seed: [
+        TutorSession(
+          id: 'seeded-ts', studentId: 'stu1', subjectId: 'sub-1',
+          topicId: 't-1', topicTitle: 'Algebra',
+          status: SessionStatus.completed,
+          startTime: DateTime.now(), plannedDurationMinutes: 45,
+          lessonPlanJson: '', questionsAsked: 0, questionsCorrect: 0,
+          confidenceRating: 0,
+        ),
+      ]);
+      final container = ProviderContainer(
+        overrides: [
+          tutorSessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(tutorSessionRepositoryProvider);
+      final sessions = await repo.getStudentSessions('stu1');
+      expect(sessions, hasLength(1));
+      expect(sessions.first.id, 'seeded-ts');
+      expect(sessions.first.topicTitle, 'Algebra');
     });
   });
 
@@ -140,6 +216,40 @@ void main() {
   });
 }
 
+class _SeededFakeLessonRepository extends LessonRepository {
+  final List<Lesson> _lessons;
+
+  _SeededFakeLessonRepository({List<Lesson>? seed}) : _lessons = List.from(seed ?? []);
+
+  @override
+  Future<Result<List<Lesson>>> getAll() async => Result.success(List.from(_lessons));
+
+  @override
+  Future<Result<Lesson?>> get(String id) async =>
+      Result.success(_lessons.where((l) => l.id == id).firstOrNull);
+
+  @override
+  Future<Result<void>> save(String key, Lesson lesson) async {
+    _lessons.removeWhere((l) => l.id == lesson.id);
+    _lessons.add(lesson);
+    return Result.success(null);
+  }
+}
+
+class _SeededFakeTutorSessionRepository extends TutorSessionRepository {
+  final List<TutorSession> _sessions;
+  bool throwOnGet = false;
+
+  _SeededFakeTutorSessionRepository({List<TutorSession>? seed})
+      : _sessions = List.from(seed ?? []);
+
+  @override
+  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+    if (throwOnGet) throw Exception('Error');
+    return _sessions.where((s) => s.studentId == studentId).toList();
+  }
+}
+
 class FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
   bool throwOnSave = false;
@@ -177,7 +287,7 @@ class FakeSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) throw Exception('save failed');
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);

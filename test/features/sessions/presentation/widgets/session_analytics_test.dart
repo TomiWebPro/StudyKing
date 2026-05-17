@@ -689,4 +689,141 @@ void main() {
       expect(find.text('0s'), findsAtLeastNWidgets(1));
     });
   });
+
+  group('SessionAnalyticsWidget - bodySmallColor fallback', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('falls back to grey when bodySmall color is null', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData.light().copyWith(
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.black),
+            bodyMedium: TextStyle(color: Colors.black),
+            bodySmall: TextStyle(),
+            titleLarge: TextStyle(color: Colors.black),
+            titleSmall: TextStyle(color: Colors.black),
+            displayLarge: TextStyle(color: Colors.black),
+            labelSmall: TextStyle(color: Colors.black),
+          ),
+        ),
+        home: Scaffold(
+          body: SizedBox(
+            height: 1200,
+            child: const SessionAnalyticsWidget(
+              sessions: [],
+              currentStreak: 0,
+            ),
+          ),
+        ),
+      ));
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.calendar_month));
+      expect(icon.color, Colors.grey);
+    });
+
+    testWidgets('uses bodySmall color when available', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData.light().copyWith(
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.black),
+            bodyMedium: TextStyle(color: Colors.black),
+            bodySmall: TextStyle(color: Colors.deepPurple),
+            titleLarge: TextStyle(color: Colors.black),
+            titleSmall: TextStyle(color: Colors.black),
+            displayLarge: TextStyle(color: Colors.black),
+            labelSmall: TextStyle(color: Colors.black),
+          ),
+        ),
+        home: Scaffold(
+          body: SizedBox(
+            height: 1200,
+            child: const SessionAnalyticsWidget(
+              sessions: [],
+              currentStreak: 0,
+            ),
+          ),
+        ),
+      ));
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.calendar_month));
+      expect(icon.color, Colors.deepPurple);
+    });
+  });
+
+  group('SessionAnalyticsWidget - MetricCard properties', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('four MetricCards with correct labels and values', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+        ),
+      ));
+
+      final cards = tester.widgetList<MetricCard>(find.byType(MetricCard)).toList();
+      expect(cards.length, 4);
+      expect(cards[0].label, 'Avg Session');
+      expect(cards[0].value, '\u2014');
+      expect(cards[1].label, 'Total Sessions');
+      expect(cards[1].value, '0');
+      expect(cards[2].label, 'Current Streak');
+      expect(cards[2].value, '0 days');
+      expect(cards[3].label, 'Total Time');
+      expect(cards[3].value, '0s');
+    });
+
+    testWidgets('correct MetricCard values with session data', (tester) async {
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 7200000),
+        buildSession(id: '2', start: asOf, timeSpentMs: 3600000),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 5,
+          asOf: asOf,
+        ),
+      ));
+
+      final cards = tester.widgetList<MetricCard>(find.byType(MetricCard)).toList();
+      expect(cards[0].value, '1h 30m 0s');
+      expect(cards[1].value, '2');
+      expect(cards[2].value, '5 days');
+      expect(cards[3].value, '3h 0m 0s');
+    });
+
+    testWidgets('MetricCards receive distinct non-transparent accent colors', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        const SessionAnalyticsWidget(
+          sessions: [],
+          currentStreak: 0,
+        ),
+      ));
+
+      final cards = tester.widgetList<MetricCard>(find.byType(MetricCard)).toList();
+      expect(cards.length, 4);
+      for (final card in cards) {
+        expect(card.accent, isNot(equals(Colors.transparent)));
+      }
+      expect(cards[0].accent, isNot(equals(cards[1].accent)));
+      expect(cards[1].accent, isNot(equals(cards[2].accent)));
+      expect(cards[2].accent, isNot(equals(cards[3].accent)));
+    });
+  });
 }

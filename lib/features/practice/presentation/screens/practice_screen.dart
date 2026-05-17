@@ -43,6 +43,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   late final StudentIdService _studentIdService;
   List<Subject> _subjects = [];
   bool _isLoading = true;
+  String? _loadError;
   Map<String, int> _dueCounts = {};
   bool _isLoadingDueCounts = false;
   int _totalQuestionCount = 0;
@@ -71,12 +72,16 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       setState(() {
         _subjects = subjects;
         _isLoading = false;
+        _loadError = null;
       });
       _loadDueCounts();
       _loadQuestionCount();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _loadError = e.toString();
+      });
       AppErrorHandler.handleError(context, e, 'Subjects Load',
           retry: true, retryCallback: _retryLoadSubjects);
     }
@@ -94,7 +99,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         _dueCounts = dueCounts;
         _isLoadingDueCounts = false;
       });
-    } catch (_) {
+    } catch (e) {
+      _logger.e('Failed to load due counts', e);
       if (mounted) setState(() => _isLoadingDueCounts = false);
     }
   }
@@ -113,7 +119,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         _questionsToday = allAttempts
             .where((a) => a.timestamp.isAfter(today))
             .length;
-      } catch (_) {
+      } catch (e) {
+        _logger.e('Failed to load attempts count', e);
         _questionsToday = 0;
       }
 
@@ -121,7 +128,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       setState(() {
         _totalQuestionCount = allQuestions.length;
       });
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to load question count', e);
+    }
   }
 
   Future<void> _startPractice(Subject subject) async {
@@ -529,7 +538,33 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: ResponsiveUtils.screenPadding(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                _loadError!,
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _retryLoadSubjects,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (_subjects.isEmpty) return const PracticeEmptyState();
     return RefreshIndicator(
       onRefresh: _loadSubjects,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/repositories/student_availability_repository.dart';
@@ -70,7 +71,9 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
           _durationMinutes = availability.defaultSessionDurationMinutes;
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      const Logger('LessonBookingSheet').e('Failed to load availability: $e');
+    }
   }
 
   @override
@@ -253,7 +256,8 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       if (mounted) {
         setState(() => _hasConflict = conflict);
       }
-    } catch (_) {
+    } catch (e) {
+      const Logger('LessonBookingSheet').e('Failed to check scheduling conflict', e);
     } finally {
       if (mounted) {
         setState(() => _isCheckingConflict = false);

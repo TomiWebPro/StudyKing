@@ -1,5 +1,6 @@
 import '../../../core/errors/result.dart';
 import '../../../core/data/models/session_model.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
 import '../../../core/services/plan_adapter.dart';
@@ -81,7 +82,8 @@ class DashboardService {
         'totalSessions': focusToday.length,
         'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
       });
-    } catch (_) {
+    } catch (e) {
+      const Logger('DashboardService').e('Failed to get focus stats: $e');
       return null;
     }
   }
@@ -124,7 +126,8 @@ class DashboardService {
           category: (b['category'] as String?) ?? 'general',
         );
       }).toList();
-    } catch (_) {
+    } catch (e) {
+      const Logger('DashboardService').e('Failed to get badges: $e');
       return [];
     }
   }

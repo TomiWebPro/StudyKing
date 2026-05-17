@@ -181,7 +181,7 @@ class _FakeSessionRepo extends SessionRepository {
   }
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
     return Result.success(null);

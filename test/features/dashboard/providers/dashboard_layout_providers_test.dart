@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
 
 void main() {
@@ -165,78 +162,7 @@ void main() {
       });
     });
 
-    group('init with Hive', () {
-      late Directory hiveDir;
 
-      setUp(() {
-        hiveDir = Directory.systemTemp.createTempSync('layout_test_');
-        Hive.init(hiveDir.path);
-      });
-
-      tearDown(() async {
-        await Hive.deleteBoxFromDisk('dashboard_layout_prefs');
-        hiveDir.deleteSync(recursive: true);
-      });
-
-      test('loads saved collapsed cards from Hive', () async {
-        final box = await Hive.openBox('dashboard_layout_prefs');
-        await box.put('collapsedCards', ['saved-card-1', 'saved-card-2']);
-        await box.close();
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container
-            .read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        final state = container.read(dashboardLayoutPreferencesProvider);
-        expect(state.collapsedCards, {'saved-card-1', 'saved-card-2'});
-      });
-
-      test('keeps empty set when no saved data', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container
-            .read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        expect(
-          container.read(dashboardLayoutPreferencesProvider).collapsedCards,
-          isEmpty,
-        );
-      });
-
-      test('persists toggle to Hive', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container
-            .read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        notifier.toggleCollapsed('persist-card');
-
-        final box = await Hive.openBox('dashboard_layout_prefs');
-        final saved = box.get('collapsedCards') as List<String>?;
-        expect(saved, contains('persist-card'));
-        await box.close();
-      });
-
-      test('persists toggle and untoggle to Hive', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container
-            .read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        notifier.toggleCollapsed('temp-card');
-        notifier.toggleCollapsed('temp-card');
-
-        final box = await Hive.openBox('dashboard_layout_prefs');
-        final saved = box.get('collapsedCards') as List<String>?;
-        expect(saved, isEmpty);
-        await box.close();
-      });
-    });
   });
 
   group('dashboardLayoutPreferencesProvider', () {

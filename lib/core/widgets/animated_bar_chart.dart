@@ -118,9 +118,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 widget.yAxisLabel!,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
+                style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),

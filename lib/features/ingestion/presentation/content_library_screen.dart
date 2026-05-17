@@ -493,7 +493,7 @@ class _SourceListTile extends StatelessWidget {
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
+        padding: const EdgeInsetsDirectional.only(end: 24),
         color: theme.colorScheme.error,
         child: Icon(Icons.delete, color: theme.colorScheme.onError),
       ),
@@ -501,8 +501,8 @@ class _SourceListTile extends StatelessWidget {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Delete Source'),
-            content: const Text('Are you sure you want to delete this source?'),
+            title: Text(l10n.deleteSourceTitle),
+            content: Text(l10n.deleteSourceBody),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
               ElevatedButton(

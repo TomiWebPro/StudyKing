@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
-import '../utils/number_format_utils.dart';
 
 class NotificationService {
   NotificationService();
@@ -210,12 +209,11 @@ class NotificationService {
     required double hoursStudied,
   }) async {
     final l10n = _l10n;
-    final hoursStr = formatDecimal(hoursStudied, _l10n?.localeName ?? 'en', minFractionDigits: 1, maxFractionDigits: 1);
     await showNotification(
       id: id,
       title: l10n?.notifTitleTakeBreak ?? 'Take a Break',
-      body: l10n?.notifBodyOverwork(hoursStr)
-          ?? 'You\'ve studied $hoursStr hours today. Remember to rest!',
+      body: l10n?.notifBodyOverwork(hoursStudied.toInt())
+          ?? 'You\'ve studied ${hoursStudied.toInt()} hours today. Remember to rest!',
       payload: 'overwork_warning',
       channelId: NotificationChannelIds.wellbeing,
       channelName: l10n?.notifChannelWellbeing ?? 'Wellbeing Alerts',

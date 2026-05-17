@@ -8,6 +8,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
   _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false})
@@ -20,7 +21,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) {
       throw Exception('save failed');
     }
@@ -30,12 +31,16 @@ class _FakeSessionRepository extends SessionRepository {
   }
 }
 
-Widget _buildTestApp(_FakeSessionRepository repository) {
+Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: SessionTrackerScreen(sessionRepository: repository),
+      routes: {
+        '/session-history': (_) => const Scaffold(body: Center(child: Text('Session History'))),
+      },
     ),
   );
 }
@@ -204,6 +209,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session History'), findsOneWidget);
+    });
+
+    testWidgets('navigator pushes session history on view all tap', (tester) async {
+      final observer = TestNavigatorObserver();
+      final repo = _FakeSessionRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'View All'));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/session-history'),
+        isTrue,
+      );
+    });
+
+    testWidgets('navigator pops history on system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      final repo = _FakeSessionRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'View All'));
+      await tester.pumpAndSettle();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, hasLength(1));
     });
   });
 

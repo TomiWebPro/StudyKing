@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -67,18 +69,49 @@ void main() {
 
     test('handles error from session repository gracefully', () async {
       final now = DateTime.now();
-      final repo = SessionRepository();
+      final failingRepo = _FailingSessionRepository();
       final container = ProviderContainer(
         overrides: [
-          sessionRepositoryProvider.overrideWithValue(repo),
+          sessionRepositoryProvider.overrideWithValue(failingRepo),
         ],
       );
       addTearDown(container.dispose);
 
       final service = container.read(studyTimerServiceProvider);
       final sessions = await service.repository.getByDate(now);
-      expect(sessions.isSuccess, true);
-      expect(sessions.data, isEmpty);
+      expect(sessions.isFailure, true);
     });
   });
+}
+
+class _FailingSessionRepository extends SessionRepository {
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.failure('Database error');
+  }
+
+  @override
+  Future<Result<List<Session>>> getByDate(DateTime date) async {
+    return Result.failure('Database error');
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    return Result.failure('Database error');
+  }
+
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    return Result.failure('Database error');
+  }
+
+  @override
+  Future<Result<void>> delete(String id) async {
+    return Result.failure('Database error');
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    return Result.failure('Database error');
+  }
 }

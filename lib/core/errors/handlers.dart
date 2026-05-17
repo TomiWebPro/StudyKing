@@ -34,12 +34,13 @@ class AppErrorHandler {
     void Function()? retryCallback,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final errorMessage = _getErrorMessage(exception, l10n);
     final snackBar = SnackBar(
       content: retry && retryCallback != null
           ? Row(
               children: [
-                const Icon(Icons.refresh, color: Colors.white),
+                Icon(Icons.refresh, color: cs.onErrorContainer),
                 const SizedBox(width: 12),
                 Expanded(child: Text(errorMessage)),
                 TextButton(
@@ -53,13 +54,13 @@ class AppErrorHandler {
               children: [
                 Icon(
                   _getErrorIcon(exception),
-                  color: Colors.white,
+                  color: cs.onErrorContainer,
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(errorMessage)),
               ],
             ),
-      backgroundColor: Colors.red.shade800,
+      backgroundColor: cs.errorContainer,
       behavior: SnackBarBehavior.floating,
       duration: Duration(seconds: retry ? 4 : 3),
     );

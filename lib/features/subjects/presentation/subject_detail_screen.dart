@@ -12,6 +12,7 @@ import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
@@ -49,7 +50,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       await repo.init();
       final sources = await repo.getBySubject(widget.args.subjectId);
       if (mounted) setState(() => _sourceCount = sources.length);
-    } catch (_) {}
+    } catch (e) {
+      const Logger('SubjectDetailScreen').e('Failed to load source count: $e');
+    }
   }
 
   @override
@@ -299,7 +302,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         AppRoutes.subjectSelection,
         arguments: subject,
       );
-    } catch (_) {}
+    } catch (e) {
+      const Logger('SubjectDetailScreen').e('Failed to edit subject: $e');
+    }
   }
 
   Future<void> _confirmDelete() async {
@@ -429,7 +434,8 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      const Logger('SubjectDetailScreen').e('Failed to load sources', e);
       if (mounted) setState(() => _isLoading = false);
     }
   }

@@ -332,7 +332,7 @@ void main() {
     });
 
     test('notifBodyOverwork', () {
-      expect(l10n.notifBodyOverwork('5'),
+      expect(l10n.notifBodyOverwork(5),
           'You\'ve studied 5 hours today. Remember to rest!');
     });
 
@@ -362,7 +362,7 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notifBodyOverwork('3'),
+      expect(l10n.notifBodyOverwork(3),
           'You\'ve studied 3 hours today. Remember to rest!');
     });
 
@@ -748,7 +748,7 @@ void main() {
     });
 
     test('notifBodyOverwork', () {
-      expect(l10n.notifBodyOverwork('5'),
+      expect(l10n.notifBodyOverwork(5),
           'Ha estudiado 5 horas hoy. ¡Recuerde descansar!');
     });
 
@@ -776,7 +776,7 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notifBodyOverwork('3'),
+      expect(l10n.notifBodyOverwork(3),
           'Ha estudiado 3 horas hoy. ¡Recuerde descansar!');
     });
 
@@ -944,7 +944,7 @@ void main() {
                     Text(l.notifTitleTimeToReview),
                     Text(l.notifBodyRevision(3, 'Algebra')),
                     Text(l.notifTitleTakeBreak),
-                    Text(l.notifBodyOverwork('5')),
+                    Text(l.notifBodyOverwork(5)),
                     Text(l.notifTitlePlanAdjustment),
                     Text(l.notifBodyPlanAdjustment(3)),
                     Text(l.notifTitleUpcomingLesson),
@@ -1196,7 +1196,7 @@ void main() {
                     Text(l.notifTitleTimeToReview),
                     Text(l.notificationTimeToReviewBody(5, 'History')),
                     Text(l.notifTitleTakeBreak),
-                    Text(l.notifBodyOverwork('3')),
+                    Text(l.notifBodyOverwork(3)),
                     Text(l.notifTitlePlanAdjustment),
                     Text(l.notifBodyPlanAdjustment(7)),
                     Text(l.notifTitleUpcomingLesson),

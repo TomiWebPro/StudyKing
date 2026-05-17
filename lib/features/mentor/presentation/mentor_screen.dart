@@ -8,6 +8,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider, mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -34,6 +35,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _isSending = false;
   bool _isInitialized = false;
   bool _initError = false;
+  bool _isRetrying = false;
   String _initErrorMessage = '';
 
   bool _didInit = false;
@@ -87,6 +89,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         setState(() {
           _isInitialized = true;
           _initError = false;
+          _isRetrying = false;
           _messages.addAll(loadedMessages);
         });
         if (loadedMessages.isEmpty) {
@@ -98,6 +101,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
+          _isRetrying = false;
           _initErrorMessage = l10n.mentorInitFailed(e.toString());
         });
       }
@@ -314,15 +318,24 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                     ),
                     const SizedBox(width: 12),
                     FilledButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _initError = false;
-                          _initErrorMessage = '';
-                        });
-                        _initializeMentor();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: Text(l10n.retry),
+                      onPressed: _isRetrying
+                          ? null
+                          : () {
+                              setState(() {
+                                _initError = false;
+                                _initErrorMessage = '';
+                                _isRetrying = true;
+                              });
+                              _initializeMentor();
+                            },
+                      icon: _isRetrying
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: Text(_isRetrying ? l10n.retrying : l10n.retry),
                     ),
                   ],
                 ),
@@ -384,6 +397,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       final l10n = AppLocalizations.of(context)!;
       final report = await _mentorService.getProgressReport();
       final localeName = l10n.localeName;
+      final topicRepo = ref.read(topicRepositoryProvider);
 
       if (!mounted) return;
       showDialog(
@@ -479,16 +493,34 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          onTap: () {
+                          onTap: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
                             Navigator.of(ctx).pop();
-                            Navigator.pushNamed(
-                              context,
-                              AppRoutes.practiceSession,
-                              arguments: PracticeSessionArgs(
-                                subjectId: '',
-                                topicId: topic.topicId,
-                              ),
-                            );
+                            try {
+                              final topicResult = await topicRepo.get(topic.topicId);
+                              final subjectId = topicResult.data?.subjectId;
+                              if (subjectId != null && subjectId.isNotEmpty) {
+                                if (!context.mounted) return;
+                                navigator.pushNamed(
+                                  AppRoutes.practiceSession,
+                                  arguments: PracticeSessionArgs(
+                                    subjectId: subjectId,
+                                    topicId: topic.topicId,
+                                  ),
+                                );
+                              } else {
+                                if (!context.mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text(l10n.unableToResolveSubject)),
+                                );
+                              }
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(content: Text(l10n.unableToResolveSubject)),
+                              );
+                            }
                           },
                         )),
                   ],

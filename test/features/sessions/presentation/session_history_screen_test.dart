@@ -5,6 +5,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
   _FakeSessionRepository({List<Session>? seed, this.throwOnDelete = false})
@@ -17,7 +18,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
     return Result.success(null);
@@ -31,10 +32,11 @@ class _FakeSessionRepository extends SessionRepository {
   }
 }
 
-Widget _buildTestApp(_FakeSessionRepository repository) {
+Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? navigatorObserver}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     home: SessionHistoryScreen(sessionRepository: repository),
   );
 }
@@ -872,6 +874,46 @@ void main() {
       await tester.tap(find.text('Full Progress JSON'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('SessionHistoryScreen - Navigation', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('navigator observes no pops initially', (tester) async {
+      final observer = TestNavigatorObserver();
+      final repo = _FakeSessionRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('navigator pops via system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: DateTime.now(), actualDurationMs: 600000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo, navigatorObserver: observer));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byKey(const Key('s1')), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
     });
   });
 

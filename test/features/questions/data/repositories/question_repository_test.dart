@@ -5,7 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 /// Fake Box`<Question>` with in-memory storage for happy-path testing.

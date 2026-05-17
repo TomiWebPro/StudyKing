@@ -712,7 +712,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String importPreview(int boxes, int records) {
-    return 'Esta copia contiene $boxes sección(es) con $records registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?';
+    String _temp0 = intl.Intl.pluralLogic(
+      boxes,
+      locale: localeName,
+      other: '$boxes secciones',
+      one: '1 sección',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      records,
+      locale: localeName,
+      other: '$records registros',
+      one: '1 registro',
+    );
+    return 'Esta copia contiene $_temp0 con $_temp1. Los datos actuales pueden sobrescribirse. ¿Continuar?';
   }
 
   @override
@@ -2883,8 +2895,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notifTitleTakeBreak => 'Tome un Descanso';
 
   @override
-  String notifBodyOverwork(String hours) {
-    return 'Ha estudiado $hours horas hoy. ¡Recuerde descansar!';
+  String notifBodyOverwork(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours horas',
+      one: '1 hora',
+    );
+    return 'Ha estudiado $_temp0 hoy. ¡Recuerde descansar!';
   }
 
   @override
@@ -3819,11 +3837,115 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pageNotFound => 'Página no encontrada';
 
   @override
-  String get pageNotFoundDescription => 'La página que buscas no existe o el enlace no es válido.';
+  String get pageNotFoundDescription =>
+      'La página que buscas no existe o el enlace no es válido.';
 
   @override
   String get goToDashboard => 'Ir al Panel';
 
   @override
   String get sending => 'Enviando';
+
+  @override
+  String get dailyReminderDescription =>
+      'Reciba un recordatorio diario para estudiar a su hora preferida';
+
+  @override
+  String get reminderTime => 'Hora del Recordatorio';
+
+  @override
+  String get dailyReminderTimeHelp => 'Hora del Recordatorio Diario';
+
+  @override
+  String get checkNudgesNow => 'Revisar Avisos Ahora';
+
+  @override
+  String get runNudgeChecks => 'Ejecutar avisos inmediatamente';
+
+  @override
+  String get nudgeCheckComplete => 'Revisión de avisos completada';
+
+  @override
+  String get nudgeCheckFailed => 'Revisión de avisos fallida';
+
+  @override
+  String get dailyCapWarningTitle => 'Advertencia de Límite Diario';
+
+  @override
+  String dailyCapWarningBody(int selectedMinutes, int remaining) {
+    return 'Iniciar esta sesión excederá su límite diario. $selectedMinutes min seleccionados, $remaining min restantes. ¿Continuar?';
+  }
+
+  @override
+  String get continueAnyway => 'Continuar de Todas Formas';
+
+  @override
+  String get focusFirstVisitHelp =>
+      'Configure un temporizador y estudie sin distracciones. Las sesiones completadas cuentan para su plan diario.';
+
+  @override
+  String get contentManagement => 'Gestión de Contenido';
+
+  @override
+  String get myUploads => 'Mis Cargas';
+
+  @override
+  String get viewMyUploads => 'Ver sus materiales cargados';
+
+  @override
+  String get questionBank => 'Banco de Preguntas';
+
+  @override
+  String get browseAndManageQuestions => 'Explorar y gestionar preguntas';
+
+  @override
+  String get failedUploads => 'Cargas Fallidas';
+
+  @override
+  String sourceCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fuentes fallaron al procesarse',
+      one: '1 fuente falló al procesarse',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noFailedUploads => 'Sin cargas fallidas';
+
+  @override
+  String get breakDuration => 'Duración del Descanso';
+
+  @override
+  String get featureLabelIngestion => 'Ingestión';
+
+  @override
+  String get featureLabelGeneral => 'General';
+
+  @override
+  String get deleteSourceTitle => 'Eliminar fuente';
+
+  @override
+  String get deleteSourceBody =>
+      '¿Está seguro de que desea eliminar esta fuente?';
+
+  @override
+  String get dailyReminderNotificationTitle => 'Recordatorio de estudio diario';
+
+  @override
+  String get dailyReminderNotificationBody =>
+      '¡Hora de estudiar! Tiene tareas de estudio planificadas para hoy.';
+
+  @override
+  String get addSubjectsForFocusHint =>
+      'Agregue materias en Configuración para realizar un seguimiento del enfoque por materia.';
+
+  @override
+  String get retrying => 'Reintentando...';
+
+  @override
+  String get unableToResolveSubject =>
+      'No se pudo encontrar la materia para este tema.';
 }

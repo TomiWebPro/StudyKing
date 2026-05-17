@@ -1,35 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-
-class OnboardingService {
-  static const String _onboardingKey = 'onboarding_completed';
-  static const String _dontShowAgainKey = 'onboarding_dont_show_again';
-
-  static Future<bool> isOnboardingNeeded() async {
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    final completed = box.get(_onboardingKey, defaultValue: false) as bool;
-    final dontShow = box.get(_dontShowAgainKey, defaultValue: false) as bool;
-    return !completed && !dontShow;
-  }
-
-  static Future<void> markCompleted() async {
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    await box.put(_onboardingKey, true);
-  }
-
-  static Future<void> markDontShowAgain() async {
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    await box.put(_dontShowAgainKey, true);
-  }
-
-  static Future<bool> isFirstLaunch() async {
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    return !(box.get(_onboardingKey, defaultValue: false) as bool);
-  }
-}
+import '../services/onboarding_service.dart';
 
 class OnboardingDialog extends StatefulWidget {
   const OnboardingDialog({super.key});

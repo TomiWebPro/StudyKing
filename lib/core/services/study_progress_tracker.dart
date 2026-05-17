@@ -218,7 +218,7 @@ class StudyProgressTracker {
         });
       }
     } catch (e) {
-      _logger.w('Failed to get weak topics for recommendations: $e');
+      _logger.e('Failed to get weak topics for recommendations: $e');
     }
 
     return recommendations;
@@ -238,7 +238,7 @@ class StudyProgressTracker {
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
     } catch (e) {
-      _logger.w('Failed to get badges: $e');
+      _logger.e('Failed to get badges: $e');
       return [];
     }
   }
@@ -258,7 +258,7 @@ class StudyProgressTracker {
         };
       }
     } catch (e) {
-      _logger.w('Failed to get topic mastery level from service: $e');
+      _logger.e('Failed to get topic mastery level from service: $e');
     }
 
     try {
@@ -271,7 +271,7 @@ class StudyProgressTracker {
       if (accuracy >= 0.6 && attempts >= 3) return 'Developing';
       if (attempts >= 1) return 'Browsing';
     } catch (e) {
-      _logger.w('Failed to get topic progress for mastery level: $e');
+      _logger.e('Failed to get topic progress for mastery level: $e');
     }
 
     return 'Novice';

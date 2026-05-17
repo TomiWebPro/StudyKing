@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/data/models/subject_model.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
@@ -16,46 +14,6 @@ import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-
-class _TestSourceAdapter extends TypeAdapter<Source> {
-  @override
-  final int typeId = 26;
-
-  @override
-  Source read(BinaryReader reader) {
-    final raw = reader.read() as Map;
-    final map = <String, dynamic>{};
-    for (final entry in raw.entries) {
-      map['${entry.key}'] = entry.value;
-    }
-    return Source.fromJson(map);
-  }
-
-  @override
-  void write(BinaryWriter writer, Source obj) {
-    writer.write(obj.toJson());
-  }
-}
-
-class _TestSubjectAdapter extends TypeAdapter<Subject> {
-  @override
-  final int typeId = 11;
-
-  @override
-  Subject read(BinaryReader reader) {
-    final raw = reader.read() as Map;
-    final map = <String, dynamic>{};
-    for (final entry in raw.entries) {
-      map['${entry.key}'] = entry.value;
-    }
-    return Subject.fromJson(map);
-  }
-
-  @override
-  void write(BinaryWriter writer, Subject obj) {
-    writer.write(obj.toJson());
-  }
-}
 
 class _FakeLlmService extends LlmService {
   _FakeLlmService()
@@ -296,51 +254,19 @@ class _ThrowingFetchPipeline extends _FakeContentPipeline {
   }
 }
 
-Widget _buildWidget({ContentPipeline? pipeline}) {
+Widget _buildWidget({ContentPipeline? pipeline, TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: UploadScreen(pipeline: pipeline),
     ),
   );
 }
 
 void main() {
-  late String hivePath;
-
-  setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('upload_screen_test_');
-    hivePath = dir.path;
-    Hive.init(hivePath);
-    if (!Hive.isAdapterRegistered(11)) {
-      Hive.registerAdapter(_TestSubjectAdapter());
-    }
-    if (!Hive.isAdapterRegistered(26)) {
-      Hive.registerAdapter(_TestSourceAdapter());
-    }
-    // Pre-open the subjects and sources boxes so they exist
-    await Hive.openBox<Subject>('subjects');
-    await Hive.openBox<Source>('sources');
-  });
-
-  setUp(() async {
-    // Clear subjects box between tests for clean state
-    final box = Hive.box<Subject>('subjects');
-    await box.clear();
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    if (hivePath.isNotEmpty) {
-      try {
-        await Directory(hivePath).delete(recursive: true);
-      } catch (_) {}
-    }
-  });
-
   group('UploadScreen', () {
     Future<void> enterTextAndSubmit(WidgetTester tester,
         {String title = '', String content = ''}) async {
@@ -712,6 +638,27 @@ void main() {
         await tester.pumpAndSettle(const Duration(seconds: 5));
 
         expect(find.text('Upload Content'), findsAtLeastNWidgets(1));
+      });
+    });
+
+    group('navigation', () {
+      testWidgets('navigator observes no pops initially', (tester) async {
+        final observer = TestNavigatorObserver();
+        await tester.pumpWidget(_buildWidget(navigatorObserver: observer));
+        await tester.pump();
+
+        expect(observer.poppedRoutes, isEmpty);
+      });
+
+      testWidgets('navigator pops via system back', (tester) async {
+        final observer = TestNavigatorObserver();
+        await tester.pumpWidget(_buildWidget(navigatorObserver: observer));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        expect(observer.poppedRoutes, hasLength(1));
       });
     });
   });

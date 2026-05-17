@@ -59,7 +59,7 @@ class _FakeSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
     return Result.success(null);
@@ -144,12 +144,13 @@ void main() {
 
       final repo = container.read(sessionRepositoryProvider);
       expect(repo, same(fakeRepo));
-      repo.save(Session(
+      final session = Session(
         id: 'test-1',
         studentId: 's1',
         type: SessionType.focus,
         startTime: DateTime.now(),
-      ));
+      );
+      repo.save(session.id, session);
     });
   });
 

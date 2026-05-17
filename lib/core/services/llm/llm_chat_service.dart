@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../errors/result.dart';
@@ -225,7 +225,9 @@ class LlmService {
                 yield content;
               }
             }
-          } catch (_) {}
+          } catch (e) {
+            const Logger('LlmService').e('Failed to parse SSE response: $e');
+          }
         }
       }
       _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
@@ -330,7 +332,9 @@ class LlmService {
             yield content;
           }
           if (done) break;
-        } catch (_) {}
+        } catch (e) {
+          const Logger('LlmService').e('Failed to parse Ollama response: $e');
+        }
       }
       _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
       _usageMeter?.recordUsage(
@@ -436,7 +440,9 @@ class LlmService {
                 yield content;
               }
             }
-          } catch (_) {}
+          } catch (e) {
+            const Logger('LlmService').e('Failed to parse SSE response: $e');
+          }
         }
       }
       _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);

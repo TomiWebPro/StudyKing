@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -71,10 +73,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _tile(l10n.quickGuide, l10n.aiPoweredStudyAssistant, Icons.auto_awesome,
                   () => Navigator.pushNamed(context, AppRoutes.quickGuide)),
             ]),
-            _section('Content Management', [
-              _tile('My Uploads', 'View your uploaded materials', Icons.source,
+            _section(l10n.contentManagement, [
+              _tile(l10n.myUploads, l10n.viewMyUploads, Icons.source,
                   () => Navigator.pushNamed(context, AppRoutes.contentLibrary)),
-              _tile('Question Bank', 'Browse and manage questions', Icons.quiz,
+              _tile(l10n.questionBank, l10n.browseAndManageQuestions, Icons.quiz,
                   () => Navigator.pushNamed(context, AppRoutes.questionBank)),
               _FailedUploadsTile(),
             ]),
@@ -132,16 +134,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (settings.studyRemindersEnabled) ...[
                 SwitchListTile(
                   secondary: const Icon(Icons.alarm),
-                  title: const Text('Daily Reminder'),
-                  subtitle: const Text('Get a daily reminder to study at your preferred time'),
+                  title: Text(l10n.dailyReminders),
+                  subtitle: Text(l10n.dailyReminderDescription),
                   value: settings.dailyReminderEnabled,
                   onChanged: (value) =>
                       ref.read(settingsProvider.notifier).updateDailyReminderEnabled(value),
                 ),
                 if (settings.dailyReminderEnabled)
                   _tile(
-                    'Reminder Time',
-                    '${settings.dailyReminderHour.toString().padLeft(2, '0')}:${settings.dailyReminderMinute.toString().padLeft(2, '0')}',
+                    l10n.reminderTime,
+                    DateFormat.jm(l10n.localeName).format(
+                      DateTime(0, 0, 0, settings.dailyReminderHour, settings.dailyReminderMinute),
+                    ),
                     Icons.access_time,
                     () => _showDailyReminderTimePicker(settings),
                   ),
@@ -176,8 +180,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               ListTile(
                 leading: const Icon(Icons.notifications),
-                title: const Text('Check Nudges Now'),
-                subtitle: const Text('Run nudge checks immediately'),
+                title: Text(l10n.checkNudgesNow),
+                subtitle: Text(l10n.runNudgeChecks),
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () async {
                   final scheduler = ref.read(engagementSchedulerProvider);
@@ -185,13 +189,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     await scheduler.runDailyChecksNow();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Nudge check complete')),
+                        SnackBar(content: Text(l10n.nudgeCheckComplete)),
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Nudge check failed')),
+                        SnackBar(content: Text(l10n.nudgeCheckFailed)),
                       );
                     }
                   }
@@ -209,8 +213,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _getDailyCapLabel(l10n),
                   Icons.access_time_filled,
                   () => _showDailyCapDialog()),
-              _tile('Break Duration',
-                  '${settings.breakDurationSeconds ~/ 60} min',
+              _tile(l10n.breakDuration,
+                  l10n.minutesValue(settings.breakDurationSeconds ~/ 60),
                   Icons.free_breakfast,
                   () => _showBreakDurationDialog(settings.breakDurationSeconds)),
             ]),
@@ -458,7 +462,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final box = Hive.box(HiveBoxNames.settings);
       final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
       return cap > 0 ? l10n.minutesValue(cap) : l10n.noLimit;
-    } catch (_) {
+    } catch (e) {
+      const Logger('SettingsScreen').e('Failed to get daily cap label', e);
       return l10n.noLimit;
     }
   }
@@ -487,15 +492,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               .toList(),
         ),
       );
-    } catch (_) {}
+    } catch (e) {
+      const Logger('SettingsScreen').e('Failed to show daily cap dialog: $e');
+    }
   }
 
   Future<void> _showDailyReminderTimePicker(SettingsBox settings) async {
+    final l10n = AppLocalizations.of(context)!;
     final initial = TimeOfDay(hour: settings.dailyReminderHour, minute: settings.dailyReminderMinute);
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
-      helpText: 'Daily Reminder Time',
+      helpText: l10n.dailyReminderTimeHelp,
     );
     if (picked != null) {
       await ref.read(settingsProvider.notifier).updateDailyReminderTime(picked.hour, picked.minute);
@@ -503,8 +511,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await notifService.init();
       await notifService.showDailyReminder(
         id: 9999,
-        title: 'Daily Study Reminder',
-        body: 'Time to study! You have study tasks planned for today.',
+        title: l10n.dailyReminderNotificationTitle,
+        body: l10n.dailyReminderNotificationBody,
         remindAt: picked,
       );
     }
@@ -719,7 +727,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final obj = value as dynamic;
       return obj.toJson() as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      const Logger('SettingsScreen').e('Failed to convert map', e);
       return null;
     }
   }
@@ -835,15 +844,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   String _featureLabel(String feature) {
+    final l10n = AppLocalizations.of(context)!;
     switch (feature) {
       case 'ocr_extraction':
       case 'transcription':
       case 'content_classification':
       case 'content_summarization':
       case 'question_generation':
-        return 'Ingestion';
+        return l10n.featureLabelIngestion;
       case 'general':
-        return 'General';
+        return l10n.featureLabelGeneral;
       default:
         return feature;
     }
@@ -1023,11 +1033,14 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
       await repo.init();
       final failed = await repo.getFailed();
       if (mounted) setState(() => _failedCount = failed.length);
-    } catch (_) {}
+    } catch (e) {
+      const Logger('SettingsScreen').e('Failed to load failed count', e);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListTile(
       leading: _failedCount > 0
           ? Badge(
@@ -1035,10 +1048,10 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
               child: const Icon(Icons.error_outline),
             )
           : const Icon(Icons.error_outline),
-      title: const Text('Failed Uploads'),
+      title: Text(l10n.failedUploads),
       subtitle: Text(_failedCount > 0
-          ? '$_failedCount source(s) failed to process'
-          : 'No failed uploads'),
+          ? l10n.sourceCountFailed(_failedCount)
+          : l10n.noFailedUploads),
       trailing: const Icon(Icons.arrow_forward_ios),
       onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
     );

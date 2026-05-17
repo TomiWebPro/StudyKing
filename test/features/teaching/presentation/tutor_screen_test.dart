@@ -21,6 +21,7 @@ import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLlmService extends LlmService {
   _FakeLlmService()
@@ -124,7 +125,7 @@ class _FakeTutorService extends TutorService {
   Future<void> endLesson() async {}
 }
 
-Widget _wrapApp(Widget child) {
+Widget _wrapApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       studentIdValueProvider.overrideWith((ref) => 'test-student-id'),
@@ -132,6 +133,7 @@ Widget _wrapApp(Widget child) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: child,
     ),
   );
@@ -329,6 +331,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('45 min remaining'), findsOneWidget);
+    });
+
+    testWidgets('navigator observes no pops initially', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('navigator pops via system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(),
+        ),
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, isEmpty);
     });
   });
 }

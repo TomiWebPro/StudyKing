@@ -226,14 +226,18 @@ class TranscriptionExtractor {
                       .join(' ');
                   if (textParts.isNotEmpty) return textParts;
                 }
-              } catch (_) {}
+              } catch (e) {
+                _logger.e('Failed to parse YouTube transcript JSON', e);
+              }
             }
 
             if (!body.trim().startsWith('<') && body.length > 50) {
               return body;
             }
           }
-        } catch (_) {}
+        } catch (e) {
+          _logger.e('Failed to fetch YouTube transcript from URL', e);
+        }
       }
 
       return null;

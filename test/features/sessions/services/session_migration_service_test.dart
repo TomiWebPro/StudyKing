@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/session_adapter.dart';
 import 'package:studyking/features/sessions/services/session_migration_service.dart';
 
 Map<String, dynamic> createFocusSessionJson({
@@ -38,6 +41,9 @@ void main() {
     setUp(() async {
       hivePath = (await Directory.systemTemp.createTemp('migration_test_')).path;
       Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(36)) {
+        Hive.registerAdapter(SessionAdapter());
+      }
     });
 
     tearDown(() async {
@@ -48,11 +54,11 @@ void main() {
     });
 
     test('full migration lifecycle', () async {
-      await Hive.openBox<String>('focus_sessions');
-      await Hive.openBox<String>('sessions');
+      await Hive.openBox<String>(HiveBoxNames.focusSessions);
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
 
-      final focusBox = Hive.box<String>('focus_sessions');
-      final sessionsBox = Hive.box<String>('sessions');
+      final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+      final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
 
       focusBox.put('s1', jsonEncode(createFocusSessionJson(
         id: 'f1', studentId: 'stu-1', subjectId: 'sub-1',
@@ -62,7 +68,12 @@ void main() {
       )));
       focusBox.put('corrupt', 'not-json');
 
-      sessionsBox.put('focus_f2', jsonEncode(createFocusSessionJson(id: 'f2')));
+      sessionsBox.put('f2', Session(
+        id: 'f2',
+        studentId: 'existing',
+        startTime: DateTime(2025, 1, 15),
+        type: SessionType.focus,
+      ));
       focusBox.put('dup', jsonEncode(createFocusSessionJson(id: 'f2')));
 
       focusBox.put('s3', jsonEncode(createFocusSessionJson(
@@ -71,42 +82,47 @@ void main() {
 
       await SessionMigrationService.migrateIfNeeded();
 
-      expect(sessionsBox.containsKey('focus_f1'), isTrue);
-      expect(sessionsBox.containsKey('focus_f3'), isTrue);
-      expect(sessionsBox.containsKey('focus_f2'), isTrue);
+      expect(sessionsBox.containsKey('f1'), isTrue);
+      expect(sessionsBox.containsKey('f3'), isTrue);
+      expect(sessionsBox.containsKey('f2'), isTrue);
       expect(sessionsBox.length, 3);
 
-      final decoded = jsonDecode(sessionsBox.get('focus_f1')!) as Map<String, dynamic>;
-      expect(decoded['id'], 'f1');
-      expect(decoded['studentId'], 'stu-1');
-      expect(decoded['subjectId'], 'sub-1');
-      expect(decoded['topicId'], 'topic-1');
-      expect(decoded['type'], 'focus');
-      expect(decoded['startTime'], DateTime(2025, 1, 15, 10, 0, 0).toIso8601String());
-      expect(decoded['endTime'], DateTime(2025, 1, 15, 10, 45, 0).toIso8601String());
-      expect(decoded['actualDurationMs'], 2700000);
-      expect(decoded['plannedDurationMinutes'], 45);
-      expect(decoded['completed'], isTrue);
+      final migrated = sessionsBox.get('f1')!;
+      expect(migrated.id, 'f1');
+      expect(migrated.studentId, 'stu-1');
+      expect(migrated.subjectId, 'sub-1');
+      expect(migrated.topicId, 'topic-1');
+      expect(migrated.type, SessionType.focus);
+      expect(migrated.startTime, DateTime(2025, 1, 15, 10, 0, 0));
+      expect(migrated.endTime, DateTime(2025, 1, 15, 10, 45, 0));
+      expect(migrated.actualDurationMs, 2700000);
+      expect(migrated.plannedDurationMinutes, 45);
+      expect(migrated.completed, isTrue);
+
+      final migratedIncomplete = sessionsBox.get('f3')!;
+      expect(migratedIncomplete.actualDurationMs, 0);
+      expect(migratedIncomplete.completed, isFalse);
+      expect(migratedIncomplete.endTime, isNull);
 
       await SessionMigrationService.migrateIfNeeded();
       expect(sessionsBox.length, 3);
     });
 
     test('completes without error when focus_sessions box does not exist', () async {
-      await Hive.openBox<String>('sessions');
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
       await expectLater(
         SessionMigrationService.migrateIfNeeded(),
         completes,
       );
     });
 
-    test('skips migration when focus_sessions is empty', () async {
-      await Hive.openBox<String>('focus_sessions');
-      await Hive.openBox<String>('sessions');
+    test('skips migration gracefully when focus_sessions is empty', () async {
+      await Hive.openBox<String>(HiveBoxNames.focusSessions);
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
 
       await SessionMigrationService.migrateIfNeeded();
 
-      final sessionsBox = Hive.box<String>('sessions');
+      final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
       expect(sessionsBox.isEmpty, isTrue);
     });
   });

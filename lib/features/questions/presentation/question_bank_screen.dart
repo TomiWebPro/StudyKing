@@ -327,7 +327,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                           children: [
                                             if (_selectionMode)
                                               Padding(
-                                                padding: const EdgeInsets.only(right: 12, top: 4),
+                                                padding: const EdgeInsetsDirectional.only(end: 12, top: 4),
                                                 child: Icon(
                                                   isSelected ? Icons.check_box : Icons.check_box_outline_blank,
                                                   color: isSelected ? theme.colorScheme.primary : null,

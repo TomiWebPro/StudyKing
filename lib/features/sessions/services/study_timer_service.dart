@@ -63,7 +63,8 @@ class StudyTimerService {
     try {
       final box = Hive.box(HiveBoxNames.settings);
       return box.get('dailyCapMinutes', defaultValue: 0);
-    } catch (_) {
+    } catch (e) {
+      _logger.e('Failed to get daily cap minutes', e);
       return 0;
     }
   }
@@ -119,7 +120,7 @@ class StudyTimerService {
     _isPaused = false;
     _startTimer();
 
-    await _repository.save(_currentSession!);
+    await _repository.save(_currentSession!.id, _currentSession!);
     _logger.d('Session started: ${_currentSession!.id} type: ${type.name}');
     return _currentSession!;
   }
@@ -182,10 +183,12 @@ class StudyTimerService {
           title: 'Focus Session Complete',
           body: 'Great focus! You completed ${_elapsedMs ~/ 60000} minutes.',
         );
-      } catch (_) {}
+      } catch (e) {
+        _logger.e('Failed to show session complete notification', e);
+      }
     }
 
-    await _repository.save(_currentSession!);
+    await _repository.save(_currentSession!.id, _currentSession!);
     final completed = _currentSession!;
     _currentSession = null;
     _elapsedMs = 0;
@@ -212,7 +215,7 @@ class StudyTimerService {
       completed: false,
     );
 
-    await _repository.save(_currentSession!);
+    await _repository.save(_currentSession!.id, _currentSession!);
     final cancelled = _currentSession!;
     _currentSession = null;
     _elapsedMs = 0;

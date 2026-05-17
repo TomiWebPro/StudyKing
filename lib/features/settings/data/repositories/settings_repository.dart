@@ -11,6 +11,7 @@ class SettingsRepository {
   Box? _settingsBox;
   Box? _profileBox;
   static const String _currentProfileKey = 'current_profile';
+  static const String _settingsKey = 'settings';
 
   Box _requireSettingsBox() {
     final box = _settingsBox;
@@ -111,41 +112,41 @@ class SettingsRepository {
   /// Get current settings
   Future<SettingsBox> getSettings() async {
     final box = _requireSettingsBox();
-    
-    return SettingsBox(
+
+    final stored = box.get(_settingsKey);
+    if (stored is Map) {
+      return SettingsBox.fromJson(stored.cast<String, dynamic>());
+    }
+
+    // Migration from legacy per-key storage
+    final legacy = SettingsBox(
       apiKey: box.get('apiKey', defaultValue: ''),
       apiBaseUrl: box.get('apiBaseUrl', defaultValue: ApiConfig.openRouterBaseUrlString),
       selectedModel: box.get('selectedModel', defaultValue: ''),
       themeMode: box.get('themeMode', defaultValue: 0),
-      fontSize: box.get('fontSize', defaultValue: 16.0),
+      fontSize: box.get('fontSize', defaultValue: SettingsBox.defaultFontSize),
       totalSessionCount: box.get('totalSessionCount', defaultValue: 0),
       totalStudyTimeMs: box.get('totalStudyTimeMs', defaultValue: 0),
       totalQuestions: box.get('totalQuestions', defaultValue: 0),
       studyRemindersEnabled: box.get('studyRemindersEnabled', defaultValue: true),
-      requestTimeoutSeconds: box.get('requestTimeoutSeconds', defaultValue: 120),
-      sessionDurationMinutes: box.get('sessionDurationMinutes', defaultValue: 30),
+      requestTimeoutSeconds: box.get('requestTimeoutSeconds', defaultValue: SettingsBox.defaultRequestTimeoutSeconds),
+      sessionDurationMinutes: box.get('sessionDurationMinutes', defaultValue: SettingsBox.defaultSessionDurationMinutes),
       highContrastEnabled: box.get('highContrastEnabled', defaultValue: false),
       largeTouchTargets: box.get('largeTouchTargets', defaultValue: false),
       reduceMotion: box.get('reduceMotion', defaultValue: false),
-      revisionRemindersEnabled:
-          box.get('revisionRemindersEnabled', defaultValue: true),
-      lessonNotificationsEnabled:
-          box.get('lessonNotificationsEnabled', defaultValue: true),
-      overworkAlertsEnabled:
-          box.get('overworkAlertsEnabled', defaultValue: true),
+      revisionRemindersEnabled: box.get('revisionRemindersEnabled', defaultValue: true),
+      lessonNotificationsEnabled: box.get('lessonNotificationsEnabled', defaultValue: true),
+      overworkAlertsEnabled: box.get('overworkAlertsEnabled', defaultValue: true),
       planAdjustmentNotificationsEnabled:
           box.get('planAdjustmentNotificationsEnabled', defaultValue: true),
-      breakDurationSeconds:
-          box.get('breakDurationSeconds', defaultValue: 300),
-      dailyReminderHour:
-          box.get('dailyReminderHour', defaultValue: 9),
-      dailyReminderMinute:
-          box.get('dailyReminderMinute', defaultValue: 0),
-      firstFocusVisit:
-          box.get('firstFocusVisit', defaultValue: true),
-      dailyReminderEnabled:
-          box.get('dailyReminderEnabled', defaultValue: false),
+      breakDurationSeconds: box.get('breakDurationSeconds', defaultValue: SettingsBox.defaultBreakDurationSeconds),
+      dailyReminderHour: box.get('dailyReminderHour', defaultValue: SettingsBox.defaultDailyReminderHour),
+      dailyReminderMinute: box.get('dailyReminderMinute', defaultValue: 0),
+      firstFocusVisit: box.get('firstFocusVisit', defaultValue: true),
+      dailyReminderEnabled: box.get('dailyReminderEnabled', defaultValue: false),
     );
+    await box.put(_settingsKey, legacy.toJson());
+    return legacy;
   }
 
   /// Update settings fields
@@ -174,70 +175,30 @@ class SettingsRepository {
     final box = _requireSettingsBox();
     final current = await getSettings();
 
-    final updated = SettingsBox(
-      apiKey: apiKey ?? current.apiKey,
-      apiBaseUrl: apiBaseUrl ?? current.apiBaseUrl,
-      selectedModel: selectedModel ?? current.selectedModel,
-      themeMode: themeMode?.index ?? current.themeMode,
-      fontSize: fontSize ?? current.fontSize,
-      totalSessionCount: current.totalSessionCount,
-      totalStudyTimeMs: current.totalStudyTimeMs,
-      totalQuestions: current.totalQuestions,
-      studyRemindersEnabled:
-          studyRemindersEnabled ?? current.studyRemindersEnabled,
-      requestTimeoutSeconds:
-          requestTimeoutSeconds ?? current.requestTimeoutSeconds,
-      sessionDurationMinutes:
-          sessionDurationMinutes ?? current.sessionDurationMinutes,
-      highContrastEnabled:
-          highContrastEnabled ?? current.highContrastEnabled,
-      largeTouchTargets:
-          largeTouchTargets ?? current.largeTouchTargets,
-      reduceMotion:
-          reduceMotion ?? current.reduceMotion,
-      revisionRemindersEnabled:
-          revisionRemindersEnabled ?? current.revisionRemindersEnabled,
-      lessonNotificationsEnabled:
-          lessonNotificationsEnabled ?? current.lessonNotificationsEnabled,
-      overworkAlertsEnabled:
-          overworkAlertsEnabled ?? current.overworkAlertsEnabled,
-      planAdjustmentNotificationsEnabled:
-          planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled,
-      breakDurationSeconds:
-          breakDurationSeconds ?? current.breakDurationSeconds,
-      dailyReminderHour:
-          dailyReminderHour ?? current.dailyReminderHour,
-      dailyReminderMinute:
-          dailyReminderMinute ?? current.dailyReminderMinute,
-      firstFocusVisit:
-          firstFocusVisit ?? current.firstFocusVisit,
-      dailyReminderEnabled:
-          dailyReminderEnabled ?? current.dailyReminderEnabled,
+    final updated = current.copyWith(
+      apiKey: apiKey,
+      apiBaseUrl: apiBaseUrl,
+      selectedModel: selectedModel,
+      themeModeEnum: themeMode,
+      fontSize: fontSize,
+      studyRemindersEnabled: studyRemindersEnabled,
+      requestTimeoutSeconds: requestTimeoutSeconds,
+      sessionDurationMinutes: sessionDurationMinutes,
+      highContrastEnabled: highContrastEnabled,
+      largeTouchTargets: largeTouchTargets,
+      reduceMotion: reduceMotion,
+      revisionRemindersEnabled: revisionRemindersEnabled,
+      lessonNotificationsEnabled: lessonNotificationsEnabled,
+      overworkAlertsEnabled: overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: breakDurationSeconds,
+      dailyReminderHour: dailyReminderHour,
+      dailyReminderMinute: dailyReminderMinute,
+      firstFocusVisit: firstFocusVisit,
+      dailyReminderEnabled: dailyReminderEnabled,
     );
 
-    await box.put('apiKey', updated.apiKey);
-    await box.put('apiBaseUrl', updated.apiBaseUrl);
-    await box.put('selectedModel', updated.selectedModel);
-    await box.put('themeMode', updated.themeMode);
-    await box.put('fontSize', updated.fontSize);
-    await box.put('totalSessionCount', updated.totalSessionCount);
-    await box.put('totalStudyTimeMs', updated.totalStudyTimeMs);
-    await box.put('totalQuestions', updated.totalQuestions);
-    await box.put('studyRemindersEnabled', updated.studyRemindersEnabled);
-    await box.put('requestTimeoutSeconds', updated.requestTimeoutSeconds);
-    await box.put('sessionDurationMinutes', updated.sessionDurationMinutes);
-    await box.put('highContrastEnabled', updated.highContrastEnabled);
-    await box.put('largeTouchTargets', updated.largeTouchTargets);
-    await box.put('reduceMotion', updated.reduceMotion);
-    await box.put('revisionRemindersEnabled', updated.revisionRemindersEnabled);
-    await box.put('lessonNotificationsEnabled', updated.lessonNotificationsEnabled);
-    await box.put('overworkAlertsEnabled', updated.overworkAlertsEnabled);
-    await box.put('planAdjustmentNotificationsEnabled', updated.planAdjustmentNotificationsEnabled);
-    await box.put('breakDurationSeconds', updated.breakDurationSeconds);
-    await box.put('dailyReminderHour', updated.dailyReminderHour);
-    await box.put('dailyReminderMinute', updated.dailyReminderMinute);
-    await box.put('firstFocusVisit', updated.firstFocusVisit);
-    await box.put('dailyReminderEnabled', updated.dailyReminderEnabled);
+    await box.put(_settingsKey, updated.toJson());
   }
 
   /// Update statistics counters
@@ -247,28 +208,13 @@ class SettingsRepository {
     int? questions,
   }) async {
     final current = await getSettings();
-    await updateSettings(
-      apiKey: current.apiKey,
-      apiBaseUrl: current.apiBaseUrl,
-      selectedModel: current.selectedModel,
-      themeMode: current.themeModeEnum,
-      fontSize: current.fontSize,
-      studyRemindersEnabled: current.studyRemindersEnabled,
-      requestTimeoutSeconds: current.requestTimeoutSeconds,
-      sessionDurationMinutes: current.sessionDurationMinutes,
-      highContrastEnabled: current.highContrastEnabled,
-      largeTouchTargets: current.largeTouchTargets,
-      reduceMotion: current.reduceMotion,
-      breakDurationSeconds: current.breakDurationSeconds,
-      dailyReminderHour: current.dailyReminderHour,
-      dailyReminderMinute: current.dailyReminderMinute,
-      firstFocusVisit: current.firstFocusVisit,
-      dailyReminderEnabled: current.dailyReminderEnabled,
+    final updated = current.copyWith(
+      totalSessionCount: sessionCount,
+      totalStudyTimeMs: studyTimeMs,
+      totalQuestions: questions,
     );
     final box = _requireSettingsBox();
-    await box.put('totalSessionCount', sessionCount ?? current.totalSessionCount);
-    await box.put('totalStudyTimeMs', studyTimeMs ?? current.totalStudyTimeMs);
-    await box.put('totalQuestions', questions ?? current.totalQuestions);
+    await box.put(_settingsKey, updated.toJson());
   }
 
   /// Clear all settings (use with caution)

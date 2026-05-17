@@ -38,7 +38,7 @@ class SubjectColorSelector extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.2),
                   border: Border.all(
-                    color: isSelected ? color : Colors.grey.shade300,
+                    color: isSelected ? color : Theme.of(context).colorScheme.outlineVariant,
                     width: isSelected ? 2 : 1,
                   ),
                   borderRadius: BorderRadius.circular(20),
@@ -58,7 +58,7 @@ class SubjectColorSelector extends StatelessWidget {
                     Text(
                       ColorUtils.getColorLabel(colorString, l10n: l10n),
                       style: TextStyle(
-                        color: isSelected ? color : Colors.black87,
+                        color: isSelected ? color : Theme.of(context).colorScheme.onSurface,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -99,7 +99,7 @@ class SubjectFormFields extends StatelessWidget {
       key: formKey,
       child: ListView(
         shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         children: [
           TextFormField(
             controller: nameController,

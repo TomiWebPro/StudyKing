@@ -3,7 +3,7 @@ import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -30,7 +30,7 @@ class FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     sessions.add(session);
     return Result.success(null);
   }

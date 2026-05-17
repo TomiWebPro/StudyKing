@@ -83,13 +83,15 @@ String formatDurationFromContext(BuildContext context, Duration duration, {bool 
 String formatTimer(Duration duration, {AppLocalizations? l10n}) {
   if (duration.isNegative) return formatTimer(-duration, l10n: l10n);
   final sep = _getDurationSeparator(l10n);
+  final localeName = l10n?.localeName ?? 'en';
   final h = duration.inHours;
   final m = duration.inMinutes.remainder(60);
   final s = duration.inSeconds.remainder(60);
+  final twoDigits = NumberFormat('00', localeName);
   if (h > 0) {
-    return '${h.toString().padLeft(2, '0')}$sep${m.toString().padLeft(2, '0')}$sep${s.toString().padLeft(2, '0')}';
+    return '${twoDigits.format(h)}$sep${twoDigits.format(m)}$sep${twoDigits.format(s)}';
   }
-  return '${m.toString().padLeft(2, '0')}$sep${s.toString().padLeft(2, '0')}';
+  return '${twoDigits.format(m)}$sep${twoDigits.format(s)}';
 }
 
 String formatTimerFromContext(BuildContext context, Duration duration) {

@@ -41,6 +41,7 @@ class ConversationManager {
   String _lastExerciseQuestion = '';
   bool _pendingExerciseQuestionCapture = false;
   String localeName = 'en';
+  int totalTokensUsed = 0;
 
   ConversationManager({
     required LlmService llmService,
@@ -71,19 +72,19 @@ class ConversationManager {
   List<ConversationMessage> get messages => _memory.getHistory();
   String get capturedExerciseQuestion => _lastExerciseQuestion;
 
+  static final Logger _logger = const Logger('ConversationManager');
+
   Future<void> initialize() async {
     phase = ConversationPhase.greeting;
     await _loadPersistedMessages();
   }
-
-  static final Logger _logger = const Logger('ConversationManager');
 
   Future<void> _loadPersistedMessages() async {
     if (_persistenceRepo == null) return;
     try {
       await _memory.loadFromRepository();
     } catch (e) {
-      _logger.w('Failed to load persisted messages', e);
+      _logger.e('Failed to load persisted messages', e);
     }
   }
 
@@ -108,6 +109,7 @@ class ConversationManager {
       return defaultPlan;
     }
     final response = result.data!;
+    totalTokensUsed += response.length ~/ 4;
 
     final plan = LessonPlan.fromJson(response);
     if (plan != null) {
@@ -123,6 +125,7 @@ class ConversationManager {
     _memory.addUserMessage(content);
 
     if (phase == ConversationPhase.greeting) {
+      _logTransition(phase, ConversationPhase.teaching, 'initial greeting');
       phase = ConversationPhase.teaching;
     } else if (phase == ConversationPhase.exercise) {
       final result = await _evaluateExerciseResponse(content);
@@ -139,8 +142,17 @@ class ConversationManager {
       );
     } else if (phase == ConversationPhase.feedback) {
       if (_consecutiveIncorrect >= 2) {
+        _logTransition(phase, ConversationPhase.adaptiveReview, 'consecutive incorrect >= 2');
         phase = ConversationPhase.adaptiveReview;
       } else {
+        _logTransition(phase, ConversationPhase.teaching, 'student answered correctly');
+        phase = ConversationPhase.teaching;
+      }
+    } else if (phase == ConversationPhase.adaptiveReview) {
+      final lower = content.toLowerCase();
+      final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
+      if (continueKeywords.any((k) => lower.contains(k))) {
+        _logTransition(phase, ConversationPhase.teaching, 'student indicates understanding');
         phase = ConversationPhase.teaching;
       }
     }
@@ -166,6 +178,7 @@ class ConversationManager {
     }
 
     final assistantContent = buffer.toString();
+    totalTokensUsed += assistantContent.length ~/ 4;
     _memory.addAssistantMessage(assistantContent);
 
     if (_pendingExerciseQuestionCapture) {
@@ -180,6 +193,7 @@ class ConversationManager {
     _memory.addUserMessage('[Image submitted for analysis]');
 
     if (phase == ConversationPhase.greeting) {
+      _logTransition(phase, ConversationPhase.teaching, 'image submitted during greeting');
       phase = ConversationPhase.teaching;
     }
 
@@ -202,6 +216,7 @@ class ConversationManager {
     }
 
     final assistantContent = buffer.toString();
+    totalTokensUsed += assistantContent.length ~/ 4;
     _memory.addAssistantMessage(assistantContent);
   }
 
@@ -251,22 +266,25 @@ class ConversationManager {
     final lower = content.toLowerCase();
     final exerciseKeywords = ['exercise', 'practice', 'quiz'];
     if (exerciseKeywords.any((k) => lower.contains(k))) {
+      _logTransition(phase, ConversationPhase.exercise, 'keyword detected in student message');
       phase = ConversationPhase.exercise;
       _pendingExerciseQuestionCapture = true;
-      return;
-    }
-
-    if (phase == ConversationPhase.adaptiveReview) {
-      phase = ConversationPhase.teaching;
     }
   }
 
+  void transitionToTeaching() {
+    _logTransition(phase, ConversationPhase.teaching, 'explicit transitionToTeaching()');
+    phase = ConversationPhase.teaching;
+  }
+
   void transitionToExercise() {
+    _logTransition(phase, ConversationPhase.exercise, 'explicit transitionToExercise()');
     phase = ConversationPhase.exercise;
     _pendingExerciseQuestionCapture = true;
   }
 
   void transitionToClosing() {
+    _logTransition(phase, ConversationPhase.closing, 'explicit transitionToClosing()');
     phase = ConversationPhase.closing;
   }
 
@@ -305,7 +323,9 @@ class ConversationManager {
       feature: 'teaching_summary',
     );
     if (result.isFailure) return '';
-    return result.data!;
+    final summary = result.data!;
+    totalTokensUsed += summary.length ~/ 4;
+    return summary;
   }
 
   TutorSession toSession() {
@@ -327,7 +347,12 @@ class ConversationManager {
       // LLM-facing: invariant English format OK per AGENTS.md
       tutorNotes: 'Adaptive pace: ${formatDecimal(adaptivePace, 'en', minFractionDigits: 1, maxFractionDigits: 1)}x',
       lessonPlanJson: lessonPlan?.toJsonString() ?? '{}',
+      totalTokensUsed: totalTokensUsed,
     );
+  }
+
+  void _logTransition(ConversationPhase from, ConversationPhase to, String reason) {
+    _logger.i('Phase transition: ${from.name} → ${to.name} ($reason)');
   }
 
   void clearMessages() {

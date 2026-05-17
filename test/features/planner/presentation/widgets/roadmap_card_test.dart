@@ -1,11 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/roadmap_card.dart';
 import 'package:studyking/features/planner/presentation/widgets/milestone_timeline.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
+  setUpAll(() {
+    Hive.init(Directory.systemTemp.createTempSync('roadmap_card_test_').path);
+  });
+
   Widget buildApp(Widget widget) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -79,6 +86,7 @@ void main() {
       ));
 
       expect(find.textContaining('Milestones'), findsOneWidget);
+      expect(find.textContaining('2 Milestones'), findsOneWidget);
     });
 
     testWidgets('shows completed milestones', (tester) async {
@@ -145,12 +153,61 @@ void main() {
       expect(checkbox.onChanged, isNull);
     });
 
-    testWidgets('shows completed status with green color', (tester) async {
+    testWidgets('shows completed status', (tester) async {
       await tester.pumpWidget(buildApp(
         RoadmapCard(roadmap: roadmap(status: 'completed')),
       ));
 
       expect(find.text('Completed'), findsOneWidget);
+    });
+
+    testWidgets('shows not_started status fallback', (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(roadmap: roadmap(status: 'not_started')),
+      ));
+
+      expect(find.text('Not Started'), findsOneWidget);
+    });
+
+    testWidgets('uses completionPercentage when milestones are empty', (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(roadmap: roadmap(completion: 75.0, milestones: [])),
+      ));
+
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.textContaining('75'), findsOneWidget);
+      expect(find.textContaining('0/0'), findsOneWidget);
+    });
+
+    testWidgets('no checkboxes when onToggleMilestone is null', (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(roadmap: roadmap(milestones: [milestone()])),
+      ));
+
+      expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.byType(MilestoneTimeline), findsOneWidget);
+    });
+
+    testWidgets('shows milestone topic count subtitle', (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(
+          roadmap: roadmap(milestones: [milestone()]),
+          onToggleMilestone: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.textContaining('1 topic'), findsOneWidget);
+    });
+
+    testWidgets('divider shown between milestones and timeline', (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(
+          roadmap: roadmap(milestones: [milestone()]),
+          onToggleMilestone: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.byType(Divider), findsOneWidget);
     });
   });
 }

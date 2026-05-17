@@ -245,10 +245,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       ),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      goalController.dispose();
-      daysController.dispose();
-    });
+    goalController.dispose();
+    daysController.dispose();
 
     if (result == null || result['goal']!.isEmpty) return;
 

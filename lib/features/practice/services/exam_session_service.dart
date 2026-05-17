@@ -208,7 +208,7 @@ class ExamSessionService {
       completed: true,
       tags: ['exam', 'auto_submit:${autoSubmitted ? 'true' : 'false'}'],
     );
-    await _sessionRepo.save(session);
+    await _sessionRepo.save(session.id, session);
 
     return result;
   }

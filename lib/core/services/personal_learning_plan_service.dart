@@ -41,6 +41,7 @@ class PlanGenerationConfig {
 }
 
 class PersonalLearningPlanService {
+  static final Logger _logger = const Logger('PersonalLearningPlanService');
   final MasteryGraphService _masteryService;
   final MasteryGraphRepository _repository;
   final TopicRepository _topicRepository;
@@ -105,7 +106,7 @@ class PersonalLearningPlanService {
       try {
         await _adherenceRepository.init();
       } catch (e) {
-        const Logger('PersonalLearningPlanService').e('Failed to initialize adherence repository', e);
+        _logger.e('Failed to initialize adherence repository', e);
       }
     }
 
@@ -182,7 +183,7 @@ class PersonalLearningPlanService {
           learningLevels = resolver.buildLearningLevels(resolved.data!);
         }
       } catch (e) {
-        const Logger('PersonalLearningPlanService').e('Failed to resolve syllabus', e);
+        _logger.e('Failed to resolve syllabus', e);
       }
     }
 
@@ -219,7 +220,7 @@ class PersonalLearningPlanService {
       await _planRepository.init();
       await _planRepository.savePlan(plan);
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to save generated plan', e);
+      _logger.e('Failed to save generated plan', e);
     }
 
     return Result.success(plan);
@@ -311,7 +312,7 @@ class PersonalLearningPlanService {
       await _planRepository.init();
       await _planRepository.savePlan(plan);
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to save empty mastery plan', e);
+      _logger.e('Failed to save empty mastery plan', e);
     }
 
     return Result.success(plan);
@@ -426,7 +427,7 @@ class PersonalLearningPlanService {
         );
       }).toList();
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to link questions to daily plans', e);
+      _logger.e('Failed to link questions to daily plans', e);
       return dailyPlans;
     }
   }
@@ -489,7 +490,7 @@ class PersonalLearningPlanService {
         }
       }
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to record daily adherence', e);
+      _logger.e('Failed to record daily adherence', e);
     }
   }
 
@@ -559,7 +560,7 @@ class PersonalLearningPlanService {
     try {
       await _planRepository.savePlan(updated);
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to save redistributed plan', e);
+      _logger.e('Failed to save redistributed plan', e);
     }
   }
 
@@ -723,7 +724,7 @@ class PersonalLearningPlanService {
       final topicResult = await _topicRepository.get(topicId);
       return topicResult.data?.title ?? topicId;
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get topic title', e);
+      _logger.e('Failed to get topic title', e);
       return topicId;
     }
   }
@@ -734,7 +735,7 @@ class PersonalLearningPlanService {
       final result = await _masteryService.getReadinessScore(studentId, topicId);
       return result.isSuccess ? result.data! : 0.5;
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get readiness score', e);
+      _logger.e('Failed to get readiness score', e);
       return 0.5;
     }
   }
@@ -745,7 +746,7 @@ class PersonalLearningPlanService {
       final result = await _masteryService.getReviewUrgency(studentId, topicId);
       return result.isSuccess ? result.data! : 0.3;
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get review urgency', e);
+      _logger.e('Failed to get review urgency', e);
       return 0.3;
     }
   }
@@ -755,7 +756,7 @@ class PersonalLearningPlanService {
       final topicResult = await _topicRepository.get(topicId);
       return topicResult.data?.subjectId ?? '';
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get subject ID', e);
+      _logger.e('Failed to get subject ID', e);
       return '';
     }
   }
@@ -867,7 +868,7 @@ class PersonalLearningPlanService {
       await _adherenceRepository.init();
       return _adherenceRepository.getAverageAdherence(studentId);
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get current adherence', e);
+      _logger.e('Failed to get current adherence', e);
       return 0.0;
     }
   }
@@ -877,7 +878,7 @@ class PersonalLearningPlanService {
       await _adherenceRepository.init();
       return _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
     } catch (e) {
-      const Logger('PersonalLearningPlanService').e('Failed to get consecutive low adherence days', e);
+      _logger.e('Failed to get consecutive low adherence days', e);
       return 0;
     }
   }

@@ -76,9 +76,10 @@ class TutorService {
       try {
         final existingResult = await _database.sessionRepository.get(scheduledSessionId);
         if (existingResult.isSuccess && existingResult.data != null) {
-          await _database.sessionRepository.save(
-            existingResult.data!.copyWith(status: SessionStatus.inProgress),
+          final updatedSession = existingResult.data!.copyWith(
+            status: SessionStatus.inProgress,
           );
+          await _database.sessionRepository.save(updatedSession.id, updatedSession);
         }
       } catch (e) {
         _logger.w('Failed to update scheduled session to inProgress', e);
@@ -145,7 +146,7 @@ class TutorService {
     try {
       final now = _clock.now();
       final elapsedMs = _elapsedMinutes(session) * 60000;
-      await _database.sessionRepository.save(Session(
+      final sessionToSave = Session(
         id: session.id,
         studentId: session.studentId,
         subjectId: session.subjectId,
@@ -167,7 +168,8 @@ class TutorService {
           totalMessages: session.totalMessages,
           totalTokensUsed: session.totalTokensUsed,
         ),
-      ));
+      );
+      await _database.sessionRepository.save(sessionToSave.id, sessionToSave);
     } catch (e) {
       _logger.w('Failed to save tutor session as Session', e);
     }
@@ -176,14 +178,13 @@ class TutorService {
       try {
         final existingResult = await _database.sessionRepository.get(_scheduledSessionId!);
         if (existingResult.isSuccess && existingResult.data != null) {
-          await _database.sessionRepository.save(
-            existingResult.data!.copyWith(
-              status: SessionStatus.completed,
-              completed: true,
-              endTime: session.endTime ?? _clock.now(),
-              tutorSessionId: session.id,
-            ),
+          final completedSession = existingResult.data!.copyWith(
+            status: SessionStatus.completed,
+            completed: true,
+            endTime: session.endTime ?? _clock.now(),
+            tutorSessionId: session.id,
           );
+          await _database.sessionRepository.save(completedSession.id, completedSession);
         }
       } catch (e) {
         _logger.w('Failed to update scheduled session to completed', e);

@@ -194,7 +194,7 @@ class FakeSessionRepository extends SessionRepository {
   List<Session> get savedSessions => List.unmodifiable(_savedSessions);
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     _savedSessions.add(session);
     return Result.success(null);
   }

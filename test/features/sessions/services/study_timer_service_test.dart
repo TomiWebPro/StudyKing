@@ -8,7 +8,7 @@ class FakeSessionRepository extends SessionRepository {
   final Map<String, Session> _store = {};
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     _store[session.id] = session;
     return Result.success(null);
   }
@@ -71,37 +71,6 @@ class FakeSessionRepository extends SessionRepository {
   }
 }
 
-class _FailingSessionRepository extends SessionRepository {
-  @override
-  Future<Result<void>> save(Session session) async {
-    return Result.failure('Save failed');
-  }
-
-  @override
-  Future<Result<Session?>> get(String id) async {
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<List<Session>>> getAll() async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<List<Session>>> getByDate(DateTime date) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
-
-  @override
-  Future<Result<int>> getTodaySessionCount() async => Result.success(0);
-
-  @override
-  Future<Result<int>> getTodayCompletedSessionCount() async => Result.success(0);
-}
-
 class TestableStudyTimerService extends StudyTimerService {
   int _dailyCapMinutes = 0;
 
@@ -138,10 +107,14 @@ void main() {
       test('repository getter returns injected repository', () {
         expect(service.repository, repository);
       });
+
+      test('elapsedSeconds is 0 initially', () {
+        expect(service.elapsedSeconds, 0);
+      });
     });
 
     group('startSession', () {
-      test('creates and saves a new session', () async {
+      test('creates and saves a new session of type focus', () async {
         final session = await service.startSession(
           plannedDurationMinutes: 25,
           type: SessionType.focus,
@@ -160,6 +133,37 @@ void main() {
         expect(service.currentSession!.id, session.id);
       });
 
+      test('creates and saves a new session of type practice', () async {
+        final session = await service.startSession(
+          plannedDurationMinutes: 30,
+          type: SessionType.practice,
+          studentId: 'student-1',
+        );
+        expect(session.type, SessionType.practice);
+        expect(service.currentSession!.type, SessionType.practice);
+        expect(service.currentSession!.id, session.id);
+      });
+
+      test('creates and saves a new session of type tutoring', () async {
+        final session = await service.startSession(
+          plannedDurationMinutes: 45,
+          type: SessionType.tutoring,
+          studentId: 'student-1',
+        );
+        expect(session.type, SessionType.tutoring);
+        expect(service.currentSession!.type, SessionType.tutoring);
+      });
+
+      test('creates and saves a new session of type manual', () async {
+        final session = await service.startSession(
+          plannedDurationMinutes: 10,
+          type: SessionType.manual,
+          studentId: 'student-1',
+        );
+        expect(session.type, SessionType.manual);
+        expect(service.currentSession!.type, SessionType.manual);
+      });
+
       test('cancels previous session when starting new one', () async {
         final first = await service.startSession(
           plannedDurationMinutes: 25,
@@ -175,6 +179,13 @@ void main() {
       test('sets elapsedMs to 0 on start', () async {
         await service.startSession(plannedDurationMinutes: 25);
         expect(service.elapsedMs, 0);
+      });
+
+      test('uses empty string for studentId when not provided', () async {
+        final session = await service.startSession(
+          plannedDurationMinutes: 25,
+        );
+        expect(session.studentId, '');
       });
     });
 
@@ -201,24 +212,19 @@ void main() {
         service.resumeSession();
         expect(service.isPaused, isFalse);
       });
+
+      test('pauseSession does not clear elapsedMs', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        service.pauseSession();
+        expect(service.elapsedMs, 0);
+      });
     });
 
     group('completeSession', () {
-      test('throws StateError when no active session', () async {
-        expect(
-          () => service.completeSession(),
-          throwsA(isA<StateError>()),
-        );
-      });
-
-      test('returns failure when repository save fails', () async {
-        final failingRepo = _FailingSessionRepository();
-        final timerService = TestableStudyTimerService(repository: failingRepo);
-        addTearDown(() => timerService.dispose());
-        await timerService.startSession(plannedDurationMinutes: 25);
-
-        final result = await timerService.completeSession();
+      test('returns failure when no active session', () async {
+        final result = await service.completeSession();
         expect(result.isFailure, isTrue);
+        expect(result.error, 'No_active_session');
       });
 
       test('completes the active session', () async {
@@ -260,14 +266,31 @@ void main() {
         expect(captured, isNotNull);
         expect(captured!.id, completed.id);
       });
+
+      test('completes with zero elapsedMs', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        final result = await service.completeSession();
+        expect(result.isSuccess, true);
+        final completed = result.data!;
+        expect(completed.actualDurationMs, 0);
+        expect(completed.completed, isTrue);
+      });
+
+      test('resets state after completion', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        await service.completeSession();
+        expect(service.hasActiveSession, isFalse);
+        expect(service.currentSession, isNull);
+        expect(service.elapsedMs, 0);
+        expect(service.isPaused, isFalse);
+      });
     });
 
     group('cancelSession', () {
-      test('throws StateError when no active session', () async {
-        expect(
-          () => service.cancelSession(),
-          throwsA(isA<StateError>()),
-        );
+      test('returns failure when no active session', () async {
+        final result = await service.cancelSession();
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'No_active_session');
       });
 
       test('cancels the active session', () async {
@@ -279,9 +302,208 @@ void main() {
         expect(cancelled.endTime, isNotNull);
         expect(service.hasActiveSession, isFalse);
       });
+
+      test('cancels with zero elapsedMs', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        final result = await service.cancelSession();
+        expect(result.isSuccess, true);
+        expect(result.data!.actualDurationMs, 0);
+      });
+
+      test('resets state after cancellation', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        await service.cancelSession();
+        expect(service.hasActiveSession, isFalse);
+        expect(service.currentSession, isNull);
+        expect(service.elapsedMs, 0);
+        expect(service.isPaused, isFalse);
+      });
     });
 
-    group('callbacks', () {
+    group('reconcileElapsedMs', () {
+      test('does nothing when no active session', () async {
+        service.reconcileElapsedMs(5000);
+        expect(service.elapsedMs, 0);
+      });
+
+      test('does nothing when session is paused', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        service.pauseSession();
+        service.reconcileElapsedMs(5000);
+        expect(service.elapsedMs, 0);
+      });
+
+      test('increments elapsedMs when active and not paused', () async {
+        await service.startSession(plannedDurationMinutes: 25);
+        service.reconcileElapsedMs(5000);
+        expect(service.elapsedMs, 5000);
+      });
+
+      test('auto-completes session when elapsed exceeds planned duration', () async {
+        await service.startSession(
+          plannedDurationMinutes: 1,
+          studentId: 'student-1',
+        );
+        final sessionId = service.currentSession!.id;
+        expect(service.hasActiveSession, isTrue);
+        service.reconcileElapsedMs(120000);
+        await Future<void>.delayed(Duration.zero);
+        final storedResult = await repository.get(sessionId);
+        expect(storedResult.data!.completed, isTrue);
+      });
+    });
+
+    group('daily cap - isDailyCapExceededMidSession', () {
+      test('returns false when cap is 0', () async {
+        expect(await service.isDailyCapExceededMidSession(), isFalse);
+      });
+
+      test('returns false when under cap', () async {
+        service.setDailyCapMinutes(120);
+        expect(await service.isDailyCapExceededMidSession(), isFalse);
+      });
+
+      test('returns true when over cap without current session', () async {
+        service.setDailyCapMinutes(10);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(hours: 1)),
+          actualDurationMs: 600000,
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        expect(await service.isDailyCapExceededMidSession(), isTrue);
+      });
+
+      test('returns false when over cap but current session keeps total under', () async {
+        service.setDailyCapMinutes(15);
+        await service.startSession(plannedDurationMinutes: 10);
+        service.reconcileElapsedMs(120000);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          actualDurationMs: 600000,
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        expect(await service.isDailyCapExceededMidSession(), isFalse);
+      });
+    });
+
+    group('getRemainingDailyCapMinutes', () {
+      test('returns -1 when cap is 0', () async {
+        expect(await service.getRemainingDailyCapMinutes(), -1);
+      });
+
+      test('returns cap value when no sessions', () async {
+        service.setDailyCapMinutes(120);
+        expect(await service.getRemainingDailyCapMinutes(), 120);
+      });
+
+      test('returns reduced remaining after sessions', () async {
+        service.setDailyCapMinutes(60);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          actualDurationMs: 1800000,
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        final remaining = await service.getRemainingDailyCapMinutes();
+        expect(remaining, 30);
+      });
+
+      test('can go to 0 remaining', () async {
+        service.setDailyCapMinutes(60);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          actualDurationMs: 3600000,
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        expect(await service.getRemainingDailyCapMinutes(), 0);
+      });
+    });
+
+    group('getRecentSessions', () {
+      test('returns empty when no sessions', () async {
+        expect(await service.getRecentSessions(), isEmpty);
+      });
+
+      test('returns limited recent sessions', () async {
+        for (var i = 0; i < 5; i++) {
+          final sess1 = Session(
+            id: 's$i',
+            studentId: 'student-1',
+            startTime: DateTime(2025, 1, 15 + i),
+            type: SessionType.focus,
+          );
+          await repository.save(sess1.id, sess1);
+        }
+        final recent = await service.getRecentSessions(limit: 3);
+        expect(recent.length, 3);
+      });
+
+      test('returns all sessions when fewer than limit', () async {
+        final s1 = Session(
+          id: 's1',
+          studentId: 'student-1',
+          startTime: DateTime(2025, 1, 15),
+          type: SessionType.focus,
+        );
+        await repository.save(s1.id, s1);
+        final recent = await service.getRecentSessions(limit: 10);
+        expect(recent.length, 1);
+      });
+
+      test('defaults to limit of 10', () async {
+        for (var i = 0; i < 15; i++) {
+          final s = Session(
+            id: 's$i',
+            studentId: 'student-1',
+            startTime: DateTime(2025, 1, 15 + i),
+            type: SessionType.focus,
+          );
+          await repository.save(s.id, s);
+        }
+        final recent = await service.getRecentSessions();
+        expect(recent.length, 10);
+      });
+    });
+
+    group('onTick callbacks', () {
+      test('addOnTick registers callback', () {
+        final calls = <int>[];
+        service.addOnTick((elapsed) => calls.add(elapsed));
+        expect(service.hasActiveSession, isFalse);
+      });
+
+      test('removeOnTick unregisters callback', () {
+        final calls = <int>[];
+        void cb(int elapsed) => calls.add(elapsed);
+        service.addOnTick(cb);
+        service.removeOnTick(cb);
+      });
+
+      test('addOnTick and removeOnTick are idempotent', () {
+        void cb(int elapsed) {}
+        service.addOnTick(cb);
+        service.addOnTick(cb);
+        service.removeOnTick(cb);
+        service.removeOnTick(cb);
+      });
+    });
+
+    group('onSessionComplete callbacks', () {
       test('addOnSessionComplete registers callback', () async {
         final calls = <Session>[];
         service.addOnSessionComplete((s) => calls.add(s));
@@ -298,6 +520,17 @@ void main() {
         await service.startSession(plannedDurationMinutes: 25);
         await service.completeSession();
         expect(calls, isEmpty);
+      });
+
+      test('multiple callbacks all fire', () async {
+        final calls = <String>[];
+        service.addOnSessionComplete((_) => calls.add('a'));
+        service.addOnSessionComplete((_) => calls.add('b'));
+        await service.startSession(plannedDurationMinutes: 25);
+        await service.completeSession();
+        expect(calls.length, 2);
+        expect(calls, contains('a'));
+        expect(calls, contains('b'));
       });
     });
 
@@ -324,97 +557,138 @@ void main() {
 
       test('returns true when over cap', () async {
         service.setDailyCapMinutes(60);
-        await repository.save(Session(
+        final sess0 = Session(
           id: 'existing-session',
           studentId: 'student-1',
           startTime: DateTime.now(),
           actualDurationMs: 2400000,
           type: SessionType.focus,
-        ));
+        );
+        await repository.save(sess0.id, sess0);
         expect(await service.isDailyCapReached(30), isTrue);
       });
-    });
 
-    group('getRemainingDailyCapMinutes', () {
-      test('returns -1 when cap is 0', () async {
-        expect(await service.getRemainingDailyCapMinutes(), -1);
-      });
-
-      test('returns remaining minutes', () async {
-        service.setDailyCapMinutes(120);
-        expect(await service.getRemainingDailyCapMinutes(), 120);
-      });
-    });
-
-    group('getRecentSessions', () {
-      test('returns empty when no sessions', () async {
-        expect(await service.getRecentSessions(), isEmpty);
-      });
-
-      test('returns limited recent sessions', () async {
-        for (var i = 0; i < 5; i++) {
-          await repository.save(Session(
-            id: 's$i',
-            studentId: 'student-1',
-            startTime: DateTime(2025, 1, 15 + i),
-            type: SessionType.focus,
-          ));
-        }
-        final recent = await service.getRecentSessions(limit: 3);
-        expect(recent.length, 3);
+      test('returns false when exactly at cap boundary', () async {
+        service.setDailyCapMinutes(60);
+        final existing = Session(
+          id: 'existing-session',
+          studentId: 'student-1',
+          startTime: DateTime.now(),
+          actualDurationMs: 1800000,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        expect(await service.isDailyCapReached(30), isFalse);
       });
     });
 
     group('today stats delegation', () {
+      test('getTodayDurationMs returns 0 when no sessions', () async {
+        expect(await service.getTodayDurationMs(), 0);
+      });
+
       test('getTodayDurationMs delegates to repository', () async {
-        await repository.save(Session(
+        final sess2 = Session(
           id: 'today-session',
           studentId: 'student-1',
           startTime: DateTime.now(),
           actualDurationMs: 5000,
           type: SessionType.focus,
-        ));
+        );
+        await repository.save(sess2.id, sess2);
         expect(await service.getTodayDurationMs(), 5000);
       });
 
       test('getTodaySessionCount delegates to repository', () async {
-        await repository.save(Session(
+        final sess3 = Session(
           id: 's1',
           studentId: 'student-1',
           startTime: DateTime.now(),
           type: SessionType.focus,
-        ));
-        await repository.save(Session(
+        );
+        await repository.save(sess3.id, sess3);
+        final sess4 = Session(
           id: 's2',
           studentId: 'student-1',
           startTime: DateTime.now(),
           type: SessionType.focus,
-        ));
+        );
+        await repository.save(sess4.id, sess4);
         expect(await service.getTodaySessionCount(), 2);
       });
 
       test('getTodayCompletedSessionCount delegates to repository', () async {
-        await repository.save(Session(
+        final sess5 = Session(
           id: 's1',
           studentId: 'student-1',
           startTime: DateTime.now(),
           completed: true,
           type: SessionType.focus,
-        ));
+        );
+        await repository.save(sess5.id, sess5);
         expect(await service.getTodayCompletedSessionCount(), 1);
       });
 
-      test('getTodayStats delegates to repository', () async {
+      test('getTodayCompletedSessionCount returns 0 when no completed sessions', () async {
+        final sess = Session(
+          id: 's1',
+          studentId: 'student-1',
+          startTime: DateTime.now(),
+          completed: false,
+          type: SessionType.focus,
+        );
+        await repository.save(sess.id, sess);
+        expect(await service.getTodayCompletedSessionCount(), 0);
+      });
+
+      test('getTodayStats returns empty map when no sessions', () async {
         final stats = await service.getTodayStats();
         expect(stats, isA<Map<String, dynamic>>());
+        expect(stats['totalMs'], 0);
+        expect(stats['totalSessions'], 0);
+      });
+
+      test('getTodayStats returns accumulated stats', () async {
+        final s1 = Session(
+          id: 's1',
+          studentId: 'student-1',
+          startTime: DateTime.now(),
+          actualDurationMs: 10000,
+          completed: true,
+          type: SessionType.focus,
+        );
+        final s2 = Session(
+          id: 's2',
+          studentId: 'student-1',
+          startTime: DateTime.now(),
+          actualDurationMs: 20000,
+          completed: false,
+          type: SessionType.focus,
+        );
+        await repository.save(s1.id, s1);
+        await repository.save(s2.id, s2);
+        final stats = await service.getTodayStats();
+        expect(stats['totalMs'], 30000);
+        expect(stats['totalSessions'], 2);
+        expect(stats['completedSessions'], 1);
       });
     });
 
     group('dispose', () {
-      test('cancels timer and clears state', () async {
+      test('cancels timer', () async {
         await service.startSession(plannedDurationMinutes: 25);
         await service.dispose();
         expect(service.hasActiveSession, isTrue);
+      });
+
+      test('can be called when no active session', () async {
+        await service.dispose();
+        expect(service.currentSession, isNull);
+      });
+
+      test('can be called multiple times', () async {
+        await service.dispose();
+        await service.dispose();
       });
     });
   });

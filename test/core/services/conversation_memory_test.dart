@@ -205,5 +205,78 @@ void main() {
         memory.addUserMessage('no persist');
       });
     });
+
+    group('loadFromRepository', () {
+      test('loads messages from repository', () async {
+        final repo = _FakeConversationRepository();
+        repo.getSessionMessagesResult = [
+          ConversationMessage(
+            id: 'm1',
+            sessionId: 'sess1',
+            role: MessageRole.student,
+            type: MessageType.text,
+            content: 'Hello',
+            timestamp: DateTime.now(),
+          ),
+          ConversationMessage(
+            id: 'm2',
+            sessionId: 'sess1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Hi there',
+            timestamp: DateTime.now(),
+          ),
+        ];
+
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+        );
+        await memory.loadFromRepository();
+
+        expect(memory.messages, hasLength(2));
+        expect(memory.messages.first.content, equals('Hello'));
+        expect(memory.messages.last.content, equals('Hi there'));
+      });
+
+      test('clears existing messages before loading', () async {
+        final repo = _FakeConversationRepository();
+        repo.getSessionMessagesResult = [
+          ConversationMessage(
+            id: 'm1',
+            sessionId: 'sess1',
+            role: MessageRole.student,
+            type: MessageType.text,
+            content: 'From repo',
+            timestamp: DateTime.now(),
+          ),
+        ];
+
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+        );
+        memory.addUserMessage('temp message');
+        expect(memory.messages, hasLength(1));
+
+        await memory.loadFromRepository();
+
+        expect(memory.messages, hasLength(1));
+        expect(memory.messages.first.content, equals('From repo'));
+      });
+
+      test('does nothing when sessionId is null', () async {
+        final repo = _FakeConversationRepository();
+        final memory = ConversationMemory(repository: repo);
+        await memory.loadFromRepository();
+        expect(memory.messages, isEmpty);
+      });
+
+      test('does nothing when repository is null', () async {
+        final memory = ConversationMemory(sessionId: 'sess1');
+        await memory.loadFromRepository();
+        expect(memory.messages, isEmpty);
+      });
+    });
   });
 }

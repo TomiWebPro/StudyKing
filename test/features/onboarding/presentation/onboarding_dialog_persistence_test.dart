@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
+import 'package:studyking/features/onboarding/services/onboarding_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget widget) {
@@ -16,18 +14,15 @@ Widget _buildTestApp(Widget widget) {
 }
 
 void main() {
-  late String hivePath;
+  late Map<String, dynamic> storage;
 
-  setUp(() async {
-    hivePath = (await Directory.systemTemp.createTemp('onboarding_minimal_')).path;
-    Hive.init(hivePath);
+  setUp(() {
+    storage = <String, dynamic>{};
+    OnboardingService.setTestStorage(storage);
   });
 
-  tearDown(() async {
-    await Hive.close();
-    if (hivePath.isNotEmpty) {
-      await Directory(hivePath).delete(recursive: true);
-    }
+  tearDown(() {
+    OnboardingService.setTestStorage(null);
   });
 
   testWidgets('minimal onboarding test', (tester) async {
@@ -35,9 +30,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Get Started'));
     await tester.pump();
-    await tester.runAsync(() async {
-      final box = await Hive.openBox(HiveBoxNames.settings);
-      expect(box.get('onboarding_completed'), isTrue);
-    });
+
+    expect(storage['onboarding_completed'], isTrue);
   });
 }

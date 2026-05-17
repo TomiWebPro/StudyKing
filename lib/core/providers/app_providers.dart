@@ -16,6 +16,7 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../data/database_service.dart';
 import '../services/engagement_scheduler.dart';
+import '../services/notification_service.dart';
 import '../services/plan_adapter.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
@@ -36,7 +37,7 @@ final databaseProvider = Provider<DatabaseService>((ref) {
   );
 });
 
-final settingsRepository = SettingsRepository();
+var settingsRepository = SettingsRepository();
 
 class SettingsController extends StateNotifier<SettingsBox> {
   final Logger _logger = const Logger('SettingsController');
@@ -292,6 +293,10 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
     scheduler.dispose();
   });
   return scheduler;
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
 });
 
 

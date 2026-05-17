@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -40,8 +40,9 @@ Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
 
 void main() {
   setUpAll(() {
-    Hive.init(Directory.systemTemp.createTempSync('lesson_test_').path);
+    Hive.init(Directory.systemTemp.createTempSync('lesson_booking_test_').path);
   });
+
   group('LessonBookingSheet', () {
     testWidgets('renders title and topic title', (tester) async {
       await _showSheet(tester, const LessonBookingSheet(
@@ -200,7 +201,52 @@ void main() {
       expect(find.text('15 minutes'), findsOneWidget);
     });
 
-    testWidgets('shows conflict warning icon and container when conflict detected',
+    testWidgets('decrease button is disabled at 15 minutes', (tester) async {
+      await _showSheet(tester, const LessonBookingSheet(
+        topicId: 'topic-1',
+        topicTitle: 'Algebra Basics',
+        subjectId: 'subj-1',
+        onSchedule: _fakeSchedule,
+      ));
+
+      await tester.tap(find.byIcon(Icons.remove_circle_outline));
+      await tester.pump();
+
+      final decreaseButton = tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byIcon(Icons.remove_circle_outline),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(decreaseButton.onPressed, isNull);
+    });
+
+    testWidgets('increase button is disabled at 120 minutes', (tester) async {
+      await _showSheet(tester, const LessonBookingSheet(
+        topicId: 'topic-1',
+        topicTitle: 'Algebra Basics',
+        subjectId: 'subj-1',
+        onSchedule: _fakeSchedule,
+      ));
+
+      for (var i = 0; i < 6; i++) {
+        await tester.tap(find.byIcon(Icons.add_circle_outline));
+      }
+      await tester.pump();
+
+      expect(find.text('120 minutes'), findsOneWidget);
+
+      final increaseButton = tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byIcon(Icons.add_circle_outline),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(increaseButton.onPressed, isNull);
+    });
+
+    testWidgets(
+        'shows conflict warning icon and container when conflict detected',
         (tester) async {
       final conflictService = _FakeConflictPlannerService(conflictResult: true);
       await tester.pumpWidget(MaterialApp(
@@ -243,7 +289,8 @@ void main() {
       expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
 
-    testWidgets('scheduling with conflict shows snackbar instead of calling onSchedule',
+    testWidgets(
+        'scheduling with conflict shows snackbar instead of calling onSchedule',
         (tester) async {
       bool onScheduleCalled = false;
       final conflictService = _FakeConflictPlannerService(conflictResult: true);
@@ -306,6 +353,28 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+    });
+
+    testWidgets('renders schedule icon on button', (tester) async {
+      await _showSheet(tester, const LessonBookingSheet(
+        topicId: 'topic-1',
+        topicTitle: 'Algebra Basics',
+        subjectId: 'subj-1',
+        onSchedule: _fakeSchedule,
+      ));
+
+      expect(find.byIcon(Icons.check), findsOneWidget);
+    });
+
+    testWidgets('renders drag handle at top', (tester) async {
+      await _showSheet(tester, const LessonBookingSheet(
+        topicId: 'topic-1',
+        topicTitle: 'Algebra Basics',
+        subjectId: 'subj-1',
+        onSchedule: _fakeSchedule,
+      ));
+
+      expect(find.byType(Container), findsWidgets);
     });
   });
 }

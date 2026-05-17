@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -11,23 +15,13 @@ class FakeSubjectRepository extends SubjectRepository {
   @override
   Future<void> init() async {}
 
-  void addSubject(Subject subject) {
-    _storage[subject.id] = subject;
-  }
-
-  void clearStorage() {
-    _storage.clear();
-  }
+  @override
+  Future<Result<Subject?>> get(String key) async =>
+      Result.success(_storage[key]);
 
   @override
-  Future<Result<Subject?>> get(String key) async {
-    return Result.success(_storage[key]);
-  }
-
-  @override
-  Future<Result<List<Subject>>> getAll() async {
-    return Result.success(_storage.values.toList());
-  }
+  Future<Result<List<Subject>>> getAll() async =>
+      Result.success(_storage.values.toList());
 
   @override
   Future<Result<void>> save(String key, Subject item) async {
@@ -40,79 +34,17 @@ class FakeSubjectRepository extends SubjectRepository {
     _storage.remove(key);
     return Result.success(null);
   }
-
-  @override
-  Future<void> create(Subject subject) async {
-    _storage[subject.id] = subject;
-  }
-
-  @override
-  Future<List<Subject>> getWithTopics(List<String> topicIds) async {
-    return _storage.values
-        .where((s) => s.topicIds.any((id) => topicIds.contains(id)))
-        .toList();
-  }
-
-  @override
-  Future<void> addTopicToSubject(String subjectId, String topicId) async {
-    final subject = _storage[subjectId];
-    if (subject != null) {
-      if (subject.topicIds.contains(topicId)) return;
-      _storage[subjectId] = subject.copyWith(
-        topicIds: [...subject.topicIds, topicId],
-      );
-    }
-  }
-
-  @override
-  Future<void> removeTopicFromSubject(String subjectId, String topicId) async {
-    final subject = _storage[subjectId];
-    if (subject != null) {
-      _storage[subjectId] = subject.copyWith(
-        topicIds: subject.topicIds.where((id) => id != topicId).toList(),
-      );
-    }
-  }
-
-  @override
-  Future<Subject?> getByCode(String code) async {
-    return _storage.values.where((s) => s.code == code).firstOrNull;
-  }
-}
-
-Subject createTestSubject({
-  String id = 'test-id',
-  String name = 'Test Subject',
-  String? description,
-  String? syllabus,
-  String? code,
-  String? teacher,
-  List<String>? topicIds,
-  String color = '#2196F3',
-  DateTime? createdAt,
-  DateTime? examDate,
-}) {
-  return Subject(
-    id: id,
-    name: name,
-    description: description,
-    syllabus: syllabus,
-    code: code,
-    teacher: teacher,
-    topicIds: topicIds,
-    color: color,
-    createdAt: createdAt,
-    examDate: examDate,
-  );
 }
 
 class TestSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   final FakeSubjectRepository _repo;
+  bool buildCalled = false;
 
   TestSubjectsRepositoryNotifier(this._repo);
 
   @override
   Future<SubjectRepository> build() async {
+    buildCalled = true;
     await Future.delayed(const Duration(milliseconds: 10));
     return _repo;
   }
@@ -126,345 +58,178 @@ class FailingSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   }
 }
 
+ProviderContainer _makeContainer(SubjectsRepositoryNotifier notifier) =>
+    ProviderContainer(overrides: [subjectsRepositoryProvider.overrideWith(() => notifier)]);
+
+class TestSubjectAdapter extends TypeAdapter<Subject> {
+  @override
+  final int typeId = 11;
+
+  @override
+  Subject read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return Subject.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, Subject obj) {
+    writer.write(obj.toJson());
+  }
+}
+
+Subject _createSubject({
+  required String id,
+  String name = 'Test Subject',
+  List<String>? topicIds,
+}) {
+  return Subject(
+    id: id,
+    name: name,
+    topicIds: topicIds,
+  );
+}
+
 void main() {
-  group('SubjectsRepositoryNotifier', () {
-    group('initialization', () {
-      test('creates repository and returns it from build', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-
-        final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
-        final result = await notifier.build();
-
-        expect(result, isA<SubjectRepository>());
-        final allSubjects = await result.getAll();
-        expect(allSubjects.data!.length, 1);
-        expect(allSubjects.data!.first.name, 'Physics');
-      });
-
-      test('build returns repository withinitialized data', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Chemistry'));
-
-        final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
-        final result = await notifier.build();
-
-        final allSubjects = await result.getAll();
-        expect(allSubjects.data!.length, 1);
-        expect(allSubjects.data!.first.name, 'Chemistry');
-      });
+  group('subjectsRepositoryProvider', () {
+    test('resolves SubjectRepository', () async {
+      final c = _makeContainer(TestSubjectsRepositoryNotifier(FakeSubjectRepository()));
+      expect(await c.read(subjectsRepositoryProvider.future), isA<SubjectRepository>());
+      c.dispose();
     });
 
-    group('subjectsRepositoryProvider', () {
-      test('provider returns AsyncValue with data after build', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        container.read(subjectsRepositoryProvider);
-        
-        await expectLater(
-          container.read(subjectsRepositoryProvider.future),
-          completes,
-        );
-        
-        container.dispose();
-      });
-
-      test('provider returns AsyncValue with loading state initially', () {
-        final fakeRepo = FakeSubjectRepository();
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        final asyncValue = container.read(subjectsRepositoryProvider);
-
-        expect(asyncValue.isLoading, isTrue);
-        container.dispose();
-      });
-
-      test('provider returns AsyncValue with error on failure', () async {
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => FailingSubjectsRepositoryNotifier()),
-          ],
-        );
-
-        try {
-          await container.read(subjectsRepositoryProvider.future);
-        } catch (_) {}
-
-        final asyncValue = container.read(subjectsRepositoryProvider);
-        expect(asyncValue.hasError, isTrue);
-        container.dispose();
-      });
+    test('shows loading before build', () {
+      final c = _makeContainer(TestSubjectsRepositoryNotifier(FakeSubjectRepository()));
+      expect(c.read(subjectsRepositoryProvider).isLoading, isTrue);
+      c.dispose();
     });
 
-    group('repository operations via provider', () {
-      late ProviderContainer container;
-      late FakeSubjectRepository fakeRepo;
-
-      setUp(() {
-        fakeRepo = FakeSubjectRepository();
-        container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-      });
-
-      tearDown(() {
-        container.dispose();
-      });
-
-      test('can get all subjects', () async {
-        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final subjects = await repo.getAll();
-
-        expect(subjects.data!.length, 2);
-      });
-
-      test('can get subject by id', () async {
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final subject = await repo.get('subj-1');
-
-        expect(subject.data, isNotNull);
-        expect(subject.data!.name, 'Physics');
-      });
-
-      test('can save subject', () async {
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final newSubject = createTestSubject(id: 'new-subj', name: 'Biology');
-        await repo.create(newSubject);
-
-        final retrieved = await repo.get('new-subj');
-        expect(retrieved.data, isNotNull);
-        expect(retrieved.data!.name, 'Biology');
-      });
-
-      test('can delete subject', () async {
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        await repo.delete('subj-1');
-
-        final result = await repo.get('subj-1');
-        expect(result.data, isNull);
-      });
-
-      test('can filter subjects by topics', () async {
-        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
-        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry', topicIds: ['topic-3']));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final filtered = await repo.getWithTopics(['topic-1']);
-
-        expect(filtered.length, 1);
-        expect(filtered.first.name, 'Physics');
-      });
-
-      test('can get subject by code', () async {
-        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics', code: 'IB-PHYS'));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final subject = await repo.getByCode('IB-PHYS');
-
-        expect(subject, isNotNull);
-        expect(subject!.name, 'Physics');
-      });
-
-      test('can add topic to subject', () async {
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1']));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        await repo.addTopicToSubject('subj-1', 'topic-2');
-
-        final subject = await repo.get('subj-1');
-        expect(subject.data!.topicIds, containsAll(['topic-1', 'topic-2']));
-      });
-
-      test('can remove topic from subject', () async {
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', topicIds: ['topic-1', 'topic-2']));
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        await repo.removeTopicFromSubject('subj-1', 'topic-1');
-
-        final subject = await repo.get('subj-1');
-        expect(subject.data!.topicIds, ['topic-2']);
-      });
+    test('shows error on init failure', () async {
+      final c = _makeContainer(FailingSubjectsRepositoryNotifier());
+      try { await c.read(subjectsRepositoryProvider.future); } catch (_) {}
+      expect(c.read(subjectsRepositoryProvider).hasError, isTrue);
+      c.dispose();
     });
 
-    group('AsyncNotifier behavior', () {
-      test('state updates reflect in provider', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        
-        final repo = container.read(subjectsRepositoryProvider).valueOrNull;
-        expect(repo, isNotNull);
-        container.dispose();
-      });
-
-      test('handles empty repository', () async {
-        final fakeRepo = FakeSubjectRepository();
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final subjects = await repo.getAll();
-
-        expect(subjects.data, isEmpty);
-        container.dispose();
-      });
+    test('returns same instance across reads', () async {
+      final c = _makeContainer(TestSubjectsRepositoryNotifier(FakeSubjectRepository()));
+      await c.read(subjectsRepositoryProvider.future);
+      final a = c.read(subjectsRepositoryProvider).valueOrNull;
+      final b = c.read(subjectsRepositoryProvider).valueOrNull;
+      expect(identical(a, b), isTrue);
+      c.dispose();
     });
 
-    group('error handling', () {
-      test('handles get failure gracefully', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final result = await repo.get('non-existent');
-
-        expect(result.data, isNull);
-        container.dispose();
-      });
-
-      test('handles delete non-existent gracefully', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics'));
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        await repo.delete('non-existent');
-        
-        final remaining = await repo.getAll();
-        expect(remaining.data!.length, 1);
-        container.dispose();
-      });
-
-      test('handles getWithTopics on empty repository', () async {
-        final fakeRepo = FakeSubjectRepository();
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final result = await repo.getWithTopics(['topic-1']);
-
-        expect(result, isEmpty);
-        container.dispose();
-      });
-
-      test('handles getByCode for non-existent code', () async {
-        final fakeRepo = FakeSubjectRepository();
-        fakeRepo.addSubject(createTestSubject(id: 'subj-1', name: 'Physics', code: 'IB-PHYS'));
-        
-        final container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final result = await repo.getByCode('NON-EXISTENT');
-
-        expect(result, isNull);
-        container.dispose();
-      });
+    test('build method is called when provider is read', () async {
+      final fakeRepo = FakeSubjectRepository();
+      final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
+      final c = _makeContainer(notifier);
+      expect(notifier.buildCalled, isFalse);
+      await c.read(subjectsRepositoryProvider.future);
+      expect(notifier.buildCalled, isTrue);
+      c.dispose();
     });
 
-    group('getAll via repository', () {
-      late ProviderContainer container;
-      late FakeSubjectRepository fakeRepo;
+    test('overridden fake repo is returned from provider', () async {
+      final fakeRepo = FakeSubjectRepository();
+      final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
+      final c = _makeContainer(notifier);
+      final repo = await c.read(subjectsRepositoryProvider.future);
+      expect(repo, same(fakeRepo));
+      c.dispose();
+    });
 
-      setUp(() {
-        fakeRepo = FakeSubjectRepository();
-        container = ProviderContainer(
-          overrides: [
-            subjectsRepositoryProvider.overrideWith(() => TestSubjectsRepositoryNotifier(fakeRepo)),
-          ],
-        );
-      });
+    test('error state contains exception message', () async {
+      final c = _makeContainer(FailingSubjectsRepositoryNotifier());
+      try { await c.read(subjectsRepositoryProvider.future); } catch (_) {}
+      final asyncValue = c.read(subjectsRepositoryProvider);
+      expect(asyncValue.hasError, isTrue);
+      expect(asyncValue.error.toString(), contains('Failed to initialize repository'));
+      c.dispose();
+    });
 
-      tearDown(() {
-        container.dispose();
-      });
+    test('notifier disposes without error', () async {
+      final notifier = TestSubjectsRepositoryNotifier(FakeSubjectRepository());
+      final c = _makeContainer(notifier);
+      await c.read(subjectsRepositoryProvider.future);
+      expect(c.dispose, returnsNormally);
+    });
 
-      test('returns all subjects', () async {
-        fakeRepo.addSubject(createTestSubject(id: '1', name: 'Physics'));
-        fakeRepo.addSubject(createTestSubject(id: '2', name: 'Chemistry'));
+    test('fake repo methods work through provider', () async {
+      final fakeRepo = FakeSubjectRepository();
+      final notifier = TestSubjectsRepositoryNotifier(fakeRepo);
+      final c = _makeContainer(notifier);
+      final repo = await c.read(subjectsRepositoryProvider.future);
 
-        await container.read(subjectsRepositoryProvider.future);
-        final repo = container.read(subjectsRepositoryProvider).value!;
-        
-        final subjects = await repo.getAll();
+      final all = await repo.getAll();
+      expect(all.data, isEmpty);
 
-        expect(subjects.data!.length, 2);
-      });
+      await repo.save('subj-1', _createSubject(id: 'subj-1', name: 'Physics'));
+      final saved = await repo.get('subj-1');
+      expect(saved.data, isNotNull);
+      expect(saved.data!.name, 'Physics');
+
+      await repo.delete('subj-1');
+      final afterDelete = await repo.get('subj-1');
+      expect(afterDelete.data, isNull);
+      c.dispose();
+    });
+  });
+
+  group('subjectsRepositoryProvider (real Hive init)', () {
+    late String hivePath;
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('subjects_provider_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(11)) {
+        Hive.registerAdapter(TestSubjectAdapter());
+      }
+    });
+
+    tearDown(() async {
+      await Hive.close();
+    });
+
+    test('real build() creates SubjectRepository with init', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      expect(repo, isA<SubjectRepository>());
+      final subjects = await repo.getAll();
+      expect(subjects.data, isEmpty);
+    });
+
+    test('real build() supports CRUD after init', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = await container.read(subjectsRepositoryProvider.future);
+      final subject = _createSubject(id: 'test-1', name: 'Physics');
+      await repo.save('test-1', subject);
+
+      final retrieved = await repo.get('test-1');
+      expect(retrieved.data, isNotNull);
+      expect(retrieved.data!.name, 'Physics');
+      expect((await repo.getAll()).data, hasLength(1));
+
+      await repo.delete('test-1');
+      expect((await repo.get('test-1')).data, isNull);
+    });
+
+    test('real build() returns same instance on repeated reads', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container.read(subjectsRepositoryProvider.future);
+      final a = container.read(subjectsRepositoryProvider).valueOrNull;
+      final b = container.read(subjectsRepositoryProvider).valueOrNull;
+      expect(identical(a, b), isTrue);
     });
   });
 }

@@ -291,8 +291,8 @@ class ProgressExportService {
             pw.SizedBox(height: 4),
             pw.Text(
               l10n.pdfDateRange(
-                attempts.last.timestamp.toLocal().toString().split(' ')[0],
-                attempts.first.timestamp.toLocal().toString().split(' ')[0],
+                DateFormat.yMd(l10n.localeName).format(attempts.last.timestamp.toLocal()),
+                DateFormat.yMd(l10n.localeName).format(attempts.first.timestamp.toLocal()),
               ),
               style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
             ),

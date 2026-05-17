@@ -64,7 +64,7 @@ class PracticeSessionService {
       final duration = endTime.difference(_sessionStartTime).inMilliseconds;
       final id = '${endTime.millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch % 99999}';
 
-      await _sessionRepo.save(Session(
+      final session = Session(
         id: id,
         startTime: _sessionStartTime,
         endTime: endTime,
@@ -74,7 +74,8 @@ class PracticeSessionService {
         studentId: _studentIdService.getStudentId(),
         subjectId: subjectId,
         type: SessionType.practice,
-      ));
+      );
+      await _sessionRepo.save(session.id, session);
     } catch (e) {
       _logger.e('Failed to auto-save session', e);
     }

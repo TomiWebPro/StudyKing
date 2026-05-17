@@ -38,6 +38,7 @@ void main() {
   PlannedTopic topic({
     String id = 'topic-1',
     String title = 'Algebra',
+    String subjectId = 'subj-1',
   }) {
     return PlannedTopic(
       topicId: id,
@@ -49,7 +50,7 @@ void main() {
       estimatedQuestions: 5,
       estimatedMinutes: 15,
       reasons: ['Needs practice'],
-      subjectId: 'subj-1',
+      subjectId: subjectId,
     );
   }
 
@@ -165,6 +166,93 @@ void main() {
       ));
 
       expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+    });
+
+    testWidgets('empty topicId hides trailing widget', (tester) async {
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: [topic(id: '')]),
+          onStartTutoring: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+      expect(find.byIcon(Icons.event), findsNothing);
+    });
+
+    testWidgets('shows topic subtitle with estimated questions and minutes', (tester) async {
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: [topic()]),
+          onStartTutoring: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.textContaining('5'), findsOneWidget);
+      expect(find.textContaining('15'), findsOneWidget);
+    });
+
+    testWidgets('renders multiple topics', (tester) async {
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: [
+            topic(id: 't1', title: 'Algebra'),
+            topic(id: 't2', title: 'Geometry'),
+          ]),
+          onStartTutoring: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Geometry'), findsOneWidget);
+    });
+
+    testWidgets('shows both schedule and tutoring buttons with onScheduleLesson', (tester) async {
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: [topic()]),
+          onStartTutoring: (_, __, ___) {},
+          onScheduleLesson: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.event), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy_outlined), findsOneWidget);
+    });
+
+    testWidgets('schedule lesson button calls callback', (tester) async {
+      String? capturedTopicId;
+      String? capturedTopicTitle;
+      String? capturedSubjectId;
+
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: [topic()]),
+          onStartTutoring: (_, __, ___) {},
+          onScheduleLesson: (topicId, topicTitle, subjectId) {
+            capturedTopicId = topicId;
+            capturedTopicTitle = topicTitle;
+            capturedSubjectId = subjectId;
+          },
+        ),
+      ));
+
+      await tester.tap(find.byIcon(Icons.event));
+      expect(capturedTopicId, 'topic-1');
+      expect(capturedTopicTitle, 'Algebra');
+      expect(capturedSubjectId, 'subj-1');
+    });
+
+    testWidgets('no topics section when priorityTopics is empty', (tester) async {
+      await tester.pumpWidget(buildApp(
+        DailyPlanCard(
+          day: plan(topics: []),
+          onStartTutoring: (_, __, ___) {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+      expect(find.byIcon(Icons.school), findsNothing);
     });
   });
 }

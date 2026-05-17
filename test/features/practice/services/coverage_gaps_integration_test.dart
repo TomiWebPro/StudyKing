@@ -24,7 +24,7 @@ import 'package:studyking/features/practice/services/practice_session_service.da
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/questions/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -1710,7 +1710,7 @@ class _FakeSessionRepo extends SessionRepository {
   bool shouldThrow = false;
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     if (shouldThrow) return Result.failure('Save error');
     sessions.add(session);
     return Result.success(null);

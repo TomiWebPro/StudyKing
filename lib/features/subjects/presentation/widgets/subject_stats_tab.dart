@@ -7,7 +7,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class SubjectStatsTab extends StatelessWidget {
+class SubjectStatsTab extends StatefulWidget {
   final String subjectId;
   final SessionRepository? sessionRepository;
 
@@ -18,23 +18,65 @@ class SubjectStatsTab extends StatelessWidget {
   });
 
   @override
+  State<SubjectStatsTab> createState() => _SubjectStatsTabState();
+}
+
+class _SubjectStatsTabState extends State<SubjectStatsTab> {
+  late Future<List<Session>> _sessionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionsFuture = _loadSessions();
+  }
+
+  Future<List<Session>> _loadSessions() async {
+    final sessionRepo = widget.sessionRepository ?? SessionRepository();
+    final result = await sessionRepo.getAll();
+    final sessions = result.data ?? [];
+    return sessions.where((s) => s.subjectId == widget.subjectId).toList();
+  }
+
+  void _retry() {
+    setState(() {
+      _sessionsFuture = _loadSessions();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sessionRepo = sessionRepository ?? SessionRepository();
-
-    Future<List<Session>> loadSessions() async {
-      try {
-        final result = await sessionRepo.getAll();
-        final sessions = result.data ?? [];
-        return sessions.where((s) => s.subjectId == subjectId).toList();
-      } catch (e) {
-        return [];
-      }
-    }
 
     return FutureBuilder<List<Session>>(
-      future: loadSessions(),
+      future: _sessionsFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Semantics(
+            label: l10n.errorOccurred,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(height: 12),
+                    Text(l10n.errorOccurred, style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 12),
+                    FilledButton.tonalIcon(
+                      onPressed: _retry,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
         final subjectSessions = snapshot.data ?? [];
 
         final totalSessions = subjectSessions.length;

@@ -6,6 +6,7 @@ class Timeouts {
   static const Duration ms500 = Duration(milliseconds: 500);
   static const Duration hour = Duration(hours: 1);
   static const Duration fiveMinutes = Duration(minutes: 5);
+  static const Duration thirtyMinutes = Duration(minutes: 30);
   static const Duration day = Duration(days: 1);
   static const Duration week = Duration(days: 7);
   static const Duration apiCall = Duration(seconds: 15);

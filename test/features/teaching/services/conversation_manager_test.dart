@@ -445,6 +445,14 @@ void main() {
         final session = manager.toSession();
         expect(session.lessonPlanJson, contains('goals'));
       });
+
+      test('session includes totalTokensUsed tracked from LLM calls', () async {
+        await manager.initialize();
+        await manager.sendMessage('Hello').toList();
+
+        final session = manager.toSession();
+        expect(session.totalTokensUsed, greaterThan(0));
+      });
     });
 
     group('clearMessages', () {
@@ -503,10 +511,23 @@ void main() {
         expect(manager.phase, equals(ConversationPhase.exercise));
       });
 
-      test('transitions from adaptiveReview to teaching when no keyword', () async {
+      test('transitions from adaptiveReview to teaching when student indicates understanding', () async {
         await manager.sendMessage('Hello').toList();
         manager.phase = ConversationPhase.adaptiveReview;
         await manager.sendMessage('I understand now').toList();
+        expect(manager.phase, equals(ConversationPhase.teaching));
+      });
+
+      test('stays in adaptiveReview when student does not indicate understanding', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.adaptiveReview;
+        await manager.sendMessage('tell me more').toList();
+        expect(manager.phase, equals(ConversationPhase.adaptiveReview));
+      });
+
+      test('transitionToTeaching explicitly sets phase to teaching', () async {
+        manager.phase = ConversationPhase.adaptiveReview;
+        manager.transitionToTeaching();
         expect(manager.phase, equals(ConversationPhase.teaching));
       });
     });
@@ -516,7 +537,7 @@ void main() {
         await manager.initialize();
       });
 
-      test('transitions to adaptiveReview when consecutiveIncorrect >= 2 then to teaching', () async {
+      test('transitions to adaptiveReview when consecutiveIncorrect >= 2 stays in adaptiveReview until understanding', () async {
         await manager.sendMessage('Hello').toList();
 
         manager.phase = ConversationPhase.exercise;
@@ -531,6 +552,11 @@ void main() {
 
         await manager.sendMessage('ok').toList();
 
+        // Stays in adaptiveReview after feedback transition
+        expect(manager.phase, equals(ConversationPhase.adaptiveReview));
+
+        // Transitions to teaching on understanding
+        await manager.sendMessage('I understand now').toList();
         expect(manager.phase, equals(ConversationPhase.teaching));
       });
 

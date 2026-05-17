@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
@@ -33,6 +34,10 @@ Session _createExportSession({
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting();
+  });
+
   group('SessionExportService', () {
     final startTime = DateTime(2025, 1, 15, 10, 0, 0);
     final endTime = DateTime(2025, 1, 15, 10, 45, 0);

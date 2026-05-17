@@ -26,7 +26,7 @@ class SpacedRepetitionQueries {
 
   static List<Question> getQuestionsDueAfter(
       Box<Question> box, DateTime asOf) {
-    final cutover = asOf.subtract(const Duration(minutes: 30));
+    final cutover = asOf.subtract(Timeouts.thirtyMinutes);
     return box.values
         .where((q) => (q.nextReview ?? DateTime.now()).isBefore(cutover))
         .toList();

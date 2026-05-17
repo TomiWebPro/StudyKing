@@ -115,7 +115,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) throw Exception('save session error');
     _sessions[session.id] = session;
     return Result.success(null);
@@ -685,7 +685,7 @@ void main() {
         status: SessionStatus.completed,
         tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
       );
-      await sessionRepo2.save(existingSession);
+      await sessionRepo2.save(existingSession.id, existingSession);
 
       final service2 = PlannerService(
         planRepo: planRepo,
@@ -879,27 +879,33 @@ void main() {
     test('filters out completed sessions', () async {
       final now = DateTime.now();
       final sessionRepo2 = _FakeSessionRepository();
-      await sessionRepo2.save(Session(
-        id: 'completed-1',
-        studentId: 'test-student',
-        subjectId: 'sub_physics',
-        topicId: 'topic-1',
-        startTime: now.add(const Duration(hours: 1)),
-        completed: true,
-        type: SessionType.tutoring,
-        status: SessionStatus.completed,
-        tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
-      ));
-      await sessionRepo2.save(Session(
-        id: 'planned-1',
-        studentId: 'test-student',
-        subjectId: 'sub_physics',
-        topicId: 'topic-2',
-        startTime: now.add(const Duration(hours: 2)),
-        type: SessionType.tutoring,
-        status: SessionStatus.planned,
-        tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
-      ));
+      final sess0 = Session(
+        
+                id: 'completed-1',
+                studentId: 'test-student',
+                subjectId: 'sub_physics',
+                topicId: 'topic-1',
+                startTime: now.add(const Duration(hours: 1)),
+                completed: true,
+                type: SessionType.tutoring,
+                status: SessionStatus.completed,
+                tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
+              
+      );
+      await sessionRepo2.save(sess0.id, sess0);
+      final sess1 = Session(
+        
+                id: 'planned-1',
+                studentId: 'test-student',
+                subjectId: 'sub_physics',
+                topicId: 'topic-2',
+                startTime: now.add(const Duration(hours: 2)),
+                type: SessionType.tutoring,
+                status: SessionStatus.planned,
+                tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
+              
+      );
+      await sessionRepo2.save(sess1.id, sess1);
 
       final service2 = PlannerService(
         planRepo: planRepo,
@@ -921,28 +927,34 @@ void main() {
     test('filters out sessions with endTime', () async {
       final now = DateTime.now();
       final sessionRepo2 = _FakeSessionRepository();
-      await sessionRepo2.save(Session(
-        id: 'ended-1',
-        studentId: 'test-student',
-        subjectId: 'sub_physics',
-        topicId: 'topic-1',
-        startTime: now.subtract(const Duration(hours: 2)),
-        endTime: now.subtract(const Duration(hours: 1)),
-        completed: false,
-        type: SessionType.tutoring,
-        status: SessionStatus.planned,
-        tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
-      ));
-      await sessionRepo2.save(Session(
-        id: 'planned-2',
-        studentId: 'test-student',
-        subjectId: 'sub_physics',
-        topicId: 'topic-2',
-        startTime: now.add(const Duration(hours: 2)),
-        type: SessionType.tutoring,
-        status: SessionStatus.planned,
-        tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
-      ));
+      final sess2 = Session(
+        
+                id: 'ended-1',
+                studentId: 'test-student',
+                subjectId: 'sub_physics',
+                topicId: 'topic-1',
+                startTime: now.subtract(const Duration(hours: 2)),
+                endTime: now.subtract(const Duration(hours: 1)),
+                completed: false,
+                type: SessionType.tutoring,
+                status: SessionStatus.planned,
+                tutorMetadata: TutorMetadata(topicTitle: 'Kinematics'),
+              
+      );
+      await sessionRepo2.save(sess2.id, sess2);
+      final sess3 = Session(
+        
+                id: 'planned-2',
+                studentId: 'test-student',
+                subjectId: 'sub_physics',
+                topicId: 'topic-2',
+                startTime: now.add(const Duration(hours: 2)),
+                type: SessionType.tutoring,
+                status: SessionStatus.planned,
+                tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
+              
+      );
+      await sessionRepo2.save(sess3.id, sess3);
 
       final service2 = PlannerService(
         planRepo: planRepo,

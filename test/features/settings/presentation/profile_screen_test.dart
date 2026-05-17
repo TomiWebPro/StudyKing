@@ -1,35 +1,36 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/providers/app_providers.dart' show localeProvider, settingsRepository;
-import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
-import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-Directory? _tempDir;
+class _FakeSettingsRepository extends SettingsRepository {
+  UserProfile? _currentProfile;
 
-Future<void> _initHive() async {
-  _tempDir = await Directory.systemTemp.createTemp('hive_profile_test_');
-  Hive.init(_tempDir!.path);
-  Hive.registerAdapter(SettingsBoxAdapter());
-  Hive.registerAdapter(UserProfileAdapter());
-  Hive.registerAdapter(AccessibilityPreferencesAdapter());
-  await Hive.openBox(HiveBoxNames.settings);
-  await Hive.openBox(HiveBoxNames.profile);
-  await settingsRepository.init();
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<UserProfile?> getProfileData() async {
+    if (_currentProfile != null) return _currentProfile;
+    return UserProfile(id: 'default_profile', name: '');
+  }
+
+  @override
+  Future<void> saveProfileData(UserProfile profile) async {
+    _currentProfile = profile;
+  }
+
+  @override
+  Future<void> clearProfile() async {
+    _currentProfile = null;
+  }
 }
 
-Future<void> _closeHive() async {
-  await Hive.close();
-  await _tempDir?.delete(recursive: true);
-  _tempDir = null;
-}
+late SettingsRepository _originalRepo;
 
 Widget buildProfileScreen() {
   return ProviderScope(
@@ -46,19 +47,16 @@ Widget buildProfileScreen() {
 }
 
 void main() {
-  setUpAll(() async {
-    await _initHive();
+  setUpAll(() {
+    _originalRepo = settingsRepository;
   });
 
-  tearDownAll(() async {
-    await _closeHive();
+  setUp(() {
+    settingsRepository = _FakeSettingsRepository();
   });
 
-  setUp(() async {
-    final settingsBox = Hive.box(HiveBoxNames.settings);
-    await settingsBox.clear();
-    final profileBox = Hive.box(HiveBoxNames.profile);
-    await profileBox.clear();
+  tearDown(() {
+    settingsRepository = _originalRepo;
   });
 
   group('ProfileScreen', () {
@@ -311,8 +309,7 @@ void main() {
     });
 
     testWidgets('loads existing profile data into fields', (tester) async {
-      final profileBox = Hive.box(HiveBoxNames.profile);
-      await profileBox.put('test-id', UserProfile(
+      await settingsRepository.saveProfileData(UserProfile(
         id: 'test-id',
         name: 'Jane Doe',
         studentId: '12345',
@@ -322,7 +319,6 @@ void main() {
         notificationsEnabled: false,
         language: 'es',
       ));
-      await profileBox.put('current_profile', 'test-id');
 
       await tester.pumpWidget(buildProfileScreen());
       await tester.pumpAndSettle();
@@ -334,9 +330,6 @@ void main() {
     });
 
     testWidgets('handles profile load error gracefully', (tester) async {
-      await Hive.box(HiveBoxNames.settings).clear();
-      await Hive.box(HiveBoxNames.profile).clear();
-
       await tester.pumpWidget(buildProfileScreen());
       await tester.pumpAndSettle();
 
@@ -609,12 +602,10 @@ void main() {
 
     group('Delete Account Flow', () {
       testWidgets('delete confirmation calls clearProfile', (tester) async {
-        final profileBox = Hive.box(HiveBoxNames.profile);
-        await profileBox.put('delete-test', UserProfile(
+        await settingsRepository.saveProfileData(UserProfile(
           id: 'delete-test',
           name: 'Delete Test',
         ));
-        await profileBox.put('current_profile', 'delete-test');
 
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
@@ -647,12 +638,10 @@ void main() {
       });
 
       testWidgets('cancel delete does not clear profile', (tester) async {
-        final profileBox = Hive.box(HiveBoxNames.profile);
-        await profileBox.put('cancel-delete-test', UserProfile(
+        await settingsRepository.saveProfileData(UserProfile(
           id: 'cancel-delete-test',
           name: 'Cancel Delete Test',
         ));
-        await profileBox.put('current_profile', 'cancel-delete-test');
 
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
@@ -682,13 +671,11 @@ void main() {
 
     group('Language Switch Side Effects', () {
       testWidgets('language dropdown shows current language', (tester) async {
-        final profileBox = Hive.box(HiveBoxNames.profile);
-        await profileBox.put('lang-test', UserProfile(
+        await settingsRepository.saveProfileData(UserProfile(
           id: 'lang-test',
           name: 'Lang User',
           language: 'es',
         ));
-        await profileBox.put('current_profile', 'lang-test');
 
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
@@ -697,13 +684,11 @@ void main() {
       });
 
       testWidgets('can switch from Spanish to English', (tester) async {
-        final profileBox = Hive.box(HiveBoxNames.profile);
-        await profileBox.put('lang-switch-test', UserProfile(
+        await settingsRepository.saveProfileData(UserProfile(
           id: 'lang-switch-test',
           name: 'Switch User',
           language: 'es',
         ));
-        await profileBox.put('current_profile', 'lang-switch-test');
 
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();
@@ -720,13 +705,11 @@ void main() {
 
     group('Notifications Toggle', () {
       testWidgets('notifications can be enabled', (tester) async {
-        final profileBox = Hive.box(HiveBoxNames.profile);
-        await profileBox.put('notif-test', UserProfile(
+        await settingsRepository.saveProfileData(UserProfile(
           id: 'notif-test',
           name: 'Notif User',
           notificationsEnabled: false,
         ));
-        await profileBox.put('current_profile', 'notif-test');
 
         await tester.pumpWidget(buildProfileScreen());
         await tester.pumpAndSettle();

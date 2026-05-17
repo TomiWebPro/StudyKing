@@ -1,10 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/milestone_timeline.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
+  setUpAll(() {
+    Hive.init(Directory.systemTemp.createTempSync('milestone_test_').path);
+  });
+
   Widget buildApp(Widget widget) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -28,7 +35,7 @@ void main() {
         ),
       ));
 
-      expect(find.byType(SizedBox), findsOneWidget);
+      expect(find.text('Timeline'), findsNothing);
       expect(find.byType(MilestoneTimeline), findsOneWidget);
     });
 
@@ -59,9 +66,11 @@ void main() {
       ));
 
       expect(find.text('Timeline'), findsOneWidget);
+      expect(find.textContaining('Complete Chapter 1'), findsOneWidget);
+      expect(find.textContaining('Complete Chapter 2'), findsOneWidget);
     });
 
-    testWidgets('shows completed milestones in green', (tester) async {
+    testWidgets('shows completed milestones', (tester) async {
       await tester.pumpWidget(buildApp(
         MilestoneTimeline(
           roadmap: RoadmapModel(
@@ -83,6 +92,34 @@ void main() {
       ));
 
       expect(find.textContaining('Done Chapter'), findsOneWidget);
+    });
+
+    testWidgets('shows past-due milestone with error color', (tester) async {
+      await tester.pumpWidget(buildApp(
+        MilestoneTimeline(
+          roadmap: RoadmapModel(
+            id: 'r1',
+            studentId: 's1',
+            goal: 'Goal',
+            createdAt: DateTime.now().subtract(const Duration(days: 30)),
+            milestones: [
+              MilestoneModel(
+                id: 'm1',
+                title: 'Overdue Task',
+                deadline: DateTime.now().subtract(const Duration(days: 5)),
+                order: 1,
+                isCompleted: false,
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      expect(find.textContaining('Overdue Task'), findsOneWidget);
+      final container = tester.widget<Container>(
+        find.byType(Container).first,
+      );
+      expect(container.decoration, isA<BoxDecoration>());
     });
 
     testWidgets('handles roadmap with targetCompletionDate', (tester) async {
@@ -131,6 +168,61 @@ void main() {
 
       expect(find.textContaining('Midterm'), findsOneWidget);
       expect(find.textContaining('Mar 15'), findsOneWidget);
+    });
+
+    testWidgets('renders milestone order labels (M1, M2)', (tester) async {
+      await tester.pumpWidget(buildApp(
+        MilestoneTimeline(
+          roadmap: RoadmapModel(
+            id: 'r1',
+            studentId: 's1',
+            goal: 'Goal',
+            createdAt: DateTime.now().subtract(const Duration(days: 10)),
+            milestones: [
+              MilestoneModel(
+                id: 'm1',
+                title: 'First',
+                deadline: DateTime.now().add(const Duration(days: 5)),
+                order: 1,
+              ),
+              MilestoneModel(
+                id: 'm2',
+                title: 'Second',
+                deadline: DateTime.now().add(const Duration(days: 15)),
+                order: 2,
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      expect(find.text('M1'), findsOneWidget);
+      expect(find.text('M2'), findsOneWidget);
+    });
+
+    testWidgets('handles totalDuration <= 0 gracefully', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(buildApp(
+        MilestoneTimeline(
+          roadmap: RoadmapModel(
+            id: 'r1',
+            studentId: 's1',
+            goal: 'Goal',
+            createdAt: now,
+            targetCompletionDate: now,
+            milestones: [
+              MilestoneModel(
+                id: 'm1',
+                title: 'Same Day',
+                deadline: now,
+                order: 1,
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      expect(find.byType(MilestoneTimeline), findsOneWidget);
     });
   });
 }

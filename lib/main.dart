@@ -42,6 +42,7 @@ import 'features/mentor/presentation/mentor_screen.dart';
 import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
 import 'features/onboarding/presentation/onboarding_dialog.dart';
+import 'features/onboarding/services/onboarding_service.dart';
 
 final Logger _mainLogger = const Logger('App');
 

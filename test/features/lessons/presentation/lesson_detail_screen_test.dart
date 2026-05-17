@@ -10,6 +10,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLessonRepository extends LessonRepository {
   final List<Lesson> _lessons;
@@ -37,6 +38,7 @@ Widget _buildTestApp({
   required LessonDetailArgs args,
   List<Lesson>? lessons,
   bool shouldThrow = false,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   final repo = _FakeLessonRepository(lessons: lessons);
   repo.shouldThrow = shouldThrow;
@@ -48,6 +50,7 @@ Widget _buildTestApp({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: Builder(
         builder: (context) => Scaffold(
           body: LessonDetailScreen(args: args),
@@ -347,6 +350,64 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Tutor'), findsOneWidget);
+    });
+
+    testWidgets('navigator pushes tutor route on teaching mode tap', (tester) async {
+      final observer = TestNavigatorObserver();
+      final now = DateTime.now();
+
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Algebra',
+            topicId: 't1', blocks: [], createdAt: now,
+          ),
+        ],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.smart_toy_outlined));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/tutor'),
+        isTrue,
+      );
+    });
+
+    testWidgets('navigator pops tutor on system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      final now = DateTime.now();
+
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Algebra',
+            topicId: 't1', blocks: [], createdAt: now,
+          ),
+        ],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.smart_toy_outlined));
+      await tester.pumpAndSettle();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, hasLength(1));
     });
   });
 

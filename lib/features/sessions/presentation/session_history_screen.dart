@@ -220,7 +220,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               action: SnackBarAction(
                 label: l10n.undo,
                 onPressed: () {
-                  _sessionRepository.save(session);
+                  _sessionRepository.save(session.id, session);
                   _loadSessions();
                 },
               ),

@@ -12,6 +12,7 @@ import 'package:studyking/features/teaching/providers/teaching_providers.dart' s
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
+import '../services/conversation_phase.dart';
 import '../services/tutor_service.dart';
 import '../data/models/lesson_plan_model.dart';
 import 'widgets/chat_bubble.dart';
@@ -432,13 +433,18 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         body: Column(
           children: [
             if (_isInitialized && _manager != null)
-              LessonProgressBar(
-                elapsedMinutes: _elapsedMinutes,
-                plannedDurationMinutes: widget.durationMinutes,
-                exerciseCount: _manager!.exerciseCount,
-                correctCount: _manager!.correctCount,
-                topicTitle: widget.topicTitle,
-                lessonPlan: _lessonPlan,
+              Column(
+                children: [
+                  LessonProgressBar(
+                    elapsedMinutes: _elapsedMinutes,
+                    plannedDurationMinutes: widget.durationMinutes,
+                    exerciseCount: _manager!.exerciseCount,
+                    correctCount: _manager!.correctCount,
+                    topicTitle: widget.topicTitle,
+                    lessonPlan: _lessonPlan,
+                  ),
+                  _buildPhaseIndicator(),
+                ],
               ),
             if (_initError)
               _buildInitErrorCard(l10n)
@@ -477,6 +483,54 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPhaseIndicator() {
+    if (_manager == null) return const SizedBox.shrink();
+    final phase = _manager!.phase;
+    IconData icon;
+    Color color;
+    switch (phase) {
+      case ConversationPhase.greeting:
+        icon = Icons.waving_hand_outlined;
+        color = Colors.amber;
+        break;
+      case ConversationPhase.teaching:
+        icon = Icons.school_outlined;
+        color = Colors.green;
+        break;
+      case ConversationPhase.exercise:
+        icon = Icons.quiz_outlined;
+        color = Colors.blue;
+        break;
+      case ConversationPhase.feedback:
+        icon = Icons.feedback_outlined;
+        color = Colors.orange;
+        break;
+      case ConversationPhase.adaptiveReview:
+        icon = Icons.psychology_outlined;
+        color = Colors.purple;
+        break;
+      case ConversationPhase.closing:
+        icon = Icons.summarize_outlined;
+        color = Colors.grey;
+        break;
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            phase.name,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

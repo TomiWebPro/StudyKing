@@ -53,7 +53,7 @@ class PracticeDataService {
           .toSet()
           .toList();
     } catch (e) {
-      _logger.w('Failed to load topics: $e');
+      _logger.e('Failed to load topics: $e');
       return [];
     }
   }
@@ -64,7 +64,7 @@ class PracticeDataService {
       final questions = questionsResult.data ?? [];
       return questions.where((q) => q.topic == topic).toList();
     } catch (e) {
-      _logger.w('Failed to load topic questions: $e');
+      _logger.e('Failed to load topic questions: $e');
       return [];
     }
   }
@@ -87,7 +87,7 @@ class PracticeDataService {
           .where((q) => weakTopicIds.contains(q.topicId))
           .toList();
     } catch (e) {
-      _logger.w('Failed to load weak area questions: $e');
+      _logger.e('Failed to load weak area questions: $e');
       return [];
     }
   }

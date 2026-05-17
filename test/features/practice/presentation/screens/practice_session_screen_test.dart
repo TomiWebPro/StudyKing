@@ -1,10 +1,8 @@
-import 'dart:io';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -590,10 +588,6 @@ void main() {
     });
 
     group('back navigation popscope', () {
-      setUp(() {
-        Hive.init(Directory.systemTemp.createTempSync('prac_session_pop_test_').path);
-      });
-
       testWidgets('shows exit confirmation dialog on back press during session', (tester) async {
         final questions = [
           question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
@@ -957,10 +951,6 @@ void main() {
     });
 
     group('session auto-save', () {
-      setUp(() {
-        Hive.init(Directory.systemTemp.createTempSync('prac_session_test_').path);
-      });
-
       testWidgets('saves session on completion via SessionRepository', (tester) async {
         final sessionRepo = FakeSessionRepository();
         final questions = [

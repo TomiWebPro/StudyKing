@@ -15,7 +15,7 @@ void main() {
   }
 
   group('PlanSummaryCard', () {
-    testWidgets('renders plan summary title', (tester) async {
+    testWidgets('renders plan summary title and icon', (tester) async {
       await tester.pumpWidget(buildApp(
         PlanSummaryCard(
           summary: PlanSummary(
@@ -30,6 +30,7 @@ void main() {
       ));
 
       expect(find.text('Plan Summary'), findsOneWidget);
+      expect(find.byIcon(Icons.summarize), findsOneWidget);
     });
 
     testWidgets('shows total questions and time', (tester) async {
@@ -137,6 +138,44 @@ void main() {
 
       expect(find.byType(Wrap), findsOneWidget);
     });
+
+    testWidgets('renders divider', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PlanSummaryCard(
+          summary: PlanSummary(
+            totalQuestions: 50,
+            totalMinutes: 300,
+            newTopics: 5,
+            reviewTopics: 3,
+            estimatedCoverage: 0.75,
+            focusAreas: [],
+          ),
+        ),
+      ));
+
+      expect(find.byType(Divider), findsOneWidget);
+    });
+
+    testWidgets('renders all five summary chips', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PlanSummaryCard(
+          summary: PlanSummary(
+            totalQuestions: 100,
+            totalMinutes: 600,
+            newTopics: 8,
+            reviewTopics: 4,
+            estimatedCoverage: 0.85,
+            focusAreas: [],
+          ),
+        ),
+      ));
+
+      expect(find.text('100Q'), findsOneWidget);
+      expect(find.text('600 min'), findsOneWidget);
+      expect(find.text('8 new'), findsOneWidget);
+      expect(find.text('4 review'), findsOneWidget);
+      expect(find.text('85%'), findsOneWidget);
+    });
   });
 
   group('PlanSummaryCard Spanish locale', () {
@@ -165,6 +204,24 @@ void main() {
 
       expect(find.text('100P'), findsOneWidget);
       expect(find.textContaining('85'), findsOneWidget);
+    });
+
+    testWidgets('shows localized new and review text', (tester) async {
+      await tester.pumpWidget(buildSpanishApp(
+        PlanSummaryCard(
+          summary: PlanSummary(
+            totalQuestions: 50,
+            totalMinutes: 300,
+            newTopics: 3,
+            reviewTopics: 2,
+            estimatedCoverage: 0.6,
+            focusAreas: [],
+          ),
+        ),
+      ));
+
+      expect(find.text('3 nuevos'), findsOneWidget);
+      expect(find.text('2 revisión'), findsOneWidget);
     });
   });
 }

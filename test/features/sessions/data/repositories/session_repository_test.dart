@@ -93,7 +93,7 @@ void main() {
     group('save', () {
       test('stores a session', () async {
         final session = createSession(startTime: DateTime(2025, 1, 15, 10, 0));
-        final saveResult = await repository.save(session);
+        final saveResult = await repository.save(session.id, session);
         expect(saveResult.isSuccess, isTrue);
         final storedResult = await repository.get(session.id);
         expect(storedResult.isSuccess, isTrue);
@@ -113,8 +113,8 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 0),
           actualDurationMs: 2000,
         );
-        await repository.save(session1);
-        await repository.save(session2);
+        await repository.save(session1.id, session1);
+        await repository.save(session2.id, session2);
         final storedResult = await repository.get('s1');
         expect(storedResult.isSuccess, isTrue);
         expect(storedResult.data!.actualDurationMs, 2000);
@@ -150,7 +150,7 @@ void main() {
           status: SessionStatus.completed,
           tutorMetadata: tutorMeta,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final storedResult = await repository.get(session.id);
         expect(storedResult.isSuccess, isTrue);
         final stored = storedResult.data!;
@@ -184,15 +184,24 @@ void main() {
       });
 
       test('returns all stored sessions sorted by startTime desc', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15, 10, 0),
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 16, 10, 0),
-        ));
-        await repository.save(createSession(
-          id: 's3', startTime: DateTime(2025, 1, 14, 10, 0),
-        ));
+        final sess0 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15, 10, 0),
+                  
+        );
+        await repository.save(sess0.id, sess0);
+        final sess1 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 16, 10, 0),
+                  
+        );
+        await repository.save(sess1.id, sess1);
+        final sess2 = createSession(
+          
+                    id: 's3', startTime: DateTime(2025, 1, 14, 10, 0),
+                  
+        );
+        await repository.save(sess2.id, sess2);
         final result = await repository.getAll();
         expect(result.isSuccess, isTrue);
         final all = result.data!;
@@ -203,9 +212,12 @@ void main() {
       });
 
       test('returns sessions when there is only one', () async {
-        await repository.save(createSession(
-          id: 'only', startTime: DateTime(2025, 1, 15, 10, 0),
-        ));
+        final sess3 = createSession(
+          
+                    id: 'only', startTime: DateTime(2025, 1, 15, 10, 0),
+                  
+        );
+        await repository.save(sess3.id, sess3);
         final result = await repository.getAll();
         expect(result.isSuccess, isTrue);
         expect(result.data!.length, 1);
@@ -215,15 +227,24 @@ void main() {
 
     group('getByDate', () {
       test('returns sessions for given date', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15, 10, 0),
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 15, 14, 0),
-        ));
-        await repository.save(createSession(
-          id: 's3', startTime: DateTime(2025, 1, 16, 10, 0),
-        ));
+        final sess4 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15, 10, 0),
+                  
+        );
+        await repository.save(sess4.id, sess4);
+        final sess5 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 15, 14, 0),
+                  
+        );
+        await repository.save(sess5.id, sess5);
+        final sess6 = createSession(
+          
+                    id: 's3', startTime: DateTime(2025, 1, 16, 10, 0),
+                  
+        );
+        await repository.save(sess6.id, sess6);
         final results = await repository.getByDate(DateTime(2025, 1, 15));
         expect(results.isSuccess, isTrue);
         expect(results.data!.length, 2);
@@ -237,15 +258,24 @@ void main() {
 
       test('returns only sessions on specified date boundary (start of day)',
           () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15, 0, 0, 0),
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 15, 23, 59, 59),
-        ));
-        await repository.save(createSession(
-          id: 's3', startTime: DateTime(2025, 1, 14, 23, 59, 59),
-        ));
+        final sess7 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15, 0, 0, 0),
+                  
+        );
+        await repository.save(sess7.id, sess7);
+        final sess8 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 15, 23, 59, 59),
+                  
+        );
+        await repository.save(sess8.id, sess8);
+        final sess9 = createSession(
+          
+                    id: 's3', startTime: DateTime(2025, 1, 14, 23, 59, 59),
+                  
+        );
+        await repository.save(sess9.id, sess9);
         final results = await repository.getByDate(DateTime(2025, 1, 15));
         expect(results.isSuccess, isTrue);
         expect(results.data!.length, 2);
@@ -255,15 +285,24 @@ void main() {
 
     group('getByType', () {
       test('filters by session type', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15), type: SessionType.tutoring,
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 15), type: SessionType.focus,
-        ));
-        await repository.save(createSession(
-          id: 's3', startTime: DateTime(2025, 1, 15), type: SessionType.practice,
-        ));
+        final sess10 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15), type: SessionType.tutoring,
+                  
+        );
+        await repository.save(sess10.id, sess10);
+        final sess11 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 15), type: SessionType.focus,
+                  
+        );
+        await repository.save(sess11.id, sess11);
+        final sess12 = createSession(
+          
+                    id: 's3', startTime: DateTime(2025, 1, 15), type: SessionType.practice,
+                  
+        );
+        await repository.save(sess12.id, sess12);
         final tutoringResult = await repository.getByType(SessionType.tutoring);
         expect(tutoringResult.isSuccess, isTrue);
         expect(tutoringResult.data!.length, 1);
@@ -283,15 +322,24 @@ void main() {
 
     group('getByStudent', () {
       test('filters by student id', () async {
-        await repository.save(createSession(
-          id: 's1', studentId: 'stu-1', startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's2', studentId: 'stu-2', startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's3', studentId: 'stu-1', startTime: DateTime(2025, 1, 16),
-        ));
+        final sess13 = createSession(
+          
+                    id: 's1', studentId: 'stu-1', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess13.id, sess13);
+        final sess14 = createSession(
+          
+                    id: 's2', studentId: 'stu-2', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess14.id, sess14);
+        final sess15 = createSession(
+          
+                    id: 's3', studentId: 'stu-1', startTime: DateTime(2025, 1, 16),
+                  
+        );
+        await repository.save(sess15.id, sess15);
         final results = await repository.getByStudent('stu-1');
         expect(results.isSuccess, isTrue);
         expect(results.data!.length, 2);
@@ -307,12 +355,18 @@ void main() {
 
     group('getBySubject', () {
       test('filters by subject id', () async {
-        await repository.save(createSession(
-          id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's2', subjectId: 'sub-2', startTime: DateTime(2025, 1, 15),
-        ));
+        final sess16 = createSession(
+          
+                    id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess16.id, sess16);
+        final sess17 = createSession(
+          
+                    id: 's2', subjectId: 'sub-2', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess17.id, sess17);
         final results = await repository.getBySubject('sub-1');
         expect(results.isSuccess, isTrue);
         expect(results.data!.length, 1);
@@ -328,18 +382,27 @@ void main() {
 
     group('getByStudentAndSubject', () {
       test('filters by both student and subject', () async {
-        await repository.save(createSession(
-          id: 's1', studentId: 'stu-1', subjectId: 'sub-1',
-          startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's2', studentId: 'stu-1', subjectId: 'sub-2',
-          startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's3', studentId: 'stu-2', subjectId: 'sub-1',
-          startTime: DateTime(2025, 1, 15),
-        ));
+        final sess18 = createSession(
+          
+                    id: 's1', studentId: 'stu-1', subjectId: 'sub-1',
+                    startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess18.id, sess18);
+        final sess19 = createSession(
+          
+                    id: 's2', studentId: 'stu-1', subjectId: 'sub-2',
+                    startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess19.id, sess19);
+        final sess20 = createSession(
+          
+                    id: 's3', studentId: 'stu-2', subjectId: 'sub-1',
+                    startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess20.id, sess20);
         final results = await repository.getByStudentAndSubject('stu-1', 'sub-1');
         expect(results.isSuccess, isTrue);
         expect(results.data!.length, 1);
@@ -356,10 +419,13 @@ void main() {
     group('getRecentSessionsForSubject', () {
       test('returns recent sessions limited by count', () async {
         for (var i = 0; i < 5; i++) {
-          await repository.save(createSession(
-            id: 's$i', subjectId: 'sub-1',
-            startTime: DateTime(2025, 1, 15 + i),
-          ));
+          final sess21 = createSession(
+            
+                        id: 's$i', subjectId: 'sub-1',
+                        startTime: DateTime(2025, 1, 15 + i),
+                      
+          );
+          await repository.save(sess21.id, sess21);
         }
         final results = await repository.getRecentSessionsForSubject('sub-1',
             limit: 3);
@@ -369,9 +435,12 @@ void main() {
       });
 
       test('returns all sessions when fewer than limit', () async {
-        await repository.save(createSession(
-          id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
-        ));
+        final sess22 = createSession(
+          
+                    id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess22.id, sess22);
         final results = await repository.getRecentSessionsForSubject('sub-1',
             limit: 10);
         expect(results.isSuccess, isTrue);
@@ -385,18 +454,27 @@ void main() {
       });
 
       test('returns sessions sorted by most recent first', () async {
-        await repository.save(createSession(
-          id: 'old', subjectId: 'sub-1',
-          startTime: DateTime(2025, 1, 10),
-        ));
-        await repository.save(createSession(
-          id: 'new', subjectId: 'sub-1',
-          startTime: DateTime(2025, 1, 20),
-        ));
-        await repository.save(createSession(
-          id: 'mid', subjectId: 'sub-1',
-          startTime: DateTime(2025, 1, 15),
-        ));
+        final sess23 = createSession(
+          
+                    id: 'old', subjectId: 'sub-1',
+                    startTime: DateTime(2025, 1, 10),
+                  
+        );
+        await repository.save(sess23.id, sess23);
+        final sess24 = createSession(
+          
+                    id: 'new', subjectId: 'sub-1',
+                    startTime: DateTime(2025, 1, 20),
+                  
+        );
+        await repository.save(sess24.id, sess24);
+        final sess25 = createSession(
+          
+                    id: 'mid', subjectId: 'sub-1',
+                    startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess25.id, sess25);
         final results = await repository.getRecentSessionsForSubject('sub-1');
         expect(results.data!.map((s) => s.id),
             equals(['new', 'mid', 'old']));
@@ -405,18 +483,27 @@ void main() {
 
     group('getTotalStudyTimeForSubject', () {
       test('sums actualDurationMs for subject', () async {
-        await repository.save(createSession(
-          id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
-          actualDurationMs: 1000,
-        ));
-        await repository.save(createSession(
-          id: 's2', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
-          actualDurationMs: 2000,
-        ));
-        await repository.save(createSession(
-          id: 's3', subjectId: 'sub-2', startTime: DateTime(2025, 1, 15),
-          actualDurationMs: 3000,
-        ));
+        final sess26 = createSession(
+          
+                    id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
+                    actualDurationMs: 1000,
+                  
+        );
+        await repository.save(sess26.id, sess26);
+        final sess27 = createSession(
+          
+                    id: 's2', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
+                    actualDurationMs: 2000,
+                  
+        );
+        await repository.save(sess27.id, sess27);
+        final sess28 = createSession(
+          
+                    id: 's3', subjectId: 'sub-2', startTime: DateTime(2025, 1, 15),
+                    actualDurationMs: 3000,
+                  
+        );
+        await repository.save(sess28.id, sess28);
         final result = await repository.getTotalStudyTimeForSubject('sub-1');
         expect(result.isSuccess, isTrue);
         expect(result.data, 3000);
@@ -431,15 +518,24 @@ void main() {
 
     group('getActive', () {
       test('returns sessions that are active', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15), completed: false,
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 15), completed: true,
-        ));
-        await repository.save(createSession(
-          id: 's3', startTime: DateTime(2025, 1, 15), completed: false,
-        ));
+        final sess29 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15), completed: false,
+                  
+        );
+        await repository.save(sess29.id, sess29);
+        final sess30 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 15), completed: true,
+                  
+        );
+        await repository.save(sess30.id, sess30);
+        final sess31 = createSession(
+          
+                    id: 's3', startTime: DateTime(2025, 1, 15), completed: false,
+                  
+        );
+        await repository.save(sess31.id, sess31);
         final active = await repository.getActive();
         expect(active.isSuccess, isTrue);
         expect(active.data!.length, 2);
@@ -447,19 +543,25 @@ void main() {
       });
 
       test('returns empty when no active sessions', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15), completed: true,
-        ));
+        final sess32 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15), completed: true,
+                  
+        );
+        await repository.save(sess32.id, sess32);
         final active = await repository.getActive();
         expect(active.isSuccess, isTrue);
         expect(active.data, isEmpty);
       });
 
       test('considers session with endTime set as not active', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15),
-          endTime: DateTime(2025, 1, 15, 11, 0), completed: false,
-        ));
+        final sess33 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15),
+                    endTime: DateTime(2025, 1, 15, 11, 0), completed: false,
+                  
+        );
+        await repository.save(sess33.id, sess33);
         final active = await repository.getActive();
         expect(active.isSuccess, isTrue);
         expect(active.data, isEmpty);
@@ -468,9 +570,12 @@ void main() {
 
     group('delete', () {
       test('removes a session', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15),
-        ));
+        final sess34 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess34.id, sess34);
         final deleteResult = await repository.delete('s1');
         expect(deleteResult.isSuccess, isTrue);
         final result = await repository.get('s1');
@@ -486,12 +591,18 @@ void main() {
 
     group('clearAll', () {
       test('removes all sessions', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime(2025, 1, 15),
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime(2025, 1, 15),
-        ));
+        final sess35 = createSession(
+          
+                    id: 's1', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess35.id, sess35);
+        final sess36 = createSession(
+          
+                    id: 's2', startTime: DateTime(2025, 1, 15),
+                  
+        );
+        await repository.save(sess36.id, sess36);
         final clearResult = await repository.clearAll();
         expect(clearResult.isSuccess, isTrue);
         final result = await repository.getAll();
@@ -513,12 +624,18 @@ void main() {
       });
 
       test('sums today session durations', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(), actualDurationMs: 5000,
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime.now(), actualDurationMs: 3000,
-        ));
+        final sess37 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(), actualDurationMs: 5000,
+                  
+        );
+        await repository.save(sess37.id, sess37);
+        final sess38 = createSession(
+          
+                    id: 's2', startTime: DateTime.now(), actualDurationMs: 3000,
+                  
+        );
+        await repository.save(sess38.id, sess38);
         final result = await repository.getTodayDurationMs();
         expect(result.isSuccess, isTrue);
         expect(result.data, 8000);
@@ -533,12 +650,18 @@ void main() {
       });
 
       test('counts today sessions', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(),
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime.now(),
-        ));
+        final sess39 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(),
+                  
+        );
+        await repository.save(sess39.id, sess39);
+        final sess40 = createSession(
+          
+                    id: 's2', startTime: DateTime.now(),
+                  
+        );
+        await repository.save(sess40.id, sess40);
         final result = await repository.getTodaySessionCount();
         expect(result.isSuccess, isTrue);
         expect(result.data, 2);
@@ -547,21 +670,30 @@ void main() {
 
     group('getTodayCompletedSessionCount', () {
       test('returns 0 when no completed sessions today', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(), completed: false,
-        ));
+        final sess41 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(), completed: false,
+                  
+        );
+        await repository.save(sess41.id, sess41);
         final result = await repository.getTodayCompletedSessionCount();
         expect(result.isSuccess, isTrue);
         expect(result.data, 0);
       });
 
       test('counts completed sessions today', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(), completed: true,
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime.now(), completed: false,
-        ));
+        final sess42 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(), completed: true,
+                  
+        );
+        await repository.save(sess42.id, sess42);
+        final sess43 = createSession(
+          
+                    id: 's2', startTime: DateTime.now(), completed: false,
+                  
+        );
+        await repository.save(sess43.id, sess43);
         final result = await repository.getTodayCompletedSessionCount();
         expect(result.isSuccess, isTrue);
         expect(result.data, 1);
@@ -576,28 +708,40 @@ void main() {
       });
 
       test('sums weekly session durations', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(), actualDurationMs: 1000,
-        ));
-        await repository.save(createSession(
-          id: 's2',
-          startTime: DateTime.now().subtract(const Duration(days: 3)),
-          actualDurationMs: 2000,
-        ));
+        final sess44 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(), actualDurationMs: 1000,
+                  
+        );
+        await repository.save(sess44.id, sess44);
+        final sess45 = createSession(
+          
+                    id: 's2',
+                    startTime: DateTime.now().subtract(const Duration(days: 3)),
+                    actualDurationMs: 2000,
+                  
+        );
+        await repository.save(sess45.id, sess45);
         final result = await repository.getWeeklyDurationMs();
         expect(result.isSuccess, isTrue);
         expect(result.data, 3000);
       });
 
       test('excludes sessions older than 7 days', () async {
-        await repository.save(createSession(
-          id: 'recent', startTime: DateTime.now(), actualDurationMs: 1000,
-        ));
-        await repository.save(createSession(
-          id: 'old',
-          startTime: DateTime.now().subtract(const Duration(days: 10)),
-          actualDurationMs: 5000,
-        ));
+        final sess46 = createSession(
+          
+                    id: 'recent', startTime: DateTime.now(), actualDurationMs: 1000,
+                  
+        );
+        await repository.save(sess46.id, sess46);
+        final sess47 = createSession(
+          
+                    id: 'old',
+                    startTime: DateTime.now().subtract(const Duration(days: 10)),
+                    actualDurationMs: 5000,
+                  
+        );
+        await repository.save(sess47.id, sess47);
         final result = await repository.getWeeklyDurationMs();
         expect(result.isSuccess, isTrue);
         expect(result.data, 1000);
@@ -617,14 +761,20 @@ void main() {
       });
 
       test('returns computed stats for today', () async {
-        await repository.save(createSession(
-          id: 's1', startTime: DateTime.now(), completed: true,
-          actualDurationMs: 3600000, plannedDurationMinutes: 60,
-        ));
-        await repository.save(createSession(
-          id: 's2', startTime: DateTime.now(), completed: false,
-          actualDurationMs: 1800000, plannedDurationMinutes: null,
-        ));
+        final sess48 = createSession(
+          
+                    id: 's1', startTime: DateTime.now(), completed: true,
+                    actualDurationMs: 3600000, plannedDurationMinutes: 60,
+                  
+        );
+        await repository.save(sess48.id, sess48);
+        final sess49 = createSession(
+          
+                    id: 's2', startTime: DateTime.now(), completed: false,
+                    actualDurationMs: 1800000, plannedDurationMinutes: null,
+                  
+        );
+        await repository.save(sess49.id, sess49);
         final statsResult = await repository.getTodayStats();
         expect(statsResult.isSuccess, isTrue);
         final stats = statsResult.data!;
@@ -649,14 +799,20 @@ void main() {
       });
 
       test('returns computed stats for subject', () async {
-        await repository.save(createSession(
-          id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
-          actualDurationMs: 1000, questionsAnswered: 10, correctAnswers: 8,
-        ));
-        await repository.save(createSession(
-          id: 's2', subjectId: 'sub-1', startTime: DateTime(2025, 1, 16),
-          actualDurationMs: 2000, questionsAnswered: 5, correctAnswers: 4,
-        ));
+        final sess50 = createSession(
+          
+                    id: 's1', subjectId: 'sub-1', startTime: DateTime(2025, 1, 15),
+                    actualDurationMs: 1000, questionsAnswered: 10, correctAnswers: 8,
+                  
+        );
+        await repository.save(sess50.id, sess50);
+        final sess51 = createSession(
+          
+                    id: 's2', subjectId: 'sub-1', startTime: DateTime(2025, 1, 16),
+                    actualDurationMs: 2000, questionsAnswered: 5, correctAnswers: 4,
+                  
+        );
+        await repository.save(sess51.id, sess51);
         final statsResult = await repository.getSubjectStats('sub-1');
         expect(statsResult.isSuccess, isTrue);
         final stats = statsResult.data!;
@@ -668,10 +824,13 @@ void main() {
       });
 
       test('handles zero questions gracefully', () async {
-        await repository.save(createSession(
-          id: 's1', subjectId: 'sub-zero', startTime: DateTime(2025, 1, 15),
-          actualDurationMs: 500, questionsAnswered: 0, correctAnswers: 0,
-        ));
+        final sess52 = createSession(
+          
+                    id: 's1', subjectId: 'sub-zero', startTime: DateTime(2025, 1, 15),
+                    actualDurationMs: 500, questionsAnswered: 0, correctAnswers: 0,
+                  
+        );
+        await repository.save(sess52.id, sess52);
         final statsResult = await repository.getSubjectStats('sub-zero');
         expect(statsResult.isSuccess, isTrue);
         final stats = statsResult.data!;
@@ -687,7 +846,7 @@ void main() {
           id: 'active', startTime: DateTime.now(),
           completed: false,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('active')).data!;
         expect(stored.isActive, isTrue);
       });
@@ -697,7 +856,7 @@ void main() {
           id: 'done', startTime: DateTime.now(),
           completed: true,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('done')).data!;
         expect(stored.isActive, isFalse);
       });
@@ -707,7 +866,7 @@ void main() {
           id: 'ended', startTime: DateTime.now(),
           endTime: DateTime.now(), completed: false,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('ended')).data!;
         expect(stored.isActive, isFalse);
       });
@@ -717,7 +876,7 @@ void main() {
           id: 'dur', startTime: DateTime.now(),
           actualDurationMs: 5000,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('dur')).data!;
         expect(stored.actualDuration, const Duration(seconds: 5));
       });
@@ -727,7 +886,7 @@ void main() {
           id: 'plan', startTime: DateTime.now(),
           plannedDurationMinutes: 30,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('plan')).data!;
         expect(stored.plannedDuration, const Duration(minutes: 30));
       });
@@ -738,7 +897,7 @@ void main() {
           id: 'noplan', startTime: DateTime.now(),
           plannedDurationMinutes: null,
         );
-        await repository.save(session);
+        await repository.save(session.id, session);
         final stored = (await repository.get('noplan')).data!;
         expect(stored.plannedDuration, isNull);
       });

@@ -10,6 +10,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 final _today = DateTime.now();
 final _todayStart = DateTime(_today.year, _today.month, _today.day);
@@ -18,7 +19,7 @@ class FakeSessionRepository extends SessionRepository {
   final List<Session> _sessions = [];
 
   @override
-  Future<Result<void>> save(Session session) async {
+  Future<Result<void>> save(String key, Session session) async {
     _sessions.add(session);
     return Result.success(null);
   }
@@ -245,7 +246,7 @@ class _FakeStatsService extends FakeStudyTimerService {
   }
 }
 
-Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride}) {
+Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
@@ -257,12 +258,13 @@ Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride}) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: widget,
     ),
   );
 }
 
-Widget _buildTestApp(Widget widget) {
+Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
@@ -271,6 +273,7 @@ Widget _buildTestApp(Widget widget) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: widget,
     ),
   );
@@ -712,6 +715,33 @@ void main() {
       expect(find.text('2h 0m'), findsOneWidget);
       expect(find.text('2/3'), findsOneWidget);
       expect(find.text('Recent Sessions'), findsOneWidget);
+    });
+
+    testWidgets('navigator observes no pops initially', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+        navigatorObserver: observer,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('navigator pops via system back', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(
+        const FocusTimerScreen(),
+        navigatorObserver: observer,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(observer.poppedRoutes, hasLength(1));
     });
   });
 }

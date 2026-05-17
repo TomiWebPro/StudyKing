@@ -902,7 +902,7 @@
   "@importConfirmTitle": {
     "description": "Title for import confirmation dialog"
   },
-  "importPreview": "Esta copia contiene {boxes} sección(es) con {records} registro(s). Los datos actuales pueden sobrescribirse. ¿Continuar?",
+  "importPreview": "Esta copia contiene {boxes,plural,=1{1 sección} other{{boxes} secciones}} con {records,plural,=1{1 registro} other{{records} registros}}. Los datos actuales pueden sobrescribirse. ¿Continuar?",
   "@importPreview": {
     "description": "Preview message before importing a backup with box and record counts",
     "placeholders": {
@@ -3892,12 +3892,12 @@
   "@notifTitleTakeBreak": {
     "description": "Title for overwork warning notification"
   },
-  "notifBodyOverwork": "Ha estudiado {hours} horas hoy. ¡Recuerde descansar!",
+  "notifBodyOverwork": "Ha estudiado {hours,plural,=1{1 hora} other{{hours} horas}} hoy. ¡Recuerde descansar!",
   "@notifBodyOverwork": {
     "description": "Body for overwork warning",
     "placeholders": {
       "hours": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
@@ -5221,5 +5221,128 @@
   "sending": "Enviando",
   "@sending": {
     "description": "Label shown when a message is being sent"
+  },
+  "dailyReminderDescription": "Reciba un recordatorio diario para estudiar a su hora preferida",
+  "@dailyReminderDescription": {
+    "description": "Subtitle for daily reminder toggle"
+  },
+  "reminderTime": "Hora del Recordatorio",
+  "@reminderTime": {
+    "description": "Tile title for daily reminder time setting"
+  },
+  "dailyReminderTimeHelp": "Hora del Recordatorio Diario",
+  "@dailyReminderTimeHelp": {
+    "description": "Help text for the daily reminder time picker"
+  },
+  "checkNudgesNow": "Revisar Avisos Ahora",
+  "@checkNudgesNow": {
+    "description": "Button title to run nudge checks immediately"
+  },
+  "runNudgeChecks": "Ejecutar avisos inmediatamente",
+  "@runNudgeChecks": {
+    "description": "Subtitle for nudge check button"
+  },
+  "nudgeCheckComplete": "Revisión de avisos completada",
+  "@nudgeCheckComplete": {
+    "description": "Snackbar message after successful nudge check"
+  },
+  "nudgeCheckFailed": "Revisión de avisos fallida",
+  "@nudgeCheckFailed": {
+    "description": "Snackbar message after failed nudge check"
+  },
+  "dailyCapWarningTitle": "Advertencia de Límite Diario",
+  "@dailyCapWarningTitle": {
+    "description": "Title for daily cap warning dialog"
+  },
+  "dailyCapWarningBody": "Iniciar esta sesión excederá su límite diario. {selectedMinutes} min seleccionados, {remaining} min restantes. ¿Continuar?",
+  "@dailyCapWarningBody": {
+    "description": "Body for daily cap warning dialog",
+    "placeholders": {
+      "selectedMinutes": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "continueAnyway": "Continuar de Todas Formas",
+  "@continueAnyway": {
+    "description": "Button to proceed despite warning"
+  },
+  "focusFirstVisitHelp": "Configure un temporizador y estudie sin distracciones. Las sesiones completadas cuentan para su plan diario.",
+  "@focusFirstVisitHelp": {
+    "description": "Help text shown on first visit to focus timer"
+  },
+  "contentManagement": "Gestión de Contenido",
+  "@contentManagement": {
+    "description": "Section title for content management settings"
+  },
+  "myUploads": "Mis Cargas",
+  "@myUploads": {
+    "description": "Tile title for uploaded materials"
+  },
+  "viewMyUploads": "Ver sus materiales cargados",
+  "@viewMyUploads": {
+    "description": "Subtitle for uploads tile"
+  },
+  "questionBank": "Banco de Preguntas",
+  "@questionBank": {
+    "description": "Tile title for question bank"
+  },
+  "browseAndManageQuestions": "Explorar y gestionar preguntas",
+  "@browseAndManageQuestions": {
+    "description": "Subtitle for question bank tile"
+  },
+  "failedUploads": "Cargas Fallidas",
+  "@failedUploads": {
+    "description": "Tile title for failed uploads"
+  },
+  "sourceCountFailed": "{count,plural,=1{1 fuente falló al procesarse} other{{count} fuentes fallaron al procesarse}}",
+  "@sourceCountFailed": {
+    "description": "Failed upload count message",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noFailedUploads": "Sin cargas fallidas",
+  "@noFailedUploads": {
+    "description": "Message when no failed uploads exist"
+  },
+  "breakDuration": "Duración del Descanso",
+  "@breakDuration": {
+    "description": "Tile title for break duration setting"
+  },
+  "featureLabelIngestion": "Ingestión",
+  "@featureLabelIngestion": {
+    "description": "Feature label for ingestion in token usage dialog"
+  },
+  "featureLabelGeneral": "General",
+  "@featureLabelGeneral": {
+    "description": "Feature label for general in token usage dialog"
+  },
+  "deleteSourceTitle": "Eliminar fuente",
+  "@deleteSourceTitle": {
+    "description": "Title for delete source confirmation dialog"
+  },
+  "deleteSourceBody": "¿Está seguro de que desea eliminar esta fuente?",
+  "@deleteSourceBody": {
+    "description": "Body for delete source confirmation dialog"
+  },
+  "dailyReminderNotificationTitle": "Recordatorio de estudio diario",
+  "@dailyReminderNotificationTitle": {
+    "description": "Title for daily reminder study notification"
+  },
+  "dailyReminderNotificationBody": "¡Hora de estudiar! Tiene tareas de estudio planificadas para hoy.",
+  "@dailyReminderNotificationBody": {
+    "description": "Body for daily reminder study notification"
+  },
+  "addSubjectsForFocusHint": "Agregue materias en Configuración para realizar un seguimiento del enfoque por materia.",
+  "@addSubjectsForFocusHint": {
+    "description": "Hint shown in focus timer when no subjects exist yet"
+  },
+  "retrying": "Reintentando...",
+  "@retrying": {
+    "description": "Button label when retrying an operation"
+  },
+  "unableToResolveSubject": "No se pudo encontrar la materia para este tema.",
+  "@unableToResolveSubject": {
+    "description": "Snackbar message when subject cannot be resolved for a topic"
   }
 }

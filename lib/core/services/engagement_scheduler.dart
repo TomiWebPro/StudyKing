@@ -146,7 +146,7 @@ class EngagementScheduler {
         }
       }
     } catch (e) {
-      _logger.w('Failed to check upcoming lessons: $e');
+      _logger.e('Failed to check upcoming lessons: $e');
     }
   }
 
@@ -173,7 +173,7 @@ class EngagementScheduler {
           );
         }
       } catch (e) {
-        _logger.w('Failed to send overwork nudge: $e');
+        _logger.e('Failed to send overwork nudge: $e');
       }
     }
 
@@ -203,7 +203,7 @@ class EngagementScheduler {
           }
         }
       } catch (e) {
-        _logger.w('Failed to send revision nudge: $e');
+        _logger.e('Failed to send revision nudge: $e');
       }
     }
 
@@ -229,7 +229,7 @@ class EngagementScheduler {
           );
         }
       } catch (e) {
-        _logger.w('Failed to send plan adjustment nudge: $e');
+        _logger.e('Failed to send plan adjustment nudge: $e');
       }
     }
 
@@ -245,7 +245,7 @@ class EngagementScheduler {
           );
         }
       } catch (e) {
-        _logger.w('Failed to check weak topics for nudge: $e');
+        _logger.e('Failed to check weak topics for nudge: $e');
       }
     }
 
@@ -265,7 +265,7 @@ class EngagementScheduler {
           await _nudgeRepository.create(model);
         }
       } catch (e) {
-        _logger.w('Failed to check plan adherence: $e');
+        _logger.e('Failed to check plan adherence: $e');
       }
     }
   }
@@ -276,7 +276,7 @@ class EngagementScheduler {
       final stats = await _tracker.getOverallStats(studentId);
       totalHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0;
     } catch (e) {
-      _logger.w('Failed to get overall stats for overwork nudge: $e');
+      _logger.e('Failed to get overall stats for overwork nudge: $e');
     }
 
     if (_sessionRepository != null) {
@@ -289,7 +289,7 @@ class EngagementScheduler {
           totalHours = sessionHours;
         }
       } catch (e) {
-        _logger.w('Failed to get today sessions for overwork nudge: $e');
+        _logger.e('Failed to get today sessions for overwork nudge: $e');
       }
     }
 
@@ -339,7 +339,7 @@ class EngagementScheduler {
         ));
       }
     } catch (e) {
-      _logger.w('Failed to get plan adjustment nudge: $e');
+      _logger.e('Failed to get plan adjustment nudge: $e');
     }
     return nudges;
   }

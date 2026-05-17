@@ -65,7 +65,7 @@ class CrossFeatureIntegrator {
       completed: true,
       sourceId: tutorSessionId,
     );
-    await _sessionRepo.save(session);
+    await _sessionRepo.save(session.id, session);
     _logger.d('Created Session for tutor session $tutorSessionId');
   }
 
@@ -83,14 +83,14 @@ class CrossFeatureIntegrator {
     final updated = session.copyWith(
       sourceId: tutorSessionId ?? sourceId ?? session.sourceId,
     );
-    await _sessionRepo.save(updated);
+    await _sessionRepo.save(updated.id, updated);
   }
 
   Future<Result<List<Session>>> _getSessions(String? studentId) async {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
     if (result.isFailure || result.data == null) {
-      _logger.w('cross_feature_integrator: failed to load sessions', result.error);
+      _logger.e('cross_feature_integrator: failed to load sessions', result.error);
       return Result.failure(result.error);
     }
     return Result.success(result.data!);

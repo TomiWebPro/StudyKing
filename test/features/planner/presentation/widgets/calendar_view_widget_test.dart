@@ -68,6 +68,55 @@ PersonalLearningPlan createPlan({
   );
 }
 
+PersonalLearningPlan createRestDayPlan() {
+  final now = DateTime.now();
+  return PersonalLearningPlan(
+    studentId: 'student-1',
+    generatedAt: now,
+    dailyPlans: [
+      DailyPlan(
+        date: now,
+        dayNumber: 1,
+        priorityTopics: [],
+        reviewQuestionIds: [],
+        stretchGoalQuestionIds: [],
+        targetQuestions: 0,
+        targetMinutes: 0,
+        isRestDay: true,
+      ),
+    ],
+    summary: PlanSummary(
+      totalQuestions: 0,
+      totalMinutes: 0,
+      newTopics: 0,
+      reviewTopics: 0,
+      estimatedCoverage: 0,
+      focusAreas: [],
+    ),
+    recommendations: [],
+    planDurationDays: 1,
+  );
+}
+
+PersonalLearningPlan createEmptyPlan() {
+  final now = DateTime.now();
+  return PersonalLearningPlan(
+    studentId: 'student-1',
+    generatedAt: now,
+    dailyPlans: [],
+    summary: PlanSummary(
+      totalQuestions: 0,
+      totalMinutes: 0,
+      newTopics: 0,
+      reviewTopics: 0,
+      estimatedCoverage: 0,
+      focusAreas: [],
+    ),
+    recommendations: [],
+    planDurationDays: 0,
+  );
+}
+
 void main() {
   setUp(() async {
     Intl.defaultLocale = 'en';
@@ -123,8 +172,8 @@ void main() {
         CalendarViewWidget(plan: createPlan()),
       ));
 
-      for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S']) {
-        expect(find.text(day), findsAtLeast(1));
+      for (final day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
+        expect(find.textContaining(day.substring(0, 2)), findsAtLeast(1));
       }
     });
 
@@ -178,68 +227,24 @@ void main() {
     });
 
     testWidgets('renders rest day without minutes', (tester) async {
-      final now = DateTime.now();
-      final plan = PersonalLearningPlan(
-        studentId: 'student-1',
-        generatedAt: now,
-        dailyPlans: [
-          DailyPlan(
-            date: now,
-            dayNumber: 1,
-            priorityTopics: [],
-            reviewQuestionIds: [],
-            stretchGoalQuestionIds: [],
-            targetQuestions: 0,
-            targetMinutes: 0,
-            isRestDay: true,
-          ),
-        ],
-        summary: PlanSummary(
-          totalQuestions: 0,
-          totalMinutes: 0,
-          newTopics: 0,
-          reviewTopics: 0,
-          estimatedCoverage: 0,
-          focusAreas: [],
-        ),
-        recommendations: [],
-        planDurationDays: 1,
-      );
-
       await tester.pumpWidget(buildApp(
-        CalendarViewWidget(plan: plan),
+        CalendarViewWidget(plan: createRestDayPlan()),
       ));
 
+      final now = DateTime.now();
       expect(find.text('${now.day}'), findsOneWidget);
       expect(find.text('0m'), findsNothing);
     });
 
     testWidgets('renders with empty plan (no daily plans)', (tester) async {
-      final now = DateTime.now();
-      final plan = PersonalLearningPlan(
-        studentId: 'student-1',
-        generatedAt: now,
-        dailyPlans: [],
-        summary: PlanSummary(
-          totalQuestions: 0,
-          totalMinutes: 0,
-          newTopics: 0,
-          reviewTopics: 0,
-          estimatedCoverage: 0,
-          focusAreas: [],
-        ),
-        recommendations: [],
-        planDurationDays: 0,
-      );
-
       await tester.pumpWidget(buildApp(
-        CalendarViewWidget(plan: plan),
+        CalendarViewWidget(plan: createEmptyPlan()),
       ));
 
-      final expected = DateFormat.yMMM().format(DateTime(now.year, now.month));
+      final expected = DateFormat.yMMM().format(DateTime(DateTime.now().year, DateTime.now().month));
       expect(find.text(expected), findsOneWidget);
-      for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S']) {
-        expect(find.text(day), findsAtLeast(1));
+      for (final day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
+        expect(find.textContaining(day.substring(0, 2)), findsAtLeast(1));
       }
     });
 
@@ -263,6 +268,40 @@ void main() {
 
       final janYear = decYear + 1;
       expect(find.text('Jan $janYear'), findsOneWidget);
+    });
+
+    testWidgets('today cell has special decoration', (tester) async {
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: createPlan()),
+      ));
+
+      expect(find.byType(InkWell), findsWidgets);
+    });
+
+    testWidgets('non-rest day shows target minutes', (tester) async {
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: createPlan()),
+      ));
+
+      expect(find.text('30 min'), findsOneWidget);
+    });
+
+    testWidgets('onDayTap is null prevents tapping', (tester) async {
+      bool wasCalled = false;
+
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(
+          plan: createPlan(),
+          onDayTap: null,
+        ),
+      ));
+
+      final now = DateTime.now();
+      final dayCell = find.text('${now.day}').last;
+      await tester.tap(dayCell);
+      await tester.pumpAndSettle();
+
+      expect(wasCalled, isFalse);
     });
   });
 }

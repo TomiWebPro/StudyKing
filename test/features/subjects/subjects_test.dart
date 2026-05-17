@@ -11,10 +11,6 @@ void main() {
       expect(Subject, isA<Type>());
     });
 
-    test('exports ProgressRepository', () {
-      expect(ProgressRepository, isA<Type>());
-    });
-
     test('exports SubjectRepository', () {
       expect(SubjectRepository, isA<Type>());
     });

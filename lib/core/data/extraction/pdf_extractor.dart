@@ -64,7 +64,9 @@ class PdfExtractor {
           extractionMethod: 'pdf_raw_decode',
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to clean raw PDF content', e);
+    }
 
     if (simpleExtraction.text.isNotEmpty) {
       return simpleExtraction;

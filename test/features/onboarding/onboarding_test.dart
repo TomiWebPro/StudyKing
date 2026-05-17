@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
+import 'package:studyking/features/onboarding/onboarding.dart';
 
 void main() {
   group('Onboarding barrel', () {

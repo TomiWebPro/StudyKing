@@ -22,6 +22,8 @@ typedef ProcessingProgressCallback = void Function(ProcessingStatus status, Stri
 class ContentPipeline {
   final LlmService _llmService;
   final SourceRepository _sourceRepository;
+
+  SourceRepository get sourceRepository => _sourceRepository;
   final TopicRepository _topicRepository;
   final QuestionRepository _questionRepository;
   final DocumentExtractor _documentExtractor;

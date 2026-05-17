@@ -1295,7 +1295,7 @@ abstract class AppLocalizations {
   /// Preview message before importing a backup with box and record counts
   ///
   /// In en, this message translates to:
-  /// **'This backup contains {boxes} section(s) with {records} record(s). Existing data may be overwritten. Continue?'**
+  /// **'This backup contains {boxes,plural,=1{1 section} other{{boxes} sections}} with {records,plural,=1{1 record} other{{records} records}}. Existing data may be overwritten. Continue?'**
   String importPreview(int boxes, int records);
 
   /// Snackbar message when data restore succeeds
@@ -4979,8 +4979,8 @@ abstract class AppLocalizations {
   /// Body for overwork warning
   ///
   /// In en, this message translates to:
-  /// **'You\'ve studied {hours} hours today. Remember to rest!'**
-  String notifBodyOverwork(String hours);
+  /// **'You\'ve studied {hours,plural,=1{1 hour} other{{hours} hours}} today. Remember to rest!'**
+  String notifBodyOverwork(int hours);
 
   /// Title for plan adjustment notification
   ///
@@ -5726,13 +5726,13 @@ abstract class AppLocalizations {
   /// **'Usage: {totalCost} over {totalTokens} tokens, avg: {avgCost} per 1k tokens'**
   String usageSummary(String totalCost, String totalTokens, String avgCost);
 
-  /// Tooltip for collapsed card header
+  /// Semantic hint for expanding a card section
   ///
   /// In en, this message translates to:
   /// **'Tap to expand'**
   String get tapToExpand;
 
-  /// Tooltip for expanded card header
+  /// Semantic hint for collapsing a card section
   ///
   /// In en, this message translates to:
   /// **'Tap to collapse'**
@@ -6449,6 +6449,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sending'**
   String get sending;
+
+  /// Subtitle for daily reminder toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Get a daily reminder to study at your preferred time'**
+  String get dailyReminderDescription;
+
+  /// Tile title for daily reminder time setting
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder Time'**
+  String get reminderTime;
+
+  /// Help text for the daily reminder time picker
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Reminder Time'**
+  String get dailyReminderTimeHelp;
+
+  /// Button title to run nudge checks immediately
+  ///
+  /// In en, this message translates to:
+  /// **'Check Nudges Now'**
+  String get checkNudgesNow;
+
+  /// Subtitle for nudge check button
+  ///
+  /// In en, this message translates to:
+  /// **'Run nudge checks immediately'**
+  String get runNudgeChecks;
+
+  /// Snackbar message after successful nudge check
+  ///
+  /// In en, this message translates to:
+  /// **'Nudge check complete'**
+  String get nudgeCheckComplete;
+
+  /// Snackbar message after failed nudge check
+  ///
+  /// In en, this message translates to:
+  /// **'Nudge check failed'**
+  String get nudgeCheckFailed;
+
+  /// Title for daily cap warning dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Cap Warning'**
+  String get dailyCapWarningTitle;
+
+  /// Body for daily cap warning dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Starting this session will exceed your daily cap. {selectedMinutes} min selected, {remaining} min remaining. Continue?'**
+  String dailyCapWarningBody(int selectedMinutes, int remaining);
+
+  /// Button to proceed despite warning
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Anyway'**
+  String get continueAnyway;
+
+  /// Help text shown on first visit to focus timer
+  ///
+  /// In en, this message translates to:
+  /// **'Set a timer and study distraction-free. Completed sessions count toward your daily plan.'**
+  String get focusFirstVisitHelp;
+
+  /// Section title for content management settings
+  ///
+  /// In en, this message translates to:
+  /// **'Content Management'**
+  String get contentManagement;
+
+  /// Tile title for uploaded materials
+  ///
+  /// In en, this message translates to:
+  /// **'My Uploads'**
+  String get myUploads;
+
+  /// Subtitle for uploads tile
+  ///
+  /// In en, this message translates to:
+  /// **'View your uploaded materials'**
+  String get viewMyUploads;
+
+  /// Tile title for question bank
+  ///
+  /// In en, this message translates to:
+  /// **'Question Bank'**
+  String get questionBank;
+
+  /// Subtitle for question bank tile
+  ///
+  /// In en, this message translates to:
+  /// **'Browse and manage questions'**
+  String get browseAndManageQuestions;
+
+  /// Tile title for failed uploads
+  ///
+  /// In en, this message translates to:
+  /// **'Failed Uploads'**
+  String get failedUploads;
+
+  /// Failed upload count message
+  ///
+  /// In en, this message translates to:
+  /// **'{count} source(s) failed to process'**
+  String sourceCountFailed(int count);
+
+  /// Message when no failed uploads exist
+  ///
+  /// In en, this message translates to:
+  /// **'No failed uploads'**
+  String get noFailedUploads;
+
+  /// Tile title for break duration setting
+  ///
+  /// In en, this message translates to:
+  /// **'Break Duration'**
+  String get breakDuration;
+
+  /// Feature label for ingestion in token usage dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Ingestion'**
+  String get featureLabelIngestion;
+
+  /// Feature label for general in token usage dialog
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get featureLabelGeneral;
+
+  /// Title for delete source confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Source'**
+  String get deleteSourceTitle;
+
+  /// Body for delete source confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this source?'**
+  String get deleteSourceBody;
+
+  /// Title for daily reminder study notification
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Study Reminder'**
+  String get dailyReminderNotificationTitle;
+
+  /// Body for daily reminder study notification
+  ///
+  /// In en, this message translates to:
+  /// **'Time to study! You have study tasks planned for today.'**
+  String get dailyReminderNotificationBody;
+
+  /// Hint shown in focus timer when no subjects exist yet
+  ///
+  /// In en, this message translates to:
+  /// **'Add subjects in Settings to track focus by subject.'**
+  String get addSubjectsForFocusHint;
+
+  /// Button label when retrying an operation
+  ///
+  /// In en, this message translates to:
+  /// **'Retrying...'**
+  String get retrying;
+
+  /// Snackbar message when subject cannot be resolved for a topic
+  ///
+  /// In en, this message translates to:
+  /// **'Could not find subject for this topic.'**
+  String get unableToResolveSubject;
 }
 
 class _AppLocalizationsDelegate

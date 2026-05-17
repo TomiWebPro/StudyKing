@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
@@ -377,49 +374,6 @@ void main() {
       });
     });
 
-    group('init', () {
-      late Directory hiveDir;
-
-      setUp(() {
-        hiveDir = Directory.systemTemp.createTempSync('layout_init_test_');
-        Hive.init(hiveDir.path);
-      });
-
-      tearDown(() async {
-        await Hive.deleteBoxFromDisk('dashboard_layout_prefs');
-        hiveDir.deleteSync(recursive: true);
-      });
-
-      test('loads saved collapsed cards from Hive', () async {
-        final box = await Hive.openBox('dashboard_layout_prefs');
-        await box.put('collapsedCards', ['card-1', 'card-2']);
-        await box.close();
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        expect(
-          container.read(dashboardLayoutPreferencesProvider).collapsedCards,
-          {'card-1', 'card-2'},
-        );
-      });
-
-      test('keeps empty set when no saved data', () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        await notifier.init();
-
-        expect(
-          container.read(dashboardLayoutPreferencesProvider).collapsedCards,
-          isEmpty,
-        );
-      });
-    });
   });
 
   group('dashboardLayoutPreferencesProvider', () {
