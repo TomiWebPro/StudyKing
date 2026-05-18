@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-05-18: Test Coverage & Quality Audit (test_master.md) — fixed subject_topics_tab_test (removed Hive.init, added NavigatorObserver, behavioral assertions), spaced_repetition_service_fake_repo_test (removed Hive.init test groups), subject_form_widgets_test (fixed NavigatorObserver import path), topic_edit/dependency_dialog tests (fixed slider/dropdown assertions), tutor_session_repository_test (fixed error propagation test), focus_practice_service_test/lesson_agent_service_test/settings_providers_test/llm_task_providers_test (fixed Question createdAt/updatedAt, containsPair API, block count), practice_mastery_dashboard_integration_test (fixed Question createdAt/updatedAt); all 207 tests pass
 - 2026-05-18: Internationalisation Master Issue — replaced hardcoded `localeName == 'es'` branching in ConversationManager.processImage() with locale-aware ARB keys (`tutorImageAnalysisUserPrompt`, `tutorImageAnalysisSystemPrompt`) in both app_en.arb and app_es.arb; Verified all M1-M7/m1-m12 items are fully implemented across the codebase (plural ARB keys, RTL chevrons, locale-aware validation messages, locale-aware service constructors, locale-specific chatbot keyword maps, no hardcoded English defaults remain in production code)
 - 2026-05-18: Implemented Code Quality & Refactoring Master Issue fixes:
   - B1: Removed duplicate `@HiveType(typeId: 26)` ingestion Source model; canonical source lives in core/data/models/source_model.dart; created manual SourceAdapter; registered in hive_initializer.dart
@@ -86,4 +87,18 @@
   - M2: Fixed engagementMasteryServiceProvider to inject sub-repos (masteryState, questionMastery, topicDependency, questionEvaluation) through Riverpod provider reads; engagementPlannerServiceProvider injects MasteryGraphService dependency
   - M5: Fixed LlmTaskManagerScreen to read from llmTaskServiceProvider (feature-layer) instead of llmTaskManagerProvider (core); uses LlmTaskService wrapper
   - m1: Added NextUpCard to dashboard — shows upcoming scheduled lessons, due reviews count, weak topics count from dashboard providers
-  - m2: TutorService.startLesson() now creates Lesson record with blocks parsed from generated lesson plan; TutorService.endLesson() updates lesson with session notes; LessonRepository injected and _lessonPlanToBlocks parsing logic added
+   - m2: TutorService.startLesson() now creates Lesson record with blocks parsed from generated lesson plan; TutorService.endLesson() updates lesson with session notes; LessonRepository injected and _lessonPlanToBlocks parsing logic added
+- 2026-05-18: Implemented Code Refactor Master & Quality fixes:
+   - M-2: Extracted _buildContextPrompt (102→15 lines) into 9 focused helper methods (_appendStats, _appendPlan, _appendRoadmaps, _appendPendingActions, _appendUpcomingLessons, _appendWeakTopics, _appendTodayStudy, _appendStreak, _appendTodaySessions)
+   - M-3: Extracted _checkWellbeingInner (82→10 lines) into 5 focused helper methods (_checkOverwork, _checkLateNight, _checkRevision, _checkStreak, _isRateLimited)
+   - M-5: Extracted _sendNudgeNotifications (118→6 lines) into 5 separate nudge methods (_sendOverworkNudge, _sendRevisionNudge, _sendPlanAdjustmentNudge, _sendWeakTopicsNudge, _sendAdherenceNudge) with early returns
+   - M-12: Replaced dashboard provider own repo instances (TopicRepository, AttemptRepository, SessionRepository) with shared providers (topicRepositoryProvider, attemptRepositoryProvider, sessionRepositoryProvider)
+   - M-20: Deleted duplicate test/features/onboarding/onboarding_store_test.dart (identical coverage to onboarding_service_test.dart)
+   - m-2: Removed dead SpacedRepetitionQueries static class (40 lines of unused code)
+   - m-5: Refactored OnboardingService from static mutable _testStorage to constructor-injected OnboardingStorage interface with HiveOnboardingStorage and InMemoryOnboardingStorage implementations; all callers and tests updated
+   - m-7: Replaced session_history_screen.dart _buildErrorState (28→5 lines) with reusable ErrorRetryWidget
+   - m-9: Removed duplicated _questionTypeLabel standalone functions from question_bank_screen.dart and source_detail_screen.dart; all callers now use canonical QuestionTypeLocalized extension
+   - m-10: Removed misleading "Orphaned" comment from session_providers.dart
+   - m-12: Extracted hardcoded targetQuestionsPerDay: 15 to PlanDefaults.targetQuestionsPerDay and _breakDuration: 300 to FocusTimerDefaults.breakDurationSeconds in app_runtime_config.dart
+   - m-13: Changed _trimRepository call from unawaited to .catchError to handle errors properly
+   - m-14: Made EngagementSchedulerConfig.studentId required (no more 'default' default); scheduler fetches from StudentIdService when no config provided

@@ -3,16 +3,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
-Widget _buildTestApp(Widget child) {
+Widget _buildTestApp(Widget child, {NavigatorObserver? observer}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    navigatorObservers: observer != null ? [observer] : [],
     home: Scaffold(body: child),
   );
 }
 
 void main() {
+  group('NavigatorObserver usage', () {
+    testWidgets('NavigatorObserver tracks route changes in SubjectColorSelector', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(
+        SubjectColorSelector(
+          selectedColor: ColorUtils.defaultColorHex,
+          onColorSelected: (color) {},
+        ),
+        observer: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(observer.pushedRoutes, isNotEmpty);
+    });
+  });
+
   group('SubjectColorSelector', () {
     testWidgets('displays color chips for all available colors', (tester) async {
       await tester.pumpWidget(_buildTestApp(
