@@ -1,5 +1,4 @@
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -8,7 +7,6 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class PracticeDataService {
-  final Logger _logger = const Logger('PracticeDataService');
   final SpacedRepetitionService _srService;
   final QuestionRepository _questionRepo;
   final SubjectRepository _subjectRepo;
@@ -43,30 +41,20 @@ class PracticeDataService {
   }
 
   Future<List<String>> loadTopics(QuestionRepository questionRepo) async {
-    try {
-      final questionsResult = await questionRepo.getAll();
-      final questions = questionsResult.data ?? [];
-      if (questions.isEmpty) return [];
-      return questions
-          .where((q) => q.topic != null && q.topic!.isNotEmpty)
-          .map((q) => q.topic!)
-          .toSet()
-          .toList();
-    } catch (e) {
-      _logger.e('Failed to load topics: $e');
-      return [];
-    }
+    final questionsResult = await questionRepo.getAll();
+    final questions = questionsResult.data ?? [];
+    if (questions.isEmpty) return [];
+    return questions
+        .where((q) => q.topic != null && q.topic!.isNotEmpty)
+        .map((q) => q.topic!)
+        .toSet()
+        .toList();
   }
 
   Future<List<Question>> loadTopicQuestions(String topic) async {
-    try {
-      final questionsResult = await _questionRepo.getAll();
-      final questions = questionsResult.data ?? [];
-      return questions.where((q) => q.topic == topic).toList();
-    } catch (e) {
-      _logger.e('Failed to load topic questions: $e');
-      return [];
-    }
+    final questionsResult = await _questionRepo.getAll();
+    final questions = questionsResult.data ?? [];
+    return questions.where((q) => q.topic == topic).toList();
   }
 
   Future<List<Question>> loadWeakAreaQuestions(
@@ -80,15 +68,10 @@ class PracticeDataService {
     }
     final weakTopicIds =
         weakTopicsResult.data!.map((s) => s.topicId).toSet();
-    try {
-      final allQuestionsResult = await _questionRepo.getAll();
-      final allQuestions = allQuestionsResult.data ?? [];
-      return allQuestions
-          .where((q) => weakTopicIds.contains(q.topicId))
-          .toList();
-    } catch (e) {
-      _logger.e('Failed to load weak area questions: $e');
-      return [];
-    }
+    final allQuestionsResult = await _questionRepo.getAll();
+    final allQuestions = allQuestionsResult.data ?? [];
+    return allQuestions
+        .where((q) => weakTopicIds.contains(q.topicId))
+        .toList();
   }
 }

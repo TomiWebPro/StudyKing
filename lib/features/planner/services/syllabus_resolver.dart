@@ -46,7 +46,8 @@ class SyllabusResolver {
   }) async {
     try {
       await _topicRepository.init();
-      final topics = await _topicRepository.getBySubject(subjectId);
+      final topicsResult = await _topicRepository.getBySubject(subjectId);
+      final topics = topicsResult.data ?? [];
       if (topics.isEmpty) {
         return Result.failure(
           l10n?.noTopicsFoundForSubject(subjectId),
@@ -90,7 +91,7 @@ class SyllabusResolver {
         final priority = dep?.calculatePriority(
               masteryState: mastery?.accuracy ?? 0.0,
               isPrerequisite: prereqs.any((p) => !completedTopicIds.contains(p)),
-              downstreamCount: dep?.downstreamTopics.length ?? 0, // ignore: invalid_null_aware_operator
+              downstreamCount: dep.downstreamTopics.length,
             ) ??
             (1 - (mastery?.accuracy ?? 0.0));
 

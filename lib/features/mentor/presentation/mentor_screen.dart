@@ -10,6 +10,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart' s
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider, mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -29,6 +30,7 @@ class MentorScreen extends ConsumerStatefulWidget {
 }
 
 class _MentorScreenState extends ConsumerState<MentorScreen> {
+  final _logger = const Logger('MentorScreen');
   late final MentorService _mentorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
@@ -141,7 +143,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       if (mounted) {
         setState(() => _suggestedAction = action);
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to load suggested action', e);
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -288,7 +292,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _scrollToBottom();
       }
       _loadSuggestedAction();
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to handle post-chat intents', e);
+    }
   }
 
   Future<void> _showScheduleConfirmationDialog(ScheduleProposal proposal) async {
@@ -305,9 +311,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           children: [
             Text('${l10n.time}: $dateStr'),
             const SizedBox(height: 8),
-            Text('${l10n.duration}: ${proposal.durationMinutes} min'),
+            Text('${l10n.duration}: ${l10n.minutesValue(proposal.durationMinutes)}'),
             const SizedBox(height: 8),
-            Text('Topic: ${proposal.topicTitle}'),
+            Text(l10n.mentorScheduleTopic(proposal.topicTitle)),
           ],
         ),
         actions: [
@@ -567,12 +573,37 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   Future<void> _showProgressReport() async {
     if (!_isInitialized) return;
 
-    try {
-      final l10n = AppLocalizations.of(context)!;
-      final report = await _mentorService.getProgressReport();
-      final localeName = l10n.localeName;
-      final topicRepo = ref.read(topicRepositoryProvider);
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.analytics,
+                color: Theme.of(ctx).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(l10n.progressReport),
+          ],
+        ),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text(l10n.generatingReport),
+          ],
+        ),
+      ),
+    );
 
+    try {
+      final localeName = AppLocalizations.of(context)!.localeName;
+      final topicRepo = ref.read(topicRepositoryProvider);
+      final report = await _mentorService.getProgressReport();
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
       if (!mounted) return;
       showDialog(
         context: context,
@@ -765,6 +796,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      Navigator.of(context).pop();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.mentorProgressReportError)),
       );
@@ -773,35 +806,39 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Widget _reportSectionHeader(BuildContext context, IconData icon, String title) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: theme.colorScheme.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+    return MergeSemantics(
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _reportStatRow(BuildContext context, IconData icon, String text) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+    return MergeSemantics(
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

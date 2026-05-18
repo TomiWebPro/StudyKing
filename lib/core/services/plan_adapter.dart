@@ -96,7 +96,7 @@ class PlanAdapter {
   }) async {
     try {
       final existingResult = await _planRepository.loadPlan(studentId);
-      final existingPlan = existingResult;
+      final existingPlan = existingResult.data;
 
       final adjustedFactor = adjustmentFactor ??
           await _calculateAdjustmentFactor(studentId);
@@ -157,7 +157,8 @@ class PlanAdapter {
   Future<String?> getDailyAdherenceFeedback(String studentId) async {
     try {
       await _planRepository.init();
-      final plan = await _planRepository.loadPlan(studentId);
+      final planResult = await _planRepository.loadPlan(studentId);
+      final plan = planResult.data;
       if (plan == null) return null;
 
       await _adherenceRepository.init();

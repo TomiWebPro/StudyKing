@@ -16,7 +16,8 @@ class SessionPlanAdherenceService implements PlanAdherenceContract {
     try {
       final planRepo = PlanRepository();
       await planRepo.init();
-      final plan = await planRepo.loadPlan(studentId);
+      final planResult = await planRepo.loadPlan(studentId);
+      final plan = planResult.data;
       if (plan != null) {
         final todayPlan = plan.dailyPlans.where((d) =>
             d.date.year == DateTime.now().year &&

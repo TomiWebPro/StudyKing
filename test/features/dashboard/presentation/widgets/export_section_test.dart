@@ -14,7 +14,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   @override
   Future<void> init() async {}
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 }
 
 class _FakeTracker extends StudyProgressTracker {

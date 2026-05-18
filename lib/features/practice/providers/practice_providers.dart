@@ -20,6 +20,7 @@ import 'package:studyking/features/practice/services/practice_data_service.dart'
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 
+
 final subjectRepositoryProvider = Provider<SubjectRepository>((ref) {
   return SubjectRepository();
 });
@@ -92,7 +93,12 @@ final masteryRecorderProvider = Provider<MasteryRecorder>((ref) {
 });
 
 final readinessScorerProvider = Provider<ReadinessScorer>((ref) {
-  return ReadinessScorer();
+  final masteryService = ref.read(masteryGraphServiceProvider);
+  final studentIdService = ref.read(studentIdServiceProvider);
+  return ReadinessScorer(
+    masteryService: masteryService,
+    studentIdService: studentIdService,
+  );
 });
 
 final difficultyAdapterProvider = Provider<DifficultyAdapter>((ref) {

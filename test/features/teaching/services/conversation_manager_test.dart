@@ -15,13 +15,14 @@ class FakeConversationRepo extends ConversationRepository {
   final List<ConversationMessage> _messages = [];
 
   @override
-  Future<void> saveMessage(ConversationMessage message) async {
+  Future<Result<void>> saveMessage(ConversationMessage message) async {
     _messages.add(message);
+    return Result.success(null);
   }
 
   @override
-  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
-    return _messages.where((m) => m.sessionId == sessionId).toList();
+  Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
+    return Result.success(_messages.where((m) => m.sessionId == sessionId).toList());
   }
 }
 

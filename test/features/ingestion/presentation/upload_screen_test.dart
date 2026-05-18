@@ -50,7 +50,7 @@ class _FakeSourceRepo extends SourceRepository {
 
 class _FakeTopicRepo extends TopicRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeQuestionRepo extends QuestionRepository {

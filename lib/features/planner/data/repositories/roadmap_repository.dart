@@ -1,5 +1,6 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
 class RoadmapRepository extends Repository<RoadmapModel> {
@@ -7,35 +8,39 @@ class RoadmapRepository extends Repository<RoadmapModel> {
     await openBox(HiveBoxNames.roadmaps);
   }
 
-  Future<void> create(RoadmapModel roadmap) async {
-    await super.save(roadmap.id, roadmap);
+  Future<Result<void>> create(RoadmapModel roadmap) async {
+    return super.put(roadmap.id, roadmap);
   }
 
-  Future<void> saveRoadmap(RoadmapModel roadmap) async {
-    await create(roadmap);
+  Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {
+    return create(roadmap);
   }
 
-  Future<RoadmapModel?> loadRoadmap(String id) async {
-    final result = await super.get(id);
-    return result.data;
+  Future<Result<RoadmapModel?>> loadRoadmap(String id) async {
+    return super.get(id);
   }
 
-  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
-    final byStudent = filterBy((r) => r.studentId, studentId)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return byStudent;
+  Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(
+      String studentId) async {
+    return Result.capture(() async {
+      final byStudent = filterBy((r) => r.studentId, studentId)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return byStudent;
+    }, context: 'getRoadmapsByStudent');
   }
 
-  Future<List<RoadmapModel>> getAllRoadmaps() async {
-    final result = await super.getAll();
-    return result.data ?? [];
+  Future<Result<List<RoadmapModel>>> getAllRoadmaps() async {
+    return super.getAll();
   }
 
-  Future<void> deleteRoadmap(String id) async {
-    await super.delete(id);
+  Future<Result<void>> deleteRoadmap(String id) async {
+    return super.delete(id);
   }
 
-  Future<bool> hasRoadmap(String id) async {
-    return box.containsKey(id);
+  Future<Result<bool>> hasRoadmap(String id) async {
+    return Result.capture(
+      () async => box.containsKey(id),
+      context: 'hasRoadmap',
+    );
   }
 }

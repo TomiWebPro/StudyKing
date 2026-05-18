@@ -40,28 +40,30 @@ class FakePlanRepository extends PlanRepository {
   }
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     _storage[plan.studentId] = plan;
+    return Result.success(null);
   }
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return _storage[studentId];
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.success(_storage[studentId]);
   }
 
   @override
-  Future<bool> hasPlan(String studentId) async {
-    return _storage.containsKey(studentId);
+  Future<Result<bool>> hasPlan(String studentId) async {
+    return Result.success(_storage.containsKey(studentId));
   }
 
   @override
-  Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return _storage.values.toList();
+  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deletePlan(String studentId) async {
+  Future<Result<void>> deletePlan(String studentId) async {
     _storage.remove(studentId);
+    return Result.success(null);
   }
 }
 
@@ -118,7 +120,9 @@ class FakeTopicRepository extends TopicRepository {
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<Topic?>> get(String id) async {
@@ -145,34 +149,38 @@ class FakeRoadmapRepository extends RoadmapRepository {
   }
 
   @override
-  Future<void> saveRoadmap(RoadmapModel roadmap) async {
+  Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {
     if (failOnSave) throw Exception('Save failed');
     _storage[roadmap.id] = roadmap;
+    return Result.success(null);
   }
 
   @override
-  Future<RoadmapModel?> loadRoadmap(String id) async {
-    return _storage[id];
+  Future<Result<RoadmapModel?>> loadRoadmap(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
+  Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(String studentId) async {
     if (loadCompleter != null) await loadCompleter!.future;
     if (failOnGet) throw Exception('Get failed');
-    return _storage.values
-        .where((r) => r.studentId == studentId)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return Result.success(
+      _storage.values
+          .where((r) => r.studentId == studentId)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    );
   }
 
   @override
-  Future<List<RoadmapModel>> getAllRoadmaps() async {
-    return _storage.values.toList();
+  Future<Result<List<RoadmapModel>>> getAllRoadmaps() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deleteRoadmap(String id) async {
+  Future<Result<void>> deleteRoadmap(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 }
 
@@ -183,20 +191,23 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> saveSession(TutorSession session) async {
     _storage[session.id] = session;
+    return Result.success(null);
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async {
-    return _storage[id];
+  Future<Result<TutorSession?>> getSession(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _storage.values
-        .where((s) => s.studentId == studentId)
-        .toList();
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
+    return Result.success(
+      _storage.values
+          .where((s) => s.studentId == studentId)
+          .toList(),
+    );
   }
 }
 
@@ -291,6 +302,7 @@ class FakeSessionRepository extends SessionRepository {
   }
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) throw Exception('save failed');
     sessions.removeWhere((s) => s.id == session.id);
@@ -359,46 +371,51 @@ class FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
     if (throwOnGet) throw Exception('AttemptRepository error');
-    return _attempts.where((a) => a.studentId == studentId).toList();
+    return Result.success(_attempts.where((a) => a.studentId == studentId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
     String studentId,
     String subjectId,
   ) async {
-    return _attempts
-        .where((a) => a.studentId == studentId && a.subjectId == subjectId)
-        .toList();
+    return Result.success(
+      _attempts
+          .where((a) => a.studentId == studentId && a.subjectId == subjectId)
+          .toList(),
+    );
   }
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
-    return _attempts.where((a) => a.questionId == questionId).toList();
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.success(_attempts.where((a) => a.questionId == questionId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getBySubject(String subjectId) async {
-    return _attempts.where((a) => a.subjectId == subjectId).toList();
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    return Result.success(_attempts.where((a) => a.subjectId == subjectId).toList());
   }
 
   @override
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async {
-    final attempts = await getBySubject(subjectId);
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    final attemptsResult = await getBySubject(subjectId);
+    if (attemptsResult.isFailure) return Result.failure(attemptsResult.error);
+    final attempts = attemptsResult.data!;
     final correct = attempts.where((a) => a.isCorrect).length;
-    return {
+    return Result.success({
       'total': attempts.length,
       'correct': correct,
       'incorrect': attempts.length - correct,
       'accuracy': attempts.isNotEmpty ? correct / attempts.length : 0.0,
-    };
+    });
   }
 
   @override
-  Future<void> create(StudentAttempt attempt) async {
+  Future<Result<void>> create(StudentAttempt attempt) async {
     _attempts.add(attempt);
+    return Result.success(null);
   }
 }
 
@@ -409,46 +426,51 @@ class FakeEngagementNudgeRepository extends EngagementNudgeRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {
+  Future<Result<void>> create(EngagementNudgeModel nudge) async {
     nudges.add(nudge);
+    return Result.success(null);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByStudent(String studentId) async {
-    return nudges.where((n) => n.studentId == studentId).toList();
+  Future<Result<List<EngagementNudgeModel>>> getByStudent(String studentId) async {
+    return Result.success(nudges.where((n) => n.studentId == studentId).toList());
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(
     String studentId, {
     int limit = 10,
   }) async {
-    return nudges.where((n) => n.studentId == studentId).take(limit).toList();
+    return Result.success(nudges.where((n) => n.studentId == studentId).take(limit).toList());
   }
 
   @override
-  Future<int> getTodayCount(String studentId) async {
-    return nudges.where((n) => n.studentId == studentId).length;
+  Future<Result<int>> getTodayCount(String studentId) async {
+    return Result.success(nudges.where((n) => n.studentId == studentId).length);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getUnactedByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getUnactedByStudent(
       String studentId) async {
-    return nudges
-        .where((n) => n.studentId == studentId && !n.wasActedUpon)
-        .toList();
+    return Result.success(
+      nudges
+          .where((n) => n.studentId == studentId && !n.wasActedUpon)
+          .toList(),
+    );
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByType(
+  Future<Result<List<EngagementNudgeModel>>> getByType(
       String studentId, String nudgeType) async {
-    return nudges
-        .where((n) => n.studentId == studentId && n.nudgeType == nudgeType)
-        .toList();
+    return Result.success(
+      nudges
+          .where((n) => n.studentId == studentId && n.nudgeType == nudgeType)
+          .toList(),
+    );
   }
 
   @override
-  Future<void> markActedUpon(String id) async {
+  Future<Result<void>> markActedUpon(String id) async {
     final idx = nudges.indexWhere((n) => n.id == id);
     if (idx >= 0) {
       nudges[idx] = nudges[idx].copyWith(
@@ -456,12 +478,14 @@ class FakeEngagementNudgeRepository extends EngagementNudgeRepository {
         actedUponAt: DateTime.now(),
       );
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> deleteOld(int daysOld) async {
+  Future<Result<void>> deleteOld(int daysOld) async {
     final cutoff = DateTime.now().subtract(Duration(days: daysOld));
     nudges.removeWhere((n) => n.sentAt.isBefore(cutoff));
+    return Result.success(null);
   }
 }
 

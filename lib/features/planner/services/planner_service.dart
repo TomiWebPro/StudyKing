@@ -76,12 +76,14 @@ class PlannerService implements ActionPlanner {
 
   Future<PersonalLearningPlan?> loadExistingPlan() async {
     await planRepo.init();
-    return planRepo.loadPlan(studentId);
+    final result = await planRepo.loadPlan(studentId);
+    return result.data;
   }
 
   Future<List<RoadmapModel>> loadRoadmaps() async {
     await roadmapRepo.init();
-    return roadmapRepo.getRoadmapsByStudent(studentId);
+    final result = await roadmapRepo.getRoadmapsByStudent(studentId);
+    return result.data ?? [];
   }
 
   Future<List<PendingActionModel>> loadPendingActions() async {
@@ -224,7 +226,8 @@ class PlannerService implements ActionPlanner {
     required bool isCompleted,
   }) async {
     await roadmapRepo.init();
-    final roadmap = await roadmapRepo.loadRoadmap(roadmapId);
+    final result = await roadmapRepo.loadRoadmap(roadmapId);
+    final roadmap = result.data;
     if (roadmap == null) return null;
 
     final updatedMilestones = roadmap.milestones.map((m) {

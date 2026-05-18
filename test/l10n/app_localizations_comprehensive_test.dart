@@ -91,7 +91,7 @@ void main() {
     });
 
     test('focus mode and timer section', () {
-      expect(l10n.focusMode, 'Focus Mode');
+      expect(l10n.focusMode, 'Study');
       expect(l10n.newFocusSession, 'New Focus Session');
       expect(l10n.refreshStats, 'Refresh stats');
       expect(l10n.dailyLimitReached, 'Daily Limit Reached');
@@ -494,7 +494,7 @@ void main() {
     });
 
     test('focus mode and timer section', () {
-      expect(l10n.focusMode, 'Modo de Enfoque');
+      expect(l10n.focusMode, 'Estudio');
       expect(l10n.newFocusSession, 'Nueva Sesión de Enfoque');
       expect(l10n.refreshStats, 'Actualizar estadísticas');
       expect(l10n.dailyLimitReached, 'Límite Diario Alcanzado');

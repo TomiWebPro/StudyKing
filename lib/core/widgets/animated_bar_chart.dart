@@ -36,7 +36,7 @@ class AnimatedBarChart extends StatefulWidget {
 }
 
 class _AnimatedBarChartState extends State<AnimatedBarChart> {
-  bool _hasAnimated = false;
+  Map<String, double> _previousHeights = {};
 
   double _computeBarWidth(double availableWidth) {
     if (widget.barWidth != null) return widget.barWidth!;
@@ -46,7 +46,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
     return computed.clamp(AnimatedBarChart.minBarWidth, widget.maxBarWidth);
   }
 
-  Widget _buildBar(BuildContext context, double height, int count, int maxCount, ThemeData theme, double barWidth, Color accentColor) {
+  Widget _buildBar(BuildContext context, double height, String day, int count, int maxCount, ThemeData theme, double barWidth, Color accentColor) {
     if (widget.reduceMotion) {
       return Container(
         width: barWidth,
@@ -59,18 +59,14 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
         ),
       );
     }
+    final previousHeight = _previousHeights[day] ?? widget.minBarHeight;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(
-        begin: _hasAnimated ? height : 0,
+        begin: previousHeight,
         end: height,
       ),
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
-      onEnd: () {
-        if (!_hasAnimated) {
-          setState(() => _hasAnimated = true);
-        }
-      },
       builder: (context, value, child) {
         return Container(
           width: barWidth,
@@ -90,8 +86,15 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
   void didUpdateWidget(AnimatedBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.data != widget.data) {
-      _hasAnimated = false;
+      _previousHeights = Map.fromEntries(
+        oldWidget.data.entries.map((e) => MapEntry(e.key, _computeHeight(e.value, oldWidget.data.values.isNotEmpty ? oldWidget.data.values.reduce((a, b) => a > b ? a : b) : 0))),
+      );
     }
+  }
+
+  double _computeHeight(int count, int maxCount) {
+    final rawMax = maxCount > 0 ? maxCount : 1;
+    return widget.minBarHeight + (count / rawMax * (widget.maxBarHeight - widget.minBarHeight));
   }
 
   @override
@@ -150,23 +153,18 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                             message: '$count',
                             child: Text(
                               '$count',
-                              style: TextStyle(
-                                fontSize: 10,
+                              style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: count > 0
-                                ? accentColor
-                                : (theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant),
+                                color: count > 0 ? accentColor : theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
                         const SizedBox(height: 4),
-                        _buildBar(context, height, count, maxCount, theme, barWidth, accentColor),
+                        _buildBar(context, height, day, count, maxCount, theme, barWidth, accentColor),
                         const SizedBox(height: 6),
                         Text(
                           day,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant,
+                          style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,

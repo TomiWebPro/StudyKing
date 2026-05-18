@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -77,13 +78,14 @@ class _FakePlanRepository extends PlanRepository {
   Future<void> init() async {}
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return storedPlan;
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.success(storedPlan);
   }
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     storedPlan = plan;
+    return Result.success(null);
   }
 }
 

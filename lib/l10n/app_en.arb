@@ -48,6 +48,10 @@
   "@generating": {
     "description": "Button label when plan is being generated"
   },
+  "generatingReport": "Generating report...",
+  "@generatingReport": {
+    "description": "Loading message while generating progress report"
+  },
   "yourStudySchedule": "Your Study Schedule",
   "@yourStudySchedule": {
     "description": "Title for the generated study schedule"
@@ -266,7 +270,15 @@
   },
   "noWeakAreasFound": "No weak areas found. Keep up the great work!",
   "@noWeakAreasFound": {
-    "description": "Message when no weak areas are found"
+    "description": "Message shown when the user has no weak topics"
+  },
+  "atRiskQuestions": "At-Risk Questions",
+  "@atRiskQuestions": {
+    "description": "Title for at-risk practice mode"
+  },
+  "atRiskQuestionsDescription": "Practice questions with lowest mastery scores",
+  "@atRiskQuestionsDescription": {
+    "description": "Description for at-risk practice mode"
   },
   "noWeakAreasQuestions": "No questions available for your weak areas.",
   "@noWeakAreasQuestions": {
@@ -656,6 +668,10 @@
   "large": "Large",
   "@large": {
     "description": "Large font size label"
+  },
+  "leaveAnyway": "Leave anyway",
+  "@leaveAnyway": {
+    "description": "Button label to confirm leaving despite active timer"
   },
   "extraLarge": "Extra Large",
   "@extraLarge": {
@@ -1460,6 +1476,10 @@
   "@nextQuestion": {
     "description": "Button label for next question"
   },
+  "type": "Type",
+  "@type": {
+    "description": "Label for type field"
+  },
   "typeYourAnswerHere": "Type your answer here...",
   "@typeYourAnswerHere": {
     "description": "Hint text for text answer input"
@@ -1503,6 +1523,22 @@
   "stepByStep": "Step-by-Step",
   "@stepByStep": {
     "description": "Label for step-by-step question type"
+  },
+  "audioRecording": "Audio Recording",
+  "@audioRecording": {
+    "description": "Label for audio recording question type"
+  },
+  "canvas": "Canvas",
+  "@canvas": {
+    "description": "Label for canvas/drawing question type"
+  },
+  "fileUpload": "File Upload",
+  "@fileUpload": {
+    "description": "Label for file upload question type"
+  },
+  "graphDrawing": "Graph Drawing",
+  "@graphDrawing": {
+    "description": "Label for graph drawing question type"
   },
   "difficultyLabel": "Difficulty: {level}",
   "@difficultyLabel": {
@@ -2633,6 +2669,10 @@
   "@aboutLegalese": {
     "description": "Copyright notice for About dialog"
   },
+  "activeLessonTimer": "You have an active lesson timer. Leave anyway?",
+  "@activeLessonTimer": {
+    "description": "Title for exit confirmation when lesson timer is active"
+  },
   "unknownModelId": "unknown-model",
   "@unknownModelId": {
     "description": "Fallback model ID when unknown"
@@ -3385,9 +3425,9 @@
   "@allRequiredStepsMissing": {
     "description": "Feedback when required steps are missing from answer"
   },
-  "focusMode": "Focus Mode",
+  "focusMode": "Study",
   "@focusMode": {
-    "description": "AppBar title for focus mode screen"
+    "description": "AppBar title for study hub screen (formerly Focus Mode)"
   },
   "newFocusSession": "New Focus Session",
   "@newFocusSession": {
@@ -3427,9 +3467,9 @@
       }
     }
   },
-  "focus": "Focus",
+  "focus": "Study",
   "@focus": {
-    "description": "Bottom navigation label for focus tab"
+    "description": "Bottom navigation label for study tab"
   },
   "focusForMinutes": "Focus for {minutes} minutes",
   "@focusForMinutes": {
@@ -3449,6 +3489,11 @@
     "description": "Label indicating remaining time on timer"
   },
   "timerPaused": "PAUSED",
+  "title": "Title",
+  "@title": {
+    "description": "Label for title sort option"
+  },
+  "today": "Today",
   "@timerPaused": {
     "description": "Label indicating timer is paused"
   },
@@ -4689,9 +4734,9 @@
   "@onboardingMentorDesc": {
     "description": "Mentor tab description in onboarding"
   },
-  "onboardingFocusDesc": "Stay focused with Pomodoro-style study sessions",
+  "onboardingFocusDesc": "Quick practice hub with timer — practice questions and track focus",
   "@onboardingFocusDesc": {
-    "description": "Focus mode description in onboarding"
+    "description": "Study hub description in onboarding"
   },
   "onboardingSettingsDesc": "Configure API keys, appearance, and preferences",
   "@onboardingSettingsDesc": {
@@ -4725,6 +4770,14 @@
   "dataStorageDescription": "StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.",
   "@dataStorageDescription": {
     "description": "Data storage explanation"
+  },
+  "toggleVisibility": "Toggle visibility",
+  "@toggleVisibility": {
+    "description": "Tooltip for visibility toggle button"
+  },
+  "moreOptions": "More options",
+  "@moreOptions": {
+    "description": "Tooltip for more options button"
   },
   "iUnderstand": "I Understand",
   "@iUnderstand": {
@@ -5395,6 +5448,18 @@
   "@questionBank": {
     "description": "Title for the question bank screen"
   },
+  "questionSubtitle": "{questionType} \u2022 {difficulty}",
+  "@questionSubtitle": {
+    "description": "Subtitle for a question item showing type and difficulty",
+    "placeholders": {
+      "questionType": {
+        "type": "String"
+      },
+      "difficulty": {
+        "type": "String"
+      }
+    }
+  },
   "cancelSelection": "Cancel selection",
   "@cancelSelection": {
     "description": "Tooltip for cancel selection button"
@@ -5481,6 +5546,243 @@
     "description": "Semantics label for break remaining time",
     "placeholders": {
       "formattedTime": { "type": "String" }
+    }
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Generic loading indicator label"
+  },
+  "pending": "Pending",
+  "@pending": {
+    "description": "Status label for pending processing"
+  },
+  "extracting": "Extracting",
+  "@extracting": {
+    "description": "Status label for extracting text"
+  },
+  "processing": "Processing",
+  "@processing": {
+    "description": "Status label for processing data"
+  },
+  "generatingQuestions": "Generating Questions",
+  "@generatingQuestions": {
+    "description": "Status label for generating questions"
+  },
+  "contentLibrary": "Content Library",
+  "@contentLibrary": {
+    "description": "App bar title for content library screen"
+  },
+  "sortOrder": "Sort order",
+  "@sortOrder": {
+    "description": "Tooltip for sort order toggle"
+  },
+  "sortBy": "Sort by",
+  "@sortBy": {
+    "description": "Tooltip for sort menu"
+  },
+  "allStatuses": "All statuses",
+  "@allStatuses": {
+    "description": "Filter label showing all statuses"
+  },
+  "sourceDeleted": "Source deleted",
+  "@sourceDeleted": {
+    "description": "Snackbar message when a source is deleted"
+  },
+  "alsoDeleteQuestions": "Also delete questions generated from this source",
+  "@alsoDeleteQuestions": {
+    "description": "Checkbox label to delete associated questions with source"
+  },
+  "reprocess": "Reprocess",
+  "@reprocess": {
+    "description": "Button label to reprocess a source"
+  },
+  "sourcesCount": "{count, plural, =1{1 source} other{{count} sources}}",
+  "@sourcesCount": {
+    "description": "Label showing number of sources with pluralization",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sourceNotFound": "Source not found",
+  "@sourceNotFound": {
+    "description": "Error message when source is not found"
+  },
+  "reprocessSource": "Reprocess Source",
+  "@reprocessSource": {
+    "description": "Dialog title for source reprocessing"
+  },
+  "reprocessingWarning": "Reprocessing will replace existing generated questions. Continue?",
+  "@reprocessingWarning": {
+    "description": "Warning body for source reprocessing dialog"
+  },
+  "reprocessing": "Reprocessing...",
+  "@reprocessing": {
+    "description": "Status label during reprocessing"
+  },
+  "sourceDetail": "Source Detail",
+  "@sourceDetail": {
+    "description": "App bar title for source detail screen"
+  },
+  "status": "Status",
+  "@status": {
+    "description": "Label for status field"
+  },
+  "subject": "Subject",
+  "@subject": {
+    "description": "Label for subject field"
+  },
+  "id": "ID",
+  "@id": {
+    "description": "Label for ID field"
+  },
+  "uploaded": "Uploaded",
+  "@uploaded": {
+    "description": "Label for upload date field"
+  },
+  "processingFailed": "Processing failed",
+  "@processingFailed": {
+    "description": "Error banner text when processing fails"
+  },
+  "topicClassification": "Topic Classification",
+  "@topicClassification": {
+    "description": "Section header for topic classification"
+  },
+  "notYetClassified": "Not yet classified",
+  "@notYetClassified": {
+    "description": "Label when source has no topic classification"
+  },
+  "classifyNow": "Classify Now",
+  "@classifyNow": {
+    "description": "Button to classify source topic"
+  },
+  "summary": "Summary",
+  "@summary": {
+    "description": "Section header for summary"
+  },
+  "noSummaryAvailable": "No summary available",
+  "@noSummaryAvailable": {
+    "description": "Placeholder when no summary exists"
+  },
+  "extractedText": "Extracted Text",
+  "@extractedText": {
+    "description": "Section header for extracted text"
+  },
+  "extractedTextCount": "Extracted Text ({count})",
+  "@extractedTextCount": {
+    "description": "Section header for extracted text with character count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchInText": "Search in text",
+  "@searchInText": {
+    "description": "Hint text for searching within extracted text"
+  },
+  "noExtractedText": "No extracted text available",
+  "@noExtractedText": {
+    "description": "Placeholder when no extracted text exists"
+  },
+  "generatedQuestions": "Generated Questions",
+  "@generatedQuestions": {
+    "description": "Section header for generated questions"
+  },
+  "generatedQuestionsCount": "Generated Questions ({count})",
+  "@generatedQuestionsCount": {
+    "description": "Section header for generated questions with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noQuestionsFromSource": "No questions from this source",
+  "@noQuestionsFromSource": {
+    "description": "Placeholder when source has no questions"
+  },
+  "difficulty": "Difficulty",
+  "@difficulty": {
+    "description": "Label for difficulty level"
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit action label"
+  },
+  "aiGenerated": "AI-generated",
+  "@aiGenerated": {
+    "description": "Label for AI-generated content"
+  },
+  "manual": "Manual",
+  "@manual": {
+    "description": "Label for manually created content"
+  },
+  "sources": "Sources",
+  "@sources": {
+    "description": "Tab label for sources"
+  },
+  "viewSources": "View Sources",
+  "@viewSources": {
+    "description": "Semantic label for view sources action"
+  },
+  "noSourcesForSubject": "No sources for this subject",
+  "@noSourcesForSubject": {
+    "description": "Empty state for subject sources tab"
+  },
+  "remainingWorkload": "Remaining Workload",
+  "@remainingWorkload": {
+    "description": "Card title for remaining workload section"
+  },
+  "explanation": "Explanation",
+  "@explanation": {
+    "description": "Label for explanation input field"
+  },
+  "sourcesCountLabel": "{count, plural, =1{1 Source} other{{count} Source(s)}}",
+  "@sourcesCountLabel": {
+    "description": "Label showing number of sources with capital S",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "difficultyDistribution": "Difficulty Distribution",
+  "@difficultyDistribution": {
+    "description": "Title for difficulty tier selection in exam config"
+  },
+  "difficultyDistributionHint": "Set the number of Easy, Medium, and Hard questions. Leave all at 0 for balanced random selection.",
+  "@difficultyDistributionHint": {
+    "description": "Hint for difficulty distribution controls"
+  },
+  "easyQuestions": "Easy",
+  "@easyQuestions": {
+    "description": "Label for easy difficulty questions count"
+  },
+  "mediumQuestions": "Medium",
+  "@mediumQuestions": {
+    "description": "Label for medium difficulty questions count"
+  },
+  "hardQuestions": "Hard",
+  "@hardQuestions": {
+    "description": "Label for hard difficulty questions count"
+  },
+  "totalSelected": "Total Selected",
+  "@totalSelected": {
+    "description": "Label showing total selected question count"
+  },
+  "practiceAction": "Practice",
+  "@practiceAction": {
+    "description": "Popup menu action to practice from a source"
+  },
+  "viewDetailsAction": "View Details",
+  "@viewDetailsAction": {
+    "description": "Popup menu action to view source details"
+  },
+  "mentorScheduleTopic": "Topic: {topicTitle}",
+  "@mentorScheduleTopic": {
+    "description": "Label for topic title in schedule confirmation dialog",
+    "placeholders": {
+      "topicTitle": {
+        "type": "String"
+      }
     }
   }
 }

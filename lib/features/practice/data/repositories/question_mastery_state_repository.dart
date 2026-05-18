@@ -48,6 +48,17 @@ class QuestionMasteryStateRepository extends Repository<QuestionMasteryState> {
     }
   }
 
+  Future<Result<List<QuestionMasteryState>>> getAllForStudent(
+      String studentId) async {
+    try {
+      final states = filterBy((s) => s.studentId, studentId);
+      return Result.success(states);
+    } catch (e) {
+      _logger.e('Error getting all question mastery states for student', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<List<QuestionMasteryState>>> getDueQuestions(
     String studentId, {
     DateTime? asOf,

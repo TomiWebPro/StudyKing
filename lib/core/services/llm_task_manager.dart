@@ -139,6 +139,13 @@ class LlmTaskManager {
     return completer;
   }
 
+  String retryTask(String taskId) {
+    final idx = _tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return '';
+    final oldTask = _tasks[idx];
+    return createTask(feature: oldTask.feature, modelId: oldTask.modelId);
+  }
+
   final List<VoidCallback> _listeners = [];
   void addListener(VoidCallback listener) => _listeners.add(listener);
   void removeListener(VoidCallback listener) => _listeners.remove(listener);

@@ -125,17 +125,21 @@ class _FakeTutorSessionRepo extends TutorSessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return [];
+  Future<Result<List<TutorSession>>> getStudentSessions(
+      String studentId) async {
+    return Result.success([]);
   }
 
   @override
-  Future<List<TutorSession>> getCompletedSessions(String studentId) async {
-    return [];
+  Future<Result<List<TutorSession>>> getCompletedSessions(
+      String studentId) async {
+    return Result.success([]);
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async => null;
+  Future<Result<TutorSession?>> getSession(String id) async {
+    return Result.success(null);
+  }
 }
 
 class _FakeSessionRepo extends SessionRepository {
@@ -201,26 +205,31 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {
+  Future<Result<void>> create(EngagementNudgeModel nudge) async {
     nudges.add(nudge);
+    return Result.success(null);
   }
 
   @override
-  Future<int> getTodayCount(String studentId) async {
-    return nudges.where((n) => n.studentId == studentId).length;
+  Future<Result<int>> getTodayCount(String studentId) async {
+    return Result.success(
+        nudges.where((n) => n.studentId == studentId).length);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(
     String studentId, {
     int limit = 10,
   }) async {
-    return nudges.where((n) => n.studentId == studentId).take(limit).toList();
+    return Result.success(
+        nudges.where((n) => n.studentId == studentId).take(limit).toList());
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByStudent(String studentId) async {
-    return nudges.where((n) => n.studentId == studentId).toList();
+  Future<Result<List<EngagementNudgeModel>>> getByStudent(
+      String studentId) async {
+    return Result.success(
+        nudges.where((n) => n.studentId == studentId).toList());
   }
 }
 
@@ -231,8 +240,10 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return _attempts.where((a) => a.studentId == studentId).toList();
+  Future<Result<List<StudentAttempt>>> getByStudent(
+      String studentId) async {
+    return Result.success(
+        _attempts.where((a) => a.studentId == studentId).toList());
   }
 }
 
@@ -265,28 +276,30 @@ class _FakePlanRepo extends PlanRepository {
   Future<void> init() async {}
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return _storage[studentId];
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.success(_storage[studentId]);
   }
 
   @override
-  Future<bool> hasPlan(String studentId) async {
-    return _storage.containsKey(studentId);
+  Future<Result<bool>> hasPlan(String studentId) async {
+    return Result.success(_storage.containsKey(studentId));
   }
 
   @override
-  Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return _storage.values.toList();
+  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     _storage[plan.studentId] = plan;
+    return Result.success(null);
   }
 
   @override
-  Future<void> deletePlan(String studentId) async {
+  Future<Result<void>> deletePlan(String studentId) async {
     _storage.remove(studentId);
+    return Result.success(null);
   }
 }
 

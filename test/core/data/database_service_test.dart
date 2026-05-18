@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -13,8 +14,9 @@ class _FakeTopicRepository extends TopicRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -22,8 +24,9 @@ class _FakeQuestionRepository extends QuestionRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -31,8 +34,9 @@ class _FakeAttemptRepository extends AttemptRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -40,8 +44,9 @@ class _FakeLessonRepository extends LessonRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -52,8 +57,9 @@ class _FakeSubjectRepository extends SubjectRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -61,8 +67,9 @@ class _FakeConversationRepository extends ConversationRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
@@ -70,21 +77,22 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
   int initCallCount = 0;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCallCount++;
+    return Result.success(null);
   }
 }
 
 class _FailingRepo extends TopicRepository {
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     throw Exception('init failed');
   }
 }
 
 class _FailingQuestionRepo extends QuestionRepository {
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     throw Exception('question init failed');
   }
 }

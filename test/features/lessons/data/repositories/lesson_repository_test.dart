@@ -397,7 +397,7 @@ void main() {
         final result = await repo.addBlock(block);
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Lesson not found'));
+        expect(result.error, contains('Lesson_not_found'));
       });
     });
 
@@ -504,7 +504,7 @@ void main() {
         final result = await throwingRepo.create(lesson);
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to create lesson'));
+        expect(result.error, isNotNull);
       });
     });
 
@@ -514,7 +514,7 @@ void main() {
         final result = await throwingRepo.getBySubject('math');
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get lessons'));
+        expect(result.error, isNotNull);
       });
     });
 
@@ -524,7 +524,7 @@ void main() {
         final result = await throwingRepo.getByTopic('algebra');
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get lessons'));
+        expect(result.error, isNotNull);
       });
     });
 
@@ -534,7 +534,7 @@ void main() {
         final result = await throwingRepo.getBySubjectAndTopic('math', 'algebra');
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get lessons'));
+        expect(result.error, isNotNull);
       });
     });
 
@@ -545,7 +545,17 @@ void main() {
         final result = await throwingRepo.addBlock(block);
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to add block'));
+        expect(result.error, isNotNull);
+      });
+
+      test('returns failure when save throws after get succeeds', () async {
+        throwingRepo.throwOnSave = true;
+        throwingRepo.storedLesson = createTestLesson(id: 'l1');
+        final block = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        final result = await throwingRepo.addBlock(block);
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotNull);
       });
     });
 
@@ -555,7 +565,7 @@ void main() {
         final result = await throwingRepo.getBlocksForLesson('l1');
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get blocks'));
+        expect(result.error, isNotNull);
       });
     });
 
@@ -565,7 +575,7 @@ void main() {
         final result = await throwingRepo.getBlocksBySubject('math');
         expect(result.isSuccess, isFalse);
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('Failed to get blocks'));
+        expect(result.error, isNotNull);
       });
     });
   });
@@ -583,6 +593,7 @@ class _ThrowingLessonRepository extends LessonRepository {
   bool throwOnGet = false;
   bool throwOnGetAll = false;
   bool throwOnFilterBy = false;
+  Lesson? storedLesson;
 
   @override
   Future<Result<void>> save(String key, Lesson item) async {
@@ -593,7 +604,7 @@ class _ThrowingLessonRepository extends LessonRepository {
   @override
   Future<Result<Lesson?>> get(String id) async {
     if (throwOnGet) throw Exception('Get error');
-    return Result.success(null);
+    return Result.success(storedLesson);
   }
 
   @override

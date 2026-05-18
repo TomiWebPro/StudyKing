@@ -25,22 +25,22 @@ Question _createQuestion({
 
 void main() {
   group('ReadinessScorer', () {
-    test('returns empty list for empty input', () {
+    test('returns empty list for empty input', () async {
       final scorer = ReadinessScorer();
-      final result = scorer.scoreQuestions([]);
+      final result = await scorer.scoreQuestions([]);
       expect(result, isEmpty);
     });
 
-    test('scores single question', () {
+    test('scores single question', () async {
       final questions = [_createQuestion()];
       final scorer = ReadinessScorer();
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(1));
       expect(result.first.score, greaterThan(0));
     });
 
-    test('prioritizes questions with high review urgency', () {
+    test('prioritizes questions with high review urgency', () async {
       final now = DateTime.now();
       final questions = [
         _createQuestion(id: 'q1', topicId: 't1'),
@@ -69,14 +69,14 @@ void main() {
       };
 
       final scorer = ReadinessScorer(topicMasteryMap: topicMasteryMap);
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(2));
       expect(result.first.question.id, 'q1');
       expect(result.first.score, greaterThan(result.last.score));
     });
 
-    test('prioritizes questions with confidence gaps', () {
+    test('prioritizes questions with confidence gaps', () async {
       final now = DateTime.now();
       final questions = [
         _createQuestion(id: 'q1', topicId: 't1'),
@@ -103,13 +103,13 @@ void main() {
       final scorer = ReadinessScorer(
         questionMasteryMap: questionMasteryMap,
       );
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(2));
       expect(result.first.question.id, 'q2');
     });
 
-    test('prioritizes questions not attempted recently', () {
+    test('prioritizes questions not attempted recently', () async {
       final now = DateTime.now();
       final questions = [
         _createQuestion(id: 'q1'),
@@ -134,21 +134,21 @@ void main() {
       final scorer = ReadinessScorer(
         questionMasteryMap: questionMasteryMap,
       );
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(2));
       expect(result.first.question.id, 'q1');
     });
 
-    test('assigns default scores for unknown topics and questions', () {
+    test('assigns default scores for unknown topics and questions', () async {
       final questions = [_createQuestion()];
       final scorer = ReadinessScorer();
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result.first.score, greaterThan(0));
     });
 
-    test('sorts by score descending', () {
+    test('sorts by score descending', () async {
       final now = DateTime.now();
       final questions = List.generate(5, (i) => _createQuestion(
         id: 'q$i',
@@ -177,7 +177,7 @@ void main() {
       };
 
       final scorer = ReadinessScorer(topicMasteryMap: topicMasteryMap);
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(5));
       for (var i = 0; i < result.length - 1; i++) {
@@ -185,7 +185,7 @@ void main() {
       }
     });
 
-    test('handles empty mastery maps gracefully', () {
+    test('handles empty mastery maps gracefully', () async {
       final questions = [
         _createQuestion(id: 'q1'),
         _createQuestion(id: 'q2'),
@@ -193,12 +193,12 @@ void main() {
       ];
 
       final scorer = ReadinessScorer();
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
 
       expect(result, hasLength(3));
     });
 
-    test('ScoredQuestion carries mastery data', () {
+    test('ScoredQuestion carries mastery data', () async {
       final now = DateTime.now();
       final topicMastery = MasteryState(
         studentId: 's1',
@@ -218,7 +218,7 @@ void main() {
         questionMasteryMap: {'q1': questionMastery},
       );
 
-      final result = scorer.scoreQuestions(questions);
+      final result = await scorer.scoreQuestions(questions);
       expect(result.first.topicMastery, isNotNull);
       expect(result.first.questionMastery, isNotNull);
     });

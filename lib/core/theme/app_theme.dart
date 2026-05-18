@@ -74,7 +74,6 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           elevation: 0,
-          disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
@@ -181,7 +180,9 @@ class AppTheme {
       brightness: Brightness.light,
       contrastLevel: 1.0,
     );
-    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize).copyWith(
+    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    final baseInputTheme = base.inputDecorationTheme;
+    return base.copyWith(
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,
         thickness: 2,
@@ -196,15 +197,35 @@ class AppTheme {
         color: colorScheme.surfaceContainerHighest,
         surfaceTintColor: Colors.transparent,
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: baseInputTheme.copyWith(
+        filled: true,
+        fillColor: baseInputTheme.fillColor,
+        labelStyle: baseInputTheme.labelStyle,
+        hintStyle: baseInputTheme.hintStyle,
+        errorStyle: baseInputTheme.errorStyle,
         border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.outline, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.outline, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.12), width: 2),
         ),
       ),
     );
@@ -250,7 +271,7 @@ class AppTheme {
     final cs = Theme.of(context).colorScheme;
     return switch (status) {
       LlmTaskStatus.running => cs.primary,
-      LlmTaskStatus.done => Colors.green,
+      LlmTaskStatus.done => cs.primary,
       LlmTaskStatus.failed => cs.error,
       LlmTaskStatus.cancelled => cs.tertiary,
       LlmTaskStatus.queued => cs.onSurfaceVariant,
@@ -263,7 +284,9 @@ class AppTheme {
       brightness: Brightness.dark,
       contrastLevel: 1.0,
     );
-    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize).copyWith(
+    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    final baseInputTheme = base.inputDecorationTheme;
+    return base.copyWith(
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,
         thickness: 2,
@@ -278,15 +301,35 @@ class AppTheme {
         color: colorScheme.surfaceContainerHighest,
         surfaceTintColor: Colors.transparent,
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: baseInputTheme.copyWith(
+        filled: true,
+        fillColor: baseInputTheme.fillColor,
+        labelStyle: baseInputTheme.labelStyle,
+        hintStyle: baseInputTheme.hintStyle,
+        errorStyle: baseInputTheme.errorStyle,
         border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.outline, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.outline, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.12), width: 2),
         ),
       ),
     );

@@ -229,7 +229,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           _saveMessage = l10n.drawingSaved;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to save drawing', e);
       if (mounted) {
         setState(() {
           _saveMessage = l10n.failedToSaveDrawing;
@@ -279,8 +280,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       if (loadedStrokes.isNotEmpty) {
         _strokes.addAll(loadedStrokes);
       }
-    } catch (_) {
-      _logger.w('Invalid initial drawing payload');
+    } catch (e) {
+      _logger.w('Invalid initial drawing payload', e);
     }
   }
 }

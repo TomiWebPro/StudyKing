@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
@@ -31,6 +32,15 @@ const _kNoSubjects = 'No Subjects';
 const _kNoReviewsScheduled = 'No reviews scheduled.';
 const _kNoTopicsAvailable = 'No topics available';
 const _kNoWeakAreasFound = 'No weak areas found. Keep up the great work!';
+const _kExamMode = 'Exam Mode';
+const _kSourcePractice = 'Source Practice';
+const _kAtRiskQuestions = 'At-Risk Questions';
+const _kQuestionsToday = 'Questions Today';
+const _kDueForReview = 'Due for Review';
+const _kSubjects = 'Subjects';
+const _kRetry = 'Retry';
+const _kNoQuestionsPracticeHint = 'Add questions to start practicing.';
+const _kUploadMaterials = 'Upload Materials';
 
 class _FakeSubjectBox {
   final Map<String, Subject> _storage = {};
@@ -39,12 +49,44 @@ class _FakeSubjectBox {
   void clear() => _storage.clear();
 }
 
+Question _makeQuestion({String id = 'q1', String subjectId = '1', String topicId = 't1'}) {
+  final now = DateTime.now();
+  return Question(
+    id: id,
+    text: 'Question',
+    type: QuestionType.typedAnswer,
+    subjectId: subjectId,
+    topicId: topicId,
+    markscheme: null,
+    createdAt: now,
+    updatedAt: now,
+  );
+}
+
 class _FakeSubjectRepository extends SubjectRepository {
   final _FakeSubjectBox _box;
   _FakeSubjectRepository(this._box);
 
   @override
   Future<Result<List<Subject>>> getAll() async => Result.success(_box.values.toList());
+}
+
+class _FailingSubjectRepository extends SubjectRepository {
+  _FailingSubjectRepository();
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.failure('Load failed');
+}
+
+class _FakeAttemptRepository extends AttemptRepository {
+  final List<StudentAttempt> attempts;
+
+  _FakeAttemptRepository([this.attempts = const []]);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(attempts);
+  }
 }
 
 class _FakeQuestionRepository extends QuestionRepository {
@@ -123,15 +165,22 @@ Widget _buildTestApp({
   MasteryGraphService? masteryService,
   NavigatorObserver? navigatorObserver,
   Map<String, int>? srDueCounts,
+  AttemptRepository? attemptRepo,
+  bool showNoQuestionsBanner = false,
 }) {
   final dueCounts = srDueCounts ?? <String, int>{};
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(subjectRepo)),
       subjectRepositoryProvider.overrideWithValue(subjectRepo),
-      questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
+      questionRepositoryProvider.overrideWithValue(
+        questionRepo ?? (showNoQuestionsBanner
+            ? _FakeQuestionRepository([])
+            : _FakeQuestionRepository([_makeQuestion()])),
+      ),
       spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepository(dueCounts)),
       spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService(dueCounts)),
+      attemptRepositoryProvider.overrideWithValue(attemptRepo ?? _FakeAttemptRepository()),
       if (masteryService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryService),
     ],
@@ -180,8 +229,9 @@ void main() {
       final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics'));
       final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([_makeQuestion()]);
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, questionRepo: qRepo));
       await tester.pumpAndSettle();
 
       expect(find.text(_kPracticeModes), findsOneWidget);
@@ -195,8 +245,9 @@ void main() {
       final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Mathematics'));
       final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([_makeQuestion()]);
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, questionRepo: qRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Mathematics'), findsAtLeast(1));
@@ -206,8 +257,9 @@ void main() {
       final box = _FakeSubjectBox();
       box.addSubject(_subject(id: '1', name: 'Physics'));
       final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([_makeQuestion()]);
 
-      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo, questionRepo: qRepo));
       await tester.pumpAndSettle();
 
       expect(find.byType(FloatingActionButton), findsOneWidget);
@@ -539,8 +591,191 @@ void main() {
 
       expect(find.text('Exam Mode'), findsOneWidget);
       expect(find.text('Source Practice'), findsOneWidget);
+      expect(find.text(_kAtRiskQuestions), findsOneWidget);
       final extraCards = find.byType(Card);
       expect(extraCards, findsAtLeast(2));
+    });
+  });
+
+  group('PracticeScreen - error state', () {
+    testWidgets('shows error UI with retry button on load failure', (tester) async {
+      final failingRepo = _FailingSubjectRepository();
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: failingRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text(_kRetry), findsOneWidget);
+      expect(find.text('Load failed'), findsOneWidget);
+    });
+
+    testWidgets('retry button triggers reload', (tester) async {
+      final failingRepo = _FailingSubjectRepository();
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: failingRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+
+      // Verify retry button exists and is tappable
+      final retryButton = find.text(_kRetry);
+      expect(retryButton, findsOneWidget);
+    });
+  });
+
+  group('PracticeScreen - no questions banner', () {
+    testWidgets('shows no-questions banner when questions exist in repo but empty', (tester) async {
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([]);
+
+      await tester.pumpWidget(_buildTestApp(
+        subjectRepo: repo,
+        questionRepo: qRepo,
+        showNoQuestionsBanner: true,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Math'), findsWidgets);
+      expect(find.text(_kNoQuestionsPracticeHint), findsOneWidget);
+      expect(find.text(_kUploadMaterials), findsOneWidget);
+    });
+  });
+
+  group('PracticeScreen - summary row', () {
+    testWidgets('shows summary row with stats', (tester) async {
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_kQuestionsToday), findsOneWidget);
+      expect(find.text(_kDueForReview), findsOneWidget);
+      expect(find.byIcon(Icons.today), findsOneWidget);
+      expect(find.byIcon(Icons.schedule), findsOneWidget);
+      expect(find.byIcon(Icons.book), findsOneWidget);
+    });
+  });
+
+  group('PracticeScreen - exam mode', () {
+    testWidgets('exam mode shows subject selection sheet with multiple subjects', (tester) async {
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      box.addSubject(_subject(id: '2', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_kExamMode));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Math'), findsWidgets);
+      expect(find.text('Physics'), findsWidgets);
+    });
+
+    testWidgets('exam mode navigates directly with single subject', (tester) async {
+      int pushCount = 0;
+      final observer = TestNavigatorObserver(
+        onPush: (_) { pushCount++; },
+      );
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(
+        subjectRepo: repo,
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_kExamMode));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(pushCount, greaterThan(0));
+    });
+  });
+
+  group('PracticeScreen - quick practice from FAB', () {
+    testWidgets('FAB tap shows subject selector', (tester) async {
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      box.addSubject(_subject(id: '2', name: 'Physics'));
+      final repo = _FakeSubjectRepository(box);
+
+      await tester.pumpWidget(_buildTestApp(subjectRepo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_kPractice));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Math'), findsWidgets);
+      expect(find.text('Physics'), findsWidgets);
+    });
+  });
+
+  group('PracticeScreen - weak areas with attempts', () {
+    testWidgets('weak areas navigates when sufficient attempts exist', (tester) async {
+      final now = DateTime.now();
+      final attempts = <StudentAttempt>[
+        for (int i = 0; i < 10; i++)
+          StudentAttempt(
+            id: 'a$i',
+            studentId: 'test',
+            questionId: 'q$i',
+            subjectId: '1',
+            isCorrect: true,
+            timestamp: now,
+          ),
+      ];
+      final attemptRepo = _FakeAttemptRepository(attempts);
+      final masteryService = _FakeMasteryGraphService();
+
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(repo)),
+            subjectRepositoryProvider.overrideWithValue(repo),
+            questionRepositoryProvider.overrideWithValue(qRepo),
+            attemptRepositoryProvider.overrideWithValue(attemptRepo),
+            spacedRepetitionRepositoryProvider.overrideWithValue(_FakeSpacedRepetitionRepository({})),
+            spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService({})),
+            masteryGraphServiceProvider.overrideWithValue(masteryService),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const PracticeScreen(),
+            onGenerateRoute: (settings) {
+              if (settings.name == '/practice-session') {
+                return MaterialPageRoute(
+                  builder: (_) => const Scaffold(body: Text('Practice Session')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_kWeakAreas));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text(_kNoWeakAreasFound), findsOneWidget);
     });
   });
 }

@@ -24,7 +24,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('10'), findsOneWidget);
-      expect(find.text('7/10'), findsOneWidget);
+      expect(find.text('Correct: 7/10'), findsOneWidget);
       expect(find.text('70%'), findsOneWidget);
     });
 
@@ -96,6 +96,80 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session Results'), findsOneWidget);
+    });
+
+    testWidgets('renders topic breakdown entries', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeResultsScreen(
+          totalQuestions: 10,
+          correctAnswers: 7,
+          onPracticeAgain: () {},
+          topicBreakdown: {'Algebra': 0.8, 'Geometry': 0.6},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Topic Breakdown'), findsOneWidget);
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Geometry'), findsOneWidget);
+      expect(find.text('80%'), findsOneWidget);
+      expect(find.text('60%'), findsOneWidget);
+    });
+
+    testWidgets('does not show topic breakdown section when empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeResultsScreen(
+          totalQuestions: 10,
+          correctAnswers: 7,
+          onPracticeAgain: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Topic Breakdown'), findsNothing);
+    });
+
+    testWidgets('renders all stat rows', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeResultsScreen(
+          totalQuestions: 10,
+          correctAnswers: 7,
+          onPracticeAgain: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total Questions'), findsOneWidget);
+      expect(find.text('Correct Answers'), findsOneWidget);
+      expect(find.text('Accuracy'), findsOneWidget);
+    });
+
+    testWidgets('contains semantics merge and FocusTraversalOrder', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeResultsScreen(
+          totalQuestions: 5,
+          correctAnswers: 3,
+          onPracticeAgain: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MergeSemantics), findsAtLeastNWidgets(1));
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(1));
+      expect(find.byType(FocusTraversalOrder), findsOneWidget);
+    });
+
+    testWidgets('shows practice complete title', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeResultsScreen(
+          totalQuestions: 5,
+          correctAnswers: 3,
+          onPracticeAgain: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Practice Complete!'), findsOneWidget);
     });
   });
 }

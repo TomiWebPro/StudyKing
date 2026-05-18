@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
@@ -9,10 +10,28 @@ import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dar
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 final _today = DateTime.now();
+
+class _FakeSubjectRepo extends SubjectRepository {
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success([]);
+}
+
+class _TestSubjectsNotifier extends SubjectsRepositoryNotifier {
+  final SubjectRepository repo;
+  _TestSubjectsNotifier(this.repo);
+
+  @override
+  Future<SubjectRepository> build() async {
+    state = AsyncValue.data(repo);
+    return repo;
+  }
+}
 final _todayStart = DateTime(_today.year, _today.month, _today.day);
 
 class FakeSessionRepository extends SessionRepository {
@@ -254,6 +273,7 @@ Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigato
         studyTimerServiceProvider.overrideWithValue(serviceOverride)
       else
         studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
+      subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -269,6 +289,7 @@ Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) 
     overrides: [
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
       studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
+      subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -277,6 +298,16 @@ Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) 
       home: widget,
     ),
   );
+}
+
+Future<void> _pumpAndSwitchToTimer(WidgetTester tester, Widget widget, {TestNavigatorObserver? navigatorObserver}) async {
+  await tester.pumpWidget(_buildTestApp(widget, navigatorObserver: navigatorObserver));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+  // The screen defaults to study hub mode; switch to timer mode
+  await tester.tap(find.byType(Switch));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 void main() {
@@ -291,22 +322,14 @@ void main() {
     });
 
     testWidgets('shows setup view after initialization', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.text('New Focus Session'), findsOneWidget);
       expect(find.text('Duration'), findsOneWidget);
     });
 
     testWidgets('shows duration preset chips', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.text('5m'), findsOneWidget);
       expect(find.text('15m'), findsOneWidget);
@@ -317,21 +340,13 @@ void main() {
     });
 
     testWidgets('shows focus button with default duration', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.text('Focus for 25 minutes'), findsOneWidget);
     });
 
     testWidgets('changes selected duration when chip is tapped', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('45m'));
       await tester.pump();
@@ -340,61 +355,37 @@ void main() {
     });
 
     testWidgets('shows SessionSummaryCard', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.text('Focus Time'), findsOneWidget);
     });
 
     testWidgets('shows refresh button in app bar', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
 
     testWidgets('accepts preselectedSubjectId parameter', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(preselectedSubjectId: 'subj-1'),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen(preselectedSubjectId: 'subj-1'));
 
       expect(find.text('New Focus Session'), findsOneWidget);
     });
 
     testWidgets('accepts preselectedTopicId parameter', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(preselectedTopicId: 'topic-1'),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen(preselectedTopicId: 'topic-1'));
 
       expect(find.text('New Focus Session'), findsOneWidget);
     });
 
     testWidgets('accepts defaultDurationMinutes parameter', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(defaultDurationMinutes: 45),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen(defaultDurationMinutes: 45));
 
       expect(find.text('New Focus Session'), findsOneWidget);
     });
 
     testWidgets('25min chip is selected by default', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       final chip = tester.widget<ChoiceChip>(
         find.ancestor(
@@ -406,11 +397,7 @@ void main() {
     });
 
     testWidgets('non-default chips are not selected', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       final chip5 = tester.widget<ChoiceChip>(
         find.ancestor(
@@ -422,11 +409,7 @@ void main() {
     });
 
     testWidgets('setup to active session flow renders correctly', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.text('New Focus Session'), findsOneWidget);
 
@@ -440,11 +423,7 @@ void main() {
     });
 
     testWidgets('pauses and resumes session correctly', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -463,11 +442,7 @@ void main() {
     });
 
     testWidgets('completes session and shows break view', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -483,11 +458,7 @@ void main() {
     });
 
     testWidgets('break view shows icons and session info', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -502,11 +473,7 @@ void main() {
     });
 
     testWidgets('break timer countdown updates after each tick', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -527,11 +494,7 @@ void main() {
     });
 
     testWidgets('break ends and returns to setup after timer expires', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -552,11 +515,7 @@ void main() {
     });
 
     testWidgets('shows exit confirmation dialog when back is pressed during active session', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -575,11 +534,7 @@ void main() {
     });
 
     testWidgets('stay button keeps session active', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -597,11 +552,7 @@ void main() {
     });
 
     testWidgets('end session button cancels session and returns to setup', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -620,11 +571,7 @@ void main() {
     });
 
     testWidgets('cancel session returns to setup view', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
@@ -646,6 +593,10 @@ void main() {
         const FocusTimerScreen(),
         serviceOverride: capService,
       ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byType(Switch));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -672,6 +623,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
       await tester.tap(find.text('Focus for 25 minutes'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -689,15 +644,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
       expect(find.byType(Slider), findsOneWidget);
     });
 
     testWidgets('hides slider on mobile width', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen());
 
       expect(find.byType(Slider), findsNothing);
     });
@@ -711,6 +666,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
       expect(find.text('1h 0m'), findsOneWidget);
       expect(find.text('2h 0m'), findsOneWidget);
       expect(find.text('2/3'), findsOneWidget);
@@ -719,24 +678,14 @@ void main() {
 
     testWidgets('navigator observes no pops initially', (tester) async {
       final observer = TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-        navigatorObserver: observer,
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen(), navigatorObserver: observer);
 
       expect(observer.poppedRoutes, isEmpty);
     });
 
     testWidgets('navigator pops via system back', (tester) async {
       final observer = TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestApp(
-        const FocusTimerScreen(),
-        navigatorObserver: observer,
-      ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpAndSwitchToTimer(tester, const FocusTimerScreen(), navigatorObserver: observer);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();

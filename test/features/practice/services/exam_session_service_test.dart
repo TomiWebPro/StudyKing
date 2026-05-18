@@ -18,6 +18,7 @@ class _FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     sessions.add(session);
     return Result.success(null);

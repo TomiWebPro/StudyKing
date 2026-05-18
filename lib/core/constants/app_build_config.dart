@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:studyking/core/errors/exceptions.dart';
 
 enum AppEnvironment { development, staging, production }
 
@@ -28,7 +29,7 @@ class BuildConfig {
         return AppEnvironment.development;
       default:
         if (kReleaseMode) {
-          throw ArgumentError('Unknown APP_ENV value: $env');
+          throw AppException(message: 'Unknown APP_ENV value: $env', type: ExceptionType.validation);
         }
         return AppEnvironment.development;
     }
@@ -38,13 +39,13 @@ class BuildConfig {
     final env = environment;
     if (!kReleaseMode) return;
     if (appVersion == '1.0.0') {
-      throw ArgumentError('APP_VERSION must be set in release builds.');
+      throw AppException(message: 'APP_VERSION must be set in release builds.', type: ExceptionType.validation);
     }
     if (appBuildNumber == '1') {
-      throw ArgumentError('APP_BUILD_NUMBER must be set in release builds.');
+      throw AppException(message: 'APP_BUILD_NUMBER must be set in release builds.', type: ExceptionType.validation);
     }
     if (env == AppEnvironment.development) {
-      throw ArgumentError('Release mode cannot run with development APP_ENV.');
+      throw AppException(message: 'Release mode cannot run with development APP_ENV.', type: ExceptionType.validation);
     }
   }
 }

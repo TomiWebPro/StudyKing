@@ -13,6 +13,14 @@ class OnboardingDialog extends StatefulWidget {
 class _OnboardingDialogState extends State<OnboardingDialog> {
   bool _dontShowAgain = false;
 
+  Future<void> _completeOnboarding() async {
+    if (_dontShowAgain) {
+      await OnboardingService.markDontShowAgain();
+    } else {
+      await OnboardingService.markCompleted();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -39,7 +47,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
             const SizedBox(height: 8),
             _buildFeature(l10n.mentor, l10n.onboardingMentorDesc, Icons.auto_awesome),
             const SizedBox(height: 8),
-            _buildFeature(l10n.focusMode, l10n.onboardingFocusDesc, Icons.timer),
+            _buildFeature(l10n.focusMode, l10n.onboardingFocusDesc, Icons.menu_book),
             const SizedBox(height: 8),
             _buildFeature(l10n.settings, l10n.onboardingSettingsDesc, Icons.settings),
             const SizedBox(height: 16),
@@ -76,39 +84,23 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
+              FilledButton.icon(
                 onPressed: () async {
-                  if (_dontShowAgain) {
-                    await OnboardingService.markDontShowAgain();
-                  } else {
-                    await OnboardingService.markCompleted();
-                  }
+                  await _completeOnboarding();
                   if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.subjectSelection);
                 },
-                child: Text(l10n.addSubject),
+                icon: const Icon(Icons.rocket_launch),
+                label: Text(l10n.getStarted),
               ),
               const SizedBox(width: 8),
               TextButton(
                 onPressed: () async {
-                  if (_dontShowAgain) {
-                    await OnboardingService.markDontShowAgain();
-                  } else {
-                    await OnboardingService.markCompleted();
-                  }
+                  await _completeOnboarding();
                   if (!context.mounted) return;
                   Navigator.pushNamed(context, AppRoutes.quickGuide);
                 },
                 child: Text(l10n.quickGuide),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () async {
-                  await OnboardingService.markCompleted();
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.getStarted),
               ),
             ],
           ),
@@ -153,21 +145,34 @@ class ApiKeyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return MaterialBanner(
-      content: Text(l10n.apiKeyNeeded),
-      leading: const Icon(Icons.key, color: Colors.orange),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pushNamed(context, AppRoutes.apiConfig);
-          },
-          child: Text(l10n.configureNow),
-        ),
-        TextButton(
-          onPressed: onDismiss,
-          child: Text(l10n.dismiss),
-        ),
-      ],
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+      child: Row(
+        children: [
+          const Icon(Icons.key, color: Colors.orange, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.apiKeyNeeded,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.apiConfig);
+            },
+            child: Text(l10n.configureNow),
+          ),
+          TextButton(
+            onPressed: onDismiss,
+            child: Text(l10n.dismiss),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -180,7 +185,11 @@ class LocalDataNotice extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(l10n.dataStorageNotice),
-      content: Text(l10n.dataStorageDescription),
+      content: SingleChildScrollView(
+        child: SafeArea(
+          child: Text(l10n.dataStorageDescription),
+        ),
+      ),
       actions: [
         FilledButton(
           onPressed: () => Navigator.pop(context),

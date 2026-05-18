@@ -95,6 +95,11 @@ class MasteryGraphService {
     return questionMasteryRepo.getQuestionMasteryState(studentId, questionId);
   }
 
+  Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(
+      String studentId) {
+    return questionMasteryRepo.getAllForStudent(studentId);
+  }
+
   Future<Result<List<QuestionMasteryState>>> getQuestionsDueForReview(
     String studentId, {
     DateTime? asOf,

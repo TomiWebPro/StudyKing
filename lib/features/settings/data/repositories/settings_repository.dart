@@ -6,6 +6,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
 import '../models/user_profile_model.dart';
+import 'package:studyking/core/errors/exceptions.dart';
 
 /// Real implementation of settings repository using Hive storage
 class SettingsRepository {
@@ -17,7 +18,7 @@ class SettingsRepository {
   Box _requireSettingsBox() {
     final box = _settingsBox;
     if (box == null) {
-      throw StateError('SettingsRepository not initialized');
+      throw AppException(message: 'SettingsRepository not initialized', type: ExceptionType.database);
     }
     return box;
   }
@@ -25,7 +26,7 @@ class SettingsRepository {
   Box _requireProfileBox() {
     final box = _profileBox;
     if (box == null) {
-      throw StateError('SettingsRepository not initialized');
+      throw AppException(message: 'SettingsRepository not initialized', type: ExceptionType.database);
     }
     return box;
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 
 void main() {
   group('AppRoutes', () {
@@ -120,11 +119,18 @@ void main() {
         topicId: 't1',
         questionCount: 20,
         isSpacedRepetition: true,
+        orderedQuestionIds: ['q1', 'q2'],
       );
       expect(args.subjectId, 's1');
       expect(args.topicId, 't1');
       expect(args.questionCount, 20);
       expect(args.isSpacedRepetition, true);
+      expect(args.orderedQuestionIds, ['q1', 'q2']);
+    });
+
+    test('orderedQuestionIds defaults to null', () {
+      final args = const PracticeSessionArgs(subjectId: 's1');
+      expect(args.orderedQuestionIds, isNull);
     });
 
     test('questionCount defaults to 10', () {

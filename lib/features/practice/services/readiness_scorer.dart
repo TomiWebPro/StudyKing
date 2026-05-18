@@ -1,6 +1,9 @@
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class ScoredQuestion {
   final Question question;
@@ -8,7 +11,7 @@ class ScoredQuestion {
   final MasteryState? topicMastery;
   final QuestionMasteryState? questionMastery;
 
-  ScoredQuestion({
+  const ScoredQuestion({
     required this.question,
     required this.score,
     this.topicMastery,
@@ -17,8 +20,13 @@ class ScoredQuestion {
 }
 
 class ReadinessScorer {
-  final Map<String, MasteryState> _topicMasteryMap;
-  final Map<String, QuestionMasteryState> _questionMasteryMap;
+  final Logger _logger = const Logger('ReadinessScorer');
+  Map<String, MasteryState> _topicMasteryMap = {};
+  Map<String, QuestionMasteryState> _questionMasteryMap = {};
+  bool _dataLoaded = false;
+
+  final MasteryGraphService? _masteryService;
+  final StudentIdService? _studentIdService;
 
   static const double urgencyWeight = 0.4;
   static const double readinessInverseWeight = 0.3;
@@ -28,10 +36,50 @@ class ReadinessScorer {
   ReadinessScorer({
     Map<String, MasteryState>? topicMasteryMap,
     Map<String, QuestionMasteryState>? questionMasteryMap,
-  })  : _topicMasteryMap = topicMasteryMap ?? {},
-        _questionMasteryMap = questionMasteryMap ?? {};
+    MasteryGraphService? masteryService,
+    StudentIdService? studentIdService,
+  })  : _masteryService = masteryService,
+        _studentIdService = studentIdService {
+    if (topicMasteryMap != null) {
+      _topicMasteryMap = topicMasteryMap;
+      _dataLoaded = true;
+    }
+    if (questionMasteryMap != null) {
+      _questionMasteryMap = questionMasteryMap;
+      _dataLoaded = true;
+    }
+  }
 
-  List<ScoredQuestion> scoreQuestions(List<Question> questions) {
+  Future<void> _ensureDataLoaded() async {
+    if (_dataLoaded) return;
+    if (_masteryService == null || _studentIdService == null) return;
+    _dataLoaded = true;
+
+    try {
+      await _masteryService.init();
+      final studentId = _studentIdService.getStudentId();
+
+      final topicResult = await _masteryService.getAllTopicMastery(studentId);
+      if (topicResult.isSuccess && topicResult.data != null) {
+        for (final state in topicResult.data!) {
+          _topicMasteryMap[state.topicId] = state;
+        }
+      }
+
+      final questionResult =
+          await _masteryService.getAllQuestionMastery(studentId);
+      if (questionResult.isSuccess && questionResult.data != null) {
+        for (final state in questionResult.data!) {
+          _questionMasteryMap[state.questionId] = state;
+        }
+      }
+    } catch (e) {
+      _logger.w('Error loading mastery data', e);
+    }
+  }
+
+  Future<List<ScoredQuestion>> scoreQuestions(List<Question> questions) async {
+    await _ensureDataLoaded();
     if (questions.isEmpty) return [];
 
     final scored = questions.map((q) {

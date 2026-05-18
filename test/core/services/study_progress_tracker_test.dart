@@ -26,13 +26,14 @@ class FakeAttemptRepository extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return _attempts.where((a) => a.studentId == studentId).toList();
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(_attempts.where((a) => a.studentId == studentId).toList());
   }
 
   @override
-  Future<void> create(StudentAttempt attempt) async {
+  Future<Result<void>> create(StudentAttempt attempt) async {
     _attempts.add(attempt);
+    return Result.success(null);
   }
 
   @override
@@ -46,23 +47,23 @@ class FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(String studentId, String subjectId) async {
-    return _attempts.where((a) => a.studentId == studentId && a.subjectId == subjectId).toList();
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async {
+    return Result.success(_attempts.where((a) => a.studentId == studentId && a.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
-    return _attempts.where((a) => a.questionId == questionId).toList();
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.success(_attempts.where((a) => a.questionId == questionId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getBySubject(String subjectId) async {
-    return _attempts.where((a) => a.subjectId == subjectId).toList();
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    return Result.success(_attempts.where((a) => a.subjectId == subjectId).toList());
   }
 
   @override
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async {
-    return {};
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    return Result.success({});
   }
 
   @override

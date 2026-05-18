@@ -94,8 +94,8 @@ class _FakeAttemptRepository extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success([]);
   }
 }
 
@@ -206,7 +206,7 @@ class FakeTopicRepository extends TopicRepository {
   FakeTopicRepository({this.topic, this.failGet = false, this.returnNull = false, this.allTopics});
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Topic?>> get(String id) async {

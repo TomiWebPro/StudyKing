@@ -14,8 +14,9 @@ class _FakeReadinessTopicRepository extends TopicRepository {
   void addTopic(Topic topic) => _topics.add(topic);
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (shouldThrow) throw Exception('Init failed');
+    return Result.success(null);
   }
 
   @override
@@ -26,8 +27,8 @@ class _FakeReadinessTopicRepository extends TopicRepository {
   Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async {
-    return _topics.where((t) => t.subjectId == subjectId).toList();
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
+    return Result.success(_topics.where((t) => t.subjectId == subjectId).toList());
   }
 }
 
@@ -35,13 +36,6 @@ class _FakeReadinessMasteryRepo extends MasteryGraphRepository {
   final List<MasteryState> _states = [];
   final List<TopicDependency> _deps = [];
   bool failOnStates = false;
-
-  _FakeReadinessMasteryRepo() : super(
-    masteryStateRepo: null,
-    questionMasteryRepo: null,
-    topicDependencyRepo: null,
-    questionEvaluationRepo: null,
-  );
 
   void addState(MasteryState state) => _states.add(state);
   void addDependency(TopicDependency dep) => _deps.add(dep);

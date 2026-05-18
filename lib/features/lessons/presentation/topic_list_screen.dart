@@ -36,6 +36,7 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
       });
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         AppErrorHandler.handleError(
           context,
           e,

@@ -39,28 +39,30 @@ class _FakePlanRepository extends PlanRepository {
   }
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     _storage[plan.studentId] = plan;
+    return Result.success(null);
   }
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return _storage[studentId];
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.success(_storage[studentId]);
   }
 
   @override
-  Future<bool> hasPlan(String studentId) async {
-    return _storage.containsKey(studentId);
+  Future<Result<bool>> hasPlan(String studentId) async {
+    return Result.success(_storage.containsKey(studentId));
   }
 
   @override
-  Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return _storage.values.toList();
+  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deletePlan(String studentId) async {
+  Future<Result<void>> deletePlan(String studentId) async {
     _storage.remove(studentId);
+    return Result.success(null);
   }
 }
 
@@ -107,7 +109,7 @@ class _FakeMasteryGraphRepository extends MasteryGraphRepository {
 
 class _FakeTopicRepository extends TopicRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Topic?>> get(String id) async => Result.success(null);
@@ -130,34 +132,38 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   }
 
   @override
-  Future<void> saveRoadmap(RoadmapModel roadmap) async {
+  Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {
     if (failOnSave) throw Exception('Save failed');
     _storage[roadmap.id] = roadmap;
+    return Result.success(null);
   }
 
   @override
-  Future<RoadmapModel?> loadRoadmap(String id) async {
-    return _storage[id];
+  Future<Result<RoadmapModel?>> loadRoadmap(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
+  Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(String studentId) async {
     if (loadCompleter != null) await loadCompleter!.future;
     if (failOnGet) throw Exception('Get failed');
-    return _storage.values
-        .where((r) => r.studentId == studentId)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return Result.success(
+      _storage.values
+          .where((r) => r.studentId == studentId)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    );
   }
 
   @override
-  Future<List<RoadmapModel>> getAllRoadmaps() async {
-    return _storage.values.toList();
+  Future<Result<List<RoadmapModel>>> getAllRoadmaps() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deleteRoadmap(String id) async {
+  Future<Result<void>> deleteRoadmap(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 }
 
@@ -478,8 +484,8 @@ void main() {
         expect(find.text('3600 min'), findsOneWidget);
 
         final plan = await planRepo.getAllPlans();
-        expect(plan, hasLength(1));
-        expect(plan.first.studentId, 'test-student');
+        expect(plan.data, hasLength(1));
+        expect(plan.data!.first.studentId, 'test-student');
       });
 
       testWidgets('shows error container when plan generation fails', (tester) async {
@@ -1150,7 +1156,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         final roadmaps = await roadmapRepo.getAllRoadmaps();
-        expect(roadmaps, isEmpty);
+        expect(roadmaps.data, isEmpty);
       });
 
       testWidgets('submitting empty goal cancels creation', (tester) async {
@@ -1173,7 +1179,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         final roadmaps = await roadmapRepo.getAllRoadmaps();
-        expect(roadmaps, isEmpty);
+        expect(roadmaps.data, isEmpty);
       });
 
       testWidgets('submitting valid goal creates a roadmap', (tester) async {
@@ -1200,8 +1206,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         final roadmaps = await roadmapRepo.getAllRoadmaps();
-        expect(roadmaps, hasLength(1));
-        expect(roadmaps.first.goal, 'Learn IB Physics in 180 days');
+        expect(roadmaps.data, hasLength(1));
+        expect(roadmaps.data!.first.goal, 'Learn IB Physics in 180 days');
       });
 
       testWidgets('roadmap card renders status badge, progress bar, milestone count, target date', (tester) async {

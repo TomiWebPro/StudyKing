@@ -27,13 +27,14 @@ class FakeConversationRepository extends ConversationRepository {
   final List<ConversationMessage> _messages = [];
 
   @override
-  Future<void> saveMessage(ConversationMessage message) async {
+  Future<Result<void>> saveMessage(ConversationMessage message) async {
     _messages.add(message);
+    return Result.success(null);
   }
 
   @override
-  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
-    return _messages.where((m) => m.sessionId == sessionId).toList();
+  Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
+    return Result.success(_messages.where((m) => m.sessionId == sessionId).toList());
   }
 }
 
@@ -41,20 +42,22 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
   final List<TutorSession> _sessions = [];
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> saveSession(TutorSession session) async {
     _sessions.add(session);
+    return Result.success(null);
   }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _sessions.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
+    return Result.success(_sessions.where((s) => s.studentId == studentId).toList());
   }
 
   @override
-  Future<Map<String, dynamic>> getSessionStats(String studentId) async {
-    final sessions = await getStudentSessions(studentId);
+  Future<Result<Map<String, dynamic>>> getSessionStats(String studentId) async {
+    final sessionsResult = await getStudentSessions(studentId);
+    final sessions = sessionsResult.data!;
     final completed = sessions.where((s) => s.status == SessionStatus.completed);
-    return {
+    return Result.success({
       'totalSessions': sessions.length,
       'completedSessions': completed.length,
       'totalHours': completed.fold<double>(0, (sum, s) => sum + (s.startTime.difference(s.startTime).inMinutes / 60.0)),
@@ -62,12 +65,12 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
       'averageAccuracy': completed.isEmpty
           ? 0.0
           : completed.fold<double>(0, (sum, s) => sum + s.accuracy) / completed.length,
-    };
+    });
   }
 
   @override
-  Future<List<TutorSession>> getActiveSessions() async {
-    return _sessions.where((s) => s.status == SessionStatus.inProgress).toList();
+  Future<Result<List<TutorSession>>> getActiveSessions() async {
+    return Result.success(_sessions.where((s) => s.status == SessionStatus.inProgress).toList());
   }
 }
 
@@ -193,6 +196,7 @@ class FakeSessionRepository extends SessionRepository {
 
   List<Session> get savedSessions => List.unmodifiable(_savedSessions);
 
+  @override
   @override
   Future<Result<void>> save(String key, Session session) async {
     _savedSessions.add(session);

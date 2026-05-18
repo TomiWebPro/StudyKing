@@ -10,7 +10,8 @@ class _TestSessionQueryContract implements SessionQueryContract {
   Future<void> init() async {}
 
   @override
-  Future<Result<void>> save(Session session) async {
+  @override
+  Future<Result<void>> save(String key, Session session) async {
     _store[session.id] = session;
     return Result.success(null);
   }
@@ -97,7 +98,7 @@ void main() {
     group('save and get', () {
       test('saves and retrieves a session', () async {
         final session = _createSession(id: 's1');
-        await contract.save(session);
+        await contract.save(session.id, session);
         final result = await contract.get('s1');
         expect(result.data, isNotNull);
         expect(result.data!.id, 's1');
@@ -116,8 +117,10 @@ void main() {
       });
 
       test('returns all saved sessions', () async {
-        await contract.save(_createSession(id: 's1'));
-        await contract.save(_createSession(id: 's2'));
+        final s1 = _createSession(id: 's1');
+        await contract.save(s1.id, s1);
+        final s2 = _createSession(id: 's2');
+        await contract.save(s2.id, s2);
         final result = await contract.getAll();
         expect(result.data!.length, 2);
       });
@@ -125,8 +128,10 @@ void main() {
 
     group('getByStudent', () {
       test('returns sessions for specific student', () async {
-        await contract.save(_createSession(id: 's1', studentId: 'stu1'));
-        await contract.save(_createSession(id: 's2', studentId: 'stu2'));
+        final s1 = _createSession(id: 's1', studentId: 'stu1');
+        await contract.save(s1.id, s1);
+        final s2 = _createSession(id: 's2', studentId: 'stu2');
+        await contract.save(s2.id, s2);
         final result = await contract.getByStudent('stu1');
         expect(result.data!.length, 1);
         expect(result.data!.first.id, 's1');
@@ -136,8 +141,10 @@ void main() {
     group('getByDate', () {
       test('returns sessions for specific date', () async {
         final date = DateTime(2025, 1, 15);
-        await contract.save(_createSession(id: 's1', startTime: date));
-        await contract.save(_createSession(id: 's2', startTime: DateTime(2025, 1, 16)));
+        final s1 = _createSession(id: 's1', startTime: date);
+        await contract.save(s1.id, s1);
+        final s2 = _createSession(id: 's2', startTime: DateTime(2025, 1, 16));
+        await contract.save(s2.id, s2);
         final result = await contract.getByDate(date);
         expect(result.data!.length, 1);
         expect(result.data!.first.id, 's1');
@@ -147,8 +154,10 @@ void main() {
     group('getTodayDurationMs', () {
       test('returns total duration for today', () async {
         final now = DateTime.now();
-        await contract.save(_createSession(id: 's1', startTime: now, durationMs: 1800000));
-        await contract.save(_createSession(id: 's2', startTime: now, durationMs: 1800000));
+        final s1 = _createSession(id: 's1', startTime: now, durationMs: 1800000);
+        await contract.save(s1.id, s1);
+        final s2 = _createSession(id: 's2', startTime: now, durationMs: 1800000);
+        await contract.save(s2.id, s2);
         final result = await contract.getTodayDurationMs();
         expect(result.data, 3600000);
       });
@@ -157,7 +166,8 @@ void main() {
     group('hasSchedulingConflict', () {
       test('returns false when no conflict', () async {
         final start = DateTime(2025, 1, 15, 10, 0);
-        await contract.save(_createSession(id: 's1', startTime: start));
+        final s1 = _createSession(id: 's1', startTime: start);
+        await contract.save(s1.id, s1);
         final conflict = await contract.hasSchedulingConflict(
           startTime: DateTime(2025, 1, 15, 14, 0),
           durationMinutes: 60,
@@ -167,7 +177,8 @@ void main() {
 
       test('returns true when conflict exists', () async {
         final start = DateTime(2025, 1, 15, 10, 0);
-        await contract.save(_createSession(id: 's1', startTime: start));
+        final s1 = _createSession(id: 's1', startTime: start);
+        await contract.save(s1.id, s1);
         final conflict = await contract.hasSchedulingConflict(
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 60,
@@ -178,8 +189,10 @@ void main() {
 
     group('getScheduledLessons', () {
       test('returns only tutoring sessions', () async {
-        await contract.save(_createSession(id: 's1', type: SessionType.tutoring));
-        await contract.save(_createSession(id: 's2', type: SessionType.practice));
+        final s1 = _createSession(id: 's1', type: SessionType.tutoring);
+        await contract.save(s1.id, s1);
+        final s2 = _createSession(id: 's2', type: SessionType.practice);
+        await contract.save(s2.id, s2);
         final lessons = await contract.getScheduledLessons();
         expect(lessons.length, 1);
         expect(lessons.first.id, 's1');

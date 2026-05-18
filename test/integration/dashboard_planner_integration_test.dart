@@ -74,7 +74,7 @@ class _FakeMasteryGraphRepo extends MasteryGraphRepository {
 
 class _FakeTopicRepo extends TopicRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Topic>>> getAll() async => Result.success([]);
@@ -314,27 +314,29 @@ class PlanRepositoryFake extends PlanRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     _storage[plan.studentId] = plan;
+    return Result.success(null);
   }
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async {
-    return _storage[studentId];
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.success(_storage[studentId]);
   }
 
   @override
-  Future<bool> hasPlan(String studentId) async {
-    return _storage.containsKey(studentId);
+  Future<Result<bool>> hasPlan(String studentId) async {
+    return Result.success(_storage.containsKey(studentId));
   }
 
   @override
-  Future<List<PersonalLearningPlan>> getAllPlans() async {
-    return _storage.values.toList();
+  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deletePlan(String studentId) async {
+  Future<Result<void>> deletePlan(String studentId) async {
     _storage.remove(studentId);
+    return Result.success(null);
   }
 }

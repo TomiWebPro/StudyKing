@@ -10,7 +10,9 @@ class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<Topic?>> get(String id) async {
@@ -18,8 +20,9 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> create(Topic topic) async {
+  Future<Result<void>> create(Topic topic) async {
     _storage[topic.id] = topic;
+    return Result.success(null);
   }
 
   @override
@@ -28,18 +31,18 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async {
-    return _storage.values.where((t) => t.subjectId == subjectId).toList();
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
+    return Result.success(_storage.values.where((t) => t.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<Topic>> getByParent(String parentId) async {
-    return _storage.values.where((t) => t.parentId == parentId).toList();
+  Future<Result<List<Topic>>> getByParent(String parentId) async {
+    return Result.success(_storage.values.where((t) => t.parentId == parentId).toList());
   }
 
   @override
-  Future<List<Topic>> getRootTopics() async {
-    return _storage.values.where((t) => t.parentId == null).toList();
+  Future<Result<List<Topic>>> getRootTopics() async {
+    return Result.success(_storage.values.where((t) => t.parentId == null).toList());
   }
 
   @override
@@ -49,13 +52,14 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> addParent(Topic topic, String parentId) async {
+  Future<Result<void>> addParent(Topic topic, String parentId) async {
     final getResult = await get(parentId);
     final parent = getResult.data;
     if (parent != null) {
       final updated = topic.copyWith(parentId: parentId, subjectId: parent.subjectId);
       await create(updated);
     }
+    return Result.success(null);
   }
 }
 
@@ -177,11 +181,13 @@ void main() {
         await repository.create(createTestTopic(id: 't2', subjectId: 's1'));
         await repository.create(createTestTopic(id: 't3', subjectId: 's2'));
         final result = await repository.getBySubject('s1');
-        expect(result.length, 2);
+        final topics = result.data ?? [];
+        expect(topics.length, 2);
       });
 
       test('returns empty for non-existent subject', () async {
-        expect(await repository.getBySubject('none'), isEmpty);
+        final result = await repository.getBySubject('none');
+        expect(result.data ?? [], isEmpty);
       });
 
       test('excludes topics from other subjects', () async {
@@ -189,20 +195,23 @@ void main() {
         await repository.create(createTestTopic(id: 't2', subjectId: 's2'));
         await repository.create(createTestTopic(id: 't3', subjectId: 's2'));
         final result = await repository.getBySubject('s2');
-        expect(result.length, 2);
-        expect(result.every((t) => t.subjectId == 's2'), isTrue);
+        final topics = result.data ?? [];
+        expect(topics.length, 2);
+        expect(topics.every((t) => t.subjectId == 's2'), isTrue);
       });
 
       test('excludes topics with different subjectId', () async {
         await repository.create(createTestTopic(id: 't1', subjectId: 'math'));
         await repository.create(createTestTopic(id: 't2', subjectId: 'science'));
         final result = await repository.getBySubject('math');
-        expect(result.length, 1);
-        expect(result.first.id, 't1');
+        final topics = result.data ?? [];
+        expect(topics.length, 1);
+        expect(topics.first.id, 't1');
       });
 
       test('returns empty list when no topics at all', () async {
-        expect(await repository.getBySubject('any'), isEmpty);
+        final result = await repository.getBySubject('any');
+        expect(result.data ?? [], isEmpty);
       });
     });
 
@@ -212,30 +221,35 @@ void main() {
         await repository.create(createTestTopic(id: 't2', parentId: 'parent-1'));
         await repository.create(createTestTopic(id: 't3'));
         final result = await repository.getByParent('parent-1');
-        expect(result.length, 2);
+        final topics = result.data ?? [];
+        expect(topics.length, 2);
       });
 
       test('returns empty for non-existent parent', () async {
-        expect(await repository.getByParent('none'), isEmpty);
+        final result = await repository.getByParent('none');
+        expect(result.data ?? [], isEmpty);
       });
 
       test('excludes topics with null parentId', () async {
         await repository.create(createTestTopic(id: 't1', parentId: 'p1'));
         await repository.create(createTestTopic(id: 't2'));
         final result = await repository.getByParent('p1');
-        expect(result.length, 1);
-        expect(result.first.id, 't1');
+        final topics = result.data ?? [];
+        expect(topics.length, 1);
+        expect(topics.first.id, 't1');
       });
 
       test('excludes topics with different parentId', () async {
         await repository.create(createTestTopic(id: 't1', parentId: 'p1'));
         await repository.create(createTestTopic(id: 't2', parentId: 'p2'));
         final result = await repository.getByParent('p1');
-        expect(result.length, 1);
+        final topics = result.data ?? [];
+        expect(topics.length, 1);
       });
 
       test('returns empty list when no topics exist', () async {
-        expect(await repository.getByParent('p1'), isEmpty);
+        final result = await repository.getByParent('p1');
+        expect(result.data ?? [], isEmpty);
       });
 
       test('returns all children of the same parent', () async {
@@ -243,7 +257,8 @@ void main() {
           await repository.create(createTestTopic(id: 'child-$i', parentId: 'parent-1'));
         }
         final result = await repository.getByParent('parent-1');
-        expect(result.length, 5);
+        final topics = result.data ?? [];
+        expect(topics.length, 5);
       });
     });
 
@@ -253,17 +268,20 @@ void main() {
         await repository.create(createTestTopic(id: 't2', parentId: 'p1'));
         await repository.create(createTestTopic(id: 't3'));
         final result = await repository.getRootTopics();
-        expect(result.length, 2);
-        expect(result.every((t) => t.parentId == null), isTrue);
+        final topics = result.data ?? [];
+        expect(topics.length, 2);
+        expect(topics.every((t) => t.parentId == null), isTrue);
       });
 
       test('returns empty when no root topics', () async {
         await repository.create(createTestTopic(id: 't1', parentId: 'p1'));
-        expect(await repository.getRootTopics(), isEmpty);
+        final result = await repository.getRootTopics();
+        expect(result.data ?? [], isEmpty);
       });
 
       test('returns empty when no topics at all', () async {
-        expect(await repository.getRootTopics(), isEmpty);
+        final result = await repository.getRootTopics();
+        expect(result.data ?? [], isEmpty);
       });
 
       test('root topics are not affected by child topics', () async {
@@ -271,8 +289,9 @@ void main() {
         await repository.create(createTestTopic(id: 'child-1', parentId: 'root-1'));
         await repository.create(createTestTopic(id: 'child-2', parentId: 'root-1'));
         final result = await repository.getRootTopics();
-        expect(result.length, 1);
-        expect(result.first.id, 'root-1');
+        final topics = result.data ?? [];
+        expect(topics.length, 1);
+        expect(topics.first.id, 'root-1');
       });
 
       test('handles mixed hierarchy correctly', () async {
@@ -282,8 +301,9 @@ void main() {
         await repository.create(createTestTopic(id: 'r2'));
         await repository.create(createTestTopic(id: 'c3', parentId: 'r2'));
         final result = await repository.getRootTopics();
-        expect(result.length, 2);
-        expect(result.map((t) => t.id), containsAll(['r1', 'r2']));
+        final topics = result.data ?? [];
+        expect(topics.length, 2);
+        expect(topics.map((t) => t.id), containsAll(['r1', 'r2']));
       });
     });
 
@@ -467,11 +487,12 @@ void main() {
         await repository.create(createTestTopic(id: 'a', title: 'A', subjectId: 's1'));
         await repository.create(createTestTopic(id: 'b', title: 'B', subjectId: 's2'));
 
-        expect(await repository.getBySubject('s1'), hasLength(1));
-        expect(await repository.getBySubject('s2'), hasLength(1));
+        expect((await repository.getBySubject('s1')).data ?? [], hasLength(1));
+        expect((await repository.getBySubject('s2')).data ?? [], hasLength(1));
 
         await repository.delete('b');
-        expect(await repository.getBySubject('s2'), isEmpty);
+        final result = await repository.getBySubject('s2');
+        expect(result.data ?? [], isEmpty);
         expect((await repository.getAll()).data, hasLength(1));
       });
 
@@ -486,7 +507,8 @@ void main() {
           );
         }
 
-        final children = await repository.getByParent('parent');
+        final result = await repository.getByParent('parent');
+        final children = result.data ?? [];
         expect(children.length, 3);
       });
     });
@@ -551,8 +573,8 @@ void main() {
         for (int i = 50; i < 100; i++) {
           await repository.create(createTestTopic(id: 't$i', title: 'Topic $i', subjectId: 's2'));
         }
-        expect(await repository.getBySubject('s1'), hasLength(50));
-        expect(await repository.getBySubject('s2'), hasLength(50));
+        expect((await repository.getBySubject('s1')).data ?? [], hasLength(50));
+        expect((await repository.getBySubject('s2')).data ?? [], hasLength(50));
       });
     });
   });
@@ -624,13 +646,14 @@ void main() {
       await repository.create(createTestTopic(id: 't1', subjectId: 's1'));
       await repository.create(createTestTopic(id: 't2', subjectId: 's1'));
       await repository.create(createTestTopic(id: 't3', subjectId: 's2'));
-      expect(await repository.getBySubject('s1'), hasLength(2));
-      expect(await repository.getBySubject('s2'), hasLength(1));
+      expect((await repository.getBySubject('s1')).data ?? [], hasLength(2));
+      expect((await repository.getBySubject('s2')).data ?? [], hasLength(1));
     });
 
     test('getBySubject returns empty for non-existent subject', () async {
       await repository.create(createTestTopic(id: 't1', subjectId: 's1'));
-      expect(await repository.getBySubject('non-existent'), isEmpty);
+      final result = await repository.getBySubject('non-existent');
+      expect(result.data ?? [], isEmpty);
     });
 
     test('getByParent works after init', () async {
@@ -639,13 +662,15 @@ void main() {
       await repository.create(createTestTopic(id: 't3', parentId: 'p2', subjectId: 's1'));
       await repository.create(createTestTopic(id: 't4', subjectId: 's1'));
       final result = await repository.getByParent('p1');
-      expect(result.length, 2);
-      expect(result.every((t) => t.parentId == 'p1'), isTrue);
+      final topics = result.data ?? [];
+      expect(topics.length, 2);
+      expect(topics.every((t) => t.parentId == 'p1'), isTrue);
     });
 
     test('getByParent returns empty for non-existent parent', () async {
       await repository.create(createTestTopic(id: 't1', parentId: 'p1', subjectId: 's1'));
-      expect(await repository.getByParent('non-existent'), isEmpty);
+      final result = await repository.getByParent('non-existent');
+      expect(result.data ?? [], isEmpty);
     });
 
     test('getRootTopics works after init', () async {
@@ -653,18 +678,21 @@ void main() {
       await repository.create(createTestTopic(id: 'root2', subjectId: 's1', title: 'Root 2'));
       await repository.create(createTestTopic(id: 'child1', parentId: 'root1', subjectId: 's1', title: 'Child'));
       final result = await repository.getRootTopics();
-      expect(result.length, 2);
-      expect(result.every((t) => t.parentId == null), isTrue);
+      final topics = result.data ?? [];
+      expect(topics.length, 2);
+      expect(topics.every((t) => t.parentId == null), isTrue);
     });
 
     test('getRootTopics returns empty when all topics have parents', () async {
       await repository.create(createTestTopic(id: 'c1', parentId: 'p1', subjectId: 's1'));
       await repository.create(createTestTopic(id: 'c2', parentId: 'p1', subjectId: 's1'));
-      expect(await repository.getRootTopics(), isEmpty);
+      final result = await repository.getRootTopics();
+      expect(result.data ?? [], isEmpty);
     });
 
     test('getRootTopics returns empty when no topics exist', () async {
-      expect(await repository.getRootTopics(), isEmpty);
+      final result = await repository.getRootTopics();
+      expect(result.data ?? [], isEmpty);
     });
 
     test('addParent works after init', () async {
@@ -726,9 +754,9 @@ void main() {
       }
 
       expect((await repository.getAll()).data, hasLength(15));
-      expect(await repository.getRootTopics(), hasLength(5));
-      expect(await repository.getByParent('r0'), hasLength(2));
-      expect(await repository.getBySubject('s1'), hasLength(15));
+      expect((await repository.getRootTopics()).data ?? [], hasLength(5));
+      expect((await repository.getByParent('r0')).data ?? [], hasLength(2));
+      expect((await repository.getBySubject('s1')).data ?? [], hasLength(15));
     });
   });
 }

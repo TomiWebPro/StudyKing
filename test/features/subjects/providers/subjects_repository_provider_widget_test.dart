@@ -17,7 +17,7 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Result<List<Subject>>> getAll() async => Result.success([]);
 
   @override
-  Future<Result<void>> save(String key, Subject item) async =>
+  Future<Result<void>> put(String key, Subject item) async =>
       Result.success(null);
 
   @override

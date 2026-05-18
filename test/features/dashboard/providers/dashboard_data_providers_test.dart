@@ -68,7 +68,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 }
 
 class _FakeProgressTracker extends StudyProgressTracker {
@@ -126,7 +126,7 @@ class _FakeTopicRepo extends TopicRepository {
   _FakeTopicRepo({List<Topic> topics = const []}) : _topics = topics;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Topic>>> getAll() async => Result.success(_topics);

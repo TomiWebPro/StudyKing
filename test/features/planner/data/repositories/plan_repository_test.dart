@@ -95,15 +95,15 @@ void main() {
         final plan = createPlan();
         await repository.savePlan(plan);
         final stored = await repository.loadPlan('student-1');
-        expect(stored, isNotNull);
-        expect(stored!.studentId, 'student-1');
+        expect(stored.data, isNotNull);
+        expect(stored.data!.studentId, 'student-1');
       });
 
       test('stores a plan retrievable by studentId', () async {
         final plan = createPlan(studentId: 'custom-student');
         await repository.savePlan(plan);
         final stored = await repository.loadPlan('custom-student');
-        expect(stored, isNotNull);
+        expect(stored.data, isNotNull);
       });
 
       test('overwrites existing plan for same student', () async {
@@ -112,32 +112,32 @@ void main() {
         await repository.savePlan(plan1);
         await repository.savePlan(plan2);
         final stored = await repository.loadPlan('student-1');
-        expect(stored?.planDurationDays, 14);
+        expect(stored.data?.planDurationDays, 14);
       });
 
       test('preserves all fields', () async {
         final plan = createPlan();
         await repository.savePlan(plan);
         final stored = await repository.loadPlan('student-1');
-        expect(stored!.generatedAt, plan.generatedAt);
-        expect(stored.summary.totalQuestions, 10);
-        expect(stored.recommendations.length, 1);
-        expect(stored.dailyPlans.length, 1);
-        expect(stored.dailyPlans[0].dayNumber, 1);
+        expect(stored.data!.generatedAt, plan.generatedAt);
+        expect(stored.data!.summary.totalQuestions, 10);
+        expect(stored.data!.recommendations.length, 1);
+        expect(stored.data!.dailyPlans.length, 1);
+        expect(stored.data!.dailyPlans[0].dayNumber, 1);
       });
     });
 
     group('loadPlan', () {
       test('returns null for non-existent student', () async {
-        expect(await repository.loadPlan('nonexistent'), isNull);
+        expect((await repository.loadPlan('nonexistent')).data, isNull);
       });
 
       test('returns stored plan', () async {
         final plan = createPlan();
         await repository.savePlan(plan);
         final stored = await repository.loadPlan('student-1');
-        expect(stored, isNotNull);
-        expect(stored!.studentId, 'student-1');
+        expect(stored.data, isNotNull);
+        expect(stored.data!.studentId, 'student-1');
       });
 
       test('returns different plans for different students', () async {
@@ -145,8 +145,8 @@ void main() {
         await repository.savePlan(createPlan(studentId: 's2', planDurationDays: 14));
         final s1 = await repository.loadPlan('s1');
         final s2 = await repository.loadPlan('s2');
-        expect(s1!.planDurationDays, 7);
-        expect(s2!.planDurationDays, 14);
+        expect(s1.data!.planDurationDays, 7);
+        expect(s2.data!.planDurationDays, 14);
       });
     });
 
@@ -154,15 +154,15 @@ void main() {
       test('removes a plan', () async {
         await repository.savePlan(createPlan());
         await repository.deletePlan('student-1');
-        expect(await repository.loadPlan('student-1'), isNull);
+        expect((await repository.loadPlan('student-1')).data, isNull);
       });
 
       test('does not affect other students', () async {
         await repository.savePlan(createPlan(studentId: 's1'));
         await repository.savePlan(createPlan(studentId: 's2'));
         await repository.deletePlan('s1');
-        expect(await repository.loadPlan('s1'), isNull);
-        expect(await repository.loadPlan('s2'), isNotNull);
+        expect((await repository.loadPlan('s1')).data, isNull);
+        expect((await repository.loadPlan('s2')).data, isNotNull);
       });
 
       test('does nothing for non-existent plan', () async {
@@ -193,11 +193,11 @@ void main() {
         await repository.savePlan(createPlan(studentId: 's2'));
         await repository.savePlan(createPlan(studentId: 's3'));
         final plans = await repository.getAllPlans();
-        expect(plans.length, 3);
+        expect(plans.data!.length, 3);
       });
 
       test('returns empty when no plans', () async {
-        expect(await repository.getAllPlans(), isEmpty);
+        expect((await repository.getAllPlans()).data, isEmpty);
       });
 
       test('returns updated list after deletion', () async {
@@ -205,8 +205,8 @@ void main() {
         await repository.savePlan(createPlan(studentId: 's2'));
         await repository.deletePlan('s1');
         final plans = await repository.getAllPlans();
-        expect(plans.length, 1);
-        expect(plans.first.studentId, 's2');
+        expect(plans.data!.length, 1);
+        expect(plans.data!.first.studentId, 's2');
       });
     });
   });

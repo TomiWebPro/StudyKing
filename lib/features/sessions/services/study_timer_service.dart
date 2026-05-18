@@ -64,7 +64,7 @@ class StudyTimerService {
       final box = Hive.box(HiveBoxNames.settings);
       return box.get('dailyCapMinutes', defaultValue: 0);
     } catch (e) {
-      _logger.e('Failed to get daily cap minutes', e);
+      _logger.w('Failed to get daily cap minutes', e);
       return 0;
     }
   }
@@ -121,7 +121,7 @@ class StudyTimerService {
     _startTimer();
 
     await _repository.save(_currentSession!.id, _currentSession!);
-    _logger.d('Session started: ${_currentSession!.id} type: ${type.name}');
+    _logger.i('Session started: ${_currentSession!.id} type: ${type.name}');
     return _currentSession!;
   }
 
@@ -153,14 +153,14 @@ class StudyTimerService {
     if (_currentSession == null) return;
     _isPaused = true;
     _lastTickTime = null;
-    _logger.d('Session paused');
+    _logger.i('Session paused');
   }
 
   void resumeSession() {
     if (_currentSession == null) return;
     _isPaused = false;
     _lastTickTime = DateTime.now();
-    _logger.d('Session resumed');
+    _logger.i('Session resumed');
   }
 
   Future<Result<Session>> completeSession() async {
@@ -184,7 +184,7 @@ class StudyTimerService {
           body: 'Great focus! You completed ${_elapsedMs ~/ 60000} minutes.',
         );
       } catch (e) {
-        _logger.e('Failed to show session complete notification', e);
+        _logger.w('Failed to show session complete notification', e);
       }
     }
 
@@ -198,7 +198,7 @@ class StudyTimerService {
       cb(completed);
     }
 
-    _logger.d('Session completed: ${completed.id}');
+    _logger.i('Session completed: ${completed.id}');
     return Result.success(completed);
   }
 
@@ -221,7 +221,7 @@ class StudyTimerService {
     _elapsedMs = 0;
     _isPaused = false;
 
-    _logger.d('Session cancelled: ${cancelled.id}');
+    _logger.i('Session cancelled: ${cancelled.id}');
     return Result.success(cancelled);
   }
 

@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 @HiveType(typeId: 8)
 class BadgeModel extends HiveObject {
@@ -113,10 +114,13 @@ class BadgeDefinitions {
     ),
   ];
 
+  static final Logger _logger = const Logger('BadgeDefinition');
+
   static BadgeDefinition? getById(String id) {
     try {
       return all.firstWhere((b) => b.id == id);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Badge not found: $id', e);
       return null;
     }
   }

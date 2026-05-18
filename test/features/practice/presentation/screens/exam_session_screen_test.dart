@@ -24,6 +24,13 @@ import '../../presentation/shared_test_helpers.dart' show FakeQuestionRepository
 // Fake dependencies
 // ---------------------------------------------------------------------------
 
+Future<void> startExamFromConfig(WidgetTester tester) async {
+  await tester.pump();
+  await tester.ensureVisible(find.text('Start Exam'));
+  await tester.tap(find.text('Start Exam'));
+  await tester.pump();
+}
+
 class FakeStudentIdService extends StudentIdService {
   @override
   String getStudentId() => 'test-student-id';
@@ -373,10 +380,10 @@ void main() {
         ));
         await tester.pump();
 
-        expect(find.text('15 min'), findsOneWidget);
-        expect(find.text('30 min'), findsOneWidget);
-        expect(find.text('45 min'), findsOneWidget);
-        expect(find.text('60 min'), findsOneWidget);
+        expect(find.text('15m'), findsOneWidget);
+        expect(find.text('30m'), findsOneWidget);
+        expect(find.text('45m'), findsOneWidget);
+        expect(find.text('60m'), findsOneWidget);
       });
 
       testWidgets('shows question count chips', (tester) async {
@@ -409,7 +416,7 @@ void main() {
         ));
         await tester.pump();
 
-        await tester.tap(find.text('45 min'));
+        await tester.tap(find.text('45m'));
         await tester.pump();
 
         // 45 min chip should be selected (use ChoiceChip.selected)
@@ -451,8 +458,7 @@ void main() {
         ));
         await tester.pump();
 
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         expect(find.text('First question'), findsOneWidget);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
@@ -465,8 +471,7 @@ void main() {
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
         await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         final filledButtons = find.byType(FilledButton);
         // Should be disabled (no answer selected yet)
@@ -482,9 +487,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -503,9 +506,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('4'));
         await tester.pump();
@@ -522,9 +523,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('3'));
         await tester.pump();
@@ -541,9 +540,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -562,9 +559,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -587,9 +582,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -611,9 +604,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         // Submit first question
         await tester.tap(find.text('A'));
@@ -643,9 +634,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         expect(find.byIcon(Icons.timer), findsOneWidget);
       });
@@ -659,9 +648,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
       });
@@ -674,9 +661,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         expect(find.text('Q1'), findsOneWidget);
 
@@ -695,9 +680,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.binding.handlePopRoute();
         await tester.pump();
@@ -716,9 +699,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.binding.handlePopRoute();
         await tester.pump();
@@ -739,9 +720,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -759,9 +738,7 @@ void main() {
         ];
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         // Select wrong answer
         await tester.tap(find.text('B'));
@@ -798,6 +775,177 @@ void main() {
       });
     });
 
+    group('difficulty selectors', () {
+      testWidgets('shows difficulty distribution section', (tester) async {
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([_q(id: 'q1', text: 'Q1')]),
+        ));
+        await tester.pump();
+
+        expect(find.text('Difficulty Distribution'), findsOneWidget);
+        expect(find.text('Easy'), findsOneWidget);
+        expect(find.text('Medium'), findsOneWidget);
+        expect(find.text('Hard'), findsOneWidget);
+      });
+
+      testWidgets('shows total selected count', (tester) async {
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([_q(id: 'q1', text: 'Q1')]),
+        ));
+        await tester.pump();
+
+        expect(find.textContaining('Total Selected'), findsOneWidget);
+        expect(find.textContaining('0 / 10'), findsOneWidget);
+      });
+
+      testWidgets('difficulty sliders are interactive', (tester) async {
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([_q(id: 'q1', text: 'Q1')]),
+        ));
+        await tester.pump();
+
+        expect(find.byType(Slider), findsAtLeastNWidgets(3));
+      });
+    });
+
+    group('auto-submit on time up', () {
+      testWidgets('auto-submits exam when time is up', (tester) async {
+        final examService = FakeExamSessionService();
+        examService.setTimeUp();
+        final questions = [
+          _q(id: 'q1', text: 'Q1', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success(questions),
+          examService: examService,
+        ));
+        await startExamFromConfig(tester);
+
+        // Time triggers auto-submit via _onTimeChanged
+        examService.timeRemainingNotifier.value = Duration.zero;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Practice Complete!'), findsOneWidget);
+      });
+    });
+
+    group('config screen no-questions', () {
+      testWidgets('shows no-questions hint when total available is 0', (tester) async {
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([]),
+        ));
+        await tester.pump();
+
+        expect(find.text('No Questions Available'), findsOneWidget);
+      });
+
+      testWidgets('shows upload button when no questions available', (tester) async {
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([]),
+        ));
+        await tester.pump();
+
+        expect(find.text('Upload Materials'), findsAtLeastNWidgets(1));
+      });
+    });
+
+    group('results screen details', () {
+      testWidgets('shows auto-submitted warning when applicable', (tester) async {
+        final examService = FakeExamSessionService();
+        final questions = [
+          _q(id: 'q1', text: 'Q1', markschemeText: 'A', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success(questions),
+          examService: examService,
+        ));
+        await startExamFromConfig(tester);
+
+        await tester.tap(find.text('A'));
+        await tester.pump();
+        await tester.tap(find.text('Submit Answer'));
+        await tester.pump();
+        await tester.tap(find.text('Next'));
+        await tester.pump();
+
+        expect(find.text('Practice Complete!'), findsOneWidget);
+        expect(find.text('Total Questions'), findsOneWidget);
+        expect(find.text('Correct Answers'), findsOneWidget);
+        expect(find.text('Incorrect'), findsOneWidget);
+        expect(find.text('Skipped'), findsOneWidget);
+        expect(find.text('Accuracy'), findsOneWidget);
+      });
+    });
+
+    group('exam timer display', () {
+      testWidgets('timer icon is shown during exam', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await startExamFromConfig(tester);
+
+        expect(find.byIcon(Icons.timer), findsOneWidget);
+      });
+
+      testWidgets('shows question progress', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1', options: ['A', 'B']),
+          _q(id: 'q2', text: 'Q2', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await startExamFromConfig(tester);
+
+        expect(find.text('1/2'), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      });
+    });
+
+    group('back navigation during active exam', () {
+      testWidgets('exit with answer submitted completes exam', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1', markschemeText: 'A', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await startExamFromConfig(tester);
+
+        await tester.tap(find.text('A'));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Exit practice session?'), findsOneWidget);
+        await tester.tap(find.text('Exit'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Practice Complete!'), findsOneWidget);
+      });
+
+      testWidgets('back navigation without answer does not crash', (tester) async {
+        final questions = [
+          _q(id: 'q1', text: 'Q1', options: ['A', 'B']),
+        ];
+
+        await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
+        await startExamFromConfig(tester);
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Exit practice session?'), findsOneWidget);
+      });
+    });
+
     group('edge cases', () {
       testWidgets('handles null markscheme gracefully', (tester) async {
         final now = DateTime.utc(2024, 1, 1);
@@ -816,9 +964,7 @@ void main() {
         await tester.pumpWidget(examSessionApp(
           result: Result.success([qWithNullMarkscheme]),
         ));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -846,9 +992,7 @@ void main() {
         await tester.pumpWidget(examSessionApp(
           result: Result.success([qWithEmptyMarkscheme]),
         ));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         await tester.tap(find.text('A'));
         await tester.pump();
@@ -867,9 +1011,7 @@ void main() {
         ));
 
         await tester.pumpWidget(examSessionApp(result: Result.success(questions)));
-        await tester.pump();
-        await tester.tap(find.text('Start Exam'));
-        await tester.pump();
+        await startExamFromConfig(tester);
 
         for (int i = 0; i < 3; i++) {
           expect(find.text('Question $i'), findsOneWidget);

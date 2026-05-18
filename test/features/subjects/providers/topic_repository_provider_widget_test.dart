@@ -10,7 +10,7 @@ class _FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
 
   @override
-  Future<Result<void>> save(String key, Topic item) async {
+  Future<Result<void>> put(String key, Topic item) async {
     _topics[key] = item;
     return Result.success(null);
   }
@@ -26,7 +26,9 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 }
 
 Topic _createTopic({required String id, required String subjectId}) {
@@ -66,7 +68,7 @@ class _TopicReaderWidgetState extends ConsumerState<_TopicReaderWidget> {
 void main() {
   testWidgets('provider is accessible in widget tree', (tester) async {
     final fakeRepo = _FakeTopicRepository();
-    await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
+    await fakeRepo.put('t1', _createTopic(id: 't1', subjectId: 's1'));
 
     String? topicTitle;
 

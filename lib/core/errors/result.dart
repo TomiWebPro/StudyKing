@@ -17,7 +17,7 @@ sealed class Result<T> {
       return Result.success(await block());
     } catch (e) {
       if (context != null) {
-        Logger(context).e('capture failed: $e');
+        Logger(context).w('capture failed: $e');
       }
       return Result.failure(e.toString());
     }
@@ -28,7 +28,7 @@ sealed class Result<T> {
       return Result.success(block());
     } catch (e) {
       if (context != null) {
-        Logger(context).e('capture sync failed: $e');
+        Logger(context).w('capture sync failed: $e');
       }
       return Result.failure(e.toString());
     }

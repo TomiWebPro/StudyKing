@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
@@ -80,12 +81,13 @@ class _TestConversationRepository extends ConversationRepository {
   _TestConversationRepository(this._fakeBox);
 
   @override
-  Future<void> deleteSessionMessages(String sessionId) async {
+  Future<Result<void>> deleteSessionMessages(String sessionId) async {
     final toDelete = _fakeBox.toMap().entries
         .where((e) => e.value.sessionId == sessionId)
         .map((e) => e.key)
         .toList();
     await box.deleteAll(toDelete);
+    return Result.success(null);
   }
 }
 
@@ -124,7 +126,7 @@ void main() {
         final msg = createMessage();
         await repository.saveMessage(msg);
         final stored = await repository.getMessage('msg-1');
-        expect(stored?.content, 'Hello');
+        expect(stored.data?.content, 'Hello');
       });
 
       test('overwrites existing message with same id', () async {
@@ -133,7 +135,7 @@ void main() {
         await repository.saveMessage(msg1);
         await repository.saveMessage(msg2);
         final stored = await repository.getMessage('msg-1');
-        expect(stored?.content, 'Second');
+        expect(stored.data?.content, 'Second');
       });
     });
 
@@ -157,7 +159,9 @@ void main() {
         await repository.saveMessage(msg3);
         await repository.saveMessage(msg1);
         await repository.saveMessage(msg2);
-        final messages = await repository.getSessionMessages('s1');
+        final messagesResult = await repository.getSessionMessages('s1');
+        expect(messagesResult.isSuccess, true);
+        final messages = messagesResult.data!;
         expect(messages.length, 3);
         expect(messages[0].content, 'First');
         expect(messages[1].content, 'Second');
@@ -167,12 +171,12 @@ void main() {
       test('filters by session id', () async {
         await repository.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
         await repository.saveMessage(createMessage(id: 'm2', sessionId: 's2'));
-        expect((await repository.getSessionMessages('s1')).length, 1);
-        expect((await repository.getSessionMessages('s2')).length, 1);
+        expect((await repository.getSessionMessages('s1')).data!.length, 1);
+        expect((await repository.getSessionMessages('s2')).data!.length, 1);
       });
 
       test('returns empty list for session with no messages', () async {
-        expect(await repository.getSessionMessages('empty'), isEmpty);
+        expect((await repository.getSessionMessages('empty')).data, isEmpty);
       });
     });
 
@@ -198,7 +202,9 @@ void main() {
             timestamp: now.add(Duration(minutes: i)),
           ));
         }
-        final recent = await repository.getRecentMessages(limit: 5);
+        final recentResult = await repository.getRecentMessages(limit: 5);
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 5);
         expect(recent[0].content, 'Msg 19');
         expect(recent[4].content, 'Msg 15');
@@ -215,7 +221,9 @@ void main() {
             timestamp: now.add(Duration(minutes: i)),
           ));
         }
-        final recent = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        final recentResult = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 5);
         for (final msg in recent) {
           expect(msg.sessionId, 's1');
@@ -225,12 +233,14 @@ void main() {
       test('returns all when fewer than limit', () async {
         await repository.saveMessage(createMessage(id: 'm1'));
         await repository.saveMessage(createMessage(id: 'm2'));
-        final recent = await repository.getRecentMessages(limit: 10);
+        final recentResult = await repository.getRecentMessages(limit: 10);
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 2);
       });
 
       test('returns empty when no messages', () async {
-        expect(await repository.getRecentMessages(), isEmpty);
+        expect((await repository.getRecentMessages()).data, isEmpty);
       });
 
       test('sorts most recent first within sessionId filter', () async {
@@ -242,7 +252,9 @@ void main() {
           id: 'm2', sessionId: 's1', content: 'New',
           timestamp: now,
         ));
-        final recent = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        final recentResult = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 2);
         expect(recent[0].content, 'New');
         expect(recent[1].content, 'Old');
@@ -260,7 +272,7 @@ void main() {
 
       test('works on empty repository', () async {
         await repository.clearAll();
-        expect(await repository.getRecentMessages(), isEmpty);
+        expect((await repository.getRecentMessages()).data, isEmpty);
       });
     });
 
@@ -347,9 +359,9 @@ void main() {
         await hiveRepo.saveMessage(msg);
         final retrieved = await hiveRepo.getMessage('msg-1');
         expect(retrieved, isNotNull);
-        expect(retrieved!.content, 'Hello');
-        expect(retrieved.role, MessageRole.tutor);
-        expect(retrieved.type, MessageType.text);
+        expect(retrieved.data!.content, 'Hello');
+        expect(retrieved.data!.role, MessageRole.tutor);
+        expect(retrieved.data!.type, MessageType.text);
       });
 
       test('getMessage returns null for non-existent id', () async {
@@ -362,7 +374,7 @@ void main() {
         await hiveRepo.saveMessage(msg1);
         await hiveRepo.saveMessage(msg2);
         final stored = await hiveRepo.getMessage('msg-1');
-        expect(stored?.content, 'Second');
+        expect(stored.data?.content, 'Second');
       });
     });
 
@@ -375,7 +387,9 @@ void main() {
         await hiveRepo.saveMessage(m3);
         await hiveRepo.saveMessage(m1);
         await hiveRepo.saveMessage(m2);
-        final messages = await hiveRepo.getSessionMessages('s1');
+        final messagesResult = await hiveRepo.getSessionMessages('s1');
+        expect(messagesResult.isSuccess, true);
+        final messages = messagesResult.data!;
         expect(messages.length, 3);
         expect(messages[0].content, 'First');
         expect(messages[1].content, 'Second');
@@ -385,12 +399,12 @@ void main() {
       test('filters by session id', () async {
         await hiveRepo.saveMessage(hiveMsg(id: 'm1', sessionId: 's1'));
         await hiveRepo.saveMessage(hiveMsg(id: 'm2', sessionId: 's2'));
-        expect((await hiveRepo.getSessionMessages('s1')).length, 1);
-        expect((await hiveRepo.getSessionMessages('s2')).length, 1);
+        expect((await hiveRepo.getSessionMessages('s1')).data!.length, 1);
+        expect((await hiveRepo.getSessionMessages('s2')).data!.length, 1);
       });
 
       test('returns empty list for session with no messages', () async {
-        expect(await hiveRepo.getSessionMessages('empty'), isEmpty);
+        expect((await hiveRepo.getSessionMessages('empty')).data, isEmpty);
       });
     });
 
@@ -434,7 +448,9 @@ void main() {
             timestamp: now.add(Duration(minutes: i)),
           ));
         }
-        final recent = await hiveRepo.getRecentMessages(limit: 5);
+        final recentResult = await hiveRepo.getRecentMessages(limit: 5);
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 5);
         expect(recent[0].content, 'Msg 19');
         expect(recent[4].content, 'Msg 15');
@@ -452,7 +468,9 @@ void main() {
             timestamp: now.add(Duration(minutes: i)),
           ));
         }
-        final recent = await hiveRepo.getRecentMessages(limit: 10, sessionId: 's1');
+        final recentResult = await hiveRepo.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 5);
         for (final msg in recent) {
           expect(msg.sessionId, 's1');
@@ -462,12 +480,14 @@ void main() {
       test('returns all when fewer than limit', () async {
         await hiveRepo.saveMessage(hiveMsg(id: 'm1'));
         await hiveRepo.saveMessage(hiveMsg(id: 'm2'));
-        final recent = await hiveRepo.getRecentMessages(limit: 10);
+        final recentResult = await hiveRepo.getRecentMessages(limit: 10);
+        expect(recentResult.isSuccess, true);
+        final recent = recentResult.data!;
         expect(recent.length, 2);
       });
 
       test('returns empty when no messages', () async {
-        expect(await hiveRepo.getRecentMessages(), isEmpty);
+        expect((await hiveRepo.getRecentMessages()).data, isEmpty);
       });
     });
 

@@ -17,6 +17,6 @@ final tutorSessionRepositoryProvider = Provider<TutorSessionRepository>((ref) {
   return ref.watch(databaseProvider).tutorSessionRepository;
 });
 
-final lessonServiceProvider = Provider<LessonService>((ref) {
-  return LessonService(database: ref.watch(databaseProvider));
+final lessonServiceProvider = Provider<LessonSessionService>((ref) {
+  return LessonSessionService(database: ref.watch(databaseProvider));
 });

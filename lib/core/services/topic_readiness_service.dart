@@ -45,7 +45,8 @@ class TopicReadinessService {
       await _topicRepository.init();
       await _masteryRepository.init();
 
-      final topics = await _topicRepository.getBySubject(subjectId);
+      final topicsResult = await _topicRepository.getBySubject(subjectId);
+      final topics = topicsResult.data ?? [];
       if (topics.isEmpty) {
         return Result.success([]);
       }

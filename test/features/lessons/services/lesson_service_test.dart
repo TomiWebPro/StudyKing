@@ -20,7 +20,7 @@ class _FakeTopicRepository extends TopicRepository {
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
@@ -39,12 +39,13 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
     if (_throwOnGetStudentSessions) throw Exception('Repo failure');
-    return _sessions.values
+    final result = _sessions.values
         .where((s) => s.studentId == studentId)
         .toList()
       ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    return Result.success(result);
   }
 
   void addSession(TutorSession session) => _sessions[session.id] = session;
@@ -81,7 +82,7 @@ void main() {
   late _FakeTopicRepository topicRepo;
   late _FakeTutorSessionRepository sessionRepo;
   late DatabaseService database;
-  late LessonService service;
+  late LessonSessionService service;
 
   setUp(() {
     topicRepo = _FakeTopicRepository();
@@ -96,7 +97,7 @@ void main() {
       conversationRepository: ConversationRepository(),
       tutorSessionRepository: sessionRepo,
     );
-    service = LessonService(database: database);
+    service = LessonSessionService(database: database);
   });
 
   group('getLessonsForStudent', () {

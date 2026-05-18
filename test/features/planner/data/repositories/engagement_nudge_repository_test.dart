@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
@@ -12,36 +13,41 @@ class _FakeEngagementNudgeRepository extends EngagementNudgeRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {
+  Future<Result<void>> create(EngagementNudgeModel nudge) async {
     _storage[nudge.id] = nudge;
+    return Result.success(null);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByStudent(String studentId) async {
-    return _storage.values
-        .where((n) => n.studentId == studentId)
-        .toList()
-      ..sort((a, b) => b.sentAt.compareTo(a.sentAt));
+  Future<Result<List<EngagementNudgeModel>>> getByStudent(String studentId) async {
+    return Result.success(
+      _storage.values
+          .where((n) => n.studentId == studentId)
+          .toList()
+        ..sort((a, b) => b.sentAt.compareTo(a.sentAt)),
+    );
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(
       String studentId, {int limit = 10}) async {
-    final all = await getByStudent(studentId);
-    return all.take(limit).toList();
+    final all = (await getByStudent(studentId)).data ?? [];
+    return Result.success(all.take(limit).toList());
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getUnactedByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getUnactedByStudent(
       String studentId) async {
-    return _storage.values
-        .where((n) => n.studentId == studentId && !n.wasActedUpon)
-        .toList()
-      ..sort((a, b) => b.sentAt.compareTo(a.sentAt));
+    return Result.success(
+      _storage.values
+          .where((n) => n.studentId == studentId && !n.wasActedUpon)
+          .toList()
+        ..sort((a, b) => b.sentAt.compareTo(a.sentAt)),
+    );
   }
 
   @override
-  Future<void> markActedUpon(String id) async {
+  Future<Result<void>> markActedUpon(String id) async {
     final nudge = _storage[id];
     if (nudge != null) {
       _storage[id] = nudge.copyWith(
@@ -49,34 +55,40 @@ class _FakeEngagementNudgeRepository extends EngagementNudgeRepository {
         actedUponAt: DateTime.now(),
       );
     }
+    return Result.success(null);
   }
 
   @override
-  Future<int> getTodayCount(String studentId) async {
+  Future<Result<int>> getTodayCount(String studentId) async {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
-    return _storage.values
-        .where((n) =>
-            n.studentId == studentId && n.sentAt.isAfter(startOfDay))
-        .length;
+    return Result.success(
+      _storage.values
+          .where((n) =>
+              n.studentId == studentId && n.sentAt.isAfter(startOfDay))
+          .length,
+    );
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByType(
+  Future<Result<List<EngagementNudgeModel>>> getByType(
       String studentId, String nudgeType) async {
-    return _storage.values
-        .where((n) => n.studentId == studentId && n.nudgeType == nudgeType)
-        .toList()
-      ..sort((a, b) => b.sentAt.compareTo(a.sentAt));
+    return Result.success(
+      _storage.values
+          .where((n) => n.studentId == studentId && n.nudgeType == nudgeType)
+          .toList()
+        ..sort((a, b) => b.sentAt.compareTo(a.sentAt)),
+    );
   }
 
   @override
-  Future<void> deleteOld(int daysOld) async {
+  Future<Result<void>> deleteOld(int daysOld) async {
     final cutoff = DateTime.now().subtract(Duration(days: daysOld));
     final old = _storage.values.where((n) => n.sentAt.isBefore(cutoff)).toList();
     for (final n in old) {
       _storage.remove(n.id);
     }
+    return Result.success(null);
   }
 }
 
@@ -117,8 +129,8 @@ void main() {
         final nudge = createTestNudge();
         await repository.create(nudge);
         final stored = await repository.getByStudent('student-1');
-        expect(stored.length, 1);
-        expect(stored.first.message, 'Time to revise!');
+        expect(stored.data!.length, 1);
+        expect(stored.data!.first.message, 'Time to revise!');
       });
     });
 
@@ -133,12 +145,12 @@ void main() {
         await repository.create(createTestNudge(
           id: 'n3', studentId: 's2'));
         final result = await repository.getByStudent('s1');
-        expect(result.length, 2);
-        expect(result.first.id, 'n2');
+        expect(result.data!.length, 2);
+        expect(result.data!.first.id, 'n2');
       });
 
       test('returns empty list for student with no nudges', () async {
-        expect(await repository.getByStudent('none'), isEmpty);
+        expect((await repository.getByStudent('none')).data, isEmpty);
       });
     });
 
@@ -150,12 +162,12 @@ void main() {
             sentAt: DateTime(2024, 1, 1 + i)));
         }
         final result = await repository.getRecentByStudent('s1', limit: 3);
-        expect(result.length, 3);
+        expect(result.data!.length, 3);
       });
 
       test('returns all when fewer than limit', () async {
         await repository.create(createTestNudge(id: 'n1', studentId: 's1'));
-        expect((await repository.getRecentByStudent('s1')).length, 1);
+        expect((await repository.getRecentByStudent('s1')).data!.length, 1);
       });
     });
 
@@ -168,14 +180,14 @@ void main() {
         await repository.create(createTestNudge(
           id: 'n2', studentId: 's1', sentAt: later));
         final result = await repository.getUnactedByStudent('s1');
-        expect(result.length, 1);
-        expect(result.first.id, 'n2');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.id, 'n2');
       });
 
       test('returns empty when all acted upon', () async {
         await repository.create(createTestNudge(
           id: 'n1', studentId: 's1', wasActedUpon: true));
-        expect(await repository.getUnactedByStudent('s1'), isEmpty);
+        expect((await repository.getUnactedByStudent('s1')).data, isEmpty);
       });
     });
 
@@ -184,8 +196,8 @@ void main() {
         await repository.create(createTestNudge(id: 'n1', studentId: 's1'));
         await repository.markActedUpon('n1');
         final result = await repository.getByStudent('s1');
-        expect(result.first.wasActedUpon, isTrue);
-        expect(result.first.actedUponAt, isNotNull);
+        expect(result.data!.first.wasActedUpon, isTrue);
+        expect(result.data!.first.actedUponAt, isNotNull);
       });
 
       test('does nothing for non-existent nudge', () async {
@@ -200,14 +212,14 @@ void main() {
         await repository.create(createTestNudge(
           id: 'n2', studentId: 's1',
           sentAt: DateTime.now().subtract(const Duration(days: 2))));
-        expect(await repository.getTodayCount('s1'), 1);
+        expect((await repository.getTodayCount('s1')).data, 1);
       });
 
       test('returns zero when no nudges today', () async {
         await repository.create(createTestNudge(
           id: 'n1', studentId: 's1',
           sentAt: DateTime.now().subtract(const Duration(days: 1))));
-        expect(await repository.getTodayCount('s1'), 0);
+        expect((await repository.getTodayCount('s1')).data, 0);
       });
     });
 
@@ -223,13 +235,13 @@ void main() {
           id: 'n3', studentId: 's1', nudgeType: 'revision',
           sentAt: DateTime(2024, 3, 1)));
         final result = await repository.getByType('s1', 'revision');
-        expect(result.length, 2);
-        expect(result.first.id, 'n3');
+        expect(result.data!.length, 2);
+        expect(result.data!.first.id, 'n3');
       });
 
       test('returns empty for non-existent type', () async {
         await repository.create(createTestNudge(id: 'n1', studentId: 's1'));
-        expect(await repository.getByType('s1', 'nonexistent'), isEmpty);
+        expect((await repository.getByType('s1', 'nonexistent')).data, isEmpty);
       });
     });
 
@@ -243,8 +255,8 @@ void main() {
           sentAt: DateTime.now().subtract(const Duration(days: 2))));
         await repository.deleteOld(7);
         final result = await repository.getByStudent('s1');
-        expect(result.length, 1);
-        expect(result.first.id, 'n2');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.id, 'n2');
       });
 
       test('keeps all when none are old enough', () async {
@@ -252,7 +264,7 @@ void main() {
           id: 'n1', studentId: 's1',
           sentAt: DateTime.now().subtract(const Duration(days: 1))));
         await repository.deleteOld(7);
-        expect((await repository.getByStudent('s1')).length, 1);
+        expect((await repository.getByStudent('s1')).data!.length, 1);
       });
     });
   });
@@ -282,35 +294,35 @@ void main() {
       final nudge = createTestNudge(id: 'hive-1', message: 'Hive test');
       await repository.create(nudge);
       final stored = await repository.getByStudent('student-1');
-      expect(stored, hasLength(1));
-      expect(stored.first.message, 'Hive test');
+      expect(stored.data, hasLength(1));
+      expect(stored.data!.first.message, 'Hive test');
     });
 
     test('getRecentByStudent works after init', () async {
       await repository.create(createTestNudge(id: 'n1', studentId: 's1'));
       await repository.create(createTestNudge(id: 'n2', studentId: 's1'));
-      expect(await repository.getRecentByStudent('s1'), hasLength(2));
+      expect((await repository.getRecentByStudent('s1')).data, hasLength(2));
     });
 
     test('markActedUpon works after init', () async {
       await repository.create(createTestNudge(id: 'm1', studentId: 's1'));
       await repository.markActedUpon('m1');
       final result = await repository.getByStudent('s1');
-      expect(result.first.wasActedUpon, isTrue);
+      expect(result.data!.first.wasActedUpon, isTrue);
     });
 
     test('getUnactedByStudent returns only unacted nudges', () async {
       await repository.create(createTestNudge(id: 'u1', studentId: 's1', wasActedUpon: true));
       await repository.create(createTestNudge(id: 'u2', studentId: 's1'));
       final result = await repository.getUnactedByStudent('s1');
-      expect(result.length, 1);
-      expect(result.first.id, 'u2');
+      expect(result.data!.length, 1);
+      expect(result.data!.first.id, 'u2');
     });
 
     test('getTodayCount returns correct count', () async {
       await repository.create(createTestNudge(id: 'tc1', studentId: 's1', sentAt: DateTime.now()));
       await repository.create(createTestNudge(id: 'tc2', studentId: 's1', sentAt: DateTime.now().subtract(const Duration(days: 5))));
-      expect(await repository.getTodayCount('s1'), 1);
+      expect((await repository.getTodayCount('s1')).data, 1);
     });
 
     test('getByType filters by nudge type', () async {
@@ -318,7 +330,7 @@ void main() {
       await repository.create(createTestNudge(id: 'bt2', studentId: 's1', nudgeType: 'overwork'));
       await repository.create(createTestNudge(id: 'bt3', studentId: 's1', nudgeType: 'revision'));
       final result = await repository.getByType('s1', 'revision');
-      expect(result.length, 2);
+      expect(result.data!.length, 2);
     });
 
     test('deleteOld removes older nudges', () async {
@@ -326,8 +338,8 @@ void main() {
       await repository.create(createTestNudge(id: 'do2', studentId: 's1', sentAt: DateTime.now().subtract(const Duration(days: 2))));
       await repository.deleteOld(7);
       final remaining = await repository.getByStudent('s1');
-      expect(remaining.length, 1);
-      expect(remaining.first.id, 'do2');
+      expect(remaining.data!.length, 1);
+      expect(remaining.data!.first.id, 'do2');
     });
 
     test('getByStudent sorts by sentAt descending', () async {
@@ -336,7 +348,7 @@ void main() {
       await repository.create(createTestNudge(id: 's1a', studentId: 's1', sentAt: early));
       await repository.create(createTestNudge(id: 's1b', studentId: 's1', sentAt: late));
       final result = await repository.getByStudent('s1');
-      expect(result.first.id, 's1b');
+      expect(result.data!.first.id, 's1b');
     });
   });
 }

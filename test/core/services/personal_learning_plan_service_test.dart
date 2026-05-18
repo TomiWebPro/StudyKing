@@ -104,11 +104,14 @@ class FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
-  Future<void> create(Topic topic) async {
+  Future<Result<void>> create(Topic topic) async {
     _topics[topic.id] = topic;
+    return Result.success(null);
   }
 
   @override
@@ -120,13 +123,16 @@ class FakeTopicRepository extends TopicRepository {
   Future<Result<List<Topic>>> getAll() async => Result.success(_topics.values.toList());
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async => _topics.values.where((t) => t.subjectId == subjectId).toList();
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async =>
+      Result.success(_topics.values.where((t) => t.subjectId == subjectId).toList());
 
   @override
-  Future<List<Topic>> getByParent(String parentId) async => _topics.values.where((t) => t.parentId == parentId).toList();
+  Future<Result<List<Topic>>> getByParent(String parentId) async =>
+      Result.success(_topics.values.where((t) => t.parentId == parentId).toList());
 
   @override
-  Future<List<Topic>> getRootTopics() async => _topics.values.where((t) => t.parentId == null).toList();
+  Future<Result<List<Topic>>> getRootTopics() async =>
+      Result.success(_topics.values.where((t) => t.parentId == null).toList());
 
   @override
   Future<Result<void>> delete(String id) async {
@@ -135,7 +141,9 @@ class FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> addParent(Topic topic, String parentId) async {}
+  Future<Result<void>> addParent(Topic topic, String parentId) async {
+    return Result.success(null);
+  }
 }
 
 void main() {

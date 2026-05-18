@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/conversation_memory.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -8,13 +9,14 @@ class _FakeConversationRepository extends ConversationRepository {
   List<ConversationMessage>? getSessionMessagesResult;
 
   @override
-  Future<void> saveMessage(ConversationMessage msg) async {
+  Future<Result<void>> saveMessage(ConversationMessage msg) async {
     _saved.add(msg);
+    return Result.success(null);
   }
 
   @override
-  Future<List<ConversationMessage>> getSessionMessages(String sessionId) async {
-    return getSessionMessagesResult ?? [];
+  Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
+    return Result.success(getSessionMessagesResult ?? []);
   }
 }
 

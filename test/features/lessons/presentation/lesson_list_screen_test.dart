@@ -47,8 +47,8 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
       : _sessions = sessions ?? [];
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _sessions;
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
+    return Result.success(_sessions);
   }
 
   @override

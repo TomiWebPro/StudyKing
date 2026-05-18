@@ -332,6 +332,15 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                   ),
                 ),
               ),
+            if (task.status == LlmTaskStatus.failed)
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton.icon(
+                  onPressed: () => _retryTask(task, taskManager),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(l10n.retry),
+                ),
+              ),
             if (task.status == LlmTaskStatus.running || task.status == LlmTaskStatus.queued)
               Align(
                 alignment: AlignmentDirectional.centerEnd,
@@ -346,6 +355,10 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
         ),
       ),
     );
+  }
+
+  void _retryTask(LlmTask task, LlmTaskManager taskManager) {
+    taskManager.retryTask(task.id);
   }
 
   String _formatTime(DateTime dt) {

@@ -93,17 +93,18 @@ void main() async {
     await StudentIdService().init();
 
     try {
+      final masteryService = MasteryGraphService();
       final schedulerRef = EngagementScheduler(
         tracker: StudyProgressTracker(
-          attemptRepo: AttemptRepository(),
-          masteryService: MasteryGraphService(),
-          sessionRepo: SessionRepository(),
+          attemptRepo: mainDb.attemptRepository,
+          masteryService: masteryService,
+          sessionRepo: mainDb.sessionRepository,
         ),
-        masteryService: MasteryGraphService(),
+        masteryService: masteryService,
         nudgeRepository: EngagementNudgeRepository(),
         adherenceRepository: PlanAdherenceRepository(),
         planAdapter: PlanAdapter(),
-        sessionRepository: SessionRepository(),
+        sessionRepository: mainDb.sessionRepository,
         plannerService: PlannerService(),
       );
       await schedulerRef.init();
@@ -338,7 +339,7 @@ class _MainScreenState extends State<MainScreen> {
         navigatorKey: _navigatorKeys[3],
       ),
       TabNavigator(
-        key: const ValueKey('tab_focus_mode'),
+        key: const ValueKey('tab_study'),
         rootScreen: const FocusTimerScreen(),
         navigatorKey: _navigatorKeys[4],
       ),
@@ -411,8 +412,8 @@ class _MainScreenState extends State<MainScreen> {
                               label: Text(l10n.mentor),
                             ),
                             NavigationRailDestination(
-                              icon: Icon(Icons.timer_outlined),
-                              selectedIcon: Icon(Icons.timer),
+                              icon: Icon(Icons.menu_book_outlined),
+                              selectedIcon: Icon(Icons.menu_book),
                               label: Text(l10n.focusMode),
                             ),
                             NavigationRailDestination(
@@ -461,8 +462,8 @@ class _MainScreenState extends State<MainScreen> {
                     label: l10n.mentor,
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.timer_outlined),
-                    selectedIcon: Icon(Icons.timer),
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book),
                     label: l10n.focusMode,
                   ),
                   NavigationDestination(

@@ -30,16 +30,7 @@ class ColorUtils {
 
   static Color getSubjectColor(BuildContext context, String name) {
     final cs = Theme.of(context).colorScheme;
-    final colors = [
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-      cs.tertiary,
-      cs.primary,
-      cs.secondary,
-    ];
+    final colors = [cs.primary, cs.secondary, cs.tertiary];
     return colors[name.codeUnits.fold(0, (h, c) => h * 31 + c) % colors.length];
   }
 

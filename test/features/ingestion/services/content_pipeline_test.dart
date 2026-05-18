@@ -114,7 +114,7 @@ class _FakeTopicRepository extends TopicRepository {
   bool _shouldThrowOnGetAll = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 

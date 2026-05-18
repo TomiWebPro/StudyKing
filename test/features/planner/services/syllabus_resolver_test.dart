@@ -18,14 +18,15 @@ class _FakeTopicRepository extends TopicRepository {
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (throwOnInit) throw Exception('init error');
+    return Result.success(null);
   }
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async {
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
     if (throwOnGetBySubject) throw Exception('get by subject error');
-    return _topics.values.where((t) => t.subjectId == subjectId).toList();
+    return Result.success(_topics.values.where((t) => t.subjectId == subjectId).toList());
   }
 
   @override

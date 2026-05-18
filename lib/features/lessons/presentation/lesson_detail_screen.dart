@@ -77,6 +77,8 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     super.dispose();
   }
 
+  static const int _defaultDurationMinutes = 45;
+
   void _openTutorMode() {
     if (!mounted) return;
     Navigator.pushNamed(
@@ -88,7 +90,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
         subjectId: (widget.args.subjectId ?? '').isNotEmpty
             ? (widget.args.subjectId ?? '')
             : _lesson?.subjectId ?? '',
-        durationMinutes: 45,
+        durationMinutes: _defaultDurationMinutes,
       ),
     );
   }
@@ -145,7 +147,34 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       );
     }
     final lesson = _lesson!;
-    return Scaffold(
+    return PopScope(
+      canPop: _elapsed == Duration.zero,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final l10n = AppLocalizations.of(context)!;
+        final navigator = Navigator.of(context);
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.activeLessonTimer),
+            content: Text(l10n.leaveAnyway),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.leaveAnyway),
+              ),
+            ],
+          ),
+        );
+        if (shouldPop == true && mounted) {
+          navigator.pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(lesson.title),
         actions: [
@@ -196,6 +225,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

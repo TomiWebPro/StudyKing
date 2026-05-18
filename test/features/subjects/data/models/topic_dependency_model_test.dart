@@ -461,6 +461,171 @@ void main() {
         expect(dep.downstreamTopics, []);
         expect(dep.parentTopicId, 'root');
       });
+
+      test('defaults other fields to constructor defaults', () {
+        final dep = TopicDependency.fromTopic(
+          topicId: topicId,
+          childTopicIds: ['t2'],
+        );
+        expect(dep.prerequisites, []);
+        expect(dep.syllabusWeight, 1.0);
+        expect(dep.masteryThreshold, 0.8);
+        expect(dep.isRequired, isTrue);
+        expect(dep.estimatedQuestions, 10);
+        expect(dep.estimatedMinutes, 30);
+        expect(dep.dependencyWeights, {});
+      });
+    });
+
+    group('equality', () {
+      test('identical instances are equal', () {
+        final a = TopicDependency(topicId: topicId);
+        expect(a == a, isTrue);
+      });
+
+      test('different instances are not equal by default (identity)', () {
+        final a = TopicDependency(topicId: 't1');
+        final b = TopicDependency(topicId: 't2');
+        expect(a == b, isFalse);
+      });
+
+      test('same values but different instances are not equal', () {
+        final a = TopicDependency(topicId: topicId);
+        final b = TopicDependency(topicId: topicId);
+        expect(a == b, isFalse);
+      });
+
+      test('hashCode is consistent across calls', () {
+        final a = TopicDependency(topicId: topicId);
+        expect(a.hashCode, a.hashCode);
+      });
+
+      test('different objects likely have different hashCodes', () {
+        final a = TopicDependency(topicId: 't1');
+        final b = TopicDependency(topicId: 't2');
+        expect(a.hashCode == b.hashCode, isFalse);
+      });
+    });
+
+    group('edge cases', () {
+      group('isReady', () {
+        test('returns true with empty prerequisites even if completedTopicIds is empty', () {
+          final dep = TopicDependency(topicId: topicId, prerequisites: []);
+          expect(dep.isReady([], null), isTrue);
+        });
+
+        test('returns true when prereqs met even with extra completed IDs', () {
+          final dep = TopicDependency(
+            topicId: topicId, prerequisites: [prereqId],
+          );
+          expect(dep.isReady([prereqId, 't2', 't3'], null), isTrue);
+        });
+      });
+
+      group('calculatePriority', () {
+        test('returns 0 with syllabusWeight of 0', () {
+          final dep = TopicDependency(
+            topicId: topicId, syllabusWeight: 0.0,
+          );
+          final priority = dep.calculatePriority(
+            masteryState: 0.9, isPrerequisite: false, downstreamCount: 0,
+          );
+          expect(priority, 0.0);
+        });
+
+        test('very large downstreamCount is clamped to 10.0', () {
+          final dep = TopicDependency(
+            topicId: topicId, syllabusWeight: 1.0, masteryThreshold: 0.8,
+          );
+          final priority = dep.calculatePriority(
+            masteryState: 0.0, isPrerequisite: true, downstreamCount: 100,
+          );
+          // would be huge, but clamped to 10.0
+          expect(priority, 10.0);
+        });
+
+        test('combines low mastery, isPrerequisite, and downstreamCount', () {
+          final dep = TopicDependency(
+            topicId: topicId, syllabusWeight: 1.0, masteryThreshold: 0.8,
+          );
+          final priority = dep.calculatePriority(
+            masteryState: 0.0, isPrerequisite: true, downstreamCount: 10,
+          );
+          // 1.0 * (1 + 0.8) = 1.8 (*1.5 prereq) = 2.7 (* (1+10*0.1)) = 5.4
+          expect(priority, closeTo(5.4, 0.01));
+        });
+      });
+
+      group('fromJson', () {
+        test('handles empty prerequisites list', () {
+          final json = {
+            'topicId': topicId,
+            'prerequisites': <String>[],
+          };
+          final dep = TopicDependency.fromJson(json);
+          expect(dep.prerequisites, []);
+        });
+
+        test('handles empty downstreamTopics list', () {
+          final json = {
+            'topicId': topicId,
+            'downstreamTopics': <String>[],
+          };
+          final dep = TopicDependency.fromJson(json);
+          expect(dep.downstreamTopics, []);
+        });
+
+        test('handles empty dependencyWeights map', () {
+          final json = {
+            'topicId': topicId,
+            'dependencyWeights': <String, double>{},
+          };
+          final dep = TopicDependency.fromJson(json);
+          expect(dep.dependencyWeights, {});
+        });
+
+        test('handles empty string topicId', () {
+          final json = {'topicId': ''};
+          final dep = TopicDependency.fromJson(json);
+          expect(dep.topicId, '');
+        });
+      });
+
+      group('copyWith', () {
+        test('can replace prerequisites with empty list', () {
+          final dep = TopicDependency(
+            topicId: topicId, prerequisites: [prereqId],
+          );
+          final copy = dep.copyWith(prerequisites: []);
+          expect(copy.prerequisites, []);
+        });
+
+        test('can replace downstreamTopics with empty list', () {
+          final dep = TopicDependency(
+            topicId: topicId, downstreamTopics: ['t2'],
+          );
+          final copy = dep.copyWith(downstreamTopics: []);
+          expect(copy.downstreamTopics, []);
+        });
+
+        test('can replace dependencyWeights with empty map', () {
+          final dep = TopicDependency(
+            topicId: topicId,
+            dependencyWeights: {prereqId: 0.5},
+          );
+          final copy = dep.copyWith(dependencyWeights: {});
+          expect(copy.dependencyWeights, {});
+        });
+
+        test('passing null for parentTopicId preserves original value', () {
+          final dep = TopicDependency(
+            topicId: topicId, parentTopicId: 'p1',
+          );
+          final copy = dep.copyWith(parentTopicId: null);
+          // copyWith uses `??` so null keeps the original
+          expect(copy.parentTopicId, 'p1');
+        });
+      });
     });
   });
 }

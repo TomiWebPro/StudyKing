@@ -10,6 +10,7 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class QuestionBankScreen extends ConsumerStatefulWidget {
@@ -193,20 +194,20 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Question'),
+        title: Text(l10n.editQuestion),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: textController,
-                decoration: const InputDecoration(labelText: 'Question text', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.questionText, border: const OutlineInputBorder()),
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: explanationController,
-                decoration: const InputDecoration(labelText: 'Explanation', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.explanation, border: const OutlineInputBorder()),
                 maxLines: 2,
               ),
             ],
@@ -248,30 +249,30 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Question Bank'),
+        title: Text(l10n.questionBank),
         actions: [
           if (_selectionMode) ...[
             IconButton(
               icon: const Icon(Icons.close),
-              tooltip: 'Cancel selection',
+              tooltip: l10n.cancelSelection,
               onPressed: () => setState(() { _selectedIds.clear(); _selectionMode = false; }),
             ),
             IconButton(
               icon: const Icon(Icons.delete),
-              tooltip: 'Delete selected',
+              tooltip: l10n.deleteSelected,
               onPressed: _selectedIds.isNotEmpty ? _deleteSelected : null,
             ),
           ] else ...[
             IconButton(
               icon: const Icon(Icons.checklist),
-              tooltip: 'Select multiple',
+              tooltip: l10n.selectMultiple,
               onPressed: () => setState(() { _selectionMode = true; _selectedIds.clear(); }),
             ),
           ],
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingScreen()
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
@@ -348,14 +349,14 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                                       spacing: 8,
                                                       runSpacing: 4,
                                                       children: [
-                                                        _smallChip(q.type.name, theme),
-                                                        _smallChip('Difficulty ${q.difficulty}', theme),
+                                                        _smallChip(_questionTypeLabel(q.type, l10n), theme),
+                                                        _smallChip(l10n.difficultyLabel(q.difficulty.toString()), theme),
                                                         if (subjectName != null) _smallChip(subjectName, theme),
                                                         if (topicName != null) _smallChip(topicName, theme),
                                                         if (q.sourceIds.isNotEmpty)
-                                                          _smallChip('${q.sourceIds.length} source(s)', theme),
+                                                          _smallChip(l10n.sourcesCount(q.sourceIds.length), theme),
                                                         _smallChip(
-                                                          q.model != null ? 'AI-generated' : 'Manual',
+                                                          q.model != null ? l10n.aiGenerated : l10n.manual,
                                                           theme,
                                                         ),
                                                       ],
@@ -370,7 +371,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                                   if (v == 'delete') _deleteQuestion(q);
                                                 },
                                                 itemBuilder: (_) => [
-                                                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                                  PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
                                                   PopupMenuItem(
                                                     value: 'delete',
                                                     child: Text(l10n.delete, style: TextStyle(color: theme.colorScheme.error)),
@@ -398,7 +399,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(label, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSecondaryContainer)),
+      child: Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSecondaryContainer)),
     );
   }
 
@@ -410,7 +411,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search questions',
+              hintText: l10n.searchQuestions,
               prefixIcon: const Icon(Icons.search, size: 20),
               isDense: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -423,21 +424,21 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
             child: Row(
               children: [
                 _filterChip(
-                  label: _subjectFilter.isEmpty ? 'All subjects' : _subjectName(_subjectFilter) ?? _subjectFilter,
+                  label: _subjectFilter.isEmpty ? l10n.allSubjects : _subjectName(_subjectFilter) ?? _subjectFilter,
                   selected: _subjectFilter.isNotEmpty,
                   onTap: () => _showSubjectFilter(l10n),
                   onClear: _subjectFilter.isNotEmpty ? () => setState(() => _subjectFilter = '') : null,
                 ),
                 const SizedBox(width: 8),
                 _filterChip(
-                  label: _typeFilter.isEmpty ? 'All types' : _typeFilter,
+                  label: _typeFilter.isEmpty ? l10n.allTypes : _typeFilter,
                   selected: _typeFilter.isNotEmpty,
                   onTap: () => _showTypeFilter(l10n),
                   onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
                 ),
                 const SizedBox(width: 8),
                 _filterChip(
-                  label: _sourceFilter.isEmpty ? 'All sources' : (_sourceName(_sourceFilter) ?? _sourceFilter),
+                  label: _sourceFilter.isEmpty ? l10n.allSources : (_sourceName(_sourceFilter) ?? _sourceFilter),
                   selected: _sourceFilter.isNotEmpty,
                   onTap: () => _showSourceFilter(l10n),
                   onClear: _sourceFilter.isNotEmpty ? () => setState(() => _sourceFilter = '') : null,
@@ -472,7 +473,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All subjects'),
+            title: Text(l10n.allSubjects),
             trailing: _subjectFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -496,7 +497,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All types'),
+            title: Text(l10n.allTypes),
             trailing: _typeFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -520,7 +521,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All sources'),
+            title: Text(l10n.allSources),
             trailing: _sourceFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -535,5 +536,30 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         ],
       ),
     );
+  }
+}
+
+String _questionTypeLabel(QuestionType type, AppLocalizations l10n) {
+  switch (type) {
+    case QuestionType.singleChoice:
+      return l10n.multipleChoice;
+    case QuestionType.multiChoice:
+      return l10n.multipleSelect;
+    case QuestionType.typedAnswer:
+      return l10n.textAnswer;
+    case QuestionType.canvas:
+      return l10n.canvas;
+    case QuestionType.essay:
+      return l10n.essay;
+    case QuestionType.stepByStep:
+      return l10n.stepByStep;
+    case QuestionType.mathExpression:
+      return l10n.math;
+    case QuestionType.graphDrawing:
+      return l10n.graphDrawing;
+    case QuestionType.fileUpload:
+      return l10n.fileUpload;
+    case QuestionType.audioRecording:
+      return l10n.audioRecording;
   }
 }

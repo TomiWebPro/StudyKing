@@ -114,7 +114,7 @@ class SourcePracticeSheet extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  source.status.name,
+                                  _statusLabel(source.status, l10n),
                                   style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500),
                                 ),
                               ),
@@ -141,13 +141,13 @@ class SourcePracticeSheet extends StatelessWidget {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'select',
-                            child: Text('Practice'),
+                            child: Text(l10n.practiceAction),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'view_details',
-                            child: Text('View Details'),
+                            child: Text(l10n.viewDetailsAction),
                           ),
                         ],
                       ),
@@ -163,6 +163,25 @@ class SourcePracticeSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
+  switch (status) {
+    case ProcessingStatus.pending:
+      return l10n.pending;
+    case ProcessingStatus.extracting:
+      return l10n.extracting;
+    case ProcessingStatus.classifying:
+      return l10n.processing;
+    case ProcessingStatus.generatingQuestions:
+      return l10n.generatingQuestions;
+    case ProcessingStatus.validating:
+      return l10n.validating;
+    case ProcessingStatus.completed:
+      return l10n.completed;
+    case ProcessingStatus.failed:
+      return l10n.failed;
   }
 }
 

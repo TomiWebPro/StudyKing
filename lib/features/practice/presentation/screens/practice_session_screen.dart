@@ -12,6 +12,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/difficulty_adapter.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -49,6 +50,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late final StudentIdService _studentIdService;
   late final MasteryRecorder _masteryRecorder;
   late final MistakeReviewService _mistakeReviewService;
+  late final DifficultyAdapter _difficultyAdapter;
   List<Question> _questions = [];
   int _currentIndex = 0;
   int _previousIndex = 0;
@@ -73,6 +75,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _studentIdService = ref.read(studentIdServiceProvider);
     _masteryRecorder = ref.read(masteryRecorderProvider);
     _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
+    _difficultyAdapter = DifficultyAdapter();
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
@@ -102,6 +105,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   Future<void> _loadQuestions() async {
     try {
+      if (widget.args.orderedQuestionIds != null &&
+          widget.args.orderedQuestionIds!.isNotEmpty) {
+        await _loadOrderedQuestions();
+        return;
+      }
+
+      if (widget.args.isSpacedRepetition) {
+        await _loadSrDueQuestions();
+        return;
+      }
+
       final result = await _questionRepo.getBySubject(widget.args.subjectId);
       if (result.isFailure || result.data == null) {
         if (mounted) setState(() => _questions = []);
@@ -121,6 +135,59 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       final count = (widget.args.questionCount ?? shuffled.length).clamp(1, shuffled.length);
       if (mounted) {
         setState(() => _questions = shuffled.take(count).toList());
+        _initializeSession();
+      }
+    } catch (e) {
+      if (mounted) {
+        AppErrorHandler.handleError(context, e, 'Questions Load', retry: true, retryCallback: _retryLoadQuestions);
+      }
+    }
+  }
+
+  Future<void> _loadOrderedQuestions() async {
+    try {
+      final result = await _questionRepo.getBySubject(widget.args.subjectId);
+      if (result.isFailure || result.data == null) {
+        if (mounted) setState(() => _questions = []);
+        _showNoQuestionsDialog();
+        return;
+      }
+      final questionMap = {for (final q in result.data!) q.id: q};
+      final ordered = widget.args.orderedQuestionIds!
+          .map((id) => questionMap[id])
+          .whereType<Question>()
+          .toList();
+      if (ordered.isEmpty) {
+        if (mounted) setState(() => _questions = []);
+        _showNoQuestionsDialog();
+        return;
+      }
+      final count = (widget.args.questionCount ?? ordered.length).clamp(1, ordered.length);
+      if (mounted) {
+        setState(() => _questions = ordered.take(count).toList());
+        _initializeSession();
+      }
+    } catch (e) {
+      if (mounted) {
+        AppErrorHandler.handleError(context, e, 'Questions Load', retry: true, retryCallback: _retryLoadQuestions);
+      }
+    }
+  }
+
+  Future<void> _loadSrDueQuestions() async {
+    try {
+      final result = await _srRepo.getPracticeQuestions(widget.args.subjectId);
+      if (result.isFailure || result.data == null || result.data!.isEmpty) {
+        if (mounted) setState(() => _questions = []);
+        _showNoQuestionsDialog();
+        return;
+      }
+      var dueQuestions = result.data!;
+      dueQuestions.sort((a, b) => (a.nextReview ?? DateTime.now())
+          .compareTo(b.nextReview ?? DateTime.now()));
+      final count = (widget.args.questionCount ?? dueQuestions.length).clamp(1, dueQuestions.length);
+      if (mounted) {
+        setState(() => _questions = dueQuestions.take(count).toList());
         _initializeSession();
       }
     } catch (e) {
@@ -214,6 +281,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       confidence: _currentConfidence,
       userAnswer: _currentAnswer!,
     );
+
+    _difficultyAdapter.recordResult(isCorrect);
+    _difficultyAdapter.suggestNextDifficulty();
 
     if (widget.args.isSpacedRepetition) {
       _updateNextReview(question.id, isCorrect);

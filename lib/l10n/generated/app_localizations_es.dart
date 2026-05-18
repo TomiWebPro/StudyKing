@@ -45,6 +45,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get generating => 'Generando...';
 
   @override
+  String get generatingReport => 'Generando informe...';
+
+  @override
   String get yourStudySchedule => 'Su Horario de Estudio';
 
   @override
@@ -233,6 +236,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noWeakAreasFound =>
       'No se encontraron áreas por mejorar. ¡Siga así!';
+
+  @override
+  String get atRiskQuestions => 'Preguntas en Riesgo';
+
+  @override
+  String get atRiskQuestionsDescription =>
+      'Practica preguntas con puntuaciones de dominio más bajas';
 
   @override
   String get noWeakAreasQuestions =>
@@ -522,6 +532,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get large => 'Grande';
+
+  @override
+  String get leaveAnyway => 'Salir de todas formas';
 
   @override
   String get extraLarge => 'Extra Grande';
@@ -1125,6 +1138,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get nextQuestion => 'Siguiente Pregunta';
 
   @override
+  String get type => 'Tipo';
+
+  @override
   String get typeYourAnswerHere => 'Escriba su respuesta aquí...';
 
   @override
@@ -1157,6 +1173,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get stepByStep => 'Paso a Paso';
+
+  @override
+  String get audioRecording => 'Grabación de Audio';
+
+  @override
+  String get canvas => 'Lienzo';
+
+  @override
+  String get fileUpload => 'Subir Archivo';
+
+  @override
+  String get graphDrawing => 'Dibujo de Gráfico';
 
   @override
   String difficultyLabel(String level) {
@@ -1970,6 +1998,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get aboutLegalese => '© 2026 StudyKing.';
 
   @override
+  String get activeLessonTimer =>
+      'Tienes un temporizador de lección activo. ¿Salir de todas formas?';
+
+  @override
   String get unknownModelId => 'unknown-model';
 
   @override
@@ -2532,7 +2564,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get allRequiredStepsMissing => 'Faltan algunos pasos requeridos';
 
   @override
-  String get focusMode => 'Modo de Enfoque';
+  String get focusMode => 'Estudio';
 
   @override
   String get newFocusSession => 'Nueva Sesión de Enfoque';
@@ -2561,7 +2593,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get focus => 'Enfoque';
+  String get focus => 'Estudio';
 
   @override
   String focusForMinutes(int minutes) {
@@ -2576,6 +2608,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get timerPaused => 'PAUSADO';
+
+  @override
+  String get title => 'Título';
 
   @override
   String get timerDone => 'TERMINADO';
@@ -3476,6 +3511,12 @@ class AppLocalizationsEs extends AppLocalizations {
       'StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Exportación en el Tablero.';
 
   @override
+  String get toggleVisibility => 'Alternar visibilidad';
+
+  @override
+  String get moreOptions => 'Más opciones';
+
+  @override
   String get iUnderstand => 'Entiendo';
 
   @override
@@ -3997,6 +4038,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get questionText => 'Texto de la pregunta';
 
   @override
+  String questionSubtitle(String questionType, String difficulty) {
+    return '$questionType • $difficulty';
+  }
+
+  @override
   String get cancelSelection => 'Cancelar selección';
 
   @override
@@ -4074,5 +4120,189 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String breakRemainingLabel(String formattedTime) {
     return 'Quedan $formattedTime de descanso';
+  }
+
+  @override
+  String get loading => 'Cargando...';
+
+  @override
+  String get pending => 'Pendiente';
+
+  @override
+  String get extracting => 'Extrayendo';
+
+  @override
+  String get processing => 'Procesando';
+
+  @override
+  String get generatingQuestions => 'Generando Preguntas';
+
+  @override
+  String get contentLibrary => 'Biblioteca de Contenido';
+
+  @override
+  String get sortOrder => 'Ordenar';
+
+  @override
+  String get sortBy => 'Ordenar por';
+
+  @override
+  String get allStatuses => 'Todos los estados';
+
+  @override
+  String get sourceDeleted => 'Fuente eliminada';
+
+  @override
+  String get alsoDeleteQuestions =>
+      'Eliminar también las preguntas generadas de esta fuente';
+
+  @override
+  String get reprocess => 'Reprocesar';
+
+  @override
+  String sourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fuentes',
+      one: '1 fuente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourceNotFound => 'Fuente no encontrada';
+
+  @override
+  String get reprocessSource => 'Reprocesar Fuente';
+
+  @override
+  String get reprocessingWarning =>
+      'El reprocesamiento reemplazará las preguntas generadas existentes. ¿Continuar?';
+
+  @override
+  String get reprocessing => 'Reprocesando...';
+
+  @override
+  String get sourceDetail => 'Detalle de Fuente';
+
+  @override
+  String get status => 'Estado';
+
+  @override
+  String get subject => 'Materia';
+
+  @override
+  String get id => 'ID';
+
+  @override
+  String get uploaded => 'Subido';
+
+  @override
+  String get processingFailed => 'Procesamiento fallido';
+
+  @override
+  String get topicClassification => 'Clasificación de Tema';
+
+  @override
+  String get notYetClassified => 'Aún no clasificado';
+
+  @override
+  String get classifyNow => 'Clasificar Ahora';
+
+  @override
+  String get noSummaryAvailable => 'No hay resumen disponible';
+
+  @override
+  String get extractedText => 'Texto Extraído';
+
+  @override
+  String extractedTextCount(int count) {
+    return 'Texto Extraído ($count)';
+  }
+
+  @override
+  String get searchInText => 'Buscar en texto';
+
+  @override
+  String get noExtractedText => 'No hay texto extraído disponible';
+
+  @override
+  String get generatedQuestions => 'Preguntas Generadas';
+
+  @override
+  String generatedQuestionsCount(int count) {
+    return 'Preguntas Generadas ($count)';
+  }
+
+  @override
+  String get noQuestionsFromSource => 'No hay preguntas de esta fuente';
+
+  @override
+  String get difficulty => 'Dificultad';
+
+  @override
+  String get edit => 'Editar';
+
+  @override
+  String get aiGenerated => 'Generado por IA';
+
+  @override
+  String get manual => 'Manual';
+
+  @override
+  String get sources => 'Fuentes';
+
+  @override
+  String get viewSources => 'Ver Fuentes';
+
+  @override
+  String get noSourcesForSubject => 'No hay fuentes para esta materia';
+
+  @override
+  String get remainingWorkload => 'Carga de Trabajo Restante';
+
+  @override
+  String get explanation => 'Explicación';
+
+  @override
+  String sourcesCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Fuente(s)',
+      one: '1 Fuente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get difficultyDistribution => 'Distribución de Dificultad';
+
+  @override
+  String get difficultyDistributionHint =>
+      'Establezca el número de preguntas Fáciles, Medias y Difíciles. Deje todo en 0 para selección aleatoria equilibrada.';
+
+  @override
+  String get easyQuestions => 'Fácil';
+
+  @override
+  String get mediumQuestions => 'Media';
+
+  @override
+  String get hardQuestions => 'Difícil';
+
+  @override
+  String get totalSelected => 'Total Seleccionado';
+
+  @override
+  String get practiceAction => 'Practicar';
+
+  @override
+  String get viewDetailsAction => 'Ver Detalles';
+
+  @override
+  String mentorScheduleTopic(String topicTitle) {
+    return 'Tema: $topicTitle';
   }
 }

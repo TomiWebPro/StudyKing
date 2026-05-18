@@ -25,7 +25,7 @@ class FakeSubjectRepository extends SubjectRepository {
       Result.success(_storage.values.toList());
 
   @override
-  Future<Result<void>> save(String key, Subject item) async {
+  Future<Result<void>> put(String key, Subject item) async {
     _storage[key] = item;
     return Result.success(null);
   }
@@ -193,7 +193,7 @@ void main() {
       final all = await repo.getAll();
       expect(all.data, isEmpty);
 
-      await repo.save('subj-1', _createSubject(id: 'subj-1', name: 'Physics'));
+      await repo.put('subj-1', _createSubject(id: 'subj-1', name: 'Physics'));
       final saved = await repo.get('subj-1');
       expect(saved.data, isNotNull);
       expect(saved.data!.name, 'Physics');
@@ -290,7 +290,7 @@ void main() {
 
       final repo = await container.read(subjectsRepositoryProvider.future);
       final subject = _createSubject(id: 'test-1', name: 'Physics');
-      await repo.save('test-1', subject);
+      await repo.put('test-1', subject);
 
       final retrieved = await repo.get('test-1');
       expect(retrieved.data, isNotNull);
@@ -331,14 +331,14 @@ void main() {
       final repo = await container.read(subjectsRepositoryProvider.future);
       final s1 = _createSubject(id: 's1', name: 'Math', topicIds: ['t1', 't2']);
       final s2 = _createSubject(id: 's2', name: 'Physics', topicIds: ['t3']);
-      await repo.save('s1', s1);
-      await repo.save('s2', s2);
+      await repo.put('s1', s1);
+      await repo.put('s2', s2);
 
       final matching = await repo.getWithTopics(['t1', 't3']);
-      expect(matching, hasLength(2));
+      expect(matching.data, hasLength(2));
 
       final noMatch = await repo.getWithTopics(['t99']);
-      expect(noMatch, isEmpty);
+      expect(noMatch.data, isEmpty);
     });
 
     test('getByCode finds subject by code', () async {
@@ -351,14 +351,14 @@ void main() {
         name: 'History',
         code: 'HIST101',
       );
-      await repo.save('code-test', subject);
+      await repo.put('code-test', subject);
 
       final found = await repo.getByCode('HIST101');
-      expect(found, isNotNull);
-      expect(found!.id, 'code-test');
+      expect(found.data, isNotNull);
+      expect(found.data!.id, 'code-test');
 
       final notFound = await repo.getByCode('NONEXIST');
-      expect(notFound, isNull);
+      expect(notFound.data, isNull);
     });
 
     test('addTopicToSubject adds topic id to subject', () async {
@@ -367,7 +367,7 @@ void main() {
 
       final repo = await container.read(subjectsRepositoryProvider.future);
       final subject = _createSubject(id: 's-add', name: 'Biology');
-      await repo.save('s-add', subject);
+      await repo.put('s-add', subject);
 
       await repo.addTopicToSubject('s-add', 'topic-1');
       final updated = await repo.get('s-add');
@@ -380,7 +380,7 @@ void main() {
 
       final repo = await container.read(subjectsRepositoryProvider.future);
       final subject = _createSubject(id: 's-dup', name: 'Biology', topicIds: ['topic-1']);
-      await repo.save('s-dup', subject);
+      await repo.put('s-dup', subject);
 
       await repo.addTopicToSubject('s-dup', 'topic-1');
       final updated = await repo.get('s-dup');
@@ -402,7 +402,7 @@ void main() {
 
       final repo = await container.read(subjectsRepositoryProvider.future);
       final subject = _createSubject(id: 's-rm', name: 'Physics', topicIds: ['t1', 't2']);
-      await repo.save('s-rm', subject);
+      await repo.put('s-rm', subject);
 
       await repo.removeTopicFromSubject('s-rm', 't1');
       final updated = await repo.get('s-rm');

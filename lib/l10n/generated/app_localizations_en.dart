@@ -45,6 +45,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get generating => 'Generating...';
 
   @override
+  String get generatingReport => 'Generating report...';
+
+  @override
   String get yourStudySchedule => 'Your Study Schedule';
 
   @override
@@ -230,6 +233,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noWeakAreasFound => 'No weak areas found. Keep up the great work!';
+
+  @override
+  String get atRiskQuestions => 'At-Risk Questions';
+
+  @override
+  String get atRiskQuestionsDescription =>
+      'Practice questions with lowest mastery scores';
 
   @override
   String get noWeakAreasQuestions =>
@@ -518,6 +528,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get large => 'Large';
+
+  @override
+  String get leaveAnyway => 'Leave anyway';
 
   @override
   String get extraLarge => 'Extra Large';
@@ -1111,6 +1124,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextQuestion => 'Next Question';
 
   @override
+  String get type => 'Type';
+
+  @override
   String get typeYourAnswerHere => 'Type your answer here...';
 
   @override
@@ -1143,6 +1159,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stepByStep => 'Step-by-Step';
+
+  @override
+  String get audioRecording => 'Audio Recording';
+
+  @override
+  String get canvas => 'Canvas';
+
+  @override
+  String get fileUpload => 'File Upload';
+
+  @override
+  String get graphDrawing => 'Graph Drawing';
 
   @override
   String difficultyLabel(String level) {
@@ -1950,6 +1978,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutLegalese => '© 2026 StudyKing.';
 
   @override
+  String get activeLessonTimer =>
+      'You have an active lesson timer. Leave anyway?';
+
+  @override
   String get unknownModelId => 'unknown-model';
 
   @override
@@ -2500,7 +2532,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allRequiredStepsMissing => 'Some required steps missing';
 
   @override
-  String get focusMode => 'Focus Mode';
+  String get focusMode => 'Study';
 
   @override
   String get newFocusSession => 'New Focus Session';
@@ -2529,7 +2561,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get focus => 'Focus';
+  String get focus => 'Study';
 
   @override
   String focusForMinutes(int minutes) {
@@ -2544,6 +2576,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timerPaused => 'PAUSED';
+
+  @override
+  String get title => 'Title';
 
   @override
   String get timerDone => 'DONE!';
@@ -3406,7 +3441,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingFocusDesc =>
-      'Stay focused with Pomodoro-style study sessions';
+      'Quick practice hub with timer — practice questions and track focus';
 
   @override
   String get onboardingSettingsDesc =>
@@ -3435,6 +3470,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dataStorageDescription =>
       'StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.';
+
+  @override
+  String get toggleVisibility => 'Toggle visibility';
+
+  @override
+  String get moreOptions => 'More options';
 
   @override
   String get iUnderstand => 'I Understand';
@@ -3949,6 +3990,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get questionText => 'Question text';
 
   @override
+  String questionSubtitle(String questionType, String difficulty) {
+    return '$questionType • $difficulty';
+  }
+
+  @override
   String get cancelSelection => 'Cancel selection';
 
   @override
@@ -4025,5 +4071,189 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String breakRemainingLabel(String formattedTime) {
     return 'Break remaining $formattedTime';
+  }
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get extracting => 'Extracting';
+
+  @override
+  String get processing => 'Processing';
+
+  @override
+  String get generatingQuestions => 'Generating Questions';
+
+  @override
+  String get contentLibrary => 'Content Library';
+
+  @override
+  String get sortOrder => 'Sort order';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get allStatuses => 'All statuses';
+
+  @override
+  String get sourceDeleted => 'Source deleted';
+
+  @override
+  String get alsoDeleteQuestions =>
+      'Also delete questions generated from this source';
+
+  @override
+  String get reprocess => 'Reprocess';
+
+  @override
+  String sourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sources',
+      one: '1 source',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourceNotFound => 'Source not found';
+
+  @override
+  String get reprocessSource => 'Reprocess Source';
+
+  @override
+  String get reprocessingWarning =>
+      'Reprocessing will replace existing generated questions. Continue?';
+
+  @override
+  String get reprocessing => 'Reprocessing...';
+
+  @override
+  String get sourceDetail => 'Source Detail';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get subject => 'Subject';
+
+  @override
+  String get id => 'ID';
+
+  @override
+  String get uploaded => 'Uploaded';
+
+  @override
+  String get processingFailed => 'Processing failed';
+
+  @override
+  String get topicClassification => 'Topic Classification';
+
+  @override
+  String get notYetClassified => 'Not yet classified';
+
+  @override
+  String get classifyNow => 'Classify Now';
+
+  @override
+  String get noSummaryAvailable => 'No summary available';
+
+  @override
+  String get extractedText => 'Extracted Text';
+
+  @override
+  String extractedTextCount(int count) {
+    return 'Extracted Text ($count)';
+  }
+
+  @override
+  String get searchInText => 'Search in text';
+
+  @override
+  String get noExtractedText => 'No extracted text available';
+
+  @override
+  String get generatedQuestions => 'Generated Questions';
+
+  @override
+  String generatedQuestionsCount(int count) {
+    return 'Generated Questions ($count)';
+  }
+
+  @override
+  String get noQuestionsFromSource => 'No questions from this source';
+
+  @override
+  String get difficulty => 'Difficulty';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get aiGenerated => 'AI-generated';
+
+  @override
+  String get manual => 'Manual';
+
+  @override
+  String get sources => 'Sources';
+
+  @override
+  String get viewSources => 'View Sources';
+
+  @override
+  String get noSourcesForSubject => 'No sources for this subject';
+
+  @override
+  String get remainingWorkload => 'Remaining Workload';
+
+  @override
+  String get explanation => 'Explanation';
+
+  @override
+  String sourcesCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Source(s)',
+      one: '1 Source',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get difficultyDistribution => 'Difficulty Distribution';
+
+  @override
+  String get difficultyDistributionHint =>
+      'Set the number of Easy, Medium, and Hard questions. Leave all at 0 for balanced random selection.';
+
+  @override
+  String get easyQuestions => 'Easy';
+
+  @override
+  String get mediumQuestions => 'Medium';
+
+  @override
+  String get hardQuestions => 'Hard';
+
+  @override
+  String get totalSelected => 'Total Selected';
+
+  @override
+  String get practiceAction => 'Practice';
+
+  @override
+  String get viewDetailsAction => 'View Details';
+
+  @override
+  String mentorScheduleTopic(String topicTitle) {
+    return 'Topic: $topicTitle';
   }
 }

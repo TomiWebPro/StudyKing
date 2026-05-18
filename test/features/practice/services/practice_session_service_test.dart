@@ -19,6 +19,7 @@ class _FakeSessionRepository extends SessionRepository {
   bool saveCalled = false;
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     sessions.add(session);
     saveCalled = true;

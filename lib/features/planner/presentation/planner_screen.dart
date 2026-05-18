@@ -219,7 +219,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               const SizedBox(height: 12),
               TextField(
                 decoration: InputDecoration(
-                  labelText: l10n.studentIdOptional,
+                  labelText: l10n.subjectOptional,
                   hintText: l10n.subjectIdHint,
                   border: const OutlineInputBorder(),
                 ),
@@ -481,7 +481,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                        icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).colorScheme.error),
+                        tooltip: l10n.delete,
                         onPressed: _syllabusEntries.length > 1
                             ? () {
                                 setState(() {

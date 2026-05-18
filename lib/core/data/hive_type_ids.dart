@@ -1,5 +1,7 @@
 library;
 
+import 'package:studyking/core/errors/exceptions.dart';
+
 const int _typeIdTopicModel = 0;
 const int _typeIdQuestionModel = 2;
 const int _typeIdSettingsBox = 4;
@@ -79,7 +81,7 @@ bool _checkUniqueIds() {
         duplicates.add(id);
       }
     }
-    throw StateError('Duplicate Hive typeIds detected: $duplicates');
+    throw AppException(message: 'Duplicate Hive typeIds detected: $duplicates', type: ExceptionType.database);
   }
   return true;
 }

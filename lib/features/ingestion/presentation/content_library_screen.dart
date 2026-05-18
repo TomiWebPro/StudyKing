@@ -5,6 +5,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -99,37 +100,38 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     }
   }
 
-  Color _statusColor(ProcessingStatus status) {
+  Color _statusColor(ProcessingStatus status, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     switch (status) {
       case ProcessingStatus.completed:
-        return Colors.green;
+        return cs.primary;
       case ProcessingStatus.failed:
-        return Colors.red;
+        return cs.error;
       case ProcessingStatus.pending:
       case ProcessingStatus.extracting:
       case ProcessingStatus.classifying:
       case ProcessingStatus.generatingQuestions:
       case ProcessingStatus.validating:
-        return Colors.orange;
+        return cs.tertiary;
     }
   }
 
   String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
     switch (status) {
       case ProcessingStatus.pending:
-        return 'Pending';
+        return l10n.pending;
       case ProcessingStatus.extracting:
-        return 'Extracting';
+        return l10n.extracting;
       case ProcessingStatus.classifying:
-        return 'Processing';
+        return l10n.processing;
       case ProcessingStatus.generatingQuestions:
-        return 'Generating Questions';
+        return l10n.generatingQuestions;
       case ProcessingStatus.validating:
-        return 'Validating';
+        return l10n.validating;
       case ProcessingStatus.completed:
-        return 'Completed';
+        return l10n.completed;
       case ProcessingStatus.failed:
-        return 'Failed';
+        return l10n.failed;
     }
   }
 
@@ -171,16 +173,16 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInnerState) => AlertDialog(
-          title: const Text('Delete Source'),
+          title: Text(l10n.deleteSourceTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Are you sure you want to delete this source?'),
+              Text(l10n.deleteSourceBody),
               if (deleteQuestions) ...[
                 const SizedBox(height: 12),
                 CheckboxListTile(
-                  title: const Text('Also delete questions generated from this source'),
+                  title: Text(l10n.alsoDeleteQuestions),
                   value: alsoDeleteQuestions,
                   onChanged: (v) => setInnerState(() => alsoDeleteQuestions = v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -220,7 +222,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Source deleted'),
+          content: Text(l10n.sourceDeleted),
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
@@ -245,28 +247,28 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Content Library'),
+        title: Text(l10n.contentLibrary),
         actions: [
           IconButton(
             icon: Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward),
-            tooltip: 'Sort order',
+            tooltip: l10n.sortOrder,
             onPressed: () => setState(() => _sortAscending = !_sortAscending),
           ),
           PopupMenuButton<SortField>(
             icon: const Icon(Icons.sort),
-            tooltip: 'Sort by',
+            tooltip: l10n.sortBy,
             onSelected: (field) => setState(() => _sortField = field),
             itemBuilder: (_) => [
-              const PopupMenuItem(value: SortField.uploadDate, child: Text('Date')),
-              const PopupMenuItem(value: SortField.title, child: Text('Title')),
-              const PopupMenuItem(value: SortField.status, child: Text('Status')),
-              const PopupMenuItem(value: SortField.type, child: Text('Type')),
+              PopupMenuItem(value: SortField.uploadDate, child: Text(l10n.date)),
+              PopupMenuItem(value: SortField.title, child: Text(l10n.title)),
+              PopupMenuItem(value: SortField.status, child: Text(l10n.status)),
+              PopupMenuItem(value: SortField.type, child: Text(l10n.type)),
             ],
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingScreen()
           : _error != null
               ? Center(
                   child: Column(
@@ -312,7 +314,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                                     source: source,
                                     subjectName: subjectName,
                                     typeIcon: _typeIcon(source.type),
-                                    statusColor: _statusColor(source.statusEnum),
+                                    statusColor: _statusColor(source.statusEnum, context),
                                     statusLabel: _statusLabel(source.statusEnum, l10n),
                                     onTap: () {
                                       Navigator.pushNamed(
@@ -340,21 +342,21 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         child: Row(
           children: [
             _filterChip(
-              label: _subjectFilter.isEmpty ? 'All subjects' : _subjectName(_subjectFilter) ?? _subjectFilter,
+              label: _subjectFilter.isEmpty ? l10n.allSubjects : _subjectName(_subjectFilter) ?? _subjectFilter,
               selected: _subjectFilter.isNotEmpty,
               onSelected: () => _showSubjectFilter(l10n),
               onClear: _subjectFilter.isNotEmpty ? () => setState(() => _subjectFilter = '') : null,
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _typeFilter.isEmpty ? 'All types' : _typeFilter,
+              label: _typeFilter.isEmpty ? l10n.allTypes : _typeFilter,
               selected: _typeFilter.isNotEmpty,
               onSelected: () => _showTypeFilter(l10n),
               onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _statusFilter.isEmpty ? 'All statuses' : _statusFilter,
+              label: _statusFilter.isEmpty ? l10n.allStatuses : _statusFilter,
               selected: _statusFilter.isNotEmpty,
               onSelected: () => _showStatusFilter(l10n),
               onClear: _statusFilter.isNotEmpty ? () => setState(() => _statusFilter = '') : null,
@@ -387,7 +389,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All subjects'),
+            title: Text(l10n.allSubjects),
             trailing: _subjectFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -414,7 +416,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All types'),
+            title: Text(l10n.allTypes),
             trailing: _typeFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -441,7 +443,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: const Text('All statuses'),
+            title: Text(l10n.allStatuses),
             trailing: _statusFilter.isEmpty ? const Icon(Icons.check) : null,
             onTap: () {
               Navigator.pop(ctx);
@@ -540,7 +542,7 @@ class _SourceListTile extends StatelessWidget {
                     ),
                     child: Text(
                       statusLabel,
-                      style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500),
+                      style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
                     ),
                   ),
                   if (source.statusEnum == ProcessingStatus.failed) ...[
@@ -564,7 +566,7 @@ class _SourceListTile extends StatelessWidget {
               if (source.statusEnum == ProcessingStatus.failed)
                 IconButton(
                   icon: Icon(Icons.refresh, size: 20, color: theme.colorScheme.error),
-                  tooltip: 'Reprocess',
+                  tooltip: l10n.reprocess,
                   onPressed: () {
                     Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: source.id);
                   },

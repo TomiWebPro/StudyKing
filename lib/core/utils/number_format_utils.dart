@@ -33,7 +33,8 @@ String formatCompactNumber(int value, String localeName) {
     final fmt = NumberFormat.compact(locale: localeName);
     return fmt.format(value);
   }
-  return value.toString();
+  final fmt = NumberFormat.decimalPattern(localeName);
+  return fmt.format(value);
 }
 
 String formatHours(double totalSeconds, String localeName) {

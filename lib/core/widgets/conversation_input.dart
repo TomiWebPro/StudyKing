@@ -72,81 +72,72 @@ class _ConversationInputState extends State<ConversationInput> {
                     const SizedBox(width: 8),
                   ],
                   Expanded(
-                    child: Semantics(
-                      label: widget.semanticsLabel,
-                      hint: widget.semanticsHint,
-                      child: TextField(
-                        controller: widget.controller,
-                        focusNode: widget.focusNode,
-                        maxLines: 4,
-                        minLines: 1,
-                        textInputAction: TextInputAction.send,
-                        enabled: widget.isEnabled && !widget.isLoading,
-                        decoration: InputDecoration(
-                          hintText: widget.hintText,
-                          hintStyle: TextStyle(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.6),
-                          ),
-                          filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.5),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(
-                              color: colorScheme.primary,
-                              width: 1.5,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: widget.focusNode,
+                      maxLines: 4,
+                      minLines: 1,
+                      textInputAction: TextInputAction.send,
+                      enabled: widget.isEnabled && !widget.isLoading,
+                      decoration: InputDecoration(
+                        hintText: widget.hintText,
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 1.5,
                           ),
                         ),
-                        onSubmitted: (_) {
-                          if (!widget.isEnabled || widget.isLoading) return;
-                          widget.onSend();
-                        },
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
+                      onSubmitted: (_) {
+                        if (!widget.isEnabled || widget.isLoading) return;
+                        widget.onSend();
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
                   if (widget.trailing != null)
                     ...widget.trailing!
                   else
-                    Semantics(
-                      button: true,
-                      label: widget.isLoading
+                    IconButton.filled(
+                      icon: widget.isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send_rounded),
+                      onPressed: widget.isEnabled && !widget.isLoading
+                          ? widget.onSend
+                          : null,
+                      tooltip: widget.isLoading
                           ? AppLocalizations.of(context)!.sending
                           : widget.sendTooltip,
-                      child: IconButton.filled(
-                        icon: widget.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send_rounded),
-                        onPressed: widget.isEnabled && !widget.isLoading
-                            ? widget.onSend
-                            : null,
-                        tooltip: widget.sendTooltip,
-                        style: IconButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          minimumSize: const Size(48, 48),
-                        ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        minimumSize: const Size(48, 48),
                       ),
                     ),
                 ],
@@ -164,7 +155,7 @@ class _ConversationInputState extends State<ConversationInput> {
                     child: Text(
                       AppLocalizations.of(context)!.sendHint,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),

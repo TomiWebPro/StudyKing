@@ -57,7 +57,7 @@ void main() {
     });
 
     test('focus getter', () {
-      expect(l10n.focus, 'Focus');
+      expect(l10n.focus, 'Study');
     });
 
     test('getting started section', () {
@@ -457,7 +457,7 @@ void main() {
     });
 
     test('focus getter', () {
-      expect(l10n.focus, 'Enfoque');
+      expect(l10n.focus, 'Estudio');
     });
 
     test('getting started section', () {
@@ -1164,7 +1164,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Focus'), findsOneWidget);
+      expect(find.text('Study'), findsOneWidget);
       expect(find.text('Study Sessions'), findsOneWidget);
       expect(find.text('Summary'), findsOneWidget);
       expect(find.text('No limit'), findsOneWidget);
@@ -1240,9 +1240,9 @@ void main() {
         );
 
         if (locale.languageCode == 'en') {
-          expect(find.text('Focus'), findsOneWidget);
+          expect(find.text('Study'), findsOneWidget);
         } else {
-          expect(find.text('Enfoque'), findsOneWidget);
+          expect(find.text('Estudio'), findsOneWidget);
         }
       }
     });

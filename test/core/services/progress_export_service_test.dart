@@ -54,6 +54,9 @@ class _FakeMasteryGraphService implements MasteryGraphService {
   Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
 
   @override
+  Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(String studentId) async => Result.success([]);
+
+  @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
 
   @override
@@ -78,25 +81,28 @@ class _FakeMasteryGraphService implements MasteryGraphService {
 
 class _FakeAttemptRepository implements AttemptRepository {
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(String studentId, String subjectId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async => Result.success([]);
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async => [];
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async => Result.success([]);
 
   @override
-  Future<List<StudentAttempt>> getBySubject(String subjectId) async => [];
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async => Result.success([]);
 
   @override
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async => {};
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async => Result.success({});
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
+
+  @override
+  Future<Result<void>> put(String key, StudentAttempt item) async => Result.success(null);
 
   @override
   Future<void> init() async {}
-
-  @override
-  Future<void> create(StudentAttempt attempt) async {}
 
   @override
   Future<void> openBox(String boxName) async {}

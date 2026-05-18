@@ -36,21 +36,22 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
   void addSession(TutorSession session) => _sessions.add(session);
 
   @override
-  Future<void> saveSession(TutorSession session) async {
+  Future<Result<void>> saveSession(TutorSession session) async {
     _sessions.add(session);
+    return Result.success(null);
   }
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
-    return _sessions.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
+    return Result.success(_sessions.where((s) => s.studentId == studentId).toList());
   }
 
   @override
-  Future<TutorSession?> getSession(String id) async {
+  Future<Result<TutorSession?>> getSession(String id) async {
     try {
-      return _sessions.firstWhere((s) => s.id == id);
+      return Result.success(_sessions.firstWhere((s) => s.id == id));
     } catch (_) {
-      return null;
+      return Result.success(null);
     }
   }
 }
@@ -306,22 +307,23 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {
+  Future<Result<void>> create(EngagementNudgeModel nudge) async {
     _nudges.add(nudge);
+    return Result.success(null);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(
       String studentId, {int limit = 10}) async {
-    return _nudges.where((n) => n.studentId == studentId).take(limit).toList();
+    return Result.success(_nudges.where((n) => n.studentId == studentId).take(limit).toList());
   }
 
   @override
-  Future<int> getTodayCount(String studentId) async {
+  Future<Result<int>> getTodayCount(String studentId) async {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
-    return _nudges.where((n) =>
-        n.studentId == studentId && n.sentAt.isAfter(startOfDay)).length;
+    return Result.success(_nudges.where((n) =>
+        n.studentId == studentId && n.sentAt.isAfter(startOfDay)).length);
   }
 }
 

@@ -228,16 +228,22 @@ class TutorService {
   }
 
   Future<List<TutorSession>> getLessonHistory(String studentId) async {
-    return _database.tutorSessionRepository.getStudentSessions(studentId);
+    final result =
+        await _database.tutorSessionRepository.getStudentSessions(studentId);
+    return result.data ?? [];
   }
 
   Future<List<ConversationMessage>> getSessionMessages(
       String sessionId) async {
-    return _database.conversationRepository.getSessionMessages(sessionId);
+    final result =
+        await _database.conversationRepository.getSessionMessages(sessionId);
+    return result.data ?? [];
   }
 
   Future<Map<String, dynamic>> getStats(String studentId) async {
-    return _database.tutorSessionRepository.getSessionStats(studentId);
+    final result =
+        await _database.tutorSessionRepository.getSessionStats(studentId);
+    return result.data ?? {};
   }
 
   Future<void> saveMessage(ConversationMessage message) async {
@@ -245,8 +251,9 @@ class TutorService {
   }
 
   Future<TutorSession?> getActiveSession() async {
-    final sessions =
+    final result =
         await _database.tutorSessionRepository.getActiveSessions();
+    final sessions = result.data ?? [];
     return sessions.isNotEmpty ? sessions.first : null;
   }
 }

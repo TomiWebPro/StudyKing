@@ -74,15 +74,17 @@ class SessionAnalyticsWidget extends StatelessWidget {
       theme.textTheme.bodySmall?.color ?? Colors.grey;
 
   Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, size: 20, color: _bodySmallColor(theme)),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: theme.textTheme.bodyLarge?.color,
+    return MergeSemantics(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icon, size: 20, color: _bodySmallColor(theme)),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.textTheme.bodyLarge?.color,
+          ),
         ),
       ),
     );

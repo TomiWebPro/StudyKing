@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Generating...'**
   String get generating;
 
+  /// Loading message while generating progress report
+  ///
+  /// In en, this message translates to:
+  /// **'Generating report...'**
+  String get generatingReport;
+
   /// Title for the generated study schedule
   ///
   /// In en, this message translates to:
@@ -410,11 +416,23 @@ abstract class AppLocalizations {
   /// **'Topic selection coming soon!'**
   String get topicSelectionComingSoon;
 
-  /// Message when no weak areas are found
+  /// Message shown when the user has no weak topics
   ///
   /// In en, this message translates to:
   /// **'No weak areas found. Keep up the great work!'**
   String get noWeakAreasFound;
+
+  /// Title for at-risk practice mode
+  ///
+  /// In en, this message translates to:
+  /// **'At-Risk Questions'**
+  String get atRiskQuestions;
+
+  /// Description for at-risk practice mode
+  ///
+  /// In en, this message translates to:
+  /// **'Practice questions with lowest mastery scores'**
+  String get atRiskQuestionsDescription;
 
   /// Message when no questions found for weak areas
   ///
@@ -961,6 +979,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Large'**
   String get large;
+
+  /// Button label to confirm leaving despite active timer
+  ///
+  /// In en, this message translates to:
+  /// **'Leave anyway'**
+  String get leaveAnyway;
 
   /// Extra large font size label
   ///
@@ -2018,6 +2042,12 @@ abstract class AppLocalizations {
   /// **'Next Question'**
   String get nextQuestion;
 
+  /// Label for type field
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get type;
+
   /// Hint text for text answer input
   ///
   /// In en, this message translates to:
@@ -2083,6 +2113,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Step-by-Step'**
   String get stepByStep;
+
+  /// Label for audio recording question type
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Recording'**
+  String get audioRecording;
+
+  /// Label for canvas/drawing question type
+  ///
+  /// In en, this message translates to:
+  /// **'Canvas'**
+  String get canvas;
+
+  /// Label for file upload question type
+  ///
+  /// In en, this message translates to:
+  /// **'File Upload'**
+  String get fileUpload;
+
+  /// Label for graph drawing question type
+  ///
+  /// In en, this message translates to:
+  /// **'Graph Drawing'**
+  String get graphDrawing;
 
   /// Label showing difficulty level
   ///
@@ -3434,6 +3488,12 @@ abstract class AppLocalizations {
   /// **'© 2026 StudyKing.'**
   String get aboutLegalese;
 
+  /// Title for exit confirmation when lesson timer is active
+  ///
+  /// In en, this message translates to:
+  /// **'You have an active lesson timer. Leave anyway?'**
+  String get activeLessonTimer;
+
   /// Fallback model ID when unknown
   ///
   /// In en, this message translates to:
@@ -4304,10 +4364,10 @@ abstract class AppLocalizations {
   /// **'Some required steps missing'**
   String get allRequiredStepsMissing;
 
-  /// AppBar title for focus mode screen
+  /// AppBar title for study hub screen (formerly Focus Mode)
   ///
   /// In en, this message translates to:
-  /// **'Focus Mode'**
+  /// **'Study'**
   String get focusMode;
 
   /// Title for creating a new focus session
@@ -4352,10 +4412,10 @@ abstract class AppLocalizations {
   /// **'Session completed: {minutes}m'**
   String sessionCompleted(int minutes);
 
-  /// Bottom navigation label for focus tab
+  /// Bottom navigation label for study tab
   ///
   /// In en, this message translates to:
-  /// **'Focus'**
+  /// **'Study'**
   String get focus;
 
   /// Button label to start a focus session with specified minutes
@@ -4381,6 +4441,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PAUSED'**
   String get timerPaused;
+
+  /// Label for title sort option
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get title;
 
   /// Label indicating timer is complete
   ///
@@ -5396,7 +5462,7 @@ abstract class AppLocalizations {
   /// **'Study Sessions'**
   String get shareSessionsText;
 
-  /// Section title for summary card on dashboard
+  /// Section header for summary
   ///
   /// In en, this message translates to:
   /// **'Summary'**
@@ -5846,10 +5912,10 @@ abstract class AppLocalizations {
   /// **'Get personalized study recommendations and nudges'**
   String get onboardingMentorDesc;
 
-  /// Focus mode description in onboarding
+  /// Study hub description in onboarding
   ///
   /// In en, this message translates to:
-  /// **'Stay focused with Pomodoro-style study sessions'**
+  /// **'Quick practice hub with timer — practice questions and track focus'**
   String get onboardingFocusDesc;
 
   /// Settings tab description in onboarding
@@ -5899,6 +5965,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.'**
   String get dataStorageDescription;
+
+  /// Tooltip for visibility toggle button
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle visibility'**
+  String get toggleVisibility;
+
+  /// Tooltip for more options button
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptions;
 
   /// Acknowledgement button
   ///
@@ -6684,6 +6762,12 @@ abstract class AppLocalizations {
   /// **'Question text'**
   String get questionText;
 
+  /// Subtitle for a question item showing type and difficulty
+  ///
+  /// In en, this message translates to:
+  /// **'{questionType} • {difficulty}'**
+  String questionSubtitle(String questionType, String difficulty);
+
   /// Tooltip for cancel selection button
   ///
   /// In en, this message translates to:
@@ -6802,6 +6886,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Break remaining {formattedTime}'**
   String breakRemainingLabel(String formattedTime);
+
+  /// Generic loading indicator label
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// Status label for pending processing
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// Status label for extracting text
+  ///
+  /// In en, this message translates to:
+  /// **'Extracting'**
+  String get extracting;
+
+  /// Status label for processing data
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get processing;
+
+  /// Status label for generating questions
+  ///
+  /// In en, this message translates to:
+  /// **'Generating Questions'**
+  String get generatingQuestions;
+
+  /// App bar title for content library screen
+  ///
+  /// In en, this message translates to:
+  /// **'Content Library'**
+  String get contentLibrary;
+
+  /// Tooltip for sort order toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Sort order'**
+  String get sortOrder;
+
+  /// Tooltip for sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortBy;
+
+  /// Filter label showing all statuses
+  ///
+  /// In en, this message translates to:
+  /// **'All statuses'**
+  String get allStatuses;
+
+  /// Snackbar message when a source is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Source deleted'**
+  String get sourceDeleted;
+
+  /// Checkbox label to delete associated questions with source
+  ///
+  /// In en, this message translates to:
+  /// **'Also delete questions generated from this source'**
+  String get alsoDeleteQuestions;
+
+  /// Button label to reprocess a source
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocess'**
+  String get reprocess;
+
+  /// Label showing number of sources with pluralization
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 source} other{{count} sources}}'**
+  String sourcesCount(int count);
+
+  /// Error message when source is not found
+  ///
+  /// In en, this message translates to:
+  /// **'Source not found'**
+  String get sourceNotFound;
+
+  /// Dialog title for source reprocessing
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocess Source'**
+  String get reprocessSource;
+
+  /// Warning body for source reprocessing dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocessing will replace existing generated questions. Continue?'**
+  String get reprocessingWarning;
+
+  /// Status label during reprocessing
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocessing...'**
+  String get reprocessing;
+
+  /// App bar title for source detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'Source Detail'**
+  String get sourceDetail;
+
+  /// Label for status field
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// Label for subject field
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get subject;
+
+  /// Label for ID field
+  ///
+  /// In en, this message translates to:
+  /// **'ID'**
+  String get id;
+
+  /// Label for upload date field
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get uploaded;
+
+  /// Error banner text when processing fails
+  ///
+  /// In en, this message translates to:
+  /// **'Processing failed'**
+  String get processingFailed;
+
+  /// Section header for topic classification
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Classification'**
+  String get topicClassification;
+
+  /// Label when source has no topic classification
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet classified'**
+  String get notYetClassified;
+
+  /// Button to classify source topic
+  ///
+  /// In en, this message translates to:
+  /// **'Classify Now'**
+  String get classifyNow;
+
+  /// Placeholder when no summary exists
+  ///
+  /// In en, this message translates to:
+  /// **'No summary available'**
+  String get noSummaryAvailable;
+
+  /// Section header for extracted text
+  ///
+  /// In en, this message translates to:
+  /// **'Extracted Text'**
+  String get extractedText;
+
+  /// Section header for extracted text with character count
+  ///
+  /// In en, this message translates to:
+  /// **'Extracted Text ({count})'**
+  String extractedTextCount(int count);
+
+  /// Hint text for searching within extracted text
+  ///
+  /// In en, this message translates to:
+  /// **'Search in text'**
+  String get searchInText;
+
+  /// Placeholder when no extracted text exists
+  ///
+  /// In en, this message translates to:
+  /// **'No extracted text available'**
+  String get noExtractedText;
+
+  /// Section header for generated questions
+  ///
+  /// In en, this message translates to:
+  /// **'Generated Questions'**
+  String get generatedQuestions;
+
+  /// Section header for generated questions with count
+  ///
+  /// In en, this message translates to:
+  /// **'Generated Questions ({count})'**
+  String generatedQuestionsCount(int count);
+
+  /// Placeholder when source has no questions
+  ///
+  /// In en, this message translates to:
+  /// **'No questions from this source'**
+  String get noQuestionsFromSource;
+
+  /// Label for difficulty level
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get difficulty;
+
+  /// Edit action label
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// Label for AI-generated content
+  ///
+  /// In en, this message translates to:
+  /// **'AI-generated'**
+  String get aiGenerated;
+
+  /// Label for manually created content
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get manual;
+
+  /// Tab label for sources
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get sources;
+
+  /// Semantic label for view sources action
+  ///
+  /// In en, this message translates to:
+  /// **'View Sources'**
+  String get viewSources;
+
+  /// Empty state for subject sources tab
+  ///
+  /// In en, this message translates to:
+  /// **'No sources for this subject'**
+  String get noSourcesForSubject;
+
+  /// Card title for remaining workload section
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining Workload'**
+  String get remainingWorkload;
+
+  /// Label for explanation input field
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get explanation;
+
+  /// Label showing number of sources with capital S
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Source} other{{count} Source(s)}}'**
+  String sourcesCountLabel(int count);
+
+  /// Title for difficulty tier selection in exam config
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty Distribution'**
+  String get difficultyDistribution;
+
+  /// Hint for difficulty distribution controls
+  ///
+  /// In en, this message translates to:
+  /// **'Set the number of Easy, Medium, and Hard questions. Leave all at 0 for balanced random selection.'**
+  String get difficultyDistributionHint;
+
+  /// Label for easy difficulty questions count
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get easyQuestions;
+
+  /// Label for medium difficulty questions count
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get mediumQuestions;
+
+  /// Label for hard difficulty questions count
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get hardQuestions;
+
+  /// Label showing total selected question count
+  ///
+  /// In en, this message translates to:
+  /// **'Total Selected'**
+  String get totalSelected;
+
+  /// Popup menu action to practice from a source
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get practiceAction;
+
+  /// Popup menu action to view source details
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get viewDetailsAction;
+
+  /// Label for topic title in schedule confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Topic: {topicTitle}'**
+  String mentorScheduleTopic(String topicTitle);
 }
 
 class _AppLocalizationsDelegate

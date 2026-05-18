@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -21,6 +22,7 @@ class ValidationResult {
 }
 
 class AnswerValidationService {
+  static final Logger _logger = const Logger('AnswerValidationService');
   final Map<String, QuestionAnswerValidator> _cache = {};
   final Map<String, String> _cacheSignatures = {};
 
@@ -454,7 +456,8 @@ class QuestionAnswerValidator {
         return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
       }
       return ValidationResult(isCorrect: true, explanation: msgs.drawingDetected);
-    } catch (_) {
+    } catch (e) {
+      AnswerValidationService._logger.w('Error validating graph drawing', e);
       return ValidationResult(isCorrect: false, explanation: msgs.invalidDrawingData);
     }
   }

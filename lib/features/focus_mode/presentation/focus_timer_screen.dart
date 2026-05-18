@@ -14,6 +14,7 @@ import 'package:studyking/features/focus_mode/presentation/widgets/session_summa
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
 import 'package:studyking/core/routes/app_router.dart';
@@ -38,7 +39,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   late final StudyTimerService _service;
 
   bool _initialized = false;
-  bool _showSetup = true;
   int _selectedMinutes = 25;
   Session? _completedSession;
   bool _inBreak = false;
@@ -46,12 +46,15 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   int _breakDuration = 300;
   Timer? _breakTimer;
   String _selectedSubjectId = '';
-  bool _showFirstVisitHelp = false;
+  bool _studyMode = true;
 
   Map<String, dynamic>? _todayStats;
   int _weeklyMs = 0;
   List<Session> _recentSessions = [];
   int _lastTickMs = 0;
+
+  List<Subject> _subjects = [];
+  Map<String, int> _dueCounts = {};
 
   @override
   void initState() {
@@ -65,6 +68,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _service.hasActiveSession) {
       _reconcileBackgroundTime();
+    }
+    if (state == AppLifecycleState.paused && _inBreak) {
+      _breakTimer?.cancel();
+    } else if (state == AppLifecycleState.resumed && _inBreak && _breakRemaining > 0) {
+      _startBreakTimer();
     }
   }
 
@@ -89,7 +97,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       _breakDuration = settings.breakDurationSeconds;
 
       if (settings.firstFocusVisit) {
-        _showFirstVisitHelp = true;
         try {
           ref.read(settingsProvider.notifier).updateFirstFocusVisit();
         } catch (e) {
@@ -100,11 +107,49 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       if (mounted) {
         setState(() => _initialized = true);
       }
+      _loadInitialData();
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to initialize focus timer', e);
+      const Logger('FocusTimerScreen').e('Failed to initialize', e);
       if (mounted) {
         setState(() => _initialized = true);
       }
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    _loadSubjects();
+    _loadDueCounts();
+  }
+
+  Future<void> _loadSubjects() async {
+    try {
+      final subjectRepo = ref.read(subjectsRepositoryProvider).valueOrNull;
+      if (subjectRepo == null) return;
+      final result = await subjectRepo.getAll();
+      final subjects = result.data ?? [];
+      if (mounted) {
+        setState(() => _subjects = subjects);
+      }
+    } catch (e) {
+      const Logger('FocusTimerScreen').e('Failed to load subjects', e);
+    }
+  }
+
+  Future<void> _loadDueCounts() async {
+    if (_subjects.isEmpty) return;
+    try {
+      final srRepo = ref.read(spacedRepetitionRepositoryProvider);
+      final dueCounts = <String, int>{};
+      for (final subject in _subjects) {
+        final result = await srRepo.getPracticeQuestions(subject.id);
+        final questions = result.data ?? [];
+        dueCounts[subject.id] = questions.length;
+      }
+      if (mounted) {
+        setState(() => _dueCounts = dueCounts);
+      }
+    } catch (e) {
+      const Logger('FocusTimerScreen').e('Failed to load due counts', e);
     }
   }
 
@@ -112,7 +157,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     if (!mounted) return;
     setState(() {
       _completedSession = session;
-      _showSetup = false;
       _inBreak = true;
       _breakRemaining = _breakDuration;
       _startBreakTimer();
@@ -165,7 +209,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         _breakTimer = null;
         setState(() {
           _inBreak = false;
-          _showSetup = true;
           _completedSession = null;
         });
       }
@@ -185,7 +228,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         });
       }
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to load focus stats', e);
+      const Logger('FocusTimerScreen').e('Failed to load stats', e);
     }
   }
 
@@ -228,13 +271,98 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         topicId: widget.preselectedTopicId,
       );
       if (mounted) {
-        setState(() => _showSetup = false);
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.errorStartingSession(e.toString()))),
+        );
+      }
+    }
+  }
+
+  void _startQuickPractice(Subject subject) async {
+    await Navigator.pushNamed(context, AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(subjectId: subject.id),
+    );
+    _loadDueCounts();
+  }
+
+  void _startWeakAreasPractice() async {
+    if (_subjects.isEmpty) return;
+    final studentId = ref.read(studentIdValueProvider);
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final masteryService = ref.read(masteryGraphServiceProvider);
+      final weakResult = await masteryService.getWeakTopics(studentId);
+      if (weakResult.isFailure || weakResult.data == null || weakResult.data!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasFound)),
+          );
+        }
+        return;
+      }
+      final weakTopicIds = weakResult.data!.map((s) => s.topicId).toSet();
+      final questionRepo = ref.read(questionRepositoryProvider);
+      final allResult = await questionRepo.getAll();
+      final allQuestions = allResult.data ?? [];
+      final weakQuestions = allQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
+      if (weakQuestions.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasQuestions)),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        await Navigator.pushNamed(context, AppRoutes.practiceSession,
+          arguments: PracticeSessionArgs(
+            subjectId: weakQuestions.first.subjectId,
+            questionCount: weakQuestions.length,
+          ),
+        );
+        _loadDueCounts();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasFound)),
+        );
+      }
+    }
+  }
+
+  void _startSpacedRepetition(Subject subject) async {
+    final l10n = AppLocalizations.of(context)!;
+    final srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    try {
+      final result = await srRepo.getPracticeQuestions(subject.id);
+      if (result.isFailure || result.data == null || result.data!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noReviewsScheduled)),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        await Navigator.pushNamed(context, AppRoutes.practiceSession,
+          arguments: PracticeSessionArgs(
+            subjectId: subject.id,
+            questionCount: result.data!.length,
+            isSpacedRepetition: true,
+          ),
+        );
+        _loadDueCounts();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noQuestionsAvailable)),
         );
       }
     }
@@ -272,7 +400,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     );
     if (result == true) {
       await _service.cancelSession();
-      setState(() => _showSetup = true);
+      setState(() {});
       _loadStats();
     }
     return result ?? false;
@@ -316,14 +444,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(
           children: [
+            _buildModeToggle(cs, l10n),
+            const SizedBox(height: 12),
             if (_inBreak && _completedSession != null)
               _buildBreakView(theme, cs, l10n)
             else if (_service.hasActiveSession)
               _buildActiveSessionView(theme, l10n)
-            else if (_showSetup)
+            else if (!_studyMode)
               _buildSetupView(theme, l10n)
             else
-              _buildSetupView(theme, l10n),
+              _buildStudyHubView(theme, cs, l10n),
             const SizedBox(height: 24),
             SessionSummaryCard(
               todayStats: _todayStats,
@@ -334,6 +464,162 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         ),
       ),
     ),
+    );
+  }
+
+  Widget _buildModeToggle(ColorScheme cs, AppLocalizations l10n) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              _studyMode ? Icons.menu_book_outlined : Icons.timer_outlined,
+              size: 20,
+              color: cs.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _studyMode ? l10n.practice : l10n.focus,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const Spacer(),
+            Semantics(
+              button: true,
+              label: _studyMode ? 'Switch to timer mode' : 'Switch to study mode',
+              child: Switch(
+                value: _studyMode,
+                onChanged: (_service.hasActiveSession || _inBreak)
+                    ? null
+                    : (v) => setState(() => _studyMode = v),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudyHubView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
+    if (_subjects.isEmpty) {
+      return Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Icon(Icons.school_outlined, size: 48, color: cs.primary.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
+              Text(l10n.noSubjectsYet, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(l10n.addSubjectsAndQuestionsToStartPracticing,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addSubject),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final totalDue = _dueCounts.values.fold(0, (a, b) => a + b);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: ResponsiveUtils.cardPadding(context),
+            child: Row(
+              children: [
+                Expanded(child: _buildStatItem(theme, Icons.schedule, '$totalDue', l10n.dueForReview)),
+                Expanded(child: _buildStatItem(theme, Icons.book, '${_subjects.length}', l10n.subjects)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(l10n.yourSubjects, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ..._subjects.map((subject) => _buildSubjectPracticeCard(theme, cs, l10n, subject)),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _subjects.any((s) => (_dueCounts[s.id] ?? 0) > 0)
+                    ? () => _startSpacedRepetition(_subjects.firstWhere((s) => (_dueCounts[s.id] ?? 0) > 0))
+                    : null,
+                icon: const Icon(Icons.replay, size: 18),
+                label: Text(l10n.spacedRepetition, style: const TextStyle(fontSize: 13)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _subjects.isNotEmpty ? _startWeakAreasPractice : null,
+                icon: const Icon(Icons.psychology_outlined, size: 18),
+                label: Text(l10n.weakAreas, style: const TextStyle(fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(ThemeData theme, IconData icon, String value, String label) {
+    return MergeSemantics(
+      child: Column(children: [
+        Icon(icon, color: theme.colorScheme.primary),
+        const SizedBox(height: 4),
+        Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant)),
+      ]),
+    );
+  }
+
+  Widget _buildSubjectPracticeCard(ThemeData theme, ColorScheme cs, AppLocalizations l10n, Subject subject) {
+    final due = _dueCounts[subject.id] ?? 0;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _startQuickPractice(subject),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.menu_book, color: cs.primary, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(subject.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(
+                      due > 0
+                          ? l10n.dueQuestionsCount(due)
+                          : l10n.readyForPractice,
+                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -400,7 +686,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               },
               onCancel: () async {
                 await _service.cancelSession();
-                setState(() => _showSetup = true);
+                setState(() {});
                 _loadStats();
               },
             ),
@@ -431,32 +717,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 ),
               ],
             ),
-            if (_showFirstVisitHelp) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.focusFirstVisitHelp,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             const SizedBox(height: 16),
             _buildSubjectPicker(),
             const SizedBox(height: 16),

@@ -48,6 +48,10 @@
   "@generating": {
     "description": "Button label when plan is being generated"
   },
+  "generatingReport": "Generando informe...",
+  "@generatingReport": {
+    "description": "Loading message while generating progress report"
+  },
   "yourStudySchedule": "Su Horario de Estudio",
   "@yourStudySchedule": {
     "description": "Title for the generated study schedule"
@@ -266,7 +270,15 @@
   },
   "noWeakAreasFound": "No se encontraron áreas por mejorar. ¡Siga así!",
   "@noWeakAreasFound": {
-    "description": "Message when no weak areas are found"
+    "description": "Message shown when the user has no weak topics"
+  },
+  "atRiskQuestions": "Preguntas en Riesgo",
+  "@atRiskQuestions": {
+    "description": "Title for at-risk practice mode"
+  },
+  "atRiskQuestionsDescription": "Practica preguntas con puntuaciones de dominio más bajas",
+  "@atRiskQuestionsDescription": {
+    "description": "Description for at-risk practice mode"
   },
   "noWeakAreasQuestions": "No hay preguntas disponibles para sus áreas por mejorar.",
   "@noWeakAreasQuestions": {
@@ -656,6 +668,10 @@
   "large": "Grande",
   "@large": {
     "description": "Large font size label"
+  },
+  "leaveAnyway": "Salir de todas formas",
+  "@leaveAnyway": {
+    "description": "Button label to confirm leaving despite active timer"
   },
   "extraLarge": "Extra Grande",
   "@extraLarge": {
@@ -1460,6 +1476,10 @@
   "@nextQuestion": {
     "description": "Button label for next question"
   },
+  "type": "Tipo",
+  "@type": {
+    "description": "Label for type field"
+  },
   "typeYourAnswerHere": "Escriba su respuesta aquí...",
   "@typeYourAnswerHere": {
     "description": "Hint text for text answer input"
@@ -1503,6 +1523,22 @@
   "stepByStep": "Paso a Paso",
   "@stepByStep": {
     "description": "Label for step-by-step question type"
+  },
+  "audioRecording": "Grabación de Audio",
+  "@audioRecording": {
+    "description": "Label for audio recording question type"
+  },
+  "canvas": "Lienzo",
+  "@canvas": {
+    "description": "Label for canvas/drawing question type"
+  },
+  "fileUpload": "Subir Archivo",
+  "@fileUpload": {
+    "description": "Label for file upload question type"
+  },
+  "graphDrawing": "Dibujo de Gráfico",
+  "@graphDrawing": {
+    "description": "Label for graph drawing question type"
   },
   "difficultyLabel": "Dificultad: {level}",
   "@difficultyLabel": {
@@ -2633,6 +2669,10 @@
   "@aboutLegalese": {
     "description": "Copyright notice for About dialog"
   },
+  "activeLessonTimer": "Tienes un temporizador de lección activo. ¿Salir de todas formas?",
+  "@activeLessonTimer": {
+    "description": "Title for exit confirmation when lesson timer is active"
+  },
   "unknownModelId": "unknown-model",
   "@unknownModelId": {
     "description": "Fallback model ID when unknown"
@@ -3406,9 +3446,9 @@
       }
     }
   },
-  "focus": "Enfoque",
+  "focus": "Estudio",
   "@focus": {
-    "description": "Bottom navigation label for focus tab"
+    "description": "Bottom navigation label for study tab"
   },
   "focusForMinutes": "Enfóquese por {minutes} minutos",
   "@focusForMinutes": {
@@ -3419,9 +3459,9 @@
       }
     }
   },
-  "focusMode": "Modo de Enfoque",
+  "focusMode": "Estudio",
   "@focusMode": {
-    "description": "AppBar title for focus mode screen"
+    "description": "AppBar title for study hub screen (formerly Focus Mode)"
   },
   "focusTime": "Tiempo de Enfoque",
   "@focusTime": {
@@ -3467,6 +3507,10 @@
   "timerRemaining": "restante",
   "@timerRemaining": {
     "description": "Label indicating remaining time on timer"
+  },
+  "title": "Título",
+  "@title": {
+    "description": "Label for title sort option"
   },
   "csvOverallStats": "ESTADÍSTICAS GENERALES",
   "@csvOverallStats": {
@@ -4726,6 +4770,14 @@
   "@dataStorageDescription": {
     "description": "Data storage explanation"
   },
+  "toggleVisibility": "Alternar visibilidad",
+  "@toggleVisibility": {
+    "description": "Tooltip for visibility toggle button"
+  },
+  "moreOptions": "Más opciones",
+  "@moreOptions": {
+    "description": "Tooltip for more options button"
+  },
   "iUnderstand": "Entiendo",
   "@iUnderstand": {
     "description": "Acknowledgement button"
@@ -5395,6 +5447,18 @@
   "@questionBank": {
     "description": "Title for the question bank screen"
   },
+  "questionSubtitle": "{questionType} \u2022 {difficulty}",
+  "@questionSubtitle": {
+    "description": "Subtitle for a question item showing type and difficulty",
+    "placeholders": {
+      "questionType": {
+        "type": "String"
+      },
+      "difficulty": {
+        "type": "String"
+      }
+    }
+  },
   "cancelSelection": "Cancelar selección",
   "@cancelSelection": {
     "description": "Tooltip for cancel selection button"
@@ -5481,6 +5545,243 @@
     "description": "Semantics label for break remaining time",
     "placeholders": {
       "formattedTime": { "type": "String" }
+    }
+  },
+  "loading": "Cargando...",
+  "@loading": {
+    "description": "Generic loading indicator label"
+  },
+  "pending": "Pendiente",
+  "@pending": {
+    "description": "Status label for pending processing"
+  },
+  "extracting": "Extrayendo",
+  "@extracting": {
+    "description": "Status label for extracting text"
+  },
+  "processing": "Procesando",
+  "@processing": {
+    "description": "Status label for processing data"
+  },
+  "generatingQuestions": "Generando Preguntas",
+  "@generatingQuestions": {
+    "description": "Status label for generating questions"
+  },
+  "contentLibrary": "Biblioteca de Contenido",
+  "@contentLibrary": {
+    "description": "App bar title for content library screen"
+  },
+  "sortOrder": "Ordenar",
+  "@sortOrder": {
+    "description": "Tooltip for sort order toggle"
+  },
+  "sortBy": "Ordenar por",
+  "@sortBy": {
+    "description": "Tooltip for sort menu"
+  },
+  "allStatuses": "Todos los estados",
+  "@allStatuses": {
+    "description": "Filter label showing all statuses"
+  },
+  "sourceDeleted": "Fuente eliminada",
+  "@sourceDeleted": {
+    "description": "Snackbar message when a source is deleted"
+  },
+  "alsoDeleteQuestions": "Eliminar también las preguntas generadas de esta fuente",
+  "@alsoDeleteQuestions": {
+    "description": "Checkbox label to delete associated questions with source"
+  },
+  "reprocess": "Reprocesar",
+  "@reprocess": {
+    "description": "Button label to reprocess a source"
+  },
+  "sourcesCount": "{count, plural, =1{1 fuente} other{{count} fuentes}}",
+  "@sourcesCount": {
+    "description": "Label showing number of sources with pluralization",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sourceNotFound": "Fuente no encontrada",
+  "@sourceNotFound": {
+    "description": "Error message when source is not found"
+  },
+  "reprocessSource": "Reprocesar Fuente",
+  "@reprocessSource": {
+    "description": "Dialog title for source reprocessing"
+  },
+  "reprocessingWarning": "El reprocesamiento reemplazará las preguntas generadas existentes. ¿Continuar?",
+  "@reprocessingWarning": {
+    "description": "Warning body for source reprocessing dialog"
+  },
+  "reprocessing": "Reprocesando...",
+  "@reprocessing": {
+    "description": "Status label during reprocessing"
+  },
+  "sourceDetail": "Detalle de Fuente",
+  "@sourceDetail": {
+    "description": "App bar title for source detail screen"
+  },
+  "status": "Estado",
+  "@status": {
+    "description": "Label for status field"
+  },
+  "subject": "Materia",
+  "@subject": {
+    "description": "Label for subject field"
+  },
+  "id": "ID",
+  "@id": {
+    "description": "Label for ID field"
+  },
+  "uploaded": "Subido",
+  "@uploaded": {
+    "description": "Label for upload date field"
+  },
+  "processingFailed": "Procesamiento fallido",
+  "@processingFailed": {
+    "description": "Error banner text when processing fails"
+  },
+  "topicClassification": "Clasificación de Tema",
+  "@topicClassification": {
+    "description": "Section header for topic classification"
+  },
+  "notYetClassified": "Aún no clasificado",
+  "@notYetClassified": {
+    "description": "Label when source has no topic classification"
+  },
+  "classifyNow": "Clasificar Ahora",
+  "@classifyNow": {
+    "description": "Button to classify source topic"
+  },
+  "summary": "Resumen",
+  "@summary": {
+    "description": "Section header for summary"
+  },
+  "noSummaryAvailable": "No hay resumen disponible",
+  "@noSummaryAvailable": {
+    "description": "Placeholder when no summary exists"
+  },
+  "extractedText": "Texto Extraído",
+  "@extractedText": {
+    "description": "Section header for extracted text"
+  },
+  "extractedTextCount": "Texto Extraído ({count})",
+  "@extractedTextCount": {
+    "description": "Section header for extracted text with character count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchInText": "Buscar en texto",
+  "@searchInText": {
+    "description": "Hint text for searching within extracted text"
+  },
+  "noExtractedText": "No hay texto extraído disponible",
+  "@noExtractedText": {
+    "description": "Placeholder when no extracted text exists"
+  },
+  "generatedQuestions": "Preguntas Generadas",
+  "@generatedQuestions": {
+    "description": "Section header for generated questions"
+  },
+  "generatedQuestionsCount": "Preguntas Generadas ({count})",
+  "@generatedQuestionsCount": {
+    "description": "Section header for generated questions with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noQuestionsFromSource": "No hay preguntas de esta fuente",
+  "@noQuestionsFromSource": {
+    "description": "Placeholder when source has no questions"
+  },
+  "difficulty": "Dificultad",
+  "@difficulty": {
+    "description": "Label for difficulty level"
+  },
+  "edit": "Editar",
+  "@edit": {
+    "description": "Edit action label"
+  },
+  "aiGenerated": "Generado por IA",
+  "@aiGenerated": {
+    "description": "Label for AI-generated content"
+  },
+  "manual": "Manual",
+  "@manual": {
+    "description": "Label for manually created content"
+  },
+  "sources": "Fuentes",
+  "@sources": {
+    "description": "Tab label for sources"
+  },
+  "viewSources": "Ver Fuentes",
+  "@viewSources": {
+    "description": "Semantic label for view sources action"
+  },
+  "noSourcesForSubject": "No hay fuentes para esta materia",
+  "@noSourcesForSubject": {
+    "description": "Empty state for subject sources tab"
+  },
+  "remainingWorkload": "Carga de Trabajo Restante",
+  "@remainingWorkload": {
+    "description": "Card title for remaining workload section"
+  },
+  "explanation": "Explicación",
+  "@explanation": {
+    "description": "Label for explanation input field"
+  },
+  "sourcesCountLabel": "{count, plural, =1{1 Fuente} other{{count} Fuente(s)}}",
+  "@sourcesCountLabel": {
+    "description": "Label showing number of sources with capital S",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "difficultyDistribution": "Distribución de Dificultad",
+  "@difficultyDistribution": {
+    "description": "Title for difficulty tier selection in exam config"
+  },
+  "difficultyDistributionHint": "Establezca el número de preguntas Fáciles, Medias y Difíciles. Deje todo en 0 para selección aleatoria equilibrada.",
+  "@difficultyDistributionHint": {
+    "description": "Hint for difficulty distribution controls"
+  },
+  "easyQuestions": "Fácil",
+  "@easyQuestions": {
+    "description": "Label for easy difficulty questions count"
+  },
+  "mediumQuestions": "Media",
+  "@mediumQuestions": {
+    "description": "Label for medium difficulty questions count"
+  },
+  "hardQuestions": "Difícil",
+  "@hardQuestions": {
+    "description": "Label for hard difficulty questions count"
+  },
+  "totalSelected": "Total Seleccionado",
+  "@totalSelected": {
+    "description": "Label showing total selected question count"
+  },
+  "practiceAction": "Practicar",
+  "@practiceAction": {
+    "description": "Popup menu action to practice from a source"
+  },
+  "viewDetailsAction": "Ver Detalles",
+  "@viewDetailsAction": {
+    "description": "Popup menu action to view source details"
+  },
+  "mentorScheduleTopic": "Tema: {topicTitle}",
+  "@mentorScheduleTopic": {
+    "description": "Label for topic title in schedule confirmation dialog",
+    "placeholders": {
+      "topicTitle": {
+        "type": "String"
+      }
     }
   }
 }

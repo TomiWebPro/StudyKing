@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class NotFoundScreen extends StatelessWidget {
   final String? message;
+  final VoidCallback? onGoToDashboard;
 
-  const NotFoundScreen({super.key, this.message});
+  const NotFoundScreen({super.key, this.message, this.onGoToDashboard});
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +19,7 @@ class NotFoundScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Semantics(
-                headingLevel: 1,
+              ExcludeSemantics(
                 child: Icon(
                   Icons.search_off,
                   size: 64,
@@ -29,7 +28,7 @@ class NotFoundScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Semantics(
-                headingLevel: 2,
+                headingLevel: 1,
                 child: Text(
                   l10n.pageNotFound,
                   style: theme.textTheme.headlineSmall?.copyWith(
@@ -47,11 +46,13 @@ class NotFoundScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRoutes.dashboard,
-                  (_) => false,
-                ),
+                onPressed: onGoToDashboard ?? () {
+                  // Try to pop back to tab structure first
+                  final navigator = Navigator.of(context);
+                  if (navigator.canPop()) {
+                    navigator.pop();
+                  }
+                },
                 icon: const Icon(Icons.dashboard),
                 label: Text(l10n.goToDashboard),
               ),

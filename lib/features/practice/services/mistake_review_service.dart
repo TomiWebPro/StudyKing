@@ -35,10 +35,11 @@ class MistakeReviewService {
     DateTime? after,
   }) async {
     try {
-      final allAttempts = await _attemptRepo.getByStudentAndSubject(
+      final allAttemptsResult = await _attemptRepo.getByStudentAndSubject(
         studentId,
         subjectId,
       );
+      final allAttempts = allAttemptsResult.data ?? [];
 
       var incorrectAttempts = allAttempts.where((a) => !a.isCorrect).toList();
 
@@ -77,10 +78,11 @@ class MistakeReviewService {
     required String subjectId,
   }) async {
     try {
-      final allAttempts = await _attemptRepo.getByStudentAndSubject(
+      final allAttemptsResult = await _attemptRepo.getByStudentAndSubject(
         studentId,
         subjectId,
       );
+      final allAttempts = allAttemptsResult.data ?? [];
 
       final questionLastAttempts = <String, List<StudentAttempt>>{};
       for (final attempt in allAttempts) {
@@ -120,7 +122,8 @@ class MistakeReviewService {
 
   Future<bool> isQuestionCorrected(String questionId) async {
     try {
-      final attempts = await _attemptRepo.getByQuestion(questionId);
+      final attemptsResult = await _attemptRepo.getByQuestion(questionId);
+      final attempts = attemptsResult.data ?? [];
       return attempts.any((a) => a.isCorrect);
     } catch (e) {
       _logger.e('Error checking question corrected status', e);

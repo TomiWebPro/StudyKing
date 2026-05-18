@@ -20,6 +20,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) {
       throw Exception('save failed');

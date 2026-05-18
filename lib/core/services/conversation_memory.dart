@@ -16,7 +16,8 @@ class ConversationMemory {
     final repo = _repository;
     final sid = sessionId;
     if (repo == null || sid == null) return;
-    final stored = await repo.getSessionMessages(sid);
+    final storedResult = await repo.getSessionMessages(sid);
+    final stored = storedResult.data ?? [];
     if (stored.length > maxTurns * 2) {
       final toRemove = stored.sublist(0, stored.length - maxTurns * 2);
       for (final msg in toRemove) {
@@ -85,7 +86,8 @@ class ConversationMemory {
     final sid = sessionId;
     final repo = _repository;
     if (repo == null || sid == null) return;
-    final stored = await repo.getSessionMessages(sid);
+    final storedResult = await repo.getSessionMessages(sid);
+    final stored = storedResult.data ?? [];
     messages.clear();
     messages.addAll(stored);
   }

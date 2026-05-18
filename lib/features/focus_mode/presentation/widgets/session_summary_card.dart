@@ -100,29 +100,31 @@ class SessionSummaryCard extends StatelessWidget {
                 final plannedStr = formatDurationFromContext(context, Duration(minutes: s.plannedDurationMinutes ?? 0));
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      ExcludeSemantics(
-                        child: Icon(
-                          s.completed ? Icons.check_circle : Icons.cancel,
-                          size: 16,
-                          color: s.completed ? cs.primary : cs.error,
+                  child: MergeSemantics(
+                    child: Row(
+                      children: [
+                        ExcludeSemantics(
+                          child: Icon(
+                            s.completed ? Icons.check_circle : Icons.cancel,
+                            size: 16,
+                            color: s.completed ? cs.primary : cs.error,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '$durStr / $plannedStr',
-                          style: theme.textTheme.bodyMedium,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '$durStr / $plannedStr',
+                            style: theme.textTheme.bodyMedium,
+                          ),
                         ),
-                      ),
-                      Text(
-                        DateFormat.Hm(l10n.localeName).format(s.startTime),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        Text(
+                          DateFormat.Hm(l10n.localeName).format(s.startTime),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               }),

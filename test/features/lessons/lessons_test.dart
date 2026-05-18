@@ -7,7 +7,7 @@ void main() {
     test('exports TopicListScreen', () => expect(TopicListScreen, isNotNull));
     test('exports LessonListScreen', () => expect(LessonListScreen, isNotNull));
     test('exports LessonDetailScreen', () => expect(LessonDetailScreen, isNotNull));
-    test('exports LessonService', () => expect(LessonService, isNotNull));
+    test('exports LessonSessionService', () => expect(LessonSessionService, isNotNull));
     test('exports lessonServiceProvider', () => expect(lessonServiceProvider, isNotNull));
     test('exports LessonBlockCard', () => expect(LessonBlockCard, isNotNull));
     test('exports LessonListItem', () => expect(LessonListItem, isNotNull));

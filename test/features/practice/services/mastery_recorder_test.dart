@@ -86,8 +86,9 @@ class _FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> attempts = [];
 
   @override
-  Future<void> create(StudentAttempt attempt) async {
+  Future<Result<void>> create(StudentAttempt attempt) async {
     attempts.add(attempt);
+    return Result.success(null);
   }
 
   @override

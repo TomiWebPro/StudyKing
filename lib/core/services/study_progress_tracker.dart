@@ -1,18 +1,17 @@
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../errors/result.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import 'badge_service.dart';
 
 class StudyProgressTracker {
-  final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
   final SessionRepository? _sessionRepo;
@@ -29,7 +28,8 @@ class StudyProgressTracker {
         _l10n = l10n;
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
 
     final totalAttempts = attempts.length;
     final correctAttempts = attempts.where((a) => a.isCorrect).length;
@@ -92,7 +92,8 @@ class StudyProgressTracker {
   }
 
   Future<Map<String, dynamic>> getTopicProgress(String studentId, String topicId) async {
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final topicAttempts = attempts.where((a) => a.questionId.contains(topicId)).toList();
 
     if (topicAttempts.isEmpty) {
@@ -122,7 +123,8 @@ class StudyProgressTracker {
 
   Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async {
     studentId ??= StudentIdService().getStudentId();
-    final allAttempts = await _attemptRepo.getByStudent(studentId);
+    final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
+    final allAttempts = allAttemptsResult.data ?? [];
 
     final trend = <Map<String, dynamic>>[];
     final now = DateTime.now();
@@ -205,27 +207,22 @@ class StudyProgressTracker {
       });
     }
 
-    try {
-      final weakTopics =
-          await _masteryService.getWeakTopics(studentId);
-      if (weakTopics.isSuccess && weakTopics.data!.isNotEmpty) {
-        recommendations.add({
-          'type': 'weakness',
-          'priority': 'high',
-          'message': _l10n?.recommendWeakTopics(weakTopics.data!.length) ??
-              'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
-          'action': _l10n?.recommendAiTutor ?? 'Review weak topics with the AI tutor',
-        });
-      }
-    } catch (e) {
-      _logger.e('Failed to get weak topics for recommendations: $e');
+    final weakTopics = await _masteryService.getWeakTopics(studentId);
+    if (weakTopics.isSuccess && weakTopics.data!.isNotEmpty) {
+      recommendations.add({
+        'type': 'weakness',
+        'priority': 'high',
+        'message': _l10n?.recommendWeakTopics(weakTopics.data!.length) ??
+            'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
+        'action': _l10n?.recommendAiTutor ?? 'Review weak topics with the AI tutor',
+      });
     }
 
     return recommendations;
   }
 
   Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    try {
+    final result = await Result.capture(() async {
       final badgeService = BadgeService(
         tracker: this,
       );
@@ -237,10 +234,8 @@ class StudyProgressTracker {
         'description': l10n != null ? badgeDescription(b.id, l10n) : b.description,
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
-    } catch (e) {
-      _logger.e('Failed to get badges: $e');
-      return [];
-    }
+    }, context: 'getBadges');
+    return result.data ?? [];
   }
 
   Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async {
@@ -250,27 +245,19 @@ class StudyProgressTracker {
 
   Future<MasteryLevel> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async {
     studentId ??= StudentIdService().getStudentId();
-    try {
-      final result = await _masteryService.getTopicMastery(studentId, topicId);
-      if (result.isSuccess && result.data != null) {
-        return result.data!.masteryLevel;
-      }
-    } catch (e) {
-      _logger.e('Failed to get topic mastery level from service: $e');
+    final result = await _masteryService.getTopicMastery(studentId, topicId);
+    if (result.isSuccess && result.data != null) {
+      return result.data!.masteryLevel;
     }
 
-    try {
-      final stats = await getTopicProgress(studentId, topicId);
-      final attempts = stats['attempts'] as int? ?? 0;
-      final accuracy = (stats['accuracy'] as int? ?? 0) / 100.0;
-      if (attempts == 0) return MasteryLevel.novice;
-      if (accuracy >= 0.9 && attempts >= 10) return MasteryLevel.expert;
-      if (accuracy >= 0.8 && attempts >= 5) return MasteryLevel.proficient;
-      if (accuracy >= 0.6 && attempts >= 3) return MasteryLevel.developing;
-      if (attempts >= 1) return MasteryLevel.browsing;
-    } catch (e) {
-      _logger.e('Failed to get topic progress for mastery level: $e');
-    }
+    final stats = await getTopicProgress(studentId, topicId);
+    final attempts = stats['attempts'] as int? ?? 0;
+    final accuracy = (stats['accuracy'] as int? ?? 0) / 100.0;
+    if (attempts == 0) return MasteryLevel.novice;
+    if (accuracy >= 0.9 && attempts >= 10) return MasteryLevel.expert;
+    if (accuracy >= 0.8 && attempts >= 5) return MasteryLevel.proficient;
+    if (accuracy >= 0.6 && attempts >= 3) return MasteryLevel.developing;
+    if (attempts >= 1) return MasteryLevel.browsing;
 
     return MasteryLevel.novice;
   }
@@ -316,7 +303,8 @@ class StudyProgressTracker {
   }
 
   Future<String> exportQuestionsAndAttemptsCSV(String studentId) async {
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
 
     final csvLines = <String>[];
     csvLines.add('"Question ID","Student ID","Correct","Time (s)","Timestamp"');
@@ -329,7 +317,8 @@ class StudyProgressTracker {
   }
 
   Future<String> exportSessionHistoryCSV(String studentId) async {
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates = masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
 

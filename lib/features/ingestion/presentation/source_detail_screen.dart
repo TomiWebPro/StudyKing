@@ -13,6 +13,8 @@ import 'package:studyking/features/ingestion/providers/ingestion_providers.dart'
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SourceDetailScreen extends ConsumerStatefulWidget {
@@ -25,6 +27,7 @@ class SourceDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
+  final _logger = const Logger('SourceDetailScreen');
   final _sourceRepo = SourceRepository();
   final _subjectRepo = SubjectRepository();
   final _topicRepo = TopicRepository();
@@ -59,6 +62,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   }
 
   Future<void> _load() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -72,7 +76,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       final sourceResult = await _sourceRepo.get(widget.sourceId);
       final source = sourceResult.data;
       if (source == null) {
-        if (mounted) setState(() { _isLoading = false; _error = 'Source not found'; });
+        if (mounted) setState(() { _isLoading = false; _error = l10n.sourceNotFound; });
         return;
       }
 
@@ -84,7 +88,8 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
 
       List<Topic> topics = [];
       if (source.subjectId.isNotEmpty) {
-        topics = await _topicRepo.getBySubject(source.subjectId);
+        final topicsResult = await _topicRepo.getBySubject(source.subjectId);
+        topics = topicsResult.data ?? [];
       }
 
       List<Question> questions = [];
@@ -116,11 +121,11 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reprocess Source'),
-        content: const Text('Reprocessing will replace existing generated questions. Continue?'),
+        title: Text(l10n.reprocessSource),
+        content: Text(l10n.reprocessingWarning),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Continue')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.continueAnyway)),
         ],
       ),
     );
@@ -128,7 +133,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
 
     setState(() {
       _isReprocessing = true;
-      _reprocessingStage = 'Reprocessing...';
+      _reprocessingStage = l10n.reprocessing;
     });
 
     try {
@@ -214,7 +219,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         },
       );
       await _load();
-    } catch (_) {} finally {
+    } catch (e) {
+      _logger.w('Reprocess failed', e);
+    } finally {
       if (mounted) setState(() => _isReprocessing = false);
     }
   }
@@ -225,16 +232,16 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(appBar: AppBar(), body: const LoadingScreen());
     }
     if (_error != null || _source == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Source Detail')),
+        appBar: AppBar(title: Text(l10n.sourceDetail)),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_error ?? 'Source not found', style: TextStyle(color: theme.colorScheme.error)),
+              Text(_error ?? l10n.sourceNotFound, style: TextStyle(color: theme.colorScheme.error)),
               const SizedBox(height: 16),
               ElevatedButton(onPressed: _load, child: Text(l10n.retry)),
             ],
@@ -255,7 +262,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
           if (status == ProcessingStatus.failed)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: 'Reprocess',
+              tooltip: l10n.reprocess,
               onPressed: _reprocess,
             ),
           PopupMenuButton<String>(
@@ -268,10 +275,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'reprocess', child: Text('Reprocess')),
+              PopupMenuItem(value: 'reprocess', child: Text(l10n.reprocess)),
               PopupMenuItem(
                 value: 'delete',
-                child: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(l10n.delete, style: TextStyle(color: theme.colorScheme.error)),
               ),
             ],
           ),
@@ -293,13 +300,13 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(label: 'Status', value: status.name),
+                  _InfoRow(label: l10n.status, value: status.name),
                   if (subjectName.isNotEmpty)
-                    _InfoRow(label: 'Subject', value: subjectName),
-                  _InfoRow(label: 'Type', value: source.type.name),
-                  _InfoRow(label: 'ID', value: source.id),
+                    _InfoRow(label: l10n.subject, value: subjectName),
+                  _InfoRow(label: l10n.type, value: source.type.name),
+                  _InfoRow(label: l10n.id, value: source.id),
                   if (source.createdAt != null)
-                    _InfoRow(label: 'Uploaded', value: formatDateFromContext(context, source.createdAt!)),
+                    _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
 
                   const SizedBox(height: 16),
                   if (status == ProcessingStatus.failed)
@@ -315,7 +322,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                         children: [
                           Icon(Icons.error_outline, color: theme.colorScheme.error),
                           const SizedBox(width: 8),
-                          Expanded(child: Text('Processing failed', style: TextStyle(color: theme.colorScheme.error))),
+                          Expanded(child: Text(l10n.processingFailed, style: TextStyle(color: theme.colorScheme.error))),
                           const SizedBox(width: 8),
                           TextButton.icon(
                             icon: const Icon(Icons.refresh, size: 18),
@@ -326,7 +333,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                       ),
                     ),
 
-                  _SectionHeader(title: 'Topic Classification'),
+                  _SectionHeader(title: l10n.topicClassification),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -335,17 +342,18 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                           Expanded(
                             child: topic != null
                                 ? Text(topic.title)
-                                : Text('Not yet classified', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                                : Text(l10n.notYetClassified, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                           ),
                           if (_topics.isNotEmpty)
                             IconButton(
                               icon: const Icon(Icons.edit, size: 20),
+                              tooltip: l10n.edit,
                               onPressed: () => _showTopicPicker(),
                             ),
                           if (topic == null && _topics.isNotEmpty)
                             TextButton(
                               onPressed: _classifyNow,
-                              child: const Text('Classify Now'),
+                              child: Text(l10n.classifyNow),
                             ),
                         ],
                       ),
@@ -353,12 +361,12 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  _SectionHeader(title: 'Summary'),
+                  _SectionHeader(title: l10n.summary),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(
-                        source.summary.isNotEmpty ? source.summary : 'No summary available',
+                        source.summary.isNotEmpty ? source.summary : l10n.noSummaryAvailable,
                         style: TextStyle(
                           color: source.summary.isEmpty ? theme.colorScheme.onSurfaceVariant : null,
                         ),
@@ -367,7 +375,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  _SectionHeader(title: 'Extracted Text (${source.extractedText.length} chars)'),
+                  _SectionHeader(title: l10n.extractedTextCount(source.extractedText.length)),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -377,7 +385,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                           TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              hintText: 'Search in text',
+                              hintText: l10n.searchInText,
                               prefixIcon: const Icon(Icons.search, size: 20),
                               isDense: true,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -394,7 +402,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                                 child: source.extractedText.isNotEmpty
                                     ? Text(source.extractedText, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))
                                     : Text(
-                                        'No extracted text available',
+                                        l10n.noExtractedText,
                                         style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                                       ),
                               ),
@@ -406,12 +414,12 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  _SectionHeader(title: 'Generated Questions (${_questions.length})'),
+                  _SectionHeader(title: l10n.generatedQuestionsCount(_questions.length)),
                   if (_questions.isEmpty)
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Text('No questions from this source', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                        child: Text(l10n.noQuestionsFromSource, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                       ),
                     )
                   else
@@ -426,7 +434,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                             child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
                           ),
                           title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                          subtitle: Text('${q.type.name}  •  ${q.difficultyText ?? "Difficulty ${q.difficulty}"}'),
+                          subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.pushNamed(context, '/question-bank');
@@ -441,7 +449,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _reprocess,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Reprocess'),
+                      label: Text(l10n.reprocess),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -450,7 +458,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _confirmDelete(),
                       icon: Icon(Icons.delete, color: theme.colorScheme.error),
-                      label: const Text('Delete'),
+                      label: Text(l10n.delete),
                       style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.error)),
                     ),
                   ),
@@ -462,6 +470,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   }
 
   void _showTopicPicker() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Column(
@@ -469,7 +478,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Select Topic', style: Theme.of(ctx).textTheme.titleMedium),
+            child: Text(l10n.selectTopic, style: Theme.of(ctx).textTheme.titleMedium),
           ),
           ..._topics.map((t) => ListTile(
                 title: Text(t.title),
@@ -489,8 +498,8 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Source'),
-        content: const Text('Are you sure you want to delete this source?'),
+        title: Text(l10n.deleteSourceTitle),
+        content: Text(l10n.deleteSourceBody),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
           ElevatedButton(
@@ -509,7 +518,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     if (result.isSuccess && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Source deleted'),
+          content: Text(l10n.sourceDeleted),
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
@@ -561,5 +570,30 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
     );
+  }
+}
+
+String _questionTypeLabel(QuestionType type, AppLocalizations l10n) {
+  switch (type) {
+    case QuestionType.singleChoice:
+      return l10n.multipleChoice;
+    case QuestionType.multiChoice:
+      return l10n.multipleSelect;
+    case QuestionType.typedAnswer:
+      return l10n.textAnswer;
+    case QuestionType.canvas:
+      return l10n.canvas;
+    case QuestionType.essay:
+      return l10n.essay;
+    case QuestionType.stepByStep:
+      return l10n.stepByStep;
+    case QuestionType.mathExpression:
+      return l10n.math;
+    case QuestionType.graphDrawing:
+      return l10n.graphDrawing;
+    case QuestionType.fileUpload:
+      return l10n.fileUpload;
+    case QuestionType.audioRecording:
+      return l10n.audioRecording;
   }
 }

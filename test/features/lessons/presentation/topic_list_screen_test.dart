@@ -24,7 +24,7 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Topic?>> get(String id) async => Result.success(null);

@@ -69,16 +69,24 @@ class LessonPlan {
     }
   }
 
-  // TODO: i18n - callers should override with localized values from ARB keys
-  static LessonPlan defaultPlan(int durationMinutes) {
+  static LessonPlan defaultPlan(
+    int durationMinutes, {
+    String goal = 'Understand the topic',
+    String introTitle = 'Introduction',
+    String mainTitle = 'Main Content',
+    String practiceTitle = 'Practice',
+    String checkpointStarted = 'Lesson started',
+    String checkpointCovered = 'Topic covered',
+    String checkpointCompleted = 'Practice completed',
+  }) {
     return LessonPlan(
-      goals: ['Understand the topic'],
+      goals: [goal],
       sections: [
-        LessonSection(title: 'Introduction', durationMinutes: 5, type: LessonSectionType.explanation),
-        LessonSection(title: 'Main Content', durationMinutes: (durationMinutes - 15).clamp(5, 120), type: LessonSectionType.explanation),
-        LessonSection(title: 'Practice', durationMinutes: 10, type: LessonSectionType.exercise),
+        LessonSection(title: introTitle, durationMinutes: 5, type: LessonSectionType.explanation),
+        LessonSection(title: mainTitle, durationMinutes: (durationMinutes - 15).clamp(5, 120), type: LessonSectionType.explanation),
+        LessonSection(title: practiceTitle, durationMinutes: 10, type: LessonSectionType.exercise),
       ],
-      checkpoints: ['Lesson started', 'Topic covered', 'Practice completed'],
+      checkpoints: [checkpointStarted, checkpointCovered, checkpointCompleted],
       estimatedDifficulty: 3,
     );
   }

@@ -57,29 +57,32 @@ class _FakeBadgeRepository implements BadgeRepository {
   List<BadgeModel> filterBy<K>(K Function(BadgeModel) getter, K value) => [];
 
   @override
+  Future<Result<void>> put(String key, BadgeModel item) async => Result.success(null);
+
+  @override
   Box<BadgeModel> get box => _box!;
   Box<BadgeModel>? _box;
 }
 
 class _FakeAttemptRepository extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
   @override
   Future<Result<StudentAttempt?>> get(String id) async => Result.success(null);
   @override
   Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(String studentId, String subjectId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async => Result.success([]);
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async => [];
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async => Result.success([]);
   @override
-  Future<List<StudentAttempt>> getBySubject(String subjectId) async => [];
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async => Result.success([]);
   @override
-  Future<void> create(StudentAttempt attempt) async {}
+  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
   @override
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async => {};
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async => Result.success({});
   @override
   Future<Result<void>> delete(String id) async => Result.success(null);
 }

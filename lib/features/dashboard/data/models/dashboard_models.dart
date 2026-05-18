@@ -178,8 +178,4 @@ class DueReviewsData {
   });
 }
 
-class DashboardArgs {
-  final String studentId;
 
-  const DashboardArgs({required this.studentId});
-}

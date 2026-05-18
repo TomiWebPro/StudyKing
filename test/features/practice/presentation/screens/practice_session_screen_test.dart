@@ -1064,6 +1064,141 @@ void main() {
       expect(record.userAnswer, 'Paris');
     });
   });
+
+  group('confidence selector', () {
+    testWidgets('shows confidence selector after submission', (tester) async {
+      final questions = [
+        question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+      ];
+
+      await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+      await tester.tap(find.text('Open Session'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '4');
+      await tester.pump();
+
+      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How confident are you?'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+    });
+
+    testWidgets('tapping confidence rating updates selection', (tester) async {
+      final questions = [
+        question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+      ];
+
+      await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+      await tester.tap(find.text('Open Session'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '4');
+      await tester.pump();
+      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('5'));
+      await tester.pump();
+
+      expect(find.text('Very Confident'), findsOneWidget);
+    });
+
+    testWidgets('default confidence is moderately confident', (tester) async {
+      final questions = [
+        question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+      ];
+
+      await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+      await tester.tap(find.text('Open Session'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '4');
+      await tester.pump();
+      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Moderately Confident'), findsOneWidget);
+    });
+  });
+
+  group('multiple question completion', () {
+    testWidgets('completes three questions and shows results', (tester) async {
+      final questions = List.generate(3, (i) => question(
+        id: 'q$i',
+        text: 'Question $i',
+        type: QuestionType.typedAnswer,
+        markschemeText: 'answer',
+      ));
+
+      await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+      await tester.tap(find.text('Open Session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      for (int i = 0; i < 3; i++) {
+        expect(find.text('Question $i'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField), 'answer');
+        await tester.pump();
+        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_kNext));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text(_kPracticeComplete), findsOneWidget);
+      expect(find.text('3/3'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+    });
+  });
+
+  group('no questions dialog', () {
+    testWidgets('shows upload materials button in no-questions dialog', (tester) async {
+      await tester.pumpWidget(sessionApp(result: Result.success([])));
+      await tester.tap(find.text('Open Session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+      expect(find.text('Upload Materials'), findsOneWidget);
+    });
+
+    testWidgets('no-questions dialog has ok button', (tester) async {
+      await tester.pumpWidget(sessionApp(result: Result.success([])));
+      await tester.tap(find.text('Open Session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text(_kNoQuestionsAvailable), findsNothing);
+    });
+  });
+
+  group('session timer', () {
+    testWidgets('shows elapsed time in stats bar', (tester) async {
+      final questions = [
+        question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+      ];
+
+      await tester.pumpWidget(sessionApp(result: Result.success(questions)));
+      await tester.tap(find.text('Open Session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byIcon(Icons.access_time), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+  });
 }
 
 class _FailingQuestionRepository extends FakeQuestionRepository {

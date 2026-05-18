@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class WeakAreasCard extends StatelessWidget {
+class WeakAreasCard extends ConsumerWidget {
   final List<MasteryState> allMastery;
   final String Function(String) resolveTopicName;
 
@@ -15,7 +17,7 @@ class WeakAreasCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final weakStates = allMastery.where((s) => s.accuracy < 0.6).toList();
     if (weakStates.isEmpty) {
@@ -70,7 +72,7 @@ class WeakAreasCard extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.play_arrow, size: 20),
                     tooltip: l10n.practiceThisTopic,
-                    onPressed: () => _practiceWeakArea(context, state.topicId),
+                    onPressed: () => _practiceWeakArea(context, ref, state.topicId),
                   ),
                 ],
               ),
@@ -81,7 +83,7 @@ class WeakAreasCard extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => _practiceAllWeakAreas(context),
+                    onPressed: () => _practiceAllWeakAreas(context, ref),
                     icon: const Icon(Icons.play_arrow),
                     label: Text(l10n.practiceAllWeakAreas),
                     style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.primary),
@@ -93,20 +95,55 @@ class WeakAreasCard extends StatelessWidget {
     );
   }
 
-  void _practiceWeakArea(BuildContext context, String topicId) {
+  void _practiceWeakArea(BuildContext context, WidgetRef ref, String topicId) async {
     if (topicId.isEmpty) return;
-    Navigator.pushNamed(
+    await Navigator.pushNamed(
       context,
       AppRoutes.practiceSession,
-      arguments: PracticeSessionArgs(subjectId: '', topicId: topicId),
+      arguments: PracticeSessionArgs(
+        subjectId: '',
+        topicId: topicId,
+      ),
     );
   }
 
-  void _practiceAllWeakAreas(BuildContext context) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.practiceSession,
-      arguments: PracticeSessionArgs(subjectId: ''),
-    );
+  void _practiceAllWeakAreas(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final questionRepo = ref.read(questionRepositoryProvider);
+      final allQResult = await questionRepo.getAll();
+      final allQuestions = allQResult.data ?? [];
+      final weakTopicIds = allMastery
+          .where((s) => s.accuracy < 0.6)
+          .map((s) => s.topicId)
+          .toSet();
+      final weakQuestions = allQuestions
+          .where((q) => weakTopicIds.contains(q.topicId))
+          .toList();
+      if (weakQuestions.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasQuestions)));
+        return;
+      }
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(weakQuestions);
+      final orderedIds = scored.map((s) => s.question.id).toList();
+      final subjectId = weakQuestions.first.subjectId;
+      if (!context.mounted) return;
+      await Navigator.pushNamed(
+        context,
+        AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: subjectId,
+          orderedQuestionIds: orderedIds,
+          questionCount: orderedIds.length,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noWeakAreasFound)));
+    }
   }
 }

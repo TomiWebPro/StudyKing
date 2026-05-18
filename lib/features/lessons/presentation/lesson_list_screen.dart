@@ -4,7 +4,8 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../core/services/student_id_service.dart';
+import '../../../core/services/student_id_service.dart' show studentIdValueProvider;
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/errors/handlers.dart';
 import '../../lessons/providers/lesson_providers.dart';
@@ -23,6 +24,7 @@ class LessonListScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonListScreenState extends ConsumerState<LessonListScreen> {
+  final _logger = const Logger('LessonListScreen');
   List<Lesson> _lessons = [];
   final Map<String, LessonStatusDisplay> _statusCache = {};
   bool _isLoading = true;
@@ -47,6 +49,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
       });
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         AppErrorHandler.handleError(
           context,
           e,
@@ -63,7 +66,8 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
   Future<void> _loadTutorSessionStatuses() async {
     try {
       final repo = ref.read(sessionRepositoryProvider);
-      final result = await repo.getByStudent(StudentIdService().getStudentId());
+      final studentId = ref.read(studentIdValueProvider);
+      final result = await repo.getByStudent(studentId);
       final sessions = result.data ?? [];
       for (final session in sessions) {
         final lessonId = session.topicId ?? '';
@@ -74,8 +78,12 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
         }
       }
       if (mounted) setState(() {});
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to load tutor session statuses', e);
+    }
   }
+
+  static const int _defaultDurationMinutes = 45;
 
   void _openTutorMode() {
     if (!mounted) return;
@@ -86,7 +94,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
         topicId: widget.args.topicId,
         topicTitle: widget.args.topicTitle,
         subjectId: widget.args.subjectId,
-        durationMinutes: 45,
+        durationMinutes: _defaultDurationMinutes,
       ),
     );
   }

@@ -67,14 +67,14 @@ class _FakeTopicRepository extends TopicRepository {
   void addTopic(Topic topic) => _topics[topic.id] = topic;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async {
-    return _topics.values.where((t) => t.subjectId == subjectId).toList();
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
+    return Result.success(_topics.values.where((t) => t.subjectId == subjectId).toList());
   }
 }
 
@@ -85,15 +85,16 @@ class _FakePlanRepository extends PlanRepository {
   Future<void> init() async {}
 
   @override
-  Future<PersonalLearningPlan?> loadPlan(String studentId) async => _plan;
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async => Result.success(_plan);
 
   @override
-  Future<void> savePlan(PersonalLearningPlan plan) async {
+  Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     _plan = plan;
+    return Result.success(null);
   }
 
   @override
-  Future<bool> hasPlan(String studentId) async => _plan != null;
+  Future<Result<bool>> hasPlan(String studentId) async => Result.success(_plan != null);
 }
 
 class _FakeRoadmapRepository extends RoadmapRepository {
@@ -103,20 +104,21 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> saveRoadmap(RoadmapModel roadmap) async {
+  Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {
     _roadmaps[roadmap.id] = roadmap;
+    return Result.success(null);
   }
 
   @override
-  Future<RoadmapModel?> loadRoadmap(String id) async => _roadmaps[id];
+  Future<Result<RoadmapModel?>> loadRoadmap(String id) async => Result.success(_roadmaps[id]);
 
   @override
-  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
-    return _roadmaps.values.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(String studentId) async {
+    return Result.success(_roadmaps.values.where((r) => r.studentId == studentId).toList());
   }
 
   @override
-  Future<List<RoadmapModel>> getAllRoadmaps() async => _roadmaps.values.toList();
+  Future<Result<List<RoadmapModel>>> getAllRoadmaps() async => Result.success(_roadmaps.values.toList());
 }
 
 class _FakeSessionRepository extends SessionRepository {

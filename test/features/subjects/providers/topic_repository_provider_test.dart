@@ -16,7 +16,14 @@ class _FakeTopicRepository extends TopicRepository {
   void setShouldThrow(bool value) => _shouldThrow = value;
 
   @override
-  Future<Result<void>> save(String key, Topic item) async {
+  Future<Result<void>> create(Topic topic) async {
+    if (_shouldThrow) throw Exception('fail');
+    _topics[topic.id] = topic;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> put(String key, Topic item) async {
     if (_shouldThrow) throw Exception('fail');
     _topics[key] = item;
     return Result.success(null);
@@ -42,34 +49,30 @@ class _FakeTopicRepository extends TopicRepository {
   }
 
   @override
-  Future<List<Topic>> getBySubject(String subjectId) async {
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
     if (_shouldThrow) throw Exception('fail');
-    return _topics.values.where((t) => t.subjectId == subjectId).toList();
+    return Result.success(_topics.values.where((t) => t.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<Topic>> getByParent(String parentId) async {
+  Future<Result<List<Topic>>> getByParent(String parentId) async {
     if (_shouldThrow) throw Exception('fail');
-    return _topics.values.where((t) => t.parentId == parentId).toList();
+    return Result.success(_topics.values.where((t) => t.parentId == parentId).toList());
   }
 
   @override
-  Future<List<Topic>> getRootTopics() async {
+  Future<Result<List<Topic>>> getRootTopics() async {
     if (_shouldThrow) throw Exception('fail');
-    return _topics.values.where((t) => t.parentId == null).toList();
+    return Result.success(_topics.values.where((t) => t.parentId == null).toList());
   }
 
   @override
-  Future<void> create(Topic topic) async {
-    if (_shouldThrow) throw Exception('fail');
-    _topics[topic.id] = topic;
+  Future<Result<void>> init() async {
+    return Result.success(null);
   }
 
   @override
-  Future<void> init() async {}
-
-  @override
-  Future<void> addParent(Topic topic, String parentId) async {
+  Future<Result<void>> addParent(Topic topic, String parentId) async {
     if (_shouldThrow) throw Exception('fail');
     final parent = _topics[parentId];
     if (parent != null) {
@@ -79,6 +82,7 @@ class _FakeTopicRepository extends TopicRepository {
       );
       await create(updated);
     }
+    return Result.success(null);
   }
 }
 
@@ -118,7 +122,7 @@ void main() {
     test('can be overridden with fake repository', () async {
       final fakeRepo = _FakeTopicRepository();
       final topic = _createTopic(id: 't1', subjectId: 's1');
-      await fakeRepo.save('t1', topic);
+      await fakeRepo.put('t1', topic);
 
       final container = ProviderContainer(
         overrides: [
@@ -151,9 +155,12 @@ void main() {
 
     test('getBySubject works with override', () async {
       final fakeRepo = _FakeTopicRepository();
-      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
-      await fakeRepo.save('t2', _createTopic(id: 't2', subjectId: 's1'));
-      await fakeRepo.save('t3', _createTopic(id: 't3', subjectId: 's2'));
+      await fakeRepo.put('t1', _createTopic(id: 't1', subjectId: 's1'));
+
+      await fakeRepo.put('t2', _createTopic(id: 't2', subjectId: 's1'));
+
+      await fakeRepo.put('t3', _createTopic(id: 't3', subjectId: 's2'));
+
 
       final container = ProviderContainer(
         overrides: [
@@ -163,15 +170,19 @@ void main() {
       addTearDown(container.dispose);
 
       final repo = container.read(topicRepositoryProvider);
-      final subjectTopics = await repo.getBySubject('s1');
+      final result = await repo.getBySubject('s1');
+      final subjectTopics = result.data ?? [];
       expect(subjectTopics, hasLength(2));
     });
 
     test('getByParent works with override', () async {
       final fakeRepo = _FakeTopicRepository();
-      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1', parentId: 'p1'));
-      await fakeRepo.save('t2', _createTopic(id: 't2', subjectId: 's1', parentId: 'p1'));
-      await fakeRepo.save('t3', _createTopic(id: 't3', subjectId: 's1'));
+      await fakeRepo.put('t1', _createTopic(id: 't1', subjectId: 's1', parentId: 'p1'));
+
+      await fakeRepo.put('t2', _createTopic(id: 't2', subjectId: 's1', parentId: 'p1'));
+
+      await fakeRepo.put('t3', _createTopic(id: 't3', subjectId: 's1'));
+
 
       final container = ProviderContainer(
         overrides: [
@@ -181,15 +192,19 @@ void main() {
       addTearDown(container.dispose);
 
       final repo = container.read(topicRepositoryProvider);
-      final children = await repo.getByParent('p1');
+      final result = await repo.getByParent('p1');
+      final children = result.data ?? [];
       expect(children, hasLength(2));
     });
 
     test('getRootTopics works with override', () async {
       final fakeRepo = _FakeTopicRepository();
-      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1')); // root
-      await fakeRepo.save('t2', _createTopic(id: 't2', subjectId: 's1', parentId: 't1')); // child
-      await fakeRepo.save('t3', _createTopic(id: 't3', subjectId: 's1')); // root
+      await fakeRepo.put('t1', _createTopic(id: 't1', subjectId: 's1')); // root
+
+      await fakeRepo.put('t2', _createTopic(id: 't2', subjectId: 's1', parentId: 't1')); // child
+
+      await fakeRepo.put('t3', _createTopic(id: 't3', subjectId: 's1')); // root
+
 
       final container = ProviderContainer(
         overrides: [
@@ -199,7 +214,8 @@ void main() {
       addTearDown(container.dispose);
 
       final repo = container.read(topicRepositoryProvider);
-      final roots = await repo.getRootTopics();
+      final result = await repo.getRootTopics();
+      final roots = result.data ?? [];
       expect(roots, hasLength(2));
     });
 
@@ -234,9 +250,9 @@ void main() {
       addTearDown(container.dispose);
 
       final repo = container.read(topicRepositoryProvider);
-      await repo.save('t1', t1);
-      await repo.save('t2', t2);
+      await repo.put('t1', t1);
 
+      await repo.put('t2', t2);
       final all = await repo.getAll();
       expect(all.data, hasLength(2));
       expect(all.data!.map((t) => t.id), containsAll(['t1', 't2']));
@@ -255,7 +271,7 @@ void main() {
       addTearDown(container.dispose);
 
       final repo = container.read(topicRepositoryProvider);
-      await repo.save('parent', parent);
+      await repo.put('parent', parent);
       await repo.addParent(child, 'parent');
 
       final stored = await repo.get('child');
@@ -319,7 +335,7 @@ void main() {
     test('delete works through provider override', () async {
       final fakeRepo = _FakeTopicRepository();
       final topic = _createTopic(id: 't1', subjectId: 's1');
-      await fakeRepo.save('t1', topic);
+      await fakeRepo.put('t1', topic);
 
       final container = ProviderContainer(
         overrides: [
@@ -336,9 +352,9 @@ void main() {
 
     test('getAll works through provider override', () async {
       final fakeRepo = _FakeTopicRepository();
-      await fakeRepo.save('t1', _createTopic(id: 't1', subjectId: 's1'));
-      await fakeRepo.save('t2', _createTopic(id: 't2', subjectId: 's1'));
+      await fakeRepo.put('t1', _createTopic(id: 't1', subjectId: 's1'));
 
+      await fakeRepo.put('t2', _createTopic(id: 't2', subjectId: 's1'));
       final container = ProviderContainer(
         overrides: [
           topicRepositoryProvider.overrideWithValue(fakeRepo),
@@ -420,13 +436,16 @@ void main() {
       await repo.create(_createTopic(id: 'rt-b', subjectId: 'rs-1'));
       await repo.create(_createTopic(id: 'rt-c', subjectId: 'rs-2'));
 
-      final forSubject1 = await repo.getBySubject('rs-1');
+      final result1 = await repo.getBySubject('rs-1');
+      final forSubject1 = result1.data ?? [];
       expect(forSubject1, hasLength(2));
 
-      final forSubject2 = await repo.getBySubject('rs-2');
+      final result2 = await repo.getBySubject('rs-2');
+      final forSubject2 = result2.data ?? [];
       expect(forSubject2, hasLength(1));
 
-      final forSubject3 = await repo.getBySubject('rs-3');
+      final result3 = await repo.getBySubject('rs-3');
+      final forSubject3 = result3.data ?? [];
       expect(forSubject3, isEmpty);
     });
 
@@ -440,7 +459,8 @@ void main() {
       await repo.create(_createTopic(id: 'rt-root2', subjectId: 'rs-1'));
       await repo.create(_createTopic(id: 'rt-child', subjectId: 'rs-1', parentId: 'rt-root1'));
 
-      final roots = await repo.getRootTopics();
+      final result = await repo.getRootTopics();
+      final roots = result.data ?? [];
       expect(roots, hasLength(2));
     });
 
@@ -454,7 +474,8 @@ void main() {
       await repo.create(_createTopic(id: 'rt-child1', subjectId: 'rs-1', parentId: 'rt-parent'));
       await repo.create(_createTopic(id: 'rt-child2', subjectId: 'rs-1', parentId: 'rt-parent'));
 
-      final children = await repo.getByParent('rt-parent');
+      final result = await repo.getByParent('rt-parent');
+      final children = result.data ?? [];
       expect(children, hasLength(2));
     });
 

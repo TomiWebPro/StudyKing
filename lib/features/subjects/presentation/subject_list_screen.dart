@@ -24,6 +24,7 @@ class SubjectListScreen extends ConsumerWidget {
             label: l10n.addSubject,
             child: IconButton(
               icon: const Icon(Icons.add),
+              tooltip: l10n.addSubject,
               onPressed: () {
                 Navigator.pushNamed(context, AppRoutes.subjectSelection);
               },

@@ -8,13 +8,20 @@ import 'package:studyking/features/practice/services/spaced_repetition_engine.da
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
+/// Tolerance window used for strict "due" checks (not for session selection).
+/// Questions whose [Question.nextReview] falls within this window before
+/// the review cutoff are considered "due" for badge counting but may be
+/// excluded from session loading to avoid edge-case thrashing.
+/// Set to [Duration.zero] for exact matching.
+Duration dueWindowTolerance = Timeouts.hour;
+
 /// Static utility queries for spaced repetition.
 /// These operate on a [Box<Question>] directly for testability.
 class SpacedRepetitionQueries {
   static List<Question> getQuestionsDueForReview(Box<Question> box,
       {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(Timeouts.hour);
+    final cutover = reviewDate;
     final all = box.values.toList();
     all.sort((a, b) =>
         (a.nextReview ?? DateTime.now())
@@ -41,7 +48,7 @@ class SpacedRepetitionQueries {
   static Map<String, String> mapQuestionsToStatus(Box<Question> box,
       {DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(Timeouts.hour);
+    final cutover = reviewDate;
     return {
       for (final q in box.values)
         q.id:
@@ -68,10 +75,11 @@ class SpacedRepetitionService {
         _attemptRepo = attemptRepo,
         _srEngine = srEngine ?? SpacedRepetitionEngine();
 
-  /// Get questions due for review based on next_review date
+  /// Get questions due for review based on next_review date.
+  /// Uses the global [dueWindowTolerance] as the cutoff precision.
   List<Question> getQuestionsDueForReview({DateTime? asOf}) {
     final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(Timeouts.hour);
+    final cutover = reviewDate.subtract(dueWindowTolerance);
     final all = _questionRepo.box.values.toList();
     all.sort((a, b) =>
         (a.nextReview ?? DateTime.now())
@@ -97,7 +105,7 @@ class SpacedRepetitionService {
       final dueQuestions = getQuestionsDueForReview(asOf: asOf);
       return Result.success(dueQuestions);
     } catch (e) {
-      _logger.e('Error getting due questions', e);
+      _logger.w('Error getting due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -132,7 +140,7 @@ class SpacedRepetitionService {
 
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error updating next review date', e);
+      _logger.w('Error updating next review date', e);
       return Result.failure(e.toString());
     }
   }
@@ -159,7 +167,8 @@ class SpacedRepetitionService {
             ? DateTime.fromMillisecondsSinceEpoch(map['lr'] as int)
             : null,
       );
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Error deserializing SR data', e);
       return const QuestionSRData();
     }
   }
@@ -189,7 +198,7 @@ class SpacedRepetitionService {
 
       return Result.success(timestamps);
     } catch (e) {
-      _logger.e('Error getting question due times', e);
+      _logger.w('Error getting question due times', e);
       return Result.failure(e.toString());
     }
   }
@@ -209,7 +218,7 @@ class SpacedRepetitionService {
 
       return Result.success(practiceQuestions.toList());
     } catch (e) {
-      _logger.e('Error getting practice questions', e);
+      _logger.w('Error getting practice questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -226,7 +235,7 @@ class SpacedRepetitionService {
 
       return Result.success(topicQuestions.toList());
     } catch (e) {
-      _logger.e('Error getting topic time due questions', e);
+      _logger.w('Error getting topic time due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -237,7 +246,7 @@ class SpacedRepetitionService {
       await _questionRepo.delete(questionId);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error removing question', e);
+      _logger.w('Error removing question', e);
       return Result.failure(e.toString());
     }
   }
@@ -258,7 +267,7 @@ class SpacedRepetitionService {
 
       return Result.success(dueCount);
     } catch (e) {
-      _logger.e('Error getting subject due count', e);
+      _logger.w('Error getting subject due count', e);
       return Result.failure(e.toString());
     }
   }

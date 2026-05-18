@@ -35,6 +35,7 @@ class ConversationManager {
   int exerciseCount = 0;
   int correctCount = 0;
   int _consecutiveIncorrect = 0;
+  int _adaptiveReviewExchanges = 0;
   double adaptivePace = 1.0;
   LessonPlan? lessonPlan;
   EvaluationResult? lastEvaluationResult;
@@ -149,12 +150,19 @@ class ConversationManager {
         phase = ConversationPhase.teaching;
       }
     } else if (phase == ConversationPhase.adaptiveReview) {
+      _adaptiveReviewExchanges++;
       final lower = content.toLowerCase();
       final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
       if (continueKeywords.any((k) => lower.contains(k))) {
         _logTransition(phase, ConversationPhase.teaching, 'student indicates understanding');
         phase = ConversationPhase.teaching;
+        _adaptiveReviewExchanges = 0;
+      } else if (_adaptiveReviewExchanges >= 3) {
+        _logTransition(phase, ConversationPhase.teaching, 'max adaptive review exchanges reached');
+        phase = ConversationPhase.teaching;
+        _adaptiveReviewExchanges = 0;
       }
+      _consecutiveIncorrect = 0;
     }
 
     final buffer = StringBuffer();
@@ -257,7 +265,12 @@ class ConversationManager {
       _consecutiveIncorrect = 0;
     }
 
-    phase = ConversationPhase.feedback;
+    if (result.score >= 0.7 && phase == ConversationPhase.adaptiveReview) {
+      _logTransition(phase, ConversationPhase.teaching, 'correct in adaptive review');
+      phase = ConversationPhase.teaching;
+    } else {
+      phase = ConversationPhase.feedback;
+    }
 
     return result;
   }

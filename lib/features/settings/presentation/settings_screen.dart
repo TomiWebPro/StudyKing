@@ -57,8 +57,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = ref.watch(settingsProvider);
-    final apiKey = ref.watch(apiKeyProvider);
+    try {
+      final settings = ref.watch(settingsProvider);
+      final apiKey = ref.watch(apiKeyProvider);
+      return _buildSettingsBody(context, l10n, settings, apiKey);
+    } catch (e) {
+      return _buildSettingsError(context, l10n, e);
+    }
+  }
+
+  Widget _buildSettingsBody(BuildContext context, AppLocalizations l10n, SettingsBox settings, String apiKey) {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: FocusTraversalGroup(
@@ -254,6 +262,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: _showSignOutDialog,
               ),
             ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsError(BuildContext context, AppLocalizations l10n, Object e) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settings)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text(l10n.somethingWentWrong, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                e.toString(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => ref.invalidate(settingsProvider),
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
           ],
         ),
       ),
@@ -859,27 +901,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showSignOutDialog() {
+  Future<void> _showSignOutDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(l10n.signOut),
         content: Text(l10n.signOutConfirmation),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-          FilledButton(
-            onPressed: () {
-              ref.read(apiKeyProvider.notifier).state = '';
-              ref.read(selectedModelProvider.notifier).state = '';
-              ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
-              Navigator.pop(context);
-            },
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             child: Text(l10n.signOut),
           ),
         ],
       ),
     );
+    if (confirmed != true) return;
+    ref.read(apiKeyProvider.notifier).state = '';
+    ref.read(selectedModelProvider.notifier).state = '';
+    ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n.signOut} - ${l10n.done}')));
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
 }

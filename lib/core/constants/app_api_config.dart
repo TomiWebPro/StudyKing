@@ -1,4 +1,5 @@
 import 'app_build_config.dart';
+import 'package:studyking/core/errors/exceptions.dart';
 
 class ApiSecrets {
   const ApiSecrets({
@@ -17,7 +18,7 @@ class ApiSecrets {
     String? whisperApiKey,
   }) {
     if (openRouterApiKey.isEmpty && BuildConfig.environment == AppEnvironment.production) {
-      throw ArgumentError('Missing OPENROUTER_API_KEY in production.');
+      throw AppException(message: 'Missing OPENROUTER_API_KEY in production.', type: ExceptionType.apiKeyMissing);
     }
     return ApiSecrets(
       openRouterApiKey: openRouterApiKey,
@@ -27,14 +28,13 @@ class ApiSecrets {
   }
 
   factory ApiSecrets.fromEnvironment() {
-    // TODO(security): prefer runtime secret injection (keystore/native layer)
-    // over compile-time embedding where possible.
+    // TODO(v2.0): implement runtime secret injection (keystore/native layer) over compile-time embedding.
     final openRouter = const String.fromEnvironment('OPENROUTER_API_KEY');
     final google = const String.fromEnvironment('GOOGLE_API_KEY');
     final whisper = const String.fromEnvironment('WHISPER_API_KEY');
 
     if (openRouter.isEmpty && BuildConfig.environment == AppEnvironment.production) {
-      throw ArgumentError('Missing OPENROUTER_API_KEY in production.');
+      throw AppException(message: 'Missing OPENROUTER_API_KEY in production.', type: ExceptionType.apiKeyMissing);
     }
 
     return ApiSecrets.fromRuntime(

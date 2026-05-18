@@ -102,11 +102,11 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   @override
   Future<void> init() async {}
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {}
+  Future<Result<void>> create(EngagementNudgeModel nudge) async => Result.success(null);
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(String studentId, {int limit = 10}) async => [];
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(String studentId, {int limit = 10}) async => Result.success([]);
   @override
-  Future<int> getTodayCount(String studentId) async => 0;
+  Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
 }
 
 class _ControllableNudgeRepo extends EngagementNudgeRepository {
@@ -118,13 +118,13 @@ class _ControllableNudgeRepo extends EngagementNudgeRepository {
   Future<void> init() => _initCompleter.future;
 
   @override
-  Future<void> create(EngagementNudgeModel nudge) async {}
+  Future<Result<void>> create(EngagementNudgeModel nudge) async => Result.success(null);
 
   @override
-  Future<List<EngagementNudgeModel>> getRecentByStudent(String studentId, {int limit = 10}) async => [];
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(String studentId, {int limit = 10}) async => Result.success([]);
 
   @override
-  Future<int> getTodayCount(String studentId) async => 0;
+  Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
 }
 
 class _FakeSessionRepo2 extends SessionRepository {
@@ -165,12 +165,12 @@ class FakeLlmService extends LlmService {
 
 class _FakeAttemptRepo extends AttemptRepository {
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 }
 
 class _FakeTopicRepository extends TopicRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
   @override
   Future<Result<Topic?>> get(String key) async {
     return Result.success(Topic(

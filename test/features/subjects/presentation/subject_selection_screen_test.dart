@@ -28,8 +28,9 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Result<Subject?>> get(String id) async => Result.success(_box.get(id));
 
   @override
-  Future<void> create(Subject subject) async {
+  Future<Result<void>> create(Subject subject) async {
     await _box.put(subject.id, subject);
+    return Result.success(null);
   }
 }
 
@@ -37,7 +38,7 @@ class _FailingSubjectRepository extends SubjectRepository {
   _FailingSubjectRepository();
 
   @override
-  Future<void> create(Subject subject) async {
+  Future<Result<void>> create(Subject subject) async {
     throw Exception('Save failed');
   }
 }
@@ -52,8 +53,9 @@ class _SlowSubjectRepository extends SubjectRepository {
   Future<Result<Subject?>> get(String id) async => Result.success(null);
 
   @override
-  Future<void> create(Subject subject) async {
+  Future<Result<void>> create(Subject subject) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
+    return Result.success(null);
   }
 }
 

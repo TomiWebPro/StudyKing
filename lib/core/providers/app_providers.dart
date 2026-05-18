@@ -55,7 +55,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
     if (result.isSuccess) {
       state = result.data!;
     } else {
-      _logger.e('Error loading settings: ${result.error}');
+      _logger.w('Error loading settings: ${result.error}');
     }
   }
 
@@ -120,7 +120,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
           dailyReminderEnabled ?? state.dailyReminderEnabled,
     );
     if (updateResult.isFailure) {
-      _logger.e('Error updating settings: ${updateResult.error}');
+      _logger.w('Error updating settings: ${updateResult.error}');
       return;
     }
     if (llmProvider != null) {
@@ -130,14 +130,14 @@ class SettingsController extends StateNotifier<SettingsBox> {
     if (settingsResult.isSuccess) {
       state = settingsResult.data!;
     } else {
-      _logger.e('Error loading settings after update: ${settingsResult.error}');
+      _logger.w('Error loading settings after update: ${settingsResult.error}');
     }
   }
 
   Future<void> saveApiKey(String key) async {
     final result = await _repository.saveApiKey(service: 'default', key: key);
     if (result.isFailure) {
-      _logger.e('Error saving API key: ${result.error}');
+      _logger.w('Error saving API key: ${result.error}');
       return;
     }
     await _loadSettings();
@@ -146,7 +146,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
   Future<void> updateTheme(ThemeMode mode) async {
     final updateResult = await _repository.updateSettings(themeMode: mode);
     if (updateResult.isFailure) {
-      _logger.e('Error updating theme: ${updateResult.error}');
+      _logger.w('Error updating theme: ${updateResult.error}');
       return;
     }
     final settingsResult = await _repository.getSettings();
@@ -158,7 +158,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
   Future<void> updateFontSize(double size) async {
     final updateResult = await _repository.updateSettings(fontSize: size);
     if (updateResult.isFailure) {
-      _logger.e('Error updating font size: ${updateResult.error}');
+      _logger.w('Error updating font size: ${updateResult.error}');
       return;
     }
     final settingsResult = await _repository.getSettings();
@@ -170,7 +170,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
   Future<void> updateModel(String model) async {
     final updateResult = await _repository.updateSettings(selectedModel: model);
     if (updateResult.isFailure) {
-      _logger.e('Error updating model: ${updateResult.error}');
+      _logger.w('Error updating model: ${updateResult.error}');
       return;
     }
     final settingsResult = await _repository.getSettings();
@@ -202,7 +202,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
       questions: questions,
     );
     if (statsResult.isFailure) {
-      _logger.e('Error updating stats: ${statsResult.error}');
+      _logger.w('Error updating stats: ${statsResult.error}');
       return;
     }
     final settingsResult = await _repository.getSettings();
@@ -283,7 +283,7 @@ final localeProvider = StateProvider<Locale>((ref) {
       }
     }
   } catch (e) {
-    const Logger('localeProvider').e('Failed to get device locale', e);
+    const Logger('localeProvider').w('Failed to get device locale', e);
   }
   return const Locale('en');
 });

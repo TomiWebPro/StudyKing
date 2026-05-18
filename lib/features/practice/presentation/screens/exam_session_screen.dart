@@ -59,6 +59,9 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
 
   int _durationMinutes = 30;
   int _questionCount = 10;
+  int _easyCount = 0;
+  int _mediumCount = 0;
+  int _hardCount = 0;
 
   @override
   void initState() {
@@ -105,6 +108,9 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           durationMinutes: _durationMinutes,
           questionCount: _questionCount,
           subjectId: widget.subjectId,
+          easyCount: _easyCount > 0 ? _easyCount : null,
+          mediumCount: _mediumCount > 0 ? _mediumCount : null,
+          hardCount: _hardCount > 0 ? _hardCount : null,
         );
         final selected = _examService.selectQuestions(
           pool: result.data!,
@@ -488,6 +494,8 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
             _buildDurationSelector(),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             _buildQuestionCountSelector(),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+            _buildDifficultySelector(l10n),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 3),
             SizedBox(
               width: double.infinity,
@@ -532,6 +540,81 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           )).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildDifficultySelector(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.difficultyDistribution,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        Text(l10n.difficultyDistributionHint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        _buildDifficultySlider(
+          label: l10n.easyQuestions,
+          value: _easyCount,
+          onChanged: (v) => setState(() => _easyCount = v),
+          color: Colors.green,
+        ),
+        _buildDifficultySlider(
+          label: l10n.mediumQuestions,
+          value: _mediumCount,
+          onChanged: (v) => setState(() => _mediumCount = v),
+          color: Colors.orange,
+        ),
+        _buildDifficultySlider(
+          label: l10n.hardQuestions,
+          value: _hardCount,
+          onChanged: (v) => setState(() => _hardCount = v),
+          color: Colors.red,
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
+        Text(
+          '${l10n.totalSelected}: ${_easyCount + _mediumCount + _hardCount} / $_questionCount',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: (_easyCount + _mediumCount + _hardCount) > _questionCount
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDifficultySlider({
+    required String label,
+    required int value,
+    required ValueChanged<int> onChanged,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          Expanded(
+            child: Slider(
+              value: value.toDouble(),
+              min: 0,
+              max: _questionCount.toDouble(),
+              divisions: _questionCount,
+              activeColor: color,
+              onChanged: (v) => onChanged(v.round()),
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            child: Text('$value',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -609,7 +692,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                     icon: const Icon(Icons.home),
                     label: Text(l10n.done),
                   ),

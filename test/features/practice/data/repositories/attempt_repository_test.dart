@@ -10,12 +10,14 @@ class _FakeAttemptRepository extends AttemptRepository {
   final Map<String, StudentAttempt> _storage = {};
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
+    return Result.success(null);
   }
 
   @override
-  Future<void> create(StudentAttempt attempt) async {
+  Future<Result<void>> create(StudentAttempt attempt) async {
     _storage[attempt.id] = attempt;
+    return Result.success(null);
   }
 
   @override
@@ -29,38 +31,39 @@ class _FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return _storage.values.where((a) => a.studentId == studentId).toList();
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(_storage.values.where((a) => a.studentId == studentId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(String studentId, String subjectId) async {
-    return _storage.values
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async {
+    return Result.success(_storage.values
         .where((a) => a.studentId == studentId && a.subjectId == subjectId)
-        .toList();
+        .toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
-    return _storage.values.where((a) => a.questionId == questionId).toList();
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.success(_storage.values.where((a) => a.questionId == questionId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getBySubject(String subjectId) async {
-    return _storage.values.where((a) => a.subjectId == subjectId).toList();
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    return Result.success(_storage.values.where((a) => a.subjectId == subjectId).toList());
   }
 
   @override
-  Future<Map<String, dynamic>> getSubjectStats(String subjectId) async {
-    final attempts = await getBySubject(subjectId);
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    final attemptsResult = await getBySubject(subjectId);
+    final attempts = attemptsResult.data!;
     final correct = attempts.where((a) => a.isCorrect).length;
     final total = attempts.length;
-    return {
+    return Result.success({
       'total': total,
       'correct': correct,
       'incorrect': total - correct,
       'accuracy': total > 0 ? correct / total : 0.0,
-    };
+    });
   }
 
   @override
@@ -112,11 +115,11 @@ void main() {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's2', questionId: 'q2', subjectId: 'sub1', timestamp: now));
         final result = await repository.getByStudent('s1');
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
 
       test('returns empty for student with no attempts', () async {
-        expect(await repository.getByStudent('none'), isEmpty);
+        expect((await repository.getByStudent('none')).data!, isEmpty);
       });
     });
 
@@ -125,11 +128,11 @@ void main() {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub2', timestamp: now));
         final result = await repository.getByStudentAndSubject('s1', 'sub1');
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
 
       test('returns empty when no match', () async {
-        expect(await repository.getByStudentAndSubject('s1', 'sub1'), isEmpty);
+        expect((await repository.getByStudentAndSubject('s1', 'sub1')).data!, isEmpty);
       });
     });
 
@@ -137,11 +140,11 @@ void main() {
       test('returns attempts for question', () async {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's2', questionId: 'q1', subjectId: 'sub1', timestamp: now));
-        expect((await repository.getByQuestion('q1')).length, 2);
+        expect((await repository.getByQuestion('q1')).data!.length, 2);
       });
 
       test('returns empty for question with no attempts', () async {
-        expect(await repository.getByQuestion('none'), isEmpty);
+        expect((await repository.getByQuestion('none')).data!, isEmpty);
       });
     });
 
@@ -149,11 +152,11 @@ void main() {
       test('returns attempts for subject', () async {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub2', timestamp: now));
-        expect((await repository.getBySubject('sub1')).length, 1);
+        expect((await repository.getBySubject('sub1')).data!.length, 1);
       });
 
       test('returns empty for subject with no attempts', () async {
-        expect(await repository.getBySubject('none'), isEmpty);
+        expect((await repository.getBySubject('none')).data!, isEmpty);
       });
     });
 
@@ -162,7 +165,9 @@ void main() {
         await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', isCorrect: true, timestamp: now));
         await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', isCorrect: false, timestamp: now));
         await repository.create(StudentAttempt(id: 'a3', studentId: 's1', questionId: 'q3', subjectId: 'sub1', isCorrect: true, timestamp: now));
-        final stats = await repository.getSubjectStats('sub1');
+        final statsResult = await repository.getSubjectStats('sub1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['total'], 3);
         expect(stats['correct'], 2);
         expect(stats['incorrect'], 1);
@@ -170,7 +175,9 @@ void main() {
       });
 
       test('returns zero stats for no attempts', () async {
-        final stats = await repository.getSubjectStats('empty');
+        final statsResult = await repository.getSubjectStats('empty');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['total'], 0);
         expect(stats['accuracy'], 0.0);
       });
@@ -218,13 +225,15 @@ void main() {
       await repository.create(StudentAttempt(id: 'a1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', timestamp: DateTime.now()));
       await repository.create(StudentAttempt(id: 'a2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', timestamp: DateTime.now()));
       await repository.create(StudentAttempt(id: 'a3', studentId: 's2', questionId: 'q3', subjectId: 'sub1', timestamp: DateTime.now()));
-      expect(await repository.getByStudent('s1'), hasLength(2));
+      expect((await repository.getByStudent('s1')).data!, hasLength(2));
     });
 
     test('getSubjectStats works after init', () async {
       await repository.create(StudentAttempt(id: 's1', studentId: 's1', questionId: 'q1', subjectId: 'sub1', isCorrect: true, timestamp: DateTime.now()));
       await repository.create(StudentAttempt(id: 's2', studentId: 's1', questionId: 'q2', subjectId: 'sub1', isCorrect: false, timestamp: DateTime.now()));
-      final stats = await repository.getSubjectStats('sub1');
+      final statsResult = await repository.getSubjectStats('sub1');
+      expect(statsResult.isSuccess, true);
+      final stats = statsResult.data!;
       expect(stats['total'], 2);
       expect(stats['correct'], 1);
     });

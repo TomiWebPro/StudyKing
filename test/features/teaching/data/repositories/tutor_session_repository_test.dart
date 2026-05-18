@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/adapters/conversation_message_adapter.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
-import 'package:studyking/core/data/models/session_model.dart';
 
 class _FakeTutorSessionBox implements Box<TutorSession> {
   final Map<dynamic, TutorSession> _storage = {};
@@ -110,7 +110,7 @@ void main() {
         final session = createSession();
         await repository.saveSession(session);
         final stored = await repository.getSession('session-1');
-        expect(stored?.topicTitle, 'Algebra');
+        expect(stored.data?.topicTitle, 'Algebra');
       });
 
       test('overwrites existing session with same id', () async {
@@ -119,7 +119,7 @@ void main() {
         await repository.saveSession(session1);
         await repository.saveSession(session2);
         final stored = await repository.getSession('session-1');
-        expect(stored?.topicTitle, 'Calculus');
+        expect(stored.data?.topicTitle, 'Calculus');
       });
     });
 
@@ -142,7 +142,9 @@ void main() {
         await repository.saveSession(s1);
         await repository.saveSession(s2);
         await repository.saveSession(s3);
-        final all = await repository.getAllSessions();
+        final allResult = await repository.getAllSessions();
+        expect(allResult.isSuccess, true);
+        final all = allResult.data!;
         expect(all.length, 3);
         expect(all[0].id, 's2');
         expect(all[1].id, 's3');
@@ -150,12 +152,14 @@ void main() {
       });
 
       test('returns empty when no sessions', () async {
-        expect(await repository.getAllSessions(), isEmpty);
+        expect((await repository.getAllSessions()).data, isEmpty);
       });
 
       test('returns single session', () async {
         await repository.saveSession(createSession(id: 's1'));
-        final all = await repository.getAllSessions();
+        final allResult = await repository.getAllSessions();
+        expect(allResult.isSuccess, true);
+        final all = allResult.data!;
         expect(all.length, 1);
         expect(all[0].id, 's1');
       });
@@ -166,12 +170,14 @@ void main() {
         await repository.saveSession(createSession(id: 's1', studentId: 'stu1'));
         await repository.saveSession(createSession(id: 's2', studentId: 'stu1'));
         await repository.saveSession(createSession(id: 's3', studentId: 'stu2'));
-        final sessions = await repository.getStudentSessions('stu1');
+        final sessionsResult = await repository.getStudentSessions('stu1');
+        expect(sessionsResult.isSuccess, true);
+        final sessions = sessionsResult.data!;
         expect(sessions.length, 2);
       });
 
       test('returns empty for student with no sessions', () async {
-        expect(await repository.getStudentSessions('none'), isEmpty);
+        expect((await repository.getStudentSessions('none')).data, isEmpty);
       });
     });
 
@@ -181,12 +187,14 @@ void main() {
         await repository.saveSession(createSession(id: 's2', studentId: 'stu1', subjectId: 'sub1'));
         await repository.saveSession(createSession(id: 's3', studentId: 'stu1', subjectId: 'sub2'));
         await repository.saveSession(createSession(id: 's4', studentId: 'stu2', subjectId: 'sub1'));
-        final sessions = await repository.getSubjectSessions('stu1', 'sub1');
+        final sessionsResult = await repository.getSubjectSessions('stu1', 'sub1');
+        expect(sessionsResult.isSuccess, true);
+        final sessions = sessionsResult.data!;
         expect(sessions.length, 2);
       });
 
       test('returns empty when no match', () async {
-        expect(await repository.getSubjectSessions('stu1', 'sub1'), isEmpty);
+        expect((await repository.getSubjectSessions('stu1', 'sub1')).data, isEmpty);
       });
     });
 
@@ -196,14 +204,16 @@ void main() {
         await repository.saveSession(createSession(id: 's2', status: SessionStatus.planned));
         await repository.saveSession(createSession(id: 's3', status: SessionStatus.completed));
         await repository.saveSession(createSession(id: 's4', status: SessionStatus.inProgress));
-        final active = await repository.getActiveSessions();
+        final activeResult = await repository.getActiveSessions();
+        expect(activeResult.isSuccess, true);
+        final active = activeResult.data!;
         expect(active.length, 2);
         expect(active.every((s) => s.status == SessionStatus.inProgress), isTrue);
       });
 
       test('returns empty when no active sessions', () async {
         await repository.saveSession(createSession(id: 's1', status: SessionStatus.completed));
-        expect(await repository.getActiveSessions(), isEmpty);
+        expect((await repository.getActiveSessions()).data, isEmpty);
       });
     });
 
@@ -213,13 +223,15 @@ void main() {
         await repository.saveSession(createSession(id: 's2', studentId: 'stu1', status: SessionStatus.completed));
         await repository.saveSession(createSession(id: 's3', studentId: 'stu1', status: SessionStatus.inProgress));
         await repository.saveSession(createSession(id: 's4', studentId: 'stu2', status: SessionStatus.completed));
-        final completed = await repository.getCompletedSessions('stu1');
+        final completedResult = await repository.getCompletedSessions('stu1');
+        expect(completedResult.isSuccess, true);
+        final completed = completedResult.data!;
         expect(completed.length, 2);
         expect(completed.every((s) => s.status == SessionStatus.completed), isTrue);
       });
 
       test('returns empty when no completed sessions', () async {
-        expect(await repository.getCompletedSessions('stu1'), isEmpty);
+        expect((await repository.getCompletedSessions('stu1')).data, isEmpty);
       });
     });
 
@@ -228,7 +240,8 @@ void main() {
         final session = createSession();
         await repository.saveSession(session);
         await repository.deleteSession('session-1');
-        expect(await repository.getSession('session-1'), isNull);
+        final deletedCheck = await repository.getSession('session-1');
+        expect(deletedCheck.data, isNull);
       });
 
       test('does nothing for non-existent session', () async {
@@ -241,18 +254,20 @@ void main() {
         await repository.saveSession(createSession(id: 's1'));
         await repository.saveSession(createSession(id: 's2'));
         await repository.clearAll();
-        expect(await repository.getAllSessions(), isEmpty);
+        expect((await repository.getAllSessions()).data, isEmpty);
       });
 
       test('works on empty repository', () async {
         await repository.clearAll();
-        expect(await repository.getAllSessions(), isEmpty);
+        expect((await repository.getAllSessions()).data, isEmpty);
       });
     });
 
     group('getSessionStats', () {
       test('returns zeros when no sessions', () async {
-        final stats = await repository.getSessionStats('stu1');
+        final statsResult = await repository.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 0);
         expect(stats['completedSessions'], 0);
         expect(stats['totalHours'], 0.0);
@@ -276,7 +291,9 @@ void main() {
           questionsAsked: 2, questionsCorrect: 1,
         ));
 
-        final stats = await repository.getSessionStats('stu1');
+        final statsResult = await repository.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 3);
         expect(stats['completedSessions'], 2);
         expect(stats['totalQuestions'], 15);
@@ -290,7 +307,9 @@ void main() {
         await repository.saveSession(createSession(
           id: 's2', studentId: 'stu2', status: SessionStatus.completed,
         ));
-        final stats = await repository.getSessionStats('stu1');
+        final statsResult = await repository.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 1);
       });
 
@@ -298,7 +317,9 @@ void main() {
         await repository.saveSession(createSession(
           id: 's1', studentId: 'stu1', status: SessionStatus.inProgress,
         ));
-        final stats = await repository.getSessionStats('stu1');
+        final statsResult = await repository.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['averageAccuracy'], 0.0);
       });
     });
@@ -367,8 +388,8 @@ void main() {
         await hiveRepo.saveSession(session);
         final retrieved = await hiveRepo.getSession('session-1');
         expect(retrieved, isNotNull);
-        expect(retrieved!.topicTitle, 'Algebra');
-        expect(retrieved.studentId, 'student-1');
+        expect(retrieved.data!.topicTitle, 'Algebra');
+        expect(retrieved.data!.studentId, 'student-1');
       });
 
       test('getSession returns null for non-existent', () async {
@@ -381,7 +402,7 @@ void main() {
         await hiveRepo.saveSession(s1);
         await hiveRepo.saveSession(s2);
         final stored = await hiveRepo.getSession('session-1');
-        expect(stored?.topicTitle, 'Calculus');
+        expect(stored.data?.topicTitle, 'Calculus');
       });
     });
 
@@ -393,7 +414,9 @@ void main() {
         await hiveRepo.saveSession(s1);
         await hiveRepo.saveSession(s2);
         await hiveRepo.saveSession(s3);
-        final all = await hiveRepo.getAllSessions();
+        final allResult = await hiveRepo.getAllSessions();
+        expect(allResult.isSuccess, true);
+        final all = allResult.data!;
         expect(all.length, 3);
         expect(all[0].id, 's2');
         expect(all[1].id, 's3');
@@ -401,7 +424,7 @@ void main() {
       });
 
       test('returns empty when no sessions', () async {
-        expect(await hiveRepo.getAllSessions(), isEmpty);
+        expect((await hiveRepo.getAllSessions()).data, isEmpty);
       });
     });
 
@@ -410,12 +433,14 @@ void main() {
         await hiveRepo.saveSession(hiveSession(id: 's1', studentId: 'stu1'));
         await hiveRepo.saveSession(hiveSession(id: 's2', studentId: 'stu1'));
         await hiveRepo.saveSession(hiveSession(id: 's3', studentId: 'stu2'));
-        final sessions = await hiveRepo.getStudentSessions('stu1');
+        final sessionsResult = await hiveRepo.getStudentSessions('stu1');
+        expect(sessionsResult.isSuccess, true);
+        final sessions = sessionsResult.data!;
         expect(sessions.length, 2);
       });
 
       test('returns empty for student with no sessions', () async {
-        expect(await hiveRepo.getStudentSessions('none'), isEmpty);
+        expect((await hiveRepo.getStudentSessions('none')).data, isEmpty);
       });
     });
 
@@ -425,12 +450,14 @@ void main() {
         await hiveRepo.saveSession(hiveSession(id: 's2', studentId: 'stu1', subjectId: 'sub1'));
         await hiveRepo.saveSession(hiveSession(id: 's3', studentId: 'stu1', subjectId: 'sub2'));
         await hiveRepo.saveSession(hiveSession(id: 's4', studentId: 'stu2', subjectId: 'sub1'));
-        final sessions = await hiveRepo.getSubjectSessions('stu1', 'sub1');
+        final sessionsResult = await hiveRepo.getSubjectSessions('stu1', 'sub1');
+        expect(sessionsResult.isSuccess, true);
+        final sessions = sessionsResult.data!;
         expect(sessions.length, 2);
       });
 
       test('returns empty when no match', () async {
-        expect(await hiveRepo.getSubjectSessions('stu1', 'sub1'), isEmpty);
+        expect((await hiveRepo.getSubjectSessions('stu1', 'sub1')).data, isEmpty);
       });
     });
 
@@ -440,14 +467,16 @@ void main() {
         await hiveRepo.saveSession(hiveSession(id: 's2', status: SessionStatus.planned));
         await hiveRepo.saveSession(hiveSession(id: 's3', status: SessionStatus.completed));
         await hiveRepo.saveSession(hiveSession(id: 's4', status: SessionStatus.inProgress));
-        final active = await hiveRepo.getActiveSessions();
+        final activeResult = await hiveRepo.getActiveSessions();
+        expect(activeResult.isSuccess, true);
+        final active = activeResult.data!;
         expect(active.length, 2);
         expect(active.every((s) => s.status == SessionStatus.inProgress), isTrue);
       });
 
       test('returns empty when no active sessions', () async {
         await hiveRepo.saveSession(hiveSession(id: 's1', status: SessionStatus.completed));
-        expect(await hiveRepo.getActiveSessions(), isEmpty);
+        expect((await hiveRepo.getActiveSessions()).data, isEmpty);
       });
     });
 
@@ -457,13 +486,15 @@ void main() {
         await hiveRepo.saveSession(hiveSession(id: 's2', studentId: 'stu1', status: SessionStatus.completed));
         await hiveRepo.saveSession(hiveSession(id: 's3', studentId: 'stu1', status: SessionStatus.inProgress));
         await hiveRepo.saveSession(hiveSession(id: 's4', studentId: 'stu2', status: SessionStatus.completed));
-        final completed = await hiveRepo.getCompletedSessions('stu1');
+        final completedResult = await hiveRepo.getCompletedSessions('stu1');
+        expect(completedResult.isSuccess, true);
+        final completed = completedResult.data!;
         expect(completed.length, 2);
         expect(completed.every((s) => s.status == SessionStatus.completed), isTrue);
       });
 
       test('returns empty when no completed sessions', () async {
-        expect(await hiveRepo.getCompletedSessions('stu1'), isEmpty);
+        expect((await hiveRepo.getCompletedSessions('stu1')).data, isEmpty);
       });
     });
 
@@ -471,7 +502,8 @@ void main() {
       test('removes a session', () async {
         await hiveRepo.saveSession(hiveSession());
         await hiveRepo.deleteSession('session-1');
-        expect(await hiveRepo.getSession('session-1'), isNull);
+        final deletedCheck = await hiveRepo.getSession('session-1');
+        expect(deletedCheck.data, isNull);
       });
 
       test('does nothing for non-existent session', () async {
@@ -484,13 +516,15 @@ void main() {
         await hiveRepo.saveSession(hiveSession(id: 's1'));
         await hiveRepo.saveSession(hiveSession(id: 's2'));
         await hiveRepo.clearAll();
-        expect(await hiveRepo.getAllSessions(), isEmpty);
+        expect((await hiveRepo.getAllSessions()).data, isEmpty);
       });
     });
 
     group('getSessionStats', () {
       test('returns zeros when no sessions', () async {
-        final stats = await hiveRepo.getSessionStats('stu1');
+        final statsResult = await hiveRepo.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 0);
         expect(stats['completedSessions'], 0);
         expect(stats['totalHours'], 0.0);
@@ -514,7 +548,9 @@ void main() {
           questionsAsked: 2, questionsCorrect: 1,
         ));
 
-        final stats = await hiveRepo.getSessionStats('stu1');
+        final statsResult = await hiveRepo.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 3);
         expect(stats['completedSessions'], 2);
         expect(stats['totalQuestions'], 15);
@@ -528,7 +564,9 @@ void main() {
         await hiveRepo.saveSession(hiveSession(
           id: 's2', studentId: 'stu2', status: SessionStatus.completed,
         ));
-        final stats = await hiveRepo.getSessionStats('stu1');
+        final statsResult = await hiveRepo.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
         expect(stats['totalSessions'], 1);
       });
     });

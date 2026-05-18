@@ -8,7 +8,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
+import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -144,6 +144,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   child: IconButton(
                                     icon: const Icon(Icons.more_vert),
                                     color: theme.colorScheme.onPrimary,
+                                    tooltip: l10n.moreOptions,
                                     onPressed: () => _showMoreOptions(),
                                   ),
                                 ),
@@ -165,7 +166,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               tabs: [
                 Tab(icon: const Icon(Icons.book), text: l10n.lessonsTab),
                 Tab(icon: const Icon(Icons.play_arrow), text: l10n.practiceTab),
-                Tab(icon: const Icon(Icons.source), text: 'Sources'),
+                Tab(icon: const Icon(Icons.source), text: l10n.sources),
                 Tab(icon: const Icon(Icons.history), text: l10n.historyTab),
                 Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
               ],
@@ -246,10 +247,10 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             ),
             if (_sourceCount > 0)
               Semantics(
-                label: 'View Sources',
+                label: l10n.viewSources,
                 child: ListTile(
                   leading: const Icon(Icons.source),
-                  title: Text('$_sourceCount Source(s)'),
+                  title: Text(l10n.sourcesCountLabel(_sourceCount)),
                   onTap: () {
                     Navigator.pop(context);
                     _tabController.animateTo(2);
@@ -410,6 +411,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
   final _sourceRepo = SourceRepository();
   List<_SourceItem> _items = [];
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -418,7 +420,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _error = null; });
     try {
       await _sourceRepo.init();
       final sources = await _sourceRepo.getBySubject(widget.subjectId);
@@ -436,7 +438,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
       }
     } catch (e) {
       const Logger('SubjectDetailScreen').e('Failed to load sources', e);
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() { _isLoading = false; _error = e.toString(); });
     }
   }
 
@@ -445,7 +447,37 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const LoadingScreen();
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text(l10n.somethingWentWrong, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (_items.isEmpty) {
       return Center(
@@ -454,7 +486,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
           children: [
             Icon(Icons.folder_open, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            Text('No sources for this subject', style: theme.textTheme.bodyLarge),
+            Text(l10n.noSourcesForSubject, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 12),
             ElevatedButton.icon(
               icon: const Icon(Icons.cloud_upload),
@@ -472,7 +504,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Text(
-            '${_items.length} Source(s)',
+            l10n.sourcesCount(_items.length),
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ),
@@ -482,11 +514,12 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final item = _items[index];
+              final cs = theme.colorScheme;
               final statusColor = item.status == ProcessingStatus.completed
-                  ? Colors.green
+                  ? cs.primary
                   : item.status == ProcessingStatus.failed
-                      ? Colors.red
-                      : Colors.orange;
+                      ? cs.error
+                      : cs.tertiary;
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: theme.colorScheme.primaryContainer,
@@ -502,8 +535,8 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        item.status.name,
-                        style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500),
+                        _statusLabel(item.status, l10n),
+                        style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
                       ),
                     ),
                     if (item.questionCount > 0) ...[
@@ -535,6 +568,25 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
       case SourceType.audio: return Icons.headphones;
       case SourceType.document: return Icons.description;
     }
+  }
+}
+
+String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
+  switch (status) {
+    case ProcessingStatus.pending:
+      return l10n.pending;
+    case ProcessingStatus.extracting:
+      return l10n.extracting;
+    case ProcessingStatus.classifying:
+      return l10n.processing;
+    case ProcessingStatus.generatingQuestions:
+      return l10n.generatingQuestions;
+    case ProcessingStatus.validating:
+      return l10n.validating;
+    case ProcessingStatus.completed:
+      return l10n.completed;
+    case ProcessingStatus.failed:
+      return l10n.failed;
   }
 }
 

@@ -16,12 +16,17 @@ class Repository<T> {
     _box = box;
   }
 
+  /// Alias for [put] matching the [save] naming convention.
   Future<Result<void>> save(String key, T item) async {
+    return put(key, item);
+  }
+
+  Future<Result<void>> put(String key, T item) async {
     try {
       await _box.put(key, item);
       return Result.success(null);
     } catch (e) {
-      return Result.failure('Failed to save: $e');
+      return Result.failure('Failed to put: $e');
     }
   }
 

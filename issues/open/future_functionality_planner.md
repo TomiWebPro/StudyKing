@@ -1,411 +1,441 @@
-# Future Functionality Plan: Phase 3 Audit & Roadmap
+# Future Functionality Planner — Vision Gap Analysis & Next Phase Roadmap
 
-## Context
-
-Fourth-pass audit comparing the vision (`agent_must_read.md`) against current implementation. This report documents: (1) zero progress since the previous completed report — all 16 issues remain open, (2) new user-rage reports from `issues/further_issues/open/`, (3) newly discovered gaps, and (4) a prioritised phase plan with concrete acceptance criteria.
-
-**Critical finding:** Every issue from `issues/completed/future_functionality_planner.md` remains unfixed. The two user-rage issues (`focus_mode.md`, `lessons.md`) have escalated — users now report the same problems *again* with identical severity.
-
-**Further issues integrated:**
-
-| File | Priority | Summary |
-|---|---|---|
-| `issues/further_issues/open/focus_mode.md` | **URGENT (escalated)** | User rage: "fucking useless", "must change immediately". Wants Focus Mode = cross-subject practice question hub, not Pomodoro timer. |
-| `issues/further_issues/open/lessons.md` | **URGENT (escalated)** | User rage: "fucking useless", "fucking clear all of them". Wants Preply-style calendar scheduling, LLM agents that prepare materials, long-term agent memory, tool-using agents, separate scheduling from lesson plans. |
+**Generated:** 2026-05-18
+**Analyzed Scope:** `lib/` (315 files), `test/` (331 files), `agent_must_read.md` (product vision)
+**Sources:** Product vision document, codebase deep audit, user beta feedback (`issues/further_issues/open/lessons.md`, `issues/further_issues/open/focus_mode.md`)
 
 ---
 
-## Progress Since Previous Report
+## Executive Summary
 
-| Previous ID | Description | Status | Notes |
-|---|---|---|---|
-| **B1** | Background notification scheduling | ❌ STILL OPEN | `EngagementScheduler` still `Timer.periodic`-based (engagement_scheduler.dart:94-103); no `workmanager` in pubspec.yaml |
-| **B2** | Focus Mode = Pomodoro timer, not practice mode | ❌ STILL OPEN | `focus_timer_screen.dart` unchanged; user rage escalated |
-| **B3** | Lesson system static, no LLM agent materials | ❌ STILL OPEN | `lesson_service.dart`, `tutor_screen.dart` unchanged; user rage escalated |
-| **M1** | Voice conversation flow (auto-send, TTS, interrupt, toggle) | ❌ STILL OPEN | `voice_controller.dart` unchanged; `speak()` still has zero callers |
-| **M2** | Mentor `suggestNextAction()` rule-based | ❌ STILL OPEN | `mentor_service.dart:575-581` still calls rule-based `getRecommendations()` |
-| **M3** | Handwriting recognition for canvas submissions | ❌ STILL OPEN | `canvas_drawing_widget.dart` has basic drawing but no handwriting OCR pipeline; `canvas`/`graphDrawing` question types still stubs |
-| **M4** | `LessonService` queries `SessionRepository` not `LessonRepository` | ❌ STILL OPEN | `lesson_service.dart` unchanged |
-| **M5** | ConversationManager phase transitions fragile | ❌ STILL OPEN | `conversation_manager.dart` unchanged |
-| **M6** | No lesson presentation/slide system | ❌ STILL OPEN | `tutor_screen.dart` still chat-only; `LessonBlockType.slide` enum value exists but unused by tutoring system |
-| **m1** | `VoiceController.speak()` exists but never called | ❌ STILL OPEN | Zero callers confirmed |
-| **m2** | FocusTimerScreen hardcoded English + direct singleton | ❌ STILL OPEN | Hardcoded strings at lines 197-205, 445; direct `StudentIdService()` access at lines 89? |
-| **m3** | `EmbeddingService` has zero callers (~200 lines dead code) | ❌ STILL OPEN | `llm_embeddings_service.dart` still uncalled |
-| **m4** | `TutorSession.totalTokensUsed` defined but unpopulated | ❌ STILL OPEN | `tutor_session_model.dart` field defined, never written |
-| **m5** | No cross-feature event bus | ❌ STILL OPEN | `cross_feature_integrator.dart` uses direct repo calls |
-| **m6** | `LlmTaskManager` tasks lost on app restart | ❌ STILL OPEN | In-memory only, no Hive persistence |
-| **m7** | Content pipeline excludes 5 question types | ❌ STILL OPEN | `content_pipeline.dart` still hardcodes limited `allowedTypes` |
-
-### New findings since previous report
-
-| ID | Description | Severity |
-|---|---|---|
-| **N1** | Tutor screen lacks structured slide/presentation mode — critical for B3 | MAJOR |
-| **N2** | No long-term agent memory system — agents start fresh each session | MAJOR |
-| **N3** | No tool-using agent infrastructure (web search, syllabus access, etc.) | MAJOR |
-| **N4** | MentorScreen has no voice input — vision requires voice in all interaction modes | MAJOR |
-| **N5** | `EngagementScheduler` creates 7+ singletons via `new` in main.dart:93-105 instead of provider injection | MINOR |
-| **N6** | `conversation_memory.dart` maxTurns=30 hardcoded in ConversationManager; no long-term memory beyond current session | MAJOR |
-| **N7** | No network connectivity monitoring — all API calls fail silently when offline | MINOR |
-| **N8** | `FocusTimerScreen` has dead `_lastTickMs` reconciliation code (focus_timer_screen.dart:70-79) that only works while app is foregrounded | MINOR |
-| **N9** | Tab 5 is called "Focus Mode" (timer icon) but user wants practice hub — rebranding required | MAJOR |
+The codebase is surprisingly mature — most features have full implementations across all layers (model → repository → service → provider → UI). However, there are critical gaps between the product vision and what's actually delivered, exacerbated by user beta feedback identifying two features as "fucking useless." This document identifies the gaps, prioritizes user-reported issues first, and proposes a concrete next-phase plan.
 
 ---
 
-## BLOCKER — App crashes or user cannot proceed
+## PHASE 0: FIX USER-REPORTED BETA ISSUES (HIGHEST PRIORITY)
 
-### B1. Background notifications tied to app process — proactive engagement stops when app is closed
-
-**Context:** `EngagementScheduler` (engagement_scheduler.dart:94-103) uses `Timer.periodic` which dies with the app process. `flutter_local_notifications` is used only for foreground-triggered delivery. No `workmanager`, `android_alarm_manager`, or other background scheduling package exists in `pubspec.yaml`. When the app is killed, all nudges, reminders, and notifications stop — the "persistent mentor" from the vision is non-functional.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/core/services/engagement_scheduler.dart` | 94-103 | `Timer.periodic` — lost on app close |
-| `lib/main.dart` | 92-110 | Scheduler created per-launch with `new`, no background task |
-| `lib/core/services/notification_service.dart` | — | `flutter_local_notifications` exists but not wired to background scheduling |
-| `pubspec.yaml` | — | Missing `workmanager` dependency |
-
-**Acceptance criteria:**
-1. Nudge checks run at least once every 6h even when app is closed (platform-permitted)
-2. On app reopen after >24h closed, missed nudges are caught up and displayed
-3. Lesson reminders fire 15min before scheduled lesson time
-4. Practice nudges fire if no practice session recorded in last 48h
-5. All notification scheduling uses platform-native APIs (workmanager), not app-process `Timer`
-6. Existing foreground notification behavior is preserved
-7. `EngagementScheduler` dependencies injected via Riverpod providers, not `new` in main.dart
+These are direct complaints from beta testers recorded in `issues/further_issues/open/`. They must be resolved before any new feature work, and the markdown files should be moved to `issues/further_issues/completed/` upon resolution.
 
 ---
 
-### B2. Focus Mode is a Pomodoro timer — user demands cross-subject practice mode (ESCALATED)
+### BETA-B1: Focus Mode — Make It an Actual Cross-Subject Practice Hub (BLOCKER)
 
-**Context:** User report (`further_issues/open/focus_mode.md`) states current Focus Mode is "fucking useless" and "must fix immediately making the focus mode actually useful." Current implementation (`focus_timer_screen.dart`) is purely a Pomodoro-style countdown timer with subject selector. The user wants a **practice mode** where students practice questions from different subjects — like a "quick practice" hub that aggregates spaced-repetition due reviews, weak-topic drilling, and free-form question practice into a single focused interface.
+**Source:** `issues/further_issues/open/focus_mode.md`
+> "The current focus mode is fucking useless, I wanted it to be a place where student can practice questions from different subjects after lessons."
 
-The vision describes: "adaptive practice should be a major component: the system should continuously test understanding, focus on weak areas, revisit old content intelligently, and optimize for retention and mastery."
+**Root Cause Analysis:**
+The focus mode is a Pomodoro timer with a "Practice Hub" toggle that shows subjects and due counts (`focus_timer_screen.dart:465-570`). It delegates to `PracticeSessionScreen` via `Navigator.pushNamed` but passes the **same broken arguments** that the main practice screen uses — subject + question count only, discarding readiness scoring and SM-2 filtering (see `dry_run_usability_validator.md` B2, B3). The result: the "Practice Hub" is a thin wrapper around the practice system that inherits all its bugs.
 
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/focus_mode/` (entire feature) | Pomodoro timer, not practice mode |
-| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | 553 lines of timer + break logic that user rejects |
-| `lib/features/focus_mode/presentation/widgets/focus_timer_widget.dart` | Circular progress timer UI |
-| `lib/features/focus_mode/providers/focus_mode_providers.dart` | 9 lines — only creates `StudyTimerService` provider |
-| `lib/features/practice/` | Practice feature exists but is a separate tab; Focus Mode should be the entry point |
-| `lib/main.dart:337-339` | Tab 5 labeled "Focus Mode" with timer icon |
-
-**Rationale:** The timer infrastructure (session recording, adherence tracking, badge checking) is valuable scaffolding. Keep timer as an OPTIONAL sub-mode. The default view should be a practice dashboard.
-
-**Acceptance criteria:**
-1. Focus Mode default view shows subjects with due reviews / weak topic practice cards (NOT a timer)
-2. User can start a "Focus Practice Session" that pulls questions from: spaced repetition due queue, weak topics (mastery < 0.5), or manual subject/topic selection
-3. Timer runs in background during practice (showing elapsed/target time) to track focus duration
-4. Session records correct/incorrect answers, updates mastery, and logs a Session record
-5. End-of-session summary shows: questions answered, accuracy, time spent, mastery changes
-6. Original Pomodoro timer mode still available as a toggle ("Pure Timer" / "Practice Mode")
-7. Hardcoded English strings moved to ARB keys (`focus_timer_screen.dart` lines 166, 197-205, 445)
-8. Direct `StudentIdService()` singleton calls replaced with provider injection
-9. `NotificationService()` created via provider, not `new`
-10. Tab 5 renamed from "Focus Mode" to "Practice" or "Study" with appropriate icon
-
----
-
-### B3. Lesson system is static — user demands LLM agent-driven material preparation and scheduling (ESCALATED)
-
-**Context:** User report (`further_issues/open/lessons.md`) states lessons are "fucking useless", "fucking clear all of them." The user demands:
-1. **Preply-style calendar scheduling** — see scheduled lessons in a calendar, reschedule, book new lessons
-2. **LLM agents that prepare materials** — not a chatbot, but agents that research, create presentations, generate exercises, and prepare lesson content proactively
-3. **Separate scheduling from lesson plan** — scheduling is about time/calendar; lesson plan is about content/presentation
-4. **Long-term agent memory** — agents remember past lessons, student progress, preferences across sessions
-5. **Tool-using agents** — agents can call tools (search web, access syllabus, generate questions)
-6. **Presentation mode** — slide-like structured content alongside conversational AI
-
-The vision says: "AI tutor should dynamically generate the lesson plans and goals beforehand, teach concepts interactively, explain ideas step-by-step" and "lessons may be structured, visual, slide-like, or interactive."
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/lessons/` (entire feature) | Static content model, no agent-driven preparation |
-| `lib/features/lessons/presentation/lesson_list_screen.dart` | Flat lesson list, no scheduling view |
-| `lib/features/lessons/presentation/lesson_detail_screen.dart` | Static block list; hardcoded `durationMinutes: 45` at line 91 |
-| `lib/features/lessons/services/lesson_service.dart` | Confusing architecture — queries `SessionRepository` not `LessonRepository` |
-| `lib/features/teaching/presentation/tutor_screen.dart` | Chat-based only, no slides/presentations |
-| `lib/features/teaching/services/conversation_manager.dart` | Phase machine fragile, no structured content output |
-| `lib/features/teaching/services/prompts/prompts.dart` | Basic prompts, no agent instructions |
-| `lib/features/planner/presentation/planner_screen.dart` | Scheduling exists but no calendar view |
-| `lib/features/planner/presentation/widgets/calendar_view_widget.dart` | Calendar widget exists but is plan-focused, not lesson-scheduling-focused |
-| `lib/core/services/conversation_memory.dart` | maxTurns=30 in-memory only; no cross-session persistence |
-
-**Acceptance criteria:**
-1. **Calendar scheduling view:** Dedicated lesson scheduling screen with calendar grid (like Preply/Google Calendar). User can tap a time slot to schedule, drag to reschedule, see availability and conflicts. This is distinct from the planner calendar.
-2. **LLM agent system for lesson content:** Create `LessonAgentService` that receives a topic + syllabus + student history and proactively generates: lesson plan (sections, timing), presentation content (structured sections with headings, bullet points, examples), exercises, and summary notes. Runs asynchronously before lesson time.
-3. **Separation of concerns:** Clear separation between `SchedulingService` (calendar, time, conflicts) and `LessonContentService` (materials, presentations, exercises). Rename/refactor `LessonService` to resolve `SessionRepository` vs `LessonRepository` confusion.
-4. **Long-term agent memory:** Agents receive previous lesson summaries, student weak areas, mastery state, and preference history when preparing new lessons. `ConversationMemory` extended with cross-session persistence (stored per-student, retrievable by topic/subject).
-5. **Tool-using agents:** Agents can call tools during lesson preparation: `searchSyllabus`, `getStudentWeakTopics`, `getPreviousLessonSummary`, `generateQuestions`, `searchWeb`. Define a `Tool` interface/abstract class.
-6. **Presentation mode in TutorScreen:** Add slide-like view alongside chat. AI produces structured sections (Markdown headings, bullet points, code blocks, math) rendered as scrollable cards. Student can chat alongside viewing slides.
-7. Fix hardcoded `durationMinutes: 45` in `lesson_detail_screen.dart:91` and `lesson_list_screen.dart:88` — use configurable or adaptive duration.
-8. `LessonPlan.defaultPlan()` resolve `// TODO: i18n` at `lesson_plan_model.dart:72`.
-
----
-
-## MAJOR — Features broken, misleading, or critically incomplete
-
-### M1. No true voice conversation flow — STT transcription only, no TTS playback, no interrupt
-
-**Context:** VoiceBar is rendered in TutorScreen but:
-- No auto-send on silence detection — user must tap send manually
-- No TTS playback of AI responses — `VoiceController.speak()` exists (voice_controller.dart:157-177) but **never called** after an AI response arrives (confirmed by grep — zero callers)
-- No voice conversation mode toggle (voice-only, text-only, mixed)
-- No "interrupt AI speaking with new voice input"
-- Mentor screen and Quick Guide screen have no voice support at all despite the vision requiring "speak naturally with the AI tutor"
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart` | VoiceBar present but no conversational voice loop; TTS never triggered |
-| `lib/features/teaching/services/voice_controller.dart` | `speak()` exists (line 157) but never called after AI response |
-| `lib/features/teaching/services/conversation_manager.dart` | After streaming AI response (line 169), no `voiceController.speak()` call |
-| `lib/features/mentor/presentation/mentor_screen.dart` | No VoiceBar, no voice controller |
-| `lib/features/quickguide/presentation/quick_guide_screen.dart` | No VoiceBar, no voice controller |
-| `lib/features/teaching/providers/teaching_providers.dart` | `voiceControllerProvider` not `KeepAlive` — destroyed on navigation |
-
-**Acceptance criteria:**
-1. Tap-to-talk triggers speech recognition; after 1.5s silence, recognized text is auto-sent
-2. After AI response arrives, it is read aloud via TTS (`voiceController.speak()` called after streaming completes)
-3. User can interrupt AI speaking by tapping mic again (stops TTS, starts new recognition)
-4. Voice conversation mode toggle in tutor screen (voice-only, text-only, mixed)
-5. Mentor screen has microphone button alongside text input
-6. Quick Guide screen has microphone button alongside text input
-7. Voice mode respects `settingsProvider.locale` for both STT and TTS
-8. `voiceControllerProvider` changed to `KeepAliveProvider` to persist across navigation
-
----
-
-### M2. Mentor `suggestNextAction()` rule-based, not LLM-driven
-
-**Context:** `MentorService.suggestNextAction()` (mentor_service.dart:575-581) calls `_progressTracker.getRecommendations()` which returns rule-based messages, then falls back to generic locale strings. The vision requires an AI mentor that dynamically decides what to study next.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/mentor/services/mentor_service.dart` | 575-581 | Rule-based via `getRecommendations()` |
-| `lib/core/services/study_progress_tracker.dart` | ~166-223 | `getRecommendations()` purely rule-based |
-
-**Acceptance criteria:**
-1. `suggestNextAction()` composes an LLM prompt with student context (weak topics, adherence %, recent sessions, upcoming lessons, current time)
-2. Returns AI-generated contextual recommendation
-3. Graceful fallback to rule-based if LLM unavailable
-4. LLM recommendation cached for 15min to avoid redundant API calls
-5. Recommendation includes actionable `MentorAction.type` that student can tap to execute
-
----
-
-### M3. No handwriting recognition for canvas submissions
-
-**Context:** `QuestionType.canvas` and `QuestionType.graphDrawing` exist as enum values but only as `break` stubs in `content_pipeline.dart`. The canvas drawing widget exists (`canvas_drawing_widget.dart`) for free-form drawing but there is no handwriting-to-text recognition pipeline. Practice sessions never include canvas-type questions.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | Drawing exists but no OCR pipeline to convert strokes to text |
-| `lib/core/data/extraction/ocr_extractor.dart` | Has LLM-based OCR but not wired to canvas submissions |
-| `lib/features/practice/services/practice_session_service.dart` | No canvas question handling |
-| `lib/features/practice/providers/practice_providers.dart` | No canvas question type in allowed types |
-| `lib/features/ingestion/services/content_pipeline.dart` | `canvas` and `graphDrawing` in allowedTypes but only `break` |
-
-**Acceptance criteria:**
-1. Canvas strokes can be submitted for LLM-based interpretation (sent as image bytes via vision API)
-2. Recognized text/math shown to student for confirmation before submission
-3. Handwritten math expressions evaluated for correctness via `ExerciseEvaluator`
-4. Canvas questions appear alongside typed questions in practice sessions
-5. Content pipeline's `_generateQuestions` updated to include `canvas` and `graphDrawing` in allowed types
-
----
-
-### M4. `LessonService` queries `SessionRepository` not `LessonRepository` — confusing architecture
-
-**Context:** `LessonService` (lesson_service.dart) treats `Session` models as "lessons" — it queries `sessionRepository` for all operations. `Lesson` and `Session` are completely separate Hive types with different purposes. `Lesson` is authored content; `Session` is a study activity record.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/lessons/services/lesson_service.dart` | All methods query `SessionRepository`, not `LessonRepository` |
-
-**Acceptance criteria:**
-1. `LessonService` renamed to reflect its actual behavior (e.g., `LessonSessionService`)
-2. OR `LessonService` refactored to use `LessonRepository` with a separate class for session-based queries
-3. No behavior change for callers — public API unchanged
-
----
-
-### M5. `ConversationManager` phase transitions fragile — no recovery from `adaptiveReview`
-
-**Context:** `ConversationManager.sendMessage()` (conversation_manager.dart:123-178) has phase transitions but once in `adaptiveReview`, there is no structured path back to `teaching` except via `_detectExerciseRequest` (line 260-263) which only fires on explicit user message keywords. A student could get stuck in adaptive review mode indefinitely.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/teaching/services/conversation_manager.dart` | 141-146, 260-263 | Adaptive review → teaching recovery ambiguous |
-
-**Acceptance criteria:**
-1. After `adaptiveReview` completes (student answers correctly or explicitly asks to continue), phase transitions back to `teaching`
-2. Phase transitions are logged for debugging
-3. Tutor screen displays current phase for transparency
-
----
-
-### M6. No lesson presentation/slide system — LLM returns only chat text, not structured content
-
-**Context:** The tutoring system (`tutor_screen.dart` + `conversation_manager.dart`) is entirely chat-based. There is no "slide" or "presentation" mode where structured lesson content is displayed alongside the conversation. The `LessonBlockType.slide` enum exists in `enums.dart` but is never used by the tutoring system.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/teaching/presentation/tutor_screen.dart` | Chat-only; no presentation view |
-| `lib/core/data/enums.dart` | `LessonBlockType.slide` enum value exists but unused in teaching |
-| `lib/features/teaching/services/conversation_manager.dart` | Outputs streaming text only, no structured sections |
-
-**Acceptance criteria:**
-1. LessonPlan sections (introduction, main content, practice) render as structured cards/slides in the tutor screen
-2. Students can scroll through slides while the AI explains alongside
-3. Slide content includes formatted math, diagrams placeholders, and bullet points
-
----
-
-## MINOR — Code quality, UX friction, or technical debt
-
-### m1. `VoiceController.speak()` exists but is never called after AI response
-
-**Context:** `VoiceController.speak()` (voice_controller.dart:157-177) has full TTS implementation but no code path calls it. Confirmed by grep — zero callers.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/teaching/services/voice_controller.dart:157` | `speak()` implemented but unreferenced |
-| `lib/features/teaching/services/conversation_manager.dart:169` | After `assistantContent` ready, no `speak()` call |
-
----
-
-### m2. `FocusTimerScreen` has hardcoded English strings and direct singleton access
-
-**Context:** The focus timer screen accesses `StudentIdService().getStudentId()` directly and has hardcoded English dialog strings.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | Multiple | Hardcoded strings, direct singleton access |
-
----
-
-### m3. `EmbeddingService` fully implemented but has zero callers (~200 lines dead code)
-
-**Context:** `EmbeddingService` has full OpenRouter/Ollama/OpenAI embedding integration but no callers exist.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/core/services/llm/llm_embeddings_service.dart` | ~200 | Fully implemented, zero callers |
-
-**Acceptance criteria:**
-1. Either remove `EmbeddingService` with its provider + barrel export
-2. OR create a concrete use case (semantic search across ingested materials, question similarity matching, RAG for tutor context)
-
----
-
-### m4. `TutorSession.totalTokensUsed` defined but never populated
-
-**Context:** `TutorSession` model has `totalTokensUsed` field but it is never written to.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/features/teaching/data/models/tutor_session_model.dart` | `totalTokensUsed` defined, never populated |
-| `lib/features/teaching/services/tutor_service.dart` | `endLesson()` doesn't record token usage |
-
----
-
-### m5. Cross-feature event bus still missing — tight coupling between services
-
-**Context:** `CrossFeatureIntegrator` uses direct repository calls for all cross-feature integration.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/core/services/cross_feature_integrator.dart` | Direct repository calls, no event system |
-
-**Acceptance criteria (investigation, not implementation):**
-1. Document all current cross-feature coupling points
-2. Propose an event system design
-3. No implementation required — design doc only
-
----
-
-### m6. `LlmTaskManager` tasks lost on app restart — no persistence
-
-**Context:** `LlmTaskManager` (llm_task_manager.dart) maintains tasks in-memory. All task history lost on restart.
-
-**Affected files:**
-| File | Issue |
-|---|---|
-| `lib/core/services/llm_task_manager.dart` | In-memory only, no persistence |
-| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | Cumulative counters reset on restart |
-
----
-
-### m7. Content ingestion question generation excludes 5 question types
-
-**Context:** `ContentPipeline._generateQuestions` hardcodes `allowedTypes` excluding `canvas`, `graphDrawing`, `stepByStep`, `fileUpload`, `audioRecording`.
-
-**Affected files:**
-| File | Lines | Issue |
-|---|---|---|
-| `lib/features/ingestion/services/content_pipeline.dart` | ~330-395 | Excludes 5 question types |
-
----
-
-## Dependency Graph & Ordering
-
+**Current Architecture:**
 ```
-Phase 1 — Fix USER-RAGE issues (IMMEDIATE — these are blocking user trust)
-├── B2: Focus Mode → Cross-subject Practice Mode (rewrite entire focus_mode feature)
-├── B3: Lessons → LLM Agent-driven materials + Calendar Scheduling
-│   ├── M6: Presentation/slide view in TutorScreen
-│   ├── M4: Fix LessonService architecture confusion
-│   └── M5: Fix ConversationManager phase transitions
-
-Phase 2 — Background infrastructure (enables "persistent mentor")
-├── B1: Workmanager integration for background notifications
-├── N6: Long-term conversation memory (cross-session persistence)
-
-Phase 3 — Voice interaction (highest vision gap)
-├── M1: Voice conversation flow (auto-send, TTS, interrupt, toggle)
-├── m1: Wire TTS speak() into AI response flow
-├── M1/N4: Mentor/Quick Guide voice integration
-
-Phase 4 — Agent infrastructure & smart features
-├── M2: LLM-powered suggestNextAction()
-├── M3: Handwriting recognition for canvas questions
-├── N2: Long-term agent memory system
-├── N3: Tool-using agent infrastructure
-
-Phase 5 — Cleanup & architecture
-├── m3: EmbeddingService → remove or give a use case
-├── m4: TutorSession.totalTokensUsed population
-├── m5: Cross-feature pub/sub design doc
-├── m6: LlmTaskManager persistence
-├── m2: FocusTimerScreen i18n + provider cleanup
-├── m7: Content pipeline expanded question types
-├── N5: EngagementScheduler provider injection vs singleton hell
-├── N7: Network connectivity monitoring
+FocusTimerScreen._buildStudyHubView()
+  ├── _startQuickPractice() → PracticeSessionScreen (subject only, no ordering)
+  ├── _startSpacedRepetition() → PracticeSessionScreen (count only, B3 bug)
+  └── _startWeakAreasPractice() → PracticeSessionScreen (topic IDs discarded, B2 bug)
 ```
 
-## Rationale Summary
+**What "Fixed" Looks Like (Acceptance Criteria):**
+- [ ] Focus mode's default view (when not running a timer) is a real **cross-subject practice aggregation dashboard**, showing:
+  - Due reviews across ALL subjects (merged SM-2 queue)
+  - Weak questions across ALL topics (merged at-risk question pool)
+  - Recent mistakes across ALL subjects (merged mistake review)
+  - Quick-practice entry for each subject with accurate due counts
+- [ ] The "Practice Hub" tab must pass **pre-ordered question lists** (from `ReadinessScorer`) to `PracticeSessionScreen` — not just subject + count
+- [ ] A "Focus Practice" mode exists: student sets a timer, then is fed questions from across all subjects in urgency order while the timer counts down. Session auto-ends when timer expires (submits current question as-is).
+- [ ] The Pomodoro timer remains available as a sub-mode (not the primary feature)
+- [ ] Wire `DifficultyAdapter` (which is currently dead code — see `difficulty_adapter.dart`) into the focus practice flow so question difficulty adapts in real-time during a focus session
+- [ ] When `lessons` branch completes (see BETA-B2), focus mode shows a "Post-Lesson Practice" section: questions from the most recently completed lesson's topic, adjacent weak topics, and spaced repetition items
 
-**25 gaps identified** — 3 BLOCKER, 6 MAJOR, 9 MINOR (9 new findings since previous report). Key changes:
+**Affected Files:**
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart` — entire `_buildStudyHubView` needs redesign
+- `lib/features/focus_mode/providers/focus_mode_providers.dart` — needs cross-subject aggregation providers
+- `lib/features/practice/presentation/screens/practice_session_screen.dart` — must accept pre-ordered question lists
+- `lib/features/practice/presentation/screens/practice_screen.dart` — focus mode specific entry points
+- `lib/features/practice/services/difficulty_adapter.dart` — wire into session flow
+- `lib/features/focus_mode/presentation/widgets/session_summary_card.dart` — update for focus-practice hybrid
 
-1. **Zero progress** since the previous completed report — all 16 previously identified issues remain unfixed. This is the single most important finding.
-2. **2 user-rage issues escalated** — `focus_mode.md` and `lessons.md` now explicitly demand immediate fixes with stronger language than before. These are the highest-priority items.
-3. **9 new findings** (N1-N9) discovered during deep exploration, including missing agent infrastructure (long-term memory, tool use) and voice gaps in Mentor screen.
-4. **The blocker issues are interconnected** — B3 (Lessons) touches M4 (LessonService), M5 (phases), M6 (presentation), and the new N2/N3 (agent infrastructure). Fixing B3 requires addressing all of these.
-5. **Architecture concerns**: The app has ~315 test files but the core user-facing features (lessons, focus mode) remain broken from a UX standpoint. Testing coverage does not equal product quality.
+---
 
-The highest-impact change is **Phase 1**: B2 (Focus Mode → Practice Hub) and B3 (Lessons → Agent-driven + Scheduling). These two changes directly address user frustration and align with the core vision of "an all-in-one AI-native learning platform."
+### BETA-B2: Lessons — Make LLM-Driven Agent-Based Teaching with Presentations (BLOCKER)
+
+**Source:** `issues/further_issues/open/lessons.md`
+> "Make the lessons like preply... seperate scheduling lesson time and lesson plan. Lesson must have presentation and llm explanations. Current lesson is fucking useless."
+> "Lessons are prepared from llm agents, llm is not just a fucking chatbot."
+> "Agents must have long term memory not each new session is fresh now and toolless."
+
+**Root Cause Analysis:**
+The `lessons/` feature is a static content viewer. `LessonBlockCard` renders ALL block types (text, example, exercise, quiz, slide, summary) as identical text cards in a `ListView` (`lesson_detail_screen.dart:166-175`). The `LessonBlockType.slide` exists in the data model but produces the same `Text(block.content)` widget as every other type (see `lesson_block_card.dart:29`). The LLM is not integrated into the lesson experience — the "AI Tutor" button opens a separate `TutorScreen` that bears no relationship to the lesson content.
+
+Critically, lessons are never **prepared** by LLM agents. They are manually created blocks stored in Hive. The vision says "dynamically generate the lesson plans and goals beforehand" — this doesn't happen.
+
+Long-term memory is non-existent: `ConversationMemory` holds 50 turns but each tutor session starts with zero context from previous sessions. The mentor has `ConversationRepository` for persistence but never seeds new conversations with historical data.
+
+**Scheduling vs Content Separation:**
+Currently, scheduling lives in `planner/` (calendar, roadmaps, lesson bookings) and content lives in `lessons/` (static blocks). The vision demands these be separate: "separate scheduling lesson time and lesson plan." A scheduled lesson slot should trigger LLM agent preparation of materials, not just show pre-existing blocks.
+
+**What "Fixed" Looks Like (Acceptance Criteria):**
+
+**Lesson Content & Presentation:**
+- [ ] `LessonBlockType.slide` must render as a full-screen/deck-style presentation — `PageView`, decorative background, heading overlay, bullet-point formatting, optional images
+- [ ] `LessonBlockCard` must be context-aware: slides get carousel UI, exercises get interactive widgets (inline answer input + check), quizzes get radio button selection
+- [ ] The lesson detail screen must show a "lesson agenda" (sections with time estimates) before the student starts, generated by the LLM
+- [ ] When opening a lesson, the system calls the LLM to **enrich** the static content: generate explanations, examples tailored to the student's weak areas, follow-up questions
+- [ ] An "LLM Explain This" button on every block calls the tutor with the block content as context
+
+**LLM Agent Lesson Preparation:**
+- [ ] Create a new `LessonAgentService` (or extend `TutorService`) that:
+  - Takes a syllabus topic + student mastery data → generates a structured `LessonPlan` with sections, time estimates, exercises
+  - Persists the `LessonPlan` as `LessonBlock` entries in the lesson repository
+  - Is callable from the scheduler: when a lesson is scheduled, the agent pre-generates materials
+- [ ] The lesson list screen shows which lessons have pre-generated materials and which are pending generation
+- [ ] Background generation shows progress in the `LlmTaskManager` screen
+
+**Long-Term Agent Memory:**
+- [ ] `ConversationMemory` must support session-level summarization: when a tutor session ends, generate a concise summary (`tutorNotes` already exists on `Session.tutorMetadata`) and store it in the mentor's conversation history
+- [ ] When starting a new lesson on a topic the student has studied before, seed the conversation with:
+  - Previous session summary
+  - Mastery state for that topic
+  - Common mistakes from `MistakeReviewService`
+  - Last N questions attempted with correctness
+- [ ] The mentor chat must seed from historical conversation summaries, not start blank each time
+
+**Scheduling Integration:**
+- [ ] `PlannerService` must provide a `getUpcomingLessonSlots()` that returns scheduled slots without content
+- [ ] A new screen/tab in planner: "Lesson Prep" shows upcoming slots, their preparation status (pending/generating/ready), and allows manual trigger of agent preparation
+- [ ] When a lesson slot's start time approaches (< 15 min), the system must ensure materials are generated
+- [ ] The Calendar View (`calendar_view_widget.dart`) needs lesson slots time-slot visualization (like Preply/Google Calendar)
+
+**Affected Files:**
+- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` — full rewrite for type-specific rendering
+- `lib/features/lessons/presentation/lesson_detail_screen.dart` — add agenda view, LLM enrichment, slide carousel
+- `lib/features/lessons/presentation/lesson_list_screen.dart` — show preparation status
+- `lib/features/lessons/services/lesson_service.dart` — add LLM preparation methods
+- `lib/features/lessons/providers/lesson_providers.dart` — new providers for lesson agent
+- `lib/features/teaching/services/conversation_manager.dart` — seed from historical context
+- `lib/features/teaching/services/tutor_service.dart` — add `generateLessonPlan` with persistence
+- `lib/features/teaching/services/conversation_memory.dart` (in core) — add session summarization
+- `lib/features/planner/presentation/widgets/calendar_view_widget.dart` — time-slot lesson visualization
+- `lib/features/planner/services/planner_service.dart` — separation of scheduling from content
+- `lib/core/services/llm_task_manager.dart` — background preparation task support
+- `lib/features/mentor/services/mentor_service.dart` — seed conversations from history
+
+---
+
+## PHASE 1: VISION GAPS — ZERO-IMPLEMENTATION FEATURES (HIGH IMPACT)
+
+---
+
+### VG-1: Proactive Background Notifications & Engagement (BLOCKER)
+
+**Vision Statement:**
+> "The system should proactively engage students with reminders, prompts, revision nudges, lesson notifications, accountability messaging, and practice encouragement."
+
+**Current State:**
+- `NotificationService` exists with 8 channels and all nudge types (overwork, revision, plan adjustment, lesson reminders, low mastery, badges)
+- `EngagementScheduler` runs daily checks and lesson reminders BUT **only in-process via `Timer`**
+- There is NO `workmanager`, `flutter_background_service`, or any background isolate — if the app is killed, zero notifications fire
+- The mentor's `checkWellbeingAndGenerateNudges()` creates in-app nudges (chat messages) but never calls `NotificationService.showNotification()`
+- `EngagementScheduler.init()` requires explicit calling and is not wired into app startup in `main.dart`
+
+**Impact:**
+Users who close the app never receive: daily study reminders, upcoming lesson alerts, overwork warnings, revision nudges, plan adjustment suggestions, or low-mastery warnings. The entire proactive engagement system is invisible to users who don't keep the app open.
+
+**Acceptance Criteria:**
+- [ ] Add `workmanager` or `flutter_background_service` to `pubspec.yaml` and register a background callback that initializes `EngagementScheduler`
+- [ ] Wire `EngagementScheduler.init()` into `main.dart` app initialization (not just when user opens specific screens)
+- [ ] Modify `MentorService.checkWellbeingAndGenerateNudges()` to also call `NotificationService.showNotification()` for high-severity nudges (not just in-app chat)
+- [ ] Daily reminder notifications work even when the app has been killed for 24+ hours
+- [ ] Lesson reminder notifications fire 15-30 minutes before scheduled lessons regardless of app state
+- [ ] Add notification tap handling: tapping a notification navigates to the relevant screen (mentor for nudge, lesson for lesson reminder, practice for revision)
+- [ ] Settings screen already has toggle controls for all 8 notification channels — verify they work with the background service
+
+**Affected Files:**
+- `pubspec.yaml` — add `workmanager` dependency
+- `lib/main.dart` — register background callback, wire `EngagementScheduler.init()`
+- `lib/core/services/engagement_scheduler.dart` — ensure thread-safe for background isolate
+- `lib/features/mentor/services/mentor_service.dart` — add platform notification calls
+- `lib/core/services/notification_service.dart` — add notification tap routing
+
+---
+
+### VG-2: Video/Audio Content Ingestion — Real Processing Pipeline (MAJOR)
+
+**Vision Statement:**
+> "Students should be able to upload large amounts of study materials such as textbooks, PDFs, notes, question banks, syllabi, online video link, video/audio, online website link, screenshots, etc. The system should intelligently process, organize, classify, validate, and integrate this material."
+
+**Current State:**
+- **Images:** OCR processing via `OcrExtractor` — works
+- **PDF:** Full extraction via `PdfExtractor` — works
+- **Documents:** `.txt`, `.md`, `.docx`, `.epub` via `DocumentExtractor` — works
+- **Web pages:** HTML stripping via `WebScraper` — works (no JS rendering)
+- **Video:** `_extractVideo()` at `document_extractor.dart:194-226` falls through to `TranscriptionExtractor` for YouTube, but for local files it just stores the URL. No actual video download/transcription pipeline.
+- **Audio:** `_extractAudio()` at `document_extractor.dart:228-253` similarly falls back to URL storage.
+- **No duplicate detection:** Uploading the same content twice creates two `Source` entries.
+- **Question generation** after ingestion uses LLM but the question quality validation is minimal.
+
+**Acceptance Criteria:**
+- [ ] Video files (mp4, webm, etc.) uploaded via file picker are: (1) optionally downloaded to app storage, (2) audio track extracted, (3) transcribed via Whisper API or local STT, (4) text stored as `Source.content` with chunks
+- [ ] Audio files (mp3, wav, m4a, ogg) are directly transcribed via STT pipeline
+- [ ] YouTube URLs trigger actual transcript download (youtube_transcript_api or similar) — not just URL storage
+- [ ] All transcriptions show progress in the `UploadScreen` processing progress bar
+- [ ] Failed transcriptions show clear error messages (not silent fallback to URL storage)
+- [ ] Add a `SourceHash` field for duplicate detection: SHA-256 of content + source type. On upload, check for existing hash and show "Already imported on [date]" dialog
+- [ ] Question validation after generation: the LLM's generated questions should be validated for:
+  - MCQ: must have exactly 1 correct answer among ≥3 options
+  - Typed: must have a non-empty answer + explanation
+  - No duplicate questions (same text as existing)
+- [ ] Web scraping must handle JavaScript-rendered content (use `webview_flutter` for JS evaluation, or delegate to a headless browser service)
+
+**Affected Files:**
+- `lib/features/ingestion/services/document_extractor.dart` — video/audio extraction rewrite
+- `lib/core/data/extraction/transcription_extractor.dart` — add actual transcription pipeline
+- `lib/features/ingestion/services/content_pipeline.dart` — add duplicate detection, validation step
+- `lib/features/ingestion/presentation/upload_screen.dart` — show per-step progress for transcription
+- `lib/features/ingestion/data/models/source_model.dart` — add `sourceHash` field
+- `lib/features/ingestion/services/web_scraper.dart` — JS rendering support
+
+---
+
+### VG-3: LLM Task Manager — Real-Time Monitoring & Control (MAJOR)
+
+**Vision Statement:**
+> "It should track LLM token usage for different tasks and have a task manager-like portal to view actively running inferencing tasks and for what purpose."
+
+**Current State:**
+- `LlmTaskManager` (`core/services/llm_task_manager.dart`) tracks tasks with status, model ID, timestamps, tokens used, estimated cost
+- A presentation screen at `llm_tasks/presentation/llm_task_manager_screen.dart` shows the task list
+- But: **no real-time streaming updates** — user must manually refresh
+- **No retry button** for failed tasks
+- **No "purpose" labeling** — tasks don't identify why they were created ("lesson generation", "question evaluation", "tutor response", etc.)
+- **No per-feature usage breakdown** — the screen shows total tokens but not which feature consumed them
+- Token counting uses `content.length ~/ 4` which is extremely rough
+
+**Acceptance Criteria:**
+- [ ] Add a `purpose` enum field to `LlmTask`: `lessonGeneration`, `questionGeneration`, `questionEvaluation`, `tutorResponse`, `mentorResponse`, `contentClassification`, `contentSummarization`, `embedding`
+- [ ] The task manager screen shows tasks grouped by purpose, with per-purpose token subtotals
+- [ ] Real-time updates via StreamProvider or WebSocket-style polling (not manual refresh)
+- [ ] Failed tasks have a "Retry" button that re-queues the task with the same parameters
+- [ ] Running tasks show a progress indicator (estimated completion based on tokens/time)
+- [ ] Token counting uses a more accurate method (actual tokenizer or at least `content.split(' ').length * 1.3`)
+- [ ] The `llm_usage_meter.dart` is wired into every LLM call across all features (teaching, mentoring, ingestion, practice evaluation) — verify coverage
+- [ ] Total token usage and estimated cost display in the app bar or a persistent bottom bar
+
+**Affected Files:**
+- `lib/core/services/llm_task_manager.dart` — add purpose field, retry, real-time updates
+- `lib/core/services/llm_usage_meter.dart` — verify coverage across features
+- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` — grouping, retry, real-time
+- `lib/features/llm_tasks/providers/llm_tasks_providers.dart` — stream provider (create if missing)
+- `lib/core/services/llm/llm_chat_service.dart` — pass task purpose, use better token counting
+
+---
+
+### VG-4: AI Agent Long-Term Memory & Tool-Use Architecture (MAJOR)
+
+**Vision Statement:**
+> "Agents must have long term memory not each new session is fresh now and toolless." (user feedback)
+> "This assistant should feel like a persistent mentor that understands the student's history, habits, preferences, and academic goals."
+
+**Current State:**
+- Mentor has `_buildContextPrompt()` that sends analytics into each chat — good foundation
+- But each new conversation session starts with zero context from previous sessions
+- `ConversationMemory` has 50-turn limit and is persisted, but never re-loaded across sessions
+- The mentor generates `ScheduleProposal` and `PlanProposal` but has no tool-use framework — all "actions" are detected via keyword matching in the user's message text
+- No function-calling/tool-use pattern — the LLM cannot directly call `scheduleLesson()`, `generateQuestions()`, etc. instead it outputs natural language text that the mentor screen tries to parse
+
+**Acceptance Criteria:**
+- [ ] Implement a tool-use/function-calling pattern for the LLM:
+  - Define a set of tools (functions) the LLM can call: `ScheduleLesson`, `GetWeakTopics`, `GetMasteryState`, `GenerateQuestions`, `CreateRoadmap`, `UpdatePlan`, `GetUpcomingLessons`, `GetTodaysStats`
+  - Each tool has a JSON schema with parameters
+  - The LLM response is parsed for function calls, executed, and results fed back
+  - This replaces the current fragile `_detectSchedulingIntent()` keyword matching
+- [ ] Conversation memory spans sessions:
+  - When a mentor session ends, generate a summary (topics discussed, actions taken, student mood)
+  - Store summaries in the conversation repository
+  - When a new session begins, load the last N summaries and seed the `_buildContextPrompt()`
+- [ ] Long-term preference learning:
+  - Track student preferences over time: preferred study times, lesson durations, subject priorities
+  - Store in a `StudentProfileModel` (currently `UserProfile` exists but is minimal)
+  - Feed preferences into every mentor interaction
+
+**Affected Files:**
+- `lib/features/mentor/services/mentor_service.dart` — tool-use pattern, cross-session context
+- `lib/features/teaching/services/conversation_manager.dart` — seed from historical summaries
+- `lib/core/services/conversation_memory.dart` — session summarization
+- `lib/features/mentor/data/models/chat_message_data.dart` — session summary field
+- `lib/features/settings/data/models/user_profile_model.dart` — preferences fields
+- `lib/core/services/llm/llm_chat_service.dart` — function-calling support in prompt templates
+
+---
+
+## PHASE 2: INCOMPLETE/STUB FEATURES (MEDIUM IMPACT)
+
+---
+
+### VG-5: Slide-Based Lesson Presentations (MAJOR)
+
+**Vision Statement:**
+> "Lessons may be structured, visual, slide-like, or interactive, but should always remain conversational and adaptive."
+
+**Current State:**
+`LessonBlockType.slide` exists at `lesson_block_card.dart:44-45` but renders as `Icons.slideshow` + `Text(block.content)` — identical to every other block type.
+
+**Acceptance Criteria:**
+- [ ] Slide blocks render as full-width cards with: large heading text, bullet-point content formatting, optional background color/image, page indicator
+- [ ] A "Presentation Mode" button exists in the lesson detail screen AppBar that opens a full-screen slide carousel (PageView with swipe navigation)
+- [ ] Presentation mode shows: slide counter (3/12), navigation arrows, auto-advance timer option
+- [ ] The slide content supports rich formatting: bullet lists, code blocks, math expressions (via existing `MathExpressionWidget`), inline images
+- [ ] Presentation mode is responsive — works on tablet landscape as a true presentation tool
+
+**Affected Files:**
+- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` — slide-specific rendering
+- `lib/features/lessons/presentation/lesson_detail_screen.dart` — "Presentation Mode" entry point
+- Create: `lib/features/lessons/presentation/screens/presentation_screen.dart`
+- Create: `lib/features/lessons/presentation/widgets/slide_viewer.dart`
+
+---
+
+### VG-6: Voice Interaction Across Features (MAJOR)
+
+**Vision Statement:**
+> "voice conversation, speech-to-text and text-to-speech"
+> "The student should be able to speak naturally with the AI tutor, ask follow-up questions, interrupt explanations"
+
+**Current State:**
+- `VoiceController` wraps `speech_to_text` + `flutter_tts` — only wired into the TutorScreen (`tutor_screen.dart:470-474`)
+- **No voice input in mentor chat** — mentor only takes typed text
+- **No TTS for mentor responses** — all mentor text is read-only
+- **No voice dictation for practice answers** — typed-answer questions don't support speech-to-text input
+- **No voice commands** — user cannot say "start practice" or "show my weak areas"
+- Voice bar in tutor has no "interrupt" capability — speaking doesn't stop ongoing TTS
+- `_buildAdaptiveChunks()` intentionally slows down text streaming (15ms/chunk) to simulate typing — this conflicts with voice output which should be fast
+
+**Acceptance Criteria:**
+- [ ] Voice input bar added to `MentorScreen` (same pattern as tutor)
+- [ ] TTS for mentor responses: toggle button in AppBar "Read Aloud" speaks the last mentor message
+- [ ] Voice dictation added to practice session: when a typed-answer question is shown, a microphone button transcribes speech into the answer field
+- [ ] In tutor mode: speaking (voice bar active) stops ongoing TTS automatically (interruption support)
+- [ ] Voice input is available with the correct locale mapping (already implemented in `_localeForSpeech()` — just needs wiring)
+- [ ] Test with both English and Spanish locales (verify STT/TTS models exist for `es_ES`)
+
+**Affected Files:**
+- `lib/features/mentor/presentation/mentor_screen.dart` — add VoiceBar widget
+- `lib/features/mentor/providers/mentor_providers.dart` — wire voiceControllerProvider
+- `lib/features/practice/presentation/screens/practice_session_screen.dart` — dictation for typed answers
+- `lib/features/practice/presentation/widgets/single_answer_widget.dart` — microphone button
+- `lib/features/teaching/services/voice_controller.dart` — interruption support
+- `lib/features/teaching/services/conversation_manager.dart` — respect voice mode for streaming speed
+
+---
+
+### VG-7: Mastery History & Trend Visualization (MAJOR)
+
+**Vision Statement:**
+> "track: performance history... identify weak areas, and drive adaptive revision"
+
+**Current State:**
+`MasteryState` is a point-in-time snapshot. No history is kept. The dashboard shows "today's mastery" but users cannot see improvement over time. `getAtRiskQuestions()` exists but is never called from any UI.
+
+**Acceptance Criteria:**
+(From `issues/open/dry_run_usability_validator.md` M2 and M4)
+- [ ] Implement `MasteryHistoryEntry` model — snapshot per session or per day
+- [ ] Dashboard shows a trend line for per-topic accuracy over time (last 7/30 days)
+- [ ] `getAtRiskQuestions()` from `MasteryGraphService` is surfaced in a new "At-Risk Questions" card on the dashboard
+- [ ] Weak areas detail screen shows historical accuracy chart with annotations for practice sessions
+
+**Affected Files:**
+- `lib/features/practice/data/models/mastery_state_model.dart` — add history
+- `lib/core/services/mastery_calculation_service.dart` — snapshot creation
+- `lib/features/dashboard/presentation/widgets/weak_areas_card.dart` — add historical trend
+- `lib/core/services/mastery_graph_service.dart` — wire getAtRiskQuestions to UI
+
+---
+
+## PHASE 3: ARCHITECTURAL DEBT (MEDIUM IMPACT)
+
+---
+
+### AD-1: Repository Contract Enforcement (MAJOR)
+
+**Issue:** 7 repositories violate the `Result<T>` contract (`issues/open/code_refactor_master.md` B2).
+
+**Affected Repositories:**
+- `SubjectRepository` — create, addTopicToSubject, removeTopicFromSubject, getWithTopics, getByCode
+- `AttemptRepository` — all methods
+- `PlanRepository` — all methods
+- `RoadmapRepository` — all methods
+- `ConversationRepository` — all methods
+- `TutorSessionRepository` — all methods
+- `EngagementNudgeRepository` — all methods
+
+**Acceptance Criteria:**
+- [ ] All 7 repositories wrap all public method return types in `Result<T>`
+- [ ] `AttemptRepository.create` fixes the discarded `Result` bug at line 10
+- [ ] Add a lint rule or unit test that verifies new repositories follow the contract
+
+---
+
+### AD-2: Bidirectional Feature Dependency Cycles (MAJOR)
+
+**Issue:** `planner ↔ sessions` and `dashboard ↔ subjects` have direct bidirectional imports (`issues/open/code_refactor_master.md` B3, B4).
+
+**Acceptance Criteria:**
+- [ ] Extract shared contracts into `core/data/contracts/`
+- [ ] `SessionTrackerScreen` receives planner data via Riverpod provider bridge
+- [ ] Dashboard imports subject data through a clean abstraction layer
+
+---
+
+## COMPLETE FINDINGS SUMMARY
+
+| ID | Type | Severity | Area | Status |
+|---|---|---|---|---|
+| BETA-B1 | User Feedback | BLOCKER | Focus Mode | ⚠️ Must Fix Now |
+| BETA-B2 | User Feedback | BLOCKER | Lessons / Teaching | ⚠️ Must Fix Now |
+| VG-1 | Vision Gap | BLOCKER | Background Notifications | 🔜 Phase 1 |
+| VG-2 | Vision Gap | MAJOR | Video/Audio Ingestion | 🔜 Phase 1 |
+| VG-3 | Vision Gap | MAJOR | LLM Task Manager | 🔜 Phase 1 |
+| VG-4 | Vision Gap | MAJOR | Agent Memory & Tools | 🔜 Phase 1 |
+| VG-5 | Vision Gap | MAJOR | Slide Presentations | 🔜 Phase 2 |
+| VG-6 | Vision Gap | MAJOR | Voice Across Features | 🔜 Phase 2 |
+| VG-7 | Vision Gap | MAJOR | Mastery History | 🔜 Phase 2 |
+| AD-1 | Architecture | MAJOR | Repository Contract | 🔜 Phase 3 |
+| AD-2 | Architecture | MAJOR | Feature Cycles | 🔜 Phase 3 |
+| - | Dry Run | BLOCKER×5 | Practice System Bugs | ⚠️ Listed in separate issue |
+
+---
+
+## IMPLEMENTATION ORDER RECOMMENDATION
+
+1. **Fix Beta Issues** (BETA-B1, BETA-B2) — these are real user complaints
+2. **Fix Practice Blocker Bugs** (dry_run_usability_validator.md B1-B5) — listed in separate issue, but the practice system must work before focus mode changes make sense
+3. **Architectural:** Add `workmanager` (AD-adacent for VG-1) and fix repository contracts (AD-1) — these unblock everything else
+4. **Vision Gap - High Impact:** Background notifications (VG-1), Agent memory/tools (VG-4)
+5. **Vision Gap - Medium Impact:** Voice (VG-6), Slide presentations (VG-5), Mastery history (VG-7)
+6. **Quality of Life:** LLM task manager (VG-3), Video ingestion (VG-2)
+
+---
+
+## RELATED FILES INDEX
+
+```
+Focus Mode:    lib/features/focus_mode/**/* (5 files)
+Lessons:       lib/features/lessons/**/* (9 files)
+Teaching:      lib/features/teaching/**/* (22 files)
+Mentor:        lib/features/mentor/**/* (7 files)
+Planner:       lib/features/planner/**/* (35+ files)
+Practice:      lib/features/practice/**/* (40+ files)
+Core Services: lib/core/services/**/* (21 files)
+Ingestion:     lib/features/ingestion/**/* (12 files)
+LLM Tasks:     lib/features/llm_tasks/**/* (2 files + core service)
+Dashboard:     lib/features/dashboard/**/* (20+ files)
+```
+
+---
+
+## When Complete
+
+After all BETA-B1 and BETA-B2 acceptance criteria are met:
+1. Move `issues/further_issues/open/lessons.md` to `issues/further_issues/completed/lessons_fixed.md`
+2. Move `issues/further_issues/open/focus_mode.md` to `issues/further_issues/completed/focus_mode_fixed.md`
+3. Update this file's status headers to [✓] for completed items
+4. Remove VG-4 (Agent Memory & Tools) from this issue if it was addressed in BETA-B2's long-term memory requirement

@@ -32,6 +32,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final allMasteryAsync = ref.watch(dashboardAllMasteryProvider(studentId));
     final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
     final overallStatsAsync = ref.watch(dashboardOverallStatsProvider(studentId));
@@ -65,6 +66,16 @@ class DashboardScreen extends ConsumerWidget {
         (workloadData == null || workloadData.totalQuestions == 0) &&
         (dueReviewsData == null || dueReviewsData.totalDue == 0);
 
+    final hasAnyError = overallStatsAsync.hasError ||
+        snapshotAsync.hasError ||
+        weeklyTrendAsync.hasError ||
+        focusStatsAsync.hasError ||
+        adherenceAsync.hasError ||
+        topicNamesAsync.hasError ||
+        badgesAsync.hasError ||
+        workloadAsync.hasError ||
+        dueReviewsAsync.hasError;
+
     final isFirstLoad = overallStatsAsync.isLoading &&
         snapshotAsync.isLoading &&
         weeklyTrendAsync.isLoading &&
@@ -94,13 +105,30 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             if (isFirstLoad)
               _buildSkeletonLoading(context)
+            else if (hasAnyError)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+                    const SizedBox(height: 12),
+                    Text(l10n.somethingWentWrong, style: theme.textTheme.bodyLarge),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () { ref.invalidate(dashboardInitProvider); },
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              )
             else if (allEmpty)
               const EmptyDashboardChecklist()
             else ...[
               CollapsibleCard(
                 cardId: 'summary',
                 asyncValue: overallStatsAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardOverallStatsProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardOverallStatsProvider(studentId)),
                 title: _cardTitle(context, Icons.summarize, l10n.summary),
                 body: SummaryRow(overallStats: overallStatsData),
               ),
@@ -108,7 +136,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'focus',
                 asyncValue: focusStatsAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardFocusStatsProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardFocusStatsProvider(studentId)),
                 title: _cardTitle(context, Icons.timer, l10n.focusTime),
                 body: InkWell(
                   onTap: () => Navigator.pushNamed(context, AppRoutes.focusMode),
@@ -133,7 +161,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'weekly_chart',
                 asyncValue: weeklyTrendAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardWeeklyTrendProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardWeeklyTrendProvider(studentId)),
                 title: _cardTitle(context, Icons.show_chart, l10n.weeklyActivity),
                 body: WeeklyChart(weeklyTrend: weeklyTrendData),
               ),
@@ -141,7 +169,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'adherence',
                 asyncValue: adherenceAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAdherenceDataProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardAdherenceDataProvider(studentId)),
                 title: _cardTitle(context, Icons.event_note, l10n.planAdherence),
                 body: PlanAdherenceCard(
                   averageAdherence: adherenceData.averageAdherence,
@@ -152,7 +180,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'mastery',
                 asyncValue: snapshotAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardMasterySnapshotProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardMasterySnapshotProvider(studentId)),
                 title: _cardTitle(context, Icons.analytics, l10n.masteryOverview),
                 body: MasteryProgressCard(snapshot: snapshotData),
               ),
@@ -160,8 +188,8 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'workload',
                 asyncValue: workloadAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardWorkloadProvider(studentId)); },
-                title: _cardTitle(context, Icons.trending_up, 'Remaining Workload'),
+                onRetry: _onRetry(ref, dashboardWorkloadProvider(studentId)),
+                title: _cardTitle(context, Icons.trending_up, l10n.remainingWorkload),
                 body: workloadData != null
                     ? WorkloadCard(
                         workload: workloadData,
@@ -173,7 +201,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'due_reviews',
                 asyncValue: dueReviewsAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardDueReviewsProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardDueReviewsProvider(studentId)),
                 title: _cardTitle(context, Icons.autorenew, l10n.dueForReview),
                 body: dueReviewsData != null && dueReviewsData.totalDue > 0
                     ? DueReviewsCard(data: dueReviewsData)
@@ -193,7 +221,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'weak_areas',
                 asyncValue: allMasteryAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardAllMasteryProvider(studentId)),
                 title: _cardTitle(context, Icons.warning_amber, l10n.weakAreas),
                 body: allMasteryData.isNotEmpty
                     ? WeakAreasCard(
@@ -206,7 +234,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'topic_breakdown',
                 asyncValue: allMasteryAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardAllMasteryProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardAllMasteryProvider(studentId)),
                 title: _cardTitle(context, Icons.pie_chart, l10n.topicPerformance),
                 body: TopicBreakdownCard(
                   allMastery: allMasteryData,
@@ -217,7 +245,7 @@ class DashboardScreen extends ConsumerWidget {
               CollapsibleCard(
                 cardId: 'badges',
                 asyncValue: badgesAsync,
-                onRetry: () { ref.invalidate(dashboardInitProvider); ref.invalidate(dashboardBadgesProvider(studentId)); },
+                onRetry: _onRetry(ref, dashboardBadgesProvider(studentId)),
                 title: _cardTitle(context, Icons.emoji_events, l10n.achievements),
                 body: BadgesCard(badges: badgesData),
               ),
@@ -236,7 +264,13 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  VoidCallback _onRetry(WidgetRef ref, ProviderBase<Object?> provider) => () {
+    ref.invalidate(dashboardInitProvider);
+    ref.invalidate(provider);
+  };
+
   Widget _buildSourcesCard(BuildContext context, AsyncValue<int> sourceCountAsync) {
+    final l10n = AppLocalizations.of(context)!;
     final count = sourceCountAsync.valueOrNull ?? 0;
     if (count == 0 && !sourceCountAsync.isLoading) return const SizedBox.shrink();
     return Card(
@@ -245,27 +279,29 @@ class DashboardScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.source, color: Theme.of(context).colorScheme.primary, size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Content Library', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      sourceCountAsync.isLoading
-                          ? 'Loading...'
-                          : '$count source(s)',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+          child: MergeSemantics(
+            child: Row(
+              children: [
+                Icon(Icons.source, color: Theme.of(context).colorScheme.primary, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.contentLibrary, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(
+                        sourceCountAsync.isLoading
+                            ? l10n.loading
+                            : l10n.sourcesCount(count),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ],
+                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ],
+            ),
           ),
         ),
       ),
@@ -273,6 +309,8 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildSkeletonLoading(BuildContext context) {
+    final theme = Theme.of(context);
+    final baseColor = theme.colorScheme.surfaceContainerHighest;
     return Column(
       children: List.generate(6, (_) => Padding(
         padding: const EdgeInsets.only(bottom: 16),
@@ -282,28 +320,27 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 120,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                _shimmerBox(width: 120, height: 20, color: baseColor),
                 const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                _shimmerBox(width: double.infinity, height: 60, color: baseColor),
               ],
             ),
           ),
         ),
       )),
+    );
+  }
+
+  Widget _shimmerBox({required double width, required double height, required Color color}) {
+    return _ShimmerWidget(
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
     );
   }
 
@@ -315,26 +352,28 @@ class DashboardScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_month,
-                  color: Theme.of(context).colorScheme.primary, size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.studyPlanner,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(l10n.studyPlanOverview,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
+          child: MergeSemantics(
+            child: Row(
+              children: [
+                Icon(Icons.calendar_month,
+                    color: Theme.of(context).colorScheme.primary, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.studyPlanner,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(l10n.studyPlanOverview,
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ],
+                Icon(Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ],
+            ),
           ),
         ),
       ),
@@ -351,6 +390,45 @@ class DashboardScreen extends ConsumerWidget {
           Text(label, style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
+    );
+  }
+}
+
+class _ShimmerWidget extends StatefulWidget {
+  final Widget child;
+  const _ShimmerWidget({required this.child});
+
+  @override
+  State<_ShimmerWidget> createState() => _ShimmerWidgetState();
+}
+
+class _ShimmerWidgetState extends State<_ShimmerWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(opacity: _animation.value, child: child);
+      },
     );
   }
 }

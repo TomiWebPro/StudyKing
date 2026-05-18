@@ -7,6 +7,7 @@ import 'package:studyking/core/providers/app_providers.dart' show settingsReposi
 import '../data/models/user_profile_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 
 extension _AppLocaleLabel on AppLocale {
   String localizedLabel(AppLocalizations l10n) => switch (this) {
@@ -30,6 +31,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final TextEditingController _studyTimeController = TextEditingController();
 
   String? _avatarIconKey;
+  bool _isLoading = true;
+  String? _error;
   bool _isSaving = false;
   String _profileId = 'default_profile';
   bool _notificationsEnabled = true;
@@ -42,6 +45,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final repository = settingsRepository;
       final profileResult = await repository.getProfileData();
@@ -50,6 +57,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _logger.e('Error loading profile: ${profileResult.error}');
         if (mounted) {
           setState(() {
+            _isLoading = false;
+            _error = profileResult.error;
             _avatarIconKey = 'Icons.person';
           });
         }
@@ -59,6 +68,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final profile = profileResult.data;
       if (profile != null && mounted) {
         setState(() {
+          _isLoading = false;
           _profileId = profile.id;
           _avatarIconKey = profile.avatarIcon;
           _nameController.text = profile.name;
@@ -71,6 +81,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.read(localeProvider.notifier).state = Locale(profile.language);
       } else if (mounted) {
         setState(() {
+          _isLoading = false;
           _avatarIconKey = 'Icons.person';
         });
       }
@@ -78,7 +89,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _logger.e('Error loading profile', e);
       if (mounted) {
         setState(() {
-          _avatarIconKey = 'Icons.person';
+          _isLoading = false;
+          _error = e.toString();
         });
       }
     }
@@ -288,6 +300,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    if (_isLoading) {
+      return const Scaffold(body: LoadingScreen());
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.profile)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                l10n.somethingWentWrong,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _error!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _loadUserData,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.profile),

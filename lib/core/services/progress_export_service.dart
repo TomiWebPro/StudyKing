@@ -38,7 +38,8 @@ class ProgressExportService {
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final badges = await _tracker.getBadges(studentId);
 
     final json = jsonEncode({
@@ -66,7 +67,8 @@ class ProgressExportService {
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final badges = await _tracker.getBadges(studentId);
     final trend = await _tracker.getWeeklyTrend(4, studentId: studentId);
 
@@ -136,7 +138,8 @@ class ProgressExportService {
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final badges = await _tracker.getBadges(studentId);
 
     final pdf = pw.Document();
@@ -343,7 +346,8 @@ class ProgressExportService {
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attempts = await _attemptRepo.getByStudent(studentId);
+    final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    final attempts = attemptsResult.data ?? [];
     final badges = await _tracker.getBadges(studentId);
 
     final json = jsonEncode({

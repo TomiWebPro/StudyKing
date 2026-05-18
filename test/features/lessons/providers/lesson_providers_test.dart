@@ -139,19 +139,20 @@ void main() {
 
       final repo = container.read(tutorSessionRepositoryProvider);
       final sessions = await repo.getStudentSessions('stu1');
-      expect(sessions, hasLength(1));
-      expect(sessions.first.id, 'seeded-ts');
-      expect(sessions.first.topicTitle, 'Algebra');
+      expect(sessions.isSuccess, isTrue);
+      expect(sessions.data, hasLength(1));
+      expect(sessions.data!.first.id, 'seeded-ts');
+      expect(sessions.data!.first.topicTitle, 'Algebra');
     });
   });
 
   group('lessonServiceProvider', () {
-    test('creates a LessonService and is singleton', () {
+    test('creates a LessonSessionService and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final svc1 = container.read(lessonServiceProvider);
       final svc2 = container.read(lessonServiceProvider);
-      expect(svc1, isA<LessonService>());
+      expect(svc1, isA<LessonSessionService>());
       expect(svc1, same(svc2));
     });
 
@@ -244,9 +245,9 @@ class _SeededFakeTutorSessionRepository extends TutorSessionRepository {
       : _sessions = List.from(seed ?? []);
 
   @override
-  Future<List<TutorSession>> getStudentSessions(String studentId) async {
+  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
     if (throwOnGet) throw Exception('Error');
-    return _sessions.where((s) => s.studentId == studentId).toList();
+    return Result.success(_sessions.where((s) => s.studentId == studentId).toList());
   }
 }
 

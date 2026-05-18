@@ -18,23 +18,29 @@ class _FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
-    return _attempts.where((a) => a.studentId == studentId).toList();
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(
+      _attempts.where((a) => a.studentId == studentId).toList(),
+    );
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
     String studentId,
     String subjectId,
   ) async {
-    return _attempts
-        .where((a) => a.studentId == studentId && a.subjectId == subjectId)
-        .toList();
+    return Result.success(
+      _attempts
+          .where((a) => a.studentId == studentId && a.subjectId == subjectId)
+          .toList(),
+    );
   }
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
-    return _attempts.where((a) => a.questionId == questionId).toList();
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.success(
+      _attempts.where((a) => a.questionId == questionId).toList(),
+    );
   }
 }
 

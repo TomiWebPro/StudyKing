@@ -1257,7 +1257,7 @@ void main() {
   // ==========================================================================
   group('ReadinessScorer - coverage gaps', () {
     group('_computeScore edge cases', () {
-      test('empty confidenceHistory uses default confidence gap', () {
+      test('empty confidenceHistory uses default confidence gap', () async {
         final now = DateTime.now();
         final questions = [_createQ(id: 'q1')];
         final qMastery = QuestionMasteryState(
@@ -1269,36 +1269,36 @@ void main() {
         final scorer = ReadinessScorer(
           questionMasteryMap: {'q1': qMastery},
         );
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         expect(result.first.score, greaterThan(0));
       });
 
-      test('no topic mastery uses default urgency', () {
+      test('no topic mastery uses default urgency', () async {
         final questions = [_createQ(id: 'q1', topicId: 'unknown')];
         final scorer = ReadinessScorer();
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         expect(result.first.score, greaterThan(0));
       });
 
-      test('no question mastery uses default days score', () {
+      test('no question mastery uses default days score', () async {
         final questions = [_createQ(id: 'q1')];
         final scorer = ReadinessScorer();
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         expect(result.first.score, greaterThan(0));
       });
 
-      test('difficulty contributes to score', () {
+      test('difficulty contributes to score', () async {
         final easyQ = _createQ(id: 'q1', difficulty: 1);
         final hardQ = _createQ(id: 'q2', difficulty: 5);
         final questions = [easyQ, hardQ];
         final scorer = ReadinessScorer();
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         // Harder question should have higher score due to difficultyNorm
         expect(result[0].question.id, 'q2');
         expect(result[0].score, greaterThan(result[1].score));
       });
 
-      test('extreme confidence gap gives high boost', () {
+      test('extreme confidence gap gives high boost', () async {
         final now = DateTime.now();
         final questions = [_createQ(id: 'q1')];
         final qMastery = QuestionMasteryState(
@@ -1310,11 +1310,11 @@ void main() {
         final scorer = ReadinessScorer(
           questionMasteryMap: {'q1': qMastery},
         );
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         expect(result.first.score, greaterThan(0.5));
       });
 
-      test('high readiness reduces priority', () {
+      test('high readiness reduces priority', () async {
         final now = DateTime.now();
         final questions = [
           _createQ(id: 'q1', topicId: 't1'),
@@ -1341,7 +1341,7 @@ void main() {
           ),
         };
         final scorer = ReadinessScorer(topicMasteryMap: topicMasteryMap);
-        final result = scorer.scoreQuestions(questions);
+        final result = await scorer.scoreQuestions(questions);
         // Low readiness (t2) should score higher due to readinessInverseWeight
         expect(result.first.question.id, 'q2');
       });
@@ -1652,8 +1652,9 @@ class _FakeAttemptRepo2 extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(StudentAttempt attempt) async {
+  Future<Result<void>> create(StudentAttempt attempt) async {
     attempts.add(attempt);
+    return Result.success(null);
   }
 }
 
@@ -1710,6 +1711,7 @@ class _FakeSessionRepo extends SessionRepository {
   bool shouldThrow = false;
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     if (shouldThrow) return Result.failure('Save error');
     sessions.add(session);
@@ -1742,26 +1744,28 @@ class _FakeAttemptRepo3 extends AttemptRepository {
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async {
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
     if (shouldThrow) throw Exception('Error');
-    return _attempts.where((a) => a.studentId == studentId).toList();
+    return Result.success(
+        _attempts.where((a) => a.studentId == studentId).toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByStudentAndSubject(
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
     String studentId,
     String subjectId,
   ) async {
     if (shouldThrow) throw Exception('Error');
-    return _attempts
+    return Result.success(_attempts
         .where((a) => a.studentId == studentId && a.subjectId == subjectId)
-        .toList();
+        .toList());
   }
 
   @override
-  Future<List<StudentAttempt>> getByQuestion(String questionId) async {
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
     if (shouldThrow) throw Exception('Error');
-    return _attempts.where((a) => a.questionId == questionId).toList();
+    return Result.success(
+        _attempts.where((a) => a.questionId == questionId).toList());
   }
 }
 

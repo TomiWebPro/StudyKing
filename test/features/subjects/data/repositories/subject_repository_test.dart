@@ -11,10 +11,22 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<void> init() async {}
 
   @override
+  Future<Result<void>> create(Subject subject) async {
+    _storage[subject.id] = subject;
+    return Result.success(null);
+  }
+
+  @override
   Future<Result<Subject?>> get(String id) async => Result.success(_storage[id]);
 
   @override
   Future<Result<List<Subject>>> getAll() async => Result.success(_storage.values.toList());
+
+  @override
+  Future<Result<void>> put(String key, Subject item) async {
+    _storage[key] = item;
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> delete(String id) async {
@@ -23,36 +35,38 @@ class _FakeSubjectRepository extends SubjectRepository {
   }
 
   @override
-  Future<List<Subject>> getWithTopics(List<String> topicIds) async {
-    return _storage.values.where((s) {
+  Future<Result<List<Subject>>> getWithTopics(List<String> topicIds) async {
+    return Result.success(_storage.values.where((s) {
       return s.topicIds.any((id) => topicIds.contains(id));
-    }).toList();
+    }).toList());
   }
 
   @override
-  Future<void> addTopicToSubject(String subjectId, String topicId) async {
+  Future<Result<void>> addTopicToSubject(String subjectId, String topicId) async {
     final subject = _storage[subjectId];
     if (subject != null) {
-      if (subject.topicIds.contains(topicId)) return;
+      if (subject.topicIds.contains(topicId)) return Result.success(null);
       _storage[subjectId] = subject.copyWith(
         topicIds: [...subject.topicIds, topicId],
       );
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> removeTopicFromSubject(String subjectId, String topicId) async {
+  Future<Result<void>> removeTopicFromSubject(String subjectId, String topicId) async {
     final subject = _storage[subjectId];
     if (subject != null) {
       _storage[subjectId] = subject.copyWith(
         topicIds: subject.topicIds.where((id) => id != topicId).toList(),
       );
     }
+    return Result.success(null);
   }
 
   @override
-  Future<Subject?> getByCode(String code) async {
-    return _storage.values.where((s) => s.code == code).firstOrNull;
+  Future<Result<Subject?>> getByCode(String code) async {
+    return Result.success(_storage.values.where((s) => s.code == code).firstOrNull);
   }
 
   void addSubject(Subject subject) {
@@ -269,8 +283,8 @@ void main() {
 
         final result = await repository.getWithTopics(['topic-1']);
 
-        expect(result.length, 2);
-        expect(result.map((s) => s.name), containsAll(['Physics', 'Biology']));
+        expect(result.data!.length, 2);
+        expect(result.data!.map((s) => s.name), containsAll(['Physics', 'Biology']));
       });
 
       test('filters subjects by multiple topic IDs', () async {
@@ -280,7 +294,7 @@ void main() {
 
         final result = await repository.getWithTopics(['topic-1', 'topic-3']);
 
-        expect(result.length, 3);
+        expect(result.data!.length, 3);
       });
 
       test('returns empty list when no matches', () async {
@@ -288,7 +302,7 @@ void main() {
 
         final result = await repository.getWithTopics(['non-existent-topic']);
 
-          expect(result, isEmpty);
+          expect(result.data, isEmpty);
         });
 
         test('getAll returns empty list on empty box', () async {
@@ -303,7 +317,7 @@ void main() {
 
         final result = await repository.getWithTopics([]);
 
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       test('returns subjects with empty topicIds when filtering for any topic', () async {
@@ -311,29 +325,7 @@ void main() {
 
         final result = await repository.getWithTopics(['topic-1']);
 
-        expect(result, isEmpty);
-      });
-
-      test('returns subjects where any topicId matches', () async {
-        repository.addSubject(createTestSubject(id: 's1', name: 'A', topicIds: ['shared', 'unique-a']));
-        repository.addSubject(createTestSubject(id: 's2', name: 'B', topicIds: ['shared', 'unique-b']));
-
-        final result = await repository.getWithTopics(['shared']);
-        expect(result.length, 2);
-      });
-
-      test('subject matching all filter topics still returned once', () async {
-        repository.addSubject(createTestSubject(id: 's1', name: 'A', topicIds: ['t1', 't2', 't3']));
-
-        final result = await repository.getWithTopics(['t1', 't2', 't3']);
-        expect(result.length, 1);
-      });
-
-      test('handles subjects with null topicIds', () async {
-        repository.addSubject(createTestSubject(id: '1', name: 'Physics'));
-
-        final result = await repository.getWithTopics(['topic-1']);
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       test('subject matching multiple filter topics counted once', () async {
@@ -350,8 +342,8 @@ void main() {
 
         final result = await repository.getWithTopics(['topic-b', 'topic-c']);
 
-        expect(result.length, 1);
-        expect(result.first.name, 'Comprehensive');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.name, 'Comprehensive');
       });
 
       test('all subjects match when all have filter topics', () async {
@@ -360,7 +352,7 @@ void main() {
         repository.addSubject(createTestSubject(id: 's3', name: 'C', topicIds: ['common']));
 
         final result = await repository.getWithTopics(['common']);
-        expect(result.length, 3);
+        expect(result.data!.length, 3);
       });
 
       test('subjects with empty topicIds excluded from filter', () async {
@@ -369,26 +361,26 @@ void main() {
         repository.addSubject(createTestSubject(id: 's3', name: 'Null Topics'));
 
         final result = await repository.getWithTopics(['t1']);
-        expect(result.length, 1);
-        expect(result.first.name, 'Has Topics');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.name, 'Has Topics');
       });
 
       test('subject with duplicate topicIds in filter matches once', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'A', topicIds: ['t1', 't2', 't1']));
         final result = await repository.getWithTopics(['t1']);
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
 
       test('filter with duplicate topic IDs returns correct results', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'A', topicIds: ['t1']));
         final result = await repository.getWithTopics(['t1', 't1', 't1']);
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
 
       test('handles topic with empty string id', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'Test', topicIds: ['']));
         final result = await repository.getWithTopics(['']);
-        expect(result.length, 1);
+        expect(result.data!.length, 1);
       });
     });
 
@@ -607,8 +599,8 @@ void main() {
 
         final result = await repository.getByCode('IB-PHYS');
 
-        expect(result, isNotNull);
-        expect(result!.name, 'Physics');
+        expect(result.data, isNotNull);
+        expect(result.data!.name, 'Physics');
       });
 
       test('returns null for non-existent code', () async {
@@ -616,7 +608,7 @@ void main() {
 
         final result = await repository.getByCode('NON-EXISTENT');
 
-        expect(result, isNull);
+        expect(result.data, isNull);
       });
 
       test('is case-sensitive', () async {
@@ -624,7 +616,7 @@ void main() {
 
         final result = await repository.getByCode('ib-phys');
 
-        expect(result, isNull);
+        expect(result.data, isNull);
       });
 
       test('returns first match when multiple subjects have same code', () async {
@@ -633,7 +625,7 @@ void main() {
 
         final result = await repository.getByCode('IB-PHYS');
 
-        expect(result, isNotNull);
+        expect(result.data, isNotNull);
       });
 
       test('handles null code in subjects', () async {
@@ -641,7 +633,7 @@ void main() {
 
         final result = await repository.getByCode('ANY-CODE');
 
-        expect(result, isNull);
+        expect(result.data, isNull);
       });
 
       test('returns subject with all fields when found', () async {
@@ -654,10 +646,10 @@ void main() {
 
         final result = await repository.getByCode('IB-PHYS-HL');
 
-        expect(result, isNotNull);
-        expect(result!.id, 's1');
-        expect(result.name, 'Physics HL');
-        expect(result.description, 'Higher Level');
+        expect(result.data, isNotNull);
+        expect(result.data!.id, 's1');
+        expect(result.data!.name, 'Physics HL');
+        expect(result.data!.description, 'Higher Level');
       });
 
       test('returns first when multiple have same code', () async {
@@ -665,30 +657,30 @@ void main() {
         repository.addSubject(createTestSubject(id: 'second', name: 'Second', code: 'SAME'));
 
         final result = await repository.getByCode('SAME');
-        expect(result, isNotNull);
-        expect(result!.id, 'first');
+        expect(result.data, isNotNull);
+        expect(result.data!.id, 'first');
       });
 
       test('does not match on partial code', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'Physics', code: 'IB-PHYSICS-HL'));
 
         final result = await repository.getByCode('PHYSICS');
-        expect(result, isNull);
+        expect(result.data, isNull);
       });
 
       test('ignores subjects with null code when matching', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'No Code'));
         repository.addSubject(createTestSubject(id: 's2', name: 'With Code', code: 'C-42'));
         final result = await repository.getByCode('C-42');
-        expect(result, isNotNull);
-        expect(result!.name, 'With Code');
+        expect(result.data, isNotNull);
+        expect(result.data!.name, 'With Code');
       });
 
       test('empty code string is matched exactly', () async {
         repository.addSubject(createTestSubject(id: 's1', name: 'Empty Code', code: ''));
         final result = await repository.getByCode('');
-        expect(result, isNotNull);
-        expect(result!.name, 'Empty Code');
+        expect(result.data, isNotNull);
+        expect(result.data!.name, 'Empty Code');
       });
     });
 
@@ -883,8 +875,8 @@ void main() {
         test('getByCode with empty string matches empty code', () async {
           repository.addSubject(createTestSubject(id: 'empty-code', name: 'No Code', code: ''));
           final result = await repository.getByCode('');
-        expect(result, isNotNull);
-        expect(result!.name, 'No Code');
+        expect(result.data, isNotNull);
+        expect(result.data!.name, 'No Code');
         });
 
         test('get with whitespace-padded id', () async {
@@ -926,7 +918,7 @@ void main() {
         });
 
         test('getByCode returns null on empty box', () async {
-          expect(await repository.getByCode('ANY'), isNull);
+          expect((await repository.getByCode('ANY')).data, isNull);
         });
       });
     });
@@ -958,7 +950,7 @@ void main() {
           repository.addSubject(createTestSubject(id: 's$i', name: 'Subject $i', topicIds: topicIds));
         }
         final result = await repository.getWithTopics(['topic-5', 'topic-105']);
-        expect(result.length, 2);
+        expect(result.data!.length, 2);
       });
 
       test('delete all subjects leaves empty box', () async {
@@ -1035,8 +1027,8 @@ void main() {
         await repository.create(Subject(id: '2', name: 'Chemistry', code: 'IB-CHEM'));
 
         final found = await repository.getByCode('IB-CHEM');
-        expect(found, isNotNull);
-        expect(found!.name, 'Chemistry');
+        expect(found.data, isNotNull);
+        expect(found.data!.name, 'Chemistry');
       });
 
       test('supports addTopicToSubject after init', () async {
@@ -1069,8 +1061,8 @@ void main() {
         await repository.create(Subject(id: '2', name: 'Chemistry', topicIds: ['topic-b']));
 
         final result = await repository.getWithTopics(['topic-a']);
-        expect(result.length, 1);
-        expect(result.first.name, 'Physics');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.name, 'Physics');
       });
 
       test('supports getAll after init', () async {

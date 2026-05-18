@@ -468,6 +468,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, size: 18),
+                        tooltip: l10n.close,
                         onPressed: () => setState(() {
                           _selectedFilePath = null;
                           _selectedFileName = null;

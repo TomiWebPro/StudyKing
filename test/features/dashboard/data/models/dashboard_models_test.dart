@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/dashboard/dashboard.dart';
 
 void main() {

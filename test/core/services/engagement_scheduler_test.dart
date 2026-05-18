@@ -1,18 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/engagement_scheduler.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 
@@ -21,7 +21,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<void> init() async {}
 
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => [];
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 }
 
 class _FakeTracker extends StudyProgressTracker {
@@ -72,13 +72,14 @@ class _FakeNudgeRepository extends EngagementNudgeRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(EngagementNudgeModel model) async {
+  Future<Result<void>> create(EngagementNudgeModel model) async {
     _nudges.add(model);
+    return Result.success(null);
   }
 
   @override
-  Future<List<EngagementNudgeModel>> getByStudent(String studentId) async {
-    return _nudges.where((n) => n.studentId == studentId).toList();
+  Future<Result<List<EngagementNudgeModel>>> getByStudent(String studentId) async {
+    return Result.success(_nudges.where((n) => n.studentId == studentId).toList());
   }
 
   List<EngagementNudgeModel> get storedNudges => _nudges;

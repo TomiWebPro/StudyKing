@@ -38,7 +38,7 @@ class _SeededAttemptRepo extends AttemptRepository {
   @override
   Future<void> init() async {}
   @override
-  Future<List<StudentAttempt>> getByStudent(String studentId) async => _attempts;
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success(_attempts);
   @override
   Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
   @override

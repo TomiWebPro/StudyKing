@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
@@ -18,6 +19,7 @@ class ApiConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
+  final Logger _logger = const Logger('ApiConfigScreen');
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _baseUrlController = TextEditingController();
 
@@ -87,7 +89,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
       if (!mounted) return;
       Navigator.pop(context);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to save API config', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -237,6 +240,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     required String description,
     bool obscureText = false,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -258,6 +262,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                     icon: Icon(
                       _obscureApiKey ? Icons.visibility : Icons.visibility_off,
                     ),
+                    tooltip: l10n.toggleVisibility,
                     onPressed: () => setState(() {
                       _obscureApiKey = !_obscureApiKey;
                     }),

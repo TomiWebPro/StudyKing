@@ -353,6 +353,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required AppLocalizations l10n,
     String? subjectId,
   }) async {
+    final logger = const Logger('PlannerNotifier.createRoadmap');
     try {
       await _service.createRoadmap(
         goal: goal,
@@ -362,7 +363,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       );
       await loadRoadmaps();
       state = state.copyWith(successMessage: l10n.roadmapGoal);
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to create roadmap', e);
       state = state.copyWith(error: l10n.failedToCreateRoadmap);
     }
   }
@@ -373,6 +375,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required bool isCompleted,
     required AppLocalizations l10n,
   }) async {
+    final logger = const Logger('PlannerNotifier.toggleMilestoneCompletion');
     try {
       await _service.toggleMilestoneCompletion(
         roadmapId: roadmapId,
@@ -380,12 +383,14 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         isCompleted: isCompleted,
       );
       await loadRoadmaps();
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to toggle milestone completion', e);
       state = state.copyWith(error: l10n.failedToUpdateMilestone);
     }
   }
 
   Future<void> acceptPendingAction(String actionId, AppLocalizations l10n) async {
+    final logger = const Logger('PlannerNotifier.acceptPendingAction');
     try {
       final success = await _service.acceptPendingAction(actionId);
       await loadPendingActions();
@@ -394,16 +399,19 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       } else {
         state = state.copyWith(error: l10n.failedToExecuteAction);
       }
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to accept pending action', e);
       state = state.copyWith(error: l10n.failedToAcceptAction);
     }
   }
 
   Future<void> dismissPendingAction(String actionId, AppLocalizations l10n) async {
+    final logger = const Logger('PlannerNotifier.dismissPendingAction');
     try {
       await _service.dismissPendingAction(actionId);
       await loadPendingActions();
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to dismiss pending action', e);
       state = state.copyWith(error: l10n.failedToDismissAction);
     }
   }
@@ -416,6 +424,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required AppLocalizations l10n,
     int durationMinutes = 30,
   }) async {
+    final logger = const Logger('PlannerNotifier.scheduleLesson');
     try {
       final success = await _service.scheduleLesson(
         topicId: topicId,
@@ -429,7 +438,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         state = state.copyWith(successMessage: l10n.lessonScheduled);
       }
       return success;
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to schedule lesson', e);
       state = state.copyWith(error: l10n.failedToScheduleLesson);
       return false;
     }
@@ -461,6 +471,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required AppLocalizations l10n,
     int durationMinutes = 30,
   }) async {
+    final logger = const Logger('PlannerNotifier.scheduleLessonWithConflictCheck');
     try {
       final hasConflict = await _service.hasSchedulingConflict(
         startTime: scheduledTime,
@@ -478,13 +489,15 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         l10n: l10n,
         durationMinutes: durationMinutes,
       );
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to schedule lesson with conflict check', e);
       state = state.copyWith(error: l10n.failedToScheduleLesson);
       return false;
     }
   }
 
   Future<bool> cancelLesson(String sessionId, AppLocalizations l10n) async {
+    final logger = const Logger('PlannerNotifier.cancelLesson');
     try {
       final success = await _service.cancelLesson(sessionId);
       if (success) {
@@ -492,7 +505,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         state = state.copyWith(successMessage: l10n.sessionDeleted);
       }
       return success;
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to cancel lesson', e);
       state = state.copyWith(error: l10n.failedToScheduleLesson);
       return false;
     }
@@ -504,6 +518,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required int durationMinutes,
     required AppLocalizations l10n,
   }) async {
+    final logger = const Logger('PlannerNotifier.rescheduleLesson');
     try {
       final success = await _service.rescheduleLesson(
         sessionId: sessionId,
@@ -515,20 +530,23 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         state = state.copyWith(successMessage: l10n.lessonScheduled);
       }
       return success;
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to reschedule lesson', e);
       state = state.copyWith(error: l10n.failedToScheduleLesson);
       return false;
     }
   }
 
   Future<void> redistributeWorkload(int missedMinutes, AppLocalizations l10n) async {
+    final logger = const Logger('PlannerNotifier.redistributeWorkload');
     try {
       await _service.redistributeWorkload(missedMinutes);
       await loadExistingPlan();
       state = state.copyWith(
         successMessage: l10n.missedWorkloadRedistributed,
       );
-    } catch (_) {
+    } catch (e) {
+      logger.e('Failed to redistribute workload', e);
       state = state.copyWith(error: l10n.failedToRedistributeWorkload);
     }
   }

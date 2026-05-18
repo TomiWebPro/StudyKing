@@ -5,6 +5,7 @@ import 'app_api_config.dart';
 import 'app_build_config.dart';
 import 'app_runtime_config.dart';
 import 'security_config.dart';
+import 'package:studyking/core/errors/exceptions.dart';
 
 class AppConfig {
   static final Logger _logger = const Logger('AppConfig');
@@ -83,9 +84,7 @@ class AppConstants {
   static AppConfig get instance {
     final current = _instance;
     if (current != null) return current;
-    throw StateError(
-      'AppConstants is not initialized. Call AppConstants.initialize() during app startup.',
-    );
+    throw AppException(message: 'AppConstants is not initialized. Call AppConstants.initialize() during app startup.', type: ExceptionType.database);
   }
 
   static AppConfig initialize() {

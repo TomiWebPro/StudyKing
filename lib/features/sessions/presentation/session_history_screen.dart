@@ -30,6 +30,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   DateTime? _selectedDate;
   String? _selectedSubject;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -39,6 +40,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Future<void> _loadSessions() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final sessionsResult = await _sessionRepository.getAll();
       final sessions = sessionsResult.data ?? [];
@@ -53,7 +58,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     } catch (e) {
       _logger.e('Error loading sessions', e);
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -347,7 +355,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : FocusTraversalGroup(
+          : _error != null
+              ? _buildErrorState(theme)
+              : FocusTraversalGroup(
             child: Column(
               children: [
                 Container(
@@ -396,7 +406,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   ),
                 ),
 
-                Padding(
+                MergeSemantics(
+                  child: Padding(
                   padding: ResponsiveUtils.screenPadding(context),
                   child: Wrap(
                     spacing: 12,
@@ -416,6 +427,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                     ],
                   ),
                 ),
+                ),
 
                 Expanded(
                   child: _filteredSessions.isEmpty
@@ -434,6 +446,38 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       value: value,
       icon: icon,
       accent: Theme.of(context).colorScheme.primary,
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+          const SizedBox(height: 16),
+          Text(
+            l10n.somethingWentWrong,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _error!,
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _loadSessions,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.retry),
+          ),
+        ],
+      ),
     );
   }
 

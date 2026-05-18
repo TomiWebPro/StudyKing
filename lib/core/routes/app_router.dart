@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/not_found_screen.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
+
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/ingestion/presentation/content_library_screen.dart';
 import 'package:studyking/features/ingestion/presentation/source_detail_screen.dart';
@@ -82,12 +82,14 @@ class PracticeSessionArgs {
   final String? topicId;
   final int? questionCount;
   final bool isSpacedRepetition;
+  final List<String>? orderedQuestionIds;
 
   const PracticeSessionArgs({
     required this.subjectId,
     this.topicId,
     this.questionCount = 10,
     this.isSpacedRepetition = false,
+    this.orderedQuestionIds,
   });
 }
 
@@ -125,6 +127,12 @@ class LessonListArgs {
     required this.topicTitle,
     this.subjectId = '',
   });
+}
+
+class DashboardArgs {
+  final String studentId;
+
+  const DashboardArgs({required this.studentId});
 }
 
 class TutorArgs {

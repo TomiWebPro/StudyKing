@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
@@ -12,34 +13,38 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> saveRoadmap(RoadmapModel roadmap) async {
+  Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {
     _storage[roadmap.id] = roadmap;
+    return Result.success(null);
   }
 
   @override
-  Future<RoadmapModel?> loadRoadmap(String id) async {
-    return _storage[id];
+  Future<Result<RoadmapModel?>> loadRoadmap(String id) async {
+    return Result.success(_storage[id]);
   }
 
   @override
-  Future<List<RoadmapModel>> getRoadmapsByStudent(String studentId) async {
-    return _storage.values.where((r) => r.studentId == studentId).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(String studentId) async {
+    return Result.success(
+      _storage.values.where((r) => r.studentId == studentId).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    );
   }
 
   @override
-  Future<List<RoadmapModel>> getAllRoadmaps() async {
-    return _storage.values.toList();
+  Future<Result<List<RoadmapModel>>> getAllRoadmaps() async {
+    return Result.success(_storage.values.toList());
   }
 
   @override
-  Future<void> deleteRoadmap(String id) async {
+  Future<Result<void>> deleteRoadmap(String id) async {
     _storage.remove(id);
+    return Result.success(null);
   }
 
   @override
-  Future<bool> hasRoadmap(String id) async {
-    return _storage.containsKey(id);
+  Future<Result<bool>> hasRoadmap(String id) async {
+    return Result.success(_storage.containsKey(id));
   }
 }
 
@@ -76,7 +81,7 @@ void main() {
         final roadmap = createTestRoadmap();
         await repository.saveRoadmap(roadmap);
         final stored = await repository.loadRoadmap('roadmap-1');
-        expect(stored?.goal, 'Master Algebra');
+        expect(stored.data?.goal, 'Master Algebra');
       });
 
       test('overwrites existing roadmap with same id', () async {
@@ -84,18 +89,18 @@ void main() {
         final r2 = createTestRoadmap(goal: 'Goal B');
         await repository.saveRoadmap(r1);
         await repository.saveRoadmap(r2);
-        expect((await repository.loadRoadmap('roadmap-1'))?.goal, 'Goal B');
+        expect((await repository.loadRoadmap('roadmap-1')).data?.goal, 'Goal B');
       });
     });
 
     group('loadRoadmap', () {
       test('returns null for non-existent', () async {
-        expect(await repository.loadRoadmap('none'), isNull);
+        expect((await repository.loadRoadmap('none')).data, isNull);
       });
 
       test('returns stored roadmap', () async {
         await repository.saveRoadmap(createTestRoadmap());
-        expect(await repository.loadRoadmap('roadmap-1'), isNotNull);
+        expect((await repository.loadRoadmap('roadmap-1')).data, isNotNull);
       });
     });
 
@@ -113,13 +118,13 @@ void main() {
           id: 'r3', studentId: 's2',
         ));
         final result = await repository.getRoadmapsByStudent('s1');
-        expect(result.length, 2);
-        expect(result[0].id, 'r2');
-        expect(result[1].id, 'r1');
+        expect(result.data!.length, 2);
+        expect(result.data![0].id, 'r2');
+        expect(result.data![1].id, 'r1');
       });
 
       test('returns empty for student with no roadmaps', () async {
-        expect(await repository.getRoadmapsByStudent('none'), isEmpty);
+        expect((await repository.getRoadmapsByStudent('none')).data, isEmpty);
       });
     });
 
@@ -127,11 +132,11 @@ void main() {
       test('returns all roadmaps', () async {
         await repository.saveRoadmap(createTestRoadmap(id: 'r1'));
         await repository.saveRoadmap(createTestRoadmap(id: 'r2'));
-        expect((await repository.getAllRoadmaps()).length, 2);
+        expect((await repository.getAllRoadmaps()).data!.length, 2);
       });
 
       test('returns empty when no roadmaps', () async {
-        expect(await repository.getAllRoadmaps(), isEmpty);
+        expect((await repository.getAllRoadmaps()).data, isEmpty);
       });
     });
 
@@ -139,7 +144,7 @@ void main() {
       test('removes a roadmap', () async {
         await repository.saveRoadmap(createTestRoadmap());
         await repository.deleteRoadmap('roadmap-1');
-        expect(await repository.loadRoadmap('roadmap-1'), isNull);
+        expect((await repository.loadRoadmap('roadmap-1')).data, isNull);
       });
 
       test('does nothing for non-existent', () async {
@@ -149,12 +154,12 @@ void main() {
 
     group('hasRoadmap', () {
       test('returns false when no roadmap exists', () async {
-        expect(await repository.hasRoadmap('roadmap-1'), isFalse);
+        expect((await repository.hasRoadmap('roadmap-1')).data, isFalse);
       });
 
       test('returns true when roadmap exists', () async {
         await repository.saveRoadmap(createTestRoadmap());
-        expect(await repository.hasRoadmap('roadmap-1'), isTrue);
+        expect((await repository.hasRoadmap('roadmap-1')).data, isTrue);
       });
     });
   });
@@ -185,21 +190,21 @@ void main() {
       final roadmap = createTestRoadmap(id: 'hive-1', goal: 'Hive Test');
       await repository.saveRoadmap(roadmap);
       final stored = await repository.loadRoadmap('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.goal, 'Hive Test');
+      expect(stored.data, isNotNull);
+      expect(stored.data!.goal, 'Hive Test');
     });
 
     test('getRoadmapsByStudent works after init', () async {
       await repository.saveRoadmap(createTestRoadmap(id: 'r1', studentId: 's1'));
       await repository.saveRoadmap(createTestRoadmap(id: 'r2', studentId: 's1'));
       await repository.saveRoadmap(createTestRoadmap(id: 'r3', studentId: 's2'));
-      expect(await repository.getRoadmapsByStudent('s1'), hasLength(2));
+      expect((await repository.getRoadmapsByStudent('s1')).data, hasLength(2));
     });
 
     test('deleteRoadmap works after init', () async {
       await repository.saveRoadmap(createTestRoadmap(id: 'd1'));
       await repository.deleteRoadmap('d1');
-      expect(await repository.loadRoadmap('d1'), isNull);
+      expect((await repository.loadRoadmap('d1')).data, isNull);
     });
   });
 }

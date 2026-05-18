@@ -8,6 +8,7 @@ class FakeSessionRepository extends SessionRepository {
   final Map<String, Session> _store = {};
 
   @override
+  @override
   Future<Result<void>> save(String key, Session session) async {
     _store[session.id] = session;
     return Result.success(null);

@@ -24,6 +24,7 @@ import 'package:studyking/features/practice/presentation/widgets/subject_practic
 import 'package:studyking/features/practice/presentation/widgets/subject_selection_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/topic_selection_sheet.dart';
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
+import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -115,7 +116,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
       final attemptRepo = ref.read(attemptRepositoryProvider);
       try {
-        final allAttempts = await attemptRepo.getByStudent(studentId);
+        final result = await attemptRepo.getByStudent(studentId);
+        final allAttempts = result.data ?? [];
         _questionsToday = allAttempts
             .where((a) => a.timestamp.isAfter(today))
             .length;
@@ -134,31 +136,42 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   }
 
   Future<void> _startPractice(Subject subject) async {
-    await Navigator.pushNamed(context, AppRoutes.practiceSession,
-        arguments: PracticeSessionArgs(subjectId: subject.id));
-    _loadDueCounts();
+    final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(subjectId: subject.id)) as PracticeSessionResult?;
+    _onSessionResult(result);
   }
 
   Future<void> _startTopicPractice(String topic) async {
     try {
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
-      final topicQuestions =
-          allQuestions.where((q) => q.topic == topic).toList();
+      final trimmedTopic = topic.trim();
+      var topicQuestions =
+          allQuestions.where((q) => q.topicId == trimmedTopic).toList();
+      if (topicQuestions.isEmpty) {
+        topicQuestions = allQuestions
+            .where((q) =>
+                q.topic != null &&
+                q.topic!.trim().toLowerCase() ==
+                    trimmedTopic.toLowerCase())
+            .toList();
+      }
       if (topicQuestions.isEmpty) {
         if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!.noQuestionsAvailable)));
+            content: Text(l10n.noQuestionsAvailable)));
         return;
       }
       if (!mounted) return;
-      await Navigator.pushNamed(context, AppRoutes.practiceSession,
-          arguments: PracticeSessionArgs(
-            subjectId: topicQuestions.first.subjectId,
-            topicId: topicQuestions.first.topicId,
-            questionCount: topicQuestions.length,
-          ));
-      _loadDueCounts();
+      final tResult = await Navigator.pushNamed(context,
+              AppRoutes.practiceSession,
+              arguments: PracticeSessionArgs(
+                subjectId: topicQuestions.first.subjectId,
+                topicId: topicQuestions.first.topicId,
+                questionCount: topicQuestions.length,
+              )) as PracticeSessionResult?;
+      _onSessionResult(tResult);
     } catch (e) {
       _logger.e('Error starting practice session', e);
       if (!mounted) return;
@@ -168,28 +181,42 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     }
   }
 
+  static const int _minAttemptsForWeakAreas = 10;
+
   Future<void> _launchWeakAreasForSubject(
       MasteryGraphService masteryService, Subject subject) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final studentId = _studentIdService.getStudentId();
       final attemptRepo = ref.read(attemptRepositoryProvider);
-      final allAttempts = await attemptRepo.getByStudent(studentId);
-      if (allAttempts.length < 10) {
+      final attemptResult = await attemptRepo.getByStudent(studentId);
+      final allAttempts = attemptResult.data ?? [];
+      final subjectAttempts =
+          allAttempts.where((a) => a.subjectId == subject.id).toList();
+      if (subjectAttempts.length < _minAttemptsForWeakAreas) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.practiceAtLeastTen)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                '${subject.name}: ${l10n.practiceAtLeastTen}')));
         return;
       }
 
+      final insufficientData =
+          allAttempts.length < _minAttemptsForWeakAreas * 3;
       final weakTopicsResult =
           await masteryService.getWeakTopics(studentId);
       if (weakTopicsResult.isFailure ||
           weakTopicsResult.data == null ||
           weakTopicsResult.data!.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
+        if (insufficientData) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  '${l10n.practiceAtLeastTen}. ${l10n.noQuestionsAvailable}')));
+        } else {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
+        }
         return;
       }
       final weakTopicIds =
@@ -203,7 +230,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         return;
       }
       final weakQuestions = allQuestions
-          .where((q) => weakTopicIds.contains(q.topicId))
+          .where((q) => weakTopicIds.contains(q.topicId) && q.subjectId == subject.id)
           .toList();
       if (weakQuestions.isEmpty) {
         if (!mounted) return;
@@ -213,22 +240,34 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       }
 
       final scorer = ref.read(readinessScorerProvider);
-      final scored = scorer.scoreQuestions(weakQuestions);
-      final orderedQuestions = scored.map((s) => s.question).toList();
+      final scored = await scorer.scoreQuestions(weakQuestions);
+      final orderedQuestionIds = scored.map((s) => s.question.id).toList();
 
       if (!mounted) return;
-      await Navigator.pushNamed(context, AppRoutes.practiceSession,
-          arguments: PracticeSessionArgs(
-            subjectId: subject.id,
-            questionCount: orderedQuestions.length,
-          ));
-      _loadDueCounts();
+      final result = await Navigator.pushNamed(context,
+              AppRoutes.practiceSession,
+              arguments: PracticeSessionArgs(
+                subjectId: subject.id,
+                topicId: orderedQuestionIds.isNotEmpty
+                    ? weakQuestions.firstWhere((q) => q.id == orderedQuestionIds.first).topicId
+                    : null,
+                questionCount: orderedQuestionIds.length,
+                orderedQuestionIds: orderedQuestionIds,
+              )) as PracticeSessionResult?;
+      _onSessionResult(result);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
       }
     }
+  }
+
+  void _onSessionResult(PracticeSessionResult? result) {
+    if (result != null) {
+      _questionsToday += result.questionsAnswered;
+    }
+    _loadDueCounts();
   }
 
   void _startSpacedRepetitionSession(Subject subject) async {
@@ -240,13 +279,19 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         return;
       }
       if (!mounted) return;
-      await Navigator.pushNamed(context, AppRoutes.practiceSession,
-          arguments: PracticeSessionArgs(
-            subjectId: subject.id,
-            questionCount: result.data!.length,
-            isSpacedRepetition: true,
-          ));
-      _loadDueCounts();
+      final dueQuestions = result.data!;
+      dueQuestions.sort((a, b) => (a.nextReview ?? DateTime.now())
+          .compareTo(b.nextReview ?? DateTime.now()));
+      final dueQuestionIds = dueQuestions.map((q) => q.id).toList();
+      final srResult = await Navigator.pushNamed(context,
+              AppRoutes.practiceSession,
+              arguments: PracticeSessionArgs(
+                subjectId: subject.id,
+                questionCount: dueQuestions.length,
+                isSpacedRepetition: true,
+                orderedQuestionIds: dueQuestionIds,
+              )) as PracticeSessionResult?;
+      _onSessionResult(srResult);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -264,6 +309,54 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       SubjectSelectionSheet.show(context,
           subjects: _subjects,
           onSubjectSelected: (subject) => _navigateToExam(subject));
+    }
+  }
+
+  Future<void> _startAtRiskPractice() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final masteryService = ref.read(masteryGraphServiceProvider);
+      await masteryService.init();
+      final studentId = _studentIdService.getStudentId();
+      final atRiskResult = await masteryService.getAtRiskQuestions(studentId);
+      if (atRiskResult.isFailure ||
+          atRiskResult.data == null ||
+          atRiskResult.data!.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasFound)));
+        return;
+      }
+      final atRiskQuestionIds =
+          atRiskResult.data!.map((s) => s.questionId).toSet();
+      final allQuestionsResult =
+          await _questionRepo.getAll().catchError((_) => Result.success(<Question>[]));
+      final allQuestions = allQuestionsResult.data ?? [];
+      final atRiskQuestions = allQuestions
+          .where((q) => atRiskQuestionIds.contains(q.id))
+          .toList();
+      if (atRiskQuestions.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasQuestions)));
+        return;
+      }
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(atRiskQuestions);
+      final orderedIds = scored.map((s) => s.question.id).toList();
+      if (!mounted) return;
+      await Navigator.pushNamed(context, AppRoutes.practiceSession,
+          arguments: PracticeSessionArgs(
+            subjectId: atRiskQuestions.first.subjectId,
+            orderedQuestionIds: orderedIds,
+            questionCount: orderedIds.length,
+          ));
+      _loadDueCounts();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noWeakAreasFound)));
+      }
     }
   }
 
@@ -322,7 +415,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
                   arguments: PracticeSessionArgs(
                     subjectId: sourceQuestions.first.subjectId,
                     questionCount: sourceQuestions.length,
-                  )).then((_) => _loadDueCounts());
+                  )).then((r) => _onSessionResult(r as PracticeSessionResult?));
             } else if (mounted) {
               showDialog(
                 context: context,
@@ -609,6 +702,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         title: l10n.sourcePractice,
         description: l10n.sourcePracticeDescription,
         onTap: _showSourcePracticeSheet,
+      ),
+      _ExtraModeCard(
+        icon: Icons.warning,
+        iconColor: Theme.of(context).colorScheme.error,
+        title: l10n.atRiskQuestions,
+        description: l10n.atRiskQuestionsDescription,
+        onTap: _startAtRiskPractice,
       ),
     ];
     return Padding(

@@ -3,7 +3,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 
 abstract class SessionQueryContract {
   Future<void> init();
-  Future<Result<void>> save(Session session);
+  Future<Result<void>> save(String key, Session session);
   Future<Result<Session?>> get(String id);
   Future<Result<List<Session>>> getAll();
   Future<Result<List<Session>>> getByStudent(String studentId);

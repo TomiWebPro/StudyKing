@@ -243,6 +243,50 @@ void main() {
       });
     });
 
+    group('mutability', () {
+      test('questionsAnswered is mutable', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        progress.questionsAnswered = 10;
+        expect(progress.questionsAnswered, 10);
+      });
+
+      test('correctAnswers is mutable', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        progress.correctAnswers = 7;
+        expect(progress.correctAnswers, 7);
+      });
+
+      test('averageTimeMs is mutable', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        progress.averageTimeMs = 12345.0;
+        expect(progress.averageTimeMs, 12345.0);
+      });
+
+      test('lastUpdated is mutable', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final later = DateTime(2026, 6, 1);
+        progress.lastUpdated = later;
+        expect(progress.lastUpdated, later);
+      });
+
+      test('mutation affects accuracy', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        progress.questionsAnswered = 10;
+        progress.correctAnswers = 8;
+        expect(progress.accuracy, 0.8);
+      });
+    });
+
     group('equality', () {
       test('identical instances are equal', () {
         final a = TopicProgress(
@@ -251,7 +295,7 @@ void main() {
         expect(a == a, isTrue);
       });
 
-      test('different instances are not equal', () {
+      test('different instances are not equal by default (identity)', () {
         final a = TopicProgress(
           topicId: 't1', lastUpdated: lastUpdated,
         );
@@ -261,11 +305,76 @@ void main() {
         expect(a == b, isFalse);
       });
 
+      test('same values but different instances are not equal', () {
+        final a = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final b = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        expect(a == b, isFalse);
+      });
+
       test('hashCode is consistent', () {
         final a = TopicProgress(
           topicId: 't1', lastUpdated: lastUpdated,
         );
         expect(a.hashCode, a.hashCode);
+      });
+
+      test('different objects have different hashCodes', () {
+        final a = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final b = TopicProgress(
+          topicId: 't2', lastUpdated: lastUpdated,
+        );
+        // identity-based hashCode, so different instances should differ
+        expect(a.hashCode == b.hashCode, isFalse);
+      });
+    });
+
+    group('edge cases', () {
+      test('large number of questions', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          questionsAnswered: 1000000, correctAnswers: 750000,
+        );
+        expect(progress.accuracy, 0.75);
+      });
+
+      test('zero questionsAnswered with non-zero correctAnswers', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          correctAnswers: 5,
+        );
+        expect(progress.accuracy, 0.0);
+      });
+
+      test('fromJson with empty string topicId', () {
+        final json = {
+          'topicId': '',
+          'lastUpdated': DateTime(2024, 1, 1).toIso8601String(),
+        };
+        final progress = TopicProgress.fromJson(json);
+        expect(progress.topicId, '');
+      });
+
+      test('copyWith with empty topicId string', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+        );
+        final copy = progress.copyWith(topicId: '');
+        expect(copy.topicId, '');
+        expect(progress.topicId, 't1');
+      });
+
+      test('large time values do not overflow', () {
+        final progress = TopicProgress(
+          topicId: 't1', lastUpdated: lastUpdated,
+          averageTimeMs: 999999999.99,
+        );
+        expect(progress.averageTimeMs, 999999999.99);
       });
     });
   });

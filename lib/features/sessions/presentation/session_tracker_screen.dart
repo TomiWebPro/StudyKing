@@ -42,6 +42,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -70,6 +71,10 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   }
 
   Future<void> _loadSessions() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final sessionsResult = await _sessionRepository.getAll();
       final sessions = sessionsResult.data ?? [];
@@ -85,7 +90,10 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     } catch (e) {
       _logger.e('Error loading sessions', e);
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -177,7 +185,8 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     try {
       final planRepo = PlanRepository();
       await planRepo.init();
-      final plan = await planRepo.loadPlan(studentId);
+      final planResult = await planRepo.loadPlan(studentId);
+      final plan = planResult.data;
       if (plan != null) {
         final todayPlan = plan.dailyPlans.where((d) =>
             d.date.year == DateTime.now().year &&
@@ -241,6 +250,44 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           elevation: 0,
         ),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.studySessionTracker),
+          centerTitle: false,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                l10n.somethingWentWrong,
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _error!,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _loadSessions,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -435,9 +482,11 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                   Icon(icon, size: 14, color: color),
                 ],
               ),
-              subtitle: Text(
-                '${formatDurationFromContext(context, session.actualDuration)} • ${formatDateFromContext(context, session.startTime)}',
-                style: theme.textTheme.bodySmall,
+              subtitle: MergeSemantics(
+                child: Text(
+                  '${formatDurationFromContext(context, session.actualDuration)} • ${formatDateFromContext(context, session.startTime)}',
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
               trailing: Text(
                 formatDurationFromContext(context, session.actualDuration),

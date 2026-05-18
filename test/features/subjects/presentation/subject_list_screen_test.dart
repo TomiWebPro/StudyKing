@@ -31,7 +31,10 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Result<Subject?>> get(String id) async => Result.success(_box.get(id));
 
   @override
-  Future<void> create(Subject subject) async => _box.put(subject.id, subject);
+  Future<Result<void>> create(Subject subject) async {
+    await _box.put(subject.id, subject);
+    return Result.success(null);
+  }
 }
 
 class _LoadingNotifier extends SubjectsRepositoryNotifier {
