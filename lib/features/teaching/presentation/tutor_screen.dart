@@ -8,6 +8,7 @@ import 'package:studyking/core/providers/app_providers.dart' show settingsProvid
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/core/services/prerequisite_check_service.dart';
 import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider, voiceControllerProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -66,11 +67,33 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     });
   }
 
-  void _initializeTutor() {
+  Future<void> _initializeTutor() async {
     if (widget.tutorService != null) {
       _tutorService = widget.tutorService!;
     } else {
       _tutorService = ref.read(tutorServiceProvider);
+    }
+
+    if (widget.topicId.isNotEmpty) {
+      final prereqCheck = PrerequisiteCheckService();
+      final prereqResult = await prereqCheck.checkPrerequisites(
+        topicId: widget.topicId,
+        studentId: StudentIdService().getStudentId(),
+      );
+      if (prereqResult.isSuccess &&
+          !prereqResult.data!.isReady &&
+          prereqResult.data!.unmetPrerequisiteTopics.isNotEmpty &&
+          mounted) {
+        final shouldContinue = await PrerequisiteCheckService.showPrerequisiteDialog(
+          context,
+          unmetTopics: prereqResult.data!.unmetPrerequisiteTopics,
+        );
+        if (!shouldContinue) {
+          if (!mounted) return;
+          Navigator.pop(context);
+          return;
+        }
+      }
     }
 
     _startLesson();
@@ -215,6 +238,32 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   void _onTranscriptionSubmitted(String text) {
     _textController.text = text;
     _sendMessage();
+  }
+
+  void _clearConversation() {
+    if (_manager == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.clearConversation),
+        content: Text(l10n.clearConversation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _manager!.clearMessages();
+              setState(() {});
+            },
+            child: Text(l10n.clearConversation),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEndLessonConfirmation() {
@@ -423,10 +472,34 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
           title: Text(widget.topicTitle),
           actions: [
             if (_isInitialized)
-              TextButton.icon(
-                onPressed: _showEndLessonConfirmation,
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: Text(l10n.endLesson),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                tooltip: l10n.moreOptions,
+                onSelected: (value) {
+                  if (value == 'clear') {
+                    _clearConversation();
+                  } else if (value == 'end') {
+                    _showEndLessonConfirmation();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'end',
+                    child: ListTile(
+                      leading: const Icon(Icons.stop_circle_outlined),
+                      title: Text(l10n.endLesson),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear',
+                    child: ListTile(
+                      leading: const Icon(Icons.refresh),
+                      title: Text(l10n.clearConversation),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -518,6 +591,15 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         color = Colors.grey;
         break;
     }
+    final l10n = AppLocalizations.of(context)!;
+    final phaseLabel = switch (phase) {
+      ConversationPhase.greeting => l10n.phaseGreeting,
+      ConversationPhase.teaching => l10n.phaseTeaching,
+      ConversationPhase.exercise => l10n.phaseExercise,
+      ConversationPhase.feedback => l10n.phaseFeedback,
+      ConversationPhase.adaptiveReview => l10n.phaseAdaptiveReview,
+      ConversationPhase.closing => l10n.phaseClosing,
+    };
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Row(
@@ -525,7 +607,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
-            phase.name,
+            phaseLabel,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
             ),

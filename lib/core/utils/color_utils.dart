@@ -1,9 +1,24 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'logger.dart';
 
 class ColorUtils {
   static const Color defaultColor = Color(0xFF2196F3);
+
+  static double _relativeLuminance(Color color) {
+    final r = (color.r * 255.0).round().clamp(0, 255) / 255.0;
+    final g = (color.g * 255.0).round().clamp(0, 255) / 255.0;
+    final b = (color.b * 255.0).round().clamp(0, 255) / 255.0;
+    double linearize(double c) => c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+    return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+  }
+
+  static Color contrastingTextColor(Color backgroundColor) {
+    final luminance = _relativeLuminance(backgroundColor);
+    return luminance > 0.5 ? Colors.black : Colors.white;
+  }
 
   static const List<String> availableColors = [
     '#2196F3',

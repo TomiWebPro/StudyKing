@@ -33,6 +33,30 @@ void main() {
         expect(block.type, LessonBlockType.quiz);
         expect(block.order, 3);
       });
+
+      test('creates with empty content string', () {
+        final block = LessonBlock(
+          id: 'b1',
+          subjectId: 's1',
+          lessonId: 'l1',
+          type: LessonBlockType.text,
+          content: '',
+        );
+        expect(block.content, '');
+        expect(block.order, 0);
+      });
+
+      test('creates with special characters in content', () {
+        final content = 'Line 1\nLine 2\tTabbed\nSpecial: ñ á é €';
+        final block = LessonBlock(
+          id: 'b1',
+          subjectId: 's1',
+          lessonId: 'l1',
+          type: LessonBlockType.text,
+          content: content,
+        );
+        expect(block.content, content);
+      });
     });
 
     group('toJson', () {
@@ -62,6 +86,15 @@ void main() {
           );
           expect(block.toJson()['type'], type.index);
         }
+      });
+
+      test('serializes empty content string', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: '',
+        );
+        final json = block.toJson();
+        expect(json['content'], '');
       });
     });
 
@@ -103,6 +136,25 @@ void main() {
           final block = LessonBlock.fromJson(json);
           expect(block.type, type);
         }
+      });
+
+      test('deserializes empty content string', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': '',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.content, '');
+      });
+
+      test('deserializes content with special characters', () {
+        final content = 'Multi-line\nwith\ttabs\nand ñ é €';
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 1, 'content': content,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.content, content);
       });
     });
 
@@ -202,6 +254,24 @@ void main() {
         expect(copy.type, LessonBlockType.quiz);
         expect(copy.content, 'Updated');
         expect(copy.order, 10);
+      });
+
+      test('passing null parameters preserves originals', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.summary, content: 'original',
+          order: 7,
+        );
+        final copy = block.copyWith(
+          id: null, subjectId: null, lessonId: null,
+          type: null, content: null, order: null,
+        );
+        expect(copy.id, 'b1');
+        expect(copy.subjectId, 's1');
+        expect(copy.lessonId, 'l1');
+        expect(copy.type, LessonBlockType.summary);
+        expect(copy.content, 'original');
+        expect(copy.order, 7);
       });
     });
 

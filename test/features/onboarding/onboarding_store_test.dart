@@ -1,134 +1,79 @@
 import 'package:flutter_test/flutter_test.dart';
-
-class _InMemoryOnboardingStore {
-  static bool onboardingCompleted = false;
-  static bool onboardingDontShowAgain = false;
-
-  static void reset() {
-    onboardingCompleted = false;
-    onboardingDontShowAgain = false;
-  }
-
-  static Future<bool> isOnboardingNeeded() async {
-    return !onboardingCompleted && !onboardingDontShowAgain;
-  }
-
-  static Future<void> markCompleted() async {
-    onboardingCompleted = true;
-  }
-
-  static Future<void> markDontShowAgain() async {
-    onboardingDontShowAgain = true;
-  }
-
-  static Future<bool> isFirstLaunch() async {
-    return !onboardingCompleted;
-  }
-}
+import 'package:studyking/features/onboarding/services/onboarding_service.dart';
 
 void main() {
-  setUp(() async {
-    _InMemoryOnboardingStore.reset();
+  late Map<String, dynamic> storage;
+
+  setUp(() {
+    storage = <String, dynamic>{};
+    OnboardingService.setTestStorage(storage);
   });
 
-  group('OnboardingService (in-memory)', () {
+  tearDown(() {
+    OnboardingService.setTestStorage(null);
+  });
+
+  group('OnboardingService', () {
     test('isOnboardingNeeded returns true when no values set', () async {
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
+      final needed = await OnboardingService.isOnboardingNeeded();
       expect(needed, isTrue);
     });
 
     test('isOnboardingNeeded returns false after markCompleted', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
+      await OnboardingService.markCompleted();
+      final needed = await OnboardingService.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('isOnboardingNeeded returns false after markDontShowAgain', () async {
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
+      await OnboardingService.markDontShowAgain();
+      final needed = await OnboardingService.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
     test('markCompleted persists the completion flag', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
-      expect(needed, isFalse);
+      await OnboardingService.markCompleted();
+      expect(storage['onboarding_completed'], isTrue);
     });
 
     test('markDontShowAgain persists the dont-show flag', () async {
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
-      expect(needed, isFalse);
+      await OnboardingService.markDontShowAgain();
+      expect(storage['onboarding_dont_show_again'], isTrue);
     });
 
     test('isFirstLaunch returns true when onboarding not yet completed', () async {
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
+      final firstLaunch = await OnboardingService.isFirstLaunch();
       expect(firstLaunch, isTrue);
     });
 
     test('isFirstLaunch returns false after markCompleted', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
-      expect(firstLaunch, isFalse);
-    });
-
-    test('isOnboardingNeeded respects completed flag independently', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
+      await OnboardingService.markCompleted();
+      final firstLaunch = await OnboardingService.isFirstLaunch();
       expect(firstLaunch, isFalse);
     });
 
     test('isFirstLaunch returns true after markDontShowAgain', () async {
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
-      expect(firstLaunch, isTrue);
-    });
-
-    test('isOnboardingNeeded returns true when both flags explicitly false', () async {
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
-      expect(needed, isTrue);
-    });
-
-    test('isOnboardingNeeded returns false when only completed is true', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
-      expect(needed, isFalse);
-    });
-
-    test('isOnboardingNeeded returns false when only dontShowAgain is true', () async {
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
-      expect(needed, isFalse);
-    });
-
-    test('isFirstLaunch returns true when only dontShowAgain is set', () async {
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
+      await OnboardingService.markDontShowAgain();
+      final firstLaunch = await OnboardingService.isFirstLaunch();
       expect(firstLaunch, isTrue);
     });
 
     test('isOnboardingNeeded returns false when both flags are true', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      final needed = await _InMemoryOnboardingStore.isOnboardingNeeded();
+      await OnboardingService.markCompleted();
+      await OnboardingService.markDontShowAgain();
+      final needed = await OnboardingService.isOnboardingNeeded();
       expect(needed, isFalse);
     });
 
-    test('isFirstLaunch returns false when completed is set', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      final firstLaunch = await _InMemoryOnboardingStore.isFirstLaunch();
-      expect(firstLaunch, isFalse);
-    });
-
     test('flags are independent', () async {
-      await _InMemoryOnboardingStore.markCompleted();
-      expect(_InMemoryOnboardingStore.onboardingCompleted, isTrue);
-      expect(_InMemoryOnboardingStore.onboardingDontShowAgain, isFalse);
+      await OnboardingService.markCompleted();
+      expect(storage['onboarding_completed'], isTrue);
+      expect(storage['onboarding_dont_show_again'], isNull);
 
-      _InMemoryOnboardingStore.reset();
-      await _InMemoryOnboardingStore.markDontShowAgain();
-      expect(_InMemoryOnboardingStore.onboardingCompleted, isFalse);
-      expect(_InMemoryOnboardingStore.onboardingDontShowAgain, isTrue);
+      storage.clear();
+      await OnboardingService.markDontShowAgain();
+      expect(storage['onboarding_completed'], isNull);
+      expect(storage['onboarding_dont_show_again'], isTrue);
     });
   });
 }

@@ -3,57 +3,79 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-Widget _buildWidget({double? strokeWidth, Color? color, String? message, String? semanticsLabel}) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: Scaffold(
-      body: LoadingScreen(
-        strokeWidth: strokeWidth ?? 3,
-        color: color,
-        message: message,
-        semanticsLabel: semanticsLabel,
-      ),
-    ),
-  );
-}
-
 void main() {
   group('LoadingScreen', () {
-    testWidgets('renders CircularProgressIndicator with default stroke width', (tester) async {
-      await tester.pumpWidget(_buildWidget());
-      await tester.pump();
-
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
-    testWidgets('renders custom stroke width', (tester) async {
-      await tester.pumpWidget(_buildWidget(strokeWidth: 5));
-      await tester.pump();
+    testWidgets('renders CircularProgressIndicator with default strokeWidth', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: LoadingScreen(),
+        ),
+      ));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('renders message when provided', (tester) async {
-      await tester.pumpWidget(_buildWidget(message: 'Please wait...'));
-      await tester.pump();
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: LoadingScreen(message: 'Please wait...'),
+        ),
+      ));
 
       expect(find.text('Please wait...'), findsOneWidget);
     });
 
-    testWidgets('renders custom color', (tester) async {
-      await tester.pumpWidget(_buildWidget(color: Colors.red));
-      await tester.pump();
+    testWidgets('uses semantics label', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: LoadingScreen(semanticsLabel: 'Content is loading'),
+        ),
+      ));
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Content is loading'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('renders with default loading text when no message provided', (tester) async {
-      await tester.pumpWidget(_buildWidget());
-      await tester.pump();
+    testWidgets('uses localized loading text as default semantics label', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: LoadingScreen(),
+        ),
+      ));
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.bySemanticsLabel(l10n.loading), findsOneWidget);
+    });
+
+    testWidgets('accepts custom strokeWidth and color', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: LoadingScreen(strokeWidth: 5, color: Colors.red),
+        ),
+      ));
+
+      final indicator = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(indicator.strokeWidth, 5);
+      expect(indicator.color, Colors.red);
     });
   });
 }

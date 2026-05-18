@@ -1,322 +1,288 @@
-# Internationalisation Master — Comprehensive i18n Audit
+# Internationalisation Master — Residual i18n Issues
 
 **Created**: 2026-05-18
 **Target Locale**: Spanish (`es`) — formal "usted" register, neutral Latin American
-**Scope**: Full codebase — `lib/`, `lib/l10n/`, `lib/features/*/presentation/`
-**Severity Levels**: BLOCKER / MAJOR / MINOR
+**Scope**: Full codebase residual sweep — `lib/`, `lib/l10n/`
+**Severity Levels**: CRITICAL / MAJOR / MINOR
 
 ---
 
-## BLOCKER — None
+## CRITICAL
 
-No app-crashing or user-progression-blocking internationalisation issues found.
+### C-1: Duplicate JSON keys in `app_en.arb` (data-integrity risk)
+
+Three keys appear twice in the English ARB file. JSON parsers silently overwrite the first occurrence with the second, so one `@description` annotation is orphaned per duplicate.
+
+| Duplicate Key | First Occurrence | Second Occurrence | Impact |
+|---|---|---|---|
+| `today` | L114 (desc: "Label for today's date") | L3496 (no `@today` metadata follows it; the `@timerPaused` annotation is at L3497) | `@today` metadata is silently dropped |
+| `summary` | L4326 (desc: "Section title for summary card on dashboard") | L5658 (desc: "Section header for summary") | Second copy overwrites first |
+| `questionBank` | L5346 (desc: "Tile title for question bank") | L5447 (desc: "Title for the question bank screen") | Second copy overwrites first |
+
+**Affected file**: `lib/l10n/app_en.arb:114,3496,4326,5658,5346,5447`
+
+**Rationale**: While both `summary` and `questionBank` duplicates happen to have the same English value, the Spanish file may need to differentiate between "tile title" vs "screen title" or "section header" vs "card title". Currently, only the second `@description` is retained — the first is silently discarded. The `today` duplicate is the worst: the `@today` annotation at L115–117 is orphaned because the parser only sees the second `today` at L3496.
+
+**Acceptance criteria**:
+- Remove the duplicate `today` at L3496. Move or merge its surrounding lines if needed so that `@timerPaused` correctly follows its `timerPaused` key.
+- Rename the duplicate `summary` keys to differentiate them, e.g. `summarySection` (section header) and `summaryCard` (dashboard card title). Or keep one and ensure both call sites use the same ARB key.
+- Rename the duplicate `questionBank` keys to e.g. `questionBankTile` (dashboard tile) and `questionBankScreen` (screen title). Or keep one.
+- Verify that both EN and ES files have matching key sets after deduplication.
 
 ---
 
 ## MAJOR
 
-### MAJOR-1: ~40 hardcoded user-facing strings in ingestion feature screens
+### M-1: Enum `.name` displayed to users instead of localized labels
 
-**Files**:
-- `lib/features/ingestion/presentation/source_detail_screen.dart`
-- `lib/features/ingestion/presentation/content_library_screen.dart`
+Four screens pass Dart enum `.name` directly to `Text()` widgets. `.name` returns the source-code identifier (always English), bypassing `AppLocalizations`.
 
-**Context**: Both screens use raw English string literals for every UI label, dialog title, tooltip, section header, placeholder, and status text — none go through `AppLocalizations.of(context)!`.
+| File | Line | Code | Enum Type |
+|---|---|---|---|
+| `lib/features/ingestion/presentation/source_detail_screen.dart` | 298 | `value: status.name` | `ProcessingStatus` |
+| `lib/features/ingestion/presentation/source_detail_screen.dart` | 301 | `value: source.type.name` | `SourceType` |
+| `lib/features/ingestion/presentation/content_library_screen.dart` | 427–431 | `Text(t.name)` in type-filter bottom sheet | `SourceType` |
+| `lib/features/ingestion/presentation/content_library_screen.dart` | 454–458 | `Text(s.name)` in status-filter bottom sheet | `ProcessingStatus` |
+| `lib/features/questions/presentation/question_bank_screen.dart` | 508–510 | `Text(t.name)` in type-filter bottom sheet | `QuestionType` |
+| `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` | 243 | `task.status.name` | `LlmTaskStatus` (or similar) |
 
-**Affected strings in `source_detail_screen.dart`**:
-- `'Source not found'` (lines 75, 237)
-- `'Reprocess Source'` (dialog title, line 119)
-- `'Reprocessing will replace existing generated questions. Continue?'` (line 120)
-- `'Continue'` (button, line 123)
-- `'Reprocessing...'` (progress, line 131)
-- `'Source Detail'` (error AppBar, line 232)
-- `'Reprocess'` (tooltip + popup + button, lines 258, 271, 444)
-- `'Delete'` (popup + button; lines 274, 453)
-- `'Status'`, `'Subject'`, `'Type'`, `'ID'`, `'Uploaded'` (`_InfoRow` labels, lines 296–302)
-- `'Processing failed'` (error banner, line 318)
-- `'Topic Classification'`, `'Summary'`, `'Extracted Text (${...} chars)'`, `'Generated Questions (${...})'` (`_SectionHeader` titles, lines 329–409)
-- `'Not yet classified'` (line 338)
-- `'Classify Now'` (button, line 348)
-- `'No summary available'` (placeholder, line 361)
-- `'Search in text'` (hint, line 380)
-- `'No extracted text available'` (placeholder, line 397)
-- `'No questions from this source'` (placeholder, line 414)
-- `'${q.type.name}  •  ${q.difficultyText ?? "Difficulty ${q.difficulty}"}'` (question subtitle, line 429)
-- `'Select Topic'` (sheet title, line 472)
-- `'Delete Source'` (dialog title, line 492)
-- `'Are you sure you want to delete this source?'` (dialog content, line 493)
-- `'Source deleted'` (snackbar, line 512)
+**Rationale**: A Spanish user sees enum identifiers like `"singleChoice"`, `"pending"`, `"failed"`, `"completed"` instead of translated labels. The codebase already has helper functions (`_questionTypeLabel`, `_statusLabel`) that produce localized strings, but they are not consistently used. There's also a second-order problem: the `_typeFilter` / `_statusFilter` strings are stored as enum `.name` values and compared against the same for filtering, so the entire filter pipeline uses English identifiers.
 
-**Affected strings in `content_library_screen.dart`**:
-- `_statusLabel()` returns hardcoded English: `'Pending'`, `'Extracting'`, `'Processing'`, `'Generating Questions'`, `'Validating'`, `'Completed'`, `'Failed'` (lines 117–134)
-- `'Delete Source'` + `'Are you sure you want to delete this source?'` + `'Also delete questions generated from this source'` (dialog, lines 174–183)
-- `'Source deleted'` (snackbar, line 223)
-- `'Content Library'` (AppBar, line 248)
-- `'Sort order'`, `'Sort by'` (tooltips, lines 252, 257)
-- `'Date'`, `'Title'`, `'Status'`, `'Type'` (sort menu items, lines 260–263)
-- `'All subjects'`, `'All types'`, `'All statuses'` (filter chips + bottom sheets, lines 343–444)
-- `'Reprocess'` (tooltip on failed source, line 567)
-
-**Rationale**: These are all user-facing. A Spanish user sees English throughout the entire ingestion workflow. The ARB file already has `allSubjects`, `allTypes`, `allSources`, `date`, `delete` but the code doesn't use them.
-
-**Acceptance Criteria**:
-- Every hardcoded string above is replaced with `l10n.<key>(...)`
-- New ARB keys added for: `sourceDetail`, `sourceNotFound`, `reprocessSource`, `reprocessingConfirm`, `continue`, `reprocessing`, `processingFailed`, `topicClassification`, `notYetClassified`, `classifyNow`, `summary`, `noSummaryAvailable`, `extractedText({charCount})`, `searchInText`, `noExtractedText`, `generatedQuestions({count})`, `noQuestionsFromSource`, `deleteSourceTitle`, `deleteSourceConfirm`, `sourceDeleted`, `processingStatusPending`, `processingStatusExtracting`, `processingStatusProcessing`, `processingStatusGeneratingQuestions`, `processingStatusValidating`, `processingStatusCompleted`, `processingStatusFailed`, `contentLibrary`, `sortOrder`, `sortBy`, `sortDate`, `sortTitle`, `sortStatus`, `sortType`, `allStatuses`
-- Spanish translations provided for all new keys
+**Acceptance criteria**:
+- `source_detail_screen.dart:298`: Replace `status.name` with `l10n.processingStatusLabel(status)` (create a mapping or switch; reuse existing `ProcessingStatus`→ ARB key logic from `content_library_screen.dart:_statusLabel`).
+- `source_detail_screen.dart:301`: Replace `source.type.name` with a `_sourceTypeLabel(type, l10n)` mapper that returns localized strings.
+- `content_library_screen.dart:427–431, 454–458`: Replace `t.name` / `s.name` in filter bottom sheets with localized labels. Update filter-comparison logic to compare against a stable identifier (e.g. `SourceType.values.index`) instead of the display string.
+- `question_bank_screen.dart:508–510`: Replace `t.name` with `_questionTypeLabel(t, l10n)` (already exists at L542). Update filter-comparison logic similarly.
+- `llm_task_manager_screen.dart:243`: Replace `task.status.name` with a localized status label via a switch/map on the task-status enum type.
 
 ---
 
-### MAJOR-2: Hardcoded English strings in question bank screen
+### M-2: `question_bank_screen.dart` type-type filter uses raw enum name despite having a localizer
 
-**File**: `lib/features/questions/presentation/question_bank_screen.dart`
-
-**Affected strings**:
-- `'Edit Question'` (dialog title, line 196)
-- `'Question text'`, `'Explanation'` (input labels, lines 203, 209)
-- `'Question Bank'` (AppBar title, line 251)
-- `'Cancel selection'`, `'Delete selected'`, `'Select multiple'` (tooltips, lines 256–267)
-- `'Difficulty ${q.difficulty}'` (chip, line 352) — ARB already has `difficultyLabel(level)` at line 1507
-- `'${q.sourceIds.length} source(s)'` (chip, line 356)
-- `'AI-generated'`, `'Manual'` (chips, line 358)
-- `'Edit'` (popup menu, line 373)
-- `'Search questions'` (hint, line 413) — ARB already has `searchQuestions` at line 5410
-- `'All subjects'`, `'All types'`, `'All sources'` (filters + sheets, lines 426–523) — ARB already has `allSubjects`, `allTypes`, `allSources`
-
-**Acceptance Criteria**:
-- Replace all with `l10n.*()` calls
-- Use `l10n.difficultyLabel(...)` instead of `'Difficulty ...'`
-- Add ARB keys: `editQuestionTitle`, `questionTextLabel`, `explanationLabel`, `searchQuestionsHint`, `aiGenerated`, `manual`, `sourceCountChip({count})`
-- Spanish translations for all new keys
-
----
-
-### MAJOR-3: Dashboard screen has hardcoded strings
-
-**File**: `lib/features/dashboard/presentation/dashboard_screen.dart`
-
-**Affected strings**:
-- `'Remaining Workload'` (card title, line 164) — no ARB key exists
-- `'Content Library'` (card title, line 256) — no ARB key exists
-- `'Loading...'` (line 260)
-- `'$count source(s)'` (line 261)
-
-**Acceptance Criteria**:
-- Add ARB keys: `remainingWorkload`, `contentLibrary`, `loading`, `sourceCountCard({count})`
-- Replace with `l10n.*()` calls
-
----
-
-### MAJOR-4: Mentor screen schedule dialog hardcoded English
-
-**File**: `lib/features/mentor/presentation/mentor_screen.dart`
-
-**Affected strings**:
-- `'Topic: ${proposal.topicTitle}'` (line 306, schedule confirmation dialog)
-- `'${l10n.duration}: ${proposal.durationMinutes} min'` (line 308, uses `min` directly rather than a formatted duration string)
-
-**Acceptance Criteria**:
-- Add ARB key: `mentorScheduleTopic({topicTitle})`
-- Use `l10n.*` for label construction
-- Replace `' min'` hardcode with locale-aware duration formatting via `formatDuration` from `time_utils.dart`
-
----
-
-### MAJOR-5: Source practice sheet popup-menu items hardcoded
-
-**File**: `lib/features/practice/presentation/widgets/source_practice_sheet.dart`
-
-**Affected strings**:
-- `'Practice'` (line 146)
-- `'View Details'` (line 149)
-
-**Acceptance Criteria**:
-- Add ARB keys: `practiceAction`, `viewDetailsAction`
-- Replace with `l10n.*()` calls
-
----
-
-### MAJOR-6: Subject detail screen hardcoded strings
-
-**File**: `lib/features/subjects/presentation/subject_detail_screen.dart`
-
-**Affected strings**:
-- `'Sources'` (tab label, line 168) — ARB has no `sourcesTab` key
-- `'View Sources'` (semantics label, line 249)
-- `'$_sourceCount Source(s)'` (list tile, line 252)
-- `'No sources for this subject'` (empty state, line 457)
-- `'${_items.length} Source(s)'` (subtitle, line 475)
-- `item.status.name` (line 505) — uses English enum `.name` directly
-
-**Acceptance Criteria**:
-- Add ARB keys: `sourcesTab`, `viewSources`, `sourceCountTile({count})`, `noSourcesForSubject`, `sourceCountSubtitle({count})`
-- Use `ProcessingStatus` labels from ARB (see MAJOR-1) instead of `.name`
-
----
-
-### MAJOR-7: Processing status labels lack ARB keys entirely
-
-**Files**: `content_library_screen.dart`, `source_detail_screen.dart`, `subject_detail_screen.dart`, `source_practice_sheet.dart`
-
-**Context**: Four files display processing status (Pending, Extracting, Processing, Generating Questions, Validating, Completed, Failed) using either:
-- `_statusLabel()` with hardcoded English strings
-- `source.status.name` (enum `.name` output is always English)
-
-**Acceptance Criteria**:
-- Add 7 ARB keys: `processingPending`, `processingExtracting`, `processingProcessing`, `processingGenerating`, `processingValidating`, `processingCompleted`, `processingFailed`
-- Create a shared helper (or use a map from the ARB) to convert `ProcessingStatus` values to localized strings
-- Spanish translations provided
-
----
-
-### MAJOR-8: Hardcoded plural constructions `${count} source(s)` repeated across the codebase
-
-**Files**: `dashboard_screen.dart` (line 261), `subject_detail_screen.dart` (lines 252, 475), `question_bank_screen.dart` (line 356)
-
-**Context**: These use string interpolation with English plural convention `source(s)` instead of a plural-aware ARB key. In Spanish the word order and plural form differ (`fuente` → `fuentes`), and the parenthetical `(s)` convention doesn't exist.
-
-**Acceptance Criteria**:
-- Create plural ARB keys: `sourceCountCard({count, plural, =1{1 source} other{{count} sources}})` and similar
-- Replace all `${count} source(s)` patterns with `l10n.sourceCountCard(count)` calls
-
----
-
-### MAJOR-9: LLM `_buildContextPrompt()` context labels are invariant English
-
-**File**: `lib/features/mentor/services/mentor_service.dart`
-
-**Context**: The `_buildContextPrompt()` method (lines 157–258) builds context for the LLM with labels like `'Current student context:'`, `'Total attempts: '`, etc. The code comment says "labels are a data-formatting convention, not user-facing text". However, a significant portion of this context is sent to the LLM which then generates the nudge / mentor messages that are displayed to users. If the LLM picks up English patterns from the context, the mentor may respond in English despite the locale being `es`.
-
-**Affected lines**: 175–255 (all `buffer.writeln()` calls with English text)
-
-**Acceptance Criteria**:
-- Audit which context labels bleed into LLM-generated output
-- Where labels affect LLM output style, localise them using `lookupAppLocalizations(Locale(_localeName)).<key>()`
-- Add ARB keys for LLM context labels if needed
-
----
-
-### MAJOR-10: `formatCompactNumber` fallback is not locale-aware for values < 1000
-
-**File**: `lib/core/utils/number_format_utils.dart` (line 36)
+**File**: `lib/features/questions/presentation/question_bank_screen.dart:508`
 
 ```dart
-String formatCompactNumber(int value, String localeName) {
-  // ...
-  return value.toString();  // <-- no thousand separators for values < 1000
-}
+...QuestionType.values.map((t) => ListTile(
+  title: Text(t.name),   // <-- shows "singleChoice" instead of "Multiple Choice"
+  trailing: _typeFilter == t.name ? ...  // <-- filter stores enum identifier
+  ...
+))
 ```
 
-**Rationale**: For values under 1000, `toString()` produces `"999"` or `"500"`. While single-language OK, in some locales values like `9999` would be formatted by `compact` but `999` would not. This is minor because numbers < 1000 rarely need separators.
+The file already defines `_questionTypeLabel(QuestionType type, AppLocalizations l10n)` at L542 that returns localized strings (e.g. `l10n.multipleChoice` for `QuestionType.singleChoice`). The filter bottom sheet at L507–511 ignores it and uses `t.name` directly.
 
-**Acceptance Criteria**: Add a locale-aware `NumberFormat` for the fallback path, or confirm via test that `NumberFormat.decimalPattern(localeName)` handles the fallback correctly for all locales.
+**Acceptance criteria**: Same as M-1 resolution for `question_bank_screen.dart`. Additionally verify that filtering still works after switching to a non-English identifier by using the enum index or string name as the stable filter key while displaying the localized label.
+
+---
+
+### M-3: `notification_service.dart` English fallbacks create permanent Android channel names
+
+**File**: `lib/core/services/notification_service.dart:55–98`
+
+The `_createNotificationChannels()` method uses `??` fallbacks for all 8 Android notification channels:
+
+```dart
+l10n?.notifChannelGeneral ?? 'StudyKing Notifications',
+l10n?.notifChannelGeneralDesc ?? 'General StudyKing notifications',
+// ...7 more identical patterns
+```
+
+**Rationale**: Android notification channels are created once — the name and description are set permanently on first creation. If `setAppLocalizations()` has not been called before `init()` (which calls `_createNotificationChannels()`), `_l10n` is `null`, and the channels are created with English names that can never be updated. The same issue applies to `showNotification()` channel name lookups which also use `??` fallbacks.
+
+**Acceptance criteria**:
+- Ensure `setAppLocalizations()` is called before `init()` in the app startup sequence. Verify in `main.dart`.
+- Consider `assert(_l10n != null, 'must call setAppLocalizations before init')` at the start of `_createNotificationChannels()`.
+- Document the init-order requirement in `docs/i18n.md`.
+
+---
+
+### M-4: `answer_validation_service.dart` fallback methods return English
+
+**File**: `lib/core/services/answer_validation_service.dart:248–275`
+
+Six instance methods check `_l10n != null` and return English if null:
+
+```dart
+String someAnswersIncorrect(String explanation) {
+  if (_l10n != null) return _l10n.someAnswersIncorrect;
+  return explanation.isNotEmpty ? explanation : 'Some answers are incorrect';
+}
+String correctAnswerIs(String answer) {
+  if (_l10n != null) return _l10n.correctAnswerIs(answer);
+  return 'The correct answer is: $answer';
+}
+// ... allStepsFormat, partialStepsFormat, noStepsFormat, allRequiredStepsMissing
+```
+
+**Rationale**: The `ValidationMessages.english` static at L182 is used as a default in services that don't hold a reference to `AppLocalizations`. When the service hasn't been initialized with localized messages, students see English feedback on their answers. This is a user-facing bug.
+
+**Acceptance criteria**:
+- Trace all call sites where `ValidationMessages.english` is used and verify `ValidationMessages.fromLocalizations(l10n)` is passed instead.
+- If any service path can legitimately operate without l10n, add an `assert()` or log warning.
+- Add a test that verifies `fromLocalizations` is properly wired in all production providers.
+
+---
+
+### M-5: `source_detail_screen.dart` exception strings shown to user
+
+**File**: `lib/features/ingestion/presentation/source_detail_screen.dart:109,239`
+
+```dart
+// Line 109:
+if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+
+// Line 239:
+Text(_error ?? l10n.sourceNotFound, ...),
+```
+
+**Rationale**: `e.toString()` renders the Dart exception type and message in English. When `_load()` fails, `_error` is set to a raw English exception string and displayed directly in the error state. This bypasses all locale support.
+
+**Acceptance criteria**:
+- Replace `e.toString()` with a localized fallback such as `l10n.errorLoadingSource`.
+- Log the original exception to `dart:developer` for debugging.
+
+---
+
+### M-6: Content library filter values mix internal keys and display labels
+
+**File**: `lib/features/ingestion/presentation/content_library_screen.dart:144,159,352,427–431,454–458`
+
+The `_typeFilter` and `_statusFilter` strings are:
+- Stored as `SourceType.name` (English enum identifier)
+- Compared against `s.type.name` for filtering (L144)
+- Displayed directly in the filter chip label (L352): `Text(t.name)` falls back to "allStatuses" → displays the stored string when a specific filter is active
+
+**Rationale**: This means when a user selects "PDF" (enum name), the chip shows "pdf" (or whatever the identifier is). The same enum-name-instead-of-label problem as M-1, but with additional coupling between storage and display.
+
+**Acceptance criteria**: Same as M-1 resolution for `content_library_screen.dart`. Store filter state using the enum value/index; display using localized labels.
+
+---
+
+### M-7: RTL-unsafe hardcoded positions (3 widgets)
+
+| File | Line | Code | Issue |
+|---|---|---|---|
+| `lib/features/ingestion/presentation/content_library_screen.dart` | 497 | `alignment: Alignment.centerRight` | In RTL, swipe-to-delete icon stays on visual right instead of start |
+| `lib/features/practice/presentation/widgets/practice_mode_card.dart` | 79 | `Positioned(right: 8, top: 8, ...)` | Count/status badge pinned to visual right; RTL should be left |
+| `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` | 94 | `Positioned(right: 8, top: 8, ...)` | Undo/clear toolbar buttons pinned to visual right; RTL should be left |
+
+**Rationale**: While the project currently only supports LTR languages (en, es), these are tech debt for future RTL support (Arabic, Hebrew). They create a "works for me" trap where RTL support requires a full re-audit.
+
+**Acceptance criteria**:
+- `content_library_screen.dart:497`: Replace `Alignment.centerRight` with `AlignmentDirectional.centerEnd`.
+- `practice_mode_card.dart:79`: Replace `Positioned(right: 8)` with `Positioned.directional(textDirection: Directionality.of(context), end: 8, top: 8)`.
+- `canvas_drawing_widget.dart:94`: Replace `Positioned(right: 8)` with `Positioned.directional(textDirection: Directionality.of(context), end: 8, top: 8)`.
+
+---
+
+### M-8: Fixed-width MetricCards may clip translated labels
+
+**File**: `lib/features/focus_mode/presentation/widgets/session_summary_card.dart:59,68,77`
+
+```dart
+width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
+```
+
+Three `MetricCard` widgets with hardcoded `140px` width (or half-width on narrow screens). Labels like "Sessions" / "Sesiones" or "Today" / "Hoy" are short enough, but the "Focus Time" / "Tiempo de enfoque" or German compound words like "Sitzungsdauer" could be clipped. The card layout doesn't use `Flexible` or `Expanded`.
+
+**Acceptance criteria**:
+- Remove the fixed `140px` width constraint.
+- Allow the parent `Wrap` to distribute space naturally.
+- Add `Flexible` or `ConstrainedBox` with `minWidth` instead of fixed width.
 
 ---
 
 ## MINOR
 
-### MINOR-1: `time_utils.dart` has English fallback strings
+### m-1: `time_utils.dart` English fallback strings
 
-**File**: `lib/core/utils/time_utils.dart` (lines 62, 68, 72)
-
-```dart
-final unknown = l10n?.unknown ?? 'Unknown';
-// ...
-return l10n?.today ?? 'Today';
-return l10n?.yesterday ?? 'Yesterday';
-```
-
-**Rationale**: These fallbacks are only used when `AppLocalizations` is null (shouldn't happen in normal usage). Low risk but a potential English leak in edge cases.
-
-**Acceptance Criteria**: Either ensure `l10n` is never null in these paths, or keep the fallbacks but add a test that verifies context-bearing overloads (`formatDateFromContext`) never hit these branches.
-
----
-
-### MINOR-2: RTL layout readiness — minimal Directionality usage
-
-**Files** (only 4): `chat_bubble.dart`, `lesson_block_card.dart`, `lesson_list_item.dart`, `lesson_booking_sheet.dart`
-
-**Context**: Only 4 files use `Directionality.of(context)`. Many layout widgets use hardcoded `start`/`end` correctly via `EdgeInsetsDirectional`, `AlignmentDirectional`, etc., but:
-- `content_library_screen.dart` line 493: `DismissDirection.endToStart` — correct, already uses directional enum
-- No RTL language currently supported (no Arabic/Hebrew in `l10n.yaml`)
-- The `l10n.yaml` lists locales: `en, es` — no RTL locale yet
-
-**Acceptance Criteria**: Document RTL readiness status. When adding an RTL language (Arabic, Hebrew), audit all files for `EdgeInsets.only(left/right)` vs `EdgeInsetsDirectional.only(start/end)`, `Alignment.topLeft` vs `AlignmentDirectional.topStart`, and `TextAlign.left` vs `TextAlign.start`.
-
----
-
-### MINOR-3: `source_practice_sheet.dart` uses `const Text()` for menu items
-
-**File**: `lib/features/practice/presentation/widgets/source_practice_sheet.dart` (lines 144–150)
+**File**: `lib/core/utils/time_utils.dart:62,68,72`
 
 ```dart
-const PopupMenuItem(
-  value: 'select',
-  child: Text('Practice'),
-),
-const PopupMenuItem(
-  value: 'view_details',
-  child: Text('View Details'),
-),
+final unknown = l10n?.unknown ?? 'Unknown';   // L62
+return l10n?.today ?? 'Today';                // L68
+return l10n?.yesterday ?? 'Yesterday';         // L72
 ```
 
-**Rationale**: `const` prevents runtime locale switching — these strings will never update when locale changes.
+**Rationale**: In normal operation `l10n` is never null because `formatDateFromContext` (the main entry point) always passes an `AppLocalizations` instance. However, `formatDate()` is a public API and could be called from contexts where `l10n` is null (e.g. tests, or during app initialization before the widget tree is built).
 
-**Acceptance Criteria**: Remove `const` from these `PopupMenuItem` widgets, pass `l10n.*` text.
-
----
-
-### MINOR-4: No `locale_config.dart` tested for locale persistence edge cases
-
-**File**: `lib/core/config/locale_config.dart`
-
-**Context**: Locale config persistence handles basic save/load. No test validates fallback when saved locale key no longer exists in supported list, or when device locale is unsupported.
-
-**Acceptance Criteria**: Add test for `resolveLocale()` with unsupported device locale — verify it falls back to `en`.
+**Acceptance criteria**:
+- Keep the fallbacks (defensive programming) but add a test in `test/core/utils/time_utils_test.dart` that verifies the context-bearing wrappers (`formatDateFromContext`, `formatDurationFromContext`) never trigger the fallback path.
+- Consider marking `formatDate()` as `@visibleForTesting` or adding a `@required`-style lint.
 
 ---
 
-### MINOR-5: ARB `@@locale` comments vs `localeName` consistency
+### m-2: `practice_mode_card.dart` and `roadmap_card.dart` restrictive `maxLines`
 
-**Context**: `app_es.arb` has `"@@locale": "es"`. The generated code uses `localeName` getter from `AppLocalizations`. Some Dart files reference `l10n.localeName` for `NumberFormat` and `DateFormat`. This works correctly but should be documented for translators.
-
-**Acceptance Criteria**: No code change needed. Add documentation in `docs/i18n.md` that `localeName` must match `@@locale` in the `.arb` file for generated locale-aware formatting to work correctly.
-
----
-
-## Summary of Required ARB Key Additions
-
-| Group | Keys needed | Priority |
+| File | Line | Constraint |
 |---|---|---|
-| Ingestion feature | ~30 keys (sourceDetail, reprocess*, processing*, deleteSource*, section headers, status labels) | HIGH |
-| Question Bank | 6 keys (editQuestionTitle, questionTextLabel, explanationLabel, aiGenerated, manual, sourceCountChip) | HIGH |
-| Dashboard | 4 keys (remainingWorkload, contentLibrary, loading, sourceCountCard) | HIGH |
-| Mentor | 1 key (mentorScheduleTopic) | HIGH |
-| Practice sheet | 2 keys (practiceAction, viewDetailsAction) | HIGH |
-| Subject detail | 4 keys (sourcesTab, viewSources, sourceCountTile, noSourcesForSubject) | HIGH |
-| Status labels | 7 keys (processingPending through processingFailed) | HIGH |
-| Sort/filter | 4 keys (sortOrder*, sortBy*, sortDate, sortTitle, sortStatus, sortType) + allStatuses | MEDIUM |
+| `lib/features/practice/presentation/widgets/practice_mode_card.dart` | 60–61, 70–71 | `maxLines: 2, overflow: TextOverflow.ellipsis` |
+| `lib/features/planner/presentation/widgets/roadmap_card.dart` | 72–73 | `maxLines: 2, overflow: TextOverflow.ellipsis` |
 
-**Total new ARB keys estimated**: ~55–60
+**Rationale**: Spanish translations are on average 20–30% longer than English. A 2-line constraint may truncate otherwise visible content. German compound words are even longer. These cards already use `Expanded`/`Flexible`, so removing or increasing the line limit should not break layouts.
 
-## Existing ARB Keys Not Used in Source Code
+**Acceptance criteria**:
+- Increase `maxLines` to 3 or remove the constraint entirely.
+- Verify the layout still fits within cards (the `Expanded` parent should prevent unbounded growth).
 
-The following keys exist in both `app_en.arb` and `app_es.arb` but are hardcoded in presentation files:
+---
 
-| ARB Key | Hardcoded in File | Line(s) |
+### m-3: `calendar_view_widget.dart` day label `maxLines: 1`
+
+**File**: `lib/features/planner/presentation/widgets/calendar_view_widget.dart:138`
+
+```dart
+maxLines: 1,
+overflow: TextOverflow.ellipsis,
+```
+
+**Rationale**: Day abbreviations in most locales are 1–4 characters, but if the widget is eventually used with longer locale day names (e.g. `DateFormat.E()` in some locales), single-line truncation may hide the label entirely. Low risk.
+
+**Acceptance criteria**: Change to `maxLines: 2` or verify that all supported and planned locales produce abbreviations short enough for the cell width.
+
+---
+
+### m-4: `main.dart` does not guard notification-service init order
+
+**File**: `lib/main.dart` (notification service initialization and `setAppLocalizations` call order)
+
+**Rationale**: M-3 (notification_service English fallbacks) requires that `setAppLocalizations` is called before `init()`. If someone reorders the startup sequence, the fallback path silently creates English channels. There is no assert or documentation enforcing this order.
+
+**Acceptance criteria**: Add an `assert` in `notification_service.dart:_createNotificationChannels()`:
+```dart
+assert(_l10n != null, 'setAppLocalizations must be called before init');
+```
+
+---
+
+### m-5: `formatCompactNumber` fallback was fixed but the test coverage is weak
+
+**File**: `lib/core/utils/number_format_utils.dart` (the `< 1000` path now uses `NumberFormat.decimalPattern(localeName)`)
+
+**Context**: The completed issue MAJOR-10 was fixed — `value.toString()` was replaced with `NumberFormat.decimalPattern(localeName).format(value)`. However, the test file (`test/core/utils/number_format_utils_test.dart`) should explicitly cover:
+- The `< 1000` code path (decimal pattern, e.g. `formatCompactNumber(999, 'es')` → `"999"`)
+- The `>= 1000` code path (compact pattern, e.g. `formatCompactNumber(1500, 'es')` → `"1,5 mil"` for `es`)
+
+**Acceptance criteria**: Add test cases covering all three branches of `formatCompactNumber`.
+
+---
+
+### m-6: `source_detail_screen.dart` line 298 shows `status.name` for `ProcessingStatus`
+
+(Already covered in M-1, listed here as a cross-reference for completeness.)
+
+---
+
+## Summary of Issues by Type
+
+| Severity | Count | Key Areas |
 |---|---|---|
-| `allSubjects` | `question_bank_screen.dart`, `content_library_screen.dart` | 426, 343 |
-| `allTypes` | `question_bank_screen.dart`, `content_library_screen.dart` | 433, 350 |
-| `allSources` | `question_bank_screen.dart` | 440 |
-| `searchQuestions` | `question_bank_screen.dart` | 413 |
-| `questionBank` | `question_bank_screen.dart` | 251 |
-| `editQuestion` | `question_bank_screen.dart` | 196 (different capitalisation — ARB is `Edit Question`, code uses `Edit Question`) |
-| `questionText` | `question_bank_screen.dart` | 203 (code uses `'Question text'`, ARB has `questionText`: `Question text`) |
-| `cancelSelection` | `question_bank_screen.dart` | 256 |
-| `deleteSelected` | `question_bank_screen.dart` | 261 |
-| `selectMultiple` | `question_bank_screen.dart` | 267 |
-| `difficultyLabel` | `question_bank_screen.dart` | 352 (code uses `'Difficulty ${q.difficulty}'` instead of `l10n.difficultyLabel(...)`) |
-| `date` | `content_library_screen.dart` | 260 (uses `'Date'` instead of `l10n.date`) |
-| `practiceBySource` | `source_practice_sheet.dart` | Already used at line 59 |
-| `practiceBySourceDescription` | `source_practice_sheet.dart` | Already used at line 64 |
+| CRITICAL | 1 | ARB duplicate keys (`today`, `summary`, `questionBank`) |
+| MAJOR | 8 | Enum `.name` displayed (5 files), notification fallbacks, answer-validation fallbacks, exception strings shown, filter value/label coupling, 3 RTL-unsafe positions, fixed-width cards |
+| MINOR | 5 | `time_utils` English fallbacks, restrictive `maxLines`, calendar day truncation, init-order guard missing, compact-number test gaps |
 
-**Recommendation**: Audit and replace these usages. Low-hanging fruit — ARB keys exist, just not wired up.
+## Key Technical Debt Items
+
+1. **Android notification channels are permanent** — once created with English names, locale switching won't update them. The only fix is a `forceCreate` or reinstallation. Mitigation: ensure `setAppLocalizations` always fires before `init`.
+2. **Enum-to-localized-label pattern not centralized** — 4 different files have ad-hoc switch statements for `QuestionType`, `ProcessingStatus`, `SourceType`, and `LlmTaskStatus`. Consider a single `source_type_localizer.dart`, `processing_status_localizer.dart`, etc. (pattern: `question_type_localizer.dart` already exists).
+3. **Filter model uses display strings as keys** — `_typeFilter`, `_statusFilter` are `String` fields compared against `.name`. Changing the display label (e.g. from `"pdf"` to `"PDF"`) would silently break filtering. Should use enum values or stable keys.

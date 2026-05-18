@@ -44,7 +44,8 @@ class NotificationService {
   }
 
   Future<void> _createNotificationChannels() async {
-    final l10n = _l10n;
+    assert(_l10n != null, 'setAppLocalizations must be called before init');
+    final l10n = _l10n!;
     final androidPlugin = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin == null) return;
@@ -52,50 +53,50 @@ class NotificationService {
     final channels = [
       AndroidNotificationChannel(
         NotificationChannelIds.general,
-        l10n?.notifChannelGeneral ?? 'StudyKing Notifications',
-        description: l10n?.notifChannelGeneralDesc ?? 'General StudyKing notifications',
+        l10n.notifChannelGeneral,
+        description: l10n.notifChannelGeneralDesc,
         importance: Importance.high,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.dailyReminder,
-        l10n?.notifChannelDailyReminder ?? 'Daily Study Reminders',
-        description: l10n?.notifChannelDailyReminderDesc ?? 'Daily reminders to study',
+        l10n.notifChannelDailyReminder,
+        description: l10n.notifChannelDailyReminderDesc,
         importance: Importance.high,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.revision,
-        l10n?.notifChannelRevision ?? 'Revision Reminders',
-        description: l10n?.notifChannelRevisionDesc ?? 'Reminders to review topics',
+        l10n.notifChannelRevision,
+        description: l10n.notifChannelRevisionDesc,
         importance: Importance.defaultImportance,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.wellbeing,
-        l10n?.notifChannelWellbeing ?? 'Wellbeing Alerts',
-        description: l10n?.notifChannelWellbeingDesc ?? 'Wellbeing and break reminders',
+        l10n.notifChannelWellbeing,
+        description: l10n.notifChannelWellbeingDesc,
         importance: Importance.high,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.planning,
-        l10n?.notifChannelPlanning ?? 'Planning Suggestions',
-        description: l10n?.notifChannelPlanningDesc ?? 'Study plan adjustment suggestions',
+        l10n.notifChannelPlanning,
+        description: l10n.notifChannelPlanningDesc,
         importance: Importance.defaultImportance,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.lessons,
-        l10n?.notifChannelLessons ?? 'Lesson Notifications',
-        description: l10n?.notifChannelLessonsDesc ?? 'Lesson reminders and updates',
+        l10n.notifChannelLessons,
+        description: l10n.notifChannelLessonsDesc,
         importance: Importance.high,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.mastery,
-        l10n?.notifChannelMastery ?? 'Mastery Alerts',
-        description: l10n?.notifChannelMasteryDesc ?? 'Low mastery topic alerts',
+        l10n.notifChannelMastery,
+        description: l10n.notifChannelMasteryDesc,
         importance: Importance.defaultImportance,
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.badges,
-        l10n?.notifChannelBadges ?? 'Badge Notifications',
-        description: l10n?.notifChannelBadgesDesc ?? 'Badge unlock notifications',
+        l10n.notifChannelBadges,
+        description: l10n.notifChannelBadgesDesc,
         importance: Importance.defaultImportance,
       ),
     ];

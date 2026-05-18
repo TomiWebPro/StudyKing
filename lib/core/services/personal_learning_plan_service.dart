@@ -197,7 +197,8 @@ class PersonalLearningPlanService {
     );
 
     final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
-    final summary = _generateSummary(linkedPlans, recommendations);
+    final totalSyllabusTopics = allTopics.length;
+    final summary = _generateSummary(linkedPlans, recommendations, totalSyllabusTopics: totalSyllabusTopics);
 
     final metadata = syllabusGoals != null
         ? <String, dynamic>{
@@ -782,8 +783,9 @@ class PersonalLearningPlanService {
 
   PlanSummary _generateSummary(
     List<DailyPlan> dailyPlans,
-    List<PlanRecommendation> recommendations,
-  ) {
+    List<PlanRecommendation> recommendations, {
+    int totalSyllabusTopics = 0,
+  }) {
     final totalQuestions = dailyPlans.fold<int>(0, (sum, d) => sum + d.targetQuestions);
     final totalMinutes = dailyPlans.fold<int>(0, (sum, d) => sum + d.targetMinutes);
 
@@ -807,12 +809,15 @@ class PersonalLearningPlanService {
       totalMinutes: totalMinutes,
       newTopics: newTopics,
       reviewTopics: existingTopics,
-      estimatedCoverage: _calculateCoverage(uniqueTopics.length),
+      estimatedCoverage: _calculateCoverage(uniqueTopics.length, totalSyllabusTopics),
       focusAreas: focusAreas,
     );
   }
 
-  double _calculateCoverage(int uniqueTopics) {
+  double _calculateCoverage(int uniqueTopics, int totalSyllabusTopics) {
+    if (totalSyllabusTopics > 0) {
+      return (uniqueTopics / totalSyllabusTopics).clamp(0.0, 1.0);
+    }
     const baseTopics = 10;
     return (uniqueTopics / baseTopics).clamp(0.0, 1.0);
   }

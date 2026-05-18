@@ -150,8 +150,8 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         if (s.subjectId != widget.preselectedSubjectId) return false;
       }
       if (_subjectFilter.isNotEmpty && s.subjectId != _subjectFilter) return false;
-      if (_typeFilter.isNotEmpty && s.type.name != _typeFilter) return false;
-      if (_statusFilter.isNotEmpty && s.statusEnum.name != _statusFilter) return false;
+      if (_typeFilter.isNotEmpty && s.type.index.toString() != _typeFilter) return false;
+      if (_statusFilter.isNotEmpty && s.statusEnum.index.toString() != _statusFilter) return false;
       return true;
     }).toList();
 
@@ -165,7 +165,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         case SortField.status:
           cmp = a.processingStatus.compareTo(b.processingStatus);
         case SortField.type:
-          cmp = a.type.name.compareTo(b.type.name);
+          cmp = a.type.index.compareTo(b.type.index);
       }
       return _sortAscending ? cmp : -cmp;
     });
@@ -358,14 +358,18 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _typeFilter.isEmpty ? l10n.allTypes : _typeFilter,
+              label: _typeFilter.isEmpty
+                  ? l10n.allTypes
+                  : _sourceTypeLabel(SourceType.values[int.parse(_typeFilter)], l10n),
               selected: _typeFilter.isNotEmpty,
               onSelected: () => _showTypeFilter(l10n),
               onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _statusFilter.isEmpty ? l10n.allStatuses : _statusFilter,
+              label: _statusFilter.isEmpty
+                  ? l10n.allStatuses
+                  : _statusLabel(ProcessingStatus.values[int.parse(_statusFilter)], l10n),
               selected: _statusFilter.isNotEmpty,
               onSelected: () => _showStatusFilter(l10n),
               onClear: _statusFilter.isNotEmpty ? () => setState(() => _statusFilter = '') : null,
@@ -418,6 +422,31 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     );
   }
 
+  String _sourceTypeLabel(SourceType type, AppLocalizations l10n) {
+    switch (type) {
+      case SourceType.pdf:
+        return l10n.pdfLabel;
+      case SourceType.syllabus:
+        return l10n.syllabusLabel;
+      case SourceType.textbook:
+        return l10n.textbookLabel;
+      case SourceType.video:
+        return l10n.videoLabel;
+      case SourceType.lectureNotes:
+        return l10n.lectureNotesLabel;
+      case SourceType.externalResource:
+        return l10n.externalResourceLabel;
+      case SourceType.image:
+        return l10n.imageLabel;
+      case SourceType.webPage:
+        return l10n.webPageLabel;
+      case SourceType.audio:
+        return l10n.audioLabel;
+      case SourceType.document:
+        return l10n.documentLabel;
+    }
+  }
+
   void _showTypeFilter(AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
@@ -433,11 +462,11 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             },
           ),
           ...SourceType.values.map((t) => ListTile(
-                title: Text(t.name),
-                trailing: _typeFilter == t.name ? const Icon(Icons.check) : null,
+                title: Text(_sourceTypeLabel(t, l10n)),
+                trailing: _typeFilter == t.index.toString() ? const Icon(Icons.check) : null,
                 onTap: () {
                   Navigator.pop(ctx);
-                  setState(() => _typeFilter = t.name);
+                  setState(() => _typeFilter = t.index.toString());
                 },
               )),
         ],
@@ -460,11 +489,11 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             },
           ),
           ...ProcessingStatus.values.map((s) => ListTile(
-                title: Text(s.name),
-                trailing: _statusFilter == s.name ? const Icon(Icons.check) : null,
+                title: Text(_statusLabel(s, l10n)),
+                trailing: _statusFilter == s.index.toString() ? const Icon(Icons.check) : null,
                 onTap: () {
                   Navigator.pop(ctx);
-                  setState(() => _statusFilter = s.name);
+                  setState(() => _statusFilter = s.index.toString());
                 },
               )),
         ],
@@ -503,7 +532,7 @@ class _SourceListTile extends StatelessWidget {
       key: ValueKey(source.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        alignment: Alignment.centerRight,
+        alignment: AlignmentDirectional.centerEnd,
         padding: const EdgeInsetsDirectional.only(end: 24),
         color: theme.colorScheme.error,
         child: Icon(Icons.delete, color: theme.colorScheme.onError),

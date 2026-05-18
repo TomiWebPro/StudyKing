@@ -74,7 +74,6 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   }
 
   Future<void> _load() async {
-    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -88,7 +87,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       final sourceResult = await _sourceRepo.get(widget.sourceId);
       final source = sourceResult.data;
       if (source == null) {
-        if (mounted) setState(() { _isLoading = false; _error = l10n.sourceNotFound; });
+        if (mounted) {
+          final l10n = AppLocalizations.of(context);
+          setState(() { _isLoading = false; _error = l10n?.sourceNotFound ?? 'Source not found'; });
+        }
         return;
       }
 
@@ -121,6 +123,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         });
       }
     } catch (e) {
+      _logger.e('_load failed', e);
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
@@ -312,10 +315,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(label: l10n.status, value: status.name),
+                  _InfoRow(label: l10n.status, value: _processingStatusLabel(status, l10n)),
                   if (subjectName.isNotEmpty)
                     _InfoRow(label: l10n.subject, value: subjectName),
-                  _InfoRow(label: l10n.type, value: source.type.name),
+                  _InfoRow(label: l10n.type, value: _sourceTypeLabel(source.type, l10n)),
                   _InfoRow(label: l10n.id, value: source.id),
                   if (source.createdAt != null)
                     _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
@@ -373,7 +376,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  _SectionHeader(title: l10n.summary),
+                  _SectionHeader(title: l10n.summarySection),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -607,5 +610,49 @@ String _questionTypeLabel(QuestionType type, AppLocalizations l10n) {
       return l10n.fileUpload;
     case QuestionType.audioRecording:
       return l10n.audioRecording;
+  }
+}
+
+String _processingStatusLabel(ProcessingStatus status, AppLocalizations l10n) {
+  switch (status) {
+    case ProcessingStatus.pending:
+      return l10n.pending;
+    case ProcessingStatus.extracting:
+      return l10n.extracting;
+    case ProcessingStatus.classifying:
+      return l10n.processing;
+    case ProcessingStatus.generatingQuestions:
+      return l10n.generatingQuestions;
+    case ProcessingStatus.validating:
+      return l10n.validating;
+    case ProcessingStatus.completed:
+      return l10n.completed;
+    case ProcessingStatus.failed:
+      return l10n.failed;
+  }
+}
+
+String _sourceTypeLabel(SourceType type, AppLocalizations l10n) {
+  switch (type) {
+    case SourceType.pdf:
+      return l10n.pdfLabel;
+    case SourceType.syllabus:
+      return l10n.syllabusLabel;
+    case SourceType.textbook:
+      return l10n.textbookLabel;
+    case SourceType.video:
+      return l10n.videoLabel;
+    case SourceType.lectureNotes:
+      return l10n.lectureNotesLabel;
+    case SourceType.externalResource:
+      return l10n.externalResourceLabel;
+    case SourceType.image:
+      return l10n.imageLabel;
+    case SourceType.webPage:
+      return l10n.webPageLabel;
+    case SourceType.audio:
+      return l10n.audioLabel;
+    case SourceType.document:
+      return l10n.documentLabel;
   }
 }

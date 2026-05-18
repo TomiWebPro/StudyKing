@@ -14,6 +14,8 @@ import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/utils/id_generator.dart';
 
 typedef QuestionValidator = bool Function(Map<String, dynamic> questionData);
@@ -156,6 +158,7 @@ class ContentPipeline {
           textToClassify,
           possibleTopics,
           modelId,
+          subjectId,
         );
         if (matchedTopicId.isNotEmpty) {
           updated = updated.copyWith(topicId: matchedTopicId);
@@ -282,6 +285,7 @@ class ContentPipeline {
     String content,
     List<String> possibleTopics,
     String modelId,
+    String subjectId,
   ) async {
     if (possibleTopics.isEmpty) return '';
     try {
@@ -312,6 +316,22 @@ class ContentPipeline {
           (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),
         ).firstOrNull;
         if (topicMatch != null) return topicMatch.id;
+
+        if (subjectId.isNotEmpty) {
+          final newTopic = Topic(
+            id: IdGenerator.generate('topic'),
+            subjectId: subjectId,
+            title: topicTitle,
+            description: 'Auto-created from syllabus upload',
+            syllabusText: '',
+          );
+          await _topicRepository.create(newTopic);
+          final subjRepo = SubjectRepository();
+          await subjRepo.init();
+          await subjRepo.addTopicToSubject(subjectId, newTopic.id);
+          _logger.i('Auto-created topic "$topicTitle" under subject $subjectId');
+          return newTopic.id;
+        }
       } catch (e) {
         _logger.e('Failed to look up topic by title', e);
       }

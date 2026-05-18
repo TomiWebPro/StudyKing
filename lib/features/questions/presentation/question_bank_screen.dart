@@ -117,7 +117,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   List<Question> get _filteredQuestions {
     return _allQuestions.where((q) {
       if (_subjectFilter.isNotEmpty && q.subjectId != _subjectFilter) return false;
-      if (_typeFilter.isNotEmpty && q.type.name != _typeFilter) return false;
+      if (_typeFilter.isNotEmpty && q.type.index.toString() != _typeFilter) return false;
       if (_sourceFilter.isNotEmpty && !q.sourceIds.contains(_sourceFilter)) return false;
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -515,7 +515,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         child: const Icon(Icons.add),
       ),
       appBar: AppBar(
-        title: Text(l10n.questionBank),
+        title: Text(l10n.questionBankScreen),
         actions: [
           if (_selectionMode) ...[
             IconButton(
@@ -698,7 +698,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                 ),
                 const SizedBox(width: 8),
                 _filterChip(
-                  label: _typeFilter.isEmpty ? l10n.allTypes : _typeFilter,
+                  label: _typeFilter.isEmpty
+                      ? l10n.allTypes
+                      : _questionTypeLabel(QuestionType.values[int.parse(_typeFilter)], l10n),
                   selected: _typeFilter.isNotEmpty,
                   onTap: () => _showTypeFilter(l10n),
                   onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
@@ -772,9 +774,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
             },
           ),
           ...QuestionType.values.map((t) => ListTile(
-            title: Text(t.name),
-            trailing: _typeFilter == t.name ? const Icon(Icons.check) : null,
-            onTap: () { Navigator.pop(ctx); setState(() => _typeFilter = t.name); },
+            title: Text(_questionTypeLabel(t, l10n)),
+            trailing: _typeFilter == t.index.toString() ? const Icon(Icons.check) : null,
+            onTap: () { Navigator.pop(ctx); setState(() => _typeFilter = t.index.toString()); },
           )),
         ],
       ),

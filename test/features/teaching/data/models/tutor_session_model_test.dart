@@ -35,6 +35,7 @@ void main() {
         expect(session.topicsCovered, []);
         expect(session.totalMessages, 0);
         expect(session.totalTokensUsed, 0);
+        expect(session.lessonId, isNull);
       });
 
       test('accepts all optional fields', () {
@@ -48,6 +49,7 @@ void main() {
           questionsAsked: 10, questionsCorrect: 8, confidenceRating: 4,
           tutorNotes: 'Good session', topicsCovered: ['Kinematics'],
           totalMessages: 25, totalTokensUsed: 5000,
+          lessonId: 'lesson-1',
         );
         expect(session.status, SessionStatus.completed);
         expect(session.endTime, endTime);
@@ -59,6 +61,74 @@ void main() {
         expect(session.topicsCovered, ['Kinematics']);
         expect(session.totalMessages, 25);
         expect(session.totalTokensUsed, 5000);
+        expect(session.lessonId, 'lesson-1');
+      });
+    });
+
+    group('lessonId', () {
+      test('defaults to null', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+        );
+        expect(session.lessonId, isNull);
+      });
+
+      test('can be set via constructor', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          lessonId: 'lesson-42',
+        );
+        expect(session.lessonId, 'lesson-42');
+      });
+
+      test('serializes and deserializes', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          lessonId: 'lesson-99',
+        );
+        final json = session.toJson();
+        expect(json['lessonId'], 'lesson-99');
+        final restored = TutorSession.fromJson(json);
+        expect(restored.lessonId, 'lesson-99');
+      });
+
+      test('copyWith preserves lessonId', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          lessonId: 'lesson-1',
+        );
+        final copy = session.copyWith();
+        expect(copy.lessonId, 'lesson-1');
+      });
+
+      test('copyWith updates lessonId', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          lessonId: 'lesson-1',
+        );
+        final copy = session.copyWith(lessonId: 'lesson-2');
+        expect(copy.lessonId, 'lesson-2');
+      });
+
+      test('copyWith clearLessonId clears lessonId', () {
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: startTime,
+          lessonId: 'lesson-1',
+        );
+        final copy = session.copyWith(clearLessonId: true);
+        expect(copy.lessonId, isNull);
       });
     });
 
@@ -297,12 +367,14 @@ void main() {
           status: SessionStatus.completed, endTime: endTime,
           questionsAsked: 15, questionsCorrect: 12,
           totalMessages: 30,
+          lessonId: 'lesson-roundtrip',
         );
         final restored = TutorSession.fromJson(original.toJson());
         expect(restored.id, original.id);
         expect(restored.status, original.status);
         expect(restored.questionsCorrect, original.questionsCorrect);
         expect(restored.totalMessages, original.totalMessages);
+        expect(restored.lessonId, 'lesson-roundtrip');
       });
 
       test('roundtrip without endTime', () {
@@ -368,6 +440,7 @@ void main() {
           topicsCovered: ['Topic A', 'Topic B'],
           totalMessages: 10,
           totalTokensUsed: 1000,
+          lessonId: 'lesson-new',
         );
         expect(copy.id, 'new-id');
         expect(copy.studentId, 'new-student');
@@ -376,6 +449,7 @@ void main() {
         expect(copy.lessonPlanJson, '{"plan": true}');
         expect(copy.topicsCovered, ['Topic A', 'Topic B']);
         expect(copy.totalTokensUsed, 1000);
+        expect(copy.lessonId, 'lesson-new');
       });
     });
 

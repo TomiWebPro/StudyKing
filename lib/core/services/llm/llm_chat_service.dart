@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../errors/result.dart';
 import '../conversation_memory.dart';
@@ -26,8 +27,9 @@ class LlmConfiguration {
 }
 
 class LlmService {
-  static String get defaultSystemPrompt =>
-      AppLocalizationsEn().aiDefaultSystemPrompt;
+  static String defaultSystemPromptForLocale(String localeName) {
+    return lookupAppLocalizations(Locale(localeName)).aiDefaultSystemPrompt;
+  }
 
   final LlmConfiguration config;
   final http.Client _httpClient;
@@ -49,6 +51,7 @@ class LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
@@ -57,7 +60,7 @@ class LlmService {
       return Result.failure('API key is empty');
     }
 
-    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPrompt;
+    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
     switch (config.provider) {
       case LlmProvider.openRouter:
@@ -73,6 +76,7 @@ class LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
@@ -81,7 +85,7 @@ class LlmService {
       return;
     }
 
-    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPrompt;
+    final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
     switch (config.provider) {
       case LlmProvider.openRouter:

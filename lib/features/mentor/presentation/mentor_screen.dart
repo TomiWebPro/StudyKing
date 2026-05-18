@@ -133,6 +133,34 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     });
   }
 
+  void _clearConversation() {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.clearConversation),
+        content: Text(l10n.clearConversation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _messages.clear();
+                _mentorService.memory.clear();
+              });
+              _sendWelcomeMessage();
+            },
+            child: Text(l10n.clearConversation),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _refreshCheck() {
     _loadSuggestedAction();
   }
@@ -396,6 +424,25 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             icon: const Icon(Icons.analytics_outlined),
             tooltip: l10n.progressReport,
             onPressed: _showProgressReport,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: l10n.moreOptions,
+            onSelected: (value) {
+              if (value == 'clear') {
+                _clearConversation();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'clear',
+                child: ListTile(
+                  leading: const Icon(Icons.refresh),
+                  title: Text(l10n.clearConversation),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),

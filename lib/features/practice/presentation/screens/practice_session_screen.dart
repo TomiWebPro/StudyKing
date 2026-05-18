@@ -230,7 +230,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             child: Text(l10n.uploadMaterials),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+              if (mounted) Navigator.of(context).pop();
+            },
             child: Text(l10n.ok),
           ),
         ],
@@ -572,13 +575,32 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                               if (!_isSubmitted)
                                 FocusTraversalOrder(
                                   order: const NumericFocusOrder(3),
-                                  child: Semantics(
-                                    label: l10n.submitAnswer,
-                                    child: FilledButton(
-                                      onPressed: _currentAnswer != null ? _submitAnswer : null,
-                                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                                      child: Text(l10n.submitAnswer),
-                                    ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Semantics(
+                                          label: l10n.submitAnswer,
+                                          child: FilledButton(
+                                            onPressed: _currentAnswer != null ? _submitAnswer : null,
+                                            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                                            child: Text(l10n.submitAnswer),
+                                          ),
+                                        ),
+                                      ),
+                                      if (_currentAnswer == null) ...[
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Semantics(
+                                            label: l10n.skip,
+                                            child: OutlinedButton(
+                                              onPressed: () => _nextQuestion(),
+                                              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                                              child: Text(l10n.skip),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                               if (_isSubmitted)
@@ -658,13 +680,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
               final isSelected = _currentConfidence == rating;
               return Semantics(
                 selected: isSelected,
-                child: InkWell(
+                  child: InkWell(
                   onTap: () => setState(() => _currentConfidence = rating),
                   borderRadius: BorderRadius.circular(24),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: ResponsiveUtils.minTouchTarget,
-                    height: ResponsiveUtils.minTouchTarget,
+                    width: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
+                    height: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? _getConfidenceColor(rating).withValues(alpha: 0.2)

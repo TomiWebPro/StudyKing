@@ -330,6 +330,7 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
   final scheduler = EngagementScheduler(
     tracker: ref.watch(engagementTrackerProvider),
     masteryService: ref.watch(engagementMasteryServiceProvider),
+    notificationService: ref.watch(notificationServiceProvider),
     nudgeRepository: ref.watch(engagementNudgeRepoProvider),
     adherenceRepository: ref.watch(engagementAdherenceRepoProvider),
     planAdapter: ref.watch(planAdapterProvider),

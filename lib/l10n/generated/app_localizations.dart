@@ -2048,6 +2048,66 @@ abstract class AppLocalizations {
   /// **'Type'**
   String get type;
 
+  /// Label for PDF source type
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get pdfLabel;
+
+  /// Label for syllabus source type
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus'**
+  String get syllabusLabel;
+
+  /// Label for textbook source type
+  ///
+  /// In en, this message translates to:
+  /// **'Textbook'**
+  String get textbookLabel;
+
+  /// Label for video source type
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get videoLabel;
+
+  /// Label for lecture notes source type
+  ///
+  /// In en, this message translates to:
+  /// **'Lecture Notes'**
+  String get lectureNotesLabel;
+
+  /// Label for external resource source type
+  ///
+  /// In en, this message translates to:
+  /// **'External Resource'**
+  String get externalResourceLabel;
+
+  /// Label for image source type
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get imageLabel;
+
+  /// Label for web page source type
+  ///
+  /// In en, this message translates to:
+  /// **'Web Page'**
+  String get webPageLabel;
+
+  /// Label for audio source type
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get audioLabel;
+
+  /// Label for document source type
+  ///
+  /// In en, this message translates to:
+  /// **'Document'**
+  String get documentLabel;
+
   /// Hint text for text answer input
   ///
   /// In en, this message translates to:
@@ -5462,7 +5522,7 @@ abstract class AppLocalizations {
   /// **'Study Sessions'**
   String get shareSessionsText;
 
-  /// Section header for summary
+  /// Section title for summary card on dashboard
   ///
   /// In en, this message translates to:
   /// **'Summary'**
@@ -5509,6 +5569,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get failed;
+
+  /// Label for queued LLM task status
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get llmStatusQueued;
+
+  /// Label for cancelled LLM task status
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get llmStatusCancelled;
 
   /// Hint text for subject ID field in planner
   ///
@@ -5963,7 +6035,7 @@ abstract class AppLocalizations {
   /// Data storage explanation
   ///
   /// In en, this message translates to:
-  /// **'StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.'**
+  /// **'StudyKing stores all your data locally on this device. To avoid data loss, use the Backup & Restore feature in Settings (Settings > Backup & Restore).'**
   String get dataStorageDescription;
 
   /// Tooltip for visibility toggle button
@@ -6624,7 +6696,7 @@ abstract class AppLocalizations {
   /// **'View your uploaded materials'**
   String get viewMyUploads;
 
-  /// Title for the question bank screen
+  /// Tile title for question bank
   ///
   /// In en, this message translates to:
   /// **'Question Bank'**
@@ -6659,6 +6731,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Break Duration'**
   String get breakDuration;
+
+  /// Title for session tracking section
+  ///
+  /// In en, this message translates to:
+  /// **'Session Tracking'**
+  String get sessionTracking;
+
+  /// Title for manual session tracker
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Session Tracker'**
+  String get manualSessionTracker;
+
+  /// Description for manual session tracking
+  ///
+  /// In en, this message translates to:
+  /// **'Track study time manually'**
+  String get manualSessionTrackerDescription;
+
+  /// Description for session history
+  ///
+  /// In en, this message translates to:
+  /// **'Review past study sessions'**
+  String get sessionHistoryDescription;
+
+  /// Export progress as CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Export Progress CSV'**
+  String get exportProgressCsv;
 
   /// Feature label for ingestion in token usage dialog
   ///
@@ -6761,6 +6863,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Question text'**
   String get questionText;
+
+  /// Title for the question bank screen
+  ///
+  /// In en, this message translates to:
+  /// **'Question Bank'**
+  String get questionBankScreen;
 
   /// Subtitle for a question item showing type and difficulty
   ///
@@ -6971,6 +7079,12 @@ abstract class AppLocalizations {
   /// **'Source not found'**
   String get sourceNotFound;
 
+  /// Error message when loading source fails
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred while loading the source. Please try again.'**
+  String get errorLoadingSource;
+
   /// Dialog title for source reprocessing
   ///
   /// In en, this message translates to:
@@ -7042,6 +7156,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Classify Now'**
   String get classifyNow;
+
+  /// Section header for summary
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summarySection;
 
   /// Placeholder when no summary exists
   ///
@@ -7204,36 +7324,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Topic: {topicTitle}'**
   String mentorScheduleTopic(String topicTitle);
-
-  /// Title for manual session tracker
-  ///
-  /// In en, this message translates to:
-  /// **'Manual Session Tracker'**
-  String get manualSessionTracker;
-
-  /// Description for manual session tracking
-  ///
-  /// In en, this message translates to:
-  /// **'Track study time manually'**
-  String get manualSessionTrackerDescription;
-
-  /// Description for session history
-  ///
-  /// In en, this message translates to:
-  /// **'Review past study sessions'**
-  String get sessionHistoryDescription;
-
-  /// Title for session tracking section
-  ///
-  /// In en, this message translates to:
-  /// **'Session Tracking'**
-  String get sessionTracking;
-
-  /// Export progress as CSV
-  ///
-  /// In en, this message translates to:
-  /// **'Export Progress CSV'**
-  String get exportProgressCsv;
 
   /// Button to create a new question
   ///
@@ -7402,6 +7492,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Settings'**
   String get viewInSettings;
+
+  /// Label for the greeting phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Greeting'**
+  String get phaseGreeting;
+
+  /// Label for the teaching phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Teaching'**
+  String get phaseTeaching;
+
+  /// Label for the exercise phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get phaseExercise;
+
+  /// Label for the feedback phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get phaseFeedback;
+
+  /// Label for the adaptive review phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Adaptive Review'**
+  String get phaseAdaptiveReview;
+
+  /// Label for the closing phase in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Closing'**
+  String get phaseClosing;
 }
 
 class _AppLocalizationsDelegate

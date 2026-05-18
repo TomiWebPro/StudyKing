@@ -10,6 +10,7 @@ import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -60,7 +61,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = AppLocalizations.of(context)!.somethingWentWrong;
         });
       }
     }
@@ -629,10 +630,19 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
   Future<void> _showSubjectFilter() async {
     final l10n = AppLocalizations.of(context)!;
-    final subjects = _allSessions.map((s) => s.subjectId).nonNulls.toSet().toList()..sort();
+    final subjectIds = _allSessions.map((s) => s.subjectId).nonNulls.toSet().toList()..sort();
+    if (subjectIds.isEmpty) return;
 
-    if (subjects.isEmpty) return;
+    final subjectRepo = SubjectRepository();
+    await subjectRepo.init();
+    final subjectNames = <String, String>{};
+    for (final id in subjectIds) {
+      final result = await subjectRepo.get(id);
+      final subject = result.data;
+      subjectNames[id] = subject?.name ?? id;
+    }
 
+    if (!mounted) return;
     final selected = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -641,13 +651,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
-            itemCount: subjects.length,
+            itemCount: subjectIds.length,
             itemBuilder: (context, index) {
-              final subject = subjects[index];
+              final id = subjectIds[index];
+              final name = subjectNames[id] ?? id;
               return ListTile(
-                title: Text(subject),
-                selected: subject == _selectedSubject,
-                onTap: () => Navigator.pop(context, subject),
+                title: Text(name),
+                selected: id == _selectedSubject,
+                onTap: () => Navigator.pop(context, id),
               );
             },
           ),

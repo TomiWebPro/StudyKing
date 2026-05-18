@@ -26,6 +26,7 @@ import 'package:studyking/features/practice/presentation/widgets/topic_selection
 import 'package:studyking/features/practice/presentation/widgets/weak_areas_sheet.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/services/prerequisite_check_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 
@@ -80,7 +81,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loadError = e.toString();
+        _loadError = AppLocalizations.of(context)!.somethingWentWrong;
       });
       AppErrorHandler.handleError(context, e, 'Subjects Load',
           retry: true, retryCallback: _retryLoadSubjects);
@@ -142,6 +143,23 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Future<void> _startTopicPractice(String topic) async {
     try {
+      final prereqCheck = PrerequisiteCheckService();
+      final prereqResult = await prereqCheck.checkPrerequisites(
+        topicId: topic,
+        studentId: _studentIdService.getStudentId(),
+      );
+      if (prereqResult.isSuccess &&
+          !prereqResult.data!.isReady &&
+          prereqResult.data!.unmetPrerequisiteTopics.isNotEmpty) {
+        if (mounted) {
+          await PrerequisiteCheckService.showPrerequisiteDialog(
+            context,
+            unmetTopics: prereqResult.data!.unmetPrerequisiteTopics,
+          );
+        }
+        return;
+      }
+
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
       final trimmedTopic = topic.trim();
@@ -642,7 +660,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
               Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 16),
               Text(
-                _loadError!,
+                l10n.somethingWentWrong,
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),

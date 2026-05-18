@@ -263,7 +263,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    task.status.name,
+                    _llmTaskStatusLabel(task.status, l10n),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -387,5 +387,20 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   String _formatTime(DateTime dt) {
     final l10n = AppLocalizations.of(context)!;
     return DateFormat.Hms(l10n.localeName).format(dt);
+  }
+
+  String _llmTaskStatusLabel(LlmTaskStatus status, AppLocalizations l10n) {
+    switch (status) {
+      case LlmTaskStatus.queued:
+        return l10n.llmStatusQueued;
+      case LlmTaskStatus.running:
+        return l10n.inProgress;
+      case LlmTaskStatus.done:
+        return l10n.completed;
+      case LlmTaskStatus.failed:
+        return l10n.failed;
+      case LlmTaskStatus.cancelled:
+        return l10n.llmStatusCancelled;
+    }
   }
 }

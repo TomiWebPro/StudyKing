@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
+import 'package:studyking/features/onboarding/services/onboarding_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -562,6 +563,28 @@ void main() {
       await tester.pump();
       expect(find.text('Local Data Storage'), findsOneWidget);
       expect(find.text('I Understand'), findsOneWidget);
+    });
+  });
+
+  group('persistence', () {
+    late Map<String, dynamic> storage;
+
+    setUp(() {
+      storage = <String, dynamic>{};
+      OnboardingService.setTestStorage(storage);
+    });
+
+    tearDown(() {
+      OnboardingService.setTestStorage(null);
+    });
+
+    testWidgets('Get Started persists onboarding_completed flag', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pump();
+      await tester.tap(find.text('Get Started'));
+      await tester.pump();
+
+      expect(storage['onboarding_completed'], isTrue);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class NotFoundScreen extends StatelessWidget {
@@ -47,10 +48,14 @@ class NotFoundScreen extends StatelessWidget {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: onGoToDashboard ?? () {
-                  // Try to pop back to tab structure first
                   final navigator = Navigator.of(context);
                   if (navigator.canPop()) {
                     navigator.pop();
+                  } else {
+                    navigator.pushNamedAndRemoveUntil(
+                      AppRoutes.dashboard,
+                      (route) => false,
+                    );
                   }
                 },
                 icon: const Icon(Icons.dashboard),

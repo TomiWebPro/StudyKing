@@ -19,7 +19,9 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 
@@ -291,6 +293,72 @@ void main() {
       final result = await service.getAllTopicMastery('student-1');
       expect(result.isFailure, isTrue);
     });
+
+    test('spacedRepetitionServiceProvider updateNextReviewDate uses overridden repos', () async {
+      final now = DateTime(2026, 5, 1);
+      final question = Question(
+        id: 'q-behave',
+        subjectId: 'sub-1',
+        topicId: 't-1',
+        text: 'Behavioral test question?',
+        type: QuestionType.typedAnswer,
+        difficulty: 2,
+        markscheme: Markscheme(correctAnswer: 'yes'),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final questionRepo = _FakeQuestionRepo([question]);
+      final attemptRepo = FakeAttemptRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(questionRepo),
+          attemptRepositoryProvider.overrideWithValue(attemptRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final srService = container.read(spacedRepetitionServiceProvider);
+      final result = await srService.updateNextReviewDate('q-behave', 0.9);
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('spacedRepetitionServiceProvider handles error-state when questionRepo fails', () async {
+      final failingQuestionRepo = _FailingQuestionRepo();
+      final attemptRepo = FakeAttemptRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(failingQuestionRepo),
+          attemptRepositoryProvider.overrideWithValue(attemptRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final srService = container.read(spacedRepetitionServiceProvider);
+      final result = await srService.updateNextReviewDate('q-nonexistent', 0.5);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('mistakeReviewServiceProvider handles error-state when attemptRepo fails', () async {
+      final failingAttemptRepo = _FailingAttemptRepository();
+      final questionRepo = _FakeQuestionRepo([]);
+
+      final container = ProviderContainer(
+        overrides: [
+          attemptRepositoryProvider.overrideWithValue(failingAttemptRepo),
+          questionRepositoryProvider.overrideWithValue(questionRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final mistakeService = container.read(mistakeReviewServiceProvider);
+      final mistakes = await mistakeService.getMistakesFromSession(
+        studentId: 'student-1',
+        subjectId: 'sub-1',
+      );
+      expect(mistakes, isEmpty);
+    });
   });
 }
 
@@ -300,11 +368,27 @@ class _FakeQuestionRepo extends QuestionRepository {
   _FakeQuestionRepo([this._questions = const []]);
 
   @override
+  Future<void> init() async {}
+
+  @override
   Future<Result<List<Question>>> getAll() async => Result.success(_questions);
 
   @override
   Future<Result<Question?>> get(String key) async =>
       Result.success(_questions.where((q) => q.id == key).firstOrNull);
+}
+
+class _FailingQuestionRepo extends QuestionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<Question?>> get(String key) async =>
+      Result.failure('Question repo failure');
+
+  @override
+  Future<Result<List<Question>>> getAll() async =>
+      Result.failure('Question repo failure');
 }
 
 class _FailingMasteryStateRepo extends MasteryStateRepository {
@@ -377,6 +461,33 @@ class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
         );
 }
 
+class _FailingAttemptRepository extends AttemptRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async =>
+      Result.failure('Attempt repo failure');
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async =>
+      Result.failure('Attempt repo failure');
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async =>
+      Result.failure('Attempt repo failure');
+
+  @override
+  Future<Result<void>> delete(String key) async =>
+      Result.failure('Attempt repo failure');
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
+      String studentId, String subjectId) async {
+    return Result.failure('Attempt repo failure');
+  }
+}
+
 class FakeAttemptRepositoryWithSeed extends AttemptRepository {
   final List<StudentAttempt> _attempts;
   FakeAttemptRepositoryWithSeed(this._attempts);
@@ -396,4 +507,10 @@ class FakeAttemptRepositoryWithSeed extends AttemptRepository {
 
   @override
   Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
+      String studentId, String subjectId) async {
+    return Result.success(_attempts);
+  }
 }

@@ -3,16 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLessonRepository extends LessonRepository {
@@ -40,16 +41,18 @@ class _FakeLessonRepository extends LessonRepository {
   Future<Result<void>> create(Lesson lesson) async => Result.success(null);
 }
 
-class _FakeTutorSessionRepository extends TutorSessionRepository {
-  final List<TutorSession> _sessions;
+class _FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions;
 
-  _FakeTutorSessionRepository({List<TutorSession>? sessions})
-      : _sessions = sessions ?? [];
+  _FakeSessionRepository({List<Session>? sessions}) : _sessions = sessions ?? [];
 
   @override
-  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
     return Result.success(_sessions);
   }
+
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
 
   @override
   Future<void> init() async {}
@@ -58,18 +61,19 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
 Widget _buildTestApp({
   LessonListArgs args = const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
   List<Lesson>? lessons,
-  List<TutorSession>? sessions,
+  List<Session>? sessions,
   bool shouldThrow = false,
   TestNavigatorObserver? navigatorObserver,
 }) {
   final lessonRepo = _FakeLessonRepository(lessons: lessons);
   lessonRepo.shouldThrow = shouldThrow;
-  final tutorSessionRepo = _FakeTutorSessionRepository(sessions: sessions);
+  final sessionRepo = _FakeSessionRepository(sessions: sessions);
 
   return ProviderScope(
     overrides: [
       lessonRepositoryProvider.overrideWithValue(lessonRepo),
-      tutorSessionRepositoryProvider.overrideWithValue(tutorSessionRepo),
+      sessionRepositoryProvider.overrideWithValue(sessionRepo),
+      studentIdValueProvider.overrideWith((ref) => 'test-student'),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -82,9 +86,16 @@ Widget _buildTestApp({
         ),
       ),
       onGenerateRoute: (settings) {
-        if (settings.name == '/lesson-detail') {
+        if (settings.name == AppRoutes.lessonDetail) {
           return MaterialPageRoute(
+            settings: settings,
             builder: (_) => const Scaffold(body: Text('Lesson Detail')),
+          );
+        }
+        if (settings.name == AppRoutes.tutor) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Tutor Screen')),
           );
         }
         return null;
@@ -123,8 +134,8 @@ void main() {
       expect(find.text('Algebra'), findsOneWidget);
       expect(find.text('Intro to Algebra'), findsOneWidget);
       expect(find.text('Equations'), findsOneWidget);
-      expect(find.text('1 block'), findsOneWidget);
-      expect(find.text('0 blocks'), findsOneWidget);
+      expect(find.text('1 block').first, findsOneWidget);
+      expect(find.text('0 blocks').first, findsOneWidget);
     });
 
     testWidgets('shows empty state with Start AI Tutoring button when no lessons', (tester) async {
@@ -134,6 +145,26 @@ void main() {
       expect(find.text('No lessons - use Planner to generate!'), findsOneWidget);
       expect(find.text('Start AI Tutoring'), findsOneWidget);
       expect(find.byIcon(Icons.smart_toy), findsOneWidget);
+      expect(find.byIcon(Icons.school_outlined), findsOneWidget);
+    });
+
+    testWidgets('empty state Start AI Tutoring navigates to tutor', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(
+        lessons: [],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Start AI Tutoring'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Tutor Screen'), findsOneWidget);
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/tutor'),
+        isTrue,
+      );
     });
 
     testWidgets('displays book and play_arrow icons for lessons', (tester) async {
@@ -159,13 +190,16 @@ void main() {
           createdAt: now,
         ),
       ], sessions: [
-        TutorSession(
-          id: 'ts1', studentId: 'test-student', subjectId: 's1',
-          topicId: 'l1', topicTitle: 'Lesson 1',
+        Session(
+          id: 's1',
+          studentId: 'test-student',
+          subjectId: 's1',
+          topicId: 'l1',
+          type: SessionType.tutoring,
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 30)),
+          completed: true,
           status: SessionStatus.completed,
-          startTime: now, plannedDurationMinutes: 30,
-          lessonPlanJson: '', questionsAsked: 0, questionsCorrect: 0,
-          confidenceRating: 0,
         ),
       ]));
       await tester.pumpAndSettle();
@@ -183,13 +217,16 @@ void main() {
           createdAt: now,
         ),
       ], sessions: [
-        TutorSession(
-          id: 'ts1', studentId: 'test-student', subjectId: 's1',
-          topicId: 'l1', topicTitle: 'Lesson 1',
+        Session(
+          id: 's1',
+          studentId: 'test-student',
+          subjectId: 's1',
+          topicId: 'l1',
+          type: SessionType.tutoring,
+          startTime: now,
+          endTime: null,
+          completed: false,
           status: SessionStatus.inProgress,
-          startTime: now, plannedDurationMinutes: 30,
-          lessonPlanJson: '', questionsAsked: 0, questionsCorrect: 0,
-          confidenceRating: 0,
         ),
       ]));
       await tester.pumpAndSettle();
@@ -212,6 +249,32 @@ void main() {
       expect(find.byIcon(Icons.smart_toy_outlined), findsOneWidget);
     });
 
+    testWidgets('AI Tutoring app bar icon navigates to tutor', (tester) async {
+      final observer = TestNavigatorObserver();
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(
+        lessons: [
+          Lesson(
+            id: 'l1', subjectId: 's1', title: 'Lesson 1',
+            topicId: 't1', blocks: [],
+            createdAt: now,
+          ),
+        ],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.smart_toy_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Tutor Screen'), findsOneWidget);
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/tutor'),
+        isTrue,
+      );
+    });
+
     testWidgets('shows error snackbar with retry when load fails', (tester) async {
       await tester.pumpWidget(_buildTestApp(shouldThrow: true));
       await tester.pump();
@@ -219,6 +282,74 @@ void main() {
 
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('retry callback shows snackbar and retries load', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeLessonRepository(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Lesson 1',
+          topicId: 't1', blocks: [], createdAt: now,
+        ),
+      ]);
+      repo.shouldThrow = true;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(repo),
+            sessionRepositoryProvider.overrideWithValue(
+              _FakeSessionRepository(sessions: [
+                Session(
+                  id: 's1', studentId: 'test-student', subjectId: 's1',
+                  topicId: 'l1', type: SessionType.tutoring,
+                  startTime: now, completed: true,
+                  status: SessionStatus.completed,
+                ),
+              ]),
+            ),
+            studentIdValueProvider.overrideWith((ref) => 'test-student'),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Builder(
+              builder: (context) => const Scaffold(
+                body: LessonListScreen(
+                  args: LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
+                ),
+              ),
+            ),
+            onGenerateRoute: (settings) {
+              if (settings.name == AppRoutes.lessonDetail) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => const Scaffold(body: Text('Lesson Detail')),
+                );
+              }
+              if (settings.name == AppRoutes.tutor) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => const Scaffold(body: Text('Tutor Screen')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+
+      repo.shouldThrow = false;
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Lesson 1'), findsOneWidget);
     });
 
     testWidgets('navigates to lesson detail on lesson tap', (tester) async {
@@ -316,4 +447,3 @@ void main() {
     });
   });
 }
-

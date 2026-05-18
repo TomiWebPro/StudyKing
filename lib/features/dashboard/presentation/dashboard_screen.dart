@@ -33,7 +33,6 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final allMasteryAsync = ref.watch(dashboardAllMasteryProvider(studentId));
     final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
     final overallStatsAsync = ref.watch(dashboardOverallStatsProvider(studentId));
@@ -66,16 +65,6 @@ class DashboardScreen extends ConsumerWidget {
         badgesData.isEmpty &&
         (workloadData == null || workloadData.totalQuestions == 0) &&
         (dueReviewsData == null || dueReviewsData.totalDue == 0);
-
-    final hasAnyError = overallStatsAsync.hasError ||
-        snapshotAsync.hasError ||
-        weeklyTrendAsync.hasError ||
-        focusStatsAsync.hasError ||
-        adherenceAsync.hasError ||
-        topicNamesAsync.hasError ||
-        badgesAsync.hasError ||
-        workloadAsync.hasError ||
-        dueReviewsAsync.hasError;
 
     final isFirstLoad = overallStatsAsync.isLoading &&
         snapshotAsync.isLoading &&
@@ -110,23 +99,6 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             if (isFirstLoad)
               _buildSkeletonLoading(context)
-            else if (hasAnyError)
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-                    const SizedBox(height: 12),
-                    Text(l10n.somethingWentWrong, style: theme.textTheme.bodyLarge),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: () { ref.invalidate(dashboardInitProvider); },
-                      icon: const Icon(Icons.refresh),
-                      label: Text(l10n.retry),
-                    ),
-                  ],
-                ),
-              )
             else if (allEmpty)
               const EmptyDashboardChecklist()
             else ...[

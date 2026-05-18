@@ -6,6 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/data/models/session_model.dart';
+import '../../../core/data/models/subject_model.dart';
+import '../../../features/subjects/data/repositories/subject_repository.dart';
+import '../../../features/subjects/data/repositories/topic_repository.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import '../providers/planner_providers.dart';
 import 'widgets/plan_summary_card.dart';
@@ -26,6 +29,8 @@ class PlannerScreen extends ConsumerStatefulWidget {
 }
 
 class _SyllabusEntry {
+  String? selectedSubjectId;
+  String? selectedSubjectTitle;
   final TextEditingController subjectController;
   final TextEditingController daysController;
   final TextEditingController hoursController;
@@ -51,6 +56,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   final TextEditingController _hoursController = TextEditingController();
   final List<_SyllabusEntry> _syllabusEntries = [];
   bool _useMultiSyllabus = false;
+  List<Subject> _allSubjects = [];
 
   @override
   void initState() {
@@ -62,6 +68,22 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(plannerProvider.notifier).loadAdditionalData();
     });
+    _loadSubjects();
+  }
+
+  Future<void> _loadSubjects() async {
+    try {
+      final repo = SubjectRepository();
+      await repo.init();
+      final result = await repo.getAll();
+      if (mounted) {
+        setState(() {
+          _allSubjects = result.data ?? [];
+        });
+      }
+    } catch (e) {
+      // Subjects loaded silently
+    }
   }
 
   @override
@@ -126,7 +148,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
     if (_useMultiSyllabus) {
       final validEntries = _syllabusEntries.where((e) =>
-          e.subjectController.text.trim().isNotEmpty &&
+          e.selectedSubjectId != null &&
+          e.selectedSubjectId!.isNotEmpty &&
           int.tryParse(e.daysController.text) != null &&
           int.tryParse(e.hoursController.text) != null &&
           int.parse(e.daysController.text) > 0 &&
@@ -140,9 +163,25 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         return;
       }
 
+      for (final entry in validEntries) {
+        final topicRepo = TopicRepository();
+        await topicRepo.init();
+        final topicsResult = await topicRepo.getBySubject(entry.selectedSubjectId!);
+        final topics = topicsResult.data ?? [];
+        if (topics.isEmpty) {
+          final subjectName = entry.selectedSubjectTitle ?? entry.selectedSubjectId!;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$subjectName has no topics. Add topics first or upload a syllabus.')),
+            );
+          }
+          return;
+        }
+      }
+
       final syllabusGoals = validEntries.map((e) => SyllabusGoal(
-        subjectId: '',
-        subjectTitle: e.subjectController.text.trim(),
+        subjectId: e.selectedSubjectId!,
+        subjectTitle: e.selectedSubjectTitle ?? e.subjectController.text.trim(),
         targetDays: int.parse(e.daysController.text),
         targetHoursPerDay: int.parse(e.hoursController.text),
       )).toList();
@@ -173,6 +212,38 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         SnackBar(content: Text(l10nGen.fillAllFieldsCorrectly)),
       );
       return;
+    }
+
+    if (_allSubjects.isNotEmpty) {
+      final matchingSubject = _allSubjects.where(
+        (s) => s.name.toLowerCase() == course.toLowerCase(),
+      ).firstOrNull;
+      if (matchingSubject == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10nGen.errorWithMessage(
+              "No subject named '$course' found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.",
+            )),
+          ),
+        );
+        return;
+      }
+      final topicRepo = TopicRepository();
+      await topicRepo.init();
+      final topicsResult = await topicRepo.getBySubject(matchingSubject.id);
+      final hasTopics = (topicsResult.data ?? []).isNotEmpty;
+      if (!hasTopics) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10nGen.errorWithMessage(
+              "'$course' has no topics. Upload a syllabus to auto-create topics, or add topics manually.",
+            )),
+          ),
+        );
+        return;
+      }
     }
 
     await ref.read(plannerProvider.notifier).generatePlan(
@@ -356,6 +427,16 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   border: const OutlineInputBorder(),
                 ),
               ),
+              if (_allSubjects.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 4),
+                  child: Text(
+                    'Enter an existing subject name to base the plan on its syllabus',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -469,14 +550,31 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: e.subjectController,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: e.selectedSubjectId,
                           decoration: InputDecoration(
                             labelText: '${l10n.courseSubject} ${index + 1}',
-                            hintText: l10n.courseHint,
                             border: const OutlineInputBorder(),
                             isDense: true,
                           ),
+                          hint: Text(l10n.courseHint),
+                          isExpanded: true,
+                          items: [
+                            ..._allSubjects.map((s) => DropdownMenuItem(
+                              value: s.id,
+                              child: Text(s.name, overflow: TextOverflow.ellipsis),
+                            )),
+                          ],
+                          onChanged: (v) {
+                            setState(() {
+                              e.selectedSubjectId = v;
+                              e.selectedSubjectTitle = _allSubjects
+                                  .where((s) => s.id == v)
+                                  .firstOrNull
+                                  ?.name;
+                              e.subjectController.text = e.selectedSubjectTitle ?? '';
+                            });
+                          },
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -522,6 +620,24 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                       ),
                     ],
                   ),
+                  if (e.selectedSubjectId != null) ...[
+                    const SizedBox(height: 4),
+                    FutureBuilder<int>(
+                      future: _getTopicCount(e.selectedSubjectId!),
+                      builder: (ctx, snap) {
+                        final count = snap.data ?? 0;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            '$count topics found',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -534,6 +650,17 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ),
       ],
     );
+  }
+
+  Future<int> _getTopicCount(String subjectId) async {
+    try {
+      final topicRepo = TopicRepository();
+      await topicRepo.init();
+      final result = await topicRepo.getBySubject(subjectId);
+      return result.data?.length ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Widget _buildSubjectProgressTabs(AppLocalizations l10n, PlannerState state) {

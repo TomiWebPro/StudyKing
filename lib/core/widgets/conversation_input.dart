@@ -36,6 +36,17 @@ class ConversationInput extends StatefulWidget {
 }
 
 class _ConversationInputState extends State<ConversationInput> {
+  bool _isSendingInternal = false;
+
+  void _debouncedSend() {
+    if (!widget.isEnabled || widget.isLoading || _isSendingInternal) return;
+    _isSendingInternal = true;
+    widget.onSend();
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) setState(() => _isSendingInternal = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -107,10 +118,7 @@ class _ConversationInputState extends State<ConversationInput> {
                           vertical: 12,
                         ),
                       ),
-                      onSubmitted: (_) {
-                        if (!widget.isEnabled || widget.isLoading) return;
-                        widget.onSend();
-                      },
+                      onSubmitted: (_) => _debouncedSend(),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -128,8 +136,8 @@ class _ConversationInputState extends State<ConversationInput> {
                               ),
                             )
                           : const Icon(Icons.send_rounded),
-                      onPressed: widget.isEnabled && !widget.isLoading
-                          ? widget.onSend
+                      onPressed: widget.isEnabled && !widget.isLoading && !_isSendingInternal
+                          ? _debouncedSend
                           : null,
                       tooltip: widget.isLoading
                           ? AppLocalizations.of(context)!.sending

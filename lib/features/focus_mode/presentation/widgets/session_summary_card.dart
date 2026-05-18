@@ -55,8 +55,8 @@ class SessionSummaryCard extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    SizedBox(
-                      width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: narrow ? (constraints.maxWidth - 12) / 2 : 140),
                       child: MetricCard(
                         icon: Icons.access_time,
                         value: formatDurationFromContext(context, Duration(milliseconds: todayMs)),
@@ -64,8 +64,8 @@ class SessionSummaryCard extends StatelessWidget {
                         accent: cs.primary,
                       ),
                     ),
-                    SizedBox(
-                      width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: narrow ? (constraints.maxWidth - 12) / 2 : 140),
                       child: MetricCard(
                         icon: Icons.date_range,
                         value: formatDurationFromContext(context, Duration(milliseconds: weeklyMs)),
@@ -73,8 +73,8 @@ class SessionSummaryCard extends StatelessWidget {
                         accent: cs.tertiary,
                       ),
                     ),
-                    SizedBox(
-                      width: narrow ? (constraints.maxWidth - 12) / 2 : 140,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: narrow ? (constraints.maxWidth - 12) / 2 : 140),
                       child: MetricCard(
                         icon: Icons.check_circle,
                         value: '$completed/$total',

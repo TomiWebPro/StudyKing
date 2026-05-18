@@ -45,6 +45,14 @@ void main() {
     test('returns plain string for small numbers', () {
       expect(formatCompactNumber(999, 'es'), '999');
     });
+
+    test('en locale formats millions', () {
+      expect(formatCompactNumber(1500000, 'en'), '1.5M');
+    });
+
+    test('zero returns zero', () {
+      expect(formatCompactNumber(0, 'en'), '0');
+    });
   });
 
   group('formatHours', () {

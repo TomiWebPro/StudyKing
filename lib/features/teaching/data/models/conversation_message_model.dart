@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 enum MessageRole { system, tutor, student, mentor }
 
-enum MessageType { text, exercise, quiz, feedback, plan, system }
+enum MessageType { text, exercise, quiz, feedback, plan, system, toolCall, toolResult }
 
 @HiveType(typeId: 27)
 class ConversationMessage extends HiveObject {
@@ -33,6 +33,18 @@ class ConversationMessage extends HiveObject {
   @HiveField(8)
   final bool isStreaming;
 
+  @HiveField(9)
+  final String? toolCallId;
+
+  @HiveField(10)
+  final String? toolName;
+
+  @HiveField(11)
+  final String? toolArguments;
+
+  @HiveField(12)
+  final String? toolResult;
+
   ConversationMessage({
     required this.id,
     required this.sessionId,
@@ -43,6 +55,10 @@ class ConversationMessage extends HiveObject {
     required this.timestamp,
     this.tokenCount = 0,
     this.isStreaming = false,
+    this.toolCallId,
+    this.toolName,
+    this.toolArguments,
+    this.toolResult,
   });
 
   ConversationMessage copyWith({
@@ -55,6 +71,10 @@ class ConversationMessage extends HiveObject {
     DateTime? timestamp,
     int? tokenCount,
     bool? isStreaming,
+    String? toolCallId,
+    String? toolName,
+    String? toolArguments,
+    String? toolResult,
   }) {
     return ConversationMessage(
       id: id ?? this.id,
@@ -66,6 +86,10 @@ class ConversationMessage extends HiveObject {
       timestamp: timestamp ?? this.timestamp,
       tokenCount: tokenCount ?? this.tokenCount,
       isStreaming: isStreaming ?? this.isStreaming,
+      toolCallId: toolCallId ?? this.toolCallId,
+      toolName: toolName ?? this.toolName,
+      toolArguments: toolArguments ?? this.toolArguments,
+      toolResult: toolResult ?? this.toolResult,
     );
   }
 
@@ -79,6 +103,10 @@ class ConversationMessage extends HiveObject {
     'timestamp': timestamp.toIso8601String(),
     'tokenCount': tokenCount,
     'isStreaming': isStreaming,
+    'toolCallId': toolCallId,
+    'toolName': toolName,
+    'toolArguments': toolArguments,
+    'toolResult': toolResult,
   };
 
   factory ConversationMessage.fromJson(Map<String, dynamic> json) => ConversationMessage(
@@ -91,5 +119,9 @@ class ConversationMessage extends HiveObject {
     timestamp: DateTime.parse(json['timestamp']),
     tokenCount: json['tokenCount'] ?? 0,
     isStreaming: json['isStreaming'] ?? false,
+    toolCallId: json['toolCallId'],
+    toolName: json['toolName'],
+    toolArguments: json['toolArguments'],
+    toolResult: json['toolResult'],
   );
 }

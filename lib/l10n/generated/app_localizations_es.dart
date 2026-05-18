@@ -1141,6 +1141,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get type => 'Tipo';
 
   @override
+  String get pdfLabel => 'PDF';
+
+  @override
+  String get syllabusLabel => 'Plan de estudios';
+
+  @override
+  String get textbookLabel => 'Libro de texto';
+
+  @override
+  String get videoLabel => 'Video';
+
+  @override
+  String get lectureNotesLabel => 'Apuntes de clase';
+
+  @override
+  String get externalResourceLabel => 'Recurso externo';
+
+  @override
+  String get imageLabel => 'Imagen';
+
+  @override
+  String get webPageLabel => 'Página web';
+
+  @override
+  String get audioLabel => 'Audio';
+
+  @override
+  String get documentLabel => 'Documento';
+
+  @override
   String get typeYourAnswerHere => 'Escriba su respuesta aquí...';
 
   @override
@@ -3222,6 +3252,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get failed => 'Fallidas';
 
   @override
+  String get llmStatusQueued => 'En cola';
+
+  @override
+  String get llmStatusCancelled => 'Cancelada';
+
+  @override
   String get subjectIdHint => 'p. ej. sub_física';
 
   @override
@@ -3940,7 +3976,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get viewMyUploads => 'Ver sus materiales cargados';
 
   @override
-  String get questionBank => 'Banco de preguntas';
+  String get questionBank => 'Banco de Preguntas';
 
   @override
   String get browseAndManageQuestions => 'Explorar y gestionar preguntas';
@@ -3964,6 +4000,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get breakDuration => 'Duración del Descanso';
+
+  @override
+  String get sessionTracking => 'Seguimiento de Sesiones';
+
+  @override
+  String get manualSessionTracker => 'Rastreador de Sesiones Manual';
+
+  @override
+  String get manualSessionTrackerDescription =>
+      'Seguimiento manual del tiempo de estudio';
+
+  @override
+  String get sessionHistoryDescription =>
+      'Revisar sesiones de estudio anteriores';
+
+  @override
+  String get exportProgressCsv => 'Exportar Progreso CSV';
 
   @override
   String get featureLabelIngestion => 'Ingestión';
@@ -4036,6 +4089,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get questionText => 'Texto de la pregunta';
+
+  @override
+  String get questionBankScreen => 'Banco de preguntas';
 
   @override
   String questionSubtitle(String questionType, String difficulty) {
@@ -4174,6 +4230,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sourceNotFound => 'Fuente no encontrada';
 
   @override
+  String get errorLoadingSource =>
+      'Ocurrió un error al cargar la fuente. Intente de nuevo.';
+
+  @override
   String get reprocessSource => 'Reprocesar Fuente';
 
   @override
@@ -4209,6 +4269,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get classifyNow => 'Clasificar Ahora';
+
+  @override
+  String get summarySection => 'Resumen';
 
   @override
   String get noSummaryAvailable => 'No hay resumen disponible';
@@ -4307,23 +4370,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get manualSessionTracker => 'Rastreador de Sesiones Manual';
-
-  @override
-  String get manualSessionTrackerDescription =>
-      'Seguimiento manual del tiempo de estudio';
-
-  @override
-  String get sessionHistoryDescription =>
-      'Revisar sesiones de estudio anteriores';
-
-  @override
-  String get sessionTracking => 'Seguimiento de Sesiones';
-
-  @override
-  String get exportProgressCsv => 'Exportar Progreso CSV';
-
-  @override
   String get createQuestion => 'Crear Pregunta';
 
   @override
@@ -4359,8 +4405,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los datos sensibles serán excluidos. Necesitará reingresar su clave API después de la restauración.';
 
   @override
-  String get selectBoxesToRestore =>
-      'Seleccionar secciones para restaurar';
+  String get selectBoxesToRestore => 'Seleccionar secciones para restaurar';
 
   @override
   String get selectAll => 'Seleccionar Todo';
@@ -4398,7 +4443,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String aiTaskFailedBody(String feature, String error) {
-    return "La tarea '$feature' falló. $error";
+    return 'La tarea \'$feature\' falló. $error';
   }
 
   @override
@@ -4415,4 +4460,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get viewInSettings => 'Abrir Configuración';
+
+  @override
+  String get phaseGreeting => 'Saludo';
+
+  @override
+  String get phaseTeaching => 'Enseñanza';
+
+  @override
+  String get phaseExercise => 'Ejercicio';
+
+  @override
+  String get phaseFeedback => 'Retroalimentación';
+
+  @override
+  String get phaseAdaptiveReview => 'Revisión Adaptativa';
+
+  @override
+  String get phaseClosing => 'Cierre';
 }

@@ -1127,6 +1127,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get type => 'Type';
 
   @override
+  String get pdfLabel => 'PDF';
+
+  @override
+  String get syllabusLabel => 'Syllabus';
+
+  @override
+  String get textbookLabel => 'Textbook';
+
+  @override
+  String get videoLabel => 'Video';
+
+  @override
+  String get lectureNotesLabel => 'Lecture Notes';
+
+  @override
+  String get externalResourceLabel => 'External Resource';
+
+  @override
+  String get imageLabel => 'Image';
+
+  @override
+  String get webPageLabel => 'Web Page';
+
+  @override
+  String get audioLabel => 'Audio';
+
+  @override
+  String get documentLabel => 'Document';
+
+  @override
   String get typeYourAnswerHere => 'Type your answer here...';
 
   @override
@@ -3186,6 +3216,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failed => 'Failed';
 
   @override
+  String get llmStatusQueued => 'Queued';
+
+  @override
+  String get llmStatusCancelled => 'Cancelled';
+
+  @override
   String get subjectIdHint => 'e.g. sub_physics';
 
   @override
@@ -3920,6 +3956,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get breakDuration => 'Break Duration';
 
   @override
+  String get sessionTracking => 'Session Tracking';
+
+  @override
+  String get manualSessionTracker => 'Manual Session Tracker';
+
+  @override
+  String get manualSessionTrackerDescription => 'Track study time manually';
+
+  @override
+  String get sessionHistoryDescription => 'Review past study sessions';
+
+  @override
+  String get exportProgressCsv => 'Export Progress CSV';
+
+  @override
   String get featureLabelIngestion => 'Ingestion';
 
   @override
@@ -3988,6 +4039,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get questionText => 'Question text';
+
+  @override
+  String get questionBankScreen => 'Question Bank';
 
   @override
   String questionSubtitle(String questionType, String difficulty) {
@@ -4125,6 +4179,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceNotFound => 'Source not found';
 
   @override
+  String get errorLoadingSource =>
+      'An error occurred while loading the source. Please try again.';
+
+  @override
   String get reprocessSource => 'Reprocess Source';
 
   @override
@@ -4160,6 +4218,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get classifyNow => 'Classify Now';
+
+  @override
+  String get summarySection => 'Summary';
 
   @override
   String get noSummaryAvailable => 'No summary available';
@@ -4258,21 +4319,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get manualSessionTracker => 'Manual Session Tracker';
-
-  @override
-  String get manualSessionTrackerDescription => 'Track study time manually';
-
-  @override
-  String get sessionHistoryDescription => 'Review past study sessions';
-
-  @override
-  String get sessionTracking => 'Session Tracking';
-
-  @override
-  String get exportProgressCsv => 'Export Progress CSV';
-
-  @override
   String get createQuestion => 'Create Question';
 
   @override
@@ -4345,7 +4391,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aiTaskFailedBody(String feature, String error) {
-    return "Task '$feature' failed. $error";
+    return 'Task \'$feature\' failed. $error';
   }
 
   @override
@@ -4362,4 +4408,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewInSettings => 'Open Settings';
+
+  @override
+  String get phaseGreeting => 'Greeting';
+
+  @override
+  String get phaseTeaching => 'Teaching';
+
+  @override
+  String get phaseExercise => 'Exercise';
+
+  @override
+  String get phaseFeedback => 'Feedback';
+
+  @override
+  String get phaseAdaptiveReview => 'Adaptive Review';
+
+  @override
+  String get phaseClosing => 'Closing';
 }

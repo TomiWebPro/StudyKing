@@ -6,6 +6,7 @@ import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectListScreen extends ConsumerWidget {
@@ -140,7 +141,7 @@ class SubjectListScreen extends ConsumerWidget {
                   ),
                   child: Icon(
                     subject.icon,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    color: ColorUtils.contrastingTextColor(ColorUtils.stringToColor(subject.color)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -165,12 +166,22 @@ class SubjectListScreen extends ConsumerWidget {
                         children: [
                           const Icon(Icons.timer, size: 14),
                           const SizedBox(width: 4),
-                          Text(
-                            l10n.practiceSessions,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          FutureBuilder<int>(
+                            future: SessionRepository().getBySubject(subject.id).then(
+                              (r) => (r.data ?? []).length,
+                            ).catchError((_) => 0),
+                            builder: (context, snapshot) {
+                              final count = snapshot.data ?? 0;
+                              return Text(
+                                count > 0
+                                    ? l10n.sessionsCount(count)
+                                    : l10n.practiceSessions,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

@@ -264,6 +264,8 @@ void main() {
         MessageType.feedback,
         MessageType.plan,
         MessageType.system,
+        MessageType.toolCall,
+        MessageType.toolResult,
       ]);
     });
 
@@ -280,6 +282,84 @@ void main() {
         final restored = ConversationMessage.fromJson(msg.toJson());
         expect(restored.type, type, reason: 'Failed for type: $type');
       }
+    });
+  });
+
+  group('tool fields', () {
+    test('creates tool call message', () {
+      final msg = ConversationMessage(
+        id: 'tool-1',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: '',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_123',
+        toolName: 'searchQuestions',
+        toolArguments: '{"topic": "physics"}',
+      );
+      expect(msg.type, MessageType.toolCall);
+      expect(msg.toolCallId, 'call_123');
+      expect(msg.toolName, 'searchQuestions');
+      expect(msg.toolArguments, '{"topic": "physics"}');
+    });
+
+    test('creates tool result message', () {
+      final msg = ConversationMessage(
+        id: 'result-1',
+        sessionId: 'session-1',
+        role: MessageRole.system,
+        type: MessageType.toolResult,
+        content: '',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_123',
+        toolResult: 'Found 5 questions',
+      );
+      expect(msg.type, MessageType.toolResult);
+      expect(msg.toolCallId, 'call_123');
+      expect(msg.toolResult, 'Found 5 questions');
+    });
+
+    test('serializes and deserializes tool fields', () {
+      final original = ConversationMessage(
+        id: 'tool-roundtrip',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: '',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_456',
+        toolName: 'scheduleLesson',
+        toolArguments: '{"time": "10:00"}',
+        toolResult: null,
+      );
+      final json = original.toJson();
+      expect(json['toolCallId'], 'call_456');
+      expect(json['toolName'], 'scheduleLesson');
+      expect(json['toolArguments'], '{"time": "10:00"}');
+
+      final restored = ConversationMessage.fromJson(json);
+      expect(restored.toolCallId, 'call_456');
+      expect(restored.toolName, 'scheduleLesson');
+      expect(restored.toolArguments, '{"time": "10:00"}');
+      expect(restored.toolResult, isNull);
+    });
+
+    test('copyWith preserves tool fields', () {
+      final msg = ConversationMessage(
+        id: 'tool-copy',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: '',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_789',
+        toolName: 'createPlan',
+      );
+      final copy = msg.copyWith(toolResult: 'Plan created');
+      expect(copy.toolCallId, 'call_789');
+      expect(copy.toolName, 'createPlan');
+      expect(copy.toolResult, 'Plan created');
     });
   });
 }

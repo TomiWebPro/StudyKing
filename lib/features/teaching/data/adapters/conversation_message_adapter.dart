@@ -26,12 +26,16 @@ class ConversationMessageAdapter extends TypeAdapter<ConversationMessage> {
       timestamp: DateTime.fromMillisecondsSinceEpoch(fields[6] as int),
       tokenCount: fields[7] as int? ?? 0,
       isStreaming: fields[8] as bool? ?? false,
+      toolCallId: fields[9] as String?,
+      toolName: fields[10] as String?,
+      toolArguments: fields[11] as String?,
+      toolResult: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ConversationMessage obj) {
-    writer.writeByte(9);
+    writer.writeByte(13);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -50,6 +54,14 @@ class ConversationMessageAdapter extends TypeAdapter<ConversationMessage> {
     writer.write(obj.tokenCount);
     writer.writeByte(8);
     writer.write(obj.isStreaming);
+    writer.writeByte(9);
+    writer.write(obj.toolCallId);
+    writer.writeByte(10);
+    writer.write(obj.toolName);
+    writer.writeByte(11);
+    writer.write(obj.toolArguments);
+    writer.writeByte(12);
+    writer.write(obj.toolResult);
   }
 }
 
@@ -84,12 +96,13 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
       topicsCovered: (fields[14] as List?)?.cast<String>() ?? [],
       totalMessages: fields[15] as int? ?? 0,
       totalTokensUsed: fields[16] as int? ?? 0,
+      lessonId: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TutorSession obj) {
-    writer.writeByte(17);
+    writer.writeByte(18);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -124,5 +137,7 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
     writer.write(obj.totalMessages);
     writer.writeByte(16);
     writer.write(obj.totalTokensUsed);
+    writer.writeByte(17);
+    writer.write(obj.lessonId);
   }
 }

@@ -1480,6 +1480,46 @@
   "@type": {
     "description": "Label for type field"
   },
+  "pdfLabel": "PDF",
+  "@pdfLabel": {
+    "description": "Label for PDF source type"
+  },
+  "syllabusLabel": "Plan de estudios",
+  "@syllabusLabel": {
+    "description": "Label for syllabus source type"
+  },
+  "textbookLabel": "Libro de texto",
+  "@textbookLabel": {
+    "description": "Label for textbook source type"
+  },
+  "videoLabel": "Video",
+  "@videoLabel": {
+    "description": "Label for video source type"
+  },
+  "lectureNotesLabel": "Apuntes de clase",
+  "@lectureNotesLabel": {
+    "description": "Label for lecture notes source type"
+  },
+  "externalResourceLabel": "Recurso externo",
+  "@externalResourceLabel": {
+    "description": "Label for external resource source type"
+  },
+  "imageLabel": "Imagen",
+  "@imageLabel": {
+    "description": "Label for image source type"
+  },
+  "webPageLabel": "Página web",
+  "@webPageLabel": {
+    "description": "Label for web page source type"
+  },
+  "audioLabel": "Audio",
+  "@audioLabel": {
+    "description": "Label for audio source type"
+  },
+  "documentLabel": "Documento",
+  "@documentLabel": {
+    "description": "Label for document source type"
+  },
   "typeYourAnswerHere": "Escriba su respuesta aquí...",
   "@typeYourAnswerHere": {
     "description": "Hint text for text answer input"
@@ -4354,6 +4394,14 @@
   "@failed": {
     "description": "Label for failed tasks count"
   },
+  "llmStatusQueued": "En cola",
+  "@llmStatusQueued": {
+    "description": "Label for queued LLM task status"
+  },
+  "llmStatusCancelled": "Cancelada",
+  "@llmStatusCancelled": {
+    "description": "Label for cancelled LLM task status"
+  },
   "subjectIdHint": "p. ej. sub_física",
   "@subjectIdHint": {
     "description": "Hint text for subject ID field in planner"
@@ -5463,8 +5511,8 @@
   "@questionText": {
     "description": "Label for question text input field"
   },
-  "questionBank": "Banco de preguntas",
-  "@questionBank": {
+  "questionBankScreen": "Banco de preguntas",
+  "@questionBankScreen": {
     "description": "Title for the question bank screen"
   },
   "questionSubtitle": "{questionType} \u2022 {difficulty}",
@@ -5626,6 +5674,10 @@
   "@sourceNotFound": {
     "description": "Error message when source is not found"
   },
+  "errorLoadingSource": "Ocurrió un error al cargar la fuente. Intente de nuevo.",
+  "@errorLoadingSource": {
+    "description": "Error message when loading source fails"
+  },
   "reprocessSource": "Reprocesar Fuente",
   "@reprocessSource": {
     "description": "Dialog title for source reprocessing"
@@ -5674,8 +5726,8 @@
   "@classifyNow": {
     "description": "Button to classify source topic"
   },
-  "summary": "Resumen",
-  "@summary": {
+  "summarySection": "Resumen",
+  "@summarySection": {
     "description": "Section header for summary"
   },
   "noSummaryAvailable": "No hay resumen disponible",
@@ -5948,5 +6000,29 @@
   "viewInSettings": "Abrir Configuración",
   "@viewInSettings": {
     "description": "Button to navigate to settings"
+  },
+  "phaseGreeting": "Saludo",
+  "@phaseGreeting": {
+    "description": "Label for the greeting phase in tutor screen"
+  },
+  "phaseTeaching": "Enseñanza",
+  "@phaseTeaching": {
+    "description": "Label for the teaching phase in tutor screen"
+  },
+  "phaseExercise": "Ejercicio",
+  "@phaseExercise": {
+    "description": "Label for the exercise phase in tutor screen"
+  },
+  "phaseFeedback": "Retroalimentación",
+  "@phaseFeedback": {
+    "description": "Label for the feedback phase in tutor screen"
+  },
+  "phaseAdaptiveReview": "Revisión Adaptativa",
+  "@phaseAdaptiveReview": {
+    "description": "Label for the adaptive review phase in tutor screen"
+  },
+  "phaseClosing": "Cierre",
+  "@phaseClosing": {
+    "description": "Label for the closing phase in tutor screen"
   }
 }

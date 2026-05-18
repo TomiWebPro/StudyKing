@@ -136,7 +136,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
                 child: Center(
                   child: Text(d,
                     overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+                    maxLines: 2,
                     style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   )),

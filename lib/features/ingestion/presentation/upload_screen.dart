@@ -13,6 +13,7 @@ import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -230,6 +231,20 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             });
             return;
           }
+
+          List<String> possibleTopics = [];
+          if (_selectedSubjectId != null && _selectedSubjectId!.isNotEmpty) {
+            try {
+              final topicRepo = TopicRepository();
+              await topicRepo.init();
+              final topicsResult = await topicRepo.getBySubject(_selectedSubjectId!);
+              possibleTopics = (topicsResult.data ?? [])
+                  .map((t) => t.title)
+                  .where((t) => t.isNotEmpty)
+                  .toList();
+            } catch (_) {}
+          }
+
           final result = await pipeline.processFullPipeline(
             title: title,
             content: actualContent,
@@ -238,7 +253,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             modelId: resolvedModelId,
             subjectId: _selectedSubjectId ?? '',
             sourceUrl: _useUrlInput ? content : '',
-            possibleTopics: [],
+            possibleTopics: possibleTopics,
             generateQuestions: _generateQuestions,
             onProgress: (status, description) {
               if (mounted) {

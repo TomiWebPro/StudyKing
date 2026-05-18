@@ -1480,6 +1480,46 @@
   "@type": {
     "description": "Label for type field"
   },
+  "pdfLabel": "PDF",
+  "@pdfLabel": {
+    "description": "Label for PDF source type"
+  },
+  "syllabusLabel": "Syllabus",
+  "@syllabusLabel": {
+    "description": "Label for syllabus source type"
+  },
+  "textbookLabel": "Textbook",
+  "@textbookLabel": {
+    "description": "Label for textbook source type"
+  },
+  "videoLabel": "Video",
+  "@videoLabel": {
+    "description": "Label for video source type"
+  },
+  "lectureNotesLabel": "Lecture Notes",
+  "@lectureNotesLabel": {
+    "description": "Label for lecture notes source type"
+  },
+  "externalResourceLabel": "External Resource",
+  "@externalResourceLabel": {
+    "description": "Label for external resource source type"
+  },
+  "imageLabel": "Image",
+  "@imageLabel": {
+    "description": "Label for image source type"
+  },
+  "webPageLabel": "Web Page",
+  "@webPageLabel": {
+    "description": "Label for web page source type"
+  },
+  "audioLabel": "Audio",
+  "@audioLabel": {
+    "description": "Label for audio source type"
+  },
+  "documentLabel": "Document",
+  "@documentLabel": {
+    "description": "Label for document source type"
+  },
   "typeYourAnswerHere": "Type your answer here...",
   "@typeYourAnswerHere": {
     "description": "Hint text for text answer input"
@@ -3489,13 +3529,12 @@
     "description": "Label indicating remaining time on timer"
   },
   "timerPaused": "PAUSED",
+  "@timerPaused": {
+    "description": "Label indicating timer is paused"
+  },
   "title": "Title",
   "@title": {
     "description": "Label for title sort option"
-  },
-  "today": "Today",
-  "@timerPaused": {
-    "description": "Label indicating timer is paused"
   },
   "timerDone": "DONE!",
   "@timerDone": {
@@ -4354,6 +4393,14 @@
   "failed": "Failed",
   "@failed": {
     "description": "Label for failed tasks count"
+  },
+  "llmStatusQueued": "Queued",
+  "@llmStatusQueued": {
+    "description": "Label for queued LLM task status"
+  },
+  "llmStatusCancelled": "Cancelled",
+  "@llmStatusCancelled": {
+    "description": "Label for cancelled LLM task status"
   },
   "subjectIdHint": "e.g. sub_physics",
   "@subjectIdHint": {
@@ -5464,8 +5511,8 @@
   "@questionText": {
     "description": "Label for question text input field"
   },
-  "questionBank": "Question Bank",
-  "@questionBank": {
+  "questionBankScreen": "Question Bank",
+  "@questionBankScreen": {
     "description": "Title for the question bank screen"
   },
   "questionSubtitle": "{questionType} \u2022 {difficulty}",
@@ -5627,6 +5674,10 @@
   "@sourceNotFound": {
     "description": "Error message when source is not found"
   },
+  "errorLoadingSource": "An error occurred while loading the source. Please try again.",
+  "@errorLoadingSource": {
+    "description": "Error message when loading source fails"
+  },
   "reprocessSource": "Reprocess Source",
   "@reprocessSource": {
     "description": "Dialog title for source reprocessing"
@@ -5675,8 +5726,8 @@
   "@classifyNow": {
     "description": "Button to classify source topic"
   },
-  "summary": "Summary",
-  "@summary": {
+  "summarySection": "Summary",
+  "@summarySection": {
     "description": "Section header for summary"
   },
   "noSummaryAvailable": "No summary available",
@@ -5949,5 +6000,29 @@
   "viewInSettings": "Open Settings",
   "@viewInSettings": {
     "description": "Button to navigate to settings"
+  },
+  "phaseGreeting": "Greeting",
+  "@phaseGreeting": {
+    "description": "Label for the greeting phase in tutor screen"
+  },
+  "phaseTeaching": "Teaching",
+  "@phaseTeaching": {
+    "description": "Label for the teaching phase in tutor screen"
+  },
+  "phaseExercise": "Exercise",
+  "@phaseExercise": {
+    "description": "Label for the exercise phase in tutor screen"
+  },
+  "phaseFeedback": "Feedback",
+  "@phaseFeedback": {
+    "description": "Label for the feedback phase in tutor screen"
+  },
+  "phaseAdaptiveReview": "Adaptive Review",
+  "@phaseAdaptiveReview": {
+    "description": "Label for the adaptive review phase in tutor screen"
+  },
+  "phaseClosing": "Closing",
+  "@phaseClosing": {
+    "description": "Label for the closing phase in tutor screen"
   }
 }

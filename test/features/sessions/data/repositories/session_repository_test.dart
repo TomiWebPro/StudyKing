@@ -1111,5 +1111,204 @@ void main() {
         expect(results.data!.length, 10);
       });
     });
+
+    group('hasSchedulingConflict', () {
+      test('returns false when no sessions exist', () async {
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('returns false when no overlap exists', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          plannedDurationMinutes: 60,
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 14, 0),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('returns true when sessions overlap', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          plannedDurationMinutes: 60,
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 60,
+        );
+        expect(conflict, isTrue);
+      });
+
+      test('returns true when proposed is fully contained', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          endTime: DateTime(2025, 1, 15, 12, 0),
+          status: SessionStatus.inProgress,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 11, 0),
+          durationMinutes: 30,
+        );
+        expect(conflict, isTrue);
+      });
+
+      test('skips excluded session', () async {
+        final sess = createSession(
+          id: 'to-exclude',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          plannedDurationMinutes: 120,
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 60,
+          excludeSessionId: 'to-exclude',
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('skips session with no endTime and no plannedDurationMinutes',
+          () async {
+        final sess = createSession(
+          id: 'no-duration',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          endTime: null,
+          plannedDurationMinutes: null,
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('detects conflict using endTime when available', () async {
+        final sess = createSession(
+          id: 'with-endtime',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          endTime: DateTime(2025, 1, 15, 11, 0),
+          plannedDurationMinutes: null,
+          status: SessionStatus.completed,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 60,
+        );
+        expect(conflict, isTrue);
+      });
+
+      test('detects conflict using plannedDurationMinutes when no endTime',
+          () async {
+        final sess = createSession(
+          id: 'planned-only',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          endTime: null,
+          plannedDurationMinutes: 60,
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 30,
+        );
+        expect(conflict, isTrue);
+      });
+
+      test('returns false when box is closed', () async {
+        final sess = createSession(
+          id: 'close-test',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          plannedDurationMinutes: 60,
+        );
+        await repository.save(sess.id, sess);
+        await Hive.close();
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 30),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
+    });
+
+    group('getScheduledLessons', () {
+      test('returns empty when no sessions exist', () async {
+        final lessons = await repository.getScheduledLessons();
+        expect(lessons, isEmpty);
+      });
+
+      test('returns only planned sessions', () async {
+        final planned = createSession(
+          id: 'planned-1',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          status: SessionStatus.planned,
+        );
+        await repository.save(planned.id, planned);
+        final inProgress = createSession(
+          id: 'inprogress-1',
+          startTime: DateTime(2025, 1, 15, 11, 0),
+          status: SessionStatus.inProgress,
+        );
+        await repository.save(inProgress.id, inProgress);
+        final completed = createSession(
+          id: 'completed-1',
+          startTime: DateTime(2025, 1, 15, 12, 0),
+          status: SessionStatus.completed,
+        );
+        await repository.save(completed.id, completed);
+        final cancelled = createSession(
+          id: 'cancelled-1',
+          startTime: DateTime(2025, 1, 15, 13, 0),
+          status: SessionStatus.cancelled,
+        );
+        await repository.save(cancelled.id, cancelled);
+        final lessons = await repository.getScheduledLessons();
+        expect(lessons.length, 1);
+        expect(lessons.first.id, 'planned-1');
+        expect(lessons.first.status, SessionStatus.planned);
+      });
+
+      test('returns multiple planned sessions', () async {
+        for (var i = 0; i < 3; i++) {
+          final sess = createSession(
+            id: 'planned-$i',
+            startTime: DateTime(2025, 1, 15, 10 + i, 0),
+            status: SessionStatus.planned,
+          );
+          await repository.save(sess.id, sess);
+        }
+        final lessons = await repository.getScheduledLessons();
+        expect(lessons.length, 3);
+      });
+
+      test('returns empty when box is closed', () async {
+        final sess = createSession(
+          id: 's1',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          status: SessionStatus.planned,
+        );
+        await repository.save(sess.id, sess);
+        await Hive.close();
+        final lessons = await repository.getScheduledLessons();
+        expect(lessons, isEmpty);
+      });
+    });
   });
 }

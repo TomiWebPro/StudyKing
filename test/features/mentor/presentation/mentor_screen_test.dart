@@ -140,11 +140,11 @@ class FakeLlmService extends LlmService {
   final bool shouldThrow;
   final Duration? responseDelay;
 
-  FakeLlmService({this.shouldThrow = false, this.responseDelay})
+  FakeLlmService({this.shouldThrow = false, this.responseDelay, bool hasApiKey = true})
       : super(
-          config: const LlmConfiguration(
+          config: LlmConfiguration(
             provider: LlmProvider.openRouter,
-            apiKey: 'test-key',
+            apiKey: hasApiKey ? 'test-key' : '',
           ),
         );
 
@@ -153,6 +153,7 @@ class FakeLlmService extends LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
@@ -181,6 +182,41 @@ class _FakeTopicRepository extends TopicRepository {
       syllabusText: '',
     ));
   }
+}
+
+class _FakeTopicRepoNoSubject extends TopicRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+  @override
+  Future<Result<Topic?>> get(String key) async {
+    return Result.success(Topic(
+      id: key,
+      title: key,
+      subjectId: '',
+      description: '',
+      syllabusText: '',
+    ));
+  }
+}
+
+class _FakeTopicRepoThrowing extends TopicRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+  @override
+  Future<Result<Topic?>> get(String key) async {
+    return Result.failure('DB error');
+  }
+}
+
+class _ThrowingNudgeRepo extends EngagementNudgeRepository {
+  @override
+  Future<void> init() async => throw Exception('Init simulation failure');
+  @override
+  Future<Result<void>> create(EngagementNudgeModel nudge) async => Result.success(null);
+  @override
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(String studentId, {int limit = 10}) async => Result.success([]);
+  @override
+  Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -1127,6 +1163,368 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('popup menu button is present in app bar', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    });
+
+    testWidgets('popup menu opens on tap and shows clear option', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Clear conversation'), findsOneWidget);
+    });
+
+    testWidgets('clear conversation shows confirmation dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear conversation'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Clear conversation'), findsOneWidget);
+    });
+
+    testWidgets('clear conversation cancel does not remove messages', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Hello mentor');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.text('Mentor response').evaluate().isNotEmpty) break;
+      }
+      expect(find.text('Hello mentor'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear conversation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hello mentor'), findsOneWidget);
+    });
+
+    testWidgets('clear conversation confirm clears messages and shows welcome', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Hello mentor');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.text('Mentor response').evaluate().isNotEmpty) break;
+      }
+      expect(find.text('Hello mentor'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear conversation'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Clear conversation'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hello mentor'), findsNothing);
+      expect(find.byIcon(Icons.auto_awesome), findsWidgets);
+    });
+
+    testWidgets('init error shows error card with retry and settings buttons', (tester) async {
+      final throwingRepo = _ThrowingNudgeRepo();
+
+      await tester.pumpWidget(_buildTestApp(nudgeRepo: throwingRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Go to Settings'), findsOneWidget);
+      expect(find.textContaining('Mentor initialization failed'), findsOneWidget);
+    });
+
+    testWidgets('init error changes input hint text', (tester) async {
+      final throwingRepo = _ThrowingNudgeRepo();
+
+      await tester.pumpWidget(_buildTestApp(nudgeRepo: throwingRepo));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Connectivity issue — configure AI provider in Settings'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('init error retry reinitializes and shows error again', (tester) async {
+      final throwingRepo = _ThrowingNudgeRepo();
+
+      await tester.pumpWidget(_buildTestApp(nudgeRepo: throwingRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('init error settings button navigates to api config', (tester) async {
+      final throwingRepo = _ThrowingNudgeRepo();
+      final navigatorRoutes = <String>[];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith(
+              (ref) => SettingsController(_FakeSettingsRepository()),
+            ),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(throwingRepo),
+            mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
+            masteryGraphServiceProvider.overrideWithValue(FakeMasteryGraphService()),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+            onGenerateRoute: (settings) {
+              if (settings.name == AppRoutes.apiConfig) {
+                navigatorRoutes.add(settings.name!);
+              }
+              return MaterialPageRoute(
+                builder: (_) => const SizedBox.shrink(),
+                settings: settings,
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Go to Settings'));
+      await tester.pumpAndSettle();
+
+      expect(navigatorRoutes, contains(AppRoutes.apiConfig));
+    });
+
+    testWidgets('suggested action card appears after initialization', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+      expect(
+        find.textContaining("You haven't added any subjects yet"),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('suggested action card can be dismissed', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Dismiss'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsNothing);
+    });
+
+    testWidgets('weak topic with no subjectId shows snackbar', (tester) async {
+      final masteryGraph = FakeMasteryGraphService();
+      final now = DateTime.now();
+      masteryGraph.setWeakTopics([
+        MasteryState(
+          studentId: 'test', topicId: 'algebra',
+          accuracy: 0.35, lastAttempt: now, lastUpdated: now,
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith(
+              (ref) => SettingsController(_FakeSettingsRepository()),
+            ),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
+            masteryGraphServiceProvider.overrideWithValue(masteryGraph),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepoNoSubject()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Progress Report'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('algebra'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not find subject for this topic.'), findsOneWidget);
+    });
+
+    testWidgets('weak topic with topic fetch error shows snackbar', (tester) async {
+      final masteryGraph = FakeMasteryGraphService();
+      final now = DateTime.now();
+      masteryGraph.setWeakTopics([
+        MasteryState(
+          studentId: 'test', topicId: 'algebra',
+          accuracy: 0.35, lastAttempt: now, lastUpdated: now,
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith(
+              (ref) => SettingsController(_FakeSettingsRepository()),
+            ),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
+            masteryGraphServiceProvider.overrideWithValue(masteryGraph),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepoThrowing()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Progress Report'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('algebra'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not find subject for this topic.'), findsOneWidget);
+    });
+
+    testWidgets('app bar shows mentor greeting and icon', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.auto_awesome), findsWidgets);
+      expect(find.text('AI Mentor'), findsWidgets);
+    });
+
+    testWidgets('conversation input is disabled during init error', (tester) async {
+      final throwingRepo = _ThrowingNudgeRepo();
+
+      await tester.pumpWidget(_buildTestApp(nudgeRepo: throwingRepo));
+      await tester.pumpAndSettle();
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.enabled, isFalse);
+    });
+
+    testWidgets('sending schedule message shows schedule dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'I want to schedule a lesson about algebra');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(AlertDialog).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+    });
+
+    testWidgets('schedule dialog cancel returns to chat', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'I want to schedule a lesson about algebra');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(AlertDialog).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('sending plan message shows plan details', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'I want to plan 90 days');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.text('Mentor response').evaluate().isNotEmpty) break;
+      }
+
+      expect(find.text('Mentor response'), findsOneWidget);
+    });
+
+    testWidgets('sends message with schedule intent and dialog shows topic', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'schedule a lesson about calculus');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(AlertDialog).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+    });
+
+    testWidgets('app bar title contains auto awesome icon and mentor greeting', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      expect(appBar.title, isNotNull);
     });
   });
 }

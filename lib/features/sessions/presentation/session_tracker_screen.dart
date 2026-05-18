@@ -92,7 +92,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = AppLocalizations.of(context)!.somethingWentWrong;
         });
       }
     }
@@ -246,7 +246,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.studySessionTracker),
-        centerTitle: false,
+          centerTitle: false,
           elevation: 0,
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -294,7 +294,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.studySessionTracker),
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
       ),
       body: SafeArea(

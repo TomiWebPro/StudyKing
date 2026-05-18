@@ -261,6 +261,7 @@ class _FakeLlMService extends LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',

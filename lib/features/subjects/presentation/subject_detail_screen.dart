@@ -16,6 +16,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
+import 'package:studyking/features/subjects/presentation/widgets/subject_topics_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_history_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 
@@ -40,7 +41,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadSourceCount();
   }
 
@@ -65,6 +66,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = ColorUtils.stringToColor(widget.args.subjectColor);
+    final textOnColor = ColorUtils.contrastingTextColor(color);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -79,7 +81,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               title: Text(
                                     widget.args.subjectName,
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: theme.colorScheme.onPrimary,
+                  color: textOnColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -125,7 +127,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                       Text(
                 widget.args.subjectName,
                                         style: theme.textTheme.titleLarge?.copyWith(
-                                          color: theme.colorScheme.onPrimary,
+                                          color: textOnColor,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -133,7 +135,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                         Text(
                                           widget.args.subjectCode!,
                                           style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+                                            color: textOnColor.withValues(alpha: 0.8),
                                           ),
                                         ),
                                     ],
@@ -166,6 +168,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               tabs: [
                 Tab(icon: const Icon(Icons.book), text: l10n.lessonsTab),
                 Tab(icon: const Icon(Icons.play_arrow), text: l10n.practiceTab),
+                Tab(icon: const Icon(Icons.topic), text: l10n.topics),
                 Tab(icon: const Icon(Icons.source), text: l10n.sources),
                 Tab(icon: const Icon(Icons.history), text: l10n.historyTab),
                 Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
@@ -183,6 +186,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     onStartPractice: () => _startPractice(isSpacedRepetition: false),
                     onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
                   ),
+                  SubjectTopicsTab(subjectId: widget.args.subjectId),
                   _SubjectSourcesTab(subjectId: widget.args.subjectId, subjectName: widget.args.subjectName),
                   SubjectHistoryTab(
                     subjectId: widget.args.subjectId,
@@ -438,7 +442,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
       }
     } catch (e) {
       const Logger('SubjectDetailScreen').e('Failed to load sources', e);
-      if (mounted) setState(() { _isLoading = false; _error = e.toString(); });
+      if (mounted) setState(() { _isLoading = false; _error = AppLocalizations.of(context)!.somethingWentWrong; });
     }
   }
 

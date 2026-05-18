@@ -125,6 +125,20 @@ void main() {
         );
         expect(lesson.toJson()['markscheme'], isNull);
       });
+
+      test('serializes multiple blocks of different types', () {
+        final blocks = [
+          sampleBlock,
+          LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.quiz, content: 'Q', order: 2),
+          LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.slide, content: 'S', order: 3),
+        ];
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', blocks: blocks, createdAt: now);
+        final json = lesson.toJson();
+        expect((json['blocks'] as List).length, 3);
+        expect((json['blocks'] as List)[0]['id'], 'block-1');
+        expect((json['blocks'] as List)[1]['type'], LessonBlockType.quiz.index);
+        expect((json['blocks'] as List)[2]['type'], LessonBlockType.slide.index);
+      });
     });
 
     group('fromJson', () {
@@ -186,6 +200,52 @@ void main() {
           expect(lesson.generatedBy, gb);
         }
       });
+
+      test('deserializes with non-null markscheme string', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'markscheme': 'This is the answer key',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.markscheme, 'This is the answer key');
+      });
+
+      test('deserializes with empty string markscheme', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'markscheme': '',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.markscheme, '');
+      });
+
+      test('deserializes with multiple blocks', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'blocks': [
+            {'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1', 'type': 0, 'content': 'A', 'order': 1},
+            {'id': 'b2', 'subjectId': 's1', 'lessonId': 'l1', 'type': 4, 'content': 'B', 'order': 2},
+          ],
+          'generatedBy': 2,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.blocks.length, 2);
+        expect(lesson.blocks[0].type, LessonBlockType.text);
+        expect(lesson.blocks[1].type, LessonBlockType.quiz);
+        expect(lesson.generatedBy, GeneratedBy.hybrid);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -241,6 +301,15 @@ void main() {
         );
         final restored = Lesson.fromJson(original.toJson());
         expect(restored.markscheme, isNull);
+      });
+
+      test('roundtrip preserves empty markscheme string', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now, markscheme: '',
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.markscheme, '');
       });
     });
 
@@ -321,6 +390,25 @@ void main() {
         expect(copy.generatedBy, GeneratedBy.hybrid);
         expect(copy.createdAt, newDate);
         expect(copy.markscheme, 'new key');
+      });
+
+      test('passing null blocks preserves original blocks', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', blocks: [sampleBlock], createdAt: now,
+        );
+        final copy = lesson.copyWith(blocks: null);
+        expect(copy.blocks, same(lesson.blocks));
+        expect(copy.blocks.length, 1);
+      });
+
+      test('passing null markscheme preserves original markscheme', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now, markscheme: 'key',
+        );
+        final copy = lesson.copyWith(markscheme: null);
+        expect(copy.markscheme, 'key');
       });
     });
 

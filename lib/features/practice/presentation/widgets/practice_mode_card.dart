@@ -57,7 +57,7 @@ class PracticeModeCard extends StatelessWidget {
                         color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
@@ -67,16 +67,17 @@ class PracticeModeCard extends StatelessWidget {
                         color: isAvailable ? color : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               if (badge != null && badge! > 0)
-                Positioned(
+                Positioned.directional(
+                  textDirection: Directionality.of(context),
                   top: 8,
-                  right: 8,
+                  end: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(

@@ -71,6 +71,39 @@ class _FakeHttpClient extends http.BaseClient {
   }
 }
 
+class _FailingHttpClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(
+      Stream.value('Error'.codeUnits),
+      500,
+    );
+  }
+}
+
+class _FailingLlmService extends LlmService {
+  _FailingLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    return Result.failure('LLM service failure');
+  }
+}
+
 void main() {
   group('ingestionProviders', () {
     group('documentExtractorProvider', () {
@@ -191,6 +224,22 @@ void main() {
         final result = await scraper.fetchPageContent('https://example.com');
         expect(result.isSuccess, isTrue);
         expect(result.data, contains('Fetched content from'));
+      });
+
+      test('error-state: handles HTTP 500 from overridden client', () async {
+        final failingClient = _FailingHttpClient();
+        final fakeScraper = WebScraper(httpClient: failingClient);
+        final container = ProviderContainer(
+          overrides: [
+            webScraperProvider.overrideWithValue(fakeScraper),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final scraper = container.read(webScraperProvider);
+        final result = await scraper.fetchPageContent('https://example.com');
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('500'));
       });
     });
 
@@ -488,6 +537,19 @@ void main() {
         expect(all.isSuccess, isTrue);
         expect(all.data, hasLength(1));
         expect(all.data!.first.title, 'Pipeline Source');
+      });
+
+      test('error-state: pipeline handles LLM service failure gracefully', () async {
+        final failingLlm = _FailingLlmService();
+        final container = ProviderContainer(
+          overrides: [
+            llmServiceProvider.overrideWithValue(failingLlm),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final pipeline = container.read(contentPipelineProvider);
+        expect(pipeline, isA<ContentPipeline>());
       });
     });
   });

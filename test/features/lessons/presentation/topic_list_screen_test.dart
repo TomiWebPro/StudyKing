@@ -7,6 +7,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/lessons/presentation/topic_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeTopicRepository extends TopicRepository {
@@ -50,6 +51,15 @@ Widget _buildTestApp({
       locale: const Locale('en'),
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const Scaffold(body: TopicListScreen()),
+      onGenerateRoute: (settings) {
+        if (settings.name == AppRoutes.lessonList) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Lesson List')),
+          );
+        }
+        return null;
+      },
     ),
   );
 }
@@ -101,30 +111,33 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
+    testWidgets('retry callback reloads topics', (tester) async {
+      final repo = _FakeTopicRepository(topics: [
+        Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: 'Algebra basics', syllabusText: ''),
+      ]);
+      repo.shouldThrow = true;
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: repo,
+        shouldThrow: true,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(repo.getAllCallCount, 1);
+
+      repo.shouldThrow = false;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(repo.getAllCallCount, 2);
+      expect(find.text('Algebra'), findsOneWidget);
+    });
+
     testWidgets('navigates to lesson list on topic tap', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(_FakeTopicRepository(topics: [
-              Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: '', syllabusText: ''),
-            ])),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            locale: const Locale('en'),
-            home: const Scaffold(body: TopicListScreen()),
-            onGenerateRoute: (settings) {
-              if (settings.name == '/lesson-list') {
-                return MaterialPageRoute(
-                  builder: (_) => const Scaffold(body: Text('Lesson List')),
-                );
-              }
-              return null;
-            },
-          ),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(topics: [
+        Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: '', syllabusText: ''),
+      ]));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Algebra'));
@@ -136,30 +149,12 @@ void main() {
 
     testWidgets('topic tap pushes correct route via NavigatorObserver', (tester) async {
       final observer = TestNavigatorObserver();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            topicRepositoryProvider.overrideWithValue(_FakeTopicRepository(topics: [
-              Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: '', syllabusText: ''),
-            ])),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            locale: const Locale('en'),
-            navigatorObservers: [observer],
-            home: const Scaffold(body: TopicListScreen()),
-            onGenerateRoute: (settings) {
-              if (settings.name == '/lesson-list') {
-                return MaterialPageRoute(
-                  builder: (_) => const Scaffold(body: Text('Lesson List')),
-                );
-              }
-              return null;
-            },
-          ),
-        ),
-      );
+      await tester.pumpWidget(_buildTestApp(
+        topics: [
+          Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: '', syllabusText: ''),
+        ],
+        navigatorObserver: observer,
+      ));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Algebra'));
@@ -172,6 +167,16 @@ void main() {
       );
     });
 
+    testWidgets('applies semantics labels on topic items', (tester) async {
+      await tester.pumpWidget(_buildTestApp(topics: [
+        Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: 'Algebra basics', syllabusText: ''),
+      ]));
+      await tester.pumpAndSettle();
+
+      final semantics = find.bySemanticsLabel(RegExp(r'Algebra, Algebra basics'));
+      expect(semantics, findsOneWidget);
+    });
+
     testWidgets('uses default database repository when none injected', (tester) async {
       await tester.pumpWidget(_buildTestApp(topics: [
         Topic(id: 't1', subjectId: 's1', title: 'Algebra', description: 'Algebra basics', syllabusText: ''),
@@ -182,4 +187,3 @@ void main() {
     });
   });
 }
-

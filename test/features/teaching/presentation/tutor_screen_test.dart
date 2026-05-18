@@ -37,6 +37,7 @@ class _FakeLlmService extends LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
@@ -49,6 +50,7 @@ class _FakeLlmService extends LlmService {
     required String message,
     required String modelId,
     String? systemPrompt,
+    String localeName = 'en',
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
@@ -75,6 +77,43 @@ class _FakeExerciseEvaluator extends ExerciseEvaluator {
   }) async {
     return EvaluationResult(score: 0.8, explanation: 'Good work.');
   }
+}
+
+class _FailingTutorService extends TutorService {
+  _FailingTutorService()
+      : super(
+          database: DatabaseService(
+            topicRepository: TopicRepository(),
+            questionRepository: QuestionRepository(),
+            attemptRepository: AttemptRepository(),
+            lessonRepository: LessonRepository(),
+            sessionRepository: SessionRepository(),
+            subjectRepository: SubjectRepository(),
+            conversationRepository: ConversationRepository(),
+            tutorSessionRepository: TutorSessionRepository(),
+          ),
+          llmService: _FakeLlmService(),
+          masteryService: MasteryGraphService(),
+          modelId: 'test-model',
+          exerciseEvaluator: _FakeExerciseEvaluator(),
+          conversationRepository: ConversationRepository(),
+        );
+
+  @override
+  Future<ConversationManager> startLesson({
+    required String studentId,
+    required String subjectId,
+    required String topicId,
+    required String topicTitle,
+    int durationMinutes = 45,
+    String? scheduledSessionId,
+    String localeName = 'en',
+  }) async {
+    throw Exception('LLM connection failed');
+  }
+
+  @override
+  Future<void> endLesson() async {}
 }
 
 class _FakeTutorService extends TutorService {
@@ -363,6 +402,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(observer.poppedRoutes, isEmpty);
+    });
+
+    testWidgets('shows error state when tutor service fails to initialize', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FailingTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Tutor initialization failed: Exception: LLM connection failed. Go to Settings to configure your AI provider, or retry.'), findsOneWidget);
+    });
+
+    testWidgets('shows retry and settings buttons in error state', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FailingTutorService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
     });
   });
 }

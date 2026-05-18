@@ -777,65 +777,53 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   Widget _buildSubjectPicker() {
     final l10n = AppLocalizations.of(context)!;
-    final subjectsAsync = ref.watch(subjectsRepositoryProvider);
-    return subjectsAsync.when(
-      data: (repo) {
-        return FutureBuilder<List<Subject>>(
-          future: repo.getAll().then((r) => r.data ?? []),
-          builder: (context, snapshot) {
-            final subjects = snapshot.data ?? [];
-            if (subjects.isEmpty) {
-              return Semantics(
-                label: l10n.addSubjectsForFocusHint,
-                child: Card(
-                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            l10n.addSubjectsForFocusHint,
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        TextButton(
-                          onPressed: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
-                          child: Text(l10n.settings),
-                        ),
-                      ],
-                    ),
+    final subjects = _subjects;
+    if (subjects.isEmpty) {
+      return Semantics(
+        label: l10n.addSubjectsForFocusHint,
+        child: Card(
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.addSubjectsForFocusHint,
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
-              );
-            }
-            return DropdownButtonFormField<String>(
-              initialValue: _selectedSubjectId.isEmpty ? null : _selectedSubjectId,
-              decoration: InputDecoration(
-                labelText: l10n.selectSubjectLabel,
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: '',
-                  child: Text(l10n.subjectOptional),
+                const SizedBox(width: 4),
+                TextButton(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+                  child: Text(l10n.settings),
                 ),
-                ...subjects.map((s) => DropdownMenuItem(
-                  value: s.id,
-                  child: Text(s.name),
-                )),
               ],
-              onChanged: (v) => setState(() => _selectedSubjectId = v ?? ''),
-            );
-          },
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      );
+    }
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedSubjectId.isEmpty ? null : _selectedSubjectId,
+      decoration: InputDecoration(
+        labelText: l10n.selectSubjectLabel,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+      items: [
+        DropdownMenuItem(
+          value: '',
+          child: Text(l10n.subjectOptional),
+        ),
+        ...subjects.map((s) => DropdownMenuItem(
+          value: s.id,
+          child: Text(s.name),
+        )),
+      ],
+      onChanged: (v) => setState(() => _selectedSubjectId = v ?? ''),
     );
   }
 }

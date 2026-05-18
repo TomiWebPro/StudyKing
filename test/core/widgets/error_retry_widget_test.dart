@@ -4,64 +4,69 @@ import 'package:studyking/core/widgets/error_retry_widget.dart';
 
 void main() {
   group('ErrorRetryWidget', () {
-    testWidgets('renders error message', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ErrorRetryWidget(message: 'Something went wrong'),
-          ),
+    testWidgets('renders error icon and message', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErrorRetryWidget(message: 'Something went wrong'),
         ),
-      );
+      ));
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Something went wrong'), findsOneWidget);
     });
 
     testWidgets('renders retry button with default label', (tester) async {
-      var retried = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ErrorRetryWidget(
-              message: 'Failed to load',
-              onRetry: () => retried = true,
-            ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErrorRetryWidget(
+            message: 'Something went wrong',
+            onRetry: () {},
           ),
         ),
-      );
+      ));
 
       expect(find.text('Retry'), findsOneWidget);
-      await tester.tap(find.text('Retry'));
-      expect(retried, isTrue);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
     });
 
     testWidgets('renders retry button with custom label', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ErrorRetryWidget(
-              message: 'Error',
-              retryLabel: 'Try Again',
-              onRetry: () {},
-            ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErrorRetryWidget(
+            message: 'Something went wrong',
+            retryLabel: 'Try Again',
+            onRetry: () {},
           ),
         ),
-      );
+      ));
 
       expect(find.text('Try Again'), findsOneWidget);
     });
 
     testWidgets('does not render retry button when onRetry is null', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ErrorRetryWidget(message: 'Just an error'),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErrorRetryWidget(message: 'Something went wrong'),
+        ),
+      ));
+
+      expect(find.byType(FilledButton), findsNothing);
+    });
+
+    testWidgets('retry button fires onRetry callback', (tester) async {
+      bool retried = false;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ErrorRetryWidget(
+            message: 'Something went wrong',
+            onRetry: () => retried = true,
           ),
         ),
-      );
+      ));
 
-      expect(find.text('Just an error'), findsOneWidget);
-      expect(find.text('Retry'), findsNothing);
+      await tester.tap(find.text('Retry'));
+      expect(retried, isTrue);
     });
   });
 }

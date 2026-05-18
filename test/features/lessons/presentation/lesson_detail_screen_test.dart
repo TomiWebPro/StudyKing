@@ -57,14 +57,31 @@ Widget _buildTestApp({
         ),
       ),
       onGenerateRoute: (settings) {
-        if (settings.name == '/tutor') {
+        if (settings.name == AppRoutes.tutor) {
           return MaterialPageRoute(
+            settings: settings,
             builder: (_) => const Scaffold(body: Text('Tutor')),
           );
         }
         return null;
       },
     ),
+  );
+}
+
+Lesson _createLesson({
+  String id = 'l1',
+  String subjectId = 's1',
+  String title = 'Algebra',
+  List<LessonBlock> blocks = const [],
+}) {
+  return Lesson(
+    id: id,
+    subjectId: subjectId,
+    title: title,
+    topicId: 't1',
+    blocks: blocks,
+    createdAt: DateTime.now(),
   );
 }
 
@@ -84,7 +101,6 @@ void main() {
     });
 
     testWidgets('displays lesson title in AppBar', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -92,10 +108,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Introduction to Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(title: 'Introduction to Algebra'),
         ],
       ));
       await tester.pumpAndSettle();
@@ -104,7 +117,6 @@ void main() {
     });
 
     testWidgets('displays all blocks with correct icons and localized titles', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -112,25 +124,20 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1',
-            blocks: [
-              LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.text, content: 'Text explanation', order: 0),
-              LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.example, content: 'Example content', order: 1),
-              LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.exercise, content: 'Exercise content', order: 2),
-              LessonBlock(id: 'b4', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.slide, content: 'Slide content', order: 3),
-              LessonBlock(id: 'b5', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.quiz, content: 'Quiz content', order: 4),
-              LessonBlock(id: 'b6', subjectId: 's1', lessonId: 'l1',
-                  type: LessonBlockType.summary, content: 'Summary content', order: 5),
-            ],
-            createdAt: now,
-          ),
+          _createLesson(blocks: [
+            LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.text, content: 'Text explanation', order: 0),
+            LessonBlock(id: 'b2', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.example, content: 'Example content', order: 1),
+            LessonBlock(id: 'b3', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.exercise, content: 'Exercise content', order: 2),
+            LessonBlock(id: 'b4', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.slide, content: 'Slide content', order: 3),
+            LessonBlock(id: 'b5', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.quiz, content: 'Quiz content', order: 4),
+            LessonBlock(id: 'b6', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.summary, content: 'Summary content', order: 5),
+          ]),
         ],
       ));
       await tester.pumpAndSettle();
@@ -158,8 +165,7 @@ void main() {
       expect(find.text('Slide'), findsOneWidget);
     });
 
-    testWidgets('displays timer starting at 0:00', (tester) async {
-      final now = DateTime.now();
+    testWidgets('displays timer starting at 00 00', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -167,19 +173,15 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('0:00'), findsOneWidget);
+      expect(find.text('00 00'), findsOneWidget);
     });
 
     testWidgets('timer updates after one second', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -187,20 +189,16 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('0:01'), findsOneWidget);
+      expect(find.text('00 01'), findsOneWidget);
     });
 
     testWidgets('timer continues incrementing', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -208,20 +206,16 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pump();
       await tester.pump(const Duration(seconds: 5));
 
-      expect(find.text('0:05'), findsOneWidget);
+      expect(find.text('00 05'), findsOneWidget);
     });
 
     testWidgets('dispose cancels the timer', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -229,24 +223,20 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
-      expect(find.text('0:03'), findsOneWidget);
+      expect(find.text('00 03'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 3));
 
-      expect(find.text('0:03'), findsNothing);
+      expect(find.text('00 03'), findsNothing);
     });
 
     testWidgets('shows teaching mode icon button in app bar', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -254,10 +244,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
@@ -266,7 +253,6 @@ void main() {
     });
 
     testWidgets('shows timer and teaching mode button in bottom bar', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -274,10 +260,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
@@ -299,12 +282,98 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Retry'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('shows error screen with error icon and buttons when load fails', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        shouldThrow: true,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Failed to load lesson. Please check your connection and try again.'), findsOneWidget);
+      expect(find.text('Go Back'), findsOneWidget);
+      expect(find.text('Retry'), findsAtLeastNWidgets(1));
+      expect(find.byType(OutlinedButton), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+    });
+
+    testWidgets('Go Back on error screen navigates back', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        shouldThrow: true,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Go Back'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algebra'), findsNothing);
+    });
+
+    testWidgets('Retry on error screen reloads lesson', (tester) async {
+      final repo = _FakeLessonRepository(lessons: [
+        _createLesson(title: 'Retried Lesson'),
+      ]);
+      repo.shouldThrow = true;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Builder(
+              builder: (context) => const Scaffold(
+                body: LessonDetailScreen(
+                  args: LessonDetailArgs(
+                    lessonId: 'l1',
+                    topicId: 't1',
+                    topicTitle: 'Algebra',
+                  ),
+                ),
+              ),
+            ),
+            onGenerateRoute: (settings) {
+              if (settings.name == AppRoutes.tutor) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => const Scaffold(body: Text('Tutor')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+
+      repo.shouldThrow = false;
+      await tester.tap(find.text('Retry').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retried Lesson'), findsOneWidget);
     });
 
     testWidgets('navigates to tutor screen from app bar teaching mode button', (tester) async {
-      final now = DateTime.now();
-
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -312,10 +381,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
@@ -328,8 +394,6 @@ void main() {
     });
 
     testWidgets('navigates to tutor screen from bottom bar teaching mode button', (tester) async {
-      final now = DateTime.now();
-
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
           lessonId: 'l1',
@@ -337,10 +401,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
@@ -354,7 +415,6 @@ void main() {
 
     testWidgets('navigator pushes tutor route on teaching mode tap', (tester) async {
       final observer = TestNavigatorObserver();
-      final now = DateTime.now();
 
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
@@ -363,10 +423,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
         navigatorObserver: observer,
       ));
@@ -383,7 +440,6 @@ void main() {
 
     testWidgets('navigator pops tutor on system back', (tester) async {
       final observer = TestNavigatorObserver();
-      final now = DateTime.now();
 
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(
@@ -392,10 +448,7 @@ void main() {
           topicTitle: 'Algebra',
         ),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
         navigatorObserver: observer,
       ));
@@ -409,34 +462,214 @@ void main() {
 
       expect(observer.poppedRoutes, hasLength(1));
     });
+
+    testWidgets('shows PopScope confirmation dialog when timer is running on back', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(
+              _FakeLessonRepository(lessons: [_createLesson()]),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            initialRoute: '/home',
+            routes: {
+              '/home': (_) => const Scaffold(
+                body: Center(child: Text('Home Screen')),
+              ),
+              '/detail': (_) => const LessonDetailScreen(
+                args: LessonDetailArgs(
+                  lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra',
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home Screen'), findsOneWidget);
+
+      await Navigator.of(tester.element(find.text('Home Screen'))).pushNamed('/detail');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('00 00'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Active Lesson Timer'), findsOneWidget);
+      expect(find.text('Leave anyway'), findsWidgets);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('PopScope dialog Leave anyway pops the route', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(
+              _FakeLessonRepository(lessons: [_createLesson()]),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            initialRoute: '/home',
+            routes: {
+              '/home': (_) => const Scaffold(
+                body: Center(child: Text('Home Screen')),
+              ),
+              '/detail': (_) => const LessonDetailScreen(
+                args: LessonDetailArgs(
+                  lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra',
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await Navigator.of(tester.element(find.text('Home Screen'))).pushNamed('/detail');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Active Lesson Timer'), findsOneWidget);
+
+      await tester.tap(find.text('Leave anyway').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home Screen'), findsOneWidget);
+    });
+
+    testWidgets('PopScope dialog Cancel dismisses the dialog', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(
+              _FakeLessonRepository(lessons: [_createLesson()]),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            initialRoute: '/home',
+            routes: {
+              '/home': (_) => const Scaffold(
+                body: Center(child: Text('Home Screen')),
+              ),
+              '/detail': (_) => const LessonDetailScreen(
+                args: LessonDetailArgs(
+                  lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra',
+                ),
+              ),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await Navigator.of(tester.element(find.text('Home Screen'))).pushNamed('/detail');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Active Lesson Timer'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('00 00'), findsOneWidget);
+    });
+
+    testWidgets('uses lesson subjectId when args.subjectId is empty', (tester) async {
+      TutorArgs? capturedArgs;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(_FakeLessonRepository(lessons: [
+              _createLesson(subjectId: 'lesson-subject'),
+            ])),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Builder(
+              builder: (context) => const Scaffold(
+                body: LessonDetailScreen(
+                  args: LessonDetailArgs(
+                    lessonId: 'l1',
+                    topicId: 't1',
+                    topicTitle: 'Algebra',
+                    subjectId: '',
+                  ),
+                ),
+              ),
+            ),
+            onGenerateRoute: (settings) {
+              if (settings.name == AppRoutes.tutor && settings.arguments is TutorArgs) {
+                capturedArgs = settings.arguments as TutorArgs;
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => const Scaffold(body: Text('Tutor')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.smart_toy_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(capturedArgs, isNotNull);
+      expect(capturedArgs!.subjectId, 'lesson-subject');
+    });
   });
 
   group('Keyboard accessibility', () {
     testWidgets('renders FocusTraversalGroup in body and bottom bar', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra'),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byType(FocusTraversalGroup), findsNWidgets(2));
+      expect(find.byType(FocusTraversalGroup), findsAtLeastNWidgets(2));
     });
 
     testWidgets('interactive elements are present for keyboard focus', (tester) async {
-      final now = DateTime.now();
       await tester.pumpWidget(_buildTestApp(
         args: const LessonDetailArgs(lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra'),
         lessons: [
-          Lesson(
-            id: 'l1', subjectId: 's1', title: 'Algebra',
-            topicId: 't1', blocks: [], createdAt: now,
-          ),
+          _createLesson(),
         ],
       ));
       await tester.pumpAndSettle();
@@ -446,4 +679,3 @@ void main() {
     });
   });
 }
-

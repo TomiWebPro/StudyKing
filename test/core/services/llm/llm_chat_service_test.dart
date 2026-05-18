@@ -36,7 +36,7 @@ class _FakeHttpClient extends http.BaseClient {
 void main() {
   group('LlmService', () {
     test('defaultSystemPrompt is defined', () {
-      expect(LlmService.defaultSystemPrompt, isNotEmpty);
+      expect(LlmService.defaultSystemPromptForLocale('en'), isNotEmpty);
     });
 
     test('chat with empty API key returns empty string', () async {

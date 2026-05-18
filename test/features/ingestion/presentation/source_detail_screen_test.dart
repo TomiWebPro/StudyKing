@@ -130,11 +130,11 @@ void main() {
         topicRepo: _FakeTopicRepo(),
         questionRepo: _FakeQuestionRepo(),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Physics Textbook'), findsOneWidget);
-      expect(find.text('completed'), findsOneWidget);
-      expect(find.text('pdf'), findsOneWidget);
+      expect(find.text('Completed'), findsOneWidget);
+      expect(find.text('PDF'), findsOneWidget);
       expect(find.text('src1'), findsOneWidget);
       expect(find.textContaining('summary of physics'), findsOneWidget);
     });
@@ -163,7 +163,7 @@ void main() {
         topicRepo: _FakeTopicRepo(),
         questionRepo: _FakeQuestionRepo(),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Source not found'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
@@ -180,7 +180,7 @@ void main() {
         topicRepo: _FakeTopicRepo(),
         questionRepo: _FakeQuestionRepo(),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.textContaining('Exception'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
@@ -198,16 +198,16 @@ void main() {
         questionRepo: _FakeQuestionRepo(),
         navigatorObserver: navigatorObserver,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete').first);
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('Delete').last);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(navigatorObserver.poppedRoutes, isNotEmpty);
     });

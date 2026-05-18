@@ -54,6 +54,9 @@ class TutorSession extends HiveObject {
   @HiveField(16)
   final int totalTokensUsed;
 
+  @HiveField(17)
+  final String? lessonId;
+
   TutorSession({
     required this.id,
     required this.studentId,
@@ -72,6 +75,7 @@ class TutorSession extends HiveObject {
     this.topicsCovered = const [],
     this.totalMessages = 0,
     this.totalTokensUsed = 0,
+    this.lessonId,
   });
 
   double get accuracy =>
@@ -103,6 +107,8 @@ class TutorSession extends HiveObject {
     List<String>? topicsCovered,
     int? totalMessages,
     int? totalTokensUsed,
+    String? lessonId,
+    bool clearLessonId = false,
   }) {
     return TutorSession(
       id: id ?? this.id,
@@ -122,6 +128,7 @@ class TutorSession extends HiveObject {
       topicsCovered: topicsCovered ?? this.topicsCovered,
       totalMessages: totalMessages ?? this.totalMessages,
       totalTokensUsed: totalTokensUsed ?? this.totalTokensUsed,
+      lessonId: clearLessonId ? null : (lessonId ?? this.lessonId),
     );
   }
 
@@ -143,6 +150,7 @@ class TutorSession extends HiveObject {
     'topicsCovered': topicsCovered,
     'totalMessages': totalMessages,
     'totalTokensUsed': totalTokensUsed,
+    'lessonId': lessonId,
   };
 
   factory TutorSession.fromJson(Map<String, dynamic> json) => TutorSession(
@@ -163,5 +171,6 @@ class TutorSession extends HiveObject {
     topicsCovered: List<String>.from(json['topicsCovered'] ?? []),
     totalMessages: json['totalMessages'] ?? 0,
     totalTokensUsed: json['totalTokensUsed'] ?? 0,
+    lessonId: json['lessonId'],
   );
 }

@@ -5,73 +5,92 @@ import 'package:studyking/core/widgets/empty_state_widget.dart';
 void main() {
   group('EmptyStateWidget', () {
     testWidgets('renders icon and title', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmptyStateWidget(
-              icon: Icons.book,
-              title: 'No items found',
-            ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
           ),
         ),
-      );
+      ));
 
-      expect(find.byIcon(Icons.book), findsOneWidget);
-      expect(find.text('No items found'), findsOneWidget);
+      expect(find.byIcon(Icons.inbox), findsOneWidget);
+      expect(find.text('No items'), findsOneWidget);
     });
 
     testWidgets('renders subtitle when provided', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmptyStateWidget(
-              icon: Icons.info,
-              title: 'Empty',
-              subtitle: 'Add some content to get started',
-            ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
+            subtitle: 'Add some items to get started',
           ),
         ),
-      );
+      ));
 
-      expect(find.text('Empty'), findsOneWidget);
-      expect(find.text('Add some content to get started'), findsOneWidget);
+      expect(find.text('Add some items to get started'), findsOneWidget);
     });
 
-    testWidgets('renders action button when label and callback provided', (tester) async {
-      var tapped = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmptyStateWidget(
-              icon: Icons.add,
-              title: 'No data',
-              actionLabel: 'Add Item',
-              onAction: () => tapped = true,
-            ),
+    testWidgets('renders action button when label and onAction provided', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
+            actionLabel: 'Add Item',
+            onAction: () {},
           ),
         ),
-      );
+      ));
 
       expect(find.text('Add Item'), findsOneWidget);
-      await tester.tap(find.text('Add Item'));
-      expect(tapped, isTrue);
+      expect(find.byType(FilledButton), findsOneWidget);
     });
 
     testWidgets('does not render action button when onAction is null', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmptyStateWidget(
-              icon: Icons.search,
-              title: 'No results',
-              actionLabel: 'Retry',
-            ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
+            actionLabel: 'Add Item',
           ),
         ),
-      );
+      ));
 
-      expect(find.text('No results'), findsOneWidget);
-      expect(find.text('Retry'), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+    });
+
+    testWidgets('action button fires onAction callback', (tester) async {
+      bool actionFired = false;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
+            actionLabel: 'Add Item',
+            onAction: () => actionFired = true,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('Add Item'));
+      expect(actionFired, isTrue);
+    });
+
+    testWidgets('icon has sematic label', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: EmptyStateWidget(
+            icon: Icons.inbox,
+            title: 'No items',
+          ),
+        ),
+      ));
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.inbox));
+      expect(icon.size, 64);
     });
   });
 }

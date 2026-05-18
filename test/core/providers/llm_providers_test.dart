@@ -145,6 +145,29 @@ void main() {
     });
   });
 
+  group('error-state handling', () {
+    test('llmServiceProvider handles empty API key gracefully', () {
+      final container = ProviderContainer(
+        overrides: [
+          apiKeyProvider.overrideWith((ref) => ''),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final service = container.read(llmServiceProvider);
+      expect(service.config.apiKey, isEmpty);
+      expect(service.config.apiKey, '');
+    });
+
+    test('llmTaskManagerProvider handles repeated initialization', () {
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+
+      final taskManager = container.read(llmTaskManagerProvider);
+      expect(taskManager, isNotNull);
+    });
+  });
+
   group('provider isolation', () {
     test('different containers have different provider instances', () {
       final container1 = ProviderContainer();

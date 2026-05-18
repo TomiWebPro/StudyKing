@@ -12,6 +12,31 @@ class _FakeStudentIdService extends StudentIdService {
   Future<void> init() async {}
 }
 
+class _FailingSessionRepo extends SessionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    return Result.failure('Session save failure');
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    return Result.failure('Session get failure');
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.failure('Session getAll failure');
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    return Result.failure('Session getByStudent failure');
+  }
+}
+
 class _FakeSessionRepository extends SessionRepository {
   final List<Session> _sessions = [];
 
@@ -311,7 +336,7 @@ void main() {
                 studentId: 's1',
                 startTime: DateTime(2026, 1, 1),
                 completed: true,
-              
+               
       );
       await sessionRepo.save(sess12.id, sess12);
       final sess13 = Session(
@@ -320,12 +345,87 @@ void main() {
                 studentId: 's1',
                 startTime: DateTime(2026, 1, 1),
                 completed: false,
-              
+               
       );
       await sessionRepo.save(sess13.id, sess13);
 
       final count = await integrator.getCompletedSessionCount(studentId: 's1');
       expect(count, 1);
+    });
+
+    group('error-state handling', () {
+      test('getUnifiedTimeline handles failing session repo gracefully', () async {
+        final failingRepo = _FailingSessionRepo();
+        final failingIntegrator = CrossFeatureIntegrator(
+          sessionRepo: failingRepo,
+          studentIdService: _FakeStudentIdService(),
+        );
+
+        final timeline = await failingIntegrator.getUnifiedTimeline(studentId: 's1');
+        expect(timeline, isEmpty);
+      });
+
+      test('getTotalStudyDurationMs handles failing session repo gracefully', () async {
+        final failingRepo = _FailingSessionRepo();
+        final failingIntegrator = CrossFeatureIntegrator(
+          sessionRepo: failingRepo,
+          studentIdService: _FakeStudentIdService(),
+        );
+
+        final total = await failingIntegrator.getTotalStudyDurationMs(studentId: 's1');
+        expect(total, 0);
+      });
+
+      test('getCompletedSessionCount handles failing session repo gracefully', () async {
+        final failingRepo = _FailingSessionRepo();
+        final failingIntegrator = CrossFeatureIntegrator(
+          sessionRepo: failingRepo,
+          studentIdService: _FakeStudentIdService(),
+        );
+
+        final count = await failingIntegrator.getCompletedSessionCount(studentId: 's1');
+        expect(count, 0);
+      });
+
+      test('getDurationByType handles failing session repo gracefully', () async {
+        final failingRepo = _FailingSessionRepo();
+        final failingIntegrator = CrossFeatureIntegrator(
+          sessionRepo: failingRepo,
+          studentIdService: _FakeStudentIdService(),
+        );
+
+        final byType = await failingIntegrator.getDurationByType(studentId: 's1');
+        expect(byType, isEmpty);
+      });
+
+      test('linkPracticeSessionToSource handles missing session without throwing', () async {
+        await expectLater(
+          integrator.linkPracticeSessionToSource(
+            practiceSessionId: 'nonexistent',
+            tutorSessionId: 'ts1',
+          ),
+          completes,
+        );
+      });
+
+      test('recordTutorSessionAsSession handles failing repo gracefully', () async {
+        final failingRepo = _FailingSessionRepo();
+        final failingIntegrator = CrossFeatureIntegrator(
+          sessionRepo: failingRepo,
+          studentIdService: _FakeStudentIdService(),
+        );
+
+        await expectLater(
+          failingIntegrator.recordTutorSessionAsSession(
+            tutorSessionId: 'ts-fail',
+            subjectId: 'sub1',
+            topicId: 't1',
+            durationMs: 1000,
+            studentId: 's1',
+          ),
+          completes,
+        );
+      });
     });
   });
 }
